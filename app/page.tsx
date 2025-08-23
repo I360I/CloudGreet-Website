@@ -104,7 +104,7 @@ export default function Home() {
               Why service businesses choose CloudGreet
             </h3>
             <p className="text-lg text-gray-600">
-              Built specifically for painters, HVAC, plumbers, and roofers who can't afford to miss calls.
+              Built specifically for painters, HVAC, plumbers, and roofers who cannot afford to miss calls.
             </p>
           </div>
           
@@ -153,7 +153,7 @@ export default function Home() {
               <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
                 <span className="text-white text-xl">👥</span>
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Booking caps so you're not overloaded</h4>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">Booking caps so you are not overloaded</h4>
               <p className="text-gray-600">Set daily/weekly booking limits to maintain quality and avoid being overwhelmed.</p>
             </div>
           </div>
@@ -251,7 +251,7 @@ export default function Home() {
                 <span className="text-white text-xl">🔧</span>
               </div>
               <h4 className="text-xl font-semibold text-gray-900 mb-2">HVAC</h4>
-              <p className="text-lg font-medium text-blue-500 mb-2">Peak season overflow? We've got it.</p>
+              <p className="text-lg font-medium text-blue-500 mb-2">Peak season overflow? We have got it.</p>
               <p className="text-gray-600">Emergency repairs, maintenance, and installation appointments.</p>
             </div>
             
@@ -321,4 +321,3 @@ export default function Home() {
     </div>
   )
 }
-
