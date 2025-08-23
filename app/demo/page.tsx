@@ -83,7 +83,6 @@ export default function DemoPage() {
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="bg-white p-4 rounded-                  <div className="space-y-4">
                     <div className="bg-white p-4 rounded-lg shadow-sm">
                       <div className="flex items-start space-x-3">
                         <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
@@ -101,7 +100,7 @@ export default function DemoPage() {
                           <span className="text-xs font-bold text-blue-500">AI</span>
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-white">"Great! I can help you schedule an estimate. What is the square footage of your living room?"</p>
+                          <p className="text-sm text-white">"Great! I can help you schedule an estimate. What is the square footage?"</p>
                         </div>
                       </div>
                     </div>
@@ -123,7 +122,7 @@ export default function DemoPage() {
                           <span className="text-xs font-bold text-blue-500">AI</span>
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-white">"I have availability tomorrow at 2 PM or Thursday at 10 AM. Which works better for you?"</p>
+                          <p className="text-sm text-white">"I have availability tomorrow at 2 PM or Thursday at 10 AM. Which works better?"</p>
                         </div>
                       </div>
                     </div>
@@ -171,7 +170,7 @@ export default function DemoPage() {
                 Want to see CloudGreet handle YOUR calls?
               </h2>
               <p className="text-xl text-blue-100 mb-8">
-                We can set up a live demo with your actual business information and phone number.
+                We can set up a live demo with your actual business information.
               </p>
               <button 
                 onClick={() => setShowLeadForm(true)}
@@ -190,7 +189,7 @@ export default function DemoPage() {
               Ready to never miss another call?
             </h2>
             <p className="text-lg text-gray-600 mb-8">
-              Join 500+ service businesses using CloudGreet to capture every lead and book more jobs.
+              Join 500+ service businesses using CloudGreet to capture every lead.
             </p>
             <button 
               onClick={() => setShowLeadForm(true)}
@@ -295,6 +294,4 @@ export default function DemoPage() {
     </div>
   )
 }
-
-
 
