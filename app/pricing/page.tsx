@@ -165,8 +165,6 @@ export default function PricingPage() {
               <div className="text-center">
                 <button 
                   onClick={() => setShowLeadForm(true)}
-                  className="w                <button 
-                  onClick={() => setShowLeadForm(true)}
                   className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-4 rounded-lg text-lg font-semibold hover:from-blue-600 hover:to-blue-700 mb-3 shadow-lg"
                 >
                   Start Free Trial
@@ -178,124 +176,6 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Value Proposition */}
-          <div className="mx-auto mt-24 max-w-4xl">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">Why CloudGreet delivers incredible ROI</h2>
-              <p className="text-lg text-gray-600">Most service businesses see a 300-500% return on investment</p>
-            </div>
-            
-            <div className="grid gap-8 md:grid-cols-3">
-              <div className="text-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border border-green-200">
-                <div className="text-3xl font-bold text-green-600 mb-2">40%</div>
-                <div className="font-semibold text-gray-900 mb-2">More Bookings</div>
-                <p className="text-sm text-gray-600">Average increase in scheduled estimates when you never miss calls</p>
-              </div>
-              
-              <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200">
-                <div className="text-3xl font-bold text-blue-600 mb-2">$6,800</div>
-                <div className="font-semibold text-gray-900 mb-2">Monthly Profit</div>
-                <p className="text-sm text-gray-600">Typical net profit after CloudGreet fees (based on $2,500 avg job value)</p>
-              </div>
-              
-              <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border border-purple-200">
-                <div className="text-3xl font-bold text-purple-600 mb-2">24hrs</div>
-                <div className="font-semibold text-gray-900 mb-2">Setup Time</div>
-                <p className="text-sm text-gray-600">From signup to answering your first call - guaranteed</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Pricing Comparison */}
-          <div className="mx-auto mt-24 max-w-5xl">
-            <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
-              Compare your options
-            </h2>
-            
-            <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-lg">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">Solution</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Monthly Cost</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Setup Time</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">24/7 Coverage</th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">Auto Booking</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  <tr className="bg-blue-50">
-                    <td className="px-6 py-4 font-semibold text-blue-900">CloudGreet AI</td>
-                    <td className="px-6 py-4 text-center text-blue-900 font-semibold">$200 + $50/booking</td>
-                    <td className="px-6 py-4 text-center text-blue-900 font-semibold">24 hours</td>
-                    <td className="px-6 py-4 text-center"><span className="text-green-500 text-xl">✓</span></td>
-                    <td className="px-6 py-4 text-center"><span className="text-green-500 text-xl">✓</span></td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-gray-900">Traditional Receptionist</td>
-                    <td className="px-6 py-4 text-center text-gray-600">$3,000 - $5,000</td>
-                    <td className="px-6 py-4 text-center text-gray-600">2-4 weeks</td>
-                    <td className="px-6 py-4 text-center"><span className="text-red-500 text-xl">✗</span></td>
-                    <td className="px-6 py-4 text-center"><span className="text-red-500 text-xl">✗</span></td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-gray-900">Answering Service</td>
-                    <td className="px-6 py-4 text-center text-gray-600">$200 - $800</td>
-                    <td className="px-6 py-4 text-center text-gray-600">1-2 weeks</td>
-                    <td className="px-6 py-4 text-center"><span className="text-green-500 text-xl">✓</span></td>
-                    <td className="px-6 py-4 text-center"><span className="text-red-500 text-xl">✗</span></td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4 text-gray-900">Voicemail Only</td>
-                    <td className="px-6 py-4 text-center text-gray-600">$20 - $50</td>
-                    <td className="px-6 py-4 text-center text-gray-600">Instant</td>
-                    <td className="px-6 py-4 text-center"><span className="text-red-500 text-xl">✗</span></td>
-                    <td className="px-6 py-4 text-center"><span className="text-red-500 text-xl">✗</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Pricing FAQ */}
-          <div className="mx-auto mt-24 max-w-3xl">
-            <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
-              Pricing questions answered
-            </h2>
-            <div className="space-y-8">
-              <div className="border-b border-gray-200 pb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">What exactly counts as a booking?</h3>
-                <p className="text-gray-600">A booking is when we successfully schedule an estimate or service appointment in your calendar with a qualified customer who provided contact information and job details. We do not charge for spam calls, wrong numbers, or unqualified inquiries.</p>
-              </div>
-              
-              <div className="border-b border-gray-200 pb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Are there any setup fees or hidden costs?</h3>
-                <p className="text-gray-600">No setup fees, no hidden costs. You only pay the monthly base fee ($200) plus per-booking fees ($50 each). Your first month is prorated based on your start date. Cancel anytime with 30 days notice.</p>
-              </div>
-              
-              <div className="border-b border-gray-200 pb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">What if I get too many bookings?</h3>
-                <p className="text-gray-600">You can set daily, weekly, or monthly booking limits to ensure you are not overwhelmed. When you reach your cap, we will politely defer additional callers to your next available period or take their information for future scheduling.</p>
-              </div>
-              
-              <div className="border-b border-gray-200 pb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">How does the 7-day free trial work?</h3>
-                <p className="text-gray-600">We set up CloudGreet for your business completely free. You get 7 full days to see how it performs with real calls. If you are not satisfied, simply cancel before the trial ends - no charges, no questions asked.</p>
-              </div>
-              
-              <div className="border-b border-gray-200 pb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Can I pause service during slow periods?</h3>
-                <p className="text-gray-600">Yes, you can pause service anytime (for vacations, slow seasons, etc.) and resume when ready. We will prorate your monthly fee accordingly. Just give us 24 hours notice to redirect your calls properly.</p>
-              </div>
-              
-              <div className="pb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">What payment methods do you accept?</h3>
-                <p className="text-gray-600">We accept all major credit cards and ACH bank transfers. Payments are processed securely through Stripe. You will receive detailed invoices showing your monthly fee and per-booking charges.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Final CTA */}
           <div className="mx-auto mt-24 max-w-2xl text-center">
             <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-8 text-white">
               <h2 className="text-3xl font-bold mb-4">
@@ -408,4 +288,3 @@ export default function PricingPage() {
     </div>
   )
 }
-
