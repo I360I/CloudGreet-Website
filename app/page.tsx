@@ -255,7 +255,7 @@ export default function Home() {
                 <span className="text-yellow-400 text-xl">★★★★★</span>
               </div>
               <blockquote className="text-gray-600 mb-6">
-                "CloudGreet increased our bookings by 40% in the first month. We went from missing calls to never missing an opportunity. The ROI is incredible."
+                &quot;CloudGreet increased our bookings by 40% in the first month. We went from missing calls to never missing an opportunity. The ROI is incredible.&quot;
               </blockquote>
               <div>
                 <div className="font-semibold text-gray-900">Mike Rodriguez</div>
@@ -268,7 +268,7 @@ export default function Home() {
                 <span className="text-yellow-400 text-xl">★★★★★</span>
               </div>
               <blockquote className="text-gray-600 mb-6">
-                "During peak HVAC season, we were drowning in calls. CloudGreet handles the overflow perfectly and books everything automatically."
+                &quot;During peak HVAC season, we were drowning in calls. CloudGreet handles the overflow perfectly and books everything automatically.&quot;
               </blockquote>
               <div>
                 <div className="font-semibold text-gray-900">Sarah Chen</div>
@@ -281,7 +281,7 @@ export default function Home() {
                 <span className="text-yellow-400 text-xl">★★★★★</span>
               </div>
               <blockquote className="text-gray-600 mb-6">
-                "As a solo plumber, I cannot answer calls while working. CloudGreet captures every emergency call and books them perfectly."
+                &quot;As a solo plumber, I cannot answer calls while working. CloudGreet captures every emergency call and books them perfectly.&quot;
               </blockquote>
               <div>
                 <div className="font-semibold text-gray-900">Tom Wilson</div>

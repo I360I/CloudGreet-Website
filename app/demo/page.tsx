@@ -89,7 +89,7 @@ export default function DemoPage() {
                           <span className="text-xs font-bold">C</span>
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-gray-600">"Hi, I need someone to paint my living room..."</p>
+                          <p className="text-sm text-gray-600">&quot;Hi, I need someone to paint my living room...&quot;</p>
                         </div>
                       </div>
                     </div>
@@ -100,7 +100,7 @@ export default function DemoPage() {
                           <span className="text-xs font-bold text-blue-500">AI</span>
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-white">"Great! I can help you schedule an estimate. What is the square footage?"</p>
+                          <p className="text-sm text-white">&quot;Great! I can help you schedule an estimate. What is the square footage?&quot;</p>
                         </div>
                       </div>
                     </div>
@@ -111,7 +111,7 @@ export default function DemoPage() {
                           <span className="text-xs font-bold">C</span>
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-gray-600">"About 300 square feet. When can someone come out?"</p>
+                          <p className="text-sm text-gray-600">&quot;About 300 square feet. When can someone come out?&quot;</p>
                         </div>
                       </div>
                     </div>
@@ -122,7 +122,7 @@ export default function DemoPage() {
                           <span className="text-xs font-bold text-blue-500">AI</span>
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-white">"I have availability tomorrow at 2 PM or Thursday at 10 AM. Which works better?"</p>
+                          <p className="text-sm text-white">&quot;I have availability tomorrow at 2 PM or Thursday at 10 AM. Which works better?&quot;</p>
                         </div>
                       </div>
                     </div>
