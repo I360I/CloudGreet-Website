@@ -610,8 +610,8 @@ export default function Home() {
                   </button>
                 </form>
 
-                <p className="<p className="text-xs text-gray-500 text-center mt-4">
-                  No spam. We will only contact you about your CloudGreet setup.
+                <p className="text-xs text-gray-500 text-center mt-4">
+  No spam. We will only contact you about your CloudGreet setup.
                 </p>
               </div>
             )}
