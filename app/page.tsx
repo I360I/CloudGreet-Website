@@ -1,302 +1,199 @@
+"use client"
+
+import Link from "next/link"
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
       <header className="sticky top-0 z-50 w-full border-b bg-white">
         <nav className="mx-auto flex max-w-7xl items-center justify-between p-6">
-          <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">CG</span>
+          <Link href="/" className="flex items-center space-x-2">
+            <div className="h-10 w-10 rounded-lg bg-blue-500 flex items-center justify-center">
+              <span className="text-white font-bold">CG</span>
             </div>
-            <span className="text-xl font-bold text-gray-900">CloudGreet</span>
+            <span className="text-2xl font-bold text-gray-900">CloudGreet</span>
+          </Link>
+          
+          <div className="hidden lg:flex lg:gap-x-8">
+            <Link href="/pricing" className="text-sm font-semibold text-gray-900 hover:text-blue-500">
+              Pricing
+            </Link>
+            <Link href="/demo" className="text-sm font-semibold text-gray-900 hover:text-blue-500">
+              Demo
+            </Link>
+            <Link href="/faq" className="text-sm font-semibold text-gray-900 hover:text-blue-500">
+              FAQ
+            </Link>
+            <Link href="/contact" className="text-sm font-semibold text-gray-900 hover:text-blue-500">
+              Contact
+            </Link>
           </div>
-          <div className="hidden lg:flex lg:gap-x-12">
-            <a href="#pricing" className="text-sm font-semibold text-gray-900 hover:text-blue-500">Pricing</a>
-            <a href="#demo" className="text-sm font-semibold text-gray-900 hover:text-blue-500">Demo</a>
-            <a href="#faq" className="text-sm font-semibold text-gray-900 hover:text-blue-500">FAQ</a>
-          </div>
-          <button className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600">
+          
+          <button 
+            onClick={() => window.open('https://buy.stripe.com/test_your_link', '_blank')}
+            className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600"
+          >
             Get Started
           </button>
         </nav>
       </header>
 
       {/* Hero Section */}
-      <section className="py-24 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Never miss a job again.
-          </h1>
-          
-          <p className="text-xl text-gray-600 mb-8">
-            CloudGreet answers every call and books estimates straight into your Google Calendar. Setup in 24 hours.
-          </p>
-          
-          <div className="flex items-center justify-center gap-6 mb-8">
-            <button className="bg-blue-500 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600">
-              Get Started
-            </button>
-            <button className="border border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50">
-              ▶ Watch 60-sec Demo
-            </button>
-          </div>
-          
-          <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-500">
-            <span className="bg-gray-100 px-3 py-1 rounded-full">$200/mo + $50 per booking</span>
-            <span className="bg-gray-100 px-3 py-1 rounded-full">Setup in 24h</span>
-            <span className="bg-gray-100 px-3 py-1 rounded-full">No contracts</span>
+      <section className="bg-gradient-to-b from-blue-50 to-white py-24">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="text-5xl font-bold text-gray-900 mb-6">
+              Never miss a job again.
+            </h1>
+            <p className="text-xl text-gray-600 mb-8">
+              CloudGreet answers every call and books estimates straight into your Google Calendar. 
+              AI receptionist built for painters, HVAC, plumbers, and roofers. Setup in 24 hours.
+            </p>
+            
+            <div className="flex items-center justify-center gap-6 mb-8">
+              <button 
+                onClick={() => window.open('https://buy.stripe.com/test_your_link', '_blank')}
+                className="bg-blue-500 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600"
+              >
+                Start Free Trial
+              </button>
+              <Link 
+                href="/demo"
+                className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50"
+              >
+                Watch Demo
+              </Link>
+            </div>
+            
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
+              <span className="bg-green-100 px-4 py-2 rounded-full text-green-800">
+                ✓ $200/mo + $50 per booking
+              </span>
+              <span className="bg-blue-100 px-4 py-2 rounded-full text-blue-800">
+                ✓ Setup in 24 hours
+              </span>
+              <span className="bg-purple-100 px-4 py-2 rounded-full text-purple-800">
+                ✓ No contracts
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section className="py-24 px-6 bg-gray-50">
-        <div className="max-w-6xl mx-auto">
+      <section className="py-24 bg-gray-50">
+        <div className="mx-auto max-w-7xl px-6">
           <div className="text-center mb-16">
             <h2 className="text-blue-500 font-semibold mb-2">How It Works</h2>
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">
+            <h3 className="text-4xl font-bold text-gray-900 mb-4">
               Three simple steps to never miss a job
             </h3>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-500 rounded-lg mx-auto mb-6 flex items-center justify-center">
-                <span className="text-white text-2xl">📞</span>
+              <div className="h-20 w-20 bg-blue-500 rounded-full mx-auto mb-6 flex items-center justify-center">
+                <span className="text-white text-3xl">📞</span>
               </div>
               <div className="mb-2">
-                <span className="text-sm font-medium text-blue-500 mr-2">01</span>
-                <h4 className="text-lg font-semibold text-gray-900 inline">We answer calls</h4>
+                <span className="text-blue-500 font-semibold mr-2">Step 1</span>
+                <h4 className="text-xl font-bold text-gray-900 inline">We answer calls</h4>
               </div>
-              <p className="text-gray-600">AI receptionist handles every call professionally, qualifying leads and gathering details.</p>
+              <p className="text-gray-600">AI receptionist handles every call professionally.</p>
             </div>
             
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-500 rounded-lg mx-auto mb-6 flex items-center justify-center">
-                <span className="text-white text-2xl">📅</span>
+              <div className="h-20 w-20 bg-blue-500 rounded-full mx-auto mb-6 flex items-center justify-center">
+                <span className="text-white text-3xl">📅</span>
               </div>
               <div className="mb-2">
-                <span className="text-sm font-medium text-blue-500 mr-2">02</span>
-                <h4 className="text-lg font-semibold text-gray-900 inline">We book estimates on your calendar</h4>
+                <span className="text-blue-500 font-semibold mr-2">Step 2</span>
+                <h4 className="text-xl font-bold text-gray-900 inline">We book estimates</h4>
               </div>
-              <p className="text-gray-600">Qualified leads get scheduled directly into your Google Calendar with all the details.</p>
+              <p className="text-gray-600">Qualified leads get scheduled into your Google Calendar.</p>
             </div>
             
             <div className="text-center">
-              <div className="w-16 h-16 bg-blue-500 rounded-lg mx-auto mb-6 flex items-center justify-center">
-                <span className="text-white text-2xl">📊</span>
+              <div className="h-20 w-20 bg-blue-500 rounded-full mx-auto mb-6 flex items-center justify-center">
+                <span className="text-white text-3xl">📊</span>
               </div>
               <div className="mb-2">
-                <span className="text-sm font-medium text-blue-500 mr-2">03</span>
-                <h4 className="text-lg font-semibold text-gray-900 inline">You get daily summary + ROI</h4>
+                <span className="text-blue-500 font-semibold mr-2">Step 3</span>
+                <h4 className="text-xl font-bold text-gray-900 inline">You get daily summaries</h4>
               </div>
-              <p className="text-gray-600">Daily text/email summaries show calls handled, bookings made, and revenue generated.</p>
+              <p className="text-gray-600">Daily reports show calls handled and revenue generated.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Value Props */}
-      <section className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
+      <section className="py-24">
+        <div className="mx-auto max-w-7xl px-6">
           <div className="text-center mb-16">
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
               Why service businesses choose CloudGreet
-            </h3>
+            </h2>
             <p className="text-lg text-gray-600">
-              Built specifically for painters, HVAC, plumbers, and roofers who cannot afford to miss calls.
+              Built specifically for trades who cannot afford to miss calls.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="border rounded-lg p-6">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">📵</span>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="p-8 bg-white border rounded-2xl shadow-sm">
+              <div className="h-16 w-16 bg-blue-100 rounded-lg mb-6 flex items-center justify-center">
+                <span className="text-2xl">📵</span>
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Stop losing leads to voicemail</h4>
-              <p className="text-gray-600">Every missed call is money lost. We answer 24/7 so you never miss an opportunity.</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Stop losing leads to voicemail</h3>
+              <p className="text-gray-600">Every missed call is money lost. We answer 24/7.</p>
             </div>
             
-            <div className="border rounded-lg p-6">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">📅</span>
+            <div className="p-8 bg-white border rounded-2xl shadow-sm">
+              <div className="h-16 w-16 bg-blue-100 rounded-lg mb-6 flex items-center justify-center">
+                <span className="text-2xl">📅</span>
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Booked directly into Google Calendar</h4>
-              <p className="text-gray-600">Qualified estimates appear in your calendar automatically with customer details and job info.</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Booked into Google Calendar</h3>
+              <p className="text-gray-600">Qualified estimates appear automatically with details.</p>
             </div>
             
-            <div className="border rounded-lg p-6">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">📧</span>
+            <div className="p-8 bg-white border rounded-2xl shadow-sm">
+              <div className="h-16 w-16 bg-blue-100 rounded-lg mb-6 flex items-center justify-center">
+                <span className="text-2xl">📧</span>
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Daily text/email summaries</h4>
-              <p className="text-gray-600">Get a daily digest of calls handled, bookings made, and revenue generated.</p>
-            </div>
-            
-            <div className="border rounded-lg p-6">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">🛡️</span>
-              </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Spam/duplicate filtering</h4>
-              <p className="text-gray-600">We filter out spam calls and duplicate inquiries so you only get real opportunities.</p>
-            </div>
-            
-            <div className="border rounded-lg p-6">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">🎨</span>
-              </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Brand-matched tone</h4>
-              <p className="text-gray-600">We learn your business style and represent your brand professionally on every call.</p>
-            </div>
-            
-            <div className="border rounded-lg p-6">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">👥</span>
-              </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Booking caps so you are not overloaded</h4>
-              <p className="text-gray-600">Set daily/weekly booking limits to maintain quality and avoid being overwhelmed.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ROI Calculator */}
-      <section id="calculator" className="py-24 px-6 bg-gray-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">
-              Calculate your ROI
-            </h3>
-            <p className="text-lg text-gray-600">
-              See how much revenue CloudGreet could generate for your business.
-            </p>
-          </div>
-          
-          <div className="bg-white rounded-lg border p-8">
-            <div className="text-center mb-6">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">🧮</span>
-              </div>
-              <h4 className="text-xl font-semibold text-gray-900">ROI Calculator</h4>
-              <p className="text-gray-600">Adjust the values below to see your potential return</p>
-            </div>
-            
-            <div className="grid gap-6 md:grid-cols-3 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-900">Average Job Value ($)</label>
-                <input type="number" defaultValue="2500" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-900">Close Rate (%)</label>
-                <input type="number" defaultValue="30" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-900">Bookings/Month</label>
-                <input type="number" defaultValue="10" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm text-gray-600">Est. monthly revenue from CloudGreet bookings:</p>
-                  <p className="text-2xl font-bold text-green-600">$7,500</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Your CloudGreet fee:</p>
-                  <p className="text-2xl font-bold text-gray-900">$700</p>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t">
-                <p className="text-sm text-gray-600">Net profit:</p>
-                <p className="text-3xl font-bold text-green-600">$6,800</p>
-                <p className="text-sm text-gray-500 mt-1">ROI: 971%</p>
-              </div>
-            </div>
-            
-            <div className="text-center mt-6">
-              <button className="bg-blue-500 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600">
-                Start in 2 minutes
-              </button>
-              <p className="mt-2 text-sm text-gray-500">Start in 2 minutes</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Industry Tiles */}
-      <section className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">
-              Built for your industry
-            </h3>
-            <p className="text-lg text-gray-600">
-              CloudGreet understands the unique needs of service businesses.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="border rounded-lg p-8">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">🎨</span>
-              </div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-2">Painters</h4>
-              <p className="text-lg font-medium text-blue-500 mb-2">We fill your calendar with estimates.</p>
-              <p className="text-gray-600">Interior, exterior, commercial painting jobs booked automatically.</p>
-            </div>
-            
-            <div className="border rounded-lg p-8">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">🔧</span>
-              </div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-2">HVAC</h4>
-              <p className="text-lg font-medium text-blue-500 mb-2">Peak season overflow? We have got it.</p>
-              <p className="text-gray-600">Emergency repairs, maintenance, and installation appointments.</p>
-            </div>
-            
-            <div className="border rounded-lg p-8">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">💧</span>
-              </div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-2">Plumbers</h4>
-              <p className="text-lg font-medium text-blue-500 mb-2">Never miss same-day jobs.</p>
-              <p className="text-gray-600">Emergency calls, repairs, and scheduled maintenance bookings.</p>
-            </div>
-            
-            <div className="border rounded-lg p-8">
-              <div className="h-12 w-12 bg-blue-500 rounded-lg mb-4 flex items-center justify-center">
-                <span className="text-white text-xl">🏠</span>
-              </div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-2">Roofers</h4>
-              <p className="text-lg font-medium text-blue-500 mb-2">Every estimate is money on the table.</p>
-              <p className="text-gray-600">Storm damage, repairs, and full roof replacement estimates.</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Daily summaries</h3>
+              <p className="text-gray-600">Get daily reports of calls and bookings made.</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 px-6 bg-blue-500">
-        <div className="max-w-4xl mx-auto text-center">
-          <h3 className="text-3xl font-bold text-white mb-4">
-            Live by tomorrow. No Zoom calls.
-          </h3>
-          <p className="text-xl text-blue-100 mb-8">
-            Setup takes 24 hours. Start capturing every lead and booking more jobs immediately.
-          </p>
-          <button className="bg-white text-blue-500 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100">
-            Get Started
-          </button>
-          <p className="mt-4 text-sm text-blue-100">
-            $200/mo + $50 per booking • No contracts • Cancel anytime
-          </p>
+      <section className="bg-blue-500 py-24">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="text-center">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Live by tomorrow. No Zoom calls.
+            </h2>
+            <p className="text-xl text-blue-100 mb-8">
+              Setup takes 24 hours. Start capturing every lead immediately.
+            </p>
+            <button 
+              onClick={() => window.open('https://buy.stripe.com/test_your_link', '_blank')}
+              className="bg-white text-blue-500 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100"
+            >
+              Get Started Now
+            </button>
+            <p className="mt-4 text-sm text-blue-100">
+              $200/mo + $50 per booking • No contracts • Cancel anytime
+            </p>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="bg-white py-12 px-6">
-        <div className="max-w-6xl mx-auto">
+        <div className="mx-auto max-w-6xl">
           <div className="flex justify-center mb-8">
             <div className="flex items-center space-x-2">
               <div className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center">
@@ -306,18 +203,17 @@ export default function Home() {
             </div>
           </div>
           <div className="flex justify-center space-x-8 mb-8">
-            <a href="#" className="text-gray-600 hover:text-gray-900">Pricing</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900">Demo</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900">FAQ</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900">Contact</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900">Privacy</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900">Terms</a>
+            <Link href="/pricing" className="text-gray-600 hover:text-gray-900">Pricing</Link>
+            <Link href="/demo" className="text-gray-600 hover:text-gray-900">Demo</Link>
+            <Link href="/faq" className="text-gray-600 hover:text-gray-900">FAQ</Link>
+            <Link href="/contact" className="text-gray-600 hover:text-gray-900">Contact</Link>
           </div>
           <p className="text-center text-gray-500 text-sm">
-            © 2024 CloudGreet. Powered by AI.
+            © 2024 CloudGreet. All rights reserved. Powered by AI.
           </p>
         </div>
       </footer>
     </div>
   )
 }
+
