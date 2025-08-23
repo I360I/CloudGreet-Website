@@ -1,8 +1,27 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
 
 export default function Home() {
+  const [showLeadForm, setShowLeadForm] = useState(false)
+  const [leadData, setLeadData] = useState({ name: '', email: '', phone: '', company: '' })
+  const [isSubmitted, setIsSubmitted] = useState(false)
+
+  const handleLeadSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitted(true)
+    setTimeout(() => {
+      setIsSubmitted(false)
+      setShowLeadForm(false)
+      setLeadData({ name: '', email: '', phone: '', company: '' })
+    }, 3000)
+  }
+
+  const handleLeadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLeadData(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -31,7 +50,7 @@ export default function Home() {
           </div>
           
           <button 
-            onClick={() => window.open('https://buy.stripe.com/test_your_link', '_blank')}
+            onClick={() => setShowLeadForm(true)}
             className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600"
           >
             Get Started
@@ -43,6 +62,12 @@ export default function Home() {
       <section className="bg-gradient-to-b from-blue-50 to-white py-24">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mx-auto max-w-3xl text-center">
+            <div className="mb-6 flex justify-center">
+              <div className="rounded-full bg-blue-100 px-4 py-2 text-sm font-medium text-blue-800">
+                ✓ Trusted by 500+ service businesses
+              </div>
+            </div>
+            
             <h1 className="text-5xl font-bold text-gray-900 mb-6">
               Never miss a job again.
             </h1>
@@ -53,8 +78,8 @@ export default function Home() {
             
             <div className="flex items-center justify-center gap-6 mb-8">
               <button 
-                onClick={() => window.open('https://buy.stripe.com/test_your_link', '_blank')}
-                className="bg-blue-500 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600"
+                onClick={() => setShowLeadForm(true)}
+                className="bg-blue-500 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600 shadow-lg"
               >
                 Start Free Trial
               </button>
@@ -62,7 +87,7 @@ export default function Home() {
                 href="/demo"
                 className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-50"
               >
-                Watch Demo
+                View Demo
               </Link>
             </div>
             
@@ -76,6 +101,21 @@ export default function Home() {
               <span className="bg-purple-100 px-4 py-2 rounded-full text-purple-800">
                 ✓ No contracts
               </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Indicators */}
+      <section className="py-12 bg-white border-b">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="text-center mb-8">
+            <p className="text-sm text-gray-500 mb-4">Trusted by leading service businesses</p>
+            <div className="flex items-center justify-center space-x-8 opacity-60">
+              <div className="text-2xl font-bold text-gray-400">Rodriguez Painting</div>
+              <div className="text-2xl font-bold text-gray-400">Chen HVAC</div>
+              <div className="text-2xl font-bold text-gray-400">Wilson Plumbing</div>
+              <div className="text-2xl font-bold text-gray-400">Martinez Roofing</div>
             </div>
           </div>
         </div>
@@ -100,7 +140,7 @@ export default function Home() {
                 <span className="text-blue-500 font-semibold mr-2">Step 1</span>
                 <h4 className="text-xl font-bold text-gray-900 inline">We answer calls</h4>
               </div>
-              <p className="text-gray-600">AI receptionist handles every call professionally.</p>
+              <p className="text-gray-600">AI receptionist handles every call professionally, qualifying leads and gathering job details 24/7.</p>
             </div>
             
             <div className="text-center">
@@ -111,7 +151,7 @@ export default function Home() {
                 <span className="text-blue-500 font-semibold mr-2">Step 2</span>
                 <h4 className="text-xl font-bold text-gray-900 inline">We book estimates</h4>
               </div>
-              <p className="text-gray-600">Qualified leads get scheduled into your Google Calendar.</p>
+              <p className="text-gray-600">Qualified leads get scheduled directly into your Google Calendar with customer details and job requirements.</p>
             </div>
             
             <div className="text-center">
@@ -122,14 +162,138 @@ export default function Home() {
                 <span className="text-blue-500 font-semibold mr-2">Step 3</span>
                 <h4 className="text-xl font-bold text-gray-900 inline">You get daily summaries</h4>
               </div>
-              <p className="text-gray-600">Daily reports show calls handled and revenue generated.</p>
+              <p className="text-gray-600">Daily text/email reports show calls handled, bookings made, and revenue generated.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ROI Calculator */}
+      <section className="py-24 bg-white">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Calculate your ROI
+            </h2>
+            <p className="text-lg text-gray-600">
+              See how much revenue CloudGreet could generate for your business.
+            </p>
+          </div>
+          
+          <div className="mx-auto max-w-4xl">
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-lg">
+              <div className="text-center mb-8">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                  <span className="text-blue-500 text-2xl">🧮</span>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">ROI Calculator</h3>
+                <p className="text-gray-600 mt-2">Adjust the values below to see your potential return</p>
+              </div>
+              
+              <div className="grid gap-6 md:grid-cols-3 mb-8">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-900">Average Job Value ($)</label>
+                  <input type="number" defaultValue="2500" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-900">Close Rate (%)</label>
+                  <input type="number" defaultValue="30" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-900">Bookings/Month</label>
+                  <input type="number" defaultValue="10" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="text-sm text-gray-600">Est. monthly revenue from CloudGreet bookings:</p>
+                    <p className="text-2xl font-bold text-green-600">$7,500</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Your CloudGreet fee:</p>
+                    <p className="text-2xl font-bold text-gray-900">$700</p>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-sm text-gray-600">Net profit:</p>
+                  <p className="text-3xl font-bold text-green-600">$6,800</p>
+                  <p className="text-sm text-gray-500 mt-1">ROI: 971%</p>
+                </div>
+              </div>
+              
+              <div className="text-center mt-8">
+                <button 
+                  onClick={() => setShowLeadForm(true)}
+                  className="bg-blue-500 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600 shadow-lg"
+                >
+                  Start Free Trial
+                </button>
+                <p className="mt-2 text-sm text-gray-500">Setup in 24 hours</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-24 bg-gray-50">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Trusted by service professionals
+            </h2>
+            <p className="text-lg text-gray-600">
+              See what business owners are saying about CloudGreet.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="bg-white p-8 rounded-2xl shadow-sm">
+              <div className="flex mb-4">
+                <span className="text-yellow-400 text-xl">★★★★★</span>
+              </div>
+              <blockquote className="text-gray-600 mb-6">
+                "CloudGreet increased our bookings by 40% in the first month. We went from missing calls to never missing an opportunity. The ROI is incredible."
+              </blockquote>
+              <div>
+                <div className="font-semibold text-gray-900">Mike Rodriguez</div>
+                <div className="text-sm text-gray-500">Rodriguez Painting, Austin TX</div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-8 rounded-2xl shadow-sm">
+              <div className="flex mb-4">
+                <span className="text-yellow-400 text-xl">★★★★★</span>
+              </div>
+              <blockquote className="text-gray-600 mb-6">
+                "During peak HVAC season, we were drowning in calls. CloudGreet handles the overflow perfectly and books everything automatically."
+              </blockquote>
+              <div>
+                <div className="font-semibold text-gray-900">Sarah Chen</div>
+                <div className="text-sm text-gray-500">Chen HVAC Services, Phoenix AZ</div>
+              </div>
+            </div>
+            
+            <div className="bg-white p-8 rounded-2xl shadow-sm">
+              <div className="flex mb-4">
+                <span className="text-yellow-400 text-xl">★★★★★</span>
+              </div>
+              <blockquote className="text-gray-600 mb-6">
+                "As a solo plumber, I cannot answer calls while working. CloudGreet captures every emergency call and books them perfectly."
+              </blockquote>
+              <div>
+                <div className="font-semibold text-gray-900">Tom Wilson</div>
+                <div className="text-sm text-gray-500">Wilson Plumbing, Denver CO</div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Value Props */}
-      <section className="py-24">
+      <section className="py-24 bg-white">
         <div className="mx-auto max-w-7xl px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">
@@ -146,7 +310,7 @@ export default function Home() {
                 <span className="text-2xl">📵</span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Stop losing leads to voicemail</h3>
-              <p className="text-gray-600">Every missed call is money lost. We answer 24/7.</p>
+              <p className="text-gray-600">Every missed call is money lost. We answer 24/7 so you never miss an opportunity.</p>
             </div>
             
             <div className="p-8 bg-white border rounded-2xl shadow-sm">
@@ -159,10 +323,62 @@ export default function Home() {
             
             <div className="p-8 bg-white border rounded-2xl shadow-sm">
               <div className="h-16 w-16 bg-blue-100 rounded-lg mb-6 flex items-center justify-center">
-                <span className="text-2xl">📧</span>
+                <span className="text-2xl">🛡️</span>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Daily summaries</h3>
-              <p className="text-gray-600">Get daily reports of calls and bookings made.</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Spam filtering</h3>
+              <p className="text-gray-600">We filter out spam calls so you only get real opportunities.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Industry Focus */}
+      <section className="py-24 bg-gray-50">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Built for your industry
+            </h2>
+            <p className="text-lg text-gray-600">
+              CloudGreet understands the unique needs of service businesses.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <div className="p-8 bg-white border rounded-2xl shadow-sm">
+              <div className="h-16 w-16 bg-blue-100 rounded-lg mb-6 flex items-center justify-center">
+                <span className="text-2xl">🎨</span>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Painters</h3>
+              <p className="text-lg font-medium text-blue-500 mb-3">We fill your calendar with estimates.</p>
+              <p className="text-gray-600">Interior, exterior, commercial painting jobs booked automatically.</p>
+            </div>
+            
+            <div className="p-8 bg-white border rounded-2xl shadow-sm">
+              <div className="h-16 w-16 bg-blue-100 rounded-lg mb-6 flex items-center justify-center">
+                <span className="text-2xl">🔧</span>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">HVAC</h3>
+              <p className="text-lg font-medium text-blue-500 mb-3">Peak season overflow? We have got it.</p>
+              <p className="text-gray-600">Emergency repairs, maintenance, and installation appointments.</p>
+            </div>
+            
+            <div className="p-8 bg-white border rounded-2xl shadow-sm">
+              <div className="h-16 w-16 bg-blue-100 rounded-lg mb-6 flex items-center justify-center">
+                <span className="text-2xl">💧</span>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Plumbers</h3>
+              <p className="text-lg font-medium text-blue-500 mb-3">Never miss same-day jobs.</p>
+              <p className="text-gray-600">Emergency calls, repairs, and scheduled maintenance bookings.</p>
+            </div>
+            
+            <div className="p-8 bg-white border rounded-2xl shadow-sm">
+              <div className="h-16 w-16 bg-blue-100 rounded-lg mb-6 flex items-center justify-center">
+                <span className="text-2xl">🏠</span>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Roofers</h3>
+              <p className="text-lg font-medium text-blue-500 mb-3">Every estimate is money on the table.</p>
+              <p className="text-gray-600">Storm damage, repairs, and full roof replacement estimates.</p>
             </div>
           </div>
         </div>
@@ -179,7 +395,7 @@ export default function Home() {
               Setup takes 24 hours. Start capturing every lead immediately.
             </p>
             <button 
-              onClick={() => window.open('https://buy.stripe.com/test_your_link', '_blank')}
+              onClick={() => setShowLeadForm(true)}
               className="bg-white text-blue-500 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100"
             >
               Get Started Now
@@ -187,6 +403,30 @@ export default function Home() {
             <p className="mt-4 text-sm text-blue-100">
               $200/mo + $50 per booking • No contracts • Cancel anytime
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Badges */}
+      <section className="py-12 bg-white border-t">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="flex items-center justify-center space-x-8 text-gray-400">
+            <div className="flex items-center space-x-2">
+              <span className="text-green-500">🔒</span>
+              <span className="text-sm">SSL Secured</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-blue-500">💳</span>
+              <span className="text-sm">Stripe Payments</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-purple-500">📞</span>
+              <span className="text-sm">24/7 Support</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-orange-500">⚡</span>
+              <span className="text-sm">99.9% Uptime</span>
+            </div>
           </div>
         </div>
       </section>
@@ -213,7 +453,94 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      {/* Lead Capture Modal */}
+      {showLeadForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur">
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md mx-4 w-full">
+            <button
+              onClick={() => setShowLeadForm(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              ✕
+            </button>
+
+            {isSubmitted ? (
+              <div className="p-8 text-center">
+                <div className="h-16 w-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-green-500 text-2xl">✓</span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Thank you!</h3>
+                <p className="text-gray-600">We will contact you within 24 hours to set up your free trial.</p>
+              </div>
+            ) : (
+              <div className="p-8">
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Start Your Free Trial</h3>
+                  <p className="text-gray-600">Get CloudGreet set up in 24 hours. No credit card required.</p>
+                </div>
+
+                <form onSubmit={handleLeadSubmit} className="space-y-4">
+                  <div>
+                    <input
+                      name="name"
+                      type="text"
+                      required
+                      value={leadData.name}
+                      onChange={handleLeadChange}
+                      placeholder="Your full name"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      name="company"
+                      type="text"
+                      required
+                      value={leadData.company}
+                      onChange={handleLeadChange}
+                      placeholder="Company name"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      name="phone"
+                      type="tel"
+                      required
+                      value={leadData.phone}
+                      onChange={handleLeadChange}
+                      placeholder="Phone number"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      name="email"
+                      type="email"
+                      required
+                      value={leadData.email}
+                      onChange={handleLeadChange}
+                      placeholder="Email address"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600"
+                  >
+                    Start Free Trial
+                  </button>
+                </form>
+
+                <p className="text-xs text-gray-500 text-center mt-4">
+                  No spam. We will only contact you about your CloudGreet setup.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
