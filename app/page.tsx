@@ -7,6 +7,19 @@ export default function Home() {
   const [showLeadForm, setShowLeadForm] = useState(false)
   const [leadData, setLeadData] = useState({ name: '', email: '', phone: '', company: '' })
   const [isSubmitted, setIsSubmitted] = useState(false)
+  
+  // ROI Calculator State
+  const [roiData, setRoiData] = useState({
+    jobValue: 2500,
+    closeRate: 30,
+    bookingsPerMonth: 10
+  })
+  const [roiResults, setRoiResults] = useState({
+    monthlyRevenue: 7500,
+    cloudGreetFee: 700,
+    netProfit: 6800,
+    roi: 971
+  })
 
   const handleLeadSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -20,6 +33,43 @@ export default function Home() {
 
   const handleLeadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLeadData(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  const handleRoiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    const numValue = parseInt(value) || 0
+    setRoiData(prev => ({ ...prev, [name]: numValue }))
+    
+    // Auto-calculate as user types
+    const updatedData = { ...roiData, [name]: numValue }
+    calculateROIWithData(updatedData)
+  }
+
+  const calculateROI = () => {
+    calculateROIWithData(roiData)
+  }
+
+  const calculateROIWithData = (data: typeof roiData) => {
+    const { jobValue, closeRate, bookingsPerMonth } = data
+    
+    // Calculate monthly revenue: bookings * job value * close rate / 100
+    const monthlyRevenue = Math.round((bookingsPerMonth * jobValue * closeRate) / 100)
+    
+    // Calculate CloudGreet fee: $200 base + $50 per booking
+    const cloudGreetFee = 200 + (bookingsPerMonth * 50)
+    
+    // Calculate net profit
+    const netProfit = monthlyRevenue - cloudGreetFee
+    
+    // Calculate ROI percentage
+    const roi = cloudGreetFee > 0 ? Math.round((netProfit / cloudGreetFee) * 100) : 0
+    
+    setRoiResults({
+      monthlyRevenue,
+      cloudGreetFee,
+      netProfit: Math.max(0, netProfit),
+      roi
+    })
   }
 
   return (
@@ -193,44 +243,67 @@ export default function Home() {
               <div className="grid gap-6 md:grid-cols-3 mb-8">
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-900">Average Job Value ($)</label>
-                  <input type="number" defaultValue="2500" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input 
+                    type="number" 
+                    name="jobValue"
+                    value={roiData.jobValue}
+                    onChange={handleRoiChange}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    style={{ color: '#111827' }}
+                    placeholder="2500"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-900">Close Rate (%)</label>
-                  <input type="number" defaultValue="30" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input 
+                    type="number" 
+                    name="closeRate"
+                    value={roiData.closeRate}
+                    onChange={handleRoiChange}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    style={{ color: '#111827' }}
+                    placeholder="30"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-900">Bookings/Month</label>
-                  <input type="number" defaultValue="10" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input 
+                    type="number" 
+                    name="bookingsPerMonth"
+                    value={roiData.bookingsPerMonth}
+                    onChange={handleRoiChange}
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    style={{ color: '#111827' }}
+                    placeholder="10"
+                  />
                 </div>
+              </div>
+
+              <div className="text-center mb-8">
+                <button 
+                  onClick={calculateROI}
+                  className="bg-blue-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-600 shadow-lg"
+                >
+                  Calculate ROI
+                </button>
               </div>
               
               <div className="bg-gray-50 rounded-lg p-6">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <p className="text-sm text-gray-600">Est. monthly revenue from CloudGreet bookings:</p>
-                    <p className="text-2xl font-bold text-green-600">$7,500</p>
+                    <p className="text-2xl font-bold text-green-600">${roiResults.monthlyRevenue.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Your CloudGreet fee:</p>
-                    <p className="text-2xl font-bold text-gray-900">$700</p>
+                    <p className="text-2xl font-bold text-gray-900">${roiResults.cloudGreetFee.toLocaleString()}</p>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t">
                   <p className="text-sm text-gray-600">Net profit:</p>
-                  <p className="text-3xl font-bold text-green-600">$6,800</p>
-                  <p className="text-sm text-gray-500 mt-1">ROI: 971%</p>
+                  <p className="text-3xl font-bold text-green-600">${roiResults.netProfit.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500 mt-1">ROI: {roiResults.roi}%</p>
                 </div>
-              </div>
-              
-              <div className="text-center mt-8">
-                <button 
-                  onClick={() => setShowLeadForm(true)}
-                  className="bg-blue-500 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600 shadow-lg"
-                >
-                  Start Free Trial
-                </button>
-                <p className="mt-2 text-sm text-gray-500">Setup in 24 hours</p>
               </div>
             </div>
           </div>
@@ -489,7 +562,8 @@ export default function Home() {
                       value={leadData.name}
                       onChange={handleLeadChange}
                       placeholder="Your full name"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      style={{ color: '#111827' }}
                     />
                   </div>
                   <div>
@@ -500,7 +574,8 @@ export default function Home() {
                       value={leadData.company}
                       onChange={handleLeadChange}
                       placeholder="Company name"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      style={{ color: '#111827' }}
                     />
                   </div>
                   <div>
@@ -511,7 +586,8 @@ export default function Home() {
                       value={leadData.phone}
                       onChange={handleLeadChange}
                       placeholder="Phone number"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      style={{ color: '#111827' }}
                     />
                   </div>
                   <div>
@@ -522,7 +598,8 @@ export default function Home() {
                       value={leadData.email}
                       onChange={handleLeadChange}
                       placeholder="Email address"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      style={{ color: '#111827' }}
                     />
                   </div>
                   <button
@@ -533,7 +610,7 @@ export default function Home() {
                   </button>
                 </form>
 
-                <p className="text-xs text-gray-500 text-center mt-4">
+                <p className="<p className="text-xs text-gray-500 text-center mt-4">
                   No spam. We will only contact you about your CloudGreet setup.
                 </p>
               </div>
@@ -544,3 +621,5 @@ export default function Home() {
     </div>
   )
 }
+
+
