@@ -15,7 +15,6 @@ export default function ContactPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Simulate form submission
     setIsSubmitted(true)
     setTimeout(() => {
       setIsSubmitted(false)
@@ -33,7 +32,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-50 w-full border-b bg-white">
         <nav className="mx-auto flex max-w-7xl items-center justify-between p-6">
           <Link href="/" className="flex items-center space-x-2">
             <div className="h-10 w-10 rounded-lg bg-blue-500 flex items-center justify-center">
@@ -58,24 +57,24 @@ export default function ContactPage() {
         </nav>
       </header>
 
-      <div className="py-24 sm:py-32">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="py-24">
+        <div className="mx-auto max-w-7xl px-6">
           <div className="mb-8">
-            <Link href="/" className="inline-flex items-center text-blue-500 hover:text-blue-600">
+            <Link href="/" className="text-blue-500 hover:text-blue-600">
               ← Back to Home
             </Link>
           </div>
 
           <div className="mx-auto max-w-2xl text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+            <h1 className="text-4xl font-bold text-gray-900 mb-6">
               Contact Us
             </h1>
-            <p className="mt-6 text-lg leading-8 text-gray-600">
-              Have questions about CloudGreet? We'd love to hear from you.
+            <p className="text-lg text-gray-600 mb-16">
+              Have questions about CloudGreet? We would love to hear from you.
             </p>
           </div>
 
-          <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-16 lg:grid-cols-2">
+          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-16 lg:grid-cols-2">
             {/* Contact Information */}
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-8">Get in touch</h2>
@@ -87,7 +86,7 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-gray-900">Email</h3>
                     <p className="text-gray-600">hello@cloudgreet.com</p>
-                    <p className="text-sm text-gray-500">We'll respond within 24 hours</p>
+                    <p className="text-sm text-gray-500">We will respond within 24 hours</p>
                   </div>
                 </div>
                 
@@ -118,7 +117,7 @@ export default function ContactPage() {
                 <p className="text-gray-600 mb-4">Skip the form and start your free trial now. Setup takes just 24 hours.</p>
                 <button 
                   onClick={() => window.open('https://buy.stripe.com/test_your_link', '_blank')}
-                  className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+                  className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600"
                 >
                   Start Free Trial
                 </button>
@@ -135,7 +134,7 @@ export default function ContactPage() {
                     <span className="text-green-500 text-2xl">✓</span>
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Message sent!</h3>
-                  <p className="text-gray-600">We'll get back to you within 24 hours.</p>
+                  <p className="text-gray-600">We will get back to you within 24 hours.</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -152,7 +151,7 @@ export default function ContactPage() {
                         value={formData.name}
                         onChange={handleChange}
                         placeholder="Your full name"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                     <div>
@@ -167,7 +166,7 @@ export default function ContactPage() {
                         value={formData.company}
                         onChange={handleChange}
                         placeholder="Your business name"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   </div>
@@ -185,7 +184,7 @@ export default function ContactPage() {
                         value={formData.phone}
                         onChange={handleChange}
                         placeholder="(555) 123-4567"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                     <div>
@@ -200,7 +199,7 @@ export default function ContactPage() {
                         value={formData.email}
                         onChange={handleChange}
                         placeholder="you@company.com"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
                   </div>
@@ -217,13 +216,13 @@ export default function ContactPage() {
                       value={formData.message}
                       onChange={handleChange}
                       placeholder="Tell us about your business and how we can help..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                     />
                   </div>
 
                   <button 
                     type="submit"
-                    className="w-full bg-blue-500 text-white px-6 py-4 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+                    className="w-full bg-blue-500 text-white px-6 py-4 rounded-lg font-semibold hover:bg-blue-600"
                   >
                     Send Message
                   </button>

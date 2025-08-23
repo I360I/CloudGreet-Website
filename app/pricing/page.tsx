@@ -133,11 +133,11 @@ export default function PricingPage() {
               </div>
               <div className="border-b border-gray-200 pb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Can I pause or cancel anytime?</h3>
-                <p className="text-gray-600">Yes, no contracts required. You can pause service or cancel with 30 days notice. We'll provide all call logs and booking data upon cancellation.</p>
+                <p className="text-gray-600">Yes, no contracts required. You can pause service or cancel with 30 days notice. We will provide all call logs and booking data upon cancellation.</p>
               </div>
               <div className="border-b border-gray-200 pb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">What if I get too many bookings?</h3>
-                <p className="text-gray-600">You can set daily, weekly, or monthly booking limits. When you reach your cap, we'll politely defer additional callers to your next available period.</p>
+                <p className="text-gray-600">You can set daily, weekly, or monthly booking limits. When you reach your cap, we will politely defer additional callers to your next available period.</p>
               </div>
             </div>
           </div>
