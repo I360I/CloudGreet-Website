@@ -2,38 +2,54 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [companyName, setCompanyName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
   const router = useRouter()
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
     
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, companyName })
       })
       
-      if (result?.error) {
-        setError("Invalid email or password")
+      const data = await response.json()
+      
+      if (response.ok) {
+        setSuccess(true)
+        setTimeout(() => router.push('/login'), 2000)
       } else {
-        router.push('/dashboard')
+        setError(data.error || "Something went wrong")
       }
     } catch (error) {
       setError("Something went wrong. Please try again.")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">✅</div>
+          <h1 className="text-2xl font-bold text-white mb-2">Account Created!</h1>
+          <p className="text-blue-200">Redirecting to login...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -59,11 +75,11 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-8 shadow-2xl">
             <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
-                <span className="text-white text-3xl">📊</span>
+              <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                <span className="text-white text-3xl">🚀</span>
               </div>
-              <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-              <p className="text-blue-200">Access your CloudGreet dashboard</p>
+              <h1 className="text-3xl font-bold text-white mb-2">Get Started</h1>
+              <p className="text-blue-200">Create your CloudGreet account</p>
             </div>
 
             {error && (
@@ -72,7 +88,19 @@ export default function LoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleRegister} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-white mb-2">Company Name</label>
+                <input
+                  type="text"
+                  required
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm"
+                  placeholder="Your Company Name"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-white mb-2">Email Address</label>
                 <input
@@ -90,6 +118,7 @@ export default function LoginPage() {
                 <input
                   type="password"
                   required
+                  minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm"
@@ -100,24 +129,24 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-bold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105 disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-green-500 to-blue-600 text-white py-3 rounded-xl font-bold hover:from-green-600 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105 disabled:opacity-50"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Signing In...
+                    Creating Account...
                   </div>
                 ) : (
-                  "🚀 Enter Dashboard"
+                  "🚀 Create Account"
                 )}
               </button>
             </form>
 
             <div className="mt-8 text-center">
               <p className="text-white/60 text-sm">
-                Don&apos;t have an account?{" "}
-                <Link href="/register" className="text-blue-300 hover:text-blue-200 transition-colors font-semibold">
-                  Create one here
+                Already have an account?{" "}
+                <Link href="/login" className="text-blue-300 hover:text-blue-200 transition-colors font-semibold">
+                  Sign in here
                 </Link>
               </p>
             </div>
