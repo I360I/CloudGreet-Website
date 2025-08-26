@@ -1,0 +1,78 @@
+[33mb069579[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m fix: Add comprehensive Tailwind replacement CSS
+[33me33a038[m fix: Add lucide-react package for icons
+[33m4495067[m fix: Remove authOptions import from dashboard route
+[33mbdaa8e7[m fix: Update NextAuth route exports for Next.js 15
+[33mf7ce9ff[m fix: Remove all Tailwind configs and disable PostCSS
+[33m11381b0[m fix: Remove all Tailwind config files completely
+[33m837de0b[m fix: Remove Tailwind completely, use basic CSS
+[33mc698869[m fix: Recreate clean globals.css file
+[33md60bf96[m fix: Clean globals.css syntax error
+[33m2bbd077[m fix: Create vapi-webhook endpoint properly
+[33m3f4e233[m fix: Restore correct package.json format
+[33m57e2add[m fix: Create missing vapi-webhook endpoint
+[33m9512e62[m feat: Add Google Calendar integration for AI receptionist bookings
+[33md3c5439[m feat: Add Vapi webhook handler for AI receptionist
+[33mf52d8cd[m fix: Add .npmrc for proper Tailwind CSS build resolution
+[33m8904002[m fix: Downgrade to React 18 for NextAuth compatibility
+[33m2f732cc[m fix: Use exact dependency versions for stable build
+[33m9f888a6[m fix: Move Tailwind CSS to dependencies for Vercel build
+[33m94a3a06[m fix: Add PostCSS config and autoprefixer for Tailwind CSS
+[33mb04386b[m fix: Complete deployment fix - remove Turbopack, clean CSS, proper fonts
+[33mff2c28e[m fix: Correct package.json syntax error
+[33mabe44ac[m fix: Add prisma generate to build process for Vercel deployment
+[33ma88519e[m feat: Professional AI receptionist dashboard with 3D liquid animation
+[33md910bec[m Disabled ESLint for deployment
+[33m5fceac7[m Added ESLint config to fix deployment
+[33m7dfc4eb[m Initial commit: CloudGreet dashboard with customizable goals
+[33m6b04124[m Fix broken string in homepage line 613
+[33mb42ca3e[m Remove duplicate CTA button from ROI calculator section
+[33m3e89243[m Fix demo page completely
+[33m0845fb5[m Fix all unescaped quotes in testimonials and demo conversations
+[33m911cbb1[m Fix all unescaped quotes in testimonials and demo conversations
+[33meda15e2[m Fix broken string in demo page line 86
+[33m1126540[m Fix syntax errors in all broken files
+[33md1773ee[m Complete website overhaul: working lead capture CTAs, real contact info, enhanced trust signals, comprehensive FAQ, professional demo page, advanced pricing with ROI calculator, testimonials, and conversion optimization
+[33mda571d6[m Fix all apostrophe errors for production build
+[33m290cd7a[m Complete CloudGreet website ready for production
+[33m7ac23c3[m Trigger deployment
+[33mf9e52e6[m Fix apostrophes for build
+[33m4376a50[m CloudGreet website
+[33mb069579[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m fix: Add comprehensive Tailwind replacement CSS
+[33me33a038[m fix: Add lucide-react package for icons
+[33m4495067[m fix: Remove authOptions import from dashboard route
+[33mbdaa8e7[m fix: Update NextAuth route exports for Next.js 15
+[33mf7ce9ff[m fix: Remove all Tailwind configs and disable PostCSS
+[33m11381b0[m fix: Remove all Tailwind config files completely
+[33m837de0b[m fix: Remove Tailwind completely, use basic CSS
+[33mc698869[m fix: Recreate clean globals.css file
+[33md60bf96[m fix: Clean globals.css syntax error
+[33m2bbd077[m fix: Create vapi-webhook endpoint properly
+[33m3f4e233[m fix: Restore correct package.json format
+[33m57e2add[m fix: Create missing vapi-webhook endpoint
+[33m9512e62[m feat: Add Google Calendar integration for AI receptionist bookings
+[33md3c5439[m feat: Add Vapi webhook handler for AI receptionist
+[33mf52d8cd[m fix: Add .npmrc for proper Tailwind CSS build resolution
+[33m8904002[m fix: Downgrade to React 18 for NextAuth compatibility
+[33m2f732cc[m fix: Use exact dependency versions for stable build
+[33m9f888a6[m fix: Move Tailwind CSS to dependencies for Vercel build
+[33m94a3a06[m fix: Add PostCSS config and autoprefixer for Tailwind CSS
+[33mb04386b[m fix: Complete deployment fix - remove Turbopack, clean CSS, proper fonts
+[33mff2c28e[m fix: Correct package.json syntax error
+[33mabe44ac[m fix: Add prisma generate to build process for Vercel deployment
+[33ma88519e[m feat: Professional AI receptionist dashboard with 3D liquid animation
+[33md910bec[m Disabled ESLint for deployment
+[33m5fceac7[m Added ESLint config to fix deployment
+[33m7dfc4eb[m Initial commit: CloudGreet dashboard with customizable goals
+[33m6b04124[m Fix broken string in homepage line 613
+[33mb42ca3e[m Remove duplicate CTA button from ROI calculator section
+[33m3e89243[m Fix demo page completely
+[33m0845fb5[m Fix all unescaped quotes in testimonials and demo conversations
+[33m911cbb1[m Fix all unescaped quotes in testimonials and demo conversations
+[33meda15e2[m Fix broken string in demo page line 86
+[33m1126540[m Fix syntax errors in all broken files
+[33md1773ee[m Complete website overhaul: working lead capture CTAs, real contact info, enhanced trust signals, comprehensive FAQ, professional demo page, advanced pricing with ROI calculator, testimonials, and conversion optimization
+[33mda571d6[m Fix all apostrophe errors for production build
+[33m290cd7a[m Complete CloudGreet website ready for production
+[33m7ac23c3[m Trigger deployment
+[33mf9e52e6[m Fix apostrophes for build
+[33m4376a50[m CloudGreet website
