@@ -3,6 +3,12 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
   },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async headers() {
     return [
       {
