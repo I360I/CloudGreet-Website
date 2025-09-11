@@ -112,3 +112,65 @@ export const authOptions: NextAuthOptions = {
 export async function getServerSessionWrapper() {
   return await getServerSession(authOptions)
 }
+
+// Additional utility functions that are being imported
+export async function findUserById(id: string) {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      console.error('Error finding user by ID:', error)
+      return null
+    }
+
+    return user
+  } catch (error) {
+    console.error('Error finding user by ID:', error)
+    return null
+  }
+}
+
+export async function findUserByEmail(email: string) {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single()
+
+    if (error) {
+      console.error('Error finding user by email:', error)
+      return null
+    }
+
+    return user
+  } catch (error) {
+    console.error('Error finding user by email:', error)
+    return null
+  }
+}
+
+export async function updateUser(id: string, updates: any) {
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error updating user:', error)
+      return null
+    }
+
+    return user
+  } catch (error) {
+    console.error('Error updating user:', error)
+    return null
+  }
+}

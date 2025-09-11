@@ -147,3 +147,21 @@ export function logError(error: Error, context?: any) {
     console.error('Development error:', errorLog)
   }
 }
+
+// Additional utility functions that are being imported
+export function handleApiError(error: Error, req: NextRequest): NextResponse {
+  return handleError(error, req)
+}
+
+export function validateUserId(userId: string): boolean {
+  return userId && userId.length > 0
+}
+
+export function createSuccessResponse(data: any, message?: string) {
+  return NextResponse.json({
+    success: true,
+    data,
+    message: message || 'Success',
+    timestamp: new Date().toISOString()
+  })
+}
