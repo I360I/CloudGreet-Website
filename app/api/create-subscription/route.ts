@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/middleware'
-import { validateApiRequest, subscriptionSchema } from '@/lib/validation'
-import { Logger } from '@/lib/logger'
+import { withAuth } from '../../lib/middleware'
+import { validateApiRequest, subscriptionSchema } from '../../lib/validation'
+import { Logger } from '../../lib/logger'
 import Stripe from 'stripe'
 
 const stripeKey = process.env.STRIPE_SECRET_KEY

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withPublic } from '@/lib/middleware'
-import { Logger } from '@/lib/logger'
-import { db } from '@/lib/database/connection'
-import { azureCommunication } from '@/lib/azure-communication'
+import { withPublic } from '../../lib/middleware'
+import { Logger } from '../../lib/logger'
+import { db } from '../../lib/database/connection'
+import { azureCommunication } from '../../lib/azure-communication'
 import Stripe from 'stripe'
 
 async function healthCheck(request: NextRequest) {
