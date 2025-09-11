@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withPublic } from '@/lib/middleware'
-import { validateApiRequest, businessSetupSchema } from '@/lib/validation'
-import { Logger } from '@/lib/logger'
 
 async function completeOnboarding(request: NextRequest) {
   try {
@@ -83,7 +80,7 @@ async function completeOnboarding(request: NextRequest) {
     })
     
   } catch (error) {
-    Logger.error('Error during onboarding completion', { error: error instanceof Error ? error.message : 'Unknown error' })
+    console.error('Error during onboarding completion', { error: error instanceof Error ? error.message : 'Unknown error' })
     return NextResponse.json(
       { success: false, message: 'Failed to complete onboarding' },
       { status: 500 }
@@ -91,5 +88,5 @@ async function completeOnboarding(request: NextRequest) {
   }
 }
 
-export const POST = withPublic(completeOnboarding)
+export const POST = completeOnboarding
 

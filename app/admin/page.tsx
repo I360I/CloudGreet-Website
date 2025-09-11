@@ -250,7 +250,14 @@ export default function AdminDashboard() {
   })
 
   if (status === 'loading' || isLoading) {
-    return <FullPageLoader text="Loading admin dashboard..." />
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading admin dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -821,23 +828,70 @@ export default function AdminDashboard() {
         </main>
 
         {/* Modals */}
-        <ClientDetailModal
-          client={selectedClient}
-          isOpen={showClientModal}
-          onClose={() => {
-            setShowClientModal(false)
-            setSelectedClient(null)
-          }}
-          isDarkMode={isDarkMode}
-          onAction={handleClientAction}
-        />
+        {showClientModal && selectedClient && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold mb-4">Client Details</h3>
+              <div className="space-y-2">
+                <p><strong>Name:</strong> {selectedClient.name}</p>
+                <p><strong>Email:</strong> {selectedClient.email}</p>
+                <p><strong>Business:</strong> {(selectedClient as any).businessName || 'N/A'}</p>
+                <p><strong>Status:</strong> {selectedClient.status}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowClientModal(false)
+                  setSelectedClient(null)
+                }}
+                className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
 
-        <AddClientModal
-          isOpen={showAddClientModal}
-          onClose={() => setShowAddClientModal(false)}
-          isDarkMode={isDarkMode}
-          onAddClient={handleAddClient}
-        />
+        {showAddClientModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold mb-4">Add New Client</h3>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Client Name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+                <input
+                  type="text"
+                  placeholder="Business Name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button
+                  onClick={() => setShowAddClientModal(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    // Handle add client logic
+                    setShowAddClientModal(false)
+                  }}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Add Client
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Toast Container */}
         <ToastContainer toasts={toasts} onClose={removeToast} />

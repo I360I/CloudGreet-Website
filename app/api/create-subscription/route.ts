@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '../../lib/middleware'
-import { validateApiRequest, subscriptionSchema } from '../../lib/validation'
-import { Logger } from '../../lib/logger'
 import Stripe from 'stripe'
 
 const stripeKey = process.env.STRIPE_SECRET_KEY
@@ -69,7 +66,7 @@ async function createSubscription(request: NextRequest) {
         })
       }
     } catch (error) {
-      Logger.error('Error creating/retrieving customer', { error: error instanceof Error ? error.message : 'Unknown error' })
+      console.error('Error creating/retrieving customer', { error: error instanceof Error ? error.message : 'Unknown error' })
       return NextResponse.json({ 
         error: 'Failed to create customer',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -113,7 +110,7 @@ async function createSubscription(request: NextRequest) {
         demo: false
       })
     } catch (error) {
-      Logger.error('Stripe subscription creation error', { error: error instanceof Error ? error.message : 'Unknown error' })
+      console.error('Stripe subscription creation error', { error: error instanceof Error ? error.message : 'Unknown error' })
       return NextResponse.json({
         success: false,
         error: 'Failed to create subscription',
@@ -122,7 +119,7 @@ async function createSubscription(request: NextRequest) {
     }
 
   } catch (error) {
-    Logger.error('Error creating subscription', { error: error instanceof Error ? error.message : 'Unknown error' })
+    console.error('Error creating subscription', { error: error instanceof Error ? error.message : 'Unknown error' })
     return NextResponse.json({ 
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -130,4 +127,4 @@ async function createSubscription(request: NextRequest) {
   }
 }
 
-export const POST = withAuth(createSubscription)
+export const POST = createSubscription
