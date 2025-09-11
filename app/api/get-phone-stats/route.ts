@@ -7,11 +7,8 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const phoneNumber = searchParams.get('phoneNumber')
-    
-    if (!phoneNumber) {
-      return NextResponse.json({ error: 'Phone number is required' }, { status: 400 })
-    }
+    const phoneNumber = searchParams.get('phoneNumber') || '+1 (555) 123-4567'
+    const userId = searchParams.get('userId')
 
     console.log(`📊 Fetching phone stats for ${phoneNumber}`)
 

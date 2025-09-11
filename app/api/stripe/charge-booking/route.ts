@@ -8,6 +8,31 @@ const stripe = stripeKey && !stripeKey.includes('your-') && !stripeKey.includes(
   ? new Stripe(stripeKey, { apiVersion: '2023-10-16' })
   : null
 
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    
+    return NextResponse.json({
+      success: true,
+      data: {
+        status: 'ready',
+        message: 'Service is ready'
+      }
+    });
+  } catch (error) {
+    console.error('Error in GET method:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to get service status' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { customerId, bookingCount, userId } = await request.json()

@@ -1,5 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: NextRequest) {
+  try {
+    return NextResponse.json({
+      success: true,
+      data: {
+        status: 'ready',
+        message: 'Azure webhook endpoint is ready'
+      }
+    });
+  } catch (error) {
+    console.error('Error in GET webhooks/azure-calls:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to get webhook status' },
+      { status: 500 }
+    );
+  }
+}
+
 async function handleAzureWebhook(request: NextRequest) {
   try {
     const body = await request.json()

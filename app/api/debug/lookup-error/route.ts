@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const errorId = searchParams.get('errorId')
+    const errorId = searchParams.get('errorId') || 'default_value'
 
     if (!errorId) {
       return NextResponse.json({

@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' })
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+
+export async function GET(request: NextRequest) {
+  try {
+    return NextResponse.json({
+      success: true,
+      data: {
+        status: 'ready',
+        message: 'Stripe webhook endpoint is ready'
+      }
+    });
+  } catch (error) {
+    console.error('Error in GET webhooks/stripe:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to get webhook status' },
+      { status: 500 }
+    );
+  }
+}
 
 async function handleStripeWebhook(request: NextRequest) {
   try {

@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // In-memory storage for active calls (in production, use Redis or similar)
 let activeCalls = new Map()
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId')
+    
+    return NextResponse.json({
+      success: true,
+      data: {
+        status: 'ready',
+        activeCalls: activeCalls.size,
+        message: 'AI call processing service is ready'
+      }
+    })
+  } catch (error) {
+    console.error('Error in GET process-call:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to get call processing status' },
+      { status: 500 }
+    )
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

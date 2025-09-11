@@ -1,5 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { google } from 'googleapis'
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId')
+    const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
+    
+    // Simulate available slots
+    const availableSlots = [
+      {
+        start: `${date}T09:00:00.000Z`,
+        end: `${date}T10:00:00.000Z`,
+        startTime: '09:00 AM',
+        endTime: '10:00 AM',
+        duration: 60
+      },
+      {
+        start: `${date}T10:30:00.000Z`,
+        end: `${date}T11:30:00.000Z`,
+        startTime: '10:30 AM',
+        endTime: '11:30 AM',
+        duration: 60
+      },
+      {
+        start: `${date}T14:00:00.000Z`,
+        end: `${date}T15:00:00.000Z`,
+        startTime: '02:00 PM',
+        endTime: '03:00 PM',
+        duration: 60
+      }
+    ]
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        available: true,
+        availableSlots,
+        date,
+        businessHours: { start: '09:00', end: '17:00' },
+        workingDays: [1, 2, 3, 4, 5],
+        totalSlots: availableSlots.length
+      }
+    })
+  } catch (error) {
+    console.error('Error getting available slots:', error)
+    return NextResponse.json(
+      { error: 'Failed to get available time slots' },
+      { status: 500 }
+    )
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

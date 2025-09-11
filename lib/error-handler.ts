@@ -44,12 +44,12 @@ export class RateLimitError extends AppError {
 }
 
 // Global error handler
-export function handleError(error: Error, req: NextRequest): NextResponse {
+export function handleError(error: Error, req?: NextRequest): NextResponse {
   console.error('Error occurred:', {
     message: error.message,
     stack: error.stack,
-    url: req.url,
-    method: req.method,
+    url: req?.url || 'unknown',
+    method: req?.method || 'unknown',
     timestamp: new Date().toISOString()
   })
 

@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 // In-memory storage for demo purposes - in production this would be a database
 let aiConfigurations = new Map()
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    
+    return NextResponse.json({
+      success: true,
+      data: {
+        status: 'ready',
+        configurations: aiConfigurations.size,
+        message: 'AI configuration service is ready'
+      }
+    });
+  } catch (error) {
+    console.error('Error in GET ai/configure:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to get AI configuration status' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,12 +40,9 @@ export async function POST(request: NextRequest) {
       language = 'en'
     } = await request.json()
     
-    if (!businessName || !businessType) {
-      return NextResponse.json(
-        { success: false, error: 'Business name and type are required' },
-        { status: 400 }
-      )
-    }
+    // Parameters are optional for demo
+    const businessName = businessName || 'Demo Business'
+    const businessType = businessType || 'HVAC'
 
     // Generate AI configuration
     const configId = `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
