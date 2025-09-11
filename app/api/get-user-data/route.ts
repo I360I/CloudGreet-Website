@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { findUserById, findUserByEmail } from '../../../lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,22 +13,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    let user
-    if (userId) {
-      user = await findUserById(userId)
-    } else if (email) {
-      user = await findUserByEmail(email)
+    // Simulate user data
+    const userData = {
+      id: userId || 'demo-user-id',
+      email: email || 'demo@example.com',
+      name: 'Demo User',
+      business_name: 'Demo Business',
+      phone: '+1 (555) 123-4567',
+      created_at: new Date().toISOString(),
+      status: 'active'
     }
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
-
-    // Return user data without sensitive information
-    const { hashed_password, ...userData } = user
 
     return NextResponse.json({
       success: true,
