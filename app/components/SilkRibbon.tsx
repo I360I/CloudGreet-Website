@@ -40,14 +40,16 @@ export default function SilkRibbon({
               left: `${startLeft}%`,
               filter: 'blur(0.2px)',
               borderRadius: '50px',
-              transform: `rotate(${i * 3 - 6}deg)`, // Slight rotation variation
+              transform: `rotate(0deg)`, // No initial rotation
             }}
             animate={{
-              x: [0, 150, -80, 200, -60, 180, 0], // Much more horizontal movement
-              y: [0, -5, 3, -8, 2, -6, 0], // Minimal vertical movement
-              rotate: [i * 3 - 6, i * 5 - 10, i * 2 - 4, i * 6 - 12, i * 4 - 8, i * 3 - 6],
+              x: [0, 100, 50, 150, 25, 120, 0], // Gentle horizontal drift
+              y: [0, 0, 0, 0, 0, 0, 0], // No vertical movement - stays anchored
+              rotate: [0, 0, 0, 0, 0, 0, 0], // No rotation - keeps straight
               opacity: [0.4, 0.8, 0.3, 0.9, 0.5, 0.7, 0.4], // More visible
-              scaleY: [0.8, 1.6, 0.6, 2.0, 0.9, 1.4, 0.8],
+              scaleY: [1, 1.8, 0.6, 2.2, 0.8, 1.6, 1], // Wave-like bending
+              scaleX: [1, 1.1, 0.9, 1.2, 0.8, 1.1, 1], // Width variation for wave effect
+              transformOrigin: 'center', // Bend from center like a wave
             }}
             transition={{
               duration: randomDuration,
@@ -79,14 +81,16 @@ export default function SilkRibbon({
               left: `${startLeft}%`,
               filter: 'blur(0.1px)',
               borderRadius: '30px',
-              transform: `rotate(${i * 4 - 6}deg)`,
+              transform: `rotate(0deg)`, // No initial rotation
             }}
             animate={{
-              x: [0, 180, -90, 220, -70, 200, 0], // Much more horizontal movement
-              y: [0, -3, 2, -5, 1, -4, 0], // Minimal vertical movement
-              rotate: [i * 4 - 6, i * 6 - 9, i * 3 - 4.5, i * 7 - 10.5, i * 5 - 7.5, i * 4 - 6],
+              x: [0, 80, 40, 120, 20, 100, 0], // Gentle horizontal drift
+              y: [0, 0, 0, 0, 0, 0, 0], // No vertical movement - stays anchored
+              rotate: [0, 0, 0, 0, 0, 0, 0], // No rotation - keeps straight
               opacity: [0.3, 0.9, 0.2, 0.95, 0.4, 0.8, 0.3], // More visible
-              scaleY: [0.6, 2.2, 0.5, 2.5, 0.8, 1.8, 0.6],
+              scaleY: [0.8, 2.4, 0.4, 2.8, 0.6, 2.0, 0.8], // More dramatic wave bending
+              scaleX: [1, 1.3, 0.7, 1.4, 0.6, 1.2, 1], // Width variation for wave effect
+              transformOrigin: 'center', // Bend from center like a wave
             }}
             transition={{
               duration: randomDuration,
