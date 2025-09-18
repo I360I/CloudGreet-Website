@@ -1,55 +1,47 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function middleware(request: NextRequest) {
-  const response = NextResponse.next()
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
 
-  // Security headers
-  response.headers.set('X-Frame-Options', 'DENY')
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('Referrer-Policy', 'origin-when-cross-origin')
-  response.headers.set('X-XSS-Protection', '1; mode=block')
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-  
-  // Content Security Policy
-  const csp = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
-    "img-src 'self' data: https:",
-    "connect-src 'self' https://api.stripe.com https://api.retellai.com https://*.supabase.co",
-    "frame-src https://js.stripe.com",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'"
-  ].join('; ')
-  
-  response.headers.set('Content-Security-Policy', csp)
-  
-  // Rate limiting headers
-  response.headers.set('X-RateLimit-Limit', '100')
-  response.headers.set('X-RateLimit-Remaining', '99')
-  response.headers.set('X-RateLimit-Reset', String(Date.now() + 3600000))
-  
-  // HSTS for HTTPS
-  if (request.nextUrl.protocol === 'https:') {
-    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
+  // Skip middleware for public routes
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/health') ||
+    pathname.startsWith('/api/telynyx/voice-webhook') ||
+    pathname.startsWith('/api/telynyx/sms-webhook') ||
+    pathname.startsWith('/api/stripe/webhook') ||
+    pathname.startsWith('/api/admin') ||
+    pathname === '/landing' ||
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/admin' ||
+    pathname.startsWith('/admin/') ||
+    pathname === '/'
+  ) {
+    return NextResponse.next()
   }
 
-  return response
+  // Simple token check for protected routes
+  const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.replace('Bearer ', '')
+  
+  // If no token and trying to access protected route, redirect to login
+  if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin'))) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  return NextResponse.next()
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    * Match all request paths except for the ones starting with:
+    * - _next/static (static files)
+    * - _next/image (image optimization files)
+    * - favicon.ico (favicon file)
+    */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }

@@ -1,14 +1,32 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Performance optimizations
   experimental: {
     optimizeCss: true,
+    optimizePackageImports: ['framer-motion', 'lucide-react'],
   },
-  typescript: {
-    ignoreBuildErrors: true,
+  
+  // Image optimization
+  images: {
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 31536000, // 1 year
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  
+  // Compression
+  compress: true,
+  
+  // Bundle analyzer (uncomment for analysis)
+  // webpack: (config, { isServer }) => {
+  //   if (!isServer) {
+  //     config.resolve.fallback = {
+  //       ...config.resolve.fallback,
+  //       fs: false,
+  //     }
+  //   }
+  //   return config
+  // },
+  
+  // Security headers
   async headers() {
     return [
       {
@@ -32,25 +50,25 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.stripe.com https://api.retellai.com https://communication.azure.com; frame-src 'self' https://js.stripe.com;",
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.telnyx.com https://api.stripe.com https://xpyrovyhktapbvzdxaho.supabase.co;",
           },
         ],
       },
     ]
   },
+  
+  // Redirects for SEO
   async redirects() {
     return [
       {
-        source: '/dashboard',
-        has: [
-          {
-            type: 'cookie',
-            key: 'next-auth.session-token',
-            value: undefined,
-          },
-        ],
-        destination: '/auth/signin',
-        permanent: false,
+        source: '/home',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/signup',
+        destination: '/',
+        permanent: true,
       },
     ]
   },

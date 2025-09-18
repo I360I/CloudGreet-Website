@@ -1,795 +1,629 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import OnboardingWizard from '../components/OnboardingWizard'
 import { 
-  Phone, 
-  Calendar, 
-  DollarSign, 
-  LogOut,
-  HelpCircle,
-  Settings,
-  Play,
-  BarChart3,
-  Target,
-  TrendingUp,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Clock,
-  X,
-  User,
-  MapPin,
-  Star,
-  Zap,
-  Activity
+  Phone, Brain, DollarSign, Calendar, TrendingUp,
+  ChevronRight, BarChart3, Activity, Clock,
+  ArrowUpRight, ArrowDownRight, Settings, Bell,
+  MessageSquare, MapPin, User, RefreshCw,
+  Star as StarIcon, Calendar as CalendarIcon,
+  Clock as ClockIcon, Zap
 } from 'lucide-react'
-import VoiceTest from '../components/VoiceTest'
-import OnboardingWidget from '../components/OnboardingWidget'
-import NotificationSystem from '../components/NotificationSystem'
-import dynamic from 'next/dynamic'
 
-// Lazy load heavy components for better performance
-const AdvancedAnalytics = dynamic(() => import('../components/AdvancedAnalytics'), {
-  loading: () => <div className="animate-pulse bg-slate-200 dark:bg-slate-700 rounded-lg h-64"></div>
-})
-const ConversationAnalytics = dynamic(() => import('../components/ConversationAnalytics'), {
-  loading: () => <div className="animate-pulse bg-slate-200 dark:bg-slate-700 rounded-lg h-64"></div>
-})
-const PredictiveAnalytics = dynamic(() => import('../components/PredictiveAnalytics'), {
-  loading: () => <div className="animate-pulse bg-slate-200 dark:bg-slate-700 rounded-lg h-64"></div>
-})
-const EnterpriseFeatures = dynamic(() => import('../components/EnterpriseFeatures'), {
-  loading: () => <div className="animate-pulse bg-slate-200 dark:bg-slate-700 rounded-lg h-64"></div>
-})
-import { 
-  TiltCard, 
-  AnimatedCounter, 
-  MorphingProgressBar,
-  StaggeredList,
-  HoverCard
-} from '../components/AdvancedAnimations'
-
-// Lazy load heavy animation components
-const ParticleBackground = dynamic(
-  () => import('../components/AdvancedAnimations').then(mod => ({ default: mod.ParticleBackground })),
-  { ssr: false, loading: () => null }
-)
-const FloatingActionButton = dynamic(
-  () => import('../components/AdvancedAnimations').then(mod => ({ default: mod.FloatingActionButton })),
-  { ssr: false, loading: () => null }
-)
-import { useDashboardData, usePerformanceMonitor } from '../hooks/useDashboardData'
-
-export default function DashboardPage() {
-  const { data: session } = useSession()
-  const router = useRouter()
-  
-  // State management
+export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [onboardingComplete, setOnboardingComplete] = useState(false)
-  const [onboardingData, setOnboardingData] = useState<any>(null)
-  const [demoUser, setDemoUser] = useState<any>(null)
+  const [selectedTab, setSelectedTab] = useState('overview')
+  const [selectedTimeframe, setSelectedTimeframe] = useState('7d')
+  const [isLive, setIsLive] = useState(false)
+  const [isDemoMode, setIsDemoMode] = useState(true)
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  
   const [dashboardData, setDashboardData] = useState({
-    calls: { totalToday: 0, totalWeek: 0, totalMonth: 0 },
-    bookings: { totalToday: 0, totalWeek: 0, totalMonth: 0 },
-    revenue: { totalToday: 0, totalWeek: 0, totalMonth: 0 },
-    answerRate: 0
+    totalCalls: 0,
+    totalRevenue: 0,
+    activeCalls: 0,
+    conversionRate: 0,
+    emergencyCalls: 0,
+    todayBookings: 0,
+    missedCalls: 0,
+    avgCallDuration: 0,
+    customerSatisfaction: 0,
+    monthlyRecurring: 0
   })
-  const [activeCalls, setActiveCalls] = useState<any[]>([])
-  const [recentActivity, setRecentActivity] = useState<any[]>([])
-  const [systemStatus, setSystemStatus] = useState({
-    phone: 'disconnected',
-    calendar: 'disconnected',
-    ai: 'inactive',
-    speech: 'not_ready'
-  })
-  const [currentTime, setCurrentTime] = useState(new Date())
-  const [showOnboardingWidget, setShowOnboardingWidget] = useState(false)
-  const [showWelcome, setShowWelcome] = useState(false)
-  const [billingInfo, setBillingInfo] = useState(null)
-  const [testAgentId, setTestAgentId] = useState<string | null>(null)
-  const [showVoiceTest, setShowVoiceTest] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'conversations' | 'predictions' | 'enterprise'>('overview')
-  
-  // Performance monitoring
-  const performanceMetrics = usePerformanceMonitor()
-  
-  // Advanced data fetching with caching
-  const {
-    dashboardData: cachedDashboardData,
-    systemStatus: cachedSystemStatus,
-    activeCalls: cachedActiveCalls,
-    recentActivity: cachedRecentActivity,
-    isLoading: isDataLoading,
-    hasError: hasDataError,
-    refreshAll,
-    performanceMetrics: dataPerformance
-  } = useDashboardData(demoUser?.businessName || 'Demo User', '30d')
 
-  // Update current time
+  const [recentCalls, setRecentCalls] = useState([])
+  const [upcomingAppointments, setUpcomingAppointments] = useState([])
+  const [liveFeed, setLiveFeed] = useState([])
+
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-    return () => clearInterval(timer)
+    // Check if user just created account and needs onboarding
+    const accountStatus = localStorage.getItem('accountStatus')
+    if (accountStatus === 'demo') {
+      setShowOnboarding(true)
+    }
+    
+    loadDashboardData()
   }, [])
 
-  // Check for welcome state and onboarding status
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    if (urlParams.get('welcome') === 'true') {
-      setShowWelcome(true)
-      // Clean up URL
-      window.history.replaceState({}, '', '/dashboard')
-    }
-    
-    // Check if user is in onboarding process
-    const isInOnboarding = window.location.pathname.includes('/onboarding')
-    if (isInOnboarding) {
-      // Redirect to onboarding if they're trying to access dashboard during onboarding
-      router.push('/onboarding/streamlined')
-    }
-  }, [])
-
-  // Fetch billing information only when onboarding is complete
-  useEffect(() => {
-    if (!onboardingComplete) return
-    
-    const fetchBillingInfo = async () => {
-      try {
-        const response = await fetch('/api/billing/subscription')
-        if (response.ok) {
-          const data = await response.json()
-          setBillingInfo(data.subscription)
-        }
-      } catch (error) {
-        console.error('Error fetching billing info:', error)
-      }
-    }
-    
-    fetchBillingInfo()
-  }, [onboardingComplete])
-
-  // Initialize dashboard
-  useEffect(() => {
-    const initializeDashboard = async () => {
-      try {
-        setIsLoading(true)
-        
-        // Check for demo user data
-        const storedDemoUser = localStorage.getItem('demoUser')
-        if (storedDemoUser) {
-          setDemoUser(JSON.parse(storedDemoUser))
-        }
-
-        // Check onboarding status
-        const storedOnboardingComplete = localStorage.getItem('onboardingComplete')
-        const storedOnboardingData = localStorage.getItem('onboardingData')
-
-        if (storedOnboardingComplete === 'true' && storedOnboardingData) {
-          setOnboardingComplete(true)
-          setOnboardingData(JSON.parse(storedOnboardingData))
-          setSystemStatus({
-            phone: 'connected',
-            calendar: 'connected',
-            ai: 'active',
-            speech: 'ready'
-          })
-        } else {
-          // Show onboarding widget for new users
-          setShowOnboardingWidget(true)
-          setSystemStatus({
-            phone: 'disconnected',
-            calendar: 'disconnected',
-            ai: 'inactive',
-            speech: 'not_ready'
-          })
-          setDashboardData({
-            calls: { totalToday: 0, totalWeek: 0, totalMonth: 0 },
-            bookings: { totalToday: 0, totalWeek: 0, totalMonth: 0 },
-            revenue: { totalToday: 0, totalWeek: 0, totalMonth: 0 },
-            answerRate: 0
-          })
-          setActiveCalls([])
-          setRecentActivity([])
-        }
-
-        // Fetch dashboard data
-        await fetchDashboardData()
-        
-      } catch (error) {
-        console.error('Error initializing dashboard:', error)
-        setError('Failed to load dashboard')
-      } finally {
+  const loadDashboardData = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        // No auth token, show demo data
+        loadDemoData()
         setIsLoading(false)
+        return
       }
-    }
 
-    initializeDashboard()
-  }, [])
-
-  const fetchDashboardData = async () => {
-    try {
-      const businessName = onboardingData?.businessName || demoUser?.business_name || 'Demo User'
-      const response = await fetch(`/api/dashboard?businessName=${encodeURIComponent(businessName)}&range=30d`)
-      if (response.ok) {
-        const result = await response.json()
-        if (result.success) {
-          setDashboardData(result.data)
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error)
-    }
-  }
-
-  const handleSignOut = () => {
-    localStorage.removeItem('demoUser')
-    localStorage.removeItem('onboardingComplete')
-    localStorage.removeItem('onboardingData')
-    window.location.href = '/login'
-  }
-
-  const handleOnboardingComplete = () => {
-    setShowOnboardingWidget(false)
-    setOnboardingComplete(true)
-    // Reload the page to refresh all data
-    window.location.reload()
-  }
-
-  const handleOnboardingDismiss = () => {
-    setShowOnboardingWidget(false)
-  }
-
-  const createTestAgent = async () => {
-    try {
-      const response = await fetch('/api/create-test-agent', {
-        method: 'POST',
+      const response = await fetch('/api/dashboard/data', {
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          businessName: demoUser?.businessName || 'Demo Business',
-          industry: demoUser?.industry || 'hvac',
-          greeting: demoUser?.greeting || 'Hello, thank you for calling!',
-          businessHours: demoUser?.businessHours || 'Mon-Fri 9-5'
-        }),
+          'Authorization': `Bearer ${token}`
+        }
       })
-
-      const result = await response.json()
-
-      if (result.success) {
-        setTestAgentId(result.agent.id)
-        setShowVoiceTest(true)
+      
+      if (response.ok) {
+        const data = await response.json()
+        setDashboardData(data)
+        setIsDemoMode(data.isDemo || false)
+        
+        // Load real data for calls and appointments
+        if (!data.isDemo) {
+          setRecentCalls(data.recentCalls || [])
+          setUpcomingAppointments(data.recentAppointments || [])
+        }
       } else {
-        console.error('Failed to create test agent:', result.error)
+        // API failed, show demo data
+        loadDemoData()
       }
     } catch (error) {
-      console.error('Error creating test agent:', error)
+      // Error occurred, show demo data
+      loadDemoData()
     }
+
+    setIsLoading(false)
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
-  }
+  const loadDemoData = () => {
+    setDashboardData({
+      totalCalls: 247,
+      totalRevenue: 45680,
+      activeCalls: 3,
+      conversionRate: 78,
+      emergencyCalls: 12,
+      todayBookings: 8,
+      missedCalls: 5,
+      avgCallDuration: 4.2,
+      customerSatisfaction: 4.8,
+      monthlyRecurring: 12800
+    })
 
-  const formatTime = (timestamp: Date) => {
-    return new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' }).format(
-      Math.ceil((timestamp.getTime() - Date.now()) / (1000 * 60)),
-      'minute'
-    )
+    setRecentCalls([
+      {
+        id: 1,
+        customer: 'John Smith',
+        phone: '+1 (555) 123-4567',
+        type: 'HVAC Service',
+        duration: '4:32',
+        status: 'completed',
+        outcome: 'appointment_booked',
+        timestamp: '2 minutes ago',
+        transcript: 'Customer called about AC not working. Scheduled service for tomorrow at 2 PM.',
+        satisfaction: 5,
+        isDemo: true
+      },
+      {
+        id: 2,
+        customer: 'Sarah Johnson',
+        phone: '+1 (555) 987-6543',
+        type: 'Painting Quote',
+        duration: '2:15',
+        status: 'completed',
+        outcome: 'lead_qualified',
+        timestamp: '15 minutes ago',
+        transcript: 'Interested in exterior painting. Provided quote for $3,500. Follow-up scheduled.',
+        satisfaction: 4,
+        isDemo: true
+      }
+    ])
+
+    setUpcomingAppointments([
+      {
+        id: 1,
+        customer: 'Emily Wilson',
+        service: 'HVAC Maintenance',
+        date: 'Today, 2:00 PM',
+        duration: '2 hours',
+        status: 'confirmed',
+        address: '123 Main St, Anytown',
+        isDemo: true
+      },
+      {
+        id: 2,
+        customer: 'Robert Brown',
+        service: 'Exterior Painting',
+        date: 'Tomorrow, 9:00 AM',
+        duration: '8 hours',
+        status: 'confirmed',
+        address: '456 Oak Ave, Anytown',
+        isDemo: true
+      }
+    ])
+
+    setLiveFeed([
+      {
+        id: 1,
+        type: 'call_started',
+        message: 'Incoming call from John Smith',
+        timestamp: 'Just now',
+        icon: Phone,
+        color: 'text-green-400',
+        isDemo: true
+      },
+      {
+        id: 2,
+        type: 'appointment_booked',
+        message: 'New appointment scheduled for Emily Wilson',
+        timestamp: '2 min ago',
+        icon: Calendar,
+        color: 'text-blue-400',
+        isDemo: true
+      },
+      {
+        id: 3,
+        type: 'payment_received',
+        message: 'Payment received: $2,500 from Robert Brown',
+        timestamp: '5 min ago',
+        icon: DollarSign,
+        color: 'text-green-400',
+        isDemo: true
+      }
+    ])
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 dark:text-slate-400">Loading dashboard...</p>
+          <div className="w-12 h-12 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading Dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 dark:from-slate-900 dark:via-blue-900/20 dark:to-slate-800 transition-colors relative overflow-hidden">
-      {/* Premium gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-blue-500/5 to-purple-500/5 pointer-events-none"></div>
-      {/* Welcome Banner */}
-      {showWelcome && (
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
-          <div className="max-w-7xl mx-auto px-6 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                  <CheckCircle className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold">🎉 Your AI Receptionist is Live!</h2>
-                  <p className="text-green-100">Here's what to expect next</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowWelcome(false)}
-                className="text-white/80 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="w-5 h-5 text-white" />
-                <span className="text-green-100">Calls will now be answered</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="w-5 h-5 text-white" />
-                <span className="text-green-100">Jobs will appear here</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="w-5 h-5 text-white" />
-                <span className="text-green-100">ROI tracker updates automatically</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <header className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200/60 dark:border-slate-700/60 shadow-sm relative z-20">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex justify-between items-center h-20">
+    <div className="min-h-screen bg-black text-white">
+      {/* Clean Header */}
+      <header className="border-b border-gray-800 bg-black/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                <Phone className="w-7 h-7 text-white" />
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <Brain className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {onboardingData?.businessName || demoUser?.business_name || 'CloudGreet'}
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400">AI Receptionist Dashboard</p>
+                <h1 className="text-2xl font-bold text-white">CloudGreet</h1>
+                <p className="text-xs text-gray-400 font-medium">AI RECEPTIONIST</p>
+              </div>
+              
+              <div className="flex items-center space-x-3 ml-8">
+                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${
+                  isDemoMode 
+                    ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
+                    : isLive 
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                      : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                }`}>
+                  <div className={`w-2 h-2 rounded-full ${
+                    isDemoMode ? 'bg-orange-400' : isLive ? 'bg-green-400' : 'bg-gray-400'
+                  }`} />
+                  <span>{isDemoMode ? 'Demo' : isLive ? 'Live' : 'Offline'}</span>
+                </div>
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* System Status Indicators */}
-              <div className="flex items-center space-x-3 bg-slate-100 dark:bg-slate-700 px-3 py-2 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${systemStatus.phone === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                  <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">Phone</span>
+              <button className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+                <Bell className="w-5 h-5 text-gray-300" />
+              </button>
+              
+              <button className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
+                <Settings className="w-5 h-5 text-gray-300" />
+              </button>
+              
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+                  <span className="text-sm font-bold">JD</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${systemStatus.ai === 'active' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                  <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">AI</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${systemStatus.calendar === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                  <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">Calendar</span>
+                <div className="hidden md:block">
+                  <p className="text-sm font-medium">John Doe</p>
+                  <p className="text-xs text-gray-400">Business Owner</p>
                 </div>
               </div>
-              
-              {/* Current Time */}
-              <div className="text-right">
-                <div className="text-sm font-medium text-slate-900 dark:text-white">
-                  {currentTime.toLocaleTimeString()}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">
-                  {currentTime.toLocaleDateString()}
-                </div>
-              </div>
-              
-              <NotificationSystem />
-              
-              <button
-                onClick={createTestAgent}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                <Phone className="w-4 h-4" />
-                <span>Test AI</span>
-              </button>
-              
-              <button
-                onClick={() => router.push('/help')}
-                className="p-3 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all duration-200"
-              >
-                <HelpCircle className="w-5 h-5" />
-              </button>
-              
-              <button
-                onClick={handleSignOut}
-                className="p-3 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all duration-200"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
             </div>
           </div>
         </div>
       </header>
 
-
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8 relative z-10">
-        {/* Onboarding Widget */}
-        {showOnboardingWidget && (
-          <OnboardingWidget 
-            onComplete={handleOnboardingComplete}
-            onDismiss={handleOnboardingDismiss}
-          />
-        )}
-
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                {onboardingComplete 
-                  ? `Welcome back, ${onboardingData?.businessName || session?.user?.name || 'User'}!`
-                  : 'Welcome to CloudGreet!'
-                }
-              </h2>
-              <p className="text-slate-600 dark:text-slate-400">
-                {onboardingComplete
-                  ? "Your AI receptionist is working 24/7. Here's what's happening today."
-                  : "Complete the setup above to activate your AI receptionist and start taking calls."
-                }
-              </p>
-            </div>
-            
-            {/* Performance Metrics */}
-            <div className="flex items-center space-x-4 text-sm text-slate-500 dark:text-slate-400">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span>Load: {performanceMetrics.renderTime}ms</span>
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Demo Mode Banner */}
+        {isDemoMode && (
+          <div className="mb-8 bg-orange-500/10 border border-orange-500/20 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Demo Mode Active</h3>
+                  <p className="text-orange-200">Complete setup to connect your real phone number and start receiving calls.</p>
+                </div>
               </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span>Memory: {performanceMetrics.memoryUsage}MB</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <span>Network: {performanceMetrics.networkLatency}ms</span>
-              </div>
+              <button
+                onClick={() => setShowOnboarding(true)}
+                className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
+              >
+                Complete Setup
+              </button>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Tab Navigation */}
-        <div className="mb-8">
-          <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 w-fit">
-            {(['overview', 'analytics', 'conversations', 'predictions', 'enterprise'] as const).map((tab) => (
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-2">Dashboard</h2>
+            <p className="text-gray-400">{isDemoMode ? 'Demo data and analytics' : 'Real-time insights and analytics'}</p>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {['24h', '7d', '30d', '90d'].map((timeframe) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-6 py-3 rounded-lg text-sm font-medium transition-all capitalize ${
-                  activeTab === tab
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                key={timeframe}
+                onClick={() => setSelectedTimeframe(timeframe)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedTimeframe === timeframe
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                 }`}
               >
-                {tab}
+                {timeframe}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Billing Section */}
-        {billingInfo && onboardingComplete && (
-          <div className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-semibold text-slate-900 dark:text-white">Billing & Subscription</h3>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-green-600 dark:text-green-400 font-medium">Active</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Monthly Base Fee</div>
-                <div className="text-2xl font-bold text-slate-900 dark:text-white">${billingInfo.plan.price / 100}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">per month</div>
-              </div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Per Booking Fee</div>
-                <div className="text-2xl font-bold text-slate-900 dark:text-white">$50</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">per booked job</div>
-              </div>
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Next Billing</div>
-                <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                  {new Date(billingInfo.billing.nextBillingDate).toLocaleDateString()}
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+          {[
+            {
+              icon: Phone,
+              label: "Total Calls",
+              value: dashboardData.totalCalls,
+              change: "+23%",
+              changeType: "positive",
+              color: "text-blue-400"
+            },
+            {
+              icon: DollarSign,
+              label: "Revenue",
+              value: `$${dashboardData.totalRevenue.toLocaleString()}`,
+              change: "+34%",
+              changeType: "positive",
+              color: "text-green-400"
+            },
+            {
+              icon: Activity,
+              label: "Conversion Rate",
+              value: `${dashboardData.conversionRate}%`,
+              change: "+12%",
+              changeType: "positive",
+              color: "text-purple-400"
+            },
+            {
+              icon: TrendingUp,
+              label: "Monthly Recurring",
+              value: `$${dashboardData.monthlyRecurring.toLocaleString()}`,
+              change: "+18%",
+              changeType: "positive",
+              color: "text-orange-400"
+            },
+            {
+              icon: StarIcon,
+              label: "Satisfaction",
+              value: `${dashboardData.customerSatisfaction}/5`,
+              change: "+0.3",
+              changeType: "positive",
+              color: "text-yellow-400"
+            },
+            {
+              icon: Clock,
+              label: "Avg Call Time",
+              value: `${dashboardData.avgCallDuration}min`,
+              change: "-0.5min",
+              changeType: "positive",
+              color: "text-indigo-400"
+            },
+          ].map((stat, index) => (
+            <div
+              key={index}
+              className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-lg bg-gray-800`}>
+                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">
-                  {billingInfo.billing.totalBookings} bookings this month
-                </div>
+                <span className={`text-sm font-medium ${
+                  stat.changeType === 'positive' ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {stat.changeType === 'positive' ? (
+                    <ArrowUpRight className="w-4 h-4 inline mr-1" />
+                  ) : (
+                    <ArrowDownRight className="w-4 h-4 inline mr-1" />
+                  )}
+                  {stat.change}
+                </span>
               </div>
+              <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
+              <p className="text-2xl font-bold text-white">{stat.value}</p>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-8 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-6">
-            <div className="flex items-center">
-              <AlertCircle className="w-6 h-6 text-red-500 mr-3" />
-              <p className="text-red-700 dark:text-red-300 font-medium">{error}</p>
-            </div>
+        {/* Tabs */}
+        <div className="mb-6">
+          <div className="flex border-b border-gray-800">
+            {[
+              { id: 'overview', label: 'Overview', icon: BarChart3 },
+              { id: 'calls', label: 'Calls', icon: Phone },
+              { id: 'appointments', label: 'Appointments', icon: Calendar },
+              { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+              { id: 'settings', label: 'Settings', icon: Settings }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setSelectedTab(tab.id)}
+                className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium transition-colors ${
+                  selectedTab === tab.id
+                    ? 'text-blue-400 border-b-2 border-blue-400'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Tab Content */}
-        {activeTab === 'overview' && (
-          <div className={!onboardingComplete ? "opacity-75" : ""}>
-          <div className="space-y-8">
-            {/* Key Metrics Row */}
-            <StaggeredList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Calls Today */}
-              <HoverCard>
-                <TiltCard className="bg-gradient-to-br from-white/95 to-blue-50/95 dark:from-slate-800/95 dark:to-blue-900/30 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-slate-700/60 shadow-xl hover:shadow-2xl transition-all duration-300">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Calls Today</p>
-                      <p className="text-3xl font-bold text-slate-900 dark:text-white">
-                        <AnimatedCounter value={dashboardData?.calls?.totalToday || 0} />
-                      </p>
-                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">+12% from yesterday</p>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={selectedTab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {selectedTab === 'overview' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {/* Recent Activity */}
+                <div className="lg:col-span-2">
+                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-semibold text-white flex items-center">
+                        <Activity className="w-5 h-5 mr-2 text-blue-400" />
+                        Recent Activity
+                      </h3>
+                      <button className="text-sm text-blue-400 hover:text-blue-300 flex items-center">
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                        Refresh
+                      </button>
                     </div>
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <Phone className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </TiltCard>
-              </HoverCard>
-
-              {/* Bookings Today */}
-              <HoverCard>
-                <TiltCard className="bg-gradient-to-br from-white/95 to-green-50/95 dark:from-slate-800/95 dark:to-green-900/30 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-slate-700/60 shadow-xl hover:shadow-2xl transition-all duration-300">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Bookings Today</p>
-                      <p className="text-3xl font-bold text-slate-900 dark:text-white">
-                        <AnimatedCounter value={Math.floor((dashboardData?.calls?.totalToday || 0) * 0.6)} />
-                      </p>
-                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">60% conversion rate</p>
-                    </div>
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <Calendar className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </TiltCard>
-              </HoverCard>
-
-              {/* Revenue Today */}
-              <HoverCard>
-                <TiltCard className="bg-gradient-to-br from-white/95 to-purple-50/95 dark:from-slate-800/95 dark:to-purple-900/30 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-slate-700/60 shadow-xl hover:shadow-2xl transition-all duration-300">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Revenue Today</p>
-                      <p className="text-3xl font-bold text-slate-900 dark:text-white">
-                        $<AnimatedCounter value={Math.floor((dashboardData?.calls?.totalToday || 0) * 0.6) * 150} />
-                      </p>
-                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">+8% from yesterday</p>
-                    </div>
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <DollarSign className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </TiltCard>
-              </HoverCard>
-
-              {/* AI Performance */}
-              <HoverCard>
-                <TiltCard className="bg-gradient-to-br from-white/95 to-orange-50/95 dark:from-slate-800/95 dark:to-orange-900/30 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-slate-700/60 shadow-xl hover:shadow-2xl transition-all duration-300">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Performance</p>
-                      <p className="text-3xl font-bold text-slate-900 dark:text-white">
-                        <AnimatedCounter value={94} />%
-                      </p>
-                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">Answer rate</p>
-                    </div>
-                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-                      <Target className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-                </TiltCard>
-              </HoverCard>
-            </StaggeredList>
-
-            {/* Performance Monitor */}
-            <div className="bg-gradient-to-br from-white/95 to-slate-50/95 dark:from-slate-800/95 dark:to-slate-900/95 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-slate-700/60 shadow-xl">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-green-500" />
-                System Performance
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl p-4 border border-green-200/50 dark:border-green-700/50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-green-700 dark:text-green-300">Response Time</p>
-                      <p className="text-2xl font-bold text-green-800 dark:text-green-200">45ms</p>
-                    </div>
-                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-                      <Zap className="w-4 h-4 text-white" />
+                    
+                    <div className="space-y-4">
+                      {liveFeed.map((item, index) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center space-x-4 p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors"
+                        >
+                          <div className="p-2 rounded-lg bg-gray-700">
+                            <item.icon className={`w-5 h-5 ${item.color}`} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-white font-medium">{item.message}</p>
+                            <p className="text-gray-400 text-sm">{item.timestamp}</p>
+                          </div>
+                          {item.isDemo && (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-500/20 text-orange-400">
+                              Demo
+                            </span>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Uptime</p>
-                      <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">99.9%</p>
-                    </div>
-                    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                      <Activity className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl p-4 border border-purple-200/50 dark:border-purple-700/50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-purple-700 dark:text-purple-300">AI Accuracy</p>
-                      <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">94.2%</p>
-                    </div>
-                    <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                      <Target className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Quick Actions */}
-            <div className="bg-gradient-to-br from-white/95 to-slate-50/95 dark:from-slate-800/95 dark:to-slate-900/95 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-slate-700/60 shadow-xl">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Quick Actions</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <button
-                  onClick={() => router.push('/analytics')}
-                  className="flex items-center justify-center space-x-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-4 rounded-xl font-semibold transition-all duration-200 hover:scale-105 shadow-lg"
-                >
-                  <BarChart3 className="w-5 h-5" />
-                  <span>View Analytics</span>
-                </button>
-                <button 
-                  onClick={() => router.push('/calls')}
-                  className="flex items-center justify-center space-x-3 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 hover:from-slate-200 hover:to-slate-300 dark:hover:from-slate-600 dark:hover:to-slate-500 text-slate-700 dark:text-slate-300 px-6 py-4 rounded-xl font-semibold transition-all duration-200 hover:scale-105 shadow-md"
-                >
-                  <Phone className="w-5 h-5" />
-                  <span>Call Management</span>
-                </button>
-                <button 
-                  onClick={() => router.push('/settings')}
-                  className="flex items-center justify-center space-x-3 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 hover:from-slate-200 hover:to-slate-300 dark:hover:from-slate-600 dark:hover:to-slate-500 text-slate-700 dark:text-slate-300 px-6 py-4 rounded-xl font-semibold transition-all duration-200 hover:scale-105 shadow-md"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span>Settings</span>
-                </button>
-                <button 
-                  onClick={() => router.push('/help')}
-                  className="flex items-center justify-center space-x-3 bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 hover:from-slate-200 hover:to-slate-300 dark:hover:from-slate-600 dark:hover:to-slate-500 text-slate-700 dark:text-slate-300 px-6 py-4 rounded-xl font-semibold transition-all duration-200 hover:scale-105 shadow-md"
-                >
-                  <HelpCircle className="w-5 h-5" />
-                  <span>Help & Support</span>
-                </button>
-              </div>
-            </div>
+                {/* Quick Actions */}
+                <div>
+                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <h3 className="text-lg font-semibold text-white mb-6">Quick Actions</h3>
+                    <div className="space-y-3">
+                      {[
+                        { icon: Phone, label: 'Test AI Agent', action: () => {/* Test AI Agent */} },
+                        { icon: Calendar, label: 'Schedule Appointment', action: () => {/* Schedule Appointment */} },
+                        { icon: MessageSquare, label: 'Send Follow-up', action: () => {/* Send Follow-up */} },
+                        { icon: BarChart3, label: 'View Reports', action: () => {/* View Reports */} },
+                        { icon: Settings, label: 'Configure Settings', action: () => setSelectedTab('settings') }
+                      ].map((action, index) => (
+                        <button
+                          key={index}
+                          onClick={action.action}
+                          className="w-full flex items-center space-x-3 p-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-left"
+                        >
+                          <div className="p-2 rounded-lg bg-gray-700">
+                            <action.icon className="w-4 h-4 text-gray-300" />
+                          </div>
+                          <span className="text-white font-medium">{action.label}</span>
+                          <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-            {/* Real-time Activity Feed */}
-            <div className="bg-gradient-to-br from-white/95 to-slate-50/95 dark:from-slate-800/95 dark:to-slate-900/95 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-slate-700/60 shadow-xl">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-blue-500" />
-                Live Activity Feed
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              </h3>
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                <div className="flex items-center space-x-4 p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl border border-green-200/50 dark:border-green-700/50">
-                  <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-white" />
+                {/* Recent Calls */}
+                <div className="lg:col-span-2">
+                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-semibold text-white flex items-center">
+                        <Phone className="w-5 h-5 mr-2 text-blue-400" />
+                        Recent Calls
+                      </h3>
+                      <button className="text-sm text-blue-400 hover:text-blue-300">
+                        View All
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {recentCalls.map((call, index) => (
+                        <div
+                          key={call.id}
+                          className="p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+                                <User className="w-5 h-5 text-white" />
+                              </div>
+                              <div>
+                                <h4 className="text-white font-semibold">{call.customer}</h4>
+                                <p className="text-gray-400 text-sm">{call.phone} • {call.type}</p>
+                                <p className="text-gray-500 text-xs mt-1 line-clamp-1">{call.transcript}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                  call.outcome === 'appointment_booked' ? 'bg-green-500/20 text-green-400' :
+                                  call.outcome === 'lead_qualified' ? 'bg-blue-500/20 text-blue-400' :
+                                  'bg-orange-500/20 text-orange-400'
+                                }`}>
+                                  {call.outcome.replace('_', ' ')}
+                                </span>
+                                <div className="flex items-center space-x-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <StarIcon 
+                                      key={i} 
+                                      className={`w-3 h-3 ${i < call.satisfaction ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} 
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              <p className="text-gray-400 text-sm">{call.duration}</p>
+                              <p className="text-gray-500 text-xs">{call.timestamp}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900 dark:text-white">New call received</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">John Smith - Roofing inquiry</p>
-                    <p className="text-xs text-green-600 dark:text-green-400">AI handled successfully</p>
-                  </div>
-                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">2 min ago</span>
                 </div>
-                <div className="flex items-center space-x-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50">
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-white" />
+
+                {/* Upcoming Appointments */}
+                <div>
+                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-semibold text-white flex items-center">
+                        <Calendar className="w-5 h-5 mr-2 text-green-400" />
+                        Upcoming Appointments
+                      </h3>
+                      <button className="text-sm text-green-400 hover:text-green-300">
+                        View Calendar
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {upcomingAppointments.map((appointment, index) => (
+                        <div
+                          key={appointment.id}
+                          className="p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-white font-semibold">{appointment.customer}</h4>
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              appointment.status === 'confirmed' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                              {appointment.status}
+                            </span>
+                          </div>
+                          <p className="text-gray-300 text-sm mb-1">{appointment.service}</p>
+                          <p className="text-gray-400 text-sm mb-1">{appointment.date}</p>
+                          <p className="text-gray-500 text-xs">{appointment.address}</p>
+                          <div className="flex items-center space-x-4 mt-2 text-xs text-gray-400">
+                            <span className="flex items-center">
+                              <Clock className="w-3 h-3 mr-1" />
+                              {appointment.duration}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900 dark:text-white">Appointment booked</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Sarah Johnson - HVAC service</p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400">Calendar synced</p>
-                  </div>
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">15 min ago</span>
-                </div>
-                <div className="flex items-center space-x-4 p-4 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl border border-purple-200/50 dark:border-purple-700/50">
-                  <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900 dark:text-white">Payment received</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">$450 - Mike Wilson</p>
-                    <p className="text-xs text-purple-600 dark:text-purple-400">Stripe processed</p>
-                  </div>
-                  <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">1 hour ago</span>
-                </div>
-                <div className="flex items-center space-x-4 p-4 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl border border-orange-200/50 dark:border-orange-700/50">
-                  <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                    <Target className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-slate-900 dark:text-white">AI Model Updated</p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Improved response accuracy</p>
-                    <p className="text-xs text-orange-600 dark:text-orange-400">+2.3% performance boost</p>
-                  </div>
-                  <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">3 hours ago</span>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-        )}
+            )}
 
-        {activeTab === 'analytics' && (
-          <AdvancedAnalytics />
-        )}
+            {selectedTab === 'calls' && (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-6">Call Management</h3>
+                <p className="text-gray-400">Advanced call logs, transcripts, and analytics coming soon...</p>
+              </div>
+            )}
 
-        {activeTab === 'conversations' && (
-          <ConversationAnalytics />
-        )}
+            {selectedTab === 'appointments' && (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-6">Appointments</h3>
+                <p className="text-gray-400">Calendar integration and appointment management coming soon...</p>
+              </div>
+            )}
 
-        {activeTab === 'predictions' && (
-          <PredictiveAnalytics />
-        )}
+            {selectedTab === 'analytics' && (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-6">Analytics</h3>
+                <p className="text-gray-400">Detailed performance metrics and insights coming soon...</p>
+              </div>
+            )}
 
-        {activeTab === 'enterprise' && (
-          <EnterpriseFeatures />
-        )}
+            {selectedTab === 'settings' && (
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-white mb-6">Settings</h3>
+                <p className="text-gray-400">AI agent configuration and business settings coming soon...</p>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
-
-      {/* Particle Background */}
-      <ParticleBackground />
-
-      {/* Floating Action Button */}
-      <FloatingActionButton />
-
-      {/* Voice Test Modal */}
-      {showVoiceTest && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-                    <Phone className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Test Your AI Receptionist</h2>
-                    <p className="text-slate-500 dark:text-slate-400">Have a live conversation with your AI</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowVoiceTest(false)}
-                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <VoiceTest 
-                agentId={testAgentId || "loading"}
-                businessName={demoUser?.businessName || "Demo Business"}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      
+      {/* Onboarding Wizard */}
+      <OnboardingWizard
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        onComplete={() => {
+          setOnboardingCompleted(true)
+          setShowOnboarding(false)
+          setIsDemoMode(false)
+          setIsLive(true)
+          // Clear demo status since onboarding is complete
+          localStorage.removeItem('accountStatus')
+          loadDashboardData()
+        }}
+      />
     </div>
   )
 }

@@ -1,97 +1,124 @@
 import { z } from 'zod'
 
-// Common validation schemas
+// Registration validation
+export const registerSchema = z.object({
+  business_name: z.string().min(1, 'Business name is required'),
+  business_type: z.string().min(1, 'Business type is required'),
+  owner_name: z.string().min(1, 'Owner name is required'),
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string().optional(),
+  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  address: z.string().min(1, 'Address is required'),
+  website: z.string().optional(),
+  services: z.array(z.string()).optional(),
+  service_areas: z.array(z.string()).optional()
+})
+
+// Login validation
+export const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required')
+})
+
+// Phone number validation
+export const phoneSchema = z.string().min(10, 'Phone number must be at least 10 digits')
+
+// Email validation
 export const emailSchema = z.string().email('Invalid email address')
-export const phoneSchema = z.string().regex(/^\+?[\d\s\-\(\)]+$/, 'Invalid phone number')
-export const businessNameSchema = z.string().min(2, 'Business name must be at least 2 characters').max(100, 'Business name too long')
-export const passwordSchema = z.string().min(8, 'Password must be at least 8 characters').regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Password must contain uppercase, lowercase, and number')
 
-// Sanitization functions
+// Business data validation
+export const businessSchema = z.object({
+  business_name: z.string().min(1, 'Business name is required'),
+  business_type: z.string().min(1, 'Business type is required'),
+  owner_name: z.string().min(1, 'Owner name is required'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  address: z.string().min(1, 'Address is required'),
+  website: z.string().optional(),
+  services: z.array(z.string()).optional(),
+  service_areas: z.array(z.string()).optional()
+})
+
+export function validatePhoneNumber(phone: string): { isValid: boolean; formatted?: string; error?: string } {
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, '')
+  
+  // Check if it's a valid length (10-15 digits)
+  if (digits.length < 10 || digits.length > 15) {
+    return { isValid: false, error: 'Phone number must be between 10-15 digits' }
+  }
+  
+  // Format as +1 (XXX) XXX-XXXX for US numbers
+  if (digits.length === 10) {
+    const formatted = `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+    return { isValid: true, formatted }
+  }
+  
+  // Format as +X (XXX) XXX-XXXX for international numbers
+  if (digits.length === 11 && digits.startsWith('1')) {
+    const formatted = `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+    return { isValid: true, formatted }
+  }
+  
+  // For other international numbers, just add + prefix
+  const formatted = `+${digits}`
+  return { isValid: true, formatted }
+}
+
+export function validateEmail(email: string): { isValid: boolean; error?: string } {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) {
+    return { isValid: false, error: 'Invalid email format' }
+  }
+  return { isValid: true }
+}
+
+export function validatePassword(password: string): { isValid: boolean; error?: string } {
+  if (password.length < 6) {
+    return { isValid: false, error: 'Password must be at least 6 characters long' }
+  }
+  if (password.length > 128) {
+    return { isValid: false, error: 'Password must be less than 128 characters' }
+  }
+  return { isValid: true }
+}
+
+export function validateBusinessName(name: string): { isValid: boolean; error?: string } {
+  if (!name || name.trim().length < 2) {
+    return { isValid: false, error: 'Business name must be at least 2 characters long' }
+  }
+  if (name.trim().length > 100) {
+    return { isValid: false, error: 'Business name must be less than 100 characters' }
+  }
+  return { isValid: true }
+}
+
 export function sanitizeInput(input: string): string {
-  return input
-    .trim()
-    .replace(/[<>]/g, '') // Remove potential HTML tags
-    .replace(/javascript:/gi, '') // Remove javascript: protocol
-    .replace(/on\w+=/gi, '') // Remove event handlers
+  return input.trim().replace(/[<>]/g, '')
 }
 
-export function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
-    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframe tags
-    .replace(/on\w+="[^"]*"/gi, '') // Remove event handlers
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount)
 }
 
-// Rate limiting store (in production, use Redis)
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
-
-export function rateLimit(identifier: string, limit: number = 100, windowMs: number = 15 * 60 * 1000): boolean {
-  const now = Date.now()
-  const key = identifier
-  const record = rateLimitStore.get(key)
-
-  if (!record || now > record.resetTime) {
-    rateLimitStore.set(key, { count: 1, resetTime: now + windowMs })
-    return true
-  }
-
-  if (record.count >= limit) {
-    return false
-  }
-
-  record.count++
-  return true
+export function formatDate(date: string | Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(new Date(date))
 }
 
-// API validation middleware
-export function validateApiRequest(schema: z.ZodSchema) {
-  return (req: any, res: any, next: any) => {
-    try {
-      const validatedData = schema.parse(req.body)
-      req.validatedData = validatedData
-      next()
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          error: 'Validation failed',
-          details: error.errors
-        })
-      }
-      return res.status(500).json({ error: 'Internal server error' })
-    }
-  }
+export function formatDateTime(date: string | Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(date))
 }
-
-// Business validation schemas
-export const businessSetupSchema = z.object({
-  businessName: businessNameSchema,
-  industry: z.string().min(1, 'Industry is required'),
-  phoneNumber: phoneSchema,
-  email: emailSchema,
-  businessHours: z.object({
-    start: z.string(),
-    end: z.string(),
-    timezone: z.string()
-  }),
-  services: z.array(z.string()).min(1, 'At least one service is required')
-})
-
-export const userRegistrationSchema = z.object({
-  email: emailSchema,
-  password: passwordSchema,
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  businessName: businessNameSchema
-})
-
-export const subscriptionSchema = z.object({
-  planId: z.string().min(1, 'Plan ID is required'),
-  paymentMethodId: z.string().min(1, 'Payment method is required'),
-  billingAddress: z.object({
-    line1: z.string().min(1, 'Address line 1 is required'),
-    city: z.string().min(1, 'City is required'),
-    state: z.string().min(1, 'State is required'),
-    postalCode: z.string().min(1, 'Postal code is required'),
-    country: z.string().min(1, 'Country is required')
-  })
-})
