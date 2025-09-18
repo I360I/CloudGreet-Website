@@ -16,7 +16,7 @@ interface HealthData {
   version?: string
   services: {
     database: { status: string; latency_ms: number; error?: string }
-    twilio: { status: string; latency_ms: number; configured: boolean }
+    telynyx: { status: string; latency_ms: number; configured: boolean }
     stripe: { status: string; latency_ms: number; configured: boolean }
   }
 }
@@ -177,30 +177,30 @@ export default function MonitoringPage() {
             </div>
           </motion.div>
 
-          {/* Twilio */}
+          {/* Telynyx */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className={`rounded-xl p-6 border ${getStatusColor(healthData?.services.twilio.status || 'unknown')}`}
+            className={`rounded-xl p-6 border ${getStatusColor(healthData?.services.telynyx.status || 'unknown')}`}
           >
             <div className="flex items-center gap-3 mb-4">
               <Phone className="w-6 h-6" />
-              <h3 className="text-lg font-semibold">Twilio</h3>
+              <h3 className="text-lg font-semibold">Telynyx</h3>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-400">Status</span>
-                <span className="font-semibold">{healthData?.services.twilio.status || 'Unknown'}</span>
+                <span className="font-semibold">{healthData?.services.telynyx.status || 'Unknown'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-400">Latency</span>
-                <span className="font-mono text-sm">{healthData?.services.twilio.latency_ms || 0}ms</span>
+                <span className="font-mono text-sm">{healthData?.services.telynyx.latency_ms || 0}ms</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-400">Configured</span>
                 <span className="font-semibold">
-                  {healthData?.services.twilio.configured ? 'Yes' : 'No'}
+                  {healthData?.services.telynyx.configured ? 'Yes' : 'No'}
                 </span>
               </div>
             </div>

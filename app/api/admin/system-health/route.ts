@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
           uptime: 99.8,
           lastCheck: new Date().toISOString()
         },
-        twilio: {
+        telynyx: {
           status: 'healthy',
           callsProcessed: 2340,
           smsProcessed: 3240,

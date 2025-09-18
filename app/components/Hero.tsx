@@ -236,7 +236,7 @@ export default function Hero() {
           </div>
           <div className="flex items-center gap-2">
             <Phone className="w-5 h-5" />
-            <span>Twilio</span>
+            <span>Telynyx</span>
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />

@@ -387,7 +387,7 @@ export default function AdminDashboard() {
                   <p className="text-blue-600">Connected and healthy</p>
                 </div>
                 <div className="p-4 bg-purple-50 rounded-lg">
-                  <h4 className="font-medium text-purple-800">Azure Services</h4>
+                  <h4 className="font-medium text-purple-800">Telynyx Services</h4>
                   <p className="text-purple-600">All services active</p>
                 </div>
               </div>

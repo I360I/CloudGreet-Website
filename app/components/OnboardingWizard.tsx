@@ -75,7 +75,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
     calendarConnected: false,
     
     // Phone Setup
-    phoneProvider: 'twilio',
+    phoneProvider: 'telynyx',
     phoneConnected: false,
     
         // Billing
