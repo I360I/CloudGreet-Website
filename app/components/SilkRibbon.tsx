@@ -20,56 +20,58 @@ export default function SilkRibbon({
 }: SilkRibbonProps) {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      {/* Flowing wave lines - exactly 5 lines like you described */}
+      {/* 5 wave lines grouped together, moving up and down like real waves */}
       {Array.from({ length: 5 }).map((_, i) => (
         <motion.div
           key={i}
           className="absolute w-full"
           style={{
             background: `linear-gradient(90deg, transparent, ${colorA}, ${colorB}, ${colorA}, transparent)`,
-            height: `${4 + i * 1}px`,
-            top: `${50 + i * 10}%`, // More spread out positioning
+            height: `${3 + i * 0.5}px`,
+            top: `${60 + i * 3}%`, // Grouped close together around trust badges
             filter: 'blur(0.5px)',
             borderRadius: '50px',
           }}
           animate={{
             x: ['-100%', '100%'],
+            y: [0, -10, 0, 10, 0], // Wave-like up and down movement
             opacity: [0.2, 0.6, 0.2],
             scaleY: [0.8, 1.4, 0.8],
           }}
           transition={{
-            duration: 15 + i * 2,
+            duration: 12 + i * 1.5,
             repeat: Infinity,
             repeatType: 'loop',
             ease: 'easeInOut',
-            delay: i * 1.5,
+            delay: i * 0.8,
           }}
         />
       ))}
       
-      {/* Additional flowing ribbons for more wave effect */}
+      {/* Additional wave ribbons with more pronounced wave motion */}
       {Array.from({ length: 3 }).map((_, i) => (
         <motion.div
           key={`wave-${i}`}
           className="absolute w-full"
           style={{
             background: `linear-gradient(90deg, transparent, ${colorB}80, ${colorA}80, ${colorB}80, transparent)`,
-            height: `${3 + i * 0.5}px`,
-            top: `${45 + i * 18}%`,
+            height: `${2 + i * 0.3}px`,
+            top: `${58 + i * 6}%`, // Also grouped close together
             filter: 'blur(0.3px)',
             borderRadius: '30px',
           }}
           animate={{
             x: ['-120%', '120%'],
+            y: [0, -15, 0, 15, 0], // More pronounced wave motion
             opacity: [0.15, 0.5, 0.15],
             scaleY: [0.6, 1.6, 0.6],
           }}
           transition={{
-            duration: 20 + i * 3,
+            duration: 18 + i * 2,
             repeat: Infinity,
             repeatType: 'loop',
             ease: 'easeInOut',
-            delay: i * 2 + 0.5,
+            delay: i * 1.2,
           }}
         />
       ))}
