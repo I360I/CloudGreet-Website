@@ -6,7 +6,9 @@ import { z } from 'zod'
 
 const completeOnboardingSchema = z.object({
   businessName: z.string().min(1, 'Business name is required'),
-  businessType: z.enum(['HVAC', 'Paint', 'Roofing'], 'Invalid business type'),
+  businessType: z.enum(['HVAC', 'Paint', 'Roofing'], {
+    message: 'Invalid business type'
+  }),
   ownerName: z.string().min(1, 'Owner name is required'),
   email: z.string().email('Invalid email'),
   phone: z.string().min(1, 'Phone number is required'),
@@ -16,7 +18,9 @@ const completeOnboardingSchema = z.object({
   serviceAreas: z.array(z.string()).min(1, 'At least one service area is required'),
   businessHours: z.record(z.string(), z.any()),
   greetingMessage: z.string().min(1, 'Greeting message is required'),
-  tone: z.enum(['professional', 'friendly', 'casual'], 'Invalid tone'),
+  tone: z.enum(['professional', 'friendly', 'casual'], {
+    message: 'Invalid tone'
+  }),
   billingPlan: z.string().optional(),
   promoCode: z.string().optional()
 })
