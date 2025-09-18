@@ -31,6 +31,9 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@next/swc-darwin-x64": "^14.0.4",
+    "@next/swc-linux-x64-gnu": "^14.0.4",
+    "@next/swc-win32-x64-msvc": "^14.0.4",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
