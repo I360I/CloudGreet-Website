@@ -39,10 +39,10 @@ export default function SilkRibbon({
               left: `${startLeft}%`,
               filter: 'blur(0.2px)',
               background: `linear-gradient(90deg, transparent, ${colorA}, ${colorB}, ${colorA}, transparent)`,
-              clipPath: `polygon(0% 50%, 10% 40%, 20% 60%, 30% 35%, 40% 65%, 50% 30%, 60% 70%, 70% 25%, 80% 75%, 90% 40%, 100% 50%)`, // Wavy shape
+              clipPath: `polygon(0% 50%, 8% 20%, 16% 80%, 24% 15%, 32% 85%, 40% 25%, 48% 75%, 56% 10%, 64% 90%, 72% 35%, 80% 65%, 88% 45%, 96% 55%, 100% 50%)`, // More dramatic wavy shape
             }}
             animate={{
-              x: [0, 100, 0], // Treadmill-like horizontal movement
+              x: ['-100%', '100%'], // Flow from left side to right side
               opacity: [0.4, 0.8, 0.4], // Pulsing visibility
             }}
             transition={{
@@ -63,11 +63,11 @@ export default function SilkRibbon({
         const randomDelay = (i + 5) * 0.3;
         const randomDuration = 15 + i * 2;
         
-        // Different wave patterns for variety
+        // Different wave patterns for variety - more dramatic waves
         const wavePatterns = [
-          `polygon(0% 50%, 15% 35%, 25% 65%, 35% 25%, 45% 75%, 55% 30%, 65% 70%, 75% 40%, 85% 60%, 100% 50%)`,
-          `polygon(0% 50%, 12% 60%, 22% 30%, 32% 80%, 42% 20%, 52% 90%, 62% 15%, 72% 85%, 82% 35%, 100% 50%)`,
-          `polygon(0% 50%, 8% 25%, 18% 75%, 28% 40%, 38% 60%, 48% 35%, 58% 65%, 68% 45%, 78% 55%, 100% 50%)`
+          `polygon(0% 50%, 6% 10%, 12% 90%, 18% 5%, 24% 95%, 30% 20%, 36% 80%, 42% 15%, 48% 85%, 54% 30%, 60% 70%, 66% 25%, 72% 75%, 78% 40%, 84% 60%, 90% 35%, 96% 65%, 100% 50%)`,
+          `polygon(0% 50%, 7% 80%, 14% 20%, 21% 85%, 28% 15%, 35% 90%, 42% 10%, 49% 95%, 56% 25%, 63% 75%, 70% 30%, 77% 70%, 84% 35%, 91% 65%, 100% 50%)`,
+          `polygon(0% 50%, 5% 25%, 10% 75%, 15% 15%, 20% 85%, 25% 35%, 30% 65%, 35% 20%, 40% 80%, 45% 40%, 50% 60%, 55% 30%, 60% 70%, 65% 25%, 70% 75%, 75% 45%, 80% 55%, 85% 35%, 90% 65%, 95% 40%, 100% 50%)`
         ];
         
         return (
@@ -84,7 +84,7 @@ export default function SilkRibbon({
               clipPath: wavePatterns[i], // Different wave pattern for each line
             }}
             animate={{
-              x: [0, 80, 0], // Treadmill-like horizontal movement
+              x: ['-120%', '120%'], // Flow from left side to right side
               opacity: [0.3, 0.9, 0.3], // Pulsing visibility
             }}
             transition={{
