@@ -20,7 +20,7 @@ export default function SilkRibbon({
 }: SilkRibbonProps) {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      {/* 5 intertwined strings starting from same spot - behind Get Started button */}
+      {/* 5 wavy lines like a treadmill - behind Get Started button */}
       {Array.from({ length: 5 }).map((_, i) => {
         // All start from same general area but moved up higher
         const startTop = 35 + i * 2; // Moved up higher (35-43%)
@@ -33,72 +33,65 @@ export default function SilkRibbon({
             key={i}
             className="absolute"
             style={{
-              background: `linear-gradient(90deg, transparent, ${colorA}, ${colorB}, ${colorA}, transparent)`,
-              height: `${3 + i * 0.5}px`, // Slightly different thickness
-              width: '70%', // Longer for better visibility
+              width: '70%',
+              height: `${4 + i * 0.5}px`, // Slightly different thickness
               top: `${startTop}%`,
               left: `${startLeft}%`,
               filter: 'blur(0.2px)',
-              borderRadius: '50px',
-              transform: `rotate(0deg) scaleY(1)`, // Start straight
-              transformOrigin: 'center',
+              background: `linear-gradient(90deg, transparent, ${colorA}, ${colorB}, ${colorA}, transparent)`,
+              clipPath: `polygon(0% 50%, 10% 40%, 20% 60%, 30% 35%, 40% 65%, 50% 30%, 60% 70%, 70% 25%, 80% 75%, 90% 40%, 100% 50%)`, // Wavy shape
             }}
             animate={{
-              x: [0, 80, 40, 120, 20, 100, 0], // Gentle horizontal drift
-              y: [0, -8, 6, -12, 4, -10, 0], // Small vertical wave movement
-              rotate: [0, 2, -1, 3, -2, 1, 0], // Small rotation for wave effect
-              opacity: [0.4, 0.8, 0.3, 0.9, 0.5, 0.7, 0.4], // More visible
-              scaleY: [1, 1.5, 0.7, 1.8, 0.8, 1.3, 1], // Wave-like bending
-              scaleX: [1, 1.2, 0.8, 1.4, 0.7, 1.1, 1], // Width variation for wave effect
-              transformOrigin: 'center', // Bend from center like a wave
+              x: [0, 100, 0], // Treadmill-like horizontal movement
+              opacity: [0.4, 0.8, 0.4], // Pulsing visibility
             }}
             transition={{
               duration: randomDuration,
               repeat: Infinity,
               repeatType: 'loop',
-              ease: 'easeInOut',
+              ease: 'linear', // Smooth linear movement like treadmill
               delay: randomDelay,
             }}
           />
         );
       })}
       
-      {/* Additional floating strings starting from same area */}
+      {/* Additional wavy lines with different wave patterns */}
       {Array.from({ length: 3 }).map((_, i) => {
         const startTop = 38 + i * 1.5; // Moved up higher (38-41%)
         const startLeft = 8 + i * 1.5; // Start closer to left side (8-12%)
         const randomDelay = (i + 5) * 0.3;
         const randomDuration = 15 + i * 2;
         
+        // Different wave patterns for variety
+        const wavePatterns = [
+          `polygon(0% 50%, 15% 35%, 25% 65%, 35% 25%, 45% 75%, 55% 30%, 65% 70%, 75% 40%, 85% 60%, 100% 50%)`,
+          `polygon(0% 50%, 12% 60%, 22% 30%, 32% 80%, 42% 20%, 52% 90%, 62% 15%, 72% 85%, 82% 35%, 100% 50%)`,
+          `polygon(0% 50%, 8% 25%, 18% 75%, 28% 40%, 38% 60%, 48% 35%, 58% 65%, 68% 45%, 78% 55%, 100% 50%)`
+        ];
+        
         return (
           <motion.div
-            key={`string-${i}`}
+            key={`wave-${i}`}
             className="absolute"
             style={{
-              background: `linear-gradient(90deg, transparent, ${colorB}90, ${colorA}90, transparent)`,
-              height: `${2.5 + i * 0.3}px`,
               width: '55%',
+              height: `${3 + i * 0.3}px`,
               top: `${startTop}%`,
               left: `${startLeft}%`,
               filter: 'blur(0.1px)',
-              borderRadius: '30px',
-              transform: `rotate(0deg) scaleY(1)`, // Start straight
-              transformOrigin: 'center',
+              background: `linear-gradient(90deg, transparent, ${colorB}90, ${colorA}90, transparent)`,
+              clipPath: wavePatterns[i], // Different wave pattern for each line
             }}
             animate={{
-              x: [0, 60, 30, 90, 15, 75, 0], // Gentle horizontal drift
-              y: [0, -10, 8, -15, 5, -12, 0], // Small vertical wave movement
-              rotate: [0, 3, -2, 4, -3, 2, 0], // Small rotation for wave effect
-              opacity: [0.3, 0.9, 0.2, 0.95, 0.4, 0.8, 0.3], // More visible
-              scaleY: [0.8, 2.0, 0.5, 2.2, 0.7, 1.8, 0.8], // More dramatic wave bending
-              scaleX: [1, 1.4, 0.6, 1.6, 0.5, 1.3, 1], // Width variation for wave effect
-              transformOrigin: 'center', // Bend from center like a wave
+              x: [0, 80, 0], // Treadmill-like horizontal movement
+              opacity: [0.3, 0.9, 0.3], // Pulsing visibility
             }}
             transition={{
               duration: randomDuration,
               repeat: Infinity,
               repeatType: 'loop',
-              ease: 'easeInOut',
+              ease: 'linear', // Smooth linear movement like treadmill
               delay: randomDelay,
             }}
           />
