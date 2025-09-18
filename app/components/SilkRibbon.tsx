@@ -24,21 +24,21 @@ export default function SilkRibbon({
       {Array.from({ length: 5 }).map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-full opacity-25"
+          className="absolute w-full"
           style={{
-            background: `linear-gradient(90deg, transparent, ${colorA}60, ${colorB}80, ${colorA}60, transparent)`,
-            height: `${3 + i * 0.5}px`,
-            top: `${60 + i * 8}%`, // Positioned around the trust badges area
-            filter: 'blur(1px)',
+            background: `linear-gradient(90deg, transparent, ${colorA}, ${colorB}, ${colorA}, transparent)`,
+            height: `${4 + i * 1}px`,
+            top: `${50 + i * 10}%`, // More spread out positioning
+            filter: 'blur(0.5px)',
             borderRadius: '50px',
           }}
           animate={{
             x: ['-100%', '100%'],
-            opacity: [0.1, 0.4, 0.1],
-            scaleY: [0.8, 1.3, 0.8],
+            opacity: [0.2, 0.6, 0.2],
+            scaleY: [0.8, 1.4, 0.8],
           }}
           transition={{
-            duration: 12 + i * 2,
+            duration: 15 + i * 2,
             repeat: Infinity,
             repeatType: 'loop',
             ease: 'easeInOut',
@@ -51,21 +51,21 @@ export default function SilkRibbon({
       {Array.from({ length: 3 }).map((_, i) => (
         <motion.div
           key={`wave-${i}`}
-          className="absolute w-full opacity-20"
+          className="absolute w-full"
           style={{
-            background: `linear-gradient(90deg, transparent, ${colorB}40, ${colorA}60, ${colorB}40, transparent)`,
-            height: `${2 + i * 0.3}px`,
-            top: `${55 + i * 15}%`,
-            filter: 'blur(0.8px)',
+            background: `linear-gradient(90deg, transparent, ${colorB}80, ${colorA}80, ${colorB}80, transparent)`,
+            height: `${3 + i * 0.5}px`,
+            top: `${45 + i * 18}%`,
+            filter: 'blur(0.3px)',
             borderRadius: '30px',
           }}
           animate={{
             x: ['-120%', '120%'],
-            opacity: [0.05, 0.3, 0.05],
-            scaleY: [0.6, 1.5, 0.6],
+            opacity: [0.15, 0.5, 0.15],
+            scaleY: [0.6, 1.6, 0.6],
           }}
           transition={{
-            duration: 18 + i * 3,
+            duration: 20 + i * 3,
             repeat: Infinity,
             repeatType: 'loop',
             ease: 'easeInOut',
