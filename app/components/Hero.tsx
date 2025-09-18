@@ -6,7 +6,7 @@ import {
   Phone, ArrowRight, Play, CheckCircle, Shield, 
   Calendar, Zap, Eye, EyeOff
 } from 'lucide-react'
-// import SilkRibbon from './SilkRibbon' // Removed - component deleted
+import SilkRibbon from './SilkRibbon'
 
 export default function Hero() {
   const [isLoading, setIsLoading] = useState(false)
@@ -177,14 +177,8 @@ export default function Hero() {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 via-black to-slate-900">
-      {/* Silk Ribbon Background - Removed component */}
-      {/* <SilkRibbon 
-        className="absolute inset-x-0 top-0 h-full"
-        speed={1.2}
-        amplitude={1.0}
-        colorA="#6AA7FF"
-        colorB="#A06BFF"
-      /> */}
+      {/* Promo Ribbon */}
+      <SilkRibbon />
 
       {/* Vignette overlay for better text readability */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none" />
