@@ -20,82 +20,77 @@ export default function SilkRibbon({
 }: SilkRibbonProps) {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      {/* Wave-like flowing ribbons */}
-      {Array.from({ length: 6 }).map((_, i) => (
+      {/* Simple flowing wave lines */}
+      {Array.from({ length: 5 }).map((_, i) => (
         <motion.div
           key={i}
-          className="absolute w-full opacity-20"
+          className="absolute w-full h-px opacity-30"
           style={{
-            background: `linear-gradient(90deg, transparent, ${colorA}, ${colorB}, ${colorA}, transparent)`,
-            height: `${2 + i * 0.5}px`,
-            top: `${20 + i * 15}%`,
-            filter: 'blur(1px)',
+            background: `linear-gradient(90deg, transparent, ${colorA}, ${colorB}, transparent)`,
+            top: `${15 + i * 18}%`,
           }}
           animate={{
-            x: ['-120%', '120%'],
-            opacity: [0.05, 0.25, 0.05],
-            scaleY: [0.8, 1.2, 0.8],
+            x: ['-100%', '100%'],
+            opacity: [0.1, 0.4, 0.1],
           }}
           transition={{
-            duration: 15 + i * 2,
+            duration: 20 + i * 3,
             repeat: Infinity,
             repeatType: 'loop',
-            ease: 'easeInOut',
+            ease: 'linear',
             delay: i * 2,
           }}
         />
       ))}
       
-      {/* Curved wave ribbons */}
-      {Array.from({ length: 4 }).map((_, i) => (
-        <motion.div
-          key={`curve-${i}`}
-          className="absolute w-full opacity-15"
-          style={{
-            background: `linear-gradient(90deg, transparent, ${colorB}, ${colorA}, ${colorB}, transparent)`,
-            height: `${1.5 + i * 0.3}px`,
-            top: `${30 + i * 20}%`,
-            filter: 'blur(0.5px)',
-            transform: `rotate(${i * 2 - 4}deg)`,
-          }}
-          animate={{
-            x: ['-100%', '100%'],
-            opacity: [0.08, 0.2, 0.08],
-            rotate: [`${i * 2 - 4}deg`, `${i * 2 - 2}deg`, `${i * 2 - 4}deg`],
-          }}
-          transition={{
-            duration: 18 + i * 3,
-            repeat: Infinity,
-            repeatType: 'loop',
-            ease: 'easeInOut',
-            delay: i * 3 + 1,
-          }}
-        />
-      ))}
-      
-      {/* Flowing silk-like waves */}
+      {/* Flowing ribbons with wave effect */}
       {Array.from({ length: 3 }).map((_, i) => (
         <motion.div
-          key={`silk-${i}`}
-          className="absolute w-full opacity-10"
+          key={`ribbon-${i}`}
+          className="absolute w-full opacity-20"
           style={{
-            background: `linear-gradient(90deg, transparent, ${colorA}40, ${colorB}60, ${colorA}40, transparent)`,
-            height: `${3 + i * 1}px`,
+            background: `linear-gradient(90deg, transparent, ${colorB}80, ${colorA}80, transparent)`,
+            height: '2px',
             top: `${25 + i * 25}%`,
-            filter: 'blur(2px)',
-            borderRadius: '50%',
+            filter: 'blur(0.5px)',
           }}
           animate={{
-            x: ['-150%', '150%'],
-            opacity: [0.03, 0.15, 0.03],
+            x: ['-120%', '120%'],
+            opacity: [0.05, 0.3, 0.05],
             scaleY: [0.5, 1.5, 0.5],
           }}
           transition={{
             duration: 25 + i * 5,
             repeat: Infinity,
             repeatType: 'loop',
-            ease: 'linear',
-            delay: i * 4 + 2,
+            ease: 'easeInOut',
+            delay: i * 3,
+          }}
+        />
+      ))}
+      
+      {/* Gentle wave particles */}
+      {Array.from({ length: 8 }).map((_, i) => (
+        <motion.div
+          key={`particle-${i}`}
+          className="absolute w-2 h-2 opacity-20 rounded-full"
+          style={{
+            background: `radial-gradient(circle, ${colorA}, ${colorB})`,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+          }}
+          animate={{
+            y: [0, -50, 0],
+            x: [0, Math.random() * 30 - 15, 0],
+            opacity: [0.1, 0.3, 0.1],
+            scale: [0.5, 1.2, 0.5],
+          }}
+          transition={{
+            duration: 6 + Math.random() * 4,
+            repeat: Infinity,
+            repeatType: 'loop',
+            ease: 'easeInOut',
+            delay: Math.random() * 3,
           }}
         />
       ))}
