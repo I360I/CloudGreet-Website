@@ -5,10 +5,7 @@ import jwt from 'jsonwebtoken'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('=== REGISTRATION DEBUG START ===')
-    
     const body = await request.json()
-    console.log('Request body received:', body)
     
     const { 
       business_name,
@@ -23,7 +20,7 @@ export async function POST(request: NextRequest) {
     } = body
     
     // Step 1: Comprehensive validation
-    console.log('Step 1: Comprehensive validation')
+    // Validation step
     
     // Check required fields
     if (!business_name?.trim()) {
@@ -87,10 +84,10 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    console.log('Step 1: Validation passed')
+    // Validation passed
     
     // Step 2: Check if user already exists
-    console.log('Step 2: Checking existing user')
+    // Check existing user
     const { data: existingUser, error: existingError } = await supabaseAdmin
       .from('users')
       .select('id')
@@ -98,7 +95,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingError && existingError.code !== 'PGRST116') {
-      console.log('Step 2: Error checking existing user:', existingError)
+      // Error checking existing user
       return NextResponse.json(
         { error: `Database error: ${existingError.message}` },
         { status: 500 }
@@ -106,21 +103,21 @@ export async function POST(request: NextRequest) {
     }
 
     if (existingUser) {
-      console.log('Step 2: User already exists')
+      // User already exists
       return NextResponse.json(
         { error: 'An account with this email already exists' },
         { status: 409 }
       )
     }
-    console.log('Step 2: User does not exist, proceeding')
+    // User does not exist, proceeding
 
     // Step 3: Hash password
-    console.log('Step 3: Hashing password')
+    // Hash password
     const passwordHash = await bcrypt.hash(password, 12)
-    console.log('Step 3: Password hashed successfully')
+    // Password hashed
 
     // Step 4: Create both user and business in a transaction-like approach
-    console.log('Step 4: Creating user and business records')
+    // Create user and business records
     
     // First, create user record
     const userData = {
@@ -133,7 +130,7 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     }
     
-    console.log('User data to insert:', { ...userData, password_hash: '[HIDDEN]' })
+    // Insert user data
     
     const { data: user, error: userError } = await supabaseAdmin
       .from('users')
@@ -142,13 +139,13 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError) {
-      console.log('Step 4: User creation error:', userError)
+      // User creation error
       return NextResponse.json(
         { error: `User creation failed: ${userError.message}` },
         { status: 500 }
       )
     }
-    console.log('Step 4: User created successfully:', user.id)
+    // User created successfully
 
     // Then, create business record with user_id
     const businessData = {
@@ -178,7 +175,7 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString()
     }
     
-    console.log('Business data to insert:', businessData)
+    // Insert business data
     
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
@@ -187,9 +184,9 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (businessError) {
-      console.log('Step 5: Business creation error:', businessError)
+      // Business creation error
       // Cleanup user record if business creation fails
-      console.log('Cleaning up user record due to business creation failure')
+      // Clean up user record
       await supabaseAdmin
         .from('users')
         .delete()
@@ -200,19 +197,19 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-    console.log('Step 5: Business created successfully:', business.id)
+    // Business created successfully
 
     // Step 6: Update user with business_id
-    console.log('Step 6: Updating user with business_id')
+    // Update user with business_id
     const { error: updateError } = await supabaseAdmin
       .from('users')
       .update({ business_id: business.id })
       .eq('id', user.id)
 
     if (updateError) {
-      console.log('Step 6: User update error:', updateError)
+      // User update error
       // Cleanup both records if update fails
-      console.log('Cleaning up both records due to update failure')
+      // Clean up both records
       await supabaseAdmin
         .from('businesses')
         .delete()
@@ -227,13 +224,13 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-    console.log('Step 6: User updated successfully')
+    // User updated successfully
 
     // Step 7: Create JWT token
-    console.log('Step 7: Creating JWT token')
+    // Create JWT token
     const jwtSecret = process.env.JWT_SECRET
     if (!jwtSecret) {
-      console.log('Step 7: JWT secret not configured')
+      // JWT secret not configured
       return NextResponse.json(
         { error: 'JWT secret not configured' },
         { status: 500 }
@@ -257,9 +254,9 @@ export async function POST(request: NextRequest) {
         keyid: 'v1'
       }
     )
-    console.log('Step 7: JWT token created successfully')
+    // JWT token created
 
-    console.log('=== REGISTRATION DEBUG SUCCESS ===')
+    // Registration successful
 
     return NextResponse.json({
       success: true,
@@ -282,8 +279,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.log('=== REGISTRATION DEBUG ERROR ===')
-    console.error('Registration error:', error)
+    // Registration error
     return NextResponse.json(
       { error: 'Registration failed. Please try again.' },
       { status: 500 }

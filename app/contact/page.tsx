@@ -17,8 +17,18 @@ export default function ContactPage() {
       const formData = new FormData(event.currentTarget)
       const data = Object.fromEntries(formData.entries())
       
-      // TODO: Implement actual contact form submission
-      console.log('Contact form data:', data)
+      // Submit contact form
+      const response = await fetch('/api/contact/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to send message')
+      }
       
       setMessage('Thank you for your message! We\'ll get back to you within 24 hours.')
       event.currentTarget.reset()
