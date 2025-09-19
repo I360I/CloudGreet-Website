@@ -13,7 +13,7 @@ import SilkRibbon from '../components/SilkRibbon'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-red-900 via-black to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white">
       {/* Navigation */}
       <motion.nav 
         initial={{ opacity: 0, y: -20 }}
