@@ -22,7 +22,7 @@ export default function SilkRibbon({
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
       {/* Ultra-smooth, ultra-long waves */}
       {Array.from({ length: 3 }).map((_, i) => {
-        const startTop = 35 + i * 8;
+        const startTop = 20 + i * 25;
         const opacities = [0.6, 0.8, 0.7];
         const strokeWidths = [3, 4, 3.5];
         const durations = [20, 25, 22];
