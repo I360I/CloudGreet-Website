@@ -44,7 +44,7 @@ export default function Hero() {
       </div>
 
       {/* Full Screen Animated Background Lines - Behind Everything */}
-      <div className="absolute inset-0 opacity-80 pointer-events-none z-0">
+      <div className="absolute inset-0 opacity-100 pointer-events-none z-0">
         <SilkRibbon 
           className="absolute inset-0 w-full h-full"
           speed={1.5}

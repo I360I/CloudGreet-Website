@@ -23,8 +23,8 @@ export default function SilkRibbon({
       {/* Ultra-smooth, ultra-long waves */}
       {Array.from({ length: 3 }).map((_, i) => {
         const startTop = 20 + i * 25;
-        const opacities = [0.6, 0.8, 0.7];
-        const strokeWidths = [3, 4, 3.5];
+        const opacities = [1.0, 1.0, 1.0];
+        const strokeWidths = [5, 6, 5.5];
         const durations = [20, 25, 22];
         
         return (
@@ -50,9 +50,9 @@ export default function SilkRibbon({
                 </feMerge>
               </filter>
               <linearGradient id={`gradient-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor={colorA} stopOpacity={opacities[i]} />
-                <stop offset="50%" stopColor={colorB} stopOpacity={opacities[i] * 0.8} />
-                <stop offset="100%" stopColor={colorA} stopOpacity={opacities[i]} />
+                <stop offset="0%" stopColor="#00FF00" stopOpacity={opacities[i]} />
+                <stop offset="50%" stopColor="#FF0000" stopOpacity={opacities[i] * 0.8} />
+                <stop offset="100%" stopColor="#0000FF" stopOpacity={opacities[i]} />
               </linearGradient>
             </defs>
             
