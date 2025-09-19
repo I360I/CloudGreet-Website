@@ -474,18 +474,15 @@ export default function LandingPage() {
                 </div>
                 
                 {/* CTA Button */}
-                <button
-                  onClick={() => {
-                    const formElement = document.querySelector('.max-w-2xl')
-                    formElement?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-5 rounded-2xl text-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25"
+                <Link
+                  href="/start"
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-5 rounded-2xl text-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 inline-block"
                 >
                   <div className="flex items-center justify-center gap-3">
                     <Zap className="w-6 h-6" />
                     Get Started Free
                   </div>
-                </button>
+                </Link>
                 
                 <p className="text-gray-400 text-sm mt-6">
                   No credit card required • Setup in minutes • Start your 7-day free trial
@@ -532,16 +529,13 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="flex justify-center items-center"
           >
-            <button
-              onClick={() => {
-                const formElement = document.querySelector('.max-w-2xl')
-                formElement?.scrollIntoView({ behavior: 'smooth' })
-              }}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-6 rounded-2xl text-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 flex items-center justify-center gap-4"
+            <Link
+              href="/start"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-6 rounded-2xl text-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 flex items-center justify-center gap-4 inline-block"
             >
               <Zap className="w-8 h-8" />
               Get Started
-            </button>
+            </Link>
             
           </motion.div>
           
