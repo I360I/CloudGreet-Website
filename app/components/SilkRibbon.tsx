@@ -20,6 +20,9 @@ export default function SilkRibbon({
 }: SilkRibbonProps) {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
+      {/* DEBUG: Simple test rectangle */}
+      <div className="absolute top-10 left-10 w-20 h-20 bg-red-500 z-50"></div>
+      
       {/* Ultra-smooth, ultra-long waves */}
       {Array.from({ length: 3 }).map((_, i) => {
         const startTop = 20 + i * 25;
