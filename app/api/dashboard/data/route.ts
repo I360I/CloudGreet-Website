@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 
 export async function GET(request: NextRequest) {
   try {
@@ -150,7 +151,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(dashboardData)
     
   } catch (error) {
-    logger.error('Dashboard data error', error as Error, { userId, businessId })
+    logger.error('Dashboard data error', error as Error, { 
+      userId: request.headers.get('x-user-id'),
+      businessId: request.headers.get('x-business-id')
+    })
     return NextResponse.json({ error: 'Failed to load dashboard data' }, { status: 500 })
   }
 }

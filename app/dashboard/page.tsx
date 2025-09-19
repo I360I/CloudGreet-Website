@@ -31,7 +31,10 @@ export default function Dashboard() {
     missedCalls: 0,
     avgCallDuration: 0,
     customerSatisfaction: 0,
-    monthlyRecurring: 0
+    monthlyRecurring: 0,
+    callsToday: 0,
+    callsThisWeek: 0,
+    avgCallsPerDay: 0
   })
 
   const [recentCalls, setRecentCalls] = useState([])
@@ -97,7 +100,6 @@ export default function Dashboard() {
     }
   }
 
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -125,17 +127,16 @@ export default function Dashboard() {
               </div>
             </Link>
               
-              <div className="flex items-center space-x-3 ml-8">
-                <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${
-                  isLive 
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                    : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full ${
-                    isLive ? 'bg-green-400' : 'bg-gray-400'
-                  }`} />
-                  <span>{isLive ? 'Live' : 'Offline'}</span>
-                </div>
+            <div className="flex items-center space-x-3 ml-8">
+              <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${
+                isLive 
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                  : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+              }`}>
+                <div className={`w-2 h-2 rounded-full ${
+                  isLive ? 'bg-green-400' : 'bg-gray-400'
+                }`} />
+                <span>{isLive ? 'Live' : 'Offline'}</span>
               </div>
             </div>
 
@@ -143,19 +144,11 @@ export default function Dashboard() {
               <button className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
                 <Bell className="w-5 h-5 text-gray-300" />
               </button>
-              
               <button className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
                 <Settings className="w-5 h-5 text-gray-300" />
               </button>
-              
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-                  <span className="text-sm font-bold">JD</span>
-                </div>
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium">John Doe</p>
-                  <p className="text-xs text-gray-400">Business Owner</p>
-                </div>
+              <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-gray-300" />
               </div>
             </div>
           </div>
@@ -177,7 +170,7 @@ export default function Dashboard() {
               <button
                 key={timeframe}
                 onClick={() => setSelectedTimeframe(timeframe)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   selectedTimeframe === timeframe
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
@@ -196,7 +189,7 @@ export default function Dashboard() {
               icon: Phone,
               label: "Total Calls",
               value: dashboardData.totalCalls,
-              change: "+23%",
+              change: "+12%",
               changeType: "positive",
               color: "text-blue-400"
             },
@@ -204,7 +197,7 @@ export default function Dashboard() {
               icon: DollarSign,
               label: "Revenue",
               value: `$${dashboardData.totalRevenue.toLocaleString()}`,
-              change: "+34%",
+              change: "+18%",
               changeType: "positive",
               color: "text-green-400"
             },
@@ -268,21 +261,22 @@ export default function Dashboard() {
                   {stat.change}
                 </span>
               </div>
-              <p className="text-gray-400 text-sm mb-1">{stat.label}</p>
-              <p className="text-2xl font-bold text-white">{stat.value}</p>
+              <div>
+                <p className="text-2xl font-bold text-white">{stat.value}</p>
+                <p className="text-gray-400 text-sm">{stat.label}</p>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Tabs */}
-        <div className="mb-6">
-          <div className="flex border-b border-gray-800">
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-800 mb-8">
+          <div className="flex space-x-8">
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'calls', label: 'Calls', icon: Phone },
               { id: 'appointments', label: 'Appointments', icon: Calendar },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-              { id: 'settings', label: 'Settings', icon: Settings }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -331,7 +325,7 @@ export default function Dashboard() {
                     <div className="space-y-4">
                       {liveFeed.map((item, index) => (
                         <div
-                          key={item.id}
+                          key={index}
                           className="flex items-center space-x-4 p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors"
                         >
                           <div className="p-2 rounded-lg bg-gray-700">
@@ -348,160 +342,25 @@ export default function Dashboard() {
                 </div>
 
                 {/* Quick Actions */}
-                <div>
+                <div className="space-y-6">
                   <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-white mb-6">Quick Actions</h3>
+                    <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
                     <div className="space-y-3">
-                      {[
-                        { icon: Phone, label: 'Test AI Agent', action: () => {/* Test AI Agent */} },
-                        { icon: Calendar, label: 'Schedule Appointment', action: () => {/* Schedule Appointment */} },
-                        { icon: MessageSquare, label: 'Send Follow-up', action: () => {/* Send Follow-up */} },
-                        { icon: BarChart3, label: 'View Reports', action: () => {/* View Reports */} },
-                        { icon: Settings, label: 'Configure Settings', action: () => setSelectedTab('settings') }
-                      ].map((action, index) => (
-                        <button
-                          key={index}
-                          onClick={action.action}
-                          className="w-full flex items-center space-x-3 p-3 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-left"
-                        >
-                          <div className="p-2 rounded-lg bg-gray-700">
-                            <action.icon className="w-4 h-4 text-gray-300" />
-                          </div>
-                          <span className="text-white font-medium">{action.label}</span>
-                          <ChevronRight className="w-4 h-4 text-gray-400 ml-auto" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Calls */}
-                <div className="lg:col-span-2">
-                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-semibold text-white flex items-center">
-                        <Phone className="w-5 h-5 mr-2 text-blue-400" />
-                        Recent Calls
-                      </h3>
-                      <button className="text-sm text-blue-400 hover:text-blue-300">
-                        View All
+                      <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                        <Phone className="w-4 h-4 inline mr-2" />
+                        Test Call
+                      </button>
+                      <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                        <Calendar className="w-4 h-4 inline mr-2" />
+                        Schedule Demo
+                      </button>
+                      <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                        <Settings className="w-4 h-4 inline mr-2" />
+                        Settings
                       </button>
                     </div>
-                    
-                    <div className="space-y-4">
-                      {recentCalls.map((call, index) => (
-                        <div
-                          key={call.id}
-                          className="p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-                                <User className="w-5 h-5 text-white" />
-                              </div>
-                              <div>
-                                <h4 className="text-white font-semibold">{call.customer}</h4>
-                                <p className="text-gray-400 text-sm">{call.phone} • {call.type}</p>
-                                <p className="text-gray-500 text-xs mt-1 line-clamp-1">{call.transcript}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                  call.outcome === 'appointment_booked' ? 'bg-green-500/20 text-green-400' :
-                                  call.outcome === 'lead_qualified' ? 'bg-blue-500/20 text-blue-400' :
-                                  'bg-orange-500/20 text-orange-400'
-                                }`}>
-                                  {call.outcome.replace('_', ' ')}
-                                </span>
-                                <div className="flex items-center space-x-1">
-                                  {[...Array(5)].map((_, i) => (
-                                    <StarIcon 
-                                      key={i} 
-                                      className={`w-3 h-3 ${i < call.satisfaction ? 'text-yellow-400 fill-current' : 'text-gray-600'}`} 
-                                    />
-                                  ))}
-                                </div>
-                              </div>
-                              <p className="text-gray-400 text-sm">{call.duration}</p>
-                              <p className="text-gray-500 text-xs">{call.timestamp}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 </div>
-
-                {/* Upcoming Appointments */}
-                <div>
-                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-semibold text-white flex items-center">
-                        <Calendar className="w-5 h-5 mr-2 text-green-400" />
-                        Upcoming Appointments
-                      </h3>
-                      <button className="text-sm text-green-400 hover:text-green-300">
-                        View Calendar
-                      </button>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {upcomingAppointments.map((appointment, index) => (
-                        <div
-                          key={appointment.id}
-                          className="p-4 bg-gray-800 rounded-lg hover:bg-gray-750 transition-colors"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-white font-semibold">{appointment.customer}</h4>
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              appointment.status === 'confirmed' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
-                            }`}>
-                              {appointment.status}
-                            </span>
-                          </div>
-                          <p className="text-gray-300 text-sm mb-1">{appointment.service}</p>
-                          <p className="text-gray-400 text-sm mb-1">{appointment.date}</p>
-                          <p className="text-gray-500 text-xs">{appointment.address}</p>
-                          <div className="flex items-center space-x-4 mt-2 text-xs text-gray-400">
-                            <span className="flex items-center">
-                              <Clock className="w-3 h-3 mr-1" />
-                              {appointment.duration}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {selectedTab === 'calls' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-6">Call Management</h3>
-                <p className="text-gray-400">Advanced call logs, transcripts, and analytics coming soon...</p>
-              </div>
-            )}
-
-            {selectedTab === 'appointments' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-6">Appointments</h3>
-                <p className="text-gray-400">Calendar integration and appointment management coming soon...</p>
-              </div>
-            )}
-
-            {selectedTab === 'analytics' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-6">Analytics</h3>
-                <p className="text-gray-400">Detailed performance metrics and insights coming soon...</p>
-              </div>
-            )}
-
-            {selectedTab === 'settings' && (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-6">Settings</h3>
-                <p className="text-gray-400">AI agent configuration and business settings coming soon...</p>
               </div>
             )}
           </motion.div>

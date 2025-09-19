@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import { 
   Phone, Play, CheckCircle, Calendar, Zap, 
   TrendingUp, Users, DollarSign
