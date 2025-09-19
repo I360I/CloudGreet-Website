@@ -20,13 +20,12 @@ export default function SilkRibbon({
 }: SilkRibbonProps) {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      {/* More wavy, more visible, intersecting lines */}
-      {Array.from({ length: 6 }).map((_, i) => {
-        // Much closer together for intersection
-        const startTop = 37 + i * 0.8; // Closer spacing for intersection
-        const opacities = [0.7, 0.8, 0.6, 0.9, 0.65, 0.75]; // More visible
-        const widths = [4, 5, 3.5, 4.5, 3, 5.5];
-        const durations = [12, 15, 10, 18, 14, 16];
+      {/* 4 lines with much higher wave peaks */}
+      {Array.from({ length: 4 }).map((_, i) => {
+        const startTop = 37 + i * 1.2; // Slightly more spacing with fewer lines
+        const opacities = [0.7, 0.8, 0.6, 0.9]; // 4 opacities
+        const widths = [4, 5, 3.5, 4.5]; // 4 widths
+        const durations = [12, 15, 10, 18]; // 4 durations
         
         return (
           <motion.div
@@ -45,17 +44,17 @@ export default function SilkRibbon({
             animate={{
               x: ['-10vw', '10vw'], // Continuous loop
               opacity: [opacities[i], opacities[i] * 1.3, opacities[i]],
-              // Much more wavy - bigger amplitude
-              scaleY: [1, 2.5, 0.3, 3, 0.4, 2.8, 1], // Much bigger wave motion
-              // Add some horizontal wave motion too
-              y: [0, -8, 12, -6, 10, -4, 0], // Vertical wave movement
+              // Much higher wave peaks - more dramatic bending
+              scaleY: [1, 4, 0.2, 5, 0.3, 4.5, 0.4, 4.8, 1], // Much higher peaks
+              // More dramatic vertical wave movement
+              y: [0, -15, 20, -12, 18, -8, 15, -5, 0], // Higher wave movement
             }}
             transition={{
               duration: durations[i],
               repeat: Infinity,
               repeatType: 'loop',
-              ease: 'easeInOut', // More natural wave motion
-              delay: i * 1.2, // Closer delays for intersection
+              ease: 'easeInOut',
+              delay: i * 1.5, // Slightly more spacing with fewer lines
             }}
           />
         );
