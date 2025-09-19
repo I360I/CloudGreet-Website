@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         })
 
       // SMS sending would be implemented here
-      console.log('SMS opt-out processed for:', From)
+      // SMS opt-out processed
 
       return NextResponse.json({ success: true })
     }
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     if (message === 'help') {
       // Send help message
       // SMS sending would be implemented here
-      console.log('SMS help requested from:', From)
+      // SMS help requested
 
       return NextResponse.json({ success: true })
     }
@@ -163,7 +163,7 @@ End all messages with: "Reply STOP to opt out; HELP for help."`
 
     // Send AI response
     // SMS sending would be implemented here
-    console.log('AI response would be sent to:', From, 'Response:', aiResponse)
+    // AI response would be sent via SMS
 
     return NextResponse.json({ success: true })
 

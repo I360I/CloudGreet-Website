@@ -27,9 +27,12 @@ export default function BillingPage() {
     // Get business ID from localStorage or API
     const token = localStorage.getItem('token')
     if (token) {
-      // In a real app, you'd fetch this from an API
-      // For now, we'll use a placeholder
-      setBusinessId('current-business-id')
+    // Get business ID from user data
+    const user = localStorage.getItem('user')
+    if (user) {
+      const userData = JSON.parse(user)
+      setBusinessId(userData.business_id || userData.id)
+    }
     }
   }, [])
 

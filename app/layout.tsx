@@ -60,7 +60,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: 'your-google-verification-code', // Update with actual verification code
+    google: 'G-XXXXXXXXXX', // Replace with actual Google Analytics verification code
   },
 }
 

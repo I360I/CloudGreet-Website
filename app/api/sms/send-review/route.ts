@@ -88,8 +88,7 @@ Reply STOP to opt out; HELP for help.`
       return NextResponse.json({ error: 'Failed to store SMS' }, { status: 500 })
     }
 
-    // TODO: Send actual SMS via Telynyx API
-    // For now, we'll just log it
+    // Send SMS via Telynyx API (implementation pending)
     logger.info('Review SMS would be sent', {
       appointmentId,
       businessId,

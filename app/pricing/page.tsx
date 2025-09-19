@@ -40,9 +40,13 @@ export default function PricingPage() {
     // Get business ID from localStorage or API
     const token = localStorage.getItem('token')
     if (token) {
-      // In a real app, you'd fetch this from an API
-      setBusinessId('current-business-id')
-      loadPricingRules()
+      // Get business ID from user data
+      const user = localStorage.getItem('user')
+      if (user) {
+        const userData = JSON.parse(user)
+        setBusinessId(userData.business_id || userData.id)
+        loadPricingRules()
+      }
     }
   }, [])
 

@@ -46,8 +46,13 @@ export default function QuotesPage() {
     // Get business ID from localStorage or API
     const token = localStorage.getItem('token')
     if (token) {
-      setBusinessId('current-business-id')
-      loadQuotes()
+      // Get business ID from user data
+      const user = localStorage.getItem('user')
+      if (user) {
+        const userData = JSON.parse(user)
+        setBusinessId(userData.business_id || userData.id)
+        loadQuotes()
+      }
     }
   }, [])
 
