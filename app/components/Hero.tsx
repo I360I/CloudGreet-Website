@@ -16,14 +16,14 @@ export default function Hero() {
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none" />
 
       {/* Content */}
-      <div className="relative z-10 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-center pt-20">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-center pt-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           className="mb-8"
         >
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-purple-300 leading-normal tracking-tight pb-2">
+          <h1 className="text-7xl md:text-8xl lg:text-9xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-purple-300 leading-tight tracking-tight">
             Never Miss a Call Again
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
@@ -50,13 +50,13 @@ export default function Hero() {
         </motion.div>
 
         {/* Trust Badges with Animated Background */}
-        <div className="relative">
+        <div className="relative py-8 px-4">
           {/* Animated Background Lines */}
-          <div className="absolute inset-0 opacity-20 pointer-events-none">
+          <div className="absolute inset-0 opacity-40 pointer-events-none">
             <SilkRibbon 
               className="absolute inset-x-0 top-0 h-full"
-              speed={1.2}
-              amplitude={1.0}
+              speed={1.5}
+              amplitude={1.2}
               colorA="#6AA7FF"
               colorB="#A06BFF"
             />
