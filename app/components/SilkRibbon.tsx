@@ -18,6 +18,7 @@ export default function SilkRibbon({
   colorA = "#6AA7FF", 
   colorB = "#A06BFF" 
 }: SilkRibbonProps) {
+  console.log('SilkRibbon component is rendering!');
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
       {/* DEBUG: Simple test rectangle */}

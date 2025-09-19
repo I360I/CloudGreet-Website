@@ -43,6 +43,9 @@ export default function Hero() {
         ))}
       </div>
 
+      {/* DEBUG: Test if Hero component is rendering */}
+      <div className="absolute top-5 right-5 w-10 h-10 bg-yellow-500 z-50"></div>
+      
       {/* Full Screen Animated Background Lines - Behind Everything */}
       <div className="absolute inset-0 opacity-100 pointer-events-none z-0">
         <SilkRibbon 
