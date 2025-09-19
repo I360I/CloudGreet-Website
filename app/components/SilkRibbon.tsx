@@ -23,8 +23,8 @@ export default function SilkRibbon({
       {/* Clean thin wavy lines */}
       {Array.from({ length: 4 }).map((_, i) => {
         const startTop = 37 + i * 1.5; // More spacing
-        const opacities = [0.5, 0.6, 0.4, 0.7]; // Moderate opacities
-        const baseWidths = [1.5, 2, 1, 2.5]; // Much thinner base widths
+        const opacities = [0.6, 0.7, 0.5, 0.8]; // Slightly more visible
+        const baseWidths = [1.8, 2.2, 1.5, 2.8]; // Slightly thicker for better visibility
         const durations = [12, 15, 10, 18];
         
         return (
@@ -38,12 +38,12 @@ export default function SilkRibbon({
               left: '-10vw',
               background: `linear-gradient(90deg, transparent, rgba(106, 167, 255, ${opacities[i]}), transparent)`,
               borderRadius: '50px',
-              filter: 'blur(0.2px)',
-              boxShadow: `0 0 10px rgba(106, 167, 255, ${opacities[i] * 0.4})`,
+              filter: 'blur(0.1px)',
+              boxShadow: `0 0 15px rgba(106, 167, 255, ${opacities[i] * 0.5})`,
             }}
             animate={{
               x: ['-10vw', '10vw'], // Continuous loop
-              opacity: [opacities[i], opacities[i] * 1.2, opacities[i]],
+              // No opacity changes - keep consistent
               // Moderate wave peaks - not too thick
               scaleY: [1, 2, 0.5, 2.2, 0.6, 2.1, 1], // Moderate peaks
               // Subtle vertical wave movement
