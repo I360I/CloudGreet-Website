@@ -18,6 +18,7 @@
     "@supabase/supabase-js": "^2.39.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.5",
+    "@vercel/speed-insights": "^1.2.0",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "framer-motion": "^10.16.16",

@@ -560,17 +560,17 @@ export default function LandingPage() {
             
             {/* Trust Indicators Content */}
             <div className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-400">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">Setup in minutes</span>
+                <span className="text-sm font-medium">Stripe Secure</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">No credit card required</span>
+                <span className="text-sm font-medium">Telynyx Powered</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">Cancel anytime</span>
+                <span className="text-sm font-medium">Google Calendar</span>
               </div>
             </div>
           </motion.div>
