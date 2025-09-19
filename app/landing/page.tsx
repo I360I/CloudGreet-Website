@@ -474,19 +474,33 @@ export default function LandingPage() {
                   ))}
                 </div>
                 
-                {/* CTA Button */}
-                <Link
-                  href="/start"
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-5 rounded-2xl text-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 inline-block"
-                >
-                  <div className="flex items-center justify-center gap-3">
-                    <Zap className="w-6 h-6" />
-                    Get Started Free
+                {/* CTA Button with Animated Background */}
+                <div className="relative">
+                  {/* Animated Background Lines */}
+                  <div className="absolute inset-0 opacity-20 pointer-events-none">
+                    <SilkRibbon
+                      className="absolute inset-x-0 top-0 h-full"
+                      speed={1.5}
+                      amplitude={0.8}
+                      colorA="#A06BFF"
+                      colorB="#6AA7FF"
+                    />
                   </div>
-                </Link>
+                  
+                  {/* CTA Button */}
+                  <Link
+                    href="/start"
+                    className="relative z-10 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-5 rounded-2xl text-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 inline-block"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <Zap className="w-6 h-6" />
+                      Get Started Free
+                    </div>
+                  </Link>
+                </div>
                 
                 <p className="text-gray-400 text-sm mt-6">
-                  No credit card required • Setup in minutes • Start your 7-day free trial
+                  No credit card required • Setup in minutes • Professional AI receptionist
                 </p>
               </div>
             </div>
@@ -545,33 +559,19 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="mt-16 relative"
+            className="mt-16 flex flex-wrap justify-center items-center gap-8 text-gray-400"
           >
-            {/* Animated Background Lines */}
-            <div className="absolute inset-0 opacity-20 pointer-events-none">
-              <SilkRibbon
-                className="absolute inset-x-0 top-0 h-full"
-                speed={1.5}
-                amplitude={0.8}
-                colorA="#A06BFF"
-                colorB="#6AA7FF"
-              />
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-sm font-medium">Stripe Secure</span>
             </div>
-            
-            {/* Trust Indicators Content */}
-            <div className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-400">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">Stripe Secure</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">Telynyx Powered</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">Google Calendar</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span className="text-sm font-medium">Telynyx Powered</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+              <span className="text-sm font-medium">Google Calendar</span>
             </div>
           </motion.div>
         </div>
