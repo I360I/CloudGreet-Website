@@ -6,6 +6,7 @@ import {
   Phone, ArrowRight, Play, CheckCircle, Shield, 
   Calendar, Zap, Eye, EyeOff
 } from 'lucide-react'
+import Link from 'next/link'
 import SilkRibbon from './SilkRibbon'
 
 export default function Hero() {
@@ -252,15 +253,24 @@ export default function Hero() {
           </div>
         </motion.div>
 
-        {/* Quick Signup Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9, duration: 0.8 }}
-          className="mt-16 max-w-2xl mx-auto"
-        >
-          <div className="bg-gray-800/30 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50">
-            <h3 className="text-2xl font-bold text-white mb-6">Get Started in 60 Seconds</h3>
+            {/* Quick Signup Form */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9, duration: 0.8 }}
+              className="mt-16 max-w-2xl mx-auto"
+            >
+              <div className="bg-gray-800/30 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50">
+                {/* Clickable Logo */}
+                <div className="flex justify-center mb-6">
+                  <Link href="/landing" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">CG</span>
+                    </div>
+                    <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-purple-300">CloudGreet</span>
+                  </Link>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-6">Get Started in 60 Seconds</h3>
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <input
