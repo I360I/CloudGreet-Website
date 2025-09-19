@@ -52,17 +52,17 @@ export default function SilkRibbon({
             }}
           >
             <motion.path
-              d={`M0,15 Q${frequencies[i]},5 ${frequencies[i]*2},15 T${frequencies[i]*4},15 T${frequencies[i]*6},15 T${frequencies[i]*8},15`}
+              d={`M0,15 Q${frequencies[i]},5 ${frequencies[i]*2},15 T${frequencies[i]*4},15 T${frequencies[i]*6},15 T${frequencies[i]*8},15 T${frequencies[i]*10},15 T${frequencies[i]*12},15 T${frequencies[i]*14},15 T${frequencies[i]*16},15 T${frequencies[i]*18},15 T${frequencies[i]*20},15`}
               stroke={`rgba(106, 167, 255, ${opacities[i]})`}
               strokeWidth={strokeWidths[i]}
               fill="none"
               filter={`drop-shadow(0 0 8px rgba(106, 167, 255, ${opacities[i] * 0.5}))`}
               animate={{
                 d: [
-                  `M0,15 Q${frequencies[i]},5 ${frequencies[i]*2},15 T${frequencies[i]*4},15 T${frequencies[i]*6},15 T${frequencies[i]*8},15`,
-                  `M0,15 Q${frequencies[i]},25 ${frequencies[i]*2},15 T${frequencies[i]*4},8 T${frequencies[i]*6},22 T${frequencies[i]*8},15`,
-                  `M0,15 Q${frequencies[i]},8 ${frequencies[i]*2},22 T${frequencies[i]*4},15 T${frequencies[i]*6},5 T${frequencies[i]*8},15`,
-                  `M0,15 Q${frequencies[i]},5 ${frequencies[i]*2},15 T${frequencies[i]*4},15 T${frequencies[i]*6},15 T${frequencies[i]*8},15`
+                  `M0,15 Q${frequencies[i]},5 ${frequencies[i]*2},15 T${frequencies[i]*4},15 T${frequencies[i]*6},15 T${frequencies[i]*8},15 T${frequencies[i]*10},15 T${frequencies[i]*12},15 T${frequencies[i]*14},15 T${frequencies[i]*16},15 T${frequencies[i]*18},15 T${frequencies[i]*20},15`,
+                  `M0,15 Q${frequencies[i]},25 ${frequencies[i]*2},15 T${frequencies[i]*4},8 T${frequencies[i]*6},22 T${frequencies[i]*8},15 T${frequencies[i]*10},5 T${frequencies[i]*12},25 T${frequencies[i]*14},15 T${frequencies[i]*16},8 T${frequencies[i]*18},22 T${frequencies[i]*20},15`,
+                  `M0,15 Q${frequencies[i]},8 ${frequencies[i]*2},22 T${frequencies[i]*4},15 T${frequencies[i]*6},5 T${frequencies[i]*8},15 T${frequencies[i]*10},25 T${frequencies[i]*12},8 T${frequencies[i]*14},15 T${frequencies[i]*16},22 T${frequencies[i]*18},5 T${frequencies[i]*20},15`,
+                  `M0,15 Q${frequencies[i]},5 ${frequencies[i]*2},15 T${frequencies[i]*4},15 T${frequencies[i]*6},15 T${frequencies[i]*8},15 T${frequencies[i]*10},15 T${frequencies[i]*12},15 T${frequencies[i]*14},15 T${frequencies[i]*16},15 T${frequencies[i]*18},15 T${frequencies[i]*20},15`
                 ]
               }}
               transition={{
