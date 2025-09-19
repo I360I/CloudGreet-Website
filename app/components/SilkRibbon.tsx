@@ -20,41 +20,42 @@ export default function SilkRibbon({
 }: SilkRibbonProps) {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      {/* Overlapping 3D wavy lines - always across screen */}
-      {Array.from({ length: 8 }).map((_, i) => {
-        // Overlap lines more - closer positioning
-        const startTop = 35 + i * 1.2; // Closer together for overlap
-        const colors = ["#6AA7FF", "#A06BFF", "#4FACFE", "#B794F6", "#63B3ED", "#8B5CF6", "#3B82F6", "#A855F7"];
-        const widths = [3, 4, 2, 3.5, 5, 2.5, 4.5, 3.2];
-        const durations = [12, 15, 10, 18, 14, 16, 13, 17];
+      {/* 3D blue wavy lines with different opacities - always across screen */}
+      {Array.from({ length: 6 }).map((_, i) => {
+        // Lowered slightly and closer together for overlap
+        const startTop = 37 + i * 1.2; // Lowered from 35 to 37
+        const opacities = [0.3, 0.5, 0.4, 0.6, 0.35, 0.45]; // Different opacities
+        const widths = [3, 4, 2.5, 3.5, 2, 4.5];
+        const durations = [12, 15, 10, 18, 14, 16];
         
         return (
           <motion.div
             key={i}
             className="absolute"
             style={{
-              width: '150vw', // Wider to ensure no gaps
+              width: '100vw', // Full screen width
               height: `${widths[i]}px`,
               top: `${startTop}%`,
-              left: '-25vw', // Start further left
-              background: `linear-gradient(90deg, transparent, ${colors[i]}, transparent)`,
+              left: '0',
+              background: `linear-gradient(90deg, transparent, rgba(106, 167, 255, ${opacities[i]}), transparent)`,
               borderRadius: '50px',
-              filter: 'blur(0.3px)',
-              boxShadow: `0 0 15px ${colors[i]}60, 0 0 30px ${colors[i]}30`, // Stronger 3D glow
+              filter: 'blur(0.5px)',
+              boxShadow: `0 0 20px rgba(106, 167, 255, ${opacities[i] * 0.5}), 0 0 40px rgba(106, 167, 255, ${opacities[i] * 0.3})`,
               zIndex: 10 - i, // Layering for 3D effect
             }}
             animate={{
-              x: ['-50vw', '50vw'], // Continuous movement with overlap
-              opacity: [0.7, 0.95, 0.7],
-              scaleY: [1, 1.8, 0.6, 2.2, 1], // More dramatic wave motion
-              scaleX: [1, 1.1, 0.9, 1.2, 1], // Width variation for 3D
+              x: [0, 0], // No horizontal movement - stay in place
+              opacity: [opacities[i], opacities[i] * 1.3, opacities[i]], // Subtle opacity pulse
+              scaleY: [1, 1.6, 0.7, 2, 1], // Wave-like vertical scaling
+              scaleX: [1, 1.05, 0.95, 1.1, 1], // Subtle width variation
+              rotateX: [0, 5, -3, 8, 0], // 3D rotation effect
             }}
             transition={{
               duration: durations[i],
               repeat: Infinity,
               repeatType: 'loop',
-              ease: 'linear',
-              delay: i * 0.8, // Closer delays for overlap
+              ease: 'easeInOut',
+              delay: i * 1.5, // Staggered delays
             }}
           />
         );
