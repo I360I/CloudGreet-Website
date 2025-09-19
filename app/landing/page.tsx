@@ -545,7 +545,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="mt-16 flex flex-wrap justify-center items-center gap-8 text-gray-400 relative"
+            className="mt-16 relative"
           >
             {/* Animated Background Lines */}
             <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -558,17 +558,20 @@ export default function LandingPage() {
               />
             </div>
             
-            <div className="relative z-10 flex items-center gap-3">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm font-medium">Setup in minutes</span>
-            </div>
-            <div className="relative z-10 flex items-center gap-3">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-              <span className="text-sm font-medium">No credit card required</span>
-            </div>
-            <div className="relative z-10 flex items-center gap-3">
-              <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
-              <span className="text-sm font-medium">Cancel anytime</span>
+            {/* Trust Indicators Content */}
+            <div className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-400">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium">Setup in minutes</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium">No credit card required</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium">Cancel anytime</span>
+              </div>
             </div>
           </motion.div>
         </div>
