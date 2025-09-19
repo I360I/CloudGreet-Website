@@ -481,7 +481,7 @@ export default function LandingPage() {
                 >
                   <div className="flex items-center justify-center gap-3">
                     <Zap className="w-6 h-6" />
-                    TESTING DEPLOYMENT
+                    Test for Free
                   </div>
                 </Link>
                 
@@ -536,7 +536,7 @@ export default function LandingPage() {
               className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-6 rounded-2xl text-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 flex items-center justify-center gap-4 inline-block"
             >
               <Zap className="w-8 h-8" />
-              TESTING DEPLOYMENT
+              Test for Free
             </Link>
             
           </motion.div>
