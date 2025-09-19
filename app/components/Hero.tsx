@@ -53,7 +53,7 @@ export default function Hero() {
             className="inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl transform hover:scale-105"
           >
             <Zap className="w-6 h-6 mr-3" />
-            Get Started Free
+            Test for Free
           </Link>
         </motion.div>
 
@@ -86,14 +86,14 @@ export default function Hero() {
           className="mt-16 max-w-2xl mx-auto text-center"
         >
           <p className="text-gray-400 text-sm mb-6">
-            No credit card required • Setup takes minutes
+            No credit card required • Setup takes minutes • Professional AI receptionist
           </p>
           <Link
             href="/start"
             className="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 text-lg"
           >
             <ArrowRight className="w-6 h-6 mr-3" />
-            Start Your Free Trial
+            Test for Free
           </Link>
         </motion.div>
       </div>
