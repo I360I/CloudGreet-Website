@@ -77,28 +77,24 @@ export default function Hero() {
           </Link>
         </motion.div>
 
-        {/* Trust Badges with Animated Background */}
-        <div className="relative py-8 px-4">
-          {/* Animated Background Lines - Behind Trust Badges */}
-          <div className="absolute inset-0 opacity-60 pointer-events-none">
-            <SilkRibbon 
-              className="absolute inset-0 w-full h-full"
-              speed={1.2}
-              amplitude={3.0}
-              colorA="#6AA7FF"
-              colorB="#A06BFF"
-            />
-          </div>
-          
-          {/* Premium Glow Effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/10 to-blue-500/5 rounded-2xl blur-xl"></div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.8 }}
-            className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-300 py-4"
-          >
+        {/* Full Screen Animated Background Lines */}
+        <div className="absolute inset-0 opacity-60 pointer-events-none">
+          <SilkRibbon 
+            className="absolute inset-0 w-full h-full"
+            speed={1.2}
+            amplitude={3.0}
+            colorA="#6AA7FF"
+            colorB="#A06BFF"
+          />
+        </div>
+
+        {/* Trust Badges */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.8 }}
+          className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-300 py-8 px-4"
+        >
           <div className="flex items-center gap-3 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-300">
             <Shield className="w-5 h-5 text-blue-400" />
             <span className="font-medium">Stripe</span>
@@ -112,7 +108,6 @@ export default function Hero() {
             <span className="font-medium">Google Calendar</span>
           </div>
         </motion.div>
-        </div>
 
       </div>
     </section>
