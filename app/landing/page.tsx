@@ -562,7 +562,7 @@ export default function LandingPage() {
             >
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">🚨 DEPLOYMENT TEST 🚨</span>
+                <span className="text-sm font-medium">Stripe Secure</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
