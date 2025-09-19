@@ -486,8 +486,8 @@ export default function LandingPage() {
                 </Link>
                 
                 {/* Professional messaging for exclusive feel */}
-                <p className="text-gray-400 text-sm mt-6">
-                  No credit card required • Setup in minutes • Professional AI receptionist • LIVE NOW
+                <p className="text-red-500 text-lg mt-6 font-bold">
+                  🚨 DEPLOYMENT TEST - IF YOU SEE THIS, VERCEL IS WORKING! 🚨
                 </p>
               </div>
             </div>
