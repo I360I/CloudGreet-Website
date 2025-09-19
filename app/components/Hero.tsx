@@ -15,6 +15,34 @@ export default function Hero() {
       {/* Vignette overlay for better text readability */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none" />
 
+      {/* Premium Background Effects */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.15)_0%,transparent_50%)]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(147,51,234,0.15)_0%,transparent_50%)]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(16,185,129,0.1)_0%,transparent_50%)]"></div>
+      
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden">
+        {Array.from({ length: 20 }).map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -30, 0],
+              opacity: [0.3, 0.8, 0.3],
+            }}
+            transition={{
+              duration: 3 + Math.random() * 2,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+            }}
+          />
+        ))}
+      </div>
+
       {/* Content */}
       <div className="relative z-10 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-center pt-8">
         <motion.div
@@ -49,37 +77,42 @@ export default function Hero() {
           </Link>
         </motion.div>
 
-        {/* Animated Background Lines - Full Screen */}
-        <div className="absolute inset-0 opacity-60 pointer-events-none">
-          <SilkRibbon 
-            className="absolute inset-0 w-full h-full"
-            speed={1.2}
-            amplitude={3.0}
-            colorA="#6AA7FF"
-            colorB="#A06BFF"
-          />
-        </div>
-
-        {/* Trust Badges */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.8 }}
-          className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-400 py-8"
-        >
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            <span>Stripe</span>
+        {/* Trust Badges with Animated Background */}
+        <div className="relative py-8 px-4">
+          {/* Animated Background Lines - Behind Trust Badges */}
+          <div className="absolute inset-0 opacity-60 pointer-events-none">
+            <SilkRibbon 
+              className="absolute inset-0 w-full h-full"
+              speed={1.2}
+              amplitude={3.0}
+              colorA="#6AA7FF"
+              colorB="#A06BFF"
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <Phone className="w-5 h-5" />
-            <span>Telynyx</span>
+          
+          {/* Premium Glow Effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/10 to-blue-500/5 rounded-2xl blur-xl"></div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-300 py-4"
+          >
+          <div className="flex items-center gap-3 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-300">
+            <Shield className="w-5 h-5 text-blue-400" />
+            <span className="font-medium">Stripe</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            <span>Google Calendar</span>
+          <div className="flex items-center gap-3 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-300">
+            <Phone className="w-5 h-5 text-purple-400" />
+            <span className="font-medium">Telynyx</span>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-300">
+            <Calendar className="w-5 h-5 text-green-400" />
+            <span className="font-medium">Google Calendar</span>
           </div>
         </motion.div>
+        </div>
 
       </div>
     </section>

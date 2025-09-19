@@ -32,12 +32,12 @@ export default function SilkRibbon({
             <motion.svg
               key={i}
               className="absolute"
-              width="200vw"
+              width="400vw"
               height="120px"
-              viewBox="0 0 2000 120"
+              viewBox="0 0 4000 120"
               style={{
                 top: `${startTop - 1}%`,
-                left: '-50vw',
+                left: '-150vw',
                 filter: 'blur(0.2px)',
                 overflow: 'visible',
               }}
@@ -52,19 +52,19 @@ export default function SilkRibbon({
               </filter>
             </defs>
             <motion.path
-              d={`M0,60 Q500,30 1000,60 T2000,60`}
+              d={`M0,60 Q1000,30 2000,60 Q3000,90 4000,60`}
               stroke={`rgba(106, 167, 255, ${opacities[i]})`}
               strokeWidth={strokeWidths[i]}
               fill="none"
               filter={`url(#glow-${i}) drop-shadow(0 0 12px rgba(106, 167, 255, ${opacities[i] * 0.8}))`}
               animate={{
                 d: [
-                  `M0,60 Q500,30 1000,60 T2000,60`,
-                  `M0,60 Q500,90 1000,60 T2000,65`,
-                  `M0,60 Q500,35 1000,85 T2000,55`,
-                  `M0,60 Q500,55 1000,75 T2000,62`,
-                  `M0,60 Q500,30 1000,60 T2000,58`,
-                  `M0,60 Q500,75 1000,60 T2000,60`
+                  `M0,60 Q1000,30 2000,60 Q3000,90 4000,60`,
+                  `M0,60 Q1000,90 2000,60 Q3000,30 4000,65`,
+                  `M0,60 Q1000,35 2000,85 Q3000,55 4000,55`,
+                  `M0,60 Q1000,55 2000,75 Q3000,35 4000,62`,
+                  `M0,60 Q1000,30 2000,60 Q3000,90 4000,58`,
+                  `M0,60 Q1000,75 2000,60 Q3000,45 4000,60`
                 ],
                 strokeWidth: [strokeWidths[i], strokeWidths[i] * 1.3, strokeWidths[i]],
                 filter: [
