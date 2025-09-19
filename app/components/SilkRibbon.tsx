@@ -21,36 +21,48 @@ export default function SilkRibbon({
   console.log('SilkRibbon component is rendering!');
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      {/* Simple working waves */}
-      {Array.from({ length: 3 }).map((_, i) => {
-        const startTop = 20 + i * 25;
-        
-        return (
-          <motion.div
-            key={i}
-            className="absolute"
-            style={{
-              top: `${startTop}%`,
-              left: '-50vw',
-              width: '200vw',
-              height: '4px',
-              background: 'linear-gradient(90deg, #00FF00, #FF0000, #0000FF)',
-              borderRadius: '2px',
-            }}
-            animate={{
-              x: [0, 100, 0],
-              scaleY: [1, 1.5, 1],
-            }}
-            transition={{
-              duration: 8 + i * 2,
-              repeat: Infinity,
-              repeatType: 'loop',
-              ease: 'easeInOut',
-              delay: i * 1,
-            }}
-          />
-        );
-      })}
+      {/* DEBUG: Static test lines */}
+      <div 
+        className="absolute"
+        style={{
+          top: '20%',
+          left: '0',
+          width: '100%',
+          height: '10px',
+          background: 'red',
+          zIndex: 100
+        }}
+      >
+        STATIC RED LINE 1
+      </div>
+      
+      <div 
+        className="absolute"
+        style={{
+          top: '45%',
+          left: '0',
+          width: '100%',
+          height: '10px',
+          background: 'blue',
+          zIndex: 100
+        }}
+      >
+        STATIC BLUE LINE 2
+      </div>
+      
+      <div 
+        className="absolute"
+        style={{
+          top: '70%',
+          left: '0',
+          width: '100%',
+          height: '10px',
+          background: 'green',
+          zIndex: 100
+        }}
+      >
+        STATIC GREEN LINE 3
+      </div>
     </div>
   )
 }
