@@ -20,39 +20,42 @@ export default function SilkRibbon({
 }: SilkRibbonProps) {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      {/* Simple wavy lines with continuous loop - no lag */}
-      {Array.from({ length: 5 }).map((_, i) => {
-        const startTop = 37 + i * 1.5;
-        const opacities = [0.4, 0.6, 0.3, 0.5, 0.35];
-        const widths = [3, 4, 2.5, 3.5, 2];
-        const durations = [12, 15, 10, 18, 14];
+      {/* More wavy, more visible, intersecting lines */}
+      {Array.from({ length: 6 }).map((_, i) => {
+        // Much closer together for intersection
+        const startTop = 37 + i * 0.8; // Closer spacing for intersection
+        const opacities = [0.7, 0.8, 0.6, 0.9, 0.65, 0.75]; // More visible
+        const widths = [4, 5, 3.5, 4.5, 3, 5.5];
+        const durations = [12, 15, 10, 18, 14, 16];
         
         return (
           <motion.div
             key={i}
             className="absolute"
             style={{
-              width: '120vw', // Wider for seamless loop
+              width: '120vw',
               height: `${widths[i]}px`,
               top: `${startTop}%`,
-              left: '-10vw', // Start slightly left for seamless loop
+              left: '-10vw',
               background: `linear-gradient(90deg, transparent, rgba(106, 167, 255, ${opacities[i]}), transparent)`,
               borderRadius: '50px',
-              filter: 'blur(0.5px)',
-              boxShadow: `0 0 15px rgba(106, 167, 255, ${opacities[i] * 0.5})`,
+              filter: 'blur(0.3px)',
+              boxShadow: `0 0 20px rgba(106, 167, 255, ${opacities[i] * 0.7})`,
             }}
             animate={{
-              x: ['-10vw', '10vw'], // Simple continuous loop
-              opacity: [opacities[i], opacities[i] * 1.2, opacities[i]],
-              // Simple wave-like scaling - no complex rotations
-              scaleY: [1, 1.8, 0.6, 2, 1], // Wave height changes
+              x: ['-10vw', '10vw'], // Continuous loop
+              opacity: [opacities[i], opacities[i] * 1.3, opacities[i]],
+              // Much more wavy - bigger amplitude
+              scaleY: [1, 2.5, 0.3, 3, 0.4, 2.8, 1], // Much bigger wave motion
+              // Add some horizontal wave motion too
+              y: [0, -8, 12, -6, 10, -4, 0], // Vertical wave movement
             }}
             transition={{
               duration: durations[i],
               repeat: Infinity,
               repeatType: 'loop',
-              ease: 'linear', // Smooth linear movement
-              delay: i * 2,
+              ease: 'easeInOut', // More natural wave motion
+              delay: i * 1.2, // Closer delays for intersection
             }}
           />
         );
