@@ -11,14 +11,6 @@ import SilkRibbon from './SilkRibbon'
 export default function Hero() {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 via-black to-slate-900">
-      {/* Animated Background Lines */}
-      <SilkRibbon 
-        className="absolute inset-x-0 top-0 h-full"
-        speed={1.2}
-        amplitude={1.0}
-        colorA="#6AA7FF"
-        colorB="#A06BFF"
-      />
 
       {/* Vignette overlay for better text readability */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none" />
@@ -57,45 +49,40 @@ export default function Hero() {
           </Link>
         </motion.div>
 
-        {/* Trust Badges */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.8 }}
-          className="flex flex-wrap justify-center items-center gap-8 text-gray-400"
-        >
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            <span>Stripe</span>
+        {/* Trust Badges with Animated Background */}
+        <div className="relative">
+          {/* Animated Background Lines */}
+          <div className="absolute inset-0 opacity-20 pointer-events-none">
+            <SilkRibbon 
+              className="absolute inset-x-0 top-0 h-full"
+              speed={1.2}
+              amplitude={1.0}
+              colorA="#6AA7FF"
+              colorB="#A06BFF"
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <Phone className="w-5 h-5" />
-            <span>Telynyx</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            <span>Google Calendar</span>
-          </div>
-        </motion.div>
-
-        {/* Additional CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9, duration: 0.8 }}
-          className="mt-16 max-w-2xl mx-auto text-center"
-        >
-          <p className="text-gray-400 text-sm mb-6">
-            No credit card required • Setup takes minutes • Professional AI receptionist
-          </p>
-          <Link
-            href="/start"
-            className="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 text-lg"
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-400"
           >
-            <ArrowRight className="w-6 h-6 mr-3" />
-            Test for Free
-          </Link>
-        </motion.div>
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              <span>Stripe</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone className="w-5 h-5" />
+              <span>Telynyx</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              <span>Google Calendar</span>
+            </div>
+          </motion.div>
+        </div>
+
       </div>
     </section>
   )
