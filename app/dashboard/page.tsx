@@ -17,7 +17,6 @@ export default function Dashboard() {
   const [selectedTab, setSelectedTab] = useState('overview')
   const [selectedTimeframe, setSelectedTimeframe] = useState('7d')
   const [isLive, setIsLive] = useState(false)
-  const [isDemoMode, setIsDemoMode] = useState(true)
   const [onboardingCompleted, setOnboardingCompleted] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   
@@ -49,7 +48,7 @@ export default function Dashboard() {
 
     // Check if user just created account and needs onboarding
     const accountStatus = localStorage.getItem('accountStatus')
-    if (accountStatus === 'demo') {
+    if (accountStatus === 'new_account') {
       setShowOnboarding(true)
     }
     
@@ -60,9 +59,8 @@ export default function Dashboard() {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        // No auth token, show demo data
-        loadDemoData()
-        setIsLoading(false)
+        // No auth token, redirect to login
+        window.location.href = '/login'
         return
       }
 
@@ -75,121 +73,22 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json()
         setDashboardData(data)
-        setIsDemoMode(data.isDemo || false)
         
         // Load real data for calls and appointments
-        if (!data.isDemo) {
-          setRecentCalls(data.recentCalls || [])
-          setUpcomingAppointments(data.recentAppointments || [])
-        }
+        setRecentCalls(data.recentCalls || [])
+        setUpcomingAppointments(data.recentAppointments || [])
       } else {
-        // API failed, show demo data
-        loadDemoData()
+        // API failed, show empty state
+        console.error('Failed to load dashboard data')
       }
     } catch (error) {
-      // Error occurred, show demo data
-      loadDemoData()
+      // Error occurred, show empty state
+      console.error('Error loading dashboard data:', error)
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
-  const loadDemoData = () => {
-    setDashboardData({
-      totalCalls: 247,
-      totalRevenue: 45680,
-      activeCalls: 3,
-      conversionRate: 78,
-      emergencyCalls: 12,
-      todayBookings: 8,
-      missedCalls: 5,
-      avgCallDuration: 4.2,
-      customerSatisfaction: 4.8,
-      monthlyRecurring: 12800
-    })
-
-    setRecentCalls([
-      {
-        id: 1,
-        customer: 'John Smith',
-        phone: '+1 (555) 123-4567',
-        type: 'HVAC Service',
-        duration: '4:32',
-        status: 'completed',
-        outcome: 'appointment_booked',
-        timestamp: '2 minutes ago',
-        transcript: 'Customer called about AC not working. Scheduled service for tomorrow at 2 PM.',
-        satisfaction: 5,
-        isDemo: true
-      },
-      {
-        id: 2,
-        customer: 'Sarah Johnson',
-        phone: '+1 (555) 987-6543',
-        type: 'Painting Quote',
-        duration: '2:15',
-        status: 'completed',
-        outcome: 'lead_qualified',
-        timestamp: '15 minutes ago',
-        transcript: 'Interested in exterior painting. Provided quote for $3,500. Follow-up scheduled.',
-        satisfaction: 4,
-        isDemo: true
-      }
-    ])
-
-    setUpcomingAppointments([
-      {
-        id: 1,
-        customer: 'Emily Wilson',
-        service: 'HVAC Maintenance',
-        date: 'Today, 2:00 PM',
-        duration: '2 hours',
-        status: 'confirmed',
-        address: '123 Main St, Anytown',
-        isDemo: true
-      },
-      {
-        id: 2,
-        customer: 'Robert Brown',
-        service: 'Exterior Painting',
-        date: 'Tomorrow, 9:00 AM',
-        duration: '8 hours',
-        status: 'confirmed',
-        address: '456 Oak Ave, Anytown',
-        isDemo: true
-      }
-    ])
-
-    setLiveFeed([
-      {
-        id: 1,
-        type: 'call_started',
-        message: 'Incoming call from John Smith',
-        timestamp: 'Just now',
-        icon: Phone,
-        color: 'text-green-400',
-        isDemo: true
-      },
-      {
-        id: 2,
-        type: 'appointment_booked',
-        message: 'New appointment scheduled for Emily Wilson',
-        timestamp: '2 min ago',
-        icon: Calendar,
-        color: 'text-blue-400',
-        isDemo: true
-      },
-      {
-        id: 3,
-        type: 'payment_received',
-        message: 'Payment received: $2,500 from Robert Brown',
-        timestamp: '5 min ago',
-        icon: DollarSign,
-        color: 'text-green-400',
-        isDemo: true
-      }
-    ])
-  }
 
   if (isLoading) {
     return (
@@ -219,16 +118,14 @@ export default function Dashboard() {
               
               <div className="flex items-center space-x-3 ml-8">
                 <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${
-                  isDemoMode 
-                    ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' 
-                    : isLive 
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                      : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                  isLive 
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                    : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
                 }`}>
                   <div className={`w-2 h-2 rounded-full ${
-                    isDemoMode ? 'bg-orange-400' : isLive ? 'bg-green-400' : 'bg-gray-400'
+                    isLive ? 'bg-green-400' : 'bg-gray-400'
                   }`} />
-                  <span>{isDemoMode ? 'Demo' : isLive ? 'Live' : 'Offline'}</span>
+                  <span>{isLive ? 'Live' : 'Offline'}</span>
                 </div>
               </div>
             </div>
@@ -258,34 +155,12 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Demo Mode Banner */}
-        {isDemoMode && (
-          <div className="mb-8 bg-orange-500/10 border border-orange-500/20 rounded-xl p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center">
-                  <Zap className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Demo Mode Active</h3>
-                  <p className="text-orange-200">Complete setup to connect your real phone number and start receiving calls.</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowOnboarding(true)}
-                className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
-              >
-                Complete Setup
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-3xl font-bold text-white mb-2">Dashboard</h2>
-            <p className="text-gray-400">{isDemoMode ? 'Demo data and analytics' : 'Real-time insights and analytics'}</p>
+            <p className="text-gray-400">Real-time insights and analytics</p>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -446,11 +321,6 @@ export default function Dashboard() {
                             <p className="text-white font-medium">{item.message}</p>
                             <p className="text-gray-400 text-sm">{item.timestamp}</p>
                           </div>
-                          {item.isDemo && (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-500/20 text-orange-400">
-                              Demo
-                            </span>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -625,9 +495,8 @@ export default function Dashboard() {
         onComplete={() => {
           setOnboardingCompleted(true)
           setShowOnboarding(false)
-          setIsDemoMode(false)
           setIsLive(true)
-          // Clear demo status since onboarding is complete
+          // Clear onboarding status since onboarding is complete
           localStorage.removeItem('accountStatus')
           loadDashboardData()
         }}

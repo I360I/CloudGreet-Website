@@ -74,7 +74,7 @@ export default function StartPage() {
 
       // Store business data and account status
       localStorage.setItem('businessData', JSON.stringify(formData))
-      localStorage.setItem('accountStatus', 'demo')
+      localStorage.setItem('accountStatus', 'new_account')
       localStorage.setItem('userId', user.id)
 
       // Redirect to dashboard where onboarding wizard will open

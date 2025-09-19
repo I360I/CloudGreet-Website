@@ -161,7 +161,7 @@ export default function Hero() {
         }))
         
         // Set account status to trigger onboarding wizard
-        localStorage.setItem('accountStatus', 'demo')
+            localStorage.setItem('accountStatus', 'new_account')
         
         // Redirect to dashboard (which will show onboarding wizard with pre-filled data)
         window.location.href = '/dashboard'

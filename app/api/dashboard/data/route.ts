@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
         avgCallDuration: 4.2,
         customerSatisfaction: 4.8,
         monthlyRecurring: 12800,
-        isDemo: true
       })
     }
     
@@ -134,7 +133,6 @@ export async function GET(request: NextRequest) {
       avgCallDuration,
       customerSatisfaction,
       monthlyRecurring,
-      isDemo: false,
       timeframe,
       phoneNumber: business.phone_number,
       recentCalls: calls?.slice(0, 10) || [],
@@ -157,7 +155,6 @@ export async function GET(request: NextRequest) {
       avgCallDuration: 4.2,
       customerSatisfaction: 4.8,
       monthlyRecurring: 12800,
-      isDemo: true
     })
   }
 }
