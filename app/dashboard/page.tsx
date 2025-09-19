@@ -53,6 +53,13 @@ export default function Dashboard() {
     }
     
     loadDashboardData()
+    
+    // Set up real-time refresh every 30 seconds for live data
+    const refreshInterval = setInterval(() => {
+      loadDashboardData()
+    }, 30000)
+    
+    return () => clearInterval(refreshInterval)
   }, [])
 
   const loadDashboardData = async () => {
@@ -231,6 +238,14 @@ export default function Dashboard() {
               changeType: "positive",
               color: "text-indigo-400"
             },
+            {
+              icon: Phone,
+              label: "Calls Today",
+              value: dashboardData.callsToday || 0,
+              change: `+${dashboardData.avgCallsPerDay || 0}/day avg`,
+              changeType: "positive",
+              color: "text-green-400"
+            },
           ].map((stat, index) => (
             <div
               key={index}
@@ -302,7 +317,10 @@ export default function Dashboard() {
                         <Activity className="w-5 h-5 mr-2 text-blue-400" />
                         Recent Activity
                       </h3>
-                      <button className="text-sm text-blue-400 hover:text-blue-300 flex items-center">
+                      <button 
+                        onClick={() => loadDashboardData()}
+                        className="text-sm text-blue-400 hover:text-blue-300 flex items-center"
+                      >
                         <RefreshCw className="w-4 h-4 mr-1" />
                         Refresh
                       </button>

@@ -18,19 +18,8 @@ export async function GET(request: NextRequest) {
       .eq('id', businessId)
       .single()
     
-    if (businessError || !business?.onboarding_completed) {
-      return NextResponse.json({
-        totalCalls: 247,
-        totalRevenue: 45680,
-        activeCalls: 3,
-        conversionRate: 78,
-        emergencyCalls: 12,
-        todayBookings: 8,
-        missedCalls: 5,
-        avgCallDuration: 4.2,
-        customerSatisfaction: 4.8,
-        monthlyRecurring: 12800,
-      })
+    if (businessError || !business) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
     }
     
     // Get timeframe from query params
@@ -90,13 +79,19 @@ export async function GET(request: NextRequest) {
       // Log error for debugging but don't expose to client
     }
     
-    // Calculate metrics
+    // Calculate comprehensive metrics
     const totalCalls = calls?.length || 0
     const totalRevenue = appointments?.reduce((sum, apt) => sum + (apt.estimated_value || 0), 0) || 0
     const activeCalls = calls?.filter(call => call.status === 'in-progress').length || 0
     const completedCalls = calls?.filter(call => call.status === 'completed').length || 0
     const conversionRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0
     const emergencyCalls = calls?.filter(call => call.status === 'emergency').length || 0
+    
+    // Calculate calls that led to appointments (conversion tracking)
+    const callsWithAppointments = calls?.filter(call => 
+      appointments?.some(apt => apt.customer_phone === call.from_number)
+    ).length || 0
+    const bookingConversionRate = totalCalls > 0 ? Math.round((callsWithAppointments / totalCalls) * 100) : 0
     
     // Today's bookings
     const today = new Date().toDateString()
@@ -126,7 +121,7 @@ export async function GET(request: NextRequest) {
       totalCalls,
       totalRevenue,
       activeCalls,
-      conversionRate,
+      conversionRate: bookingConversionRate, // Use booking conversion instead of call completion
       emergencyCalls,
       todayBookings,
       missedCalls,
@@ -137,24 +132,25 @@ export async function GET(request: NextRequest) {
       phoneNumber: business.phone_number,
       recentCalls: calls?.slice(0, 10) || [],
       recentAppointments: appointments?.slice(0, 10) || [],
-      recentSMS: sms?.slice(0, 10) || []
+      recentSMS: sms?.slice(0, 10) || [],
+      // Additional metrics for 5-10+ calls per day
+      callsToday: calls?.filter(call => {
+        const callDate = new Date(call.created_at).toDateString()
+        return callDate === today
+      }).length || 0,
+      callsThisWeek: calls?.filter(call => {
+        const callDate = new Date(call.created_at)
+        const weekAgo = new Date()
+        weekAgo.setDate(weekAgo.getDate() - 7)
+        return callDate >= weekAgo
+      }).length || 0,
+      avgCallsPerDay: calls?.length > 0 ? Math.round((calls.length / Math.max(1, Math.ceil((now.getTime() - new Date(calls[calls.length - 1]?.created_at || now).getTime()) / (1000 * 60 * 60 * 24)))) * 10) / 10 : 0
     }
     
     return NextResponse.json(dashboardData)
     
   } catch (error) {
-    // Return fallback data
-    return NextResponse.json({
-      totalCalls: 247,
-      totalRevenue: 45680,
-      activeCalls: 3,
-      conversionRate: 78,
-      emergencyCalls: 12,
-      todayBookings: 8,
-      missedCalls: 5,
-      avgCallDuration: 4.2,
-      customerSatisfaction: 4.8,
-      monthlyRecurring: 12800,
-    })
+    logger.error('Dashboard data error', error as Error, { userId, businessId })
+    return NextResponse.json({ error: 'Failed to load dashboard data' }, { status: 500 })
   }
 }

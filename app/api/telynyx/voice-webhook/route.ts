@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Store call in database
+    // Store call in database with comprehensive data
     const { data: call, error: callError } = await supabaseAdmin
       .from('call_logs')
       .insert({
@@ -76,7 +76,13 @@ export async function POST(request: NextRequest) {
         transcription_text: transcription_text,
         outcome: state,
         satisfaction_score: null,
-        cost: 0
+        cost: 0,
+        caller_name: caller_name || null,
+        caller_city: caller_city || null,
+        caller_state: caller_state || null,
+        caller_country: caller_country || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
       .single()
