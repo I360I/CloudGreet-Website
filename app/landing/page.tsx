@@ -487,7 +487,7 @@ export default function LandingPage() {
                 
                 {/* Professional messaging for exclusive feel */}
                 <p className="text-gray-400 text-sm mt-6">
-                  No credit card required • Setup in minutes • Professional AI receptionist
+                  No credit card required • Setup in minutes • Professional AI receptionist • LIVE NOW
                 </p>
               </div>
             </div>
