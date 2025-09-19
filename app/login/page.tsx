@@ -1,43 +1,24 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Shield, CheckCircle } from "lucide-react"
+import React, { useState } from 'react'
+import { motion } from 'framer-motion'
+import { ArrowRight, Eye, EyeOff, Zap } from 'lucide-react'
+import Link from 'next/link'
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [isFocused, setIsFocused] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
 
-  // Handle successful login
-  const handleLoginSuccess = (data: any) => {
-    // Store authentication token
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user))
-    localStorage.setItem('business', JSON.stringify(data.business))
-    
-    // Redirect to dashboard
-    router.push('/dashboard')
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     setIsLoading(true)
-    setError("")
-
+    setError('')
+    
     try {
-      if (!email || !password) {
-        setError("Please enter both email and password")
-        setIsLoading(false)
-        return
-      }
+      const formData = new FormData(event.currentTarget)
+      const email = formData.get('email') as string
+      const password = formData.get('password') as string
 
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -46,164 +27,136 @@ export default function LoginPage() {
         },
         body: JSON.stringify({ email, password }),
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json()
-        setError(errorData.error?.message || "Invalid email or password")
-        setIsLoading(false)
-        return
+        throw new Error(errorData.error || 'Login failed')
       }
       
-      const data = await response.json()
-      
-      if (data.success) {
-        handleLoginSuccess(data.data)
-      } else {
-        setError(data.message || "Login failed")
-        setIsLoading(false)
-      }
-      
-    } catch (error) {
+      const result = await response.json()
 
-      setError("Something went wrong. Please try again.")
+      if (result.success) {
+        localStorage.setItem('token', result.data.token)
+        localStorage.setItem('user', JSON.stringify(result.data.user))
+        localStorage.setItem('business', JSON.stringify(result.data.business))
+        
+        window.location.href = '/dashboard'
+      } else {
+        throw new Error(result.error || 'Login failed')
+      }
+    } catch (error) {
+      console.error('Login error:', error)
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError('Login failed. Please try again.')
+      }
+    } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      background: 'linear-gradient(to bottom, #0f172a, #000000, #0f172a)', 
-      display: 'flex', 
-      flexDirection: 'column',
-      color: 'white'
-    }}>
-      <header style={{ width: '100%', padding: '24px' }}>
-        <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
-          <div>
-            <div style={{ fontSize: '30px', fontWeight: 'bold', color: '#60a5fa' }}>CloudGreet</div>
-            <div style={{ fontSize: '12px', color: '#60a5fa', fontWeight: '600', letterSpacing: '0.1em' }}>AI RECEPTIONIST</div>
-          </div>
-        </Link>
-      </header>
-
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 24px' }}>
-        <div style={{ width: '100%', maxWidth: '448px' }}>
-          <div style={{ 
-            backgroundColor: 'rgba(31, 41, 55, 0.8)', 
-            borderRadius: '24px', 
-            padding: '32px', 
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', 
-            border: '1px solid rgba(55, 65, 81, 0.5)'
-          }}>
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <Shield className="w-8 h-8 text-white" />
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 flex items-center justify-center px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="w-full max-w-md"
+      >
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <Link href="/landing" className="inline-block">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center justify-center space-x-3 mb-6"
+            >
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-xl">CG</span>
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2">Welcome Back</h1>
-              <p className="text-gray-300">Sign in to your CloudGreet account</p>
+              <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">CloudGreet</span>
+            </motion.div>
+          </Link>
+          <h1 className="text-2xl font-bold text-white mb-2">Welcome Back</h1>
+          <p className="text-gray-400">Sign in to your dashboard</p>
+        </div>
+
+        {/* Login Form */}
+        <div className="bg-gray-800/30 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50">
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your email"
+              />
             </div>
 
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
-                    className={`w-full pl-10 pr-4 py-3 bg-gray-700/50 border rounded-xl text-white placeholder-gray-400 focus:outline-none transition-all duration-300 ${
-                      isFocused 
-                        ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-lg' 
-                        : 'border-gray-600 hover:border-gray-500'
-                    }`}
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  required
+                  className="w-full px-4 py-3 pr-12 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
+            </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300"
-                    placeholder="Enter your password"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
+            {/* Error Display */}
+            {error && (
+              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+                <p className="text-red-300 text-sm">{error}</p>
               </div>
+            )}
 
-              {error && (
-                <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-3">
-                  <p className="text-sm text-red-300">{error}</p>
-                </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                  Signing In...
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="w-5 h-5 mr-3" />
+                  Sign In
+                </>
               )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Signing In...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center space-x-2">
-                    <span>Sign In</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </div>
-                )}
-              </button>
-            </form>
-          </div>
+            </button>
+          </form>
 
           <div className="mt-6 text-center">
-            <p className="text-gray-300">
-              Don't have an account?{" "}
-              <Link href="/start" className="text-blue-400 hover:text-blue-300 font-semibold">
-                Create Account
+            <p className="text-gray-400 text-sm">
+              Don't have an account?{' '}
+              <Link href="/landing" className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
+                Create one here
               </Link>
             </p>
           </div>
-
-          <div className="mt-8 text-center">
-            <div className="inline-flex items-center space-x-6 text-sm text-gray-400">
-              <div className="flex items-center space-x-2">
-                <Shield className="w-4 h-4 text-green-400" />
-                <span>Secure Login</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-blue-400" />
-                <span>2FA Ready</span>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

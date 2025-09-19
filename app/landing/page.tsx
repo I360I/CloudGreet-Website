@@ -53,10 +53,10 @@ export default function LandingPage() {
             <motion.a
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              href="/dashboard"
+              href="/login"
               className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
             >
-              Dashboard
+              Sign In
             </motion.a>
           </div>
         </div>
@@ -471,17 +471,18 @@ export default function LandingPage() {
                 </div>
                 
                 {/* CTA Button */}
-                <motion.a
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  href="/dashboard"
-                  className="block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-5 rounded-2xl text-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25"
+                <button
+                  onClick={() => {
+                    const formElement = document.querySelector('.max-w-2xl')
+                    formElement?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-5 rounded-2xl text-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25"
                 >
                   <div className="flex items-center justify-center gap-3">
                     <Zap className="w-6 h-6" />
                     Get Started Free
                   </div>
-                </motion.a>
+                </button>
                 
                 <p className="text-gray-400 text-sm mt-6">
                   No credit card required • Setup in minutes • Start your 7-day free trial
@@ -528,15 +529,16 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="flex justify-center items-center"
           >
-            <motion.a
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              href="/dashboard"
+            <button
+              onClick={() => {
+                const formElement = document.querySelector('.max-w-2xl')
+                formElement?.scrollIntoView({ behavior: 'smooth' })
+              }}
               className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-12 py-6 rounded-2xl text-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-2xl hover:shadow-blue-500/25 flex items-center justify-center gap-4"
             >
               <Zap className="w-8 h-8" />
               Get Started
-            </motion.a>
+            </button>
             
           </motion.div>
           
