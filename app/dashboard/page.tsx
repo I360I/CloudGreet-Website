@@ -141,6 +141,13 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-center space-x-4">
+              <Link 
+                href="/billing"
+                className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+                title="Billing & Subscription"
+              >
+                <DollarSign className="w-5 h-5 text-gray-300" />
+              </Link>
               <button className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors">
                 <Bell className="w-5 h-5 text-gray-300" />
               </button>
@@ -354,6 +361,13 @@ export default function Dashboard() {
                         <Calendar className="w-4 h-4 inline mr-2" />
                         Schedule Demo
                       </button>
+                      <Link 
+                        href="/billing"
+                        className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
+                      >
+                        <DollarSign className="w-4 h-4 mr-2" />
+                        Manage Billing
+                      </Link>
                       <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg font-medium transition-colors">
                         <Settings className="w-4 h-4 inline mr-2" />
                         Settings
