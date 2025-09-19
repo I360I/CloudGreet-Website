@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
         message_id: MessageSid,
         from_number: From,
         to_number: To,
-        body: Body,
+        message_text: Body,
         status: MessageStatus,
         direction: Direction,
         created_at: new Date().toISOString(),
@@ -36,7 +36,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (smsError) {
-      }
+      console.error('Error storing SMS log:', smsError)
+    }
 
     // Only process inbound SMS
     if (Direction !== 'inbound') {
@@ -52,6 +53,33 @@ export async function POST(request: NextRequest) {
 
     if (businessError) {
       return NextResponse.json({ success: true })
+    }
+
+    // Forward SMS to personal phone if forwarding is enabled
+    if (business.sms_forwarding_enabled && business.notification_phone) {
+      try {
+        const forwardResponse = await fetch('https://api.telynx.com/v2/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: To, // Business phone
+            to: business.notification_phone, // Personal phone
+            text: `[CloudGreet SMS] From: ${From}\nMessage: ${Body}`,
+            type: 'SMS'
+          })
+        })
+
+        if (forwardResponse.ok) {
+          console.log('SMS forwarded successfully to personal phone')
+        } else {
+          console.error('Failed to forward SMS:', forwardResponse.status)
+        }
+      } catch (error) {
+        console.error('Error forwarding SMS:', error)
+      }
     }
 
     // Get AI agent

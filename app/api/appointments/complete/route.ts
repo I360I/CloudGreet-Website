@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { notifyNewBooking } from '@/lib/notifications'
 
 export async function PUT(request: NextRequest) {
   try {
@@ -55,6 +56,16 @@ export async function PUT(request: NextRequest) {
       } catch (error) {
         logger.error('Error sending review SMS', error as Error, { appointmentId, businessId })
       }
+    }
+
+    // Send notification about completed appointment
+    try {
+      await notifyNewBooking(
+        `Appointment completed: ${appointment.customer_name || 'Customer'} on ${new Date(appointment.appointment_date).toLocaleDateString()} at ${appointment.appointment_time}`,
+        businessId
+      )
+    } catch (error) {
+      logger.error('Error sending appointment completion notification', error as Error, { appointmentId, businessId })
     }
 
     // Log the action

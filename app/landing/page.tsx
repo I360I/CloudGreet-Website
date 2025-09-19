@@ -593,9 +593,17 @@ export default function LandingPage() {
                 </div>
                 <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">CloudGreet</span>
               </div>
-              <p className="text-gray-400 text-lg leading-relaxed max-w-md">
+              <p className="text-gray-400 text-lg leading-relaxed max-w-md mb-4">
                 Never miss a call again. Transform missed opportunities into booked appointments with AI-powered call handling.
               </p>
+              <div className="space-y-2">
+                <p className="text-gray-400 text-sm">
+                  <span className="text-white font-medium">Business Phone:</span> +1 (737) 244-8305
+                </p>
+                <p className="text-gray-400 text-sm">
+                  <span className="text-white font-medium">Email:</span> support@cloudgreet.com
+                </p>
+              </div>
             </div>
             
             {/* Quick Links */}
@@ -614,8 +622,8 @@ export default function LandingPage() {
               <div className="space-y-3">
                 <a href="/contact" className="block text-gray-400 hover:text-white transition-colors duration-300">Contact Us</a>
                 <a href="/help" className="block text-gray-400 hover:text-white transition-colors duration-300">Help Center</a>
-                <a href="/status" className="block text-gray-400 hover:text-white transition-colors duration-300">Status Page</a>
-                <a href="/docs" className="block text-gray-400 hover:text-white transition-colors duration-300">Documentation</a>
+                <a href="tel:+17372448305" className="block text-gray-400 hover:text-white transition-colors duration-300">Call: +1 (737) 244-8305</a>
+                <a href="mailto:support@cloudgreet.com" className="block text-gray-400 hover:text-white transition-colors duration-300">Email Support</a>
               </div>
             </div>
           </div>
