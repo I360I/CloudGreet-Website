@@ -9,7 +9,7 @@ import {
   ArrowUpRight, ArrowDownRight, Settings, Bell,
   MessageSquare, MapPin, User, RefreshCw,
   Star as StarIcon, Calendar as CalendarIcon,
-  Clock as ClockIcon, Zap
+  Clock as ClockIcon, Zap, FileText
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -367,6 +367,20 @@ export default function Dashboard() {
                       >
                         <DollarSign className="w-4 h-4 mr-2" />
                         Manage Billing
+                      </Link>
+                      <Link 
+                        href="/pricing"
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Pricing Rules
+                      </Link>
+                      <Link 
+                        href="/quotes"
+                        className="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-medium transition-colors inline-flex items-center justify-center"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        AI Quotes
                       </Link>
                       <button className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg font-medium transition-colors">
                         <Settings className="w-4 h-4 inline mr-2" />
