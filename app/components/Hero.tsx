@@ -380,6 +380,27 @@ export default function Hero() {
             <p className="text-gray-400 text-sm mt-4 text-center">
               No credit card required • Setup takes minutes
             </p>
+            
+            {/* Navigation Options */}
+            <div className="mt-6 flex justify-center space-x-6">
+              <button
+                onClick={() => {
+                  const heroContent = document.querySelector('h1')
+                  heroContent?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="inline-flex items-center text-gray-400 hover:text-white transition-colors duration-300 text-sm"
+              >
+                <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
+                Back to Top
+              </button>
+              <Link 
+                href="/landing"
+                className="inline-flex items-center text-gray-400 hover:text-white transition-colors duration-300 text-sm"
+              >
+                <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
+                Home Page
+              </Link>
+            </div>
           </div>
         </motion.div>
       </div>
