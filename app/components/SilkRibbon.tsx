@@ -32,12 +32,12 @@ export default function SilkRibbon({
             <motion.svg
               key={i}
               className="absolute"
-              width="100vw"
+              width="150vw"
               height="80px"
-              viewBox="0 0 1000 80"
+              viewBox="0 0 1500 80"
               style={{
                 top: `${startTop - 1}%`,
-                left: '0vw',
+                left: '-25vw',
                 filter: 'blur(0.2px)',
                 overflow: 'visible',
               }}
@@ -52,18 +52,18 @@ export default function SilkRibbon({
               </filter>
             </defs>
             <motion.path
-              d={`M0,40 Q250,20 500,40 T1000,40`}
+              d={`M0,40 Q375,20 750,40 T1500,40`}
               stroke={`rgba(106, 167, 255, ${opacities[i]})`}
               strokeWidth={strokeWidths[i]}
               fill="none"
               filter={`url(#glow-${i}) drop-shadow(0 0 12px rgba(106, 167, 255, ${opacities[i] * 0.8}))`}
               animate={{
                 d: [
-                  `M0,40 Q250,20 500,40 T1000,40`,
-                  `M0,40 Q250,60 500,40 T1000,40`,
-                  `M0,40 Q250,25 500,55 T1000,40`,
-                  `M0,40 Q250,35 500,45 T1000,40`,
-                  `M0,40 Q250,20 500,40 T1000,40`
+                  `M0,40 Q375,20 750,40 T1500,40`,
+                  `M0,40 Q375,60 750,40 T1500,40`,
+                  `M0,40 Q375,25 750,55 T1500,40`,
+                  `M0,40 Q375,35 750,45 T1500,40`,
+                  `M0,40 Q375,20 750,40 T1500,40`
                 ],
                 strokeWidth: [strokeWidths[i], strokeWidths[i] * 1.3, strokeWidths[i]],
                 filter: [
