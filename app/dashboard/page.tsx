@@ -39,6 +39,14 @@ export default function Dashboard() {
   const [liveFeed, setLiveFeed] = useState([])
 
   useEffect(() => {
+    // Check authentication first
+    const token = localStorage.getItem('token')
+    if (!token) {
+      // Redirect to login if no token
+      window.location.href = '/login'
+      return
+    }
+
     // Check if user just created account and needs onboarding
     const accountStatus = localStorage.getItem('accountStatus')
     if (accountStatus === 'demo') {
