@@ -20,66 +20,90 @@ export default function SilkRibbon({
 }: SilkRibbonProps) {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      {/* Actually wavy lines using SVG */}
-      {Array.from({ length: 4 }).map((_, i) => {
-        const startTop = 37 + i * 1.5;
-        const opacities = [0.8, 0.9, 0.7, 1.0];
-        const strokeWidths = [4, 4.5, 3.8, 5];
-        const durations = [12, 15, 10, 18];
-        const frequencies = [60, 80, 50, 70]; // Different wave frequencies
+      {/* Ultra-smooth, ultra-long waves */}
+      {Array.from({ length: 3 }).map((_, i) => {
+        const startTop = 35 + i * 8;
+        const opacities = [0.6, 0.8, 0.7];
+        const strokeWidths = [3, 4, 3.5];
+        const durations = [20, 25, 22];
         
         return (
-            <motion.svg
-              key={i}
-              className="absolute"
-              width="400vw"
-              height="120px"
-              viewBox="0 0 4000 120"
-              style={{
-                top: `${startTop - 1}%`,
-                left: '-150vw',
-                filter: 'blur(0.2px)',
-                overflow: 'visible',
-              }}
-            >
+          <motion.svg
+            key={i}
+            className="absolute"
+            width="800vw"
+            height="200px"
+            viewBox="0 0 8000 200"
+            style={{
+              top: `${startTop}%`,
+              left: '-300vw',
+              filter: 'blur(0.5px)',
+              overflow: 'visible',
+            }}
+          >
             <defs>
               <filter id={`glow-${i}`}>
-                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
                 <feMerge> 
                   <feMergeNode in="coloredBlur"/>
                   <feMergeNode in="SourceGraphic"/>
                 </feMerge>
               </filter>
+              <linearGradient id={`gradient-${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor={colorA} stopOpacity={opacities[i]} />
+                <stop offset="50%" stopColor={colorB} stopOpacity={opacities[i] * 0.8} />
+                <stop offset="100%" stopColor={colorA} stopOpacity={opacities[i]} />
+              </linearGradient>
             </defs>
+            
+            {/* Primary wave */}
             <motion.path
-              d={`M0,60 Q1000,30 2000,60 Q3000,90 4000,60`}
-              stroke={`rgba(106, 167, 255, ${opacities[i]})`}
+              d={`M0,100 C1000,50 2000,150 3000,100 C4000,50 5000,150 6000,100 C7000,50 8000,100`}
+              stroke={`url(#gradient-${i})`}
               strokeWidth={strokeWidths[i]}
               fill="none"
-              filter={`url(#glow-${i}) drop-shadow(0 0 12px rgba(106, 167, 255, ${opacities[i] * 0.8}))`}
+              filter={`url(#glow-${i})`}
               animate={{
                 d: [
-                  `M0,60 Q1000,30 2000,60 Q3000,90 4000,60`,
-                  `M0,60 Q1000,90 2000,60 Q3000,30 4000,65`,
-                  `M0,60 Q1000,35 2000,85 Q3000,55 4000,55`,
-                  `M0,60 Q1000,55 2000,75 Q3000,35 4000,62`,
-                  `M0,60 Q1000,30 2000,60 Q3000,90 4000,58`,
-                  `M0,60 Q1000,75 2000,60 Q3000,45 4000,60`
-                ],
-                strokeWidth: [strokeWidths[i], strokeWidths[i] * 1.3, strokeWidths[i]],
-                filter: [
-                  `url(#glow-${i}) drop-shadow(0 0 12px rgba(106, 167, 255, ${opacities[i] * 0.8}))`,
-                  `url(#glow-${i}) drop-shadow(0 0 18px rgba(106, 167, 255, ${opacities[i] * 1.1}))`,
-                  `url(#glow-${i}) drop-shadow(0 0 15px rgba(106, 167, 255, ${opacities[i] * 0.9}))`,
-                  `url(#glow-${i}) drop-shadow(0 0 12px rgba(106, 167, 255, ${opacities[i] * 0.8}))`
+                  `M0,100 C1000,50 2000,150 3000,100 C4000,50 5000,150 6000,100 C7000,50 8000,100`,
+                  `M0,100 C1000,150 2000,50 3000,100 C4000,150 5000,50 6000,100 C7000,150 8000,100`,
+                  `M0,100 C1000,80 2000,120 3000,100 C4000,80 5000,120 6000,100 C7000,80 8000,100`,
+                  `M0,100 C1000,120 2000,80 3000,100 C4000,120 5000,80 6000,100 C7000,120 8000,100`,
+                  `M0,100 C1000,50 2000,150 3000,100 C4000,50 5000,150 6000,100 C7000,50 8000,100`
                 ]
               }}
               transition={{
-                duration: durations[i] * 1.5,
+                duration: durations[i],
                 repeat: Infinity,
                 repeatType: 'loop',
                 ease: 'easeInOut',
-                delay: i * 1.5,
+                delay: i * 2,
+              }}
+            />
+            
+            {/* Secondary subtle wave */}
+            <motion.path
+              d={`M0,110 C1000,70 2000,130 3000,110 C4000,70 5000,130 6000,110 C7000,70 8000,110`}
+              stroke={`url(#gradient-${i})`}
+              strokeWidth={strokeWidths[i] * 0.6}
+              fill="none"
+              filter={`url(#glow-${i})`}
+              opacity={0.4}
+              animate={{
+                d: [
+                  `M0,110 C1000,70 2000,130 3000,110 C4000,70 5000,130 6000,110 C7000,70 8000,110`,
+                  `M0,110 C1000,130 2000,70 3000,110 C4000,130 5000,70 6000,110 C7000,130 8000,110`,
+                  `M0,110 C1000,90 2000,130 3000,110 C4000,90 5000,130 6000,110 C7000,90 8000,110`,
+                  `M0,110 C1000,130 2000,90 3000,110 C4000,130 5000,90 6000,110 C7000,130 8000,110`,
+                  `M0,110 C1000,70 2000,130 3000,110 C4000,70 5000,130 6000,110 C7000,70 8000,110`
+                ]
+              }}
+              transition={{
+                duration: durations[i] * 1.2,
+                repeat: Infinity,
+                repeatType: 'loop',
+                ease: 'easeInOut',
+                delay: i * 2 + 1,
               }}
             />
           </motion.svg>

@@ -78,15 +78,18 @@ export default function Hero() {
         </motion.div>
 
         {/* Full Screen Animated Background Lines */}
-        <div className="absolute inset-0 opacity-60 pointer-events-none">
+        <div className="absolute inset-0 opacity-80 pointer-events-none">
           <SilkRibbon 
             className="absolute inset-0 w-full h-full"
-            speed={1.2}
-            amplitude={3.0}
+            speed={1.5}
+            amplitude={4.0}
             colorA="#6AA7FF"
             colorB="#A06BFF"
           />
         </div>
+        
+        {/* Additional glow overlay for premium effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none"></div>
 
         {/* Trust Badges */}
         <motion.div
