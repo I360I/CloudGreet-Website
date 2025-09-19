@@ -41,16 +41,6 @@ export default function SilkRibbon({
                 filter: 'blur(0.2px)',
                 overflow: 'visible',
               }}
-              animate={{
-                x: ['-100vw', '0vw'], // Perfect seamless loop
-              }}
-              transition={{
-                duration: durations[i],
-                repeat: Infinity,
-                repeatType: 'loop',
-                ease: 'linear',
-                delay: i * 1.5,
-              }}
             >
             <defs>
               <filter id={`glow-${i}`}>
@@ -72,12 +62,14 @@ export default function SilkRibbon({
                   `M0,40 Q250,20 500,40 T1000,40`,
                   `M0,40 Q250,60 500,40 T1000,40`,
                   `M0,40 Q250,25 500,55 T1000,40`,
+                  `M0,40 Q250,35 500,45 T1000,40`,
                   `M0,40 Q250,20 500,40 T1000,40`
                 ],
                 strokeWidth: [strokeWidths[i], strokeWidths[i] * 1.3, strokeWidths[i]],
                 filter: [
                   `url(#glow-${i}) drop-shadow(0 0 12px rgba(106, 167, 255, ${opacities[i] * 0.8}))`,
                   `url(#glow-${i}) drop-shadow(0 0 18px rgba(106, 167, 255, ${opacities[i] * 1.1}))`,
+                  `url(#glow-${i}) drop-shadow(0 0 15px rgba(106, 167, 255, ${opacities[i] * 0.9}))`,
                   `url(#glow-${i}) drop-shadow(0 0 12px rgba(106, 167, 255, ${opacities[i] * 0.8}))`
                 ]
               }}
