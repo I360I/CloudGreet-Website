@@ -23,8 +23,8 @@ export default function SilkRibbon({
       {/* Actually wavy lines using SVG */}
       {Array.from({ length: 4 }).map((_, i) => {
         const startTop = 37 + i * 1.5;
-        const opacities = [0.6, 0.7, 0.5, 0.8];
-        const strokeWidths = [2, 2.5, 1.8, 3];
+        const opacities = [0.8, 0.9, 0.7, 1.0];
+        const strokeWidths = [4, 4.5, 3.8, 5];
         const durations = [12, 15, 10, 18];
         const frequencies = [60, 80, 50, 70]; // Different wave frequencies
         
@@ -32,12 +32,12 @@ export default function SilkRibbon({
             <motion.svg
               key={i}
               className="absolute"
-              width="150vw"
-              height="80px"
-              viewBox="0 0 1500 80"
+              width="200vw"
+              height="120px"
+              viewBox="0 0 2000 120"
               style={{
                 top: `${startTop - 1}%`,
-                left: '-25vw',
+                left: '-50vw',
                 filter: 'blur(0.2px)',
                 overflow: 'visible',
               }}
@@ -52,19 +52,19 @@ export default function SilkRibbon({
               </filter>
             </defs>
             <motion.path
-              d={`M0,40 Q375,20 750,40 T1500,40`}
+              d={`M0,60 Q500,30 1000,60 T2000,60`}
               stroke={`rgba(106, 167, 255, ${opacities[i]})`}
               strokeWidth={strokeWidths[i]}
               fill="none"
               filter={`url(#glow-${i}) drop-shadow(0 0 12px rgba(106, 167, 255, ${opacities[i] * 0.8}))`}
               animate={{
                 d: [
-                  `M0,40 Q375,20 750,40 T1500,40`,
-                  `M0,40 Q375,60 750,40 T1500,45`,
-                  `M0,40 Q375,25 750,55 T1500,35`,
-                  `M0,40 Q375,35 750,45 T1500,42`,
-                  `M0,40 Q375,20 750,40 T1500,38`,
-                  `M0,40 Q375,50 750,40 T1500,40`
+                  `M0,60 Q500,30 1000,60 T2000,60`,
+                  `M0,60 Q500,90 1000,60 T2000,65`,
+                  `M0,60 Q500,35 1000,85 T2000,55`,
+                  `M0,60 Q500,55 1000,75 T2000,62`,
+                  `M0,60 Q500,30 1000,60 T2000,58`,
+                  `M0,60 Q500,75 1000,60 T2000,60`
                 ],
                 strokeWidth: [strokeWidths[i], strokeWidths[i] * 1.3, strokeWidths[i]],
                 filter: [

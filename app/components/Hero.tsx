@@ -50,11 +50,11 @@ export default function Hero() {
         </motion.div>
 
         {/* Animated Background Lines - Full Screen */}
-        <div className="absolute inset-0 opacity-30 pointer-events-none">
+        <div className="absolute inset-0 opacity-60 pointer-events-none">
           <SilkRibbon 
-            className="absolute inset-x-0 top-0 h-full"
+            className="absolute inset-0 w-full h-full"
             speed={1.2}
-            amplitude={1.5}
+            amplitude={3.0}
             colorA="#6AA7FF"
             colorB="#A06BFF"
           />
