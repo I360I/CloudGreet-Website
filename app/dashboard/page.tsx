@@ -11,6 +11,7 @@ import {
   Star as StarIcon, Calendar as CalendarIcon,
   Clock as ClockIcon, Zap
 } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
@@ -114,7 +115,7 @@ export default function Dashboard() {
       <header className="border-b border-gray-800 bg-black/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <Link href="/landing" className="flex items-center space-x-4 hover:opacity-80 transition-opacity">
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Brain className="w-6 h-6 text-white" />
               </div>
@@ -122,6 +123,7 @@ export default function Dashboard() {
                 <h1 className="text-2xl font-bold text-white">CloudGreet</h1>
                 <p className="text-xs text-gray-400 font-medium">AI RECEPTIONIST</p>
               </div>
+            </Link>
               
               <div className="flex items-center space-x-3 ml-8">
                 <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${

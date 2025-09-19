@@ -21,12 +21,14 @@ export default function LandingPage() {
       >
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="flex items-center"
-            >
-              <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-purple-300">CloudGreet</span>
-            </motion.div>
+            <Link href="/landing">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="flex items-center cursor-pointer"
+              >
+                <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-purple-300">CloudGreet</span>
+              </motion.div>
+            </Link>
             <div className="hidden md:flex items-center space-x-8">
               <motion.a 
                 whileHover={{ y: -2 }}
