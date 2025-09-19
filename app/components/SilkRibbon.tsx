@@ -20,12 +20,12 @@ export default function SilkRibbon({
 }: SilkRibbonProps) {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      {/* 4 lines with much higher wave peaks */}
+      {/* Clean thin wavy lines */}
       {Array.from({ length: 4 }).map((_, i) => {
-        const startTop = 37 + i * 1.2; // Slightly more spacing with fewer lines
-        const opacities = [0.7, 0.8, 0.6, 0.9]; // 4 opacities
-        const widths = [4, 5, 3.5, 4.5]; // 4 widths
-        const durations = [12, 15, 10, 18]; // 4 durations
+        const startTop = 37 + i * 1.5; // More spacing
+        const opacities = [0.5, 0.6, 0.4, 0.7]; // Moderate opacities
+        const baseWidths = [1.5, 2, 1, 2.5]; // Much thinner base widths
+        const durations = [12, 15, 10, 18];
         
         return (
           <motion.div
@@ -33,28 +33,28 @@ export default function SilkRibbon({
             className="absolute"
             style={{
               width: '120vw',
-              height: `${widths[i]}px`,
+              height: `${baseWidths[i]}px`, // Much thinner
               top: `${startTop}%`,
               left: '-10vw',
               background: `linear-gradient(90deg, transparent, rgba(106, 167, 255, ${opacities[i]}), transparent)`,
               borderRadius: '50px',
-              filter: 'blur(0.3px)',
-              boxShadow: `0 0 20px rgba(106, 167, 255, ${opacities[i] * 0.7})`,
+              filter: 'blur(0.2px)',
+              boxShadow: `0 0 10px rgba(106, 167, 255, ${opacities[i] * 0.4})`,
             }}
             animate={{
               x: ['-10vw', '10vw'], // Continuous loop
-              opacity: [opacities[i], opacities[i] * 1.3, opacities[i]],
-              // Much higher wave peaks - more dramatic bending
-              scaleY: [1, 4, 0.2, 5, 0.3, 4.5, 0.4, 4.8, 1], // Much higher peaks
-              // More dramatic vertical wave movement
-              y: [0, -15, 20, -12, 18, -8, 15, -5, 0], // Higher wave movement
+              opacity: [opacities[i], opacities[i] * 1.2, opacities[i]],
+              // Moderate wave peaks - not too thick
+              scaleY: [1, 2, 0.5, 2.2, 0.6, 2.1, 1], // Moderate peaks
+              // Subtle vertical wave movement
+              y: [0, -8, 10, -6, 8, -4, 0], // Moderate wave movement
             }}
             transition={{
               duration: durations[i],
               repeat: Infinity,
               repeatType: 'loop',
               ease: 'easeInOut',
-              delay: i * 1.5, // Slightly more spacing with fewer lines
+              delay: i * 1.5,
             }}
           />
         );
