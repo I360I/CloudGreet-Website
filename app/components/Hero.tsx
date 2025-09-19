@@ -23,7 +23,7 @@ export default function Hero() {
           transition={{ duration: 0.8 }}
           className="mb-8"
         >
-          <h1 className="text-7xl md:text-8xl lg:text-9xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-purple-300 leading-tight tracking-tight">
+          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-purple-300 leading-tight tracking-tight">
             Never Miss a Call Again
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
@@ -49,39 +49,37 @@ export default function Hero() {
           </Link>
         </motion.div>
 
-        {/* Trust Badges with Animated Background */}
-        <div className="relative py-8 px-4">
-          {/* Animated Background Lines */}
-          <div className="absolute inset-0 opacity-40 pointer-events-none">
-            <SilkRibbon 
-              className="absolute inset-x-0 top-0 h-full"
-              speed={1.5}
-              amplitude={1.2}
-              colorA="#6AA7FF"
-              colorB="#A06BFF"
-            />
-          </div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.8 }}
-            className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-400"
-          >
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5" />
-              <span>Stripe</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="w-5 h-5" />
-              <span>Telynyx</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              <span>Google Calendar</span>
-            </div>
-          </motion.div>
+        {/* Animated Background Lines - Full Screen */}
+        <div className="absolute inset-0 opacity-30 pointer-events-none">
+          <SilkRibbon 
+            className="absolute inset-x-0 top-0 h-full"
+            speed={1.2}
+            amplitude={1.5}
+            colorA="#6AA7FF"
+            colorB="#A06BFF"
+          />
         </div>
+
+        {/* Trust Badges */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.8 }}
+          className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-400 py-8"
+        >
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            <span>Stripe</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Phone className="w-5 h-5" />
+            <span>Telynyx</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            <span>Google Calendar</span>
+          </div>
+        </motion.div>
 
       </div>
     </section>
