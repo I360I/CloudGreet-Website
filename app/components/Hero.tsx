@@ -8,7 +8,7 @@ import {
 import Link from 'next/link'
 
 // Dynamic import to prevent SSR issues
-const CSS3DHelix = React.lazy(() => import('./CSS3DHelix'))
+const HelixBackground = React.lazy(() => import('./HelixBackground'))
 const LightBackground = React.lazy(() => import('./LightBackground'))
 
 export default function Hero() {
@@ -53,7 +53,7 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* 3D Helix Background Animation - CSS-based for stability */}
+      {/* 3D Helix Background Animation - Oval strands guiding to CTA */}
       {mounted && (
         <Suspense fallback={
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
@@ -66,11 +66,7 @@ export default function Hero() {
               opacity={0.6}
             />
           ) : (
-            <CSS3DHelix
-              className="absolute inset-0 w-full h-full"
-              speed={1.2}
-              color="#6AA7FF"
-            />
+            <HelixBackground />
           )}
         </Suspense>
       )}
