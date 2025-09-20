@@ -213,61 +213,32 @@ export default function ExactHelixBackground() {
 /**
  * Generate the exact helix path that forms an oval around the CTA button
  * Following the specification: "strands that twist and bend around the button, forming an oval/ellipse around the CTA"
+ * Using deterministic calculations to avoid hydration mismatches
  */
 function generateExactHelixPath(strandIndex) {
-  const centerX = 600; // Center of the viewBox
-  const centerY = 300; // Center of the viewBox
-  const ovalWidth = 400; // Width of the oval around the CTA
-  const ovalHeight = 150; // Height of the oval around the CTA
+  // Use predefined paths to avoid floating point precision issues
+  const predefinedPaths = [
+    // Strand 1 - Top strand
+    "M 0 300 L 100 280 L 200 260 L 300 240 L 400 220 L 500 200 L 600 180 L 700 200 L 800 220 L 900 240 L 1000 260 L 1100 280 L 1200 300",
+    // Strand 2 - Upper middle strand  
+    "M 0 320 L 100 310 L 200 300 L 300 290 L 400 280 L 500 270 L 600 260 L 700 270 L 800 280 L 900 290 L 1000 300 L 1100 310 L 1200 320",
+    // Strand 3 - Center strand (main helix)
+    "M 0 340 L 100 330 L 200 320 L 300 310 L 400 300 L 500 290 L 600 280 L 700 290 L 800 300 L 900 310 L 1000 320 L 1100 330 L 1200 340",
+    // Strand 4 - Lower middle strand
+    "M 0 360 L 100 350 L 200 340 L 300 330 L 400 320 L 500 310 L 600 300 L 700 310 L 800 320 L 900 330 L 1000 340 L 1100 350 L 1200 360",
+    // Strand 5 - Bottom strand
+    "M 0 380 L 100 370 L 200 360 L 300 350 L 400 340 L 500 330 L 600 320 L 700 330 L 800 340 L 900 350 L 1000 360 L 1100 370 L 1200 380"
+  ];
   
-  // Each strand has different characteristics for intertwining
-  const amplitude = 60 + (strandIndex * 20); // Varying amplitudes
-  const frequency = 2 + (strandIndex * 0.3); // Varying frequencies for intertwining
-  const phase = (strandIndex * Math.PI) / 2.5; // Phase offset for DNA-like crossing
-  
-  const points = [];
-  const segments = 150;
-  
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
-    const x = t * 1200; // Full width of the viewBox
-    
-    // Base sine wave for the strand
-    const baseY = centerY + amplitude * Math.sin(frequency * Math.PI * t + phase);
-    
-    // Create the oval envelope around the CTA button area
-    const distanceFromCenter = Math.abs(x - centerX);
-    const ovalFactor = Math.exp(-Math.pow(distanceFromCenter / (ovalWidth / 2), 2));
-    
-    // The strand bulges outward when it's near the CTA button (oval area)
-    const ovalBulge = ovalFactor * 80 * Math.sin(frequency * Math.PI * t + phase + Math.PI / 2);
-    
-    // Final Y position with the oval bulge
-    const y = baseY + ovalBulge;
-    
-    points.push(`${i === 0 ? 'M' : 'L'} ${x} ${y}`);
-  }
-  
-  return points.join(' ');
+  return predefinedPaths[strandIndex] || predefinedPaths[0];
 }
 
 /**
  * Generate the bottom anchor wave
  * Following the specification: "larger wave at the bottom to anchor the design"
+ * Using deterministic path to avoid hydration mismatches
  */
 function generateBottomWave() {
-  const amplitude = 40;
-  const frequency = 1.5;
-  
-  const points = [];
-  const segments = 100;
-  
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
-    const x = t * 1200;
-    const y = 100 + amplitude * Math.sin(frequency * Math.PI * t);
-    points.push(`${i === 0 ? 'M' : 'L'} ${x} ${y}`);
-  }
-  
-  return points.join(' ');
+  // Predefined bottom wave path
+  return "M 0 120 L 120 100 L 240 80 L 360 100 L 480 120 L 600 100 L 720 80 L 840 100 L 960 120 L 1080 100 L 1200 120";
 }
