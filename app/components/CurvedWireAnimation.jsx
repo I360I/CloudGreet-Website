@@ -18,7 +18,7 @@ export default function CurvedWireAnimation() {
       }}
     >
       <svg
-        viewBox="0 0 1200 800"
+        viewBox="0 0 1400 800"
         style={{ width: '100%', height: '100%' }}
         className="curved-wire-svg"
       >
@@ -69,9 +69,9 @@ export default function CurvedWireAnimation() {
           </linearGradient>
         </defs>
 
-        {/* Wire 1 - Top curve that wraps around button */}
+        {/* Wire 1 - Top wire, avoids headline area */}
         <path
-          d="M 0 250 Q 400 180 600 250 Q 800 320 1200 250"
+          d="M 0 180 Q 200 150 400 180 Q 600 210 700 200 Q 800 190 1000 200 Q 1200 210 1400 180"
           fill="none"
           stroke="url(#wire1)"
           strokeWidth="3"
@@ -79,9 +79,9 @@ export default function CurvedWireAnimation() {
           className="wire-1"
         />
         
-        {/* Wire 2 - Upper middle curve */}
+        {/* Wire 2 - Upper wire, bends around text */}
         <path
-          d="M 0 320 Q 350 260 550 320 Q 750 380 1200 320"
+          d="M 0 220 Q 300 190 500 220 Q 650 240 750 230 Q 850 220 950 230 Q 1100 240 1400 220"
           fill="none"
           stroke="url(#wire2)"
           strokeWidth="3"
@@ -89,9 +89,9 @@ export default function CurvedWireAnimation() {
           className="wire-2"
         />
         
-        {/* Wire 3 - Center curve (main helix around button) */}
+        {/* Wire 3 - Main wire around button area */}
         <path
-          d="M 0 390 Q 300 320 500 390 Q 700 460 900 390 Q 1100 320 1200 390"
+          d="M 0 320 Q 200 280 400 320 Q 550 350 650 340 Q 750 330 850 340 Q 950 350 1100 320 Q 1300 280 1400 320"
           fill="none"
           stroke="url(#wire3)"
           strokeWidth="4"
@@ -99,9 +99,9 @@ export default function CurvedWireAnimation() {
           className="wire-3"
         />
         
-        {/* Wire 4 - Lower middle curve */}
+        {/* Wire 4 - Lower wire, avoids button area */}
         <path
-          d="M 0 460 Q 350 400 550 460 Q 750 520 1200 460"
+          d="M 0 380 Q 300 350 500 380 Q 650 400 750 390 Q 850 380 950 390 Q 1100 400 1400 380"
           fill="none"
           stroke="url(#wire4)"
           strokeWidth="3"
@@ -109,9 +109,9 @@ export default function CurvedWireAnimation() {
           className="wire-4"
         />
         
-        {/* Wire 5 - Bottom curve */}
+        {/* Wire 5 - Bottom wire */}
         <path
-          d="M 0 530 Q 400 480 600 530 Q 800 580 1200 530"
+          d="M 0 420 Q 200 390 400 420 Q 600 450 700 440 Q 800 430 900 440 Q 1100 450 1400 420"
           fill="none"
           stroke="url(#wire5)"
           strokeWidth="3"
@@ -121,7 +121,7 @@ export default function CurvedWireAnimation() {
         
         {/* Additional tangled wires for complexity */}
         <path
-          d="M 0 240 Q 400 180 600 240 Q 800 300 1200 240"
+          d="M 0 200 Q 400 170 600 200 Q 800 230 1000 220 Q 1200 210 1400 200"
           fill="none"
           stroke="url(#wire2)"
           strokeWidth="2"
@@ -130,7 +130,7 @@ export default function CurvedWireAnimation() {
         />
         
         <path
-          d="M 0 400 Q 350 340 550 400 Q 750 460 1200 400"
+          d="M 0 360 Q 350 330 550 360 Q 750 390 850 380 Q 950 370 1150 380 Q 1350 350 1400 360"
           fill="none"
           stroke="url(#wire4)"
           strokeWidth="2"
@@ -140,7 +140,7 @@ export default function CurvedWireAnimation() {
         
         {/* Bottom wave anchor */}
         <path
-          d="M 0 650 Q 300 620 600 650 Q 900 680 1200 650"
+          d="M 0 600 Q 300 570 600 600 Q 900 630 1200 600 Q 1400 570 1400 600"
           fill="none"
           stroke="url(#wire3)"
           strokeWidth="6"
@@ -158,107 +158,51 @@ export default function CurvedWireAnimation() {
           height: 100%;
         }
 
-        .wire-1 {
-          stroke-dasharray: 2000;
-          stroke-dashoffset: 2000;
-          animation: wireFlow1 12s linear infinite;
+        .wire-1, .wire-2, .wire-3, .wire-4, .wire-5 {
+          stroke-dasharray: 2500;
+          stroke-dashoffset: 2500;
+          animation: wireFlow 12s linear infinite;
         }
 
         .wire-2 {
-          stroke-dasharray: 2000;
-          stroke-dashoffset: 2000;
-          animation: wireFlow2 14s linear infinite;
           animation-delay: -2s;
         }
 
         .wire-3 {
-          stroke-dasharray: 2000;
-          stroke-dashoffset: 2000;
-          animation: wireFlow3 10s linear infinite;
           animation-delay: -1s;
         }
 
         .wire-4 {
-          stroke-dasharray: 2000;
-          stroke-dashoffset: 2000;
-          animation: wireFlow4 13s linear infinite;
           animation-delay: -3s;
         }
 
         .wire-5 {
-          stroke-dasharray: 2000;
-          stroke-dashoffset: 2000;
-          animation: wireFlow5 11s linear infinite;
           animation-delay: -4s;
         }
 
+        .wire-tangle-1, .wire-tangle-2 {
+          stroke-dasharray: 2000;
+          stroke-dashoffset: 2000;
+          animation: wireFlow 10s linear infinite;
+        }
+
         .wire-tangle-1 {
-          stroke-dasharray: 1500;
-          stroke-dashoffset: 1500;
-          animation: wireFlow1 8s linear infinite;
           animation-delay: -1.5s;
         }
 
         .wire-tangle-2 {
-          stroke-dasharray: 1500;
-          stroke-dashoffset: 1500;
-          animation: wireFlow2 9s linear infinite;
           animation-delay: -2.5s;
         }
 
         .bottom-wave {
-          stroke-dasharray: 1000;
-          stroke-dashoffset: 1000;
+          stroke-dasharray: 1500;
+          stroke-dashoffset: 1500;
           animation: bottomWaveFlow 15s linear infinite;
         }
 
-        @keyframes wireFlow1 {
+        @keyframes wireFlow {
           0% {
-            stroke-dashoffset: 2000;
-            transform: translateX(0);
-          }
-          100% {
-            stroke-dashoffset: 0;
-            transform: translateX(200px);
-          }
-        }
-
-        @keyframes wireFlow2 {
-          0% {
-            stroke-dashoffset: 2000;
-            transform: translateX(0);
-          }
-          100% {
-            stroke-dashoffset: 0;
-            transform: translateX(200px);
-          }
-        }
-
-        @keyframes wireFlow3 {
-          0% {
-            stroke-dashoffset: 2000;
-            transform: translateX(0);
-          }
-          100% {
-            stroke-dashoffset: 0;
-            transform: translateX(200px);
-          }
-        }
-
-        @keyframes wireFlow4 {
-          0% {
-            stroke-dashoffset: 2000;
-            transform: translateX(0);
-          }
-          100% {
-            stroke-dashoffset: 0;
-            transform: translateX(200px);
-          }
-        }
-
-        @keyframes wireFlow5 {
-          0% {
-            stroke-dashoffset: 2000;
+            stroke-dashoffset: 2500;
             transform: translateX(0);
           }
           100% {
@@ -269,12 +213,12 @@ export default function CurvedWireAnimation() {
 
         @keyframes bottomWaveFlow {
           0% {
-            stroke-dashoffset: 1000;
+            stroke-dashoffset: 1500;
             transform: translateX(0);
           }
           100% {
             stroke-dashoffset: 0;
-            transform: translateX(300px);
+            transform: translateX(400px);
           }
         }
 
