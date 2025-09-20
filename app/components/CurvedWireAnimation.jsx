@@ -32,46 +32,46 @@ export default function CurvedWireAnimation() {
             </feMerge>
           </filter>
           
-          {/* Gradients for each wire */}
+          {/* All blue gradients */}
           <linearGradient id="wire1" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0"/>
+            <stop offset="20%" stopColor="#3B82F6" stopOpacity="0.9"/>
+            <stop offset="80%" stopColor="#3B82F6" stopOpacity="0.9"/>
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
+          </linearGradient>
+          
+          <linearGradient id="wire2" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#3B82F6" stopOpacity="0"/>
             <stop offset="20%" stopColor="#3B82F6" stopOpacity="0.8"/>
             <stop offset="80%" stopColor="#3B82F6" stopOpacity="0.8"/>
             <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
           </linearGradient>
           
-          <linearGradient id="wire2" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#6366F1" stopOpacity="0"/>
-            <stop offset="20%" stopColor="#6366F1" stopOpacity="0.8"/>
-            <stop offset="80%" stopColor="#6366F1" stopOpacity="0.8"/>
-            <stop offset="100%" stopColor="#6366F1" stopOpacity="0"/>
-          </linearGradient>
-          
           <linearGradient id="wire3" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0"/>
-            <stop offset="20%" stopColor="#8B5CF6" stopOpacity="0.8"/>
-            <stop offset="80%" stopColor="#8B5CF6" stopOpacity="0.8"/>
-            <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0"/>
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0"/>
+            <stop offset="20%" stopColor="#3B82F6" stopOpacity="1"/>
+            <stop offset="80%" stopColor="#3B82F6" stopOpacity="1"/>
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
           </linearGradient>
           
           <linearGradient id="wire4" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#EC4899" stopOpacity="0"/>
-            <stop offset="20%" stopColor="#EC4899" stopOpacity="0.8"/>
-            <stop offset="80%" stopColor="#EC4899" stopOpacity="0.8"/>
-            <stop offset="100%" stopColor="#EC4899" stopOpacity="0"/>
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0"/>
+            <stop offset="20%" stopColor="#3B82F6" stopOpacity="0.8"/>
+            <stop offset="80%" stopColor="#3B82F6" stopOpacity="0.8"/>
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
           </linearGradient>
           
           <linearGradient id="wire5" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#F59E0B" stopOpacity="0"/>
-            <stop offset="20%" stopColor="#F59E0B" stopOpacity="0.8"/>
-            <stop offset="80%" stopColor="#F59E0B" stopOpacity="0.8"/>
-            <stop offset="100%" stopColor="#F59E0B" stopOpacity="0"/>
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0"/>
+            <stop offset="20%" stopColor="#3B82F6" stopOpacity="0.7"/>
+            <stop offset="80%" stopColor="#3B82F6" stopOpacity="0.7"/>
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0"/>
           </linearGradient>
         </defs>
 
         {/* Wire 1 - Top curve that wraps around button */}
         <path
-          d="M 0 200 Q 300 150 600 200 Q 900 250 1200 200"
+          d="M 0 250 Q 400 180 600 250 Q 800 320 1200 250"
           fill="none"
           stroke="url(#wire1)"
           strokeWidth="3"
@@ -81,7 +81,7 @@ export default function CurvedWireAnimation() {
         
         {/* Wire 2 - Upper middle curve */}
         <path
-          d="M 0 280 Q 250 230 500 280 Q 750 330 1200 280"
+          d="M 0 320 Q 350 260 550 320 Q 750 380 1200 320"
           fill="none"
           stroke="url(#wire2)"
           strokeWidth="3"
@@ -91,7 +91,7 @@ export default function CurvedWireAnimation() {
         
         {/* Wire 3 - Center curve (main helix around button) */}
         <path
-          d="M 0 360 Q 200 300 400 360 Q 600 420 800 360 Q 1000 300 1200 360"
+          d="M 0 390 Q 300 320 500 390 Q 700 460 900 390 Q 1100 320 1200 390"
           fill="none"
           stroke="url(#wire3)"
           strokeWidth="4"
@@ -101,7 +101,7 @@ export default function CurvedWireAnimation() {
         
         {/* Wire 4 - Lower middle curve */}
         <path
-          d="M 0 440 Q 250 390 500 440 Q 750 490 1200 440"
+          d="M 0 460 Q 350 400 550 460 Q 750 520 1200 460"
           fill="none"
           stroke="url(#wire4)"
           strokeWidth="3"
@@ -111,7 +111,7 @@ export default function CurvedWireAnimation() {
         
         {/* Wire 5 - Bottom curve */}
         <path
-          d="M 0 520 Q 300 470 600 520 Q 900 570 1200 520"
+          d="M 0 530 Q 400 480 600 530 Q 800 580 1200 530"
           fill="none"
           stroke="url(#wire5)"
           strokeWidth="3"
@@ -123,7 +123,7 @@ export default function CurvedWireAnimation() {
         <path
           d="M 0 240 Q 400 180 600 240 Q 800 300 1200 240"
           fill="none"
-          stroke="url(#wire1)"
+          stroke="url(#wire2)"
           strokeWidth="2"
           filter="url(#wireGlow)"
           className="wire-tangle-1"
@@ -132,7 +132,7 @@ export default function CurvedWireAnimation() {
         <path
           d="M 0 400 Q 350 340 550 400 Q 750 460 1200 400"
           fill="none"
-          stroke="url(#wire3)"
+          stroke="url(#wire4)"
           strokeWidth="2"
           filter="url(#wireGlow)"
           className="wire-tangle-2"
