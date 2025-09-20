@@ -33,16 +33,19 @@ function TwistingStrand({ color = '#6ea6ff', speed = 0.2, offsetX = 0 }) {
   const [geometry, setGeometry] = useState(null);
 
   useEffect(() => {
+    console.log('TwistingStrand: Creating geometry with color:', color);
     try {
       // Create a helix path with error handling
       const path = createHelixPath({ length: 14, turns: 4, bulge: 2.5 });
       const tubeGeometry = new THREE.TubeGeometry(path, 600, 0.05, 8, false);
       setGeometry(tubeGeometry);
+      console.log('TwistingStrand: Geometry created successfully');
     } catch (error) {
       console.warn('Failed to create helix geometry:', error);
       // Fallback to basic sphere geometry
       const fallbackGeometry = new THREE.SphereGeometry(1, 8, 6);
       setGeometry(fallbackGeometry);
+      console.log('TwistingStrand: Using fallback geometry');
     }
   }, []);
 
@@ -143,14 +146,15 @@ function BottomWave({ color = '#2e50a0', speed = 0.05 }) {
  */
 export default function HelixBackground() {
   const [hasError, setHasError] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
+  // Debug logging
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    console.log('HelixBackground mounted, hasError:', hasError);
+  }, [hasError]);
 
   // Fallback component if Three.js fails
-  if (hasError || !isMounted) {
+  if (hasError) {
+    console.log('HelixBackground: Using fallback CSS gradient');
     return (
       <div
         style={{
