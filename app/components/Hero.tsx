@@ -6,6 +6,7 @@ import {
   Phone, ArrowRight, Shield, Calendar, Zap
 } from 'lucide-react'
 import Link from 'next/link'
+import { ErrorBoundary } from './ErrorBoundary'
 
 // Dynamic import to prevent SSR issues
 const HelixBackground = React.lazy(() => import('./HelixBackground'))
@@ -66,7 +67,9 @@ export default function Hero() {
               opacity={0.6}
             />
           ) : (
-            <HelixBackground />
+            <ErrorBoundary>
+              <HelixBackground />
+            </ErrorBoundary>
           )}
         </Suspense>
       )}
