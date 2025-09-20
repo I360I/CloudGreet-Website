@@ -16,95 +16,101 @@ export default function WrappingHelixAnimation() {
         pointerEvents: 'none',
       }}
     >
-      {/* Wavy squiggly lines that flow naturally across the screen */}
+      {/* Curved squiggly lines that fill full screen and loop seamlessly */}
       
-      {/* Wave 1 - Large wavy line */}
+      {/* Line 1 - Full screen curved line */}
       <div
         style={{
           position: 'absolute',
-          top: '30%',
-          left: '-5%',
-          width: '110%',
-          height: '4px',
-          background: '#3b82f6',
-          borderRadius: '20px',
-          animation: 'wave1 8s ease-in-out infinite',
-          boxShadow: '0 0 15px #3b82f6, 0 0 30px #6ea6ff',
+          top: '25%',
+          left: '0%',
+          width: '100%',
+          height: '6px',
+          background: 'linear-gradient(90deg, #3b82f6, #6ea6ff, #3b82f6)',
+          borderRadius: '50px',
+          animation: 'line1 6s linear infinite',
+          boxShadow: '0 0 20px #3b82f6, 0 0 40px #6ea6ff',
+          transform: 'rotate(2deg)',
         }}
       />
       
-      {/* Wave 2 - Medium wavy line */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '45%',
-          left: '-8%',
-          width: '116%',
-          height: '3px',
-          background: '#6ea6ff',
-          borderRadius: '15px',
-          animation: 'wave2 7s ease-in-out infinite reverse',
-          boxShadow: '0 0 12px #6ea6ff, 0 0 24px #9333ea',
-        }}
-      />
-      
-      {/* Wave 3 - Small wavy line */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '60%',
-          left: '-10%',
-          width: '120%',
-          height: '3px',
-          background: '#9333ea',
-          borderRadius: '18px',
-          animation: 'wave3 9s ease-in-out infinite',
-          boxShadow: '0 0 14px #9333ea, 0 0 28px #3b82f6',
-        }}
-      />
-      
-      {/* Wave 4 - Another wavy line */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '35%',
-          left: '-12%',
-          width: '124%',
-          height: '4px',
-          background: '#3b82f6',
-          borderRadius: '25px',
-          animation: 'wave4 6s ease-in-out infinite reverse',
-          boxShadow: '0 0 12px #3b82f6, 0 0 24px #6ea6ff',
-        }}
-      />
-      
-      {/* Wave 5 - Curved wavy line */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '55%',
-          left: '-6%',
-          width: '112%',
-          height: '3px',
-          background: '#6ea6ff',
-          borderRadius: '22px',
-          animation: 'wave5 8.5s ease-in-out infinite',
-          boxShadow: '0 0 14px #6ea6ff, 0 0 28px #9333ea',
-        }}
-      />
-      
-      {/* Wave 6 - Spiral wavy line */}
+      {/* Line 2 - Full screen curved line */}
       <div
         style={{
           position: 'absolute',
           top: '40%',
-          left: '-15%',
-          width: '130%',
-          height: '2px',
-          background: '#9333ea',
-          borderRadius: '16px',
-          animation: 'wave6 7.5s ease-in-out infinite reverse',
-          boxShadow: '0 0 10px #9333ea, 0 0 20px #3b82f6',
+          left: '0%',
+          width: '100%',
+          height: '5px',
+          background: 'linear-gradient(90deg, #6ea6ff, #9333ea, #6ea6ff)',
+          borderRadius: '50px',
+          animation: 'line2 8s linear infinite',
+          boxShadow: '0 0 18px #6ea6ff, 0 0 36px #9333ea',
+          transform: 'rotate(-3deg)',
+        }}
+      />
+      
+      {/* Line 3 - Full screen curved line */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '55%',
+          left: '0%',
+          width: '100%',
+          height: '4px',
+          background: 'linear-gradient(90deg, #9333ea, #3b82f6, #9333ea)',
+          borderRadius: '50px',
+          animation: 'line3 7s linear infinite',
+          boxShadow: '0 0 16px #9333ea, 0 0 32px #3b82f6',
+          transform: 'rotate(4deg)',
+        }}
+      />
+      
+      {/* Line 4 - Full screen curved line */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '70%',
+          left: '0%',
+          width: '100%',
+          height: '5px',
+          background: 'linear-gradient(90deg, #3b82f6, #6ea6ff, #3b82f6)',
+          borderRadius: '50px',
+          animation: 'line4 9s linear infinite',
+          boxShadow: '0 0 20px #3b82f6, 0 0 40px #6ea6ff',
+          transform: 'rotate(-2deg)',
+        }}
+      />
+      
+      {/* Line 5 - Full screen curved line */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '35%',
+          left: '0%',
+          width: '100%',
+          height: '3px',
+          background: 'linear-gradient(90deg, #6ea6ff, #9333ea, #6ea6ff)',
+          borderRadius: '50px',
+          animation: 'line5 5s linear infinite',
+          boxShadow: '0 0 14px #6ea6ff, 0 0 28px #9333ea',
+          transform: 'rotate(5deg)',
+        }}
+      />
+      
+      {/* Line 6 - Full screen curved line */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '60%',
+          left: '0%',
+          width: '100%',
+          height: '4px',
+          background: 'linear-gradient(90deg, #9333ea, #3b82f6, #9333ea)',
+          borderRadius: '50px',
+          animation: 'line6 10s linear infinite',
+          boxShadow: '0 0 18px #9333ea, 0 0 36px #3b82f6',
+          transform: 'rotate(-4deg)',
         }}
       />
       
@@ -149,127 +155,127 @@ export default function WrappingHelixAnimation() {
         }}
       />
 
-      {/* CSS Animations - WAVY SQUIGGLY LINES */}
+      {/* CSS Animations - SEAMLESS FULL SCREEN LOOPING WITH CURVES */}
       <style jsx>{`
-        @keyframes wave1 {
+        @keyframes line1 {
           0% { 
-            transform: translateX(-100%) skewY(0deg);
-            opacity: 0.7;
+            transform: translateX(-100%) rotate(2deg) scaleX(1.2);
+            opacity: 0.8;
           }
           25% { 
-            transform: translateX(-50%) skewY(2deg);
+            transform: translateX(-50%) rotate(4deg) scaleX(1.1);
             opacity: 1;
           }
           50% { 
-            transform: translateX(0%) skewY(-1deg);
+            transform: translateX(0%) rotate(2deg) scaleX(1.2);
             opacity: 0.9;
           }
           75% { 
-            transform: translateX(50%) skewY(1.5deg);
+            transform: translateX(50%) rotate(0deg) scaleX(1.1);
             opacity: 1;
           }
           100% { 
-            transform: translateX(100%) skewY(0deg);
-            opacity: 0.7;
+            transform: translateX(100%) rotate(2deg) scaleX(1.2);
+            opacity: 0.8;
           }
         }
         
-        @keyframes wave2 {
+        @keyframes line2 {
           0% { 
-            transform: translateX(100%) skewY(0deg);
-            opacity: 0.8;
+            transform: translateX(-100%) rotate(-3deg) scaleX(1.1);
+            opacity: 0.7;
           }
           30% { 
-            transform: translateX(50%) skewY(-2deg);
+            transform: translateX(-30%) rotate(-5deg) scaleX(1.3);
             opacity: 1;
           }
           60% { 
-            transform: translateX(-50%) skewY(1deg);
+            transform: translateX(30%) rotate(-1deg) scaleX(1.1);
             opacity: 0.9;
           }
           100% { 
-            transform: translateX(-100%) skewY(0deg);
-            opacity: 0.8;
+            transform: translateX(100%) rotate(-3deg) scaleX(1.1);
+            opacity: 0.7;
           }
         }
         
-        @keyframes wave3 {
+        @keyframes line3 {
           0% { 
-            transform: translateX(-100%) skewY(0deg);
-            opacity: 0.6;
+            transform: translateX(-100%) rotate(4deg) scaleX(1.3);
+            opacity: 0.8;
           }
           40% { 
-            transform: translateX(-40%) skewY(3deg);
+            transform: translateX(-20%) rotate(6deg) scaleX(1.2);
             opacity: 1;
           }
           70% { 
-            transform: translateX(40%) skewY(-2deg);
-            opacity: 0.8;
+            transform: translateX(20%) rotate(2deg) scaleX(1.3);
+            opacity: 0.9;
           }
           100% { 
-            transform: translateX(100%) skewY(0deg);
-            opacity: 0.6;
+            transform: translateX(100%) rotate(4deg) scaleX(1.3);
+            opacity: 0.8;
           }
         }
         
-        @keyframes wave4 {
+        @keyframes line4 {
           0% { 
-            transform: translateX(100%) skewY(0deg);
-            opacity: 0.7;
+            transform: translateX(-100%) rotate(-2deg) scaleX(1.1);
+            opacity: 0.9;
           }
           35% { 
-            transform: translateX(35%) skewY(-3deg);
+            transform: translateX(-35%) rotate(-4deg) scaleX(1.2);
             opacity: 1;
           }
           65% { 
-            transform: translateX(-35%) skewY(2deg);
-            opacity: 0.9;
+            transform: translateX(35%) rotate(0deg) scaleX(1.1);
+            opacity: 0.8;
           }
           100% { 
-            transform: translateX(-100%) skewY(0deg);
-            opacity: 0.7;
+            transform: translateX(100%) rotate(-2deg) scaleX(1.1);
+            opacity: 0.9;
           }
         }
         
-        @keyframes wave5 {
+        @keyframes line5 {
           0% { 
-            transform: translateX(-100%) skewY(0deg);
-            opacity: 0.8;
+            transform: translateX(-100%) rotate(5deg) scaleX(1.4);
+            opacity: 0.6;
           }
           25% { 
-            transform: translateX(-25%) skewY(2.5deg);
+            transform: translateX(-25%) rotate(7deg) scaleX(1.2);
             opacity: 1;
           }
           50% { 
-            transform: translateX(0%) skewY(-1.5deg);
-            opacity: 0.9;
+            transform: translateX(0%) rotate(5deg) scaleX(1.4);
+            opacity: 0.8;
           }
           75% { 
-            transform: translateX(25%) skewY(2deg);
+            transform: translateX(25%) rotate(3deg) scaleX(1.2);
             opacity: 1;
           }
           100% { 
-            transform: translateX(100%) skewY(0deg);
-            opacity: 0.8;
+            transform: translateX(100%) rotate(5deg) scaleX(1.4);
+            opacity: 0.6;
           }
         }
         
-        @keyframes wave6 {
+        @keyframes line6 {
           0% { 
-            transform: translateX(100%) skewY(0deg);
-            opacity: 0.6;
+            transform: translateX(-100%) rotate(-4deg) scaleX(1.2);
+            opacity: 0.7;
           }
           45% { 
-            transform: translateX(45%) skewY(-2.5deg);
+            transform: translateX(-45%) rotate(-6deg) scaleX(1.1);
             opacity: 1;
           }
           75% { 
-            transform: translateX(-45%) skewY(1.5deg);
-            opacity: 0.8;
+            transform: translateX(-15%) rotate(-2deg) scaleX(1.2);
+            opacity: 0.9;
           }
           100% { 
-            transform: translateX(-100%) skewY(0deg);
-            opacity: 0.6;
+            transform: translateX(100%) rotate(-4deg) scaleX(1.2);
+            opacity: 0.7;
           }
         }
         
