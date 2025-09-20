@@ -1,18 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 /**
  * Simple but effective wave animation that wraps around the CTA button
  */
 export default function SimpleWaveBackground() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null;
-  }
 
   return (
     <div

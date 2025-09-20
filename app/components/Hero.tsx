@@ -1,24 +1,16 @@
 "use client"
 
-import React, { Suspense, useState, useEffect } from 'react'
+import React, { Suspense } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Phone, ArrowRight, Shield, Calendar, Zap
 } from 'lucide-react'
 import Link from 'next/link'
-import { ErrorBoundary } from './ErrorBoundary'
 
 // Dynamic import to prevent SSR issues
 const SimpleWaveBackground = React.lazy(() => import('./SimpleWaveBackground'))
-const LightBackground = React.lazy(() => import('./LightBackground'))
 
 export default function Hero() {
-  const [mounted, setMounted] = useState(false)
-  const [useFallback, setUseFallback] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 via-black to-slate-900">
@@ -65,13 +57,11 @@ export default function Hero() {
       </div>
 
           {/* Wave Animation that wraps around the CTA button */}
-          {mounted && (
-            <Suspense fallback={
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
-            }>
-              <SimpleWaveBackground />
-            </Suspense>
-          )}
+          <Suspense fallback={
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
+          }>
+            <SimpleWaveBackground />
+          </Suspense>
       
       {/* Additional glow overlay for premium effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none z-1"></div>
