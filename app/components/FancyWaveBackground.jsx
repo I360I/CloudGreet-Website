@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
 /**
- * CSS-based helix animation that wraps around the CTA button
- * Creates curved strands that lead the eye to the "Get Started Free" button
+ * CSS-based helix animation with screen-length curved lines
+ * All lines span the full screen width with no visible ends
+ * No line is ever perfectly straight - always curved and bending
  */
 export default function FancyWaveBackground() {
   const [mounted, setMounted] = useState(false);
@@ -42,41 +43,41 @@ export default function FancyWaveBackground() {
         pointerEvents: 'none',
       }}
     >
-      {/* Helix strands that wrap around the CTA button area */}
+      {/* Screen-length curved lines that wrap around the CTA button */}
       <div className="helix-container">
-        {/* Strand 1 - Approaches from top-left, curves around button */}
-        <div className="helix-strand strand-1" style={{
+        {/* Line 1 - Top curved line */}
+        <div className="helix-line line-1" style={{
           '--color': '#6A5BFF',
           '--delay': '0s',
-          '--duration': '8s'
+          '--duration': '12s'
         }} />
         
-        {/* Strand 2 - Approaches from top-right, curves around button */}
-        <div className="helix-strand strand-2" style={{
+        {/* Line 2 - Upper-middle curved line */}
+        <div className="helix-line line-2" style={{
           '--color': '#7E66FF',
-          '--delay': '1.5s',
-          '--duration': '9s'
+          '--delay': '2s',
+          '--duration': '14s'
         }} />
         
-        {/* Strand 3 - Center helix that wraps tightly around button */}
-        <div className="helix-strand strand-3" style={{
+        {/* Line 3 - Center curved line (wraps around button) */}
+        <div className="helix-line line-3" style={{
           '--color': '#5C8BFF',
-          '--delay': '3s',
-          '--duration': '10s'
+          '--delay': '4s',
+          '--duration': '13s'
         }} />
         
-        {/* Strand 4 - Approaches from bottom-left, curves around button */}
-        <div className="helix-strand strand-4" style={{
+        {/* Line 4 - Lower-middle curved line */}
+        <div className="helix-line line-4" style={{
           '--color': '#8A7BFF',
-          '--delay': '4.5s',
-          '--duration': '8.5s'
+          '--delay': '6s',
+          '--duration': '15s'
         }} />
         
-        {/* Strand 5 - Approaches from bottom-right, curves around button */}
-        <div className="helix-strand strand-5" style={{
+        {/* Line 5 - Bottom curved line */}
+        <div className="helix-line line-5" style={{
           '--color': '#4C7BFF',
-          '--delay': '6s',
-          '--duration': '9.5s'
+          '--delay': '8s',
+          '--duration': '11s'
         }} />
       </div>
 
@@ -86,197 +87,210 @@ export default function FancyWaveBackground() {
       <style jsx>{`
         .helix-container {
           position: absolute;
-          top: 50%;
-          left: 50%;
+          top: 0;
+          left: 0;
           width: 100%;
           height: 100%;
-          transform: translate(-50%, -50%);
         }
 
-        .helix-strand {
+        .helix-line {
           position: absolute;
-          width: 300px;
+          left: -10%;
+          width: 120%;
           height: 3px;
           border-radius: 50px;
           filter: drop-shadow(0 0 8px var(--color));
           opacity: 0.7;
-          animation: helixWrap var(--duration) var(--delay) linear infinite;
+          animation: screenFlow var(--duration) var(--delay) linear infinite;
         }
 
-        /* Strand 1: Top-left approach, curves around button from above */
-        .strand-1 {
-          background: linear-gradient(45deg, transparent, var(--color), var(--color), transparent);
-          top: 15%;
-          left: 10%;
-          transform-origin: center;
-          animation-name: strand1Wrap;
-        }
-
-        /* Strand 2: Top-right approach, curves around button from above */
-        .strand-2 {
-          background: linear-gradient(-45deg, transparent, var(--color), var(--color), transparent);
+        /* Line 1 - Top curved line */
+        .line-1 {
+          background: linear-gradient(90deg, 
+            transparent 0%, 
+            var(--color) 10%, 
+            var(--color) 90%, 
+            transparent 100%
+          );
           top: 20%;
-          right: 10%;
-          transform-origin: center;
-          animation-name: strand2Wrap;
+          animation-name: line1Flow;
         }
 
-        /* Strand 3: Center helix that wraps tightly around the button */
-        .strand-3 {
-          background: linear-gradient(0deg, transparent, var(--color), var(--color), transparent);
+        /* Line 2 - Upper-middle curved line */
+        .line-2 {
+          background: linear-gradient(90deg, 
+            transparent 0%, 
+            var(--color) 15%, 
+            var(--color) 85%, 
+            transparent 100%
+          );
+          top: 35%;
+          animation-name: line2Flow;
+        }
+
+        /* Line 3 - Center curved line (wraps around button) */
+        .line-3 {
+          background: linear-gradient(90deg, 
+            transparent 0%, 
+            var(--color) 20%, 
+            var(--color) 80%, 
+            transparent 100%
+          );
           top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 250px;
           height: 4px;
-          animation-name: strand3Wrap;
           opacity: 0.8;
+          animation-name: line3Flow;
         }
 
-        /* Strand 4: Bottom-left approach, curves around button from below */
-        .strand-4 {
-          background: linear-gradient(45deg, transparent, var(--color), var(--color), transparent);
-          bottom: 20%;
-          left: 15%;
-          transform-origin: center;
-          animation-name: strand4Wrap;
+        /* Line 4 - Lower-middle curved line */
+        .line-4 {
+          background: linear-gradient(90deg, 
+            transparent 0%, 
+            var(--color) 15%, 
+            var(--color) 85%, 
+            transparent 100%
+          );
+          top: 65%;
+          animation-name: line4Flow;
         }
 
-        /* Strand 5: Bottom-right approach, curves around button from below */
-        .strand-5 {
-          background: linear-gradient(-45deg, transparent, var(--color), var(--color), transparent);
-          bottom: 15%;
-          right: 15%;
-          transform-origin: center;
-          animation-name: strand5Wrap;
+        /* Line 5 - Bottom curved line */
+        .line-5 {
+          background: linear-gradient(90deg, 
+            transparent 0%, 
+            var(--color) 10%, 
+            var(--color) 90%, 
+            transparent 100%
+          );
+          top: 80%;
+          animation-name: line5Flow;
         }
 
-        /* Strand 1: Approaches from top-left, curves around button */
-        @keyframes strand1Wrap {
+        /* Line 1: Curved flow across screen with bends around button area */
+        @keyframes line1Flow {
           0% {
-            transform: translateX(-200px) translateY(0px) rotate(-30deg) scaleX(0.5);
+            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(2deg);
             opacity: 0.3;
           }
           25% {
-            transform: translateX(-50px) translateY(-20px) rotate(-15deg) scaleX(0.8);
+            transform: translateX(-50%) translateY(-15px) rotate(1deg) scaleY(1.2) skewY(3deg);
             opacity: 0.6;
           }
           50% {
-            transform: translateX(0px) translateY(-40px) rotate(0deg) scaleX(1.2);
-            opacity: 0.9;
+            transform: translateX(0%) translateY(-25px) rotate(2deg) scaleY(1.4) skewY(4deg);
+            opacity: 0.8;
           }
           75% {
-            transform: translateX(50px) translateY(-20px) rotate(15deg) scaleX(0.8);
+            transform: translateX(50%) translateY(-15px) rotate(1deg) scaleY(1.2) skewY(3deg);
             opacity: 0.6;
           }
           100% {
-            transform: translateX(200px) translateY(0px) rotate(30deg) scaleX(0.5);
+            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(2deg);
             opacity: 0.3;
           }
         }
 
-        /* Strand 2: Approaches from top-right, curves around button */
-        @keyframes strand2Wrap {
+        /* Line 2: Curved flow with more pronounced bends */
+        @keyframes line2Flow {
           0% {
-            transform: translateX(200px) translateY(0px) rotate(30deg) scaleX(0.5);
+            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(-1deg);
             opacity: 0.3;
           }
           25% {
-            transform: translateX(50px) translateY(-20px) rotate(15deg) scaleX(0.8);
-            opacity: 0.6;
+            transform: translateX(-50%) translateY(-20px) rotate(-1deg) scaleY(1.1) skewY(-2deg);
+            opacity: 0.5;
           }
           50% {
-            transform: translateX(0px) translateY(-40px) rotate(0deg) scaleX(1.2);
-            opacity: 0.9;
+            transform: translateX(0%) translateY(-30px) rotate(-2deg) scaleY(1.3) skewY(-3deg);
+            opacity: 0.7;
           }
           75% {
-            transform: translateX(-50px) translateY(-20px) rotate(-15deg) scaleX(0.8);
-            opacity: 0.6;
+            transform: translateX(50%) translateY(-20px) rotate(-1deg) scaleY(1.1) skewY(-2deg);
+            opacity: 0.5;
           }
           100% {
-            transform: translateX(-200px) translateY(0px) rotate(-30deg) scaleX(0.5);
+            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(-1deg);
             opacity: 0.3;
           }
         }
 
-        /* Strand 3: Center helix that wraps tightly around the button */
-        @keyframes strand3Wrap {
+        /* Line 3: Center line with dramatic curves around button */
+        @keyframes line3Flow {
           0% {
-            transform: translate(-50%, -50%) rotate(0deg) scaleX(0.3);
+            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
             opacity: 0.4;
           }
           25% {
-            transform: translate(-50%, -50%) rotate(90deg) scaleX(0.8);
+            transform: translateX(-50%) translateY(-30px) rotate(2deg) scaleY(1.3) skewY(2deg);
             opacity: 0.7;
           }
           50% {
-            transform: translate(-50%, -50%) rotate(180deg) scaleX(1.2);
+            transform: translateX(0%) translateY(-40px) rotate(3deg) scaleY(1.5) skewY(3deg);
             opacity: 0.9;
           }
           75% {
-            transform: translate(-50%, -50%) rotate(270deg) scaleX(0.8);
+            transform: translateX(50%) translateY(-30px) rotate(2deg) scaleY(1.3) skewY(2deg);
             opacity: 0.7;
           }
           100% {
-            transform: translate(-50%, -50%) rotate(360deg) scaleX(0.3);
+            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
             opacity: 0.4;
           }
         }
 
-        /* Strand 4: Approaches from bottom-left, curves around button */
-        @keyframes strand4Wrap {
+        /* Line 4: Lower line with opposite curve direction */
+        @keyframes line4Flow {
           0% {
-            transform: translateX(-200px) translateY(0px) rotate(30deg) scaleX(0.5);
+            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(-2deg);
             opacity: 0.3;
           }
           25% {
-            transform: translateX(-50px) translateY(20px) rotate(15deg) scaleX(0.8);
-            opacity: 0.6;
+            transform: translateX(-50%) translateY(20px) rotate(-1deg) scaleY(1.1) skewY(-3deg);
+            opacity: 0.5;
           }
           50% {
-            transform: translateX(0px) translateY(40px) rotate(0deg) scaleX(1.2);
-            opacity: 0.9;
+            transform: translateX(0%) translateY(30px) rotate(-2deg) scaleY(1.3) skewY(-4deg);
+            opacity: 0.7;
           }
           75% {
-            transform: translateX(50px) translateY(20px) rotate(-15deg) scaleX(0.8);
-            opacity: 0.6;
+            transform: translateX(50%) translateY(20px) rotate(-1deg) scaleY(1.1) skewY(-3deg);
+            opacity: 0.5;
           }
           100% {
-            transform: translateX(200px) translateY(0px) rotate(-30deg) scaleX(0.5);
+            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(-2deg);
             opacity: 0.3;
           }
         }
 
-        /* Strand 5: Approaches from bottom-right, curves around button */
-        @keyframes strand5Wrap {
+        /* Line 5: Bottom line with subtle curves */
+        @keyframes line5Flow {
           0% {
-            transform: translateX(200px) translateY(0px) rotate(-30deg) scaleX(0.5);
+            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
             opacity: 0.3;
           }
           25% {
-            transform: translateX(50px) translateY(20px) rotate(-15deg) scaleX(0.8);
+            transform: translateX(-50%) translateY(15px) rotate(1deg) scaleY(1.2) skewY(2deg);
             opacity: 0.6;
           }
           50% {
-            transform: translateX(0px) translateY(40px) rotate(0deg) scaleX(1.2);
-            opacity: 0.9;
+            transform: translateX(0%) translateY(25px) rotate(2deg) scaleY(1.4) skewY(3deg);
+            opacity: 0.8;
           }
           75% {
-            transform: translateX(-50px) translateY(20px) rotate(15deg) scaleX(0.8);
+            transform: translateX(50%) translateY(15px) rotate(1deg) scaleY(1.2) skewY(2deg);
             opacity: 0.6;
           }
           100% {
-            transform: translateX(-200px) translateY(0px) rotate(30deg) scaleX(0.5);
+            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
             opacity: 0.3;
           }
         }
 
         .bottom-wave {
           position: absolute;
-          bottom: 15%;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 400px;
+          bottom: 10%;
+          left: -10%;
+          width: 120%;
           height: 3px;
           background: linear-gradient(
             90deg,
@@ -286,48 +300,46 @@ export default function FancyWaveBackground() {
             transparent 100%
           );
           border-radius: 50px;
-          animation: bottomWaveFlow 12s linear infinite;
+          animation: bottomWaveFlow 16s linear infinite;
           filter: drop-shadow(0 0 6px #3457F5);
           opacity: 0.4;
         }
 
         @keyframes bottomWaveFlow {
           0% {
-            transform: translateX(-50%) translateY(0px) rotate(0deg) scaleX(0.8);
-            opacity: 0.3;
+            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
+            opacity: 0.2;
           }
           25% {
-            transform: translateX(-50%) translateY(-10px) rotate(1deg) scaleX(1.0);
-            opacity: 0.5;
-          }
-          50% {
-            transform: translateX(-50%) translateY(-15px) rotate(0deg) scaleX(1.2);
+            transform: translateX(-50%) translateY(-10px) rotate(1deg) scaleY(1.1) skewY(2deg);
             opacity: 0.4;
           }
+          50% {
+            transform: translateX(0%) translateY(-15px) rotate(0deg) scaleY(1.2) skewY(1deg);
+            opacity: 0.35;
+          }
           75% {
-            transform: translateX(-50%) translateY(-10px) rotate(-1deg) scaleX(1.0);
-            opacity: 0.5;
+            transform: translateX(50%) translateY(-10px) rotate(-1deg) scaleY(1.1) skewY(-1deg);
+            opacity: 0.4;
           }
           100% {
-            transform: translateX(-50%) translateY(0px) rotate(0deg) scaleX(0.8);
-            opacity: 0.3;
+            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
+            opacity: 0.2;
           }
         }
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
-          .helix-strand {
+          .helix-line {
             height: 2px;
             opacity: 0.5;
-            width: 200px;
           }
           
-          .strand-3 {
-            width: 180px;
+          .line-3 {
+            height: 3px;
           }
           
           .bottom-wave {
-            width: 300px;
             height: 2px;
             opacity: 0.3;
           }
