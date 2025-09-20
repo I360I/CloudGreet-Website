@@ -7,8 +7,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
-// WOW FACTOR ANIMATION - Complex, impressive initial load
-const WowFactorAnimation = React.lazy(() => import('./WowFactorAnimation'))
+// PROFESSIONAL ANIMATION - Clean, sophisticated, organized
+const ProfessionalAnimation = React.lazy(() => import('./ProfessionalAnimation'))
 
 export default function Hero() {
 
@@ -24,11 +24,11 @@ export default function Hero() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(16,185,129,0.1)_0%,transparent_50%)]"></div>
       
 
-          {/* WOW FACTOR ANIMATION - Complex, impressive initial load */}
+          {/* PROFESSIONAL ANIMATION - Clean, sophisticated, organized */}
           <Suspense fallback={
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
           }>
-            <WowFactorAnimation />
+            <ProfessionalAnimation />
           </Suspense>
       
       {/* Additional glow overlay for premium effect */}
