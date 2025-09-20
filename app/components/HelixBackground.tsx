@@ -2,7 +2,7 @@
 
 import React, { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Mesh, BufferGeometry, Float32Array, Vector3, Color } from 'three'
+import { Mesh, BufferGeometry, Vector3, Color } from 'three'
 import * as THREE from 'three'
 
 interface HelixStrandProps {
@@ -24,7 +24,7 @@ function HelixStrand({ radius, height, turns, color, opacity, speed, offset }: H
     const positions = new Float32Array((segments + 1) * 3)
     const colors = new Float32Array((segments + 1) * 3)
     
-    const color = new Color(color)
+    const colorObj = new Color(color)
     
     for (let i = 0; i <= segments; i++) {
       const t = (i / segments) * Math.PI * 2 * turns
@@ -38,9 +38,9 @@ function HelixStrand({ radius, height, turns, color, opacity, speed, offset }: H
       
       // Add color variation for depth
       const colorIntensity = 0.7 + 0.3 * Math.sin(t * 2)
-      colors[i * 3] = color.r * colorIntensity
-      colors[i * 3 + 1] = color.g * colorIntensity
-      colors[i * 3 + 2] = color.b * colorIntensity
+      colors[i * 3] = colorObj.r * colorIntensity
+      colors[i * 3 + 1] = colorObj.g * colorIntensity
+      colors[i * 3 + 2] = colorObj.b * colorIntensity
     }
     
     return { positions, colors }

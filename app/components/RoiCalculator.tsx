@@ -38,21 +38,21 @@ export default function RoiCalculator({ className = '' }: RoiCalculatorProps) {
   // Load from URL params on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const urlInputs = {
-        appointments: parseInt(params.get('appointments') || '30'),
-        closeRate: parseInt(params.get('closeRate') || '35'),
-        avgTicket: parseInt(params.get('avgTicket') || '750'),
-        missedCallsPerMonth: parseInt(params.get('missedCallsPerMonth') || '20'),
-      }
-
-      // Validate URL params
       try {
+        const params = new URLSearchParams(window.location.search)
+        const urlInputs = {
+          appointments: parseInt(params.get('appointments') || '30'),
+          closeRate: parseInt(params.get('closeRate') || '35'),
+          avgTicket: parseInt(params.get('avgTicket') || '750'),
+          missedCallsPerMonth: parseInt(params.get('missedCallsPerMonth') || '20'),
+        }
+
+        // Validate URL params
         const validated = roiInputSchema.parse(urlInputs)
         setInputs(validated)
       } catch (error) {
         // Use defaults if URL params are invalid
-
+        console.warn('Invalid URL params, using defaults:', error)
       }
     }
   }, [])
@@ -60,14 +60,18 @@ export default function RoiCalculator({ className = '' }: RoiCalculatorProps) {
   // Update URL when inputs change
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      params.set('appointments', inputs.appointments.toString())
-      params.set('closeRate', inputs.closeRate.toString())
-      params.set('avgTicket', inputs.avgTicket.toString())
-      params.set('missedCallsPerMonth', inputs.missedCallsPerMonth.toString())
-      
-      const newUrl = `${window.location.pathname}?${params.toString()}`
-      window.history.replaceState({}, '', newUrl)
+      try {
+        const params = new URLSearchParams(window.location.search)
+        params.set('appointments', inputs.appointments.toString())
+        params.set('closeRate', inputs.closeRate.toString())
+        params.set('avgTicket', inputs.avgTicket.toString())
+        params.set('missedCallsPerMonth', inputs.missedCallsPerMonth.toString())
+        
+        const newUrl = `${window.location.pathname}?${params.toString()}`
+        window.history.replaceState({}, '', newUrl)
+      } catch (error) {
+        console.warn('Failed to update URL:', error)
+      }
     }
   }, [inputs])
 
