@@ -73,7 +73,7 @@ export default function NotFound() {
             className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto"
           >
             <Link
-              href="/how-it-works"
+              href="/landing#how-it-works"
               className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50 hover:border-blue-500/30 transition-all duration-300"
             >
               <HelpCircle className="w-8 h-8 text-blue-400 mx-auto mb-4" />

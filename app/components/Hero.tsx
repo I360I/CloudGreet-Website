@@ -6,7 +6,8 @@ import {
   Phone, ArrowRight, Shield, Calendar, Zap
 } from 'lucide-react'
 import Link from 'next/link'
-import HelixBackground from './HelixBackground'
+
+import LightBackground from './LightBackground'
 
 export default function Hero() {
   return (
@@ -43,15 +44,10 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* DEBUG: Test if Hero component is rendering */}
-      <div className="absolute top-5 right-5 w-10 h-10 bg-yellow-500 z-50"></div>
       
-      {/* 3D Helix/DNA Background Animation */}
-      <HelixBackground
+      {/* Lightweight Background Animation */}
+      <LightBackground
         className="absolute inset-0 w-full h-full"
-        width={100}
-        height={60}
-        speed={1.2}
         colorA="#6AA7FF"
         colorB="#A06BFF"
         opacity={0.6}
