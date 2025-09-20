@@ -16,53 +16,125 @@ export default function WrappingHelixAnimation() {
         pointerEvents: 'none',
       }}
     >
-      {/* Helix strands that wrap around the CTA button in an oval */}
+      {/* Lightning-like lines that wind and tangle around the CTA button */}
       
-      {/* Helix Strand 1 - Outer oval */}
+      {/* Line 1 - Lightning bolt */}
       <div
         style={{
           position: 'absolute',
-          top: '35%',
-          left: '15%',
-          width: '70%',
-          height: '400px',
-          border: '4px solid #3b82f6',
-          borderRadius: '50%',
-          animation: 'helixRotate1 8s linear infinite',
-          boxShadow: '0 0 20px #3b82f6, 0 0 40px #3b82f6',
-          transform: 'rotateX(60deg) rotateY(0deg)',
+          top: '30%',
+          left: '0%',
+          width: '100%',
+          height: '4px',
+          background: 'linear-gradient(90deg, transparent, #3b82f6, #6ea6ff, #3b82f6, transparent)',
+          animation: 'lightning1 6s ease-in-out infinite',
+          boxShadow: '0 0 10px #3b82f6, 0 0 20px #6ea6ff',
+          transform: 'skewY(-5deg)',
         }}
       />
       
-      {/* Helix Strand 2 - Inner oval */}
+      {/* Line 2 - Lightning bolt */}
       <div
         style={{
           position: 'absolute',
           top: '40%',
-          left: '25%',
-          width: '50%',
-          height: '300px',
-          border: '3px solid #6ea6ff',
-          borderRadius: '50%',
-          animation: 'helixRotate2 6s linear infinite reverse',
-          boxShadow: '0 0 15px #6ea6ff, 0 0 30px #6ea6ff',
-          transform: 'rotateX(60deg) rotateY(180deg)',
+          left: '0%',
+          width: '100%',
+          height: '3px',
+          background: 'linear-gradient(90deg, transparent, #6ea6ff, #9333ea, #6ea6ff, transparent)',
+          animation: 'lightning2 8s ease-in-out infinite reverse',
+          boxShadow: '0 0 8px #6ea6ff, 0 0 16px #9333ea',
+          transform: 'skewY(3deg)',
         }}
       />
       
-      {/* Helix Strand 3 - Center oval */}
+      {/* Line 3 - Lightning bolt */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '0%',
+          width: '100%',
+          height: '3px',
+          background: 'linear-gradient(90deg, transparent, #9333ea, #3b82f6, #9333ea, transparent)',
+          animation: 'lightning3 7s ease-in-out infinite',
+          boxShadow: '0 0 8px #9333ea, 0 0 16px #3b82f6',
+          transform: 'skewY(-2deg)',
+        }}
+      />
+      
+      {/* Line 4 - Lightning bolt */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '60%',
+          left: '0%',
+          width: '100%',
+          height: '4px',
+          background: 'linear-gradient(90deg, transparent, #3b82f6, #6ea6ff, #3b82f6, transparent)',
+          animation: 'lightning4 5s ease-in-out infinite reverse',
+          boxShadow: '0 0 10px #3b82f6, 0 0 20px #6ea6ff',
+          transform: 'skewY(4deg)',
+        }}
+      />
+      
+      {/* Line 5 - Lightning bolt */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '35%',
+          left: '0%',
+          width: '100%',
+          height: '2px',
+          background: 'linear-gradient(90deg, transparent, #6ea6ff, #3b82f6, #6ea6ff, transparent)',
+          animation: 'lightning5 9s ease-in-out infinite',
+          boxShadow: '0 0 6px #6ea6ff, 0 0 12px #3b82f6',
+          transform: 'skewY(-3deg)',
+        }}
+      />
+      
+      {/* Line 6 - Lightning bolt */}
       <div
         style={{
           position: 'absolute',
           top: '45%',
-          left: '35%',
-          width: '30%',
-          height: '200px',
-          border: '2px solid #9333ea',
-          borderRadius: '50%',
-          animation: 'helixRotate3 4s linear infinite',
-          boxShadow: '0 0 10px #9333ea, 0 0 20px #9333ea',
-          transform: 'rotateX(60deg) rotateY(90deg)',
+          left: '0%',
+          width: '100%',
+          height: '3px',
+          background: 'linear-gradient(90deg, transparent, #9333ea, #6ea6ff, #9333ea, transparent)',
+          animation: 'lightning6 6.5s ease-in-out infinite reverse',
+          boxShadow: '0 0 8px #9333ea, 0 0 16px #6ea6ff',
+          transform: 'skewY(2deg)',
+        }}
+      />
+      
+      {/* Line 7 - Lightning bolt */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '55%',
+          left: '0%',
+          width: '100%',
+          height: '2px',
+          background: 'linear-gradient(90deg, transparent, #3b82f6, #9333ea, #3b82f6, transparent)',
+          animation: 'lightning7 7.5s ease-in-out infinite',
+          boxShadow: '0 0 6px #3b82f6, 0 0 12px #9333ea',
+          transform: 'skewY(-4deg)',
+        }}
+      />
+      
+      {/* Line 8 - Lightning bolt */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '65%',
+          left: '0%',
+          width: '100%',
+          height: '3px',
+          background: 'linear-gradient(90deg, transparent, #6ea6ff, #3b82f6, #6ea6ff, transparent)',
+          animation: 'lightning8 5.5s ease-in-out infinite reverse',
+          boxShadow: '0 0 8px #6ea6ff, 0 0 16px #3b82f6',
+          transform: 'skewY(1deg)',
         }}
       />
       
@@ -107,32 +179,165 @@ export default function WrappingHelixAnimation() {
         }}
       />
 
-      {/* CSS Animations - HELIX ROTATION */}
+      {/* CSS Animations - LIGHTNING FLOW AND TANGLE */}
       <style jsx>{`
-        @keyframes helixRotate1 {
+        @keyframes lightning1 {
           0% { 
-            transform: rotateX(60deg) rotateY(0deg) rotateZ(0deg);
+            transform: skewY(-5deg) translateX(-100%) scaleY(1);
+            opacity: 0.7;
+          }
+          25% { 
+            transform: skewY(-8deg) translateX(-50%) scaleY(1.2);
+            opacity: 1;
+          }
+          50% { 
+            transform: skewY(-3deg) translateX(0%) scaleY(1);
+            opacity: 0.9;
+          }
+          75% { 
+            transform: skewY(-7deg) translateX(50%) scaleY(1.1);
+            opacity: 1;
           }
           100% { 
-            transform: rotateX(60deg) rotateY(360deg) rotateZ(0deg);
+            transform: skewY(-5deg) translateX(100%) scaleY(1);
+            opacity: 0.7;
           }
         }
         
-        @keyframes helixRotate2 {
+        @keyframes lightning2 {
           0% { 
-            transform: rotateX(60deg) rotateY(180deg) rotateZ(0deg);
+            transform: skewY(3deg) translateX(100%) scaleY(1);
+            opacity: 0.6;
+          }
+          25% { 
+            transform: skewY(6deg) translateX(50%) scaleY(1.3);
+            opacity: 1;
+          }
+          50% { 
+            transform: skewY(2deg) translateX(0%) scaleY(1);
+            opacity: 0.8;
+          }
+          75% { 
+            transform: skewY(5deg) translateX(-50%) scaleY(1.2);
+            opacity: 1;
           }
           100% { 
-            transform: rotateX(60deg) rotateY(540deg) rotateZ(0deg);
+            transform: skewY(3deg) translateX(-100%) scaleY(1);
+            opacity: 0.6;
           }
         }
         
-        @keyframes helixRotate3 {
+        @keyframes lightning3 {
           0% { 
-            transform: rotateX(60deg) rotateY(90deg) rotateZ(0deg);
+            transform: skewY(-2deg) translateX(-100%) scaleY(1);
+            opacity: 0.8;
+          }
+          30% { 
+            transform: skewY(-6deg) translateX(-30%) scaleY(1.4);
+            opacity: 1;
+          }
+          60% { 
+            transform: skewY(-1deg) translateX(20%) scaleY(1);
+            opacity: 0.9;
           }
           100% { 
-            transform: rotateX(60deg) rotateY(450deg) rotateZ(0deg);
+            transform: skewY(-2deg) translateX(100%) scaleY(1);
+            opacity: 0.8;
+          }
+        }
+        
+        @keyframes lightning4 {
+          0% { 
+            transform: skewY(4deg) translateX(100%) scaleY(1);
+            opacity: 0.7;
+          }
+          40% { 
+            transform: skewY(7deg) translateX(40%) scaleY(1.2);
+            opacity: 1;
+          }
+          70% { 
+            transform: skewY(3deg) translateX(-20%) scaleY(1);
+            opacity: 0.8;
+          }
+          100% { 
+            transform: skewY(4deg) translateX(-100%) scaleY(1);
+            opacity: 0.7;
+          }
+        }
+        
+        @keyframes lightning5 {
+          0% { 
+            transform: skewY(-3deg) translateX(-100%) scaleY(1);
+            opacity: 0.6;
+          }
+          35% { 
+            transform: skewY(-5deg) translateX(-35%) scaleY(1.3);
+            opacity: 1;
+          }
+          65% { 
+            transform: skewY(-2deg) translateX(25%) scaleY(1);
+            opacity: 0.9;
+          }
+          100% { 
+            transform: skewY(-3deg) translateX(100%) scaleY(1);
+            opacity: 0.6;
+          }
+        }
+        
+        @keyframes lightning6 {
+          0% { 
+            transform: skewY(2deg) translateX(100%) scaleY(1);
+            opacity: 0.7;
+          }
+          45% { 
+            transform: skewY(5deg) translateX(45%) scaleY(1.2);
+            opacity: 1;
+          }
+          75% { 
+            transform: skewY(1deg) translateX(-25%) scaleY(1);
+            opacity: 0.8;
+          }
+          100% { 
+            transform: skewY(2deg) translateX(-100%) scaleY(1);
+            opacity: 0.7;
+          }
+        }
+        
+        @keyframes lightning7 {
+          0% { 
+            transform: skewY(-4deg) translateX(-100%) scaleY(1);
+            opacity: 0.8;
+          }
+          30% { 
+            transform: skewY(-6deg) translateX(-30%) scaleY(1.4);
+            opacity: 1;
+          }
+          60% { 
+            transform: skewY(-3deg) translateX(20%) scaleY(1);
+            opacity: 0.9;
+          }
+          100% { 
+            transform: skewY(-4deg) translateX(100%) scaleY(1);
+            opacity: 0.8;
+          }
+        }
+        
+        @keyframes lightning8 {
+          0% { 
+            transform: skewY(1deg) translateX(100%) scaleY(1);
+            opacity: 0.6;
+          }
+          40% { 
+            transform: skewY(3deg) translateX(40%) scaleY(1.3);
+            opacity: 1;
+          }
+          70% { 
+            transform: skewY(0deg) translateX(-20%) scaleY(1);
+            opacity: 0.8;
+          }
+          100% { 
+            transform: skewY(1deg) translateX(-100%) scaleY(1);
+            opacity: 0.6;
           }
         }
         
@@ -145,11 +350,6 @@ export default function WrappingHelixAnimation() {
             transform: translateX(0%); 
             opacity: 1;
           }
-        }
-        
-        @keyframes rotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>
