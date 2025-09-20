@@ -117,7 +117,9 @@ function BottomWave({ color = '#3c6cf7', speed = 0.02 }) {
  * Main background component with multiple lines.
  */
 export default function FancyWaveBackground() {
+  const [hasError, setHasError] = React.useState(false);
   const totalLines = 5;
+  
   // Precompute curves for each line
   const curves = useMemo(() => {
     const arr = [];
@@ -137,12 +139,72 @@ export default function FancyWaveBackground() {
     }
     return arr;
   }, []);
+  
   // Colors for each line - using the exact colors from spec
   const colors = ['#6A5BFF', '#7E66FF', '#5C8BFF', '#8A7BFF', '#4C7BFF'];
   // Speed variations
   const speeds = [0.08, 0.10, 0.09, 0.11, 0.12];
   // Initial offsets for staggering
   const offsets = [0, 5, 10, 15, 2];
+
+  // Fallback CSS animation if Three.js fails
+  if (hasError) {
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '60vh',
+          zIndex: 1,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          background: 'linear-gradient(45deg, rgba(106, 91, 255, 0.1), rgba(126, 102, 255, 0.1))',
+        }}
+      >
+        {/* Fallback CSS waves */}
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '-100px',
+              width: '200%',
+              height: '2px',
+              background: `linear-gradient(90deg, transparent, ${colors[i % colors.length]}, transparent)`,
+              transform: `translateY(${(i - 2) * 40}px) rotate(${i * 2}deg)`,
+              animation: `wave${i} ${10 + i * 2}s linear infinite`,
+              opacity: 0.6,
+            }}
+          />
+        ))}
+        <style jsx>{`
+          @keyframes wave0 {
+            0% { transform: translateX(-100%) translateY(-80px) rotate(0deg); }
+            100% { transform: translateX(100%) translateY(-80px) rotate(0deg); }
+          }
+          @keyframes wave1 {
+            0% { transform: translateX(-100%) translateY(-40px) rotate(2deg); }
+            100% { transform: translateX(100%) translateY(-40px) rotate(2deg); }
+          }
+          @keyframes wave2 {
+            0% { transform: translateX(-100%) translateY(0px) rotate(4deg); }
+            100% { transform: translateX(100%) translateY(0px) rotate(4deg); }
+          }
+          @keyframes wave3 {
+            0% { transform: translateX(-100%) translateY(40px) rotate(6deg); }
+            100% { transform: translateX(100%) translateY(40px) rotate(6deg); }
+          }
+          @keyframes wave4 {
+            0% { transform: translateX(-100%) translateY(80px) rotate(8deg); }
+            100% { transform: translateX(100%) translateY(80px) rotate(8deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -157,7 +219,12 @@ export default function FancyWaveBackground() {
         pointerEvents: 'none',
       }}
     >
-      <Canvas>
+      <Canvas
+        onError={() => {
+          console.log('Three.js failed to load, using fallback');
+          setHasError(true);
+        }}
+      >
         <PerspectiveCamera makeDefault position={[0, 0, 10]} />
         <ambientLight intensity={0.4} />
         <pointLight position={[15, 10, 10]} intensity={0.5} />
