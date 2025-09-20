@@ -8,7 +8,7 @@ import {
 import Link from 'next/link'
 
 // Dynamic import to prevent SSR issues
-const ProfessionalHelixBackground = React.lazy(() => import('./ProfessionalHelixBackground'))
+const MegaHelixBackground = React.lazy(() => import('./MegaHelixBackground'))
 
 export default function Hero() {
 
@@ -23,44 +23,12 @@ export default function Hero() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(147,51,234,0.15)_0%,transparent_50%)]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(16,185,129,0.1)_0%,transparent_50%)]"></div>
       
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 20 }).map((_, i) => {
-          // Use deterministic positioning to avoid hydration mismatch
-          const positions = [
-            [10, 15], [25, 30], [40, 20], [60, 35], [75, 25],
-            [15, 45], [35, 50], [55, 40], [80, 55], [20, 65],
-            [45, 70], [65, 60], [85, 75], [30, 80], [50, 85],
-            [70, 90], [90, 80], [5, 70], [95, 45], [12, 85]
-          ];
-          const [left, top] = positions[i] || [50, 50];
-          return (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
-              style={{
-                left: `${left}%`,
-                top: `${top}%`,
-              }}
-              animate={{
-                y: [0, -30, 0],
-                opacity: [0.3, 0.8, 0.3],
-              }}
-              transition={{
-                duration: 3 + (i * 0.1),
-                repeat: Infinity,
-                delay: i * 0.1,
-              }}
-            />
-          );
-        })}
-      </div>
 
-          {/* Professional Helix Animation */}
+          {/* MEGA HELIX ANIMATION SYSTEM */}
           <Suspense fallback={
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
           }>
-            <ProfessionalHelixBackground />
+            <MegaHelixBackground />
           </Suspense>
       
       {/* Additional glow overlay for premium effect */}
