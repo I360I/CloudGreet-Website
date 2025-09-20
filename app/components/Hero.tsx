@@ -53,17 +53,26 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* Background Animation - Using LightBackground for stability */}
+      {/* 3D Helix Background Animation - With error handling fallback */}
       {mounted && (
         <Suspense fallback={
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
         }>
-          <LightBackground
-            className="absolute inset-0 w-full h-full"
-            colorA="#6AA7FF"
-            colorB="#A06BFF"
-            opacity={0.6}
-          />
+          {useFallback ? (
+            <LightBackground
+              className="absolute inset-0 w-full h-full"
+              colorA="#6AA7FF"
+              colorB="#A06BFF"
+              opacity={0.6}
+            />
+          ) : (
+            <HelixBackground
+              className="absolute inset-0 w-full h-full"
+              speed={1.2}
+              color="#6AA7FF"
+              onError={() => setUseFallback(true)}
+            />
+          )}
         </Suspense>
       )}
       
