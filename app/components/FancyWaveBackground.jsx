@@ -7,7 +7,7 @@ import React, { useRef, useMemo, useState, useEffect } from 'react';
  */
 export default function FancyWaveBackground() {
   const [mounted, setMounted] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const [hasError, setHasError] = useState(true);
 
   useEffect(() => {
     setMounted(true);
