@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 /**
- * CSS-based helix wave animation that matches the Three.js specification
- * This provides a reliable fallback that works in all environments
+ * CSS-based helix animation that wraps around the CTA button
+ * Creates curved strands that lead the eye to the "Get Started Free" button
  */
 export default function FancyWaveBackground() {
   const [mounted, setMounted] = useState(false);
@@ -42,51 +42,41 @@ export default function FancyWaveBackground() {
         pointerEvents: 'none',
       }}
     >
-      {/* Main helix strands - 5 curved lines that form an oval around the CTA */}
+      {/* Helix strands that wrap around the CTA button area */}
       <div className="helix-container">
-        {/* Strand 1 - Top */}
+        {/* Strand 1 - Approaches from top-left, curves around button */}
         <div className="helix-strand strand-1" style={{
           '--color': '#6A5BFF',
           '--delay': '0s',
-          '--duration': '12s',
-          '--amplitude': '60px',
-          '--offset': '0px'
+          '--duration': '8s'
         }} />
         
-        {/* Strand 2 */}
+        {/* Strand 2 - Approaches from top-right, curves around button */}
         <div className="helix-strand strand-2" style={{
           '--color': '#7E66FF',
-          '--delay': '2s',
-          '--duration': '14s',
-          '--amplitude': '70px',
-          '--offset': '20px'
+          '--delay': '1.5s',
+          '--duration': '9s'
         }} />
         
-        {/* Strand 3 - Center */}
+        {/* Strand 3 - Center helix that wraps tightly around button */}
         <div className="helix-strand strand-3" style={{
           '--color': '#5C8BFF',
-          '--delay': '4s',
-          '--duration': '13s',
-          '--amplitude': '80px',
-          '--offset': '0px'
+          '--delay': '3s',
+          '--duration': '10s'
         }} />
         
-        {/* Strand 4 */}
+        {/* Strand 4 - Approaches from bottom-left, curves around button */}
         <div className="helix-strand strand-4" style={{
           '--color': '#8A7BFF',
-          '--delay': '6s',
-          '--duration': '15s',
-          '--amplitude': '65px',
-          '--offset': '-20px'
+          '--delay': '4.5s',
+          '--duration': '8.5s'
         }} />
         
-        {/* Strand 5 - Bottom */}
+        {/* Strand 5 - Approaches from bottom-right, curves around button */}
         <div className="helix-strand strand-5" style={{
           '--color': '#4C7BFF',
-          '--delay': '8s',
-          '--duration': '11s',
-          '--amplitude': '55px',
-          '--offset': '10px'
+          '--delay': '6s',
+          '--duration': '9.5s'
         }} />
       </div>
 
@@ -97,198 +87,197 @@ export default function FancyWaveBackground() {
         .helix-container {
           position: absolute;
           top: 50%;
-          left: 0;
+          left: 50%;
           width: 100%;
-          height: 400px;
-          transform: translateY(-50%);
+          height: 100%;
+          transform: translate(-50%, -50%);
         }
 
         .helix-strand {
           position: absolute;
-          top: 50%;
-          left: -10%;
-          width: 120%;
+          width: 300px;
           height: 3px;
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            var(--color) 20%,
-            var(--color) 80%,
-            transparent 100%
-          );
           border-radius: 50px;
-          transform: translateY(calc(-50% + var(--offset)));
-          animation: helixFlow var(--duration) var(--delay) linear infinite;
-          filter: drop-shadow(0 0 8px var(--color)) blur(0.5px);
-          opacity: 0.65;
+          filter: drop-shadow(0 0 8px var(--color));
+          opacity: 0.7;
+          animation: helixWrap var(--duration) var(--delay) linear infinite;
         }
 
+        /* Strand 1: Top-left approach, curves around button from above */
         .strand-1 {
-          animation-name: helixFlow1;
+          background: linear-gradient(45deg, transparent, var(--color), var(--color), transparent);
+          top: 15%;
+          left: 10%;
+          transform-origin: center;
+          animation-name: strand1Wrap;
         }
 
+        /* Strand 2: Top-right approach, curves around button from above */
         .strand-2 {
-          animation-name: helixFlow2;
+          background: linear-gradient(-45deg, transparent, var(--color), var(--color), transparent);
+          top: 20%;
+          right: 10%;
+          transform-origin: center;
+          animation-name: strand2Wrap;
         }
 
+        /* Strand 3: Center helix that wraps tightly around the button */
         .strand-3 {
-          animation-name: helixFlow3;
+          background: linear-gradient(0deg, transparent, var(--color), var(--color), transparent);
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 250px;
+          height: 4px;
+          animation-name: strand3Wrap;
+          opacity: 0.8;
         }
 
+        /* Strand 4: Bottom-left approach, curves around button from below */
         .strand-4 {
-          animation-name: helixFlow4;
+          background: linear-gradient(45deg, transparent, var(--color), var(--color), transparent);
+          bottom: 20%;
+          left: 15%;
+          transform-origin: center;
+          animation-name: strand4Wrap;
         }
 
+        /* Strand 5: Bottom-right approach, curves around button from below */
         .strand-5 {
-          animation-name: helixFlow5;
+          background: linear-gradient(-45deg, transparent, var(--color), var(--color), transparent);
+          bottom: 15%;
+          right: 15%;
+          transform-origin: center;
+          animation-name: strand5Wrap;
         }
 
-        @keyframes helixFlow1 {
+        /* Strand 1: Approaches from top-left, curves around button */
+        @keyframes strand1Wrap {
           0% {
-            transform: translateX(-100%) translateY(calc(-50% + var(--offset))) 
-                       rotate(0deg) scaleY(1);
+            transform: translateX(-200px) translateY(0px) rotate(-30deg) scaleX(0.5);
             opacity: 0.3;
           }
           25% {
-            transform: translateX(-50%) translateY(calc(-50% + var(--offset) - 40px)) 
-                       rotate(2deg) scaleY(1.2);
-            opacity: 0.7;
-          }
-          50% {
-            transform: translateX(0%) translateY(calc(-50% + var(--offset) - 60px)) 
-                       rotate(4deg) scaleY(1.4);
-            opacity: 0.8;
-          }
-          75% {
-            transform: translateX(50%) translateY(calc(-50% + var(--offset) - 40px)) 
-                       rotate(2deg) scaleY(1.2);
-            opacity: 0.7;
-          }
-          100% {
-            transform: translateX(100%) translateY(calc(-50% + var(--offset))) 
-                       rotate(0deg) scaleY(1);
-            opacity: 0.3;
-          }
-        }
-
-        @keyframes helixFlow2 {
-          0% {
-            transform: translateX(-100%) translateY(calc(-50% + var(--offset))) 
-                       rotate(0deg) scaleY(1);
-            opacity: 0.3;
-          }
-          25% {
-            transform: translateX(-50%) translateY(calc(-50% + var(--offset) - 30px)) 
-                       rotate(-1deg) scaleY(1.1);
+            transform: translateX(-50px) translateY(-20px) rotate(-15deg) scaleX(0.8);
             opacity: 0.6;
           }
           50% {
-            transform: translateX(0%) translateY(calc(-50% + var(--offset) - 50px)) 
-                       rotate(-3deg) scaleY(1.3);
-            opacity: 0.8;
-          }
-          75% {
-            transform: translateX(50%) translateY(calc(-50% + var(--offset) - 30px)) 
-                       rotate(-1deg) scaleY(1.1);
-            opacity: 0.6;
-          }
-          100% {
-            transform: translateX(100%) translateY(calc(-50% + var(--offset))) 
-                       rotate(0deg) scaleY(1);
-            opacity: 0.3;
-          }
-        }
-
-        @keyframes helixFlow3 {
-          0% {
-            transform: translateX(-100%) translateY(calc(-50% + var(--offset))) 
-                       rotate(0deg) scaleY(1);
-            opacity: 0.3;
-          }
-          25% {
-            transform: translateX(-50%) translateY(calc(-50% + var(--offset) - 50px)) 
-                       rotate(3deg) scaleY(1.3);
-            opacity: 0.8;
-          }
-          50% {
-            transform: translateX(0%) translateY(calc(-50% + var(--offset) - 70px)) 
-                       rotate(5deg) scaleY(1.5);
+            transform: translateX(0px) translateY(-40px) rotate(0deg) scaleX(1.2);
             opacity: 0.9;
           }
           75% {
-            transform: translateX(50%) translateY(calc(-50% + var(--offset) - 50px)) 
-                       rotate(3deg) scaleY(1.3);
-            opacity: 0.8;
+            transform: translateX(50px) translateY(-20px) rotate(15deg) scaleX(0.8);
+            opacity: 0.6;
           }
           100% {
-            transform: translateX(100%) translateY(calc(-50% + var(--offset))) 
-                       rotate(0deg) scaleY(1);
+            transform: translateX(200px) translateY(0px) rotate(30deg) scaleX(0.5);
             opacity: 0.3;
           }
         }
 
-        @keyframes helixFlow4 {
+        /* Strand 2: Approaches from top-right, curves around button */
+        @keyframes strand2Wrap {
           0% {
-            transform: translateX(-100%) translateY(calc(-50% + var(--offset))) 
-                       rotate(0deg) scaleY(1);
+            transform: translateX(200px) translateY(0px) rotate(30deg) scaleX(0.5);
             opacity: 0.3;
           }
           25% {
-            transform: translateX(-50%) translateY(calc(-50% + var(--offset) + 30px)) 
-                       rotate(-2deg) scaleY(1.1);
+            transform: translateX(50px) translateY(-20px) rotate(15deg) scaleX(0.8);
             opacity: 0.6;
           }
           50% {
-            transform: translateX(0%) translateY(calc(-50% + var(--offset) + 50px)) 
-                       rotate(-4deg) scaleY(1.3);
-            opacity: 0.8;
+            transform: translateX(0px) translateY(-40px) rotate(0deg) scaleX(1.2);
+            opacity: 0.9;
           }
           75% {
-            transform: translateX(50%) translateY(calc(-50% + var(--offset) + 30px)) 
-                       rotate(-2deg) scaleY(1.1);
+            transform: translateX(-50px) translateY(-20px) rotate(-15deg) scaleX(0.8);
             opacity: 0.6;
           }
           100% {
-            transform: translateX(100%) translateY(calc(-50% + var(--offset))) 
-                       rotate(0deg) scaleY(1);
+            transform: translateX(-200px) translateY(0px) rotate(-30deg) scaleX(0.5);
             opacity: 0.3;
           }
         }
 
-        @keyframes helixFlow5 {
+        /* Strand 3: Center helix that wraps tightly around the button */
+        @keyframes strand3Wrap {
           0% {
-            transform: translateX(-100%) translateY(calc(-50% + var(--offset))) 
-                       rotate(0deg) scaleY(1);
-            opacity: 0.3;
+            transform: translate(-50%, -50%) rotate(0deg) scaleX(0.3);
+            opacity: 0.4;
           }
           25% {
-            transform: translateX(-50%) translateY(calc(-50% + var(--offset) + 40px)) 
-                       rotate(1deg) scaleY(1.2);
+            transform: translate(-50%, -50%) rotate(90deg) scaleX(0.8);
             opacity: 0.7;
           }
           50% {
-            transform: translateX(0%) translateY(calc(-50% + var(--offset) + 60px)) 
-                       rotate(2deg) scaleY(1.4);
-            opacity: 0.8;
+            transform: translate(-50%, -50%) rotate(180deg) scaleX(1.2);
+            opacity: 0.9;
           }
           75% {
-            transform: translateX(50%) translateY(calc(-50% + var(--offset) + 40px)) 
-                       rotate(1deg) scaleY(1.2);
+            transform: translate(-50%, -50%) rotate(270deg) scaleX(0.8);
             opacity: 0.7;
           }
           100% {
-            transform: translateX(100%) translateY(calc(-50% + var(--offset))) 
-                       rotate(0deg) scaleY(1);
+            transform: translate(-50%, -50%) rotate(360deg) scaleX(0.3);
+            opacity: 0.4;
+          }
+        }
+
+        /* Strand 4: Approaches from bottom-left, curves around button */
+        @keyframes strand4Wrap {
+          0% {
+            transform: translateX(-200px) translateY(0px) rotate(30deg) scaleX(0.5);
+            opacity: 0.3;
+          }
+          25% {
+            transform: translateX(-50px) translateY(20px) rotate(15deg) scaleX(0.8);
+            opacity: 0.6;
+          }
+          50% {
+            transform: translateX(0px) translateY(40px) rotate(0deg) scaleX(1.2);
+            opacity: 0.9;
+          }
+          75% {
+            transform: translateX(50px) translateY(20px) rotate(-15deg) scaleX(0.8);
+            opacity: 0.6;
+          }
+          100% {
+            transform: translateX(200px) translateY(0px) rotate(-30deg) scaleX(0.5);
+            opacity: 0.3;
+          }
+        }
+
+        /* Strand 5: Approaches from bottom-right, curves around button */
+        @keyframes strand5Wrap {
+          0% {
+            transform: translateX(200px) translateY(0px) rotate(-30deg) scaleX(0.5);
+            opacity: 0.3;
+          }
+          25% {
+            transform: translateX(50px) translateY(20px) rotate(-15deg) scaleX(0.8);
+            opacity: 0.6;
+          }
+          50% {
+            transform: translateX(0px) translateY(40px) rotate(0deg) scaleX(1.2);
+            opacity: 0.9;
+          }
+          75% {
+            transform: translateX(-50px) translateY(20px) rotate(15deg) scaleX(0.8);
+            opacity: 0.6;
+          }
+          100% {
+            transform: translateX(-200px) translateY(0px) rotate(30deg) scaleX(0.5);
             opacity: 0.3;
           }
         }
 
         .bottom-wave {
           position: absolute;
-          bottom: 20%;
-          left: -10%;
-          width: 120%;
-          height: 4px;
+          bottom: 15%;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 400px;
+          height: 3px;
           background: linear-gradient(
             90deg,
             transparent 0%,
@@ -297,31 +286,31 @@ export default function FancyWaveBackground() {
             transparent 100%
           );
           border-radius: 50px;
-          animation: bottomWaveFlow 18s linear infinite;
+          animation: bottomWaveFlow 12s linear infinite;
           filter: drop-shadow(0 0 6px #3457F5);
-          opacity: 0.3;
+          opacity: 0.4;
         }
 
         @keyframes bottomWaveFlow {
           0% {
-            transform: translateX(-100%) translateY(0px) rotate(0deg);
-            opacity: 0.2;
+            transform: translateX(-50%) translateY(0px) rotate(0deg) scaleX(0.8);
+            opacity: 0.3;
           }
           25% {
-            transform: translateX(-50%) translateY(-15px) rotate(1deg);
-            opacity: 0.4;
+            transform: translateX(-50%) translateY(-10px) rotate(1deg) scaleX(1.0);
+            opacity: 0.5;
           }
           50% {
-            transform: translateX(0%) translateY(-25px) rotate(2deg);
-            opacity: 0.35;
-          }
-          75% {
-            transform: translateX(50%) translateY(-15px) rotate(1deg);
+            transform: translateX(-50%) translateY(-15px) rotate(0deg) scaleX(1.2);
             opacity: 0.4;
           }
+          75% {
+            transform: translateX(-50%) translateY(-10px) rotate(-1deg) scaleX(1.0);
+            opacity: 0.5;
+          }
           100% {
-            transform: translateX(100%) translateY(0px) rotate(0deg);
-            opacity: 0.2;
+            transform: translateX(-50%) translateY(0px) rotate(0deg) scaleX(0.8);
+            opacity: 0.3;
           }
         }
 
@@ -330,11 +319,17 @@ export default function FancyWaveBackground() {
           .helix-strand {
             height: 2px;
             opacity: 0.5;
+            width: 200px;
+          }
+          
+          .strand-3 {
+            width: 180px;
           }
           
           .bottom-wave {
-            height: 3px;
-            opacity: 0.25;
+            width: 300px;
+            height: 2px;
+            opacity: 0.3;
           }
         }
       `}</style>
