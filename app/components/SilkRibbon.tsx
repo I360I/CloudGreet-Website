@@ -19,106 +19,157 @@ export default function SilkRibbon({
   colorB = "#A06BFF" 
 }: SilkRibbonProps) {
   return (
-    <div className={`absolute inset-0 overflow-visible pointer-events-none ${className}`} style={{ zIndex: 1, perspective: '1000px' }}>
-      {/* Premium 3D Helix/DNA Animation */}
-      {Array.from({ length: 8 }).map((_, i) => {
-        const angle = (i * 45); // 45 degree increments for 8 strands
-        const helixOffset = i * 0.1;
+    <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`} style={{ zIndex: 1 }}>
+      {/* Horizontal flowing waves across entire screen */}
+      {Array.from({ length: 3 }).map((_, i) => {
+        const waveHeight = 60 + i * 40; // Position waves vertically
+        const waveDelay = i * 2;
+        const waveDuration = 8 + i * 2;
         
         return (
           <motion.div
             key={i}
             className="absolute"
             style={{
-              top: '60%',
-              left: '50%',
-              width: '200vw',
-              height: '3px',
+              top: `${waveHeight}%`,
+              left: '-100%',
+              width: '300%', // Extra wide to ensure smooth looping
+              height: '4px',
               background: `linear-gradient(90deg, 
-                ${i % 2 === 0 ? colorA : colorB}, 
-                ${i % 2 === 0 ? colorB : colorA}, 
-                ${i % 2 === 0 ? colorA : colorB}
+                transparent, 
+                ${colorA}40, 
+                ${colorB}80, 
+                ${colorA}60, 
+                ${colorB}40, 
+                transparent
               )`,
               borderRadius: '2px',
               zIndex: 1,
-              position: 'fixed',
-              transformOrigin: 'center center',
-              boxShadow: `0 0 20px ${i % 2 === 0 ? colorA : colorB}40`,
-              filter: 'blur(0.5px)'
+              boxShadow: `0 0 20px ${colorA}60, 0 0 40px ${colorB}40`,
+              filter: 'blur(1px)',
+              transform: 'translateZ(0)', // 3D hardware acceleration
             }}
             animate={{
-              rotateY: [0, 360],
-              rotateX: [0, 180, 360],
-              scaleY: [1, 2.5, 1],
-              scaleX: [1, 1.1, 1],
-              y: [0, -30, 15, -20, 0],
-              opacity: [0.4, 0.9, 0.6, 0.8, 0.4],
-              boxShadow: [
-                `0 0 20px ${i % 2 === 0 ? colorA : colorB}40`,
-                `0 0 40px ${i % 2 === 0 ? colorA : colorB}80`,
-                `0 0 30px ${i % 2 === 0 ? colorA : colorB}60`,
-                `0 0 35px ${i % 2 === 0 ? colorA : colorB}70`,
-                `0 0 20px ${i % 2 === 0 ? colorA : colorB}40`
-              ]
+              x: ['0vw', '100vw'], // Smooth horizontal movement
+              opacity: [0.3, 0.8, 0.3],
+              scaleY: [1, 1.5, 1],
             }}
             transition={{
-              duration: 12 + helixOffset * 10,
-              repeat: Infinity,
-              repeatType: 'loop',
-              ease: 'easeInOut',
-              delay: helixOffset * 2,
+              x: {
+                duration: waveDuration,
+                repeat: Infinity,
+                repeatType: 'loop',
+                ease: 'linear', // Constant speed for smooth flow
+              },
+              opacity: {
+                duration: 4,
+                repeat: Infinity,
+                repeatType: 'reverse',
+                ease: 'easeInOut',
+              },
+              scaleY: {
+                duration: 6,
+                repeat: Infinity,
+                repeatType: 'reverse',
+                ease: 'easeInOut',
+              },
             }}
             initial={{
-              rotateY: angle,
-              rotateX: 0,
+              x: '-100vw',
+              opacity: 0.3,
+              scaleY: 1,
             }}
           />
         );
       })}
       
-      {/* Secondary helix layer for depth */}
-      {Array.from({ length: 6 }).map((_, i) => {
-        const angle = (i * 60) + 22.5; // Offset for interweaving
-        const helixOffset = i * 0.15;
+      {/* Secondary layer for depth and complexity */}
+      {Array.from({ length: 2 }).map((_, i) => {
+        const waveHeight = 50 + i * 60;
+        const waveDelay = i * 3;
+        const waveDuration = 12 + i * 4;
         
         return (
           <motion.div
             key={`secondary-${i}`}
             className="absolute"
             style={{
-              top: '70%',
-              left: '50%',
-              width: '180vw',
+              top: `${waveHeight}%`,
+              left: '-100%',
+              width: '300%',
               height: '2px',
               background: `linear-gradient(90deg, 
-                ${colorA}60, 
-                ${colorB}80, 
-                ${colorA}60
+                transparent, 
+                ${colorB}30, 
+                ${colorA}50, 
+                ${colorB}30, 
+                transparent
               )`,
               borderRadius: '1px',
               zIndex: 1,
-              position: 'fixed',
-              transformOrigin: 'center center',
-              boxShadow: `0 0 15px ${colorA}30`,
-              filter: 'blur(0.3px)'
+              boxShadow: `0 0 15px ${colorB}50`,
+              filter: 'blur(0.5px)',
+              transform: 'translateZ(0)',
             }}
             animate={{
-              rotateY: [0, -360],
-              rotateX: [0, -180, -360],
-              scaleY: [1, 2, 1],
-              y: [0, 25, -10, 20, 0],
-              opacity: [0.3, 0.7, 0.4, 0.6, 0.3],
+              x: ['0vw', '100vw'],
+              opacity: [0.2, 0.6, 0.2],
             }}
             transition={{
-              duration: 15 + helixOffset * 8,
+              x: {
+                duration: waveDuration,
+                repeat: Infinity,
+                repeatType: 'loop',
+                ease: 'linear',
+                delay: waveDelay,
+              },
+              opacity: {
+                duration: 5,
+                repeat: Infinity,
+                repeatType: 'reverse',
+                ease: 'easeInOut',
+              },
+            }}
+            initial={{
+              x: '-100vw',
+              opacity: 0.2,
+            }}
+          />
+        );
+      })}
+      
+      {/* Glowing particles for extra premium feel */}
+      {Array.from({ length: 8 }).map((_, i) => {
+        const particleDelay = i * 0.5;
+        const particleDuration = 6 + i * 0.5;
+        
+        return (
+          <motion.div
+            key={`particle-${i}`}
+            className="absolute"
+            style={{
+              top: `${45 + (i * 8)}%`,
+              left: `${i * 12.5}%`,
+              width: '6px',
+              height: '6px',
+              background: `radial-gradient(circle, ${colorA}80, transparent)`,
+              borderRadius: '50%',
+              zIndex: 1,
+              boxShadow: `0 0 20px ${colorA}60`,
+              filter: 'blur(0.5px)',
+            }}
+            animate={{
+              y: [0, -20, 0],
+              opacity: [0.3, 0.9, 0.3],
+              scale: [1, 1.5, 1],
+              x: [0, 50, 0],
+            }}
+            transition={{
+              duration: particleDuration,
               repeat: Infinity,
               repeatType: 'loop',
               ease: 'easeInOut',
-              delay: helixOffset * 3,
-            }}
-            initial={{
-              rotateY: angle,
-              rotateX: 0,
+              delay: particleDelay,
             }}
           />
         );
