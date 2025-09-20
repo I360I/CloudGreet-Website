@@ -21,51 +21,39 @@ export default function SilkRibbon({
   console.log('SilkRibbon component is rendering!');
   return (
     <div className={`absolute inset-0 overflow-visible pointer-events-none ${className}`} style={{ zIndex: 999 }}>
-      {/* DEBUG: Lines at button height with maximum z-index */}
-      <div 
-        className="absolute"
-        style={{
-          top: '60%',
-          left: '-50vw',
-          width: '200vw',
-          height: '20px',
-          background: 'red',
-          zIndex: 9999,
-          position: 'fixed'
-        }}
-      >
-        RED LINE AT BUTTON HEIGHT
-      </div>
-      
-      <div 
-        className="absolute"
-        style={{
-          top: '65%',
-          left: '-50vw',
-          width: '200vw',
-          height: '20px',
-          background: 'blue',
-          zIndex: 9999,
-          position: 'fixed'
-        }}
-      >
-        BLUE LINE AT BUTTON HEIGHT
-      </div>
-      
-      <div 
-        className="absolute"
-        style={{
-          top: '70%',
-          left: '-50vw',
-          width: '200vw',
-          height: '20px',
-          background: 'green',
-          zIndex: 9999,
-          position: 'fixed'
-        }}
-      >
-        GREEN LINE AT BUTTON HEIGHT
-      </div>
+      {/* Animated waves at button height */}
+      {Array.from({ length: 3 }).map((_, i) => {
+        const startTop = 60 + i * 5;
+        
+        return (
+          <motion.div
+            key={i}
+            className="absolute"
+            style={{
+              top: `${startTop}%`,
+              left: '-50vw',
+              width: '200vw',
+              height: '8px',
+              background: 'linear-gradient(90deg, #3B82F6, #8B5CF6, #3B82F6)',
+              borderRadius: '4px',
+              zIndex: 9999,
+              position: 'fixed'
+            }}
+            animate={{
+              x: [0, 100, 0],
+              scaleY: [1, 1.5, 1],
+              opacity: [0.7, 1, 0.7]
+            }}
+            transition={{
+              duration: 6 + i * 1,
+              repeat: Infinity,
+              repeatType: 'loop',
+              ease: 'easeInOut',
+              delay: i * 0.5,
+            }}
+          />
+        );
+      })}
     </div>
   )
 }
