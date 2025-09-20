@@ -12,6 +12,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 const HelixBackground = React.lazy(() => import('./HelixBackground'))
 const SimpleHelixBackground = React.lazy(() => import('./SimpleHelixBackground'))
 const CSSHelixAnimation = React.lazy(() => import('./CSSHelixAnimation'))
+const WrappingHelixAnimation = React.lazy(() => import('./WrappingHelixAnimation'))
 const LightBackground = React.lazy(() => import('./LightBackground'))
 
 export default function Hero() {
@@ -69,7 +70,7 @@ export default function Hero() {
               opacity={0.6}
             />
           ) : (
-            <CSSHelixAnimation />
+            <WrappingHelixAnimation />
           )}
         </Suspense>
       )}
@@ -78,7 +79,7 @@ export default function Hero() {
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none z-1"></div>
 
       {/* Content */}
-      <div className="relative z-30 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-center pt-8">
+      <div className="relative z-30 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-start pt-20 pb-20">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -100,7 +101,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.8 }}
-          className="flex justify-center items-center mb-12 relative z-50"
+          className="flex justify-center items-center mb-16 mt-8 relative z-50"
         >
           <Link
             href="/start"
