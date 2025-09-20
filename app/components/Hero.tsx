@@ -61,7 +61,7 @@ export default function Hero() {
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none z-1"></div>
 
       {/* Content */}
-      <div className="relative z-20 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-center pt-8">
+      <div className="relative z-30 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-center pt-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -99,7 +99,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.8 }}
-          className="relative z-20 flex flex-wrap justify-center items-center gap-8 text-gray-300 py-8 px-4"
+          className="relative z-30 flex flex-wrap justify-center items-center gap-8 text-gray-300 py-8 px-4"
         >
           <div className="flex items-center gap-3 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-300">
             <Shield className="w-5 h-5 text-blue-400" />
