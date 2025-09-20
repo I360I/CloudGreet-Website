@@ -20,48 +20,51 @@ export default function SilkRibbon({
 }: SilkRibbonProps) {
   console.log('SilkRibbon component is rendering!');
   return (
-    <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      {/* DEBUG: Static test lines */}
+    <div className={`absolute inset-0 overflow-visible pointer-events-none ${className}`} style={{ zIndex: 999 }}>
+      {/* DEBUG: Lines at button height with maximum z-index */}
       <div 
         className="absolute"
         style={{
-          top: '20%',
-          left: '0',
-          width: '100%',
-          height: '10px',
+          top: '60%',
+          left: '-50vw',
+          width: '200vw',
+          height: '20px',
           background: 'red',
-          zIndex: 100
+          zIndex: 9999,
+          position: 'fixed'
         }}
       >
-        STATIC RED LINE 1
+        RED LINE AT BUTTON HEIGHT
       </div>
       
       <div 
         className="absolute"
         style={{
-          top: '45%',
-          left: '0',
-          width: '100%',
-          height: '10px',
+          top: '65%',
+          left: '-50vw',
+          width: '200vw',
+          height: '20px',
           background: 'blue',
-          zIndex: 100
+          zIndex: 9999,
+          position: 'fixed'
         }}
       >
-        STATIC BLUE LINE 2
+        BLUE LINE AT BUTTON HEIGHT
       </div>
       
       <div 
         className="absolute"
         style={{
           top: '70%',
-          left: '0',
-          width: '100%',
-          height: '10px',
+          left: '-50vw',
+          width: '200vw',
+          height: '20px',
           background: 'green',
-          zIndex: 100
+          zIndex: 9999,
+          position: 'fixed'
         }}
       >
-        STATIC GREEN LINE 3
+        GREEN LINE AT BUTTON HEIGHT
       </div>
     </div>
   )
