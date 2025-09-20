@@ -9,10 +9,7 @@ import Link from 'next/link'
 import { ErrorBoundary } from './ErrorBoundary'
 
 // Dynamic import to prevent SSR issues
-const HelixBackground = React.lazy(() => import('./HelixBackground'))
-const SimpleHelixBackground = React.lazy(() => import('./SimpleHelixBackground'))
-const CSSHelixAnimation = React.lazy(() => import('./CSSHelixAnimation'))
-const WrappingHelixAnimation = React.lazy(() => import('./WrappingHelixAnimation'))
+const FancyWaveBackground = React.lazy(() => import('./FancyWaveBackground'))
 const LightBackground = React.lazy(() => import('./LightBackground'))
 
 export default function Hero() {
@@ -57,21 +54,14 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* 3D Helix Background Animation - Oval strands guiding to CTA */}
+      {/* 3D Fancy Wave Background - DNA-like twisting strands forming oval around CTA */}
       {mounted && (
         <Suspense fallback={
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
         }>
-          {useFallback ? (
-            <LightBackground
-              className="absolute inset-0 w-full h-full"
-              colorA="#6AA7FF"
-              colorB="#A06BFF"
-              opacity={0.6}
-            />
-          ) : (
-            <WrappingHelixAnimation />
-          )}
+          <ErrorBoundary>
+            <FancyWaveBackground />
+          </ErrorBoundary>
         </Suspense>
       )}
       
