@@ -1,15 +1,22 @@
 "use client"
 
-import React, { Suspense } from 'react'
+import React, { Suspense, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Phone, ArrowRight, Shield, Calendar, Zap
 } from 'lucide-react'
 import Link from 'next/link'
 
-import LightBackground from './LightBackground'
+// Dynamic import to prevent SSR issues
+const HelixBackground = React.lazy(() => import('./HelixBackground'))
 
 export default function Hero() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-slate-900 via-black to-slate-900">
 
@@ -44,14 +51,18 @@ export default function Hero() {
         ))}
       </div>
 
-      
-      {/* Lightweight Background Animation */}
-      <LightBackground
-        className="absolute inset-0 w-full h-full"
-        colorA="#6AA7FF"
-        colorB="#A06BFF"
-        opacity={0.6}
-      />
+      {/* 3D Helix Background Animation - Only render on client */}
+      {mounted && (
+        <Suspense fallback={
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
+        }>
+          <HelixBackground
+            className="absolute inset-0 w-full h-full"
+            speed={1.2}
+            color="#6AA7FF"
+          />
+        </Suspense>
+      )}
       
       {/* Additional glow overlay for premium effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none z-1"></div>
