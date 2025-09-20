@@ -16,56 +16,53 @@ export default function WrappingHelixAnimation() {
         pointerEvents: 'none',
       }}
     >
-      {/* Multiple curved lines that wrap around the CTA button */}
+      {/* Helix strands that wrap around the CTA button in an oval */}
       
-      {/* Line 1 - Main curve - MUCH MORE VISIBLE */}
+      {/* Helix Strand 1 - Outer oval */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '35%',
+          left: '15%',
+          width: '70%',
+          height: '400px',
+          border: '4px solid #3b82f6',
+          borderRadius: '50%',
+          animation: 'helixRotate1 8s linear infinite',
+          boxShadow: '0 0 20px #3b82f6, 0 0 40px #3b82f6',
+          transform: 'rotateX(60deg) rotateY(0deg)',
+        }}
+      />
+      
+      {/* Helix Strand 2 - Inner oval */}
       <div
         style={{
           position: 'absolute',
           top: '40%',
-          left: '5%',
-          width: '90%',
+          left: '25%',
+          width: '50%',
           height: '300px',
-          border: '4px solid #3b82f6',
-          borderRadius: '50% 50% 0 0',
-          borderBottom: 'none',
-          animation: 'pulse 3s ease-in-out infinite',
-          transform: 'rotate(-10deg)',
-          boxShadow: '0 0 20px #3b82f6, 0 0 40px #3b82f6',
-        }}
-      />
-      
-      {/* Line 2 - Secondary curve */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '50%',
-          left: '10%',
-          width: '80%',
-          height: '200px',
           border: '3px solid #6ea6ff',
-          borderRadius: '50% 50% 0 0',
-          borderBottom: 'none',
-          animation: 'pulse 4s ease-in-out infinite reverse',
-          transform: 'rotate(5deg)',
+          borderRadius: '50%',
+          animation: 'helixRotate2 6s linear infinite reverse',
           boxShadow: '0 0 15px #6ea6ff, 0 0 30px #6ea6ff',
+          transform: 'rotateX(60deg) rotateY(180deg)',
         }}
       />
       
-      {/* Line 3 - Inner curve */}
+      {/* Helix Strand 3 - Center oval */}
       <div
         style={{
           position: 'absolute',
-          top: '60%',
-          left: '20%',
-          width: '60%',
-          height: '150px',
-          border: '3px solid #9333ea',
-          borderRadius: '50% 50% 0 0',
-          borderBottom: 'none',
-          animation: 'pulse 2.5s ease-in-out infinite',
-          transform: 'rotate(-5deg)',
-          boxShadow: '0 0 15px #9333ea, 0 0 30px #9333ea',
+          top: '45%',
+          left: '35%',
+          width: '30%',
+          height: '200px',
+          border: '2px solid #9333ea',
+          borderRadius: '50%',
+          animation: 'helixRotate3 4s linear infinite',
+          boxShadow: '0 0 10px #9333ea, 0 0 20px #9333ea',
+          transform: 'rotateX(60deg) rotateY(90deg)',
         }}
       />
       
@@ -110,18 +107,32 @@ export default function WrappingHelixAnimation() {
         }}
       />
 
-      {/* CSS Animations - MUCH MORE DRAMATIC */}
+      {/* CSS Animations - HELIX ROTATION */}
       <style jsx>{`
-        @keyframes pulse {
-          0%, 100% { 
-            opacity: 0.8;
-            transform: rotate(-10deg) scale(1);
-            box-shadow: 0 0 20px #3b82f6, 0 0 40px #3b82f6;
+        @keyframes helixRotate1 {
+          0% { 
+            transform: rotateX(60deg) rotateY(0deg) rotateZ(0deg);
           }
-          50% { 
-            opacity: 1;
-            transform: rotate(-10deg) scale(1.1);
-            box-shadow: 0 0 30px #3b82f6, 0 0 60px #3b82f6, 0 0 80px #3b82f6;
+          100% { 
+            transform: rotateX(60deg) rotateY(360deg) rotateZ(0deg);
+          }
+        }
+        
+        @keyframes helixRotate2 {
+          0% { 
+            transform: rotateX(60deg) rotateY(180deg) rotateZ(0deg);
+          }
+          100% { 
+            transform: rotateX(60deg) rotateY(540deg) rotateZ(0deg);
+          }
+        }
+        
+        @keyframes helixRotate3 {
+          0% { 
+            transform: rotateX(60deg) rotateY(90deg) rotateZ(0deg);
+          }
+          100% { 
+            transform: rotateX(60deg) rotateY(450deg) rotateZ(0deg);
           }
         }
         
