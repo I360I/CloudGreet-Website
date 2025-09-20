@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { ErrorBoundary } from './ErrorBoundary'
 
 // Dynamic import to prevent SSR issues
-const FancyWaveBackground = React.lazy(() => import('./FancyWaveBackground'))
+const WrappingHelixAnimation = React.lazy(() => import('./WrappingHelixAnimation'))
 const LightBackground = React.lazy(() => import('./LightBackground'))
 
 export default function Hero() {
@@ -54,14 +54,12 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* 3D Fancy Wave Background - DNA-like twisting strands forming oval around CTA */}
+      {/* Wavy Squiggly Lines Animation - Flowing naturally across screen */}
       {mounted && (
         <Suspense fallback={
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
         }>
-          <ErrorBoundary>
-            <FancyWaveBackground />
-          </ErrorBoundary>
+          <WrappingHelixAnimation />
         </Suspense>
       )}
       
