@@ -8,7 +8,7 @@ import {
 import Link from 'next/link'
 
 // Dynamic import to prevent SSR issues
-const SimpleWaveBackground = React.lazy(() => import('./SimpleWaveBackground'))
+const ProfessionalHelixBackground = React.lazy(() => import('./ProfessionalHelixBackground'))
 
 export default function Hero() {
 
@@ -56,18 +56,18 @@ export default function Hero() {
         })}
       </div>
 
-          {/* Wave Animation that wraps around the CTA button */}
+          {/* Professional Helix Animation */}
           <Suspense fallback={
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
           }>
-            <SimpleWaveBackground />
+            <ProfessionalHelixBackground />
           </Suspense>
       
       {/* Additional glow overlay for premium effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none z-1"></div>
 
       {/* Content */}
-      <div className="relative z-40 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-start pt-20 pb-20">
+      <div className="relative z-50 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
