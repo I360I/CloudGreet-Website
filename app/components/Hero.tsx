@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { ErrorBoundary } from './ErrorBoundary'
 
 // Dynamic import to prevent SSR issues
-const WrappingHelixAnimation = React.lazy(() => import('./WrappingHelixAnimation'))
+const FancyWaveBackground = React.lazy(() => import('./FancyWaveBackground'))
 const LightBackground = React.lazy(() => import('./LightBackground'))
 
 export default function Hero() {
@@ -54,14 +54,14 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* Wavy Squiggly Lines Animation - Flowing naturally across screen */}
-      {mounted && (
-        <Suspense fallback={
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
-        }>
-          <WrappingHelixAnimation />
-        </Suspense>
-      )}
+          {/* 3D Twisting DNA-like Helix Animation - Like Retell AI */}
+          {mounted && (
+            <Suspense fallback={
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
+            }>
+              <FancyWaveBackground />
+            </Suspense>
+          )}
       
       {/* Additional glow overlay for premium effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none z-1"></div>
