@@ -9,9 +9,11 @@ import Link from 'next/link'
 
 // Dynamic import to prevent SSR issues
 const HelixBackground = React.lazy(() => import('./HelixBackground'))
+const LightBackground = React.lazy(() => import('./LightBackground'))
 
 export default function Hero() {
   const [mounted, setMounted] = useState(false)
+  const [useFallback, setUseFallback] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -51,15 +53,16 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* 3D Helix Background Animation - Only render on client */}
+      {/* Background Animation - Using LightBackground for stability */}
       {mounted && (
         <Suspense fallback={
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
         }>
-          <HelixBackground
+          <LightBackground
             className="absolute inset-0 w-full h-full"
-            speed={1.2}
-            color="#6AA7FF"
+            colorA="#6AA7FF"
+            colorB="#A06BFF"
+            opacity={0.6}
           />
         </Suspense>
       )}
