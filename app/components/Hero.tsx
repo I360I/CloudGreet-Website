@@ -33,25 +33,35 @@ export default function Hero() {
       
       {/* Floating Particles */}
       <div className="absolute inset-0 overflow-hidden">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              y: [0, -30, 0],
-              opacity: [0.3, 0.8, 0.3],
-            }}
-            transition={{
-              duration: 3 + Math.random() * 2,
-              repeat: Infinity,
-              delay: Math.random() * 2,
-            }}
-          />
-        ))}
+        {Array.from({ length: 20 }).map((_, i) => {
+          // Use deterministic positioning to avoid hydration mismatch
+          const positions = [
+            [10, 15], [25, 30], [40, 20], [60, 35], [75, 25],
+            [15, 45], [35, 50], [55, 40], [80, 55], [20, 65],
+            [45, 70], [65, 60], [85, 75], [30, 80], [50, 85],
+            [70, 90], [90, 80], [5, 70], [95, 45], [12, 85]
+          ];
+          const [left, top] = positions[i] || [50, 50];
+          return (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
+              style={{
+                left: `${left}%`,
+                top: `${top}%`,
+              }}
+              animate={{
+                y: [0, -30, 0],
+                opacity: [0.3, 0.8, 0.3],
+              }}
+              transition={{
+                duration: 3 + (i * 0.1),
+                repeat: Infinity,
+                delay: i * 0.1,
+              }}
+            />
+          );
+        })}
       </div>
 
           {/* 3D Twisting DNA-like Helix Animation - Like Retell AI */}
