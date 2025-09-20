@@ -79,7 +79,7 @@ export default function Hero() {
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none z-1"></div>
 
       {/* Content */}
-      <div className="relative z-30 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-start pt-20 pb-20">
+      <div className="relative z-40 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-start pt-20 pb-20">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}

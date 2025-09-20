@@ -1,7 +1,7 @@
 import React from 'react';
 
 export default function WrappingHelixAnimation() {
-  console.log('WrappingHelixAnimation rendering');
+  console.log('WrappingHelixAnimation rendering - DEBUG: Component is loading');
 
   return (
     <div
@@ -11,25 +11,27 @@ export default function WrappingHelixAnimation() {
         left: 0,
         width: '100%',
         height: '100%',
-        zIndex: -1,
+        zIndex: 1,
         overflow: 'hidden',
+        pointerEvents: 'none',
       }}
     >
       {/* Multiple curved lines that wrap around the CTA button */}
       
-      {/* Line 1 - Main curve */}
+      {/* Line 1 - Main curve - MUCH MORE VISIBLE */}
       <div
         style={{
           position: 'absolute',
-          top: '45%',
-          left: '10%',
-          width: '80%',
-          height: '200px',
-          border: '2px solid rgba(59, 130, 246, 0.8)',
+          top: '40%',
+          left: '5%',
+          width: '90%',
+          height: '300px',
+          border: '4px solid #3b82f6',
           borderRadius: '50% 50% 0 0',
           borderBottom: 'none',
           animation: 'pulse 3s ease-in-out infinite',
           transform: 'rotate(-10deg)',
+          boxShadow: '0 0 20px #3b82f6, 0 0 40px #3b82f6',
         }}
       />
       
@@ -38,14 +40,15 @@ export default function WrappingHelixAnimation() {
         style={{
           position: 'absolute',
           top: '50%',
-          left: '15%',
-          width: '70%',
-          height: '150px',
-          border: '2px solid rgba(110, 166, 255, 0.6)',
+          left: '10%',
+          width: '80%',
+          height: '200px',
+          border: '3px solid #6ea6ff',
           borderRadius: '50% 50% 0 0',
           borderBottom: 'none',
           animation: 'pulse 4s ease-in-out infinite reverse',
           transform: 'rotate(5deg)',
+          boxShadow: '0 0 15px #6ea6ff, 0 0 30px #6ea6ff',
         }}
       />
       
@@ -53,28 +56,30 @@ export default function WrappingHelixAnimation() {
       <div
         style={{
           position: 'absolute',
-          top: '55%',
-          left: '25%',
-          width: '50%',
-          height: '100px',
-          border: '2px solid rgba(147, 51, 234, 0.7)',
+          top: '60%',
+          left: '20%',
+          width: '60%',
+          height: '150px',
+          border: '3px solid #9333ea',
           borderRadius: '50% 50% 0 0',
           borderBottom: 'none',
           animation: 'pulse 2.5s ease-in-out infinite',
           transform: 'rotate(-5deg)',
+          boxShadow: '0 0 15px #9333ea, 0 0 30px #9333ea',
         }}
       />
       
-      {/* Line 4 - Bottom wave */}
+      {/* Line 4 - Bottom wave - MUCH MORE VISIBLE */}
       <div
         style={{
           position: 'absolute',
-          bottom: '20%',
-          left: '5%',
-          width: '90%',
-          height: '3px',
-          background: 'linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.8), transparent)',
+          bottom: '25%',
+          left: '0%',
+          width: '100%',
+          height: '6px',
+          background: 'linear-gradient(90deg, transparent, #3b82f6, #6ea6ff, #3b82f6, transparent)',
           animation: 'wave 4s ease-in-out infinite',
+          boxShadow: '0 0 10px #3b82f6, 0 0 20px #6ea6ff',
         }}
       />
       
@@ -105,23 +110,25 @@ export default function WrappingHelixAnimation() {
         }}
       />
 
-      {/* CSS Animations */}
+      {/* CSS Animations - MUCH MORE DRAMATIC */}
       <style jsx>{`
         @keyframes pulse {
           0%, 100% { 
-            opacity: 0.4;
+            opacity: 0.8;
             transform: rotate(-10deg) scale(1);
+            box-shadow: 0 0 20px #3b82f6, 0 0 40px #3b82f6;
           }
           50% { 
-            opacity: 0.8;
-            transform: rotate(-10deg) scale(1.05);
+            opacity: 1;
+            transform: rotate(-10deg) scale(1.1);
+            box-shadow: 0 0 30px #3b82f6, 0 0 60px #3b82f6, 0 0 80px #3b82f6;
           }
         }
         
         @keyframes wave {
           0%, 100% { 
             transform: translateX(-100%); 
-            opacity: 0;
+            opacity: 0.6;
           }
           50% { 
             transform: translateX(0%); 
