@@ -38,8 +38,8 @@ export default function ProductionReadyAnimation() {
           left: 0;
           width: 100%;
           height: 100%;
-          background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.03) 0%, transparent 70%);
-          animation: subtlePulse 8s ease-in-out infinite;
+          background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+          animation: subtlePulse 6s ease-in-out infinite;
         }
 
         .geometric-container {
@@ -52,11 +52,11 @@ export default function ProductionReadyAnimation() {
 
         .line {
           position: absolute;
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+          height: 2px;
+          background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.4), rgba(59, 130, 246, 0.6), rgba(59, 130, 246, 0.4), transparent);
           left: 0;
           right: 0;
-          animation: lineFlow 20s linear infinite;
+          animation: lineFlow 15s linear infinite;
         }
 
         .line-1 {
@@ -78,12 +78,12 @@ export default function ProductionReadyAnimation() {
           position: absolute;
           top: 50%;
           left: 50%;
-          width: 200px;
-          height: 200px;
-          border: 1px solid rgba(59, 130, 246, 0.1);
+          width: 300px;
+          height: 300px;
+          border: 2px solid rgba(59, 130, 246, 0.3);
           border-radius: 50%;
           transform: translate(-50%, -50%);
-          animation: centerRotate 30s linear infinite;
+          animation: centerRotate 20s linear infinite;
         }
 
         @keyframes subtlePulse {
@@ -101,10 +101,10 @@ export default function ProductionReadyAnimation() {
             opacity: 0;
           }
           10% {
-            opacity: 0.3;
+            opacity: 0.6;
           }
           90% {
-            opacity: 0.3;
+            opacity: 0.6;
           }
           100% {
             transform: translateX(100%);
@@ -124,8 +124,8 @@ export default function ProductionReadyAnimation() {
         /* Responsive adjustments */
         @media (max-width: 768px) {
           .center-accent {
-            width: 150px;
-            height: 150px;
+            width: 200px;
+            height: 200px;
           }
         }
 
