@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 /**
- * CSS-based helix animation with screen-length curved lines
- * All lines span the full screen width with no visible ends
- * No line is ever perfectly straight - always curved and bending
+ * Lightning-like tangled wires that wrap around the CTA button
+ * Creates genuinely curved, intertwined lines with no visible ends
  */
 export default function FancyWaveBackground() {
   const [mounted, setMounted] = useState(false);
@@ -36,311 +35,330 @@ export default function FancyWaveBackground() {
         position: 'absolute',
         top: 0,
         left: 0,
-        width: '100%',
+          width: '100%',
         height: '60vh',
         zIndex: 1,
         overflow: 'hidden',
         pointerEvents: 'none',
       }}
     >
-      {/* Screen-length curved lines that wrap around the CTA button */}
-      <div className="helix-container">
-        {/* Line 1 - Top curved line */}
-        <div className="helix-line line-1" style={{
-          '--color': '#6A5BFF',
-          '--delay': '0s',
-          '--duration': '12s'
-        }} />
-        
-        {/* Line 2 - Upper-middle curved line */}
-        <div className="helix-line line-2" style={{
-          '--color': '#7E66FF',
-          '--delay': '2s',
-          '--duration': '14s'
-        }} />
-        
-        {/* Line 3 - Center curved line (wraps around button) */}
-        <div className="helix-line line-3" style={{
-          '--color': '#5C8BFF',
-          '--delay': '4s',
-          '--duration': '13s'
-        }} />
-        
-        {/* Line 4 - Lower-middle curved line */}
-        <div className="helix-line line-4" style={{
-          '--color': '#8A7BFF',
-          '--delay': '6s',
-          '--duration': '15s'
-        }} />
-        
-        {/* Line 5 - Bottom curved line */}
-        <div className="helix-line line-5" style={{
-          '--color': '#4C7BFF',
-          '--delay': '8s',
-          '--duration': '11s'
-        }} />
-      </div>
+      {/* SVG container for proper curved paths */}
+      <svg 
+        className="helix-svg"
+        viewBox="0 0 1000 600" 
+        preserveAspectRatio="xMidYMid slice"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+        }}
+      >
+        {/* Wire 1 - Top approach, curves around button */}
+        <path
+          className="helix-wire wire-1"
+          d="M -100,150 Q 200,100 350,200 Q 500,300 650,200 Q 800,100 1100,150"
+          stroke="#6A5BFF"
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+          filter="url(#glow)"
+          style={{
+            '--delay': '0s',
+            '--duration': '8s'
+          }}
+        />
 
-      {/* Bottom wave layer */}
-      <div className="bottom-wave" />
+        {/* Wire 2 - Upper approach, intersects with wire 1 */}
+        <path
+          className="helix-wire wire-2"
+          d="M -100,200 Q 250,150 400,250 Q 550,350 700,250 Q 850,150 1100,200"
+          stroke="#7E66FF"
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+          filter="url(#glow)"
+          style={{
+            '--delay': '1s',
+            '--duration': '9s'
+          }}
+        />
+
+        {/* Wire 3 - Center helix that wraps tightly around button */}
+        <path
+          className="helix-wire wire-3"
+          d="M 200,300 Q 300,250 500,300 Q 700,350 500,300 Q 300,350 200,300 Q 300,250 500,300 Q 700,350 800,300"
+          stroke="#5C8BFF"
+          strokeWidth="4"
+          fill="none"
+          strokeLinecap="round"
+          filter="url(#glow)"
+          style={{
+            '--delay': '2s',
+            '--duration': '10s'
+          }}
+        />
+
+        {/* Wire 4 - Lower approach, curves around button */}
+        <path
+          className="helix-wire wire-4"
+          d="M -100,400 Q 200,450 350,350 Q 500,250 650,350 Q 800,450 1100,400"
+          stroke="#8A7BFF"
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+          filter="url(#glow)"
+          style={{
+            '--delay': '3s',
+            '--duration': '8.5s'
+          }}
+        />
+
+        {/* Wire 5 - Bottom approach */}
+        <path
+          className="helix-wire wire-5"
+          d="M -100,450 Q 250,500 400,400 Q 550,300 700,400 Q 850,500 1100,450"
+          stroke="#4C7BFF"
+          strokeWidth="3"
+          fill="none"
+          strokeLinecap="round"
+          filter="url(#glow)"
+          style={{
+            '--delay': '4s',
+            '--duration': '9.5s'
+          }}
+        />
+
+        {/* Bottom wave */}
+        <path
+          className="bottom-wave"
+          d="M -100,500 Q 500,450 1100,500"
+          stroke="#3457F5"
+          strokeWidth="4"
+          fill="none"
+          strokeLinecap="round"
+          filter="url(#glow)"
+          opacity="0.4"
+        />
+
+        {/* Glow filter definition */}
+        <defs>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
 
       <style jsx>{`
-        .helix-container {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
+        .helix-svg {
+          animation: svgFlow 12s linear infinite;
         }
 
-        .helix-line {
-          position: absolute;
-          left: -10%;
-          width: 120%;
-          height: 3px;
-          border-radius: 50px;
-          filter: drop-shadow(0 0 8px var(--color));
-          opacity: 0.7;
-          animation: screenFlow var(--duration) var(--delay) linear infinite;
-        }
-
-        /* Line 1 - Top curved line */
-        .line-1 {
-          background: linear-gradient(90deg, 
-            transparent 0%, 
-            var(--color) 10%, 
-            var(--color) 90%, 
-            transparent 100%
-          );
-          top: 20%;
-          animation-name: line1Flow;
-        }
-
-        /* Line 2 - Upper-middle curved line */
-        .line-2 {
-          background: linear-gradient(90deg, 
-            transparent 0%, 
-            var(--color) 15%, 
-            var(--color) 85%, 
-            transparent 100%
-          );
-          top: 35%;
-          animation-name: line2Flow;
-        }
-
-        /* Line 3 - Center curved line (wraps around button) */
-        .line-3 {
-          background: linear-gradient(90deg, 
-            transparent 0%, 
-            var(--color) 20%, 
-            var(--color) 80%, 
-            transparent 100%
-          );
-          top: 50%;
-          height: 4px;
+        .helix-wire {
+          stroke-dasharray: 20 5;
+          stroke-dashoffset: 0;
+          animation: wireFlow var(--duration) var(--delay) linear infinite;
           opacity: 0.8;
-          animation-name: line3Flow;
         }
 
-        /* Line 4 - Lower-middle curved line */
-        .line-4 {
-          background: linear-gradient(90deg, 
-            transparent 0%, 
-            var(--color) 15%, 
-            var(--color) 85%, 
-            transparent 100%
-          );
-          top: 65%;
-          animation-name: line4Flow;
+        .wire-1 {
+          animation-name: wire1Flow;
         }
 
-        /* Line 5 - Bottom curved line */
-        .line-5 {
-          background: linear-gradient(90deg, 
-            transparent 0%, 
-            var(--color) 10%, 
-            var(--color) 90%, 
-            transparent 100%
-          );
-          top: 80%;
-          animation-name: line5Flow;
+        .wire-2 {
+          animation-name: wire2Flow;
         }
 
-        /* Line 1: Curved flow across screen with bends around button area */
-        @keyframes line1Flow {
-          0% {
-            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(2deg);
-            opacity: 0.3;
-          }
-          25% {
-            transform: translateX(-50%) translateY(-15px) rotate(1deg) scaleY(1.2) skewY(3deg);
-            opacity: 0.6;
-          }
-          50% {
-            transform: translateX(0%) translateY(-25px) rotate(2deg) scaleY(1.4) skewY(4deg);
-            opacity: 0.8;
-          }
-          75% {
-            transform: translateX(50%) translateY(-15px) rotate(1deg) scaleY(1.2) skewY(3deg);
-            opacity: 0.6;
-          }
-          100% {
-            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(2deg);
-            opacity: 0.3;
-          }
+        .wire-3 {
+          animation-name: wire3Flow;
         }
 
-        /* Line 2: Curved flow with more pronounced bends */
-        @keyframes line2Flow {
-          0% {
-            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(-1deg);
-            opacity: 0.3;
-          }
-          25% {
-            transform: translateX(-50%) translateY(-20px) rotate(-1deg) scaleY(1.1) skewY(-2deg);
-            opacity: 0.5;
-          }
-          50% {
-            transform: translateX(0%) translateY(-30px) rotate(-2deg) scaleY(1.3) skewY(-3deg);
-            opacity: 0.7;
-          }
-          75% {
-            transform: translateX(50%) translateY(-20px) rotate(-1deg) scaleY(1.1) skewY(-2deg);
-            opacity: 0.5;
-          }
-          100% {
-            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(-1deg);
-            opacity: 0.3;
-          }
+        .wire-4 {
+          animation-name: wire4Flow;
         }
 
-        /* Line 3: Center line with dramatic curves around button */
-        @keyframes line3Flow {
-          0% {
-            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
-            opacity: 0.4;
-          }
-          25% {
-            transform: translateX(-50%) translateY(-30px) rotate(2deg) scaleY(1.3) skewY(2deg);
-            opacity: 0.7;
-          }
-          50% {
-            transform: translateX(0%) translateY(-40px) rotate(3deg) scaleY(1.5) skewY(3deg);
-            opacity: 0.9;
-          }
-          75% {
-            transform: translateX(50%) translateY(-30px) rotate(2deg) scaleY(1.3) skewY(2deg);
-            opacity: 0.7;
-          }
-          100% {
-            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
-            opacity: 0.4;
-          }
-        }
-
-        /* Line 4: Lower line with opposite curve direction */
-        @keyframes line4Flow {
-          0% {
-            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(-2deg);
-            opacity: 0.3;
-          }
-          25% {
-            transform: translateX(-50%) translateY(20px) rotate(-1deg) scaleY(1.1) skewY(-3deg);
-            opacity: 0.5;
-          }
-          50% {
-            transform: translateX(0%) translateY(30px) rotate(-2deg) scaleY(1.3) skewY(-4deg);
-            opacity: 0.7;
-          }
-          75% {
-            transform: translateX(50%) translateY(20px) rotate(-1deg) scaleY(1.1) skewY(-3deg);
-            opacity: 0.5;
-          }
-          100% {
-            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(-2deg);
-            opacity: 0.3;
-          }
-        }
-
-        /* Line 5: Bottom line with subtle curves */
-        @keyframes line5Flow {
-          0% {
-            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
-            opacity: 0.3;
-          }
-          25% {
-            transform: translateX(-50%) translateY(15px) rotate(1deg) scaleY(1.2) skewY(2deg);
-            opacity: 0.6;
-          }
-          50% {
-            transform: translateX(0%) translateY(25px) rotate(2deg) scaleY(1.4) skewY(3deg);
-            opacity: 0.8;
-          }
-          75% {
-            transform: translateX(50%) translateY(15px) rotate(1deg) scaleY(1.2) skewY(2deg);
-            opacity: 0.6;
-          }
-          100% {
-            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
-            opacity: 0.3;
-          }
+        .wire-5 {
+          animation-name: wire5Flow;
         }
 
         .bottom-wave {
-          position: absolute;
-          bottom: 10%;
-          left: -10%;
-          width: 120%;
-          height: 3px;
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            #3457F5 20%,
-            #3457F5 80%,
-            transparent 100%
-          );
-          border-radius: 50px;
-          animation: bottomWaveFlow 16s linear infinite;
-          filter: drop-shadow(0 0 6px #3457F5);
-          opacity: 0.4;
+          stroke-dasharray: 30 10;
+          stroke-dashoffset: 0;
+          animation: bottomWaveFlow 15s linear infinite;
         }
 
+        /* Wire 1: Flows along the curved path */
+        @keyframes wire1Flow {
+          0% {
+            stroke-dashoffset: 0;
+            opacity: 0.3;
+          }
+          25% {
+            stroke-dashoffset: -50;
+            opacity: 0.6;
+          }
+          50% {
+            stroke-dashoffset: -100;
+            opacity: 0.8;
+          }
+          75% {
+            stroke-dashoffset: -150;
+            opacity: 0.6;
+          }
+          100% {
+            stroke-dashoffset: -200;
+            opacity: 0.3;
+          }
+        }
+
+        /* Wire 2: Flows with different timing */
+        @keyframes wire2Flow {
+          0% {
+            stroke-dashoffset: 0;
+            opacity: 0.3;
+          }
+          25% {
+            stroke-dashoffset: -60;
+            opacity: 0.5;
+          }
+          50% {
+            stroke-dashoffset: -120;
+            opacity: 0.7;
+          }
+          75% {
+            stroke-dashoffset: -180;
+            opacity: 0.5;
+          }
+          100% {
+            stroke-dashoffset: -240;
+            opacity: 0.3;
+          }
+        }
+
+        /* Wire 3: Center helix with tighter curves */
+        @keyframes wire3Flow {
+          0% {
+            stroke-dashoffset: 0;
+            opacity: 0.4;
+          }
+          25% {
+            stroke-dashoffset: -40;
+            opacity: 0.7;
+          }
+          50% {
+            stroke-dashoffset: -80;
+            opacity: 0.9;
+          }
+          75% {
+            stroke-dashoffset: -120;
+            opacity: 0.7;
+          }
+          100% {
+            stroke-dashoffset: -160;
+            opacity: 0.4;
+          }
+        }
+
+        /* Wire 4: Lower approach */
+        @keyframes wire4Flow {
+          0% {
+            stroke-dashoffset: 0;
+            opacity: 0.3;
+          }
+          25% {
+            stroke-dashoffset: -45;
+            opacity: 0.5;
+          }
+          50% {
+            stroke-dashoffset: -90;
+            opacity: 0.7;
+          }
+          75% {
+            stroke-dashoffset: -135;
+            opacity: 0.5;
+          }
+          100% {
+            stroke-dashoffset: -180;
+            opacity: 0.3;
+          }
+        }
+
+        /* Wire 5: Bottom approach */
+        @keyframes wire5Flow {
+          0% {
+            stroke-dashoffset: 0;
+            opacity: 0.3;
+          }
+          25% {
+            stroke-dashoffset: -55;
+            opacity: 0.6;
+          }
+          50% {
+            stroke-dashoffset: -110;
+            opacity: 0.8;
+          }
+          75% {
+            stroke-dashoffset: -165;
+            opacity: 0.6;
+          }
+          100% {
+            stroke-dashoffset: -220;
+            opacity: 0.3;
+          }
+        }
+
+        /* Bottom wave animation */
         @keyframes bottomWaveFlow {
           0% {
-            transform: translateX(-100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
+            stroke-dashoffset: 0;
             opacity: 0.2;
           }
           25% {
-            transform: translateX(-50%) translateY(-10px) rotate(1deg) scaleY(1.1) skewY(2deg);
+            stroke-dashoffset: -75;
             opacity: 0.4;
           }
           50% {
-            transform: translateX(0%) translateY(-15px) rotate(0deg) scaleY(1.2) skewY(1deg);
+            stroke-dashoffset: -150;
             opacity: 0.35;
           }
           75% {
-            transform: translateX(50%) translateY(-10px) rotate(-1deg) scaleY(1.1) skewY(-1deg);
+            stroke-dashoffset: -225;
             opacity: 0.4;
           }
           100% {
-            transform: translateX(100%) translateY(0px) rotate(0deg) scaleY(1) skewY(1deg);
+            stroke-dashoffset: -300;
             opacity: 0.2;
+          }
+        }
+
+        /* Overall SVG movement */
+        @keyframes svgFlow {
+          0% {
+            transform: translateX(0%);
+          }
+          100% {
+            transform: translateX(-10%);
           }
         }
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
-          .helix-line {
-            height: 2px;
-            opacity: 0.5;
+          .helix-wire {
+            stroke-width: 2;
+            opacity: 0.6;
           }
           
-          .line-3 {
-            height: 3px;
+          .wire-3 {
+            stroke-width: 3;
           }
           
           .bottom-wave {
-            height: 2px;
+            stroke-width: 2;
             opacity: 0.3;
           }
         }
