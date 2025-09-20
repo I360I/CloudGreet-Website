@@ -1,7 +1,128 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function WrappingHelixAnimation() {
-  console.log('WrappingHelixAnimation rendering - DEBUG: Component is loading');
+  const [isClient, setIsClient] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(1200);
+
+  useEffect(() => {
+    setIsClient(true);
+    setWindowWidth(window.innerWidth);
+    
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Responsive parameters based on spec
+  const getConfig = () => {
+    if (windowWidth >= 1280) {
+      return {
+        numStrands: 5,
+        ellipseRx: 240,
+        ellipseRy: 100,
+        baseSpeed: 95, // px/s
+        thickness: 2.25,
+        glowRadius: 10,
+        opacity: 0.65
+      };
+    } else if (windowWidth >= 768) {
+      return {
+        numStrands: 4,
+        ellipseRx: 200,
+        ellipseRy: 85,
+        baseSpeed: 85,
+        thickness: 2.25,
+        glowRadius: 10,
+        opacity: 0.65
+      };
+    } else {
+      return {
+        numStrands: 3,
+        ellipseRx: 160,
+        ellipseRy: 70,
+        baseSpeed: 75,
+        thickness: 1.7, // -25%
+        glowRadius: 7, // -30%
+        opacity: 0.55 // -15%
+      };
+    }
+  };
+
+  const config = getConfig();
+
+  // Strand colors from spec
+  const colors = ['#6A5BFF', '#7E66FF', '#5C8BFF', '#8A7BFF', '#4C7BFF'];
+  
+  // CTA focus point (center of button area)
+  const focusX = windowWidth / 2;
+  const focusY = 380; // Approximate CTA center
+
+  // Generate strand paths
+  const generateStrandPath = (strandIndex, time) => {
+    const speed = config.baseSpeed + (strandIndex * 15); // ±15% speed variation
+    const phase = (strandIndex * 2 * Math.PI) / config.numStrands;
+    const xOffset = (time * speed) % (windowWidth + 400) - 200;
+    
+    // Vertical starting lane offset
+    const laneOffset = (strandIndex - config.numStrands / 2) * 40;
+    
+    let path = '';
+    const segments = 60;
+    
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const x = xOffset + t * (windowWidth + 400);
+      
+      // Base vertical amplitude
+      const baseAmplitude = 30;
+      
+      // Gaussian envelope that peaks at focus (CTA center)
+      const distanceFromFocus = Math.abs(x - focusX);
+      const envelopeWidth = windowWidth * 0.3; // 30% of hero width
+      const envelope = Math.exp(-Math.pow(distanceFromFocus / envelopeWidth, 2));
+      const amplitude = baseAmplitude * (1 + envelope * 1.0); // ×2.0 peak factor
+      
+      // Wave function with phase offset
+      const wave = Math.sin((x / 100) + phase + (time * 0.1));
+      
+      // Vertical position with lane offset and wave
+      const y = focusY + laneOffset + wave * amplitude;
+      
+      if (i === 0) {
+        path += `M ${x},${y}`;
+      } else {
+        path += ` L ${x},${y}`;
+      }
+    }
+    
+    return path;
+  };
+
+  const generateBottomWavePath = (time) => {
+    const speed = 70; // 60-80 px/s
+    const xOffset = (time * speed) % (windowWidth + 400) - 200;
+    const amplitude = 37.5; // 30-45px
+    const y = focusY + 200; // +180-220px below CTA
+    
+    let path = '';
+    const segments = 40;
+    
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const x = xOffset + t * (windowWidth + 400);
+      const waveY = y + Math.sin((x / 150) + (time * 0.05)) * amplitude;
+      
+      if (i === 0) {
+        path += `M ${x},${waveY}`;
+      } else {
+        path += ` L ${x},${waveY}`;
+      }
+    }
+    
+    return path;
+  };
+
+  if (!isClient) return null;
 
   return (
     <div
@@ -14,10 +135,9 @@ export default function WrappingHelixAnimation() {
         zIndex: 1,
         overflow: 'hidden',
         pointerEvents: 'none',
+        mixBlendMode: 'screen', // Additive blending
       }}
     >
-      {/* ELECTRICITY BUZZING THROUGH - POWERING THE CENTER */}
-      
       <svg
         width="100%"
         height="100%"
@@ -27,359 +147,175 @@ export default function WrappingHelixAnimation() {
           left: 0,
         }}
       >
-        {/* LEFT SIDE ELECTRICITY - Flowing RIGHT to power center */}
+        {/* Main Helix Strands */}
+        {Array.from({ length: config.numStrands }).map((_, i) => {
+          const color = colors[i % colors.length];
+          const speed = config.baseSpeed + (i * 15);
+          const thickness = config.thickness + (Math.sin(i) * 0.75); // ±0.75px variation
+          
+          return (
+            <g key={i}>
+              {/* Main strand */}
+              <path
+                d={generateStrandPath(i, 0)}
+                stroke={color}
+                strokeWidth={thickness}
+                fill="none"
+                opacity={config.opacity}
+                filter={`blur(${Math.abs(i - 2) * 0.3}px) drop-shadow(0 0 ${config.glowRadius}px ${color})`}
+                style={{
+                  animation: `strand${i} 12s linear infinite`,
+                  transform: `scale(${1 - Math.abs(i - 2) * 0.04})`, // 3D depth effect
+                }}
+              />
+              
+              {/* Lighting sweep highlight */}
+              <path
+                d={generateStrandPath(i, 0)}
+                stroke="rgba(255,255,255,0.3)"
+                strokeWidth={thickness * 0.3}
+                fill="none"
+                style={{
+                  animation: `lightingSweep${i} 8s ease-in-out infinite`,
+                }}
+              />
+            </g>
+          );
+        })}
         
-        {/* Electric Line 1 - Left to Right */}
+        {/* Bottom Wave Layer */}
         <path
-          d="M 50,350 Q 200,320 400,350 Q 500,380 600,350"
-          stroke="#00ffff"
+          d={generateBottomWavePath(0)}
+          stroke="#3457F5"
           strokeWidth="3"
           fill="none"
-          filter="drop-shadow(0 0 15px #00ffff)"
+          opacity={0.3}
+          filter="blur(1px) drop-shadow(0 0 8px #3457F5)"
           style={{
-            animation: 'electricLeft1 2s linear infinite',
-          }}
-        />
-        
-        {/* Electric Line 2 - Left to Right */}
-        <path
-          d="M 80,380 Q 250,350 450,380 Q 550,410 650,380"
-          stroke="#3b82f6"
-          strokeWidth="3"
-          fill="none"
-          filter="drop-shadow(0 0 15px #3b82f6)"
-          style={{
-            animation: 'electricLeft2 2.3s linear infinite',
-          }}
-        />
-        
-        {/* Electric Line 3 - Left to Right */}
-        <path
-          d="M 30,410 Q 180,380 380,410 Q 480,440 580,410"
-          stroke="#6ea6ff"
-          strokeWidth="3"
-          fill="none"
-          filter="drop-shadow(0 0 15px #6ea6ff)"
-          style={{
-            animation: 'electricLeft3 1.8s linear infinite',
-          }}
-        />
-        
-        {/* Electric Line 4 - Left to Right */}
-        <path
-          d="M 100,440 Q 280,410 480,440 Q 580,470 680,440"
-          stroke="#00ffff"
-          strokeWidth="3"
-          fill="none"
-          filter="drop-shadow(0 0 15px #00ffff)"
-          style={{
-            animation: 'electricLeft4 2.1s linear infinite',
-          }}
-        />
-        
-        {/* RIGHT SIDE ELECTRICITY - Flowing LEFT to power center */}
-        
-        {/* Electric Line 5 - Right to Left */}
-        <path
-          d="M 1150,350 Q 1000,320 800,350 Q 700,380 600,350"
-          stroke="#ff00ff"
-          strokeWidth="3"
-          fill="none"
-          filter="drop-shadow(0 0 15px #ff00ff)"
-          style={{
-            animation: 'electricRight1 2.2s linear infinite',
-          }}
-        />
-        
-        {/* Electric Line 6 - Right to Left */}
-        <path
-          d="M 1120,380 Q 950,350 750,380 Q 650,410 550,380"
-          stroke="#9333ea"
-          strokeWidth="3"
-          fill="none"
-          filter="drop-shadow(0 0 15px #9333ea)"
-          style={{
-            animation: 'electricRight2 1.9s linear infinite',
-          }}
-        />
-        
-        {/* Electric Line 7 - Right to Left */}
-        <path
-          d="M 1170,410 Q 1020,380 820,410 Q 720,440 620,410"
-          stroke="#ff00ff"
-          strokeWidth="3"
-          fill="none"
-          filter="drop-shadow(0 0 15px #ff00ff)"
-          style={{
-            animation: 'electricRight3 2.4s linear infinite',
-          }}
-        />
-        
-        {/* Electric Line 8 - Right to Left */}
-        <path
-          d="M 1100,440 Q 920,410 720,440 Q 620,470 520,440"
-          stroke="#9333ea"
-          strokeWidth="3"
-          fill="none"
-          filter="drop-shadow(0 0 15px #9333ea)"
-          style={{
-            animation: 'electricRight4 2.0s linear infinite',
-          }}
-        />
-        
-        {/* CENTER POWER ZONE - Where electricity converges */}
-        <circle
-          cx="600"
-          cy="380"
-          r="8"
-          fill="#ffffff"
-          filter="drop-shadow(0 0 25px #ffffff)"
-          style={{
-            animation: 'powerPulse 1s ease-in-out infinite',
-          }}
-        />
-        
-        {/* Additional electric sparks around center */}
-        <path
-          d="M 580,360 L 620,400 M 620,360 L 580,400"
-          stroke="#ffffff"
-          strokeWidth="2"
-          filter="drop-shadow(0 0 10px #ffffff)"
-          style={{
-            animation: 'spark 0.5s ease-in-out infinite',
+            animation: 'bottomWave 10s linear infinite',
           }}
         />
       </svg>
-      
-      {/* Line 4 - Bottom wave - MUCH MORE VISIBLE */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '25%',
-          left: '0%',
-          width: '100%',
-          height: '6px',
-          background: 'linear-gradient(90deg, transparent, #3b82f6, #6ea6ff, #3b82f6, transparent)',
-          animation: 'wave 4s ease-in-out infinite',
-          boxShadow: '0 0 10px #3b82f6, 0 0 20px #6ea6ff',
-        }}
-      />
-      
-      {/* Additional decorative lines */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '40%',
-          right: '20%',
-          width: '60px',
-          height: '60px',
-          border: '2px solid rgba(110, 166, 255, 0.5)',
-          borderRadius: '50%',
-          animation: 'rotate 8s linear infinite',
-        }}
-      />
-      
-      <div
-        style={{
-          position: 'absolute',
-          top: '60%',
-          left: '15%',
-          width: '40px',
-          height: '40px',
-          border: '2px solid rgba(147, 51, 234, 0.5)',
-          borderRadius: '50%',
-          animation: 'rotate 6s linear infinite reverse',
-        }}
-      />
 
-      {/* CSS Animations - ELECTRICITY BUZZING THROUGH */}
+      {/* CSS Animations - Helix Waves */}
       <style jsx>{`
-        /* LEFT SIDE ELECTRICITY - Flowing RIGHT */
-        @keyframes electricLeft1 {
-          0% { 
-            stroke-dasharray: 0 1000;
-            stroke-dashoffset: 0;
-            opacity: 0;
-          }
-          10% { 
-            opacity: 1;
-          }
-          90% { 
-            opacity: 1;
-          }
-          100% { 
-            stroke-dasharray: 1000 0;
-            stroke-dashoffset: -1000;
-            opacity: 0;
-          }
+        /* Main strand animations - continuous left to right flow */
+        @keyframes strand0 {
+          0% { transform: translateX(-200px) scale(0.96); }
+          100% { transform: translateX(${windowWidth + 200}px) scale(0.96); }
         }
         
-        @keyframes electricLeft2 {
-          0% { 
-            stroke-dasharray: 0 1000;
-            stroke-dashoffset: 0;
-            opacity: 0;
-          }
-          10% { 
-            opacity: 1;
-          }
-          90% { 
-            opacity: 1;
-          }
-          100% { 
-            stroke-dasharray: 1000 0;
-            stroke-dashoffset: -1000;
-            opacity: 0;
-          }
+        @keyframes strand1 {
+          0% { transform: translateX(-200px) scale(0.98); }
+          100% { transform: translateX(${windowWidth + 200}px) scale(0.98); }
         }
         
-        @keyframes electricLeft3 {
-          0% { 
-            stroke-dasharray: 0 1000;
-            stroke-dashoffset: 0;
-            opacity: 0;
-          }
-          10% { 
-            opacity: 1;
-          }
-          90% { 
-            opacity: 1;
-          }
-          100% { 
-            stroke-dasharray: 1000 0;
-            stroke-dashoffset: -1000;
-            opacity: 0;
-          }
+        @keyframes strand2 {
+          0% { transform: translateX(-200px) scale(1.0); }
+          100% { transform: translateX(${windowWidth + 200}px) scale(1.0); }
         }
         
-        @keyframes electricLeft4 {
-          0% { 
-            stroke-dasharray: 0 1000;
-            stroke-dashoffset: 0;
-            opacity: 0;
-          }
-          10% { 
-            opacity: 1;
-          }
-          90% { 
-            opacity: 1;
-          }
-          100% { 
-            stroke-dasharray: 1000 0;
-            stroke-dashoffset: -1000;
-            opacity: 0;
-          }
+        @keyframes strand3 {
+          0% { transform: translateX(-200px) scale(0.98); }
+          100% { transform: translateX(${windowWidth + 200}px) scale(0.98); }
         }
         
-        /* RIGHT SIDE ELECTRICITY - Flowing LEFT */
-        @keyframes electricRight1 {
-          0% { 
-            stroke-dasharray: 0 1000;
-            stroke-dashoffset: 0;
-            opacity: 0;
-          }
-          10% { 
-            opacity: 1;
-          }
-          90% { 
-            opacity: 1;
-          }
-          100% { 
-            stroke-dasharray: 1000 0;
-            stroke-dashoffset: 1000;
-            opacity: 0;
-          }
+        @keyframes strand4 {
+          0% { transform: translateX(-200px) scale(0.96); }
+          100% { transform: translateX(${windowWidth + 200}px) scale(0.96); }
         }
         
-        @keyframes electricRight2 {
-          0% { 
-            stroke-dasharray: 0 1000;
-            stroke-dashoffset: 0;
-            opacity: 0;
-          }
-          10% { 
-            opacity: 1;
-          }
-          90% { 
-            opacity: 1;
-          }
-          100% { 
-            stroke-dasharray: 1000 0;
-            stroke-dashoffset: 1000;
-            opacity: 0;
-          }
-        }
-        
-        @keyframes electricRight3 {
-          0% { 
-            stroke-dasharray: 0 1000;
-            stroke-dashoffset: 0;
-            opacity: 0;
-          }
-          10% { 
-            opacity: 1;
-          }
-          90% { 
-            opacity: 1;
-          }
-          100% { 
-            stroke-dasharray: 1000 0;
-            stroke-dashoffset: 1000;
-            opacity: 0;
-          }
-        }
-        
-        @keyframes electricRight4 {
-          0% { 
-            stroke-dasharray: 0 1000;
-            stroke-dashoffset: 0;
-            opacity: 0;
-          }
-          10% { 
-            opacity: 1;
-          }
-          90% { 
-            opacity: 1;
-          }
-          100% { 
-            stroke-dasharray: 1000 0;
-            stroke-dashoffset: 1000;
-            opacity: 0;
-          }
-        }
-        
-        /* CENTER POWER ZONE */
-        @keyframes powerPulse {
+        /* Lighting sweep animations */
+        @keyframes lightingSweep0 {
           0%, 100% { 
-            r: 8;
-            opacity: 1;
+            stroke-dasharray: 0 1000;
+            stroke-dashoffset: 0;
+            opacity: 0;
+          }
+          20%, 80% { 
+            opacity: 0.3;
           }
           50% { 
-            r: 15;
-            opacity: 0.8;
-          }
-        }
-        
-        @keyframes spark {
-          0%, 100% { 
-            opacity: 0;
-            transform: scale(0.5);
-          }
-          50% { 
-            opacity: 1;
-            transform: scale(1.2);
-          }
-        }
-        
-        @keyframes wave {
-          0%, 100% { 
-            transform: translateX(-100%); 
+            stroke-dasharray: 200 800;
+            stroke-dashoffset: -200;
             opacity: 0.6;
           }
-          50% { 
-            transform: translateX(0%); 
-            opacity: 1;
+        }
+        
+        @keyframes lightingSweep1 {
+          0%, 100% { 
+            stroke-dasharray: 0 1000;
+            stroke-dashoffset: 0;
+            opacity: 0;
           }
+          25%, 75% { 
+            opacity: 0.3;
+          }
+          50% { 
+            stroke-dasharray: 200 800;
+            stroke-dashoffset: -200;
+            opacity: 0.6;
+          }
+        }
+        
+        @keyframes lightingSweep2 {
+          0%, 100% { 
+            stroke-dasharray: 0 1000;
+            stroke-dashoffset: 0;
+            opacity: 0;
+          }
+          30%, 70% { 
+            opacity: 0.3;
+          }
+          50% { 
+            stroke-dasharray: 200 800;
+            stroke-dashoffset: -200;
+            opacity: 0.6;
+          }
+        }
+        
+        @keyframes lightingSweep3 {
+          0%, 100% { 
+            stroke-dasharray: 0 1000;
+            stroke-dashoffset: 0;
+            opacity: 0;
+          }
+          35%, 65% { 
+            opacity: 0.3;
+          }
+          50% { 
+            stroke-dasharray: 200 800;
+            stroke-dashoffset: -200;
+            opacity: 0.6;
+          }
+        }
+        
+        @keyframes lightingSweep4 {
+          0%, 100% { 
+            stroke-dasharray: 0 1000;
+            stroke-dashoffset: 0;
+            opacity: 0;
+          }
+          40%, 60% { 
+            opacity: 0.3;
+          }
+          50% { 
+            stroke-dasharray: 200 800;
+            stroke-dashoffset: -200;
+            opacity: 0.6;
+          }
+        }
+        
+        /* Bottom wave animation */
+        @keyframes bottomWave {
+          0% { transform: translateX(-200px); }
+          100% { transform: translateX(${windowWidth + 200}px); }
+        }
+        
+        /* Cross-over shimmer effect */
+        @keyframes crossOverShimmer {
+          0%, 100% { opacity: 0.65; }
+          50% { opacity: 0.75; }
         }
       `}</style>
     </div>
