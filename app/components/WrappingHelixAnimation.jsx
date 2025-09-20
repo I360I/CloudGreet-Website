@@ -27,99 +27,77 @@ export default function WrappingHelixAnimation() {
           left: 0,
         }}
       >
-        {/* Curved Line 1 - Bends around top text area */}
+        {/* Professional tight pattern - starts close together, wraps around button */}
+        
+        {/* Line 1 - Top tight curve around button */}
         <path
-          d="M -100,200 Q 200,150 500,200 T 1200,200"
+          d="M 200,400 Q 400,350 600,400 Q 800,450 1000,400"
           stroke="#3b82f6"
-          strokeWidth="8"
+          strokeWidth="4"
           fill="none"
-          filter="drop-shadow(0 0 25px #3b82f6) drop-shadow(0 0 50px #6ea6ff)"
+          filter="drop-shadow(0 0 15px #3b82f6)"
           style={{
-            animation: 'curve1 8s ease-in-out infinite',
+            animation: 'tight1 6s ease-in-out infinite',
           }}
         />
         
-        {/* Curved Line 2 - Bends around middle area */}
+        {/* Line 2 - Slightly below, tighter curve */}
         <path
-          d="M -150,350 Q 300,300 600,350 T 1250,350"
+          d="M 250,420 Q 450,370 650,420 Q 850,470 1050,420"
           stroke="#6ea6ff"
-          strokeWidth="6"
+          strokeWidth="3"
           fill="none"
-          filter="drop-shadow(0 0 20px #6ea6ff) drop-shadow(0 0 40px #9333ea)"
+          filter="drop-shadow(0 0 12px #6ea6ff)"
           style={{
-            animation: 'curve2 10s ease-in-out infinite',
+            animation: 'tight2 7s ease-in-out infinite',
           }}
         />
         
-        {/* Curved Line 3 - Bends around button area */}
+        {/* Line 3 - Bottom tight curve around button */}
         <path
-          d="M -200,500 Q 400,450 700,500 T 1300,500"
+          d="M 300,440 Q 500,390 700,440 Q 900,490 1100,440"
           stroke="#9333ea"
-          strokeWidth="7"
+          strokeWidth="4"
           fill="none"
-          filter="drop-shadow(0 0 22px #9333ea) drop-shadow(0 0 44px #3b82f6)"
+          filter="drop-shadow(0 0 15px #9333ea)"
           style={{
-            animation: 'curve3 9s ease-in-out infinite',
+            animation: 'tight3 8s ease-in-out infinite',
           }}
         />
         
-        {/* Curved Line 4 - Bends around bottom area */}
+        {/* Line 4 - Inner tight curve */}
         <path
-          d="M -250,650 Q 500,600 800,650 T 1350,650"
+          d="M 350,410 Q 550,360 750,410 Q 950,460 1150,410"
           stroke="#3b82f6"
-          strokeWidth="8"
+          strokeWidth="3"
           fill="none"
-          filter="drop-shadow(0 0 25px #3b82f6) drop-shadow(0 0 50px #6ea6ff)"
+          filter="drop-shadow(0 0 12px #3b82f6)"
           style={{
-            animation: 'curve4 11s ease-in-out infinite',
+            animation: 'tight4 5s ease-in-out infinite',
           }}
         />
         
-        {/* Curved Line 5 - Intertwining curve */}
+        {/* Line 5 - Outer tight curve */}
         <path
-          d="M -300,300 Q 100,250 400,300 T 1000,300 Q 1100,350 1200,300"
+          d="M 150,430 Q 350,380 550,430 Q 750,480 950,430"
           stroke="#6ea6ff"
-          strokeWidth="5"
+          strokeWidth="3"
           fill="none"
-          filter="drop-shadow(0 0 18px #6ea6ff) drop-shadow(0 0 36px #9333ea)"
+          filter="drop-shadow(0 0 12px #6ea6ff)"
           style={{
-            animation: 'curve5 7s ease-in-out infinite',
+            animation: 'tight5 9s ease-in-out infinite',
           }}
         />
         
-        {/* Curved Line 6 - Complex intertwining curve */}
+        {/* Line 6 - Center tight curve */}
         <path
-          d="M -350,550 Q 200,500 500,550 T 900,550 Q 1000,600 1100,550 T 1300,550"
+          d="M 275,415 Q 475,365 675,415 Q 875,465 1075,415"
           stroke="#9333ea"
-          strokeWidth="6"
+          strokeWidth="2"
           fill="none"
-          filter="drop-shadow(0 0 20px #9333ea) drop-shadow(0 0 40px #3b82f6)"
+          filter="drop-shadow(0 0 10px #9333ea)"
           style={{
-            animation: 'curve6 12s ease-in-out infinite',
-          }}
-        />
-        
-        {/* Curved Line 7 - Wraps around button */}
-        <path
-          d="M -400,450 Q 0,400 300,450 Q 500,500 700,450 Q 900,400 1200,450"
-          stroke="#3b82f6"
-          strokeWidth="6"
-          fill="none"
-          filter="drop-shadow(0 0 30px #3b82f6) drop-shadow(0 0 60px #6ea6ff)"
-          style={{
-            animation: 'curve7 6s ease-in-out infinite',
-          }}
-        />
-        
-        {/* Curved Line 8 - Another intertwining curve */}
-        <path
-          d="M -450,400 Q -200,350 100,400 Q 300,450 500,400 Q 700,350 1000,400 Q 1200,450 1400,400"
-          stroke="#6ea6ff"
-          strokeWidth="5"
-          fill="none"
-          filter="drop-shadow(0 0 18px #6ea6ff) drop-shadow(0 0 36px #9333ea)"
-          style={{
-            animation: 'curve8 13s ease-in-out infinite',
+            animation: 'tight6 6.5s ease-in-out infinite',
           }}
         />
       </svg>
@@ -165,197 +143,135 @@ export default function WrappingHelixAnimation() {
         }}
       />
 
-      {/* CSS Animations - REAL CURVED SVG PATH ANIMATIONS */}
+      {/* CSS Animations - CLEAN PROFESSIONAL TIGHT PATTERN */}
       <style jsx>{`
-        @keyframes curve1 {
+        @keyframes tight1 {
           0% { 
-            d: path("M -100,200 Q 200,150 500,200 T 1200,200");
-            opacity: 0.8;
+            d: path("M 200,400 Q 400,350 600,400 Q 800,450 1000,400");
+            opacity: 0.9;
           }
           25% { 
-            d: path("M -100,180 Q 200,130 500,180 T 1200,180");
+            d: path("M 200,395 Q 400,345 600,395 Q 800,445 1000,395");
             opacity: 1;
           }
           50% { 
-            d: path("M -100,220 Q 200,170 500,220 T 1200,220");
+            d: path("M 200,405 Q 400,355 600,405 Q 800,455 1000,405");
             opacity: 0.9;
           }
           75% { 
-            d: path("M -100,190 Q 200,140 500,190 T 1200,190");
+            d: path("M 200,398 Q 400,348 600,398 Q 800,448 1000,398");
             opacity: 1;
           }
           100% { 
-            d: path("M -100,200 Q 200,150 500,200 T 1200,200");
-            opacity: 0.8;
-          }
-        }
-        
-        @keyframes curve2 {
-          0% { 
-            d: path("M -150,350 Q 300,300 600,350 T 1250,350");
-            opacity: 0.7;
-          }
-          20% { 
-            d: path("M -150,320 Q 300,270 600,320 T 1250,320");
-            opacity: 1;
-          }
-          40% { 
-            d: path("M -150,380 Q 300,330 600,380 T 1250,380");
+            d: path("M 200,400 Q 400,350 600,400 Q 800,450 1000,400");
             opacity: 0.9;
           }
-          60% { 
-            d: path("M -150,340 Q 300,290 600,340 T 1250,340");
-            opacity: 1;
-          }
-          80% { 
-            d: path("M -150,360 Q 300,310 600,360 T 1250,360");
-            opacity: 0.8;
-          }
-          100% { 
-            d: path("M -150,350 Q 300,300 600,350 T 1250,350");
-            opacity: 0.7;
-          }
         }
         
-        @keyframes curve3 {
+        @keyframes tight2 {
           0% { 
-            d: path("M -200,500 Q 400,450 700,500 T 1300,500");
+            d: path("M 250,420 Q 450,370 650,420 Q 850,470 1050,420");
             opacity: 0.8;
           }
           30% { 
-            d: path("M -200,470 Q 400,420 700,470 T 1300,470");
+            d: path("M 250,415 Q 450,365 650,415 Q 850,465 1050,415");
             opacity: 1;
           }
           60% { 
-            d: path("M -200,530 Q 400,480 700,530 T 1300,530");
+            d: path("M 250,425 Q 450,375 650,425 Q 850,475 1050,425");
             opacity: 0.9;
           }
           100% { 
-            d: path("M -200,500 Q 400,450 700,500 T 1300,500");
+            d: path("M 250,420 Q 450,370 650,420 Q 850,470 1050,420");
             opacity: 0.8;
           }
         }
         
-        @keyframes curve4 {
+        @keyframes tight3 {
           0% { 
-            d: path("M -250,650 Q 500,600 800,650 T 1350,650");
+            d: path("M 300,440 Q 500,390 700,440 Q 900,490 1100,440");
             opacity: 0.9;
-          }
-          25% { 
-            d: path("M -250,620 Q 500,570 800,620 T 1350,620");
-            opacity: 1;
-          }
-          50% { 
-            d: path("M -250,680 Q 500,630 800,680 T 1350,680");
-            opacity: 0.8;
-          }
-          75% { 
-            d: path("M -250,640 Q 500,590 800,640 T 1350,640");
-            opacity: 1;
-          }
-          100% { 
-            d: path("M -250,650 Q 500,600 800,650 T 1350,650");
-            opacity: 0.9;
-          }
-        }
-        
-        @keyframes curve5 {
-          0% { 
-            d: path("M -300,300 Q 100,250 400,300 T 1000,300 Q 1100,350 1200,300");
-            opacity: 0.6;
-          }
-          33% { 
-            d: path("M -300,280 Q 100,230 400,280 T 1000,280 Q 1100,330 1200,280");
-            opacity: 1;
-          }
-          66% { 
-            d: path("M -300,320 Q 100,270 400,320 T 1000,320 Q 1100,370 1200,320");
-            opacity: 0.8;
-          }
-          100% { 
-            d: path("M -300,300 Q 100,250 400,300 T 1000,300 Q 1100,350 1200,300");
-            opacity: 0.6;
-          }
-        }
-        
-        @keyframes curve6 {
-          0% { 
-            d: path("M -350,550 Q 200,500 500,550 T 900,550 Q 1000,600 1100,550 T 1300,550");
-            opacity: 0.7;
-          }
-          25% { 
-            d: path("M -350,520 Q 200,470 500,520 T 900,520 Q 1000,570 1100,520 T 1300,520");
-            opacity: 1;
-          }
-          50% { 
-            d: path("M -350,580 Q 200,530 500,580 T 900,580 Q 1000,630 1100,580 T 1300,580");
-            opacity: 0.9;
-          }
-          75% { 
-            d: path("M -350,540 Q 200,490 500,540 T 900,540 Q 1000,590 1100,540 T 1300,540");
-            opacity: 1;
-          }
-          100% { 
-            d: path("M -350,550 Q 200,500 500,550 T 900,550 Q 1000,600 1100,550 T 1300,550");
-            opacity: 0.7;
-          }
-        }
-        
-        @keyframes curve7 {
-          0% { 
-            d: path("M -400,450 Q 0,400 300,450 Q 500,500 700,450 Q 900,400 1200,450");
-            opacity: 0.8;
           }
           20% { 
-            d: path("M -400,420 Q 0,370 300,420 Q 500,470 700,420 Q 900,370 1200,420");
+            d: path("M 300,435 Q 500,385 700,435 Q 900,485 1100,435");
             opacity: 1;
           }
           40% { 
-            d: path("M -400,480 Q 0,430 300,480 Q 500,530 700,480 Q 900,430 1200,480");
+            d: path("M 300,445 Q 500,395 700,445 Q 900,495 1100,445");
             opacity: 0.9;
           }
           60% { 
-            d: path("M -400,440 Q 0,390 300,440 Q 500,490 700,440 Q 900,390 1200,440");
+            d: path("M 300,438 Q 500,388 700,438 Q 900,488 1100,438");
             opacity: 1;
           }
           80% { 
-            d: path("M -400,460 Q 0,410 300,460 Q 500,510 700,460 Q 900,410 1200,460");
-            opacity: 0.8;
+            d: path("M 300,442 Q 500,392 700,442 Q 900,492 1100,442");
+            opacity: 0.9;
           }
           100% { 
-            d: path("M -400,450 Q 0,400 300,450 Q 500,500 700,450 Q 900,400 1200,450");
+            d: path("M 300,440 Q 500,390 700,440 Q 900,490 1100,440");
+            opacity: 0.9;
+          }
+        }
+        
+        @keyframes tight4 {
+          0% { 
+            d: path("M 350,410 Q 550,360 750,410 Q 950,460 1150,410");
+            opacity: 0.8;
+          }
+          25% { 
+            d: path("M 350,405 Q 550,355 750,405 Q 950,455 1150,405");
+            opacity: 1;
+          }
+          50% { 
+            d: path("M 350,415 Q 550,365 750,415 Q 950,465 1150,415");
+            opacity: 0.9;
+          }
+          75% { 
+            d: path("M 350,408 Q 550,358 750,408 Q 950,458 1150,408");
+            opacity: 1;
+          }
+          100% { 
+            d: path("M 350,410 Q 550,360 750,410 Q 950,460 1150,410");
             opacity: 0.8;
           }
         }
         
-        @keyframes curve8 {
+        @keyframes tight5 {
           0% { 
-            d: path("M -450,400 Q -200,350 100,400 Q 300,450 500,400 Q 700,350 1000,400 Q 1200,450 1400,400");
+            d: path("M 150,430 Q 350,380 550,430 Q 750,480 950,430");
             opacity: 0.7;
           }
-          16% { 
-            d: path("M -450,370 Q -200,320 100,370 Q 300,420 500,370 Q 700,320 1000,370 Q 1200,420 1400,370");
+          33% { 
+            d: path("M 150,425 Q 350,375 550,425 Q 750,475 950,425");
             opacity: 1;
           }
-          32% { 
-            d: path("M -450,430 Q -200,380 100,430 Q 300,480 500,430 Q 700,380 1000,430 Q 1200,480 1400,430");
+          66% { 
+            d: path("M 150,435 Q 350,385 550,435 Q 750,485 950,435");
             opacity: 0.9;
           }
-          48% { 
-            d: path("M -450,390 Q -200,340 100,390 Q 300,440 500,390 Q 700,340 1000,390 Q 1200,440 1400,390");
-            opacity: 1;
+          100% { 
+            d: path("M 150,430 Q 350,380 550,430 Q 750,480 950,430");
+            opacity: 0.7;
           }
-          64% { 
-            d: path("M -450,410 Q -200,360 100,410 Q 300,460 500,410 Q 700,360 1000,410 Q 1200,460 1400,410");
+        }
+        
+        @keyframes tight6 {
+          0% { 
+            d: path("M 275,415 Q 475,365 675,415 Q 875,465 1075,415");
             opacity: 0.8;
           }
-          80% { 
-            d: path("M -450,380 Q -200,330 100,380 Q 300,430 500,380 Q 700,330 1000,380 Q 1200,430 1400,380");
+          40% { 
+            d: path("M 275,410 Q 475,360 675,410 Q 875,460 1075,410");
             opacity: 1;
           }
+          80% { 
+            d: path("M 275,420 Q 475,370 675,420 Q 875,470 1075,420");
+            opacity: 0.9;
+          }
           100% { 
-            d: path("M -450,400 Q -200,350 100,400 Q 300,450 500,400 Q 700,350 1000,400 Q 1200,450 1400,400");
-            opacity: 0.7;
+            d: path("M 275,415 Q 475,365 675,415 Q 875,465 1075,415");
+            opacity: 0.8;
           }
         }
         
