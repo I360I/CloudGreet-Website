@@ -8,7 +8,7 @@ import {
 import Link from 'next/link'
 
 // Dynamic import to prevent SSR issues
-const ExactHelixBackground = React.lazy(() => import('./ExactHelixBackground'))
+const WorkingHelixBackground = React.lazy(() => import('./WorkingHelixBackground'))
 
 export default function Hero() {
 
@@ -24,11 +24,11 @@ export default function Hero() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(16,185,129,0.1)_0%,transparent_50%)]"></div>
       
 
-          {/* EXACT HELIX BACKGROUND - Following specification precisely */}
+          {/* WORKING HELIX BACKGROUND - Simple but functional */}
           <Suspense fallback={
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 animate-pulse" />
           }>
-            <ExactHelixBackground />
+            <WorkingHelixBackground />
           </Suspense>
       
       {/* Additional glow overlay for premium effect */}
