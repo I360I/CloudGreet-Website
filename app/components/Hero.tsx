@@ -11,6 +11,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 // Dynamic import to prevent SSR issues
 const HelixBackground = React.lazy(() => import('./HelixBackground'))
 const SimpleHelixBackground = React.lazy(() => import('./SimpleHelixBackground'))
+const CSSHelixAnimation = React.lazy(() => import('./CSSHelixAnimation'))
 const LightBackground = React.lazy(() => import('./LightBackground'))
 
 export default function Hero() {
@@ -68,9 +69,7 @@ export default function Hero() {
               opacity={0.6}
             />
           ) : (
-            <ErrorBoundary>
-              <SimpleHelixBackground />
-            </ErrorBoundary>
+            <CSSHelixAnimation />
           )}
         </Suspense>
       )}
