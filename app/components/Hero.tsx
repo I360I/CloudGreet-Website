@@ -6,7 +6,7 @@ import {
   Phone, ArrowRight, Shield, Calendar, Zap
 } from 'lucide-react'
 import Link from 'next/link'
-import SilkRibbon from './SilkRibbon'
+import HelixBackground from './HelixBackground'
 
 export default function Hero() {
   return (
@@ -46,16 +46,16 @@ export default function Hero() {
       {/* DEBUG: Test if Hero component is rendering */}
       <div className="absolute top-5 right-5 w-10 h-10 bg-yellow-500 z-50"></div>
       
-      {/* Full Screen Animated Background Lines - Behind Everything */}
-      <div className="absolute inset-0 opacity-100 pointer-events-none" style={{ zIndex: 999 }}>
-        <SilkRibbon 
-          className="absolute inset-0 w-full h-full"
-          speed={1.5}
-          amplitude={4.0}
-          colorA="#6AA7FF"
-          colorB="#A06BFF"
-        />
-      </div>
+      {/* 3D Helix/DNA Background Animation */}
+      <HelixBackground
+        className="absolute inset-0 w-full h-full"
+        width={100}
+        height={60}
+        speed={1.2}
+        colorA="#6AA7FF"
+        colorB="#A06BFF"
+        opacity={0.6}
+      />
       
       {/* Additional glow overlay for premium effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none z-1"></div>
