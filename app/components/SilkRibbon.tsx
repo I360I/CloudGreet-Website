@@ -21,9 +21,9 @@ export default function SilkRibbon({
   console.log('SilkRibbon component is rendering!');
   return (
     <div className={`absolute inset-0 overflow-visible pointer-events-none ${className}`} style={{ zIndex: 1 }}>
-      {/* Wavy lines that actually bend like waves */}
-      {Array.from({ length: 3 }).map((_, i) => {
-        const startTop = 60 + i * 5;
+      {/* Wavy lines that actually bend like strings */}
+      {Array.from({ length: 2 }).map((_, i) => {
+        const startTop = 65 + i * 8;
         
         return (
           <motion.div
@@ -40,19 +40,21 @@ export default function SilkRibbon({
               position: 'fixed'
             }}
             animate={{
-              x: [0, 100, 0],
-              scaleX: [1, 1.2, 1],
-              scaleY: [1, 1.8, 1],
-              skewX: [0, 5, -5, 0],
-              skewY: [0, 2, -2, 0],
-              opacity: [0.6, 0.9, 0.6]
+              clipPath: [
+                'polygon(0% 0%, 25% 0%, 50% 20%, 75% 0%, 100% 0%, 100% 100%, 75% 100%, 50% 80%, 25% 100%, 0% 100%)',
+                'polygon(0% 0%, 25% 0%, 50% -15%, 75% 0%, 100% 0%, 100% 100%, 75% 100%, 50% 115%, 25% 100%, 0% 100%)',
+                'polygon(0% 0%, 25% 0%, 50% 10%, 75% 0%, 100% 0%, 100% 100%, 75% 100%, 50% 90%, 25% 100%, 0% 100%)',
+                'polygon(0% 0%, 25% 0%, 50% -8%, 75% 0%, 100% 0%, 100% 100%, 75% 100%, 50% 108%, 25% 100%, 0% 100%)',
+                'polygon(0% 0%, 25% 0%, 50% 20%, 75% 0%, 100% 0%, 100% 100%, 75% 100%, 50% 80%, 25% 100%, 0% 100%)'
+              ],
+              opacity: [0.6, 0.9, 0.7, 0.8, 0.6]
             }}
             transition={{
-              duration: 8 + i * 2,
+              duration: 6 + i * 2,
               repeat: Infinity,
               repeatType: 'loop',
               ease: 'easeInOut',
-              delay: i * 1,
+              delay: i * 1.5,
             }}
           />
         );

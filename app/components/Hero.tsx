@@ -83,7 +83,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.8 }}
-          className="flex justify-center items-center mb-12"
+          className="flex justify-center items-center mb-12 relative z-50"
         >
           <Link
             href="/start"
