@@ -2,7 +2,7 @@
   "version": 2,
   "name": "cloudgreet-premium",
   "alias": ["cloudgreet.com", "www.cloudgreet.com"],
-  "regions": ["iad1", "sfo1"],
+  "regions": ["iad1"],
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
