@@ -1,0 +1,29 @@
+ID,Severity,Area,URL/Route,File:Line,Evidence,Recommended Fix,Est. Effort,Owner
+CG-001,Blocker,Data Integrity,/api/admin/analytics,app/api/admin/analytics/route.ts:6-47,"Mock analytics data returned instead of real data","Replace mock data with real database queries using supabaseAdmin",S,Backend Team
+CG-002,Blocker,Data Integrity,/api/admin/system-health,app/api/admin/system-health/route.ts:6-59,"Mock system health data returned instead of real metrics","Implement real system health checks using os module and database queries",S,Backend Team
+CG-003,Blocker,Configuration,All Routes,env.local:1-91,"Missing critical environment variables (STRIPE_SECRET_KEY, SMTP credentials)","Configure all required environment variables in production",S,DevOps Team
+CG-004,High,Security,All Routes,next.config.js:51-53,"CSP policy allows unsafe-inline and unsafe-eval","Implement strict CSP policy without unsafe directives",M,Security Team
+CG-005,High,Security,All API Routes,vercel.json:30-58,"Missing rate limiting on API endpoints","Implement rate limiting using middleware or Vercel functions",M,Backend Team
+CG-006,High,Data Validation,/api/auth/register,app/api/auth/register/route.ts:1-293,"Input validation present but error handling incomplete","Add comprehensive error handling and validation for all edge cases",M,Backend Team
+CG-007,High,Monitoring,All Routes,lib/monitoring.ts:1-50,"Logger implementation exists but not used consistently","Implement consistent logging across all API routes and add error tracking",M,Backend Team
+CG-008,High,Accessibility,Landing Page,app/landing/page.tsx:1-689,"Missing ARIA labels and semantic HTML structure","Add proper ARIA labels, semantic HTML, and keyboard navigation support",M,Frontend Team
+CG-009,Medium,Performance,Bundle Size,package.json:17-40,"Large dependencies (Three.js, Framer Motion) not code-split","Implement code splitting for heavy dependencies and lazy loading",L,Frontend Team
+CG-010,Medium,SEO,Landing Page,app/landing/page.tsx:1-689,"Missing meta tags and structured data","Add comprehensive meta tags, Open Graph, and structured data",L,Frontend Team
+CG-011,Medium,Error Handling,/api/contact/submit,app/api/contact/submit/route.ts:15-60,"Basic error handling but no retry mechanism","Implement retry logic and better error messages",L,Backend Team
+CG-012,Medium,Database,/api/dashboard/data,app/api/dashboard/data/route.ts:51-170,"Database queries lack proper error handling","Add comprehensive error handling and connection pooling",L,Backend Team
+CG-013,Medium,Security,/api/stripe/create-customer,app/api/stripe/create-customer/route.ts:1-120,"Stripe integration lacks webhook signature verification","Implement proper webhook signature verification and idempotency",L,Backend Team
+CG-014,Medium,Performance,Landing Page,app/landing/page.tsx:1-689,"No image optimization for hero graphics","Implement next/image optimization and WebP/AVIF formats",L,Frontend Team
+CG-015,Medium,Accessibility,Dashboard,app/dashboard/page.tsx:1-598,"Complex dashboard lacks proper focus management","Implement proper focus management and screen reader support",L,Frontend Team
+CG-016,Low,Code Quality,All Files,Multiple locations,"Inconsistent error handling patterns","Standardize error handling patterns across all files",S,Backend Team
+CG-017,Low,Documentation,All Files,Multiple locations,"Missing API documentation","Generate OpenAPI documentation for all endpoints",S,Backend Team
+CG-018,Low,Testing,All Files,Multiple locations,"No test coverage for critical paths","Implement comprehensive test suite with >80% coverage",M,QA Team
+CG-019,Low,Performance,All Routes,Multiple locations,"No caching strategy implemented","Implement proper caching headers and CDN strategy",L,DevOps Team
+CG-020,Low,Monitoring,All Routes,Multiple locations,"No performance monitoring","Implement performance monitoring and alerting",L,DevOps Team
+CG-021,Low,Security,All Routes,Multiple locations,"No security headers for static assets","Add security headers for all static assets",S,Security Team
+CG-022,Low,Accessibility,All Pages,Multiple locations,"No reduced motion support","Implement prefers-reduced-motion support for animations",S,Frontend Team
+CG-023,Low,SEO,All Pages,Multiple locations,"No sitemap.xml or robots.txt","Generate sitemap.xml and robots.txt files",S,Frontend Team
+CG-024,Low,Performance,All Pages,Multiple locations,"No service worker for offline support","Implement service worker for offline functionality",L,Frontend Team
+CG-025,Low,Monitoring,All Routes,Multiple locations,"No health check endpoints for dependencies","Implement health checks for all external dependencies",L,Backend Team
+CG-026,Low,Security,All Routes,Multiple locations,"No CSRF protection for forms","Implement CSRF tokens for all forms",L,Backend Team
+CG-027,Low,Performance,All Pages,Multiple locations,"No preloading of critical resources","Implement resource preloading for critical assets",L,Frontend Team
+CG-028,Low,Accessibility,All Pages,Multiple locations,"No skip-to-content link","Add skip-to-content link for keyboard navigation",S,Frontend Team
