@@ -1,0 +1,93 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
+
+export async function GET(request: NextRequest) {
+  try {
+    const userId = request.headers.get('x-user-id')
+    const businessId = request.headers.get('x-business-id')
+    
+    if (!userId || !businessId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Get query parameters for filtering
+    const { searchParams } = new URL(request.url)
+    const status = searchParams.get('status')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = parseInt(searchParams.get('offset') || '0')
+
+    // Build query
+    let query = supabaseAdmin
+      .from('call_logs')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    // Apply status filter if provided
+    if (status && status !== 'all') {
+      query = query.eq('status', status)
+    }
+
+    const { data: calls, error: callsError } = await query
+
+    if (callsError) {
+      logger.error('Error fetching call history', callsError, { businessId, userId })
+      return NextResponse.json({ error: 'Failed to fetch call history' }, { status: 500 })
+    }
+
+    // Get total count for pagination
+    let countQuery = supabaseAdmin
+      .from('call_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('business_id', businessId)
+
+    if (status && status !== 'all') {
+      countQuery = countQuery.eq('status', status)
+    }
+
+    const { count, error: countError } = await countQuery
+
+    if (countError) {
+      logger.error('Error fetching call count', countError, { businessId })
+    }
+
+    // Format the response
+    const formattedCalls = calls?.map(call => ({
+      id: call.id,
+      from_number: call.from_number,
+      to_number: call.to_number,
+      customer_name: call.customer_name,
+      status: call.status,
+      duration: call.duration,
+      created_at: call.created_at,
+      timestamp: call.created_at, // For backward compatibility
+      transcript: call.transcript,
+      recording_url: call.recording_url,
+      service: call.service,
+      revenue: call.revenue,
+      estimated_value: call.estimated_value,
+      satisfaction_rating: call.satisfaction_rating,
+      notes: call.notes
+    })) || []
+
+    return NextResponse.json({
+      success: true,
+      calls: formattedCalls,
+      pagination: {
+        total: count || 0,
+        limit,
+        offset,
+        hasMore: (count || 0) > offset + limit
+      }
+    })
+
+  } catch (error) {
+    logger.error('Call history API error', error as Error, {
+      userId: request.headers.get('x-user-id'),
+      businessId: request.headers.get('x-business-id')
+    })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

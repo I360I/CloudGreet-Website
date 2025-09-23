@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /landing
+Allow: /pricing
+Allow: /login
+Allow: /register
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /api/
+Disallow: /_next/
+Disallow: /static/
+
+Sitemap: https://cloudgreet.ai/sitemap.xml
