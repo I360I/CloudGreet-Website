@@ -77,13 +77,13 @@ export async function GET(request: NextRequest) {
               .order('created_at', { ascending: false })
     
     if (callsError) {
-      logger.error('Failed to fetch calls data', callsError, { businessId, userId })
+      logger.error('Failed to fetch calls data', callsError, { businessId })
     }
     if (appointmentsError) {
-      logger.error('Failed to fetch appointments data', appointmentsError, { businessId, userId })
+      logger.error('Failed to fetch appointments data', appointmentsError, { businessId })
     }
     if (smsError) {
-      logger.error('Failed to fetch SMS data', smsError, { businessId, userId })
+      logger.error('Failed to fetch SMS data', smsError, { businessId })
     }
     
     // Calculate comprehensive metrics
