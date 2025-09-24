@@ -52,10 +52,10 @@ export default function BillingPage() {
         const { url } = await response.json()
         window.open(url, '_blank')
       } else {
-        console.error('Failed to create portal session')
+        // Failed to create portal session
       }
     } catch (error) {
-      console.error('Error opening billing portal:', error)
+      // Error opening billing portal
     } finally {
       setIsLoading(false)
     }

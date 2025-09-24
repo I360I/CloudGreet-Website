@@ -180,7 +180,7 @@ export default function HelixBackground() {
     >
       <Canvas
         onError={(error) => {
-          console.error('Canvas error:', error);
+          // Canvas error occurred, falling back to gradient
           setHasError(true);
         }}
         gl={{

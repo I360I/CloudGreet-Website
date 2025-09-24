@@ -108,7 +108,7 @@ export default function HelixBackground({
           gl={{ antialias: false, alpha: true }}
           dpr={[1, 2]}
           onError={(error) => {
-            console.warn('Canvas error:', error)
+            // Canvas error occurred, falling back to gradient
             handleError()
           }}
         >

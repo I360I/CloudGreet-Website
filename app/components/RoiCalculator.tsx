@@ -52,7 +52,7 @@ export default function RoiCalculator({ className = '' }: RoiCalculatorProps) {
         setInputs(validated)
       } catch (error) {
         // Use defaults if URL params are invalid
-        console.warn('Invalid URL params, using defaults:', error)
+        // URL params invalid, using defaults
       }
     }
   }, [])
@@ -70,7 +70,7 @@ export default function RoiCalculator({ className = '' }: RoiCalculatorProps) {
         const newUrl = `${window.location.pathname}?${params.toString()}`
         window.history.replaceState({}, '', newUrl)
       } catch (error) {
-        console.warn('Failed to update URL:', error)
+        // Failed to update URL, continuing silently
       }
     }
   }, [inputs])

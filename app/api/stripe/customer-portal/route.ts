@@ -9,65 +9,65 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
-    const { businessId } = await request.json()
+    const body = await request.json()
+    const { businessId } = body
 
     if (!businessId) {
-      return NextResponse.json({ error: 'Business ID is required' }, { status: 400 })
+      return NextResponse.json({
+        success: false,
+        message: 'Business ID is required'
+      }, { status: 400 })
     }
 
-    // Get business and customer info from database
+    // Get business Stripe customer ID
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
-      .select('stripe_customer_id, user_id')
+      .select('stripe_customer_id, business_name, email')
       .eq('id', businessId)
       .single()
 
     if (businessError || !business) {
-      logger.error('Business not found for portal', businessError, { businessId })
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+      logger.error('Business not found for customer portal', businessError, {
+        businessId
+      })
+      return NextResponse.json({
+        success: false,
+        message: 'Business not found'
+      }, { status: 404 })
     }
 
     if (!business.stripe_customer_id) {
-      return NextResponse.json({ error: 'No Stripe customer found' }, { status: 400 })
+      return NextResponse.json({
+        success: false,
+        message: 'No Stripe customer found. Please contact support.'
+      }, { status: 400 })
     }
 
-    // Create Stripe Customer Portal session
+    // Create Stripe customer portal session
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: business.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?tab=billing`,
+      return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/billing`,
     })
 
-    // Log the portal access
-    await supabaseAdmin
-      .from('audit_logs')
-      .insert({
-        action: 'customer_portal_accessed',
-        details: {
-          business_id: businessId,
-          user_id: business.user_id,
-          stripe_customer_id: business.stripe_customer_id,
-          portal_session_id: portalSession.id
-        },
-        user_id: business.user_id,
-        business_id: businessId,
-        created_at: new Date().toISOString()
-      })
-
-    logger.info('Stripe Customer Portal session created', {
+    logger.info('Customer portal session created', {
       businessId,
-      userId: business.user_id,
-      portalSessionId: portalSession.id
+      customerId: business.stripe_customer_id,
+      sessionId: portalSession.id
     })
 
-    return NextResponse.json({ 
-      url: portalSession.url 
+    return NextResponse.json({
+      success: true,
+      url: portalSession.url
     })
 
   } catch (error) {
-    logger.error('Stripe Customer Portal error', error as Error, { 
-      endpoint: 'customer-portal',
-      businessId: (await request.json().catch(() => ({}))).businessId
+    logger.error('Customer portal API error', error as Error, {
+      endpoint: 'stripe/customer-portal'
     })
-    return NextResponse.json({ error: 'Failed to create portal session' }, { status: 500 })
+    
+    return NextResponse.json({
+      success: false,
+      message: 'Failed to create customer portal session'
+    }, { status: 500 })
   }
 }

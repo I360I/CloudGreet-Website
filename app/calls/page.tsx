@@ -50,6 +50,7 @@ export default function CallsPage() {
         }
       }
     } catch (error) {
+      // Error fetching calls, will retry
     } finally {
       setIsLoading(false)
     }

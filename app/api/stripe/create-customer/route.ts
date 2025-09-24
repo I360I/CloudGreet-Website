@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import Stripe from 'stripe'
 
@@ -8,110 +8,73 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 })
 
 export async function POST(request: NextRequest) {
-  const startTime = Date.now()
-  const requestId = Math.random().toString(36).substring(7)
-  
   try {
-    const userId = request.headers.get('x-user-id')
-    const businessId = request.headers.get('x-business-id')
-    
-    if (!userId || !businessId) {
+    const body = await request.json()
+    const { businessId, email, businessName } = body
+
+    if (!businessId || !email || !businessName) {
       return NextResponse.json({
         success: false,
-        message: 'Authentication required'
-      }, { status: 401 })
+        message: 'Business ID, email, and business name are required'
+      }, { status: 400 })
     }
 
-    const body = await request.json()
-    const { email, name, phone, address } = body
+    // Check if customer already exists
+    const { data: existingBusiness } = await supabaseAdmin
+      .from('businesses')
+      .select('stripe_customer_id')
+      .eq('id', businessId)
+      .single()
+
+    if (existingBusiness?.stripe_customer_id) {
+      return NextResponse.json({
+        success: true,
+        customerId: existingBusiness.stripe_customer_id,
+        message: 'Customer already exists'
+      })
+    }
 
     // Create Stripe customer
     const customer = await stripe.customers.create({
       email,
-      name,
-      phone,
-      address: address ? {
-        line1: address,
-        country: 'US'
-      } : undefined,
+      name: businessName,
       metadata: {
-        business_id: businessId,
-        user_id: userId
+        business_id: businessId
       }
     })
 
-    // Store Stripe customer ID in database
-    const { data: business, error: businessError } = await supabase
+    // Update business with Stripe customer ID
+    const { error: updateError } = await supabaseAdmin
       .from('businesses')
       .update({
         stripe_customer_id: customer.id,
         updated_at: new Date().toISOString()
       })
       .eq('id', businessId)
-      .select()
-      .single()
 
-    if (businessError) {
-      logger.error("Error", businessError, {
-        requestId,
+    if (updateError) {
+      logger.error('Failed to update business with Stripe customer ID', updateError, {
         businessId,
-        userId,
-        action: 'update_business_stripe_id'
+        customerId: customer.id
       })
-      return NextResponse.json({
-        success: false,
-        message: 'Failed to update business with Stripe customer ID'
-      }, { status: 500 })
     }
 
-    // Log successful customer creation
-    await supabase
-      .from('audit_logs')
-      .insert({
-        action: 'stripe_customer_created',
-        details: {
-          business_id: businessId,
-          user_id: userId,
-          stripe_customer_id: customer.id,
-          email: customer.email
-        },
-        user_id: userId,
-        business_id: businessId,
-        created_at: new Date().toISOString()
-      })
-
-    await logger.info('Stripe customer created successfully', {
-      requestId,
+    logger.info('Stripe customer created', {
       businessId,
-      userId,
-      stripeCustomerId: customer.id,
-      responseTime: Date.now() - startTime
+      customerId: customer.id,
+      email
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Stripe customer created successfully',
-      data: {
-        customer: {
-          id: customer.id,
-          email: customer.email,
-          name: customer.name
-        }
-      },
-      meta: {
-        requestId,
-        responseTime: Date.now() - startTime,
-        timestamp: new Date().toISOString()
-      }
+      customerId: customer.id
     })
 
   } catch (error) {
-    logger.error("Error", error as Error, {
-      requestId,
-      endpoint: 'create_stripe_customer',
-      responseTime: Date.now() - startTime
+    logger.error('Create customer API error', error as Error, {
+      endpoint: 'stripe/create-customer'
     })
-
+    
     return NextResponse.json({
       success: false,
       message: 'Failed to create Stripe customer'
