@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     let businessData: any
     
     try {
-      const { data: businesses } = await supabaseAdmin()
+      const { data: businesses } = await supabaseAdmin
         .from('businesses')
         .select('id, business_name, phone_number, onboarding_completed')
         .limit(1)
