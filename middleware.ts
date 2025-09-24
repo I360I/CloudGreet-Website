@@ -35,6 +35,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/health') ||
+    pathname.startsWith('/api/dashboard') ||
     pathname.startsWith('/api/telynyx/voice-webhook') ||
     pathname.startsWith('/api/telynyx/sms-webhook') ||
     pathname.startsWith('/api/stripe/webhook') ||
