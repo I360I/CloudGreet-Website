@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     if (smsError) {
       logger.error('Error storing SMS log', smsError, {
-        smsId: MessageId,
+        smsId: MessageSid,
         from: From,
         to: To
       })
