@@ -495,7 +495,11 @@ export default function Dashboard() {
           {/* Right Column */}
           <div className="space-y-8">
             {/* AI Insights Panel */}
-            <AIInsightsPanel businessId={dashboardData.businessName} />
+            {/* AI Insights Panel - Component to be implemented */}
+            <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 rounded-2xl border border-purple-500/30 p-6">
+              <h3 className="text-xl font-semibold text-white mb-4">AI Insights</h3>
+              <p className="text-gray-300">AI insights panel coming soon...</p>
+            </div>
             
             {/* Upcoming Appointments */}
             <motion.div
