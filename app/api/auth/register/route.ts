@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { registerSchema } from '@/lib/validation'
@@ -12,6 +12,14 @@ export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7)
   
   try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({
+        success: false,
+        message: 'Database not configured. Please contact support.'
+      }, { status: 503 })
+    }
+
     // Rate limiting
     const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
     

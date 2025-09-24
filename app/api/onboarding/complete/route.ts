@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { telynyx } from '@/lib/telynyx'
 import { z } from 'zod'
@@ -30,6 +30,14 @@ export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7)
   
   try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({
+        success: false,
+        message: 'Database not configured. Please contact support.'
+      }, { status: 503 })
+    }
+
     // Parse and validate request
     const body = await request.json()
     const validatedData = completeOnboardingSchema.parse(body)

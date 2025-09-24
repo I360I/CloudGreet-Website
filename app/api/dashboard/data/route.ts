@@ -1,9 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          businessName: 'Demo Business',
+          businessType: 'Service Business',
+          onboardingCompleted: true,
+          stats: {
+            totalCalls: 0,
+            answeredCalls: 0,
+            missedCalls: 0,
+            totalAppointments: 0,
+            completedAppointments: 0,
+            estimatedRevenue: 0
+          },
+          recentCalls: [],
+          upcomingAppointments: [],
+          message: 'Database not configured - using demo data'
+        }
+      })
+    }
+
     // Get user ID from middleware
     const userId = request.headers.get('x-user-id')
     const businessId = request.headers.get('x-business-id')

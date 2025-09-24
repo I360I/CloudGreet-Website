@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { logger } from '@/lib/monitoring'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 
 const contactSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -18,6 +18,21 @@ export async function POST(request: NextRequest) {
     
     // Validate input
     const validatedData = contactSchema.parse(body)
+    
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
+      // Log the contact form submission without database
+      console.log('Contact form submission (no DB):', {
+        email: validatedData.email,
+        subject: validatedData.subject,
+        business: validatedData.business
+      })
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Message received successfully (demo mode)'
+      })
+    }
     
     // Store contact form submission in database
     const { data: contactRecord, error: contactError } = await supabaseAdmin

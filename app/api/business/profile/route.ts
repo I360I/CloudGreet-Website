@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { z } from 'zod'
 
@@ -20,6 +20,22 @@ const businessProfileSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          businessName: 'Demo Business',
+          businessType: 'Service Business',
+          phone: '+1-800-DEMO',
+          email: 'demo@business.com',
+          website: 'https://demo.business.com',
+          address: '123 Demo Street, Demo City, DC 12345',
+          message: 'Database not configured - using demo data'
+        }
+      })
+    }
+
     const userId = request.headers.get('x-user-id')
     const businessId = request.headers.get('x-business-id')
     
