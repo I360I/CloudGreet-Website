@@ -504,8 +504,8 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
                     onClick={async () => {
                       // Redirect to Google OAuth
                       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-                        `client_id=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}&` +
-                        `redirect_uri=${encodeURIComponent(process.env.NEXT_PUBLIC_BASE_URL + '/api/calendar/callback')}&` +
+                        `client_id=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'google_client_id'}&` +
+                        `redirect_uri=${encodeURIComponent((process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com') + '/api/calendar/callback')}&` +
                         `scope=https://www.googleapis.com/auth/calendar&` +
                         `response_type=code&` +
                         `access_type=offline&` +

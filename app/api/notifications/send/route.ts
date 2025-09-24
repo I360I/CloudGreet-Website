@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 
-// Your personal phone number for notifications
-const PERSONAL_PHONE = '+17372960092'
-const BUSINESS_PHONE = '+17372448305'
+// Get phone numbers from environment variables
+const PERSONAL_PHONE = process.env.NOTIFICATION_PHONE || '+17372960092'
+const BUSINESS_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE || '+1-800-CLOUDGREET'
 
 export async function POST(request: NextRequest) {
   try {

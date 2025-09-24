@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('Registration request:', body)
+    logger.info('Registration request received', { email: body.email })
     
     const { 
       business_name,
@@ -77,7 +78,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (businessError) {
-      console.error('Business creation error:', businessError)
+      logger.error('Business creation error', businessError, {
+        email: email,
+        businessName: business_name
+      })
       return NextResponse.json(
         { error: `Business creation failed: ${businessError.message}` },
         { status: 500 }

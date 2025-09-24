@@ -1,48 +1,87 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 
 export async function GET(request: NextRequest) {
   try {
-    // Mock analytics data - in production, fetch from database
+    // Fetch real analytics data from database
+    const { data: calls } = await supabaseAdmin
+      .from('call_logs')
+      .select('*')
+
+    const { data: appointments } = await supabaseAdmin
+      .from('appointments')
+      .select('*')
+
+    const { data: businesses } = await supabaseAdmin
+      .from('businesses')
+      .select('*')
+
+    const { data: smsLogs } = await supabaseAdmin
+      .from('sms_logs')
+      .select('*')
+
+    // Calculate real analytics
+    const totalCalls = calls?.length || 0
+    const answeredCalls = calls?.filter(call => call.status === 'completed').length || 0
+    const missedCalls = calls?.filter(call => call.status === 'no_answer').length || 0
+    const conversionRate = totalCalls > 0 ? (answeredCalls / totalCalls) * 100 : 0
+    const avgDuration = calls?.reduce((sum, call) => sum + (call.duration || 0), 0) / totalCalls || 0
+
+    const totalAppointments = appointments?.length || 0
+    const completedAppointments = appointments?.filter(apt => apt.status === 'completed').length || 0
+    const cancelledAppointments = appointments?.filter(apt => apt.status === 'cancelled').length || 0
+    const noShowAppointments = appointments?.filter(apt => apt.status === 'no_show').length || 0
+    const completionRate = totalAppointments > 0 ? (completedAppointments / totalAppointments) * 100 : 0
+
+    const totalClients = businesses?.length || 0
+    const activeClients = businesses?.filter(biz => biz.onboarding_completed).length || 0
+    const totalRevenue = appointments?.reduce((sum, apt) => sum + (apt.estimated_value || 0), 0) || 0
+    const avgClientValue = totalClients > 0 ? totalRevenue / totalClients : 0
+
+    const totalSMS = smsLogs?.length || 0
+    const deliveredSMS = smsLogs?.filter(sms => sms.status === 'delivered').length || 0
+    const repliedSMS = smsLogs?.filter(sms => sms.status === 'replied').length || 0
+    const responseRate = totalSMS > 0 ? (repliedSMS / totalSMS) * 100 : 0
+
     const analytics = {
       revenue: {
-        daily: [1200, 1350, 1100, 1450, 1600, 1800, 1650],
-        weekly: [8500, 9200, 8800, 9500, 10200, 10800, 11200],
-        monthly: [45000, 48000, 46500, 52000, 55000, 58000, 62000]
+        total: totalRevenue,
+        monthly: totalRevenue, // Simplified for now
+        average: avgClientValue
       },
       calls: {
-        total: 2340,
-        answered: 2106,
-        missed: 234,
-        conversionRate: 78.5,
-        averageDuration: 4.2,
-        dailyBreakdown: [45, 52, 38, 61, 55, 67, 49]
+        total: totalCalls,
+        answered: answeredCalls,
+        missed: missedCalls,
+        conversionRate: Math.round(conversionRate * 10) / 10,
+        averageDuration: Math.round(avgDuration * 10) / 10
       },
       appointments: {
-        total: 1890,
-        completed: 1720,
-        cancelled: 95,
-        noShow: 75,
-        completionRate: 91.0,
-        dailyBreakdown: [28, 32, 25, 38, 35, 42, 31]
+        total: totalAppointments,
+        completed: completedAppointments,
+        cancelled: cancelledAppointments,
+        noShow: noShowAppointments,
+        completionRate: Math.round(completionRate * 10) / 10
       },
       clients: {
-        new: 45,
-        active: 127,
-        churned: 8,
-        retentionRate: 94.1,
-        averageValue: 1850
+        total: totalClients,
+        active: activeClients,
+        churned: totalClients - activeClients,
+        retentionRate: totalClients > 0 ? Math.round((activeClients / totalClients) * 100 * 10) / 10 : 0,
+        averageValue: Math.round(avgClientValue)
       },
       sms: {
-        sent: 3240,
-        delivered: 3198,
-        replied: 456,
-        responseRate: 14.3
+        sent: totalSMS,
+        delivered: deliveredSMS,
+        replied: repliedSMS,
+        responseRate: Math.round(responseRate * 10) / 10
       },
       performance: {
-        systemUptime: 99.8,
-        responseTime: 1.2,
-        errorRate: 0.1,
-        satisfaction: 4.7
+        systemUptime: 99.8, // This would come from actual monitoring
+        responseTime: 1.2, // This would come from actual monitoring
+        errorRate: 0.1, // This would come from actual monitoring
+        satisfaction: 4.7 // This would come from actual feedback
       }
     }
 
@@ -52,6 +91,10 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
+    logger.error('Admin analytics API error', error as Error, { 
+      endpoint: 'admin/analytics',
+      method: 'GET'
+    })
     return NextResponse.json({ 
       success: false, 
       message: 'Failed to fetch analytics data' 

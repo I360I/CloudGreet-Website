@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
 import { telynyx } from '../../../../lib/telynyx'
+import { logger } from '../../../../lib/monitoring'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({
@@ -36,7 +37,11 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (smsError) {
-      console.error('Error storing SMS log:', smsError)
+      logger.error('Error storing SMS log', smsError, {
+        smsId: MessageId,
+        from: From,
+        to: To
+      })
     }
 
     // Only process inbound SMS
@@ -73,12 +78,23 @@ export async function POST(request: NextRequest) {
         })
 
         if (forwardResponse.ok) {
-          console.log('SMS forwarded successfully to personal phone')
+          logger.info('SMS forwarded successfully to personal phone', {
+            businessId: business.id,
+            from: From,
+            to: business.notification_phone
+          })
         } else {
-          console.error('Failed to forward SMS:', forwardResponse.status)
+          logger.error('Failed to forward SMS', new Error(`Status: ${forwardResponse.status}`), {
+            businessId: business.id,
+            status: forwardResponse.status
+          })
         }
       } catch (error) {
-        console.error('Error forwarding SMS:', error)
+        logger.error('Error forwarding SMS', error as Error, {
+          businessId: business.id,
+          from: From,
+          to: business.notification_phone
+        })
       }
     }
 

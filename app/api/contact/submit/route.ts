@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { logger } from '@/lib/monitoring'
+import { supabaseAdmin } from '@/lib/supabase'
 
 const contactSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -18,21 +19,40 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData = contactSchema.parse(body)
     
+    // Store contact form submission in database
+    const { data: contactRecord, error: contactError } = await supabaseAdmin
+      .from('contact_submissions')
+      .insert({
+        first_name: validatedData.firstName,
+        last_name: validatedData.lastName,
+        email: validatedData.email,
+        business: validatedData.business || null,
+        subject: validatedData.subject,
+        message: validatedData.message,
+        status: 'new',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+
+    if (contactError) {
+      logger.error('Failed to store contact submission', contactError, {
+        email: validatedData.email,
+        subject: validatedData.subject
+      })
+    }
+
     // Log the contact form submission
     logger.info('Contact form submission received', {
       email: validatedData.email,
       subject: validatedData.subject,
-      business: validatedData.business
+      business: validatedData.business,
+      contactId: contactRecord?.id
     })
-    
-    // In a real implementation, you would:
-    // 1. Send email notification to support team
-    // 2. Store in database for tracking
-    // 3. Send auto-reply to customer
-    // 4. Integrate with support ticket system
-    
-    // For now, we'll just log and return success
-    // TODO: Implement actual email sending and database storage
+
+    // TODO: Implement actual email sending to support team
+    // TODO: Send auto-reply to customer
+    // TODO: Integrate with support ticket system
     
     return NextResponse.json({
       success: true,
