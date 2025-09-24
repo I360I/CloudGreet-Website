@@ -45,7 +45,7 @@ export default function LoginPage() {
         throw new Error(result.error || 'Login failed')
       }
     } catch (error) {
-      console.error('Login error:', error)
+      // Login error occurred
       if (error instanceof Error) {
         setError(error.message)
       } else {

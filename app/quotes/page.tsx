@@ -64,7 +64,7 @@ export default function QuotesPage() {
         setQuotes(data.quotes || [])
       }
     } catch (error) {
-      console.error('Error loading quotes:', error)
+      // Error loading quotes
     } finally {
       setIsLoading(false)
     }
@@ -89,7 +89,7 @@ export default function QuotesPage() {
         setSelectedQuote(null)
       }
     } catch (error) {
-      console.error('Error updating quote status:', error)
+      // Error updating quote status
     }
   }
 
