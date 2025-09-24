@@ -4,30 +4,24 @@ import { logger } from '@/lib/monitoring'
 
 export async function GET(request: NextRequest) {
   try {
-    // Since we bypass middleware for dashboard, get the first business for now
-    // In production, this should get the business from the authenticated user
-    let businessId: string
-    let businessData: any
+    // Get user ID from middleware
+    const userId = request.headers.get('x-user-id')
+    const businessId = request.headers.get('x-business-id')
     
-    try {
-      const { data: businesses } = await supabaseAdmin
-        .from('businesses')
-        .select('id, business_name, phone_number, onboarding_completed')
-        .limit(1)
-      
-      if (!businesses || businesses.length === 0) {
-        return NextResponse.json({ error: 'No business found' }, { status: 404 })
-      }
-      
-      businessId = businesses[0].id
-      businessData = businesses[0]
-    } catch (error) {
-      console.error('Error fetching business:', error)
-      return NextResponse.json({ error: 'Failed to fetch business data' }, { status: 500 })
+    if (!userId || !businessId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    // Use the business data we already fetched
-    const business = businessData
+    // Check if onboarding is completed and get business status
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('onboarding_completed, phone_number, business_name, ai_tone')
+      .eq('id', businessId)
+      .single()
+    
+    if (businessError || !business) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+    }
     
     // Get timeframe from query params
     const { searchParams } = new URL(request.url)
@@ -77,13 +71,13 @@ export async function GET(request: NextRequest) {
               .order('created_at', { ascending: false })
     
     if (callsError) {
-      logger.error('Failed to fetch calls data', callsError, { businessId })
+      logger.error('Failed to fetch calls data', callsError, { businessId, userId })
     }
     if (appointmentsError) {
-      logger.error('Failed to fetch appointments data', appointmentsError, { businessId })
+      logger.error('Failed to fetch appointments data', appointmentsError, { businessId, userId })
     }
     if (smsError) {
-      logger.error('Failed to fetch SMS data', smsError, { businessId })
+      logger.error('Failed to fetch SMS data', smsError, { businessId, userId })
     }
     
     // Calculate comprehensive metrics
