@@ -24,8 +24,8 @@ export default function Hero() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(16,185,129,0.1)_0%,transparent_50%)]"></div>
       
 
-          {/* WAVE BACKGROUND - Temporarily disabled for debugging */}
-          {/* <WaveBackground intensity={1.0} /> */}
+          {/* WAVE BACKGROUND - Original canvas-based purple waves with magnetic field effects */}
+          <WaveBackground intensity={1.0} />
       
       {/* Additional glow overlay for premium effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none z-1"></div>
