@@ -191,7 +191,7 @@ export default function IntelligentCaching({ children }: IntelligentCachingProps
       // Add to pending requests
       setPendingRequests(prev => new Map(prev).set(cacheKey, fetchPromise))
     })
-  }, [optimizeCache, updateCacheEntry])
+  }, [])
 
   // Cache optimization
   const optimizeCache = useCallback((cache: Map<string, CacheEntry>): Map<string, CacheEntry> => {

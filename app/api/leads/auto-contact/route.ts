@@ -380,22 +380,22 @@ async function scheduleAutomatedCall(leadId: string, contactInfo: any) {
 
 // Helper functions
 function generateEmailContent(contactInfo: any) {
-  const subject = `Never Miss Another Call - AI Receptionist for ${contactInfo.business_name}`
+  // Enhanced subject lines based on business type and urgency
+  const businessType = contactInfo.business_type?.toLowerCase() || 'service'
+  let subject = ''
   
-  const personalized_message = `Hi ${contactInfo.name},
-
-I noticed ${contactInfo.business_name} has excellent reviews (${contactInfo.rating}/5 stars with ${contactInfo.review_count} reviews), and I have a solution that could help you capture even more customers.
-
-Our AI receptionist answers every call 24/7, qualifies leads automatically, and books appointments in your calendar. This means you'll never miss a potential customer again.
-
-Many businesses like yours see a 40-60% increase in bookings within the first month.
-
-Would you be interested in a quick 10-minute demo to see exactly how this works for ${contactInfo.business_name}?
-
-Best regards,
-CloudGreet Team
-
-P.S. We're offering a 30-day free trial with no setup fees.`
+  if (contactInfo.urgency_level === 'urgent') {
+    subject = `🚨 URGENT: ${contactInfo.business_name} - Stop Missing $${Math.round(contactInfo.estimated_revenue * 0.15)}/month in Lost Revenue`
+  } else if (businessType.includes('hvac') || businessType.includes('plumbing')) {
+    subject = `Emergency calls = $$$ - AI Receptionist for ${contactInfo.business_name}`
+  } else if (businessType.includes('painting') || businessType.includes('roofing')) {
+    subject = `Project season is here - Never miss a quote request again, ${contactInfo.business_name}`
+  } else {
+    subject = `Never Miss Another Call - AI Receptionist for ${contactInfo.business_name}`
+  }
+  
+  // Personalized message based on business data
+  const personalized_message = generatePersonalizedEmailContent(contactInfo)
 
   return {
     subject,
@@ -403,8 +403,65 @@ P.S. We're offering a 30-day free trial with no setup fees.`
   }
 }
 
+function generatePersonalizedEmailContent(contactInfo: any) {
+  const businessType = contactInfo.business_type?.toLowerCase() || 'service business'
+  const rating = contactInfo.rating
+  const reviews = contactInfo.review_count
+  const estimatedRevenue = contactInfo.estimated_revenue
+  const lostRevenue = Math.round(estimatedRevenue * 0.15) // Assume 15% lost revenue from missed calls
+  
+  // Business-specific messaging
+  let businessSpecificPitch = ''
+  if (businessType.includes('hvac')) {
+    businessSpecificPitch = `As an HVAC business, you know that emergency calls after hours can make or break your revenue. With your ${rating}/5 star rating and ${reviews} reviews, you're clearly doing something right. But how many potential emergency calls are you missing at 2 AM?`
+  } else if (businessType.includes('plumbing')) {
+    businessSpecificPitch = `Plumbing emergencies don't wait for business hours. Your ${rating}/5 star rating shows you deliver quality service, but how many customers are calling your competitors when you can't answer?`
+  } else if (businessType.includes('painting')) {
+    businessSpecificPitch = `Painting season is peak revenue time. With your ${rating}/5 star rating, customers clearly love your work. But how many quote requests are you missing when you're on a job?`
+  } else if (businessType.includes('roofing')) {
+    businessSpecificPitch = `Roofing projects are high-value opportunities. Your ${rating}/5 star rating shows you're trusted, but how many storm damage calls are you missing?`
+  } else {
+    businessSpecificPitch = `With your impressive ${rating}/5 star rating and ${reviews} reviews, ${contactInfo.business_name} is clearly a trusted business. But how many potential customers are you missing when you can't answer the phone?`
+  }
+  
+  return `Hi ${contactInfo.name},
+
+${businessSpecificPitch}
+
+Our AI receptionist answers every call 24/7, qualifies leads automatically, and books appointments in your calendar. This means you'll never miss a potential customer again.
+
+💰 **The Math:** If you're missing just 15% of potential calls, that's roughly $${lostRevenue}/month in lost revenue for ${contactInfo.business_name}.
+
+🎯 **Real Results:** Businesses like yours typically see a 40-60% increase in bookings within the first month.
+
+⚡ **Special Offer:** 30-day free trial with no setup fees. If you don't see results, you pay nothing.
+
+Would you be interested in a quick 10-minute demo to see exactly how this works for ${contactInfo.business_name}?
+
+Best regards,
+CloudGreet Team
+
+P.S. I noticed you're not currently using an AI receptionist. This could be costing you $${lostRevenue}/month in missed opportunities.`
+}
+
 function generateSMSContent(contactInfo: any) {
-  const text = `Hi ${contactInfo.name}! I'm from CloudGreet AI. I noticed ${contactInfo.business_name} has great reviews. We help businesses like yours never miss another call with our AI receptionist. Interested in a quick demo? Reply YES or call me at (555) 123-4567. - CloudGreet Team`
+  const businessType = contactInfo.business_type?.toLowerCase() || 'service business'
+  const rating = contactInfo.rating
+  const reviews = contactInfo.review_count
+  const lostRevenue = Math.round(contactInfo.estimated_revenue * 0.15)
+  
+  // Optimized SMS based on business type and urgency
+  let text = ''
+  
+  if (contactInfo.urgency_level === 'urgent') {
+    text = `🚨 Hi ${contactInfo.name}! ${contactInfo.business_name} is missing ~$${lostRevenue}/month in lost calls. Our AI receptionist captures every lead 24/7. 30-day free trial. Interested? Reply YES`
+  } else if (businessType.includes('hvac') || businessType.includes('plumbing')) {
+    text = `Hi ${contactInfo.name}! ${contactInfo.business_name} (${rating}/5 stars) - How many emergency calls do you miss after hours? Our AI answers 24/7. Free demo? Reply YES`
+  } else if (businessType.includes('painting') || businessType.includes('roofing')) {
+    text = `Hi ${contactInfo.name}! Peak season = more calls. ${contactInfo.business_name} (${rating}/5 stars) - Never miss a quote request again. AI receptionist demo? Reply YES`
+  } else {
+    text = `Hi ${contactInfo.name}! ${contactInfo.business_name} (${rating}/5 stars, ${reviews} reviews) - Never miss another call. AI receptionist captures every lead 24/7. Free trial? Reply YES`
+  }
 
   return {
     text,

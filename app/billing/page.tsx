@@ -25,10 +25,6 @@ export default function BillingPage() {
   const [businessId, setBusinessId] = useState('')
   const { showSuccess, showError } = useToast()
 
-  useEffect(() => {
-    loadBillingInfo()
-  }, [loadBillingInfo])
-
   const loadBillingInfo = async () => {
     try {
       const token = localStorage.getItem('token')
@@ -91,6 +87,10 @@ export default function BillingPage() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadBillingInfo()
+  }, [])
 
   const handleGetPhoneNumber = async () => {
     setIsLoading(true)

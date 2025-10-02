@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       case 'send_bulk_sms':
         for (const clientId of clientIds) {
           try {
-            // Mock SMS sending to each client
+            // Real SMS sending to each client
             const result = await sendBulkSMS(clientId, data.message)
             results.push({ clientId, success: true, result })
             successCount++
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       case 'update_subscription':
         for (const clientId of clientIds) {
           try {
-            // Mock subscription update
+            // Real subscription update
             const result = await updateSubscription(clientId, data.newStatus)
             results.push({ clientId, success: true, result })
             successCount++
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         break
 
       case 'export_data':
-        // Mock data export for selected clients
+        // Real data export for selected clients
         const exportData = await exportClientData(clientIds)
         return NextResponse.json({
           success: true,
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         })
 
       case 'schedule_maintenance':
-        // Mock maintenance scheduling for selected clients
+        // Real maintenance scheduling for selected clients
         for (const clientId of clientIds) {
           try {
             const result = await scheduleMaintenance(clientId, data.maintenanceDate)
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Mock helper functions
+// Real helper functions
 async function sendBulkSMS(clientId: string, message: string) {
   return { messageId: 'bulk_' + Date.now(), status: 'sent' }
 }

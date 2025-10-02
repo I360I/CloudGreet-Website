@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
     })
 
     const peakHours = Object.entries(hourDistribution)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([,a], [,b]) => (b as number) - (a as number))
       .slice(0, 3)
       .map(([hour, count]) => ({ hour: `${hour}:00`, count }))
 

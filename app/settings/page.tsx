@@ -50,10 +50,6 @@ export default function SettingsPage() {
     voice: 'alloy'
   })
 
-  useEffect(() => {
-    loadSettings()
-  }, [loadSettings])
-
   const loadSettings = async () => {
     try {
       const token = localStorage.getItem('token')
@@ -95,6 +91,10 @@ export default function SettingsPage() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
 
   const handleSave = async () => {
     setIsSaving(true)

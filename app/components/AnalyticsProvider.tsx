@@ -56,7 +56,7 @@ export function AnalyticsProvider({
     if (isOnline && events.length > 0) {
       flush()
     }
-  }, [isOnline, events.length, flush])
+  }, [isOnline, events.length])
 
   // Track user interactions
   useEffect(() => {
@@ -107,7 +107,7 @@ export function AnalyticsProvider({
       window.removeEventListener('scroll', trackScroll)
       window.removeEventListener('resize', trackResize)
     }
-  }, [isEnabled, track])
+  }, [isEnabled])
 
   const track = useCallback((event: string, properties?: Record<string, any>) => {
     if (!isEnabled) return
@@ -139,7 +139,7 @@ export function AnalyticsProvider({
     if (['signup', 'login', 'purchase', 'error'].includes(event)) {
       sendEvent(analyticsEvent)
     }
-  }, [isEnabled, userId, sessionId, sendEvent])
+  }, [isEnabled, userId, sessionId])
 
   const identify = useCallback((newUserId: string, traits?: Record<string, any>) => {
     if (!isEnabled) return
@@ -158,7 +158,7 @@ export function AnalyticsProvider({
     }
 
     sendEvent(identifyEvent)
-  }, [isEnabled, sessionId, sendEvent])
+  }, [isEnabled, sessionId])
 
   const page = useCallback((name: string, properties?: Record<string, any>) => {
     if (!isEnabled) return

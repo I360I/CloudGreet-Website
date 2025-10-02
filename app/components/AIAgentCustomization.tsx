@@ -35,10 +35,6 @@ export default function AIAgentCustomization({ businessId }: AIAgentCustomizatio
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
-  useEffect(() => {
-    fetchAgentSettings()
-  }, [businessId, fetchAgentSettings])
-
   const fetchAgentSettings = async () => {
     try {
       const response = await fetch(`/api/ai-agent/update-settings?businessId=${businessId}`)
@@ -61,6 +57,10 @@ export default function AIAgentCustomization({ businessId }: AIAgentCustomizatio
       setSettings({ ...settings, [key]: value })
     }
   }
+
+  useEffect(() => {
+    fetchAgentSettings()
+  }, [businessId])
 
   const saveSettings = async () => {
     if (!settings) return
