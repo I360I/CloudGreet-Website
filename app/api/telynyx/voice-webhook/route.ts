@@ -58,11 +58,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Get business info for the phone number first
-    const { data: business, error: businessError } = await supabaseAdmin
-      .from('businesses')
-      .select('*')
-      .eq('phone_number', to)
+    const { data: phoneRecord, error: phoneError } = await supabaseAdmin
+      .from('toll_free_numbers')
+      .select('*, businesses(*)')
+      .eq('number', to)
+      .eq('status', 'assigned')
       .single()
+    
+    const business = phoneRecord?.businesses
+    const businessError = phoneError
 
     if (businessError || !business) {
       logger.error('Error finding business for webhook', { error: businessError,  to })
