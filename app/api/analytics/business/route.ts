@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
     })
 
     const topServices = Object.entries(serviceTypes)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([,a], [,b]) => (b as number) - (a as number))
       .slice(0, 5)
       .map(([service, count]) => ({ service, count }))
 
