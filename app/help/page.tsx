@@ -264,7 +264,7 @@ export default function HelpPage() {
         >
           <h3 className="text-2xl font-bold text-white mb-4">Still need help?</h3>
           <p className="text-gray-300 mb-6">
-            Can't find what you're looking for? Our support team is here to help.
+            Can&apos;t find what you&apos;re looking for? Our support team is here to help.
           </p>
           <Link
             href="/contact"

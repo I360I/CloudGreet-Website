@@ -294,7 +294,7 @@ export default function TestAgentSimplePage() {
               <h3 className="text-xl font-semibold mb-4">How the Test Works</h3>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold mb-2 text-green-400">What You'll See:</h4>
+                  <h4 className="font-semibold mb-2 text-green-400">What You&apos;ll See:</h4>
                   <ul className="space-y-2 text-sm text-gray-300">
                     <li>• Real-time call transcript</li>
                     <li>• AI handling customer inquiries</li>

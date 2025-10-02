@@ -142,7 +142,7 @@ export default function SimpleLoginPage() {
 
         <div className="text-center mt-6 space-y-2">
           <p className="text-gray-400">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register-simple" className="text-purple-400 hover:text-purple-300 transition-colors">
               Create one
             </Link>

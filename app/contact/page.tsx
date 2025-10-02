@@ -74,7 +74,7 @@ export default function ContactPage() {
             Contact Us
           </h1>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-            Have questions? Need support? We're here to help you succeed with CloudGreet.
+            Have questions? Need support? We&apos;re here to help you succeed with CloudGreet.
           </p>
         </motion.div>
 

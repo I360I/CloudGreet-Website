@@ -124,7 +124,7 @@ export default function GetPhonePage() {
             
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
               <p className="text-blue-400 text-sm">
-                <strong>What you'll get:</strong> A dedicated phone number, AI call handling, appointment scheduling, and 24/7 availability.
+                <strong>What you&apos;ll get:</strong> A dedicated phone number, AI call handling, appointment scheduling, and 24/7 availability.
               </p>
             </div>
           </motion.div>
