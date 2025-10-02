@@ -83,7 +83,7 @@ export default function IntelligentCaching({ children }: IntelligentCachingProps
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
-  }, [])
+  }, [syncCachedData])
 
   // Calculate cache statistics
   const calculateHitRate = useCallback(() => {
@@ -191,7 +191,7 @@ export default function IntelligentCaching({ children }: IntelligentCachingProps
       // Add to pending requests
       setPendingRequests(prev => new Map(prev).set(cacheKey, fetchPromise))
     })
-  }, [])
+  }, [optimizeCache, updateCacheEntry])
 
   // Cache optimization
   const optimizeCache = useCallback((cache: Map<string, CacheEntry>): Map<string, CacheEntry> => {
@@ -234,7 +234,7 @@ export default function IntelligentCaching({ children }: IntelligentCachingProps
     }
 
     return newCache
-  }, [])
+  }, [calculateTotalSize])
 
   // Update cache entry access time
   const updateCacheEntry = useCallback((entry: CacheEntry, timestamp: number) => {

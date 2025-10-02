@@ -177,7 +177,7 @@ export default function VoiceCommands({ enabled = true, onCommand, children }: V
         recognitionRef.current.stop()
       }
     }
-  }, [enabled])
+  }, [enabled, processVoiceCommand, speak])
 
   // Process voice commands
   const processVoiceCommand = useCallback((command: string, confidence: number) => {
@@ -199,7 +199,7 @@ export default function VoiceCommands({ enabled = true, onCommand, children }: V
     } else {
       speak('Command not recognized. Say "show commands" for help.')
     }
-  }, [voiceCommands, onCommand])
+  }, [voiceCommands, onCommand, speak])
 
   // Text-to-speech function
   const speak = useCallback((text: string) => {

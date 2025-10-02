@@ -46,7 +46,7 @@ export default function RevenueAnalytics({ businessId }: { businessId: string })
 
   useEffect(() => {
     fetchRevenueData()
-  }, [businessId])
+  }, [businessId, fetchRevenueData])
 
   const fetchRevenueData = async () => {
     try {
