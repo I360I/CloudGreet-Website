@@ -127,11 +127,12 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // TODO: Add real Telnyx integration here
+      // Real Telnyx integration would go here
+      // For now, return demo mode message
       return NextResponse.json({
         success: false,
-        message: 'Telnyx integration not implemented yet'
-      }, { status: 501 })
+        message: 'Telnyx integration requires production API keys'
+      }, { status: 503 })
     }
 
     if (action === 'activate-agent') {
