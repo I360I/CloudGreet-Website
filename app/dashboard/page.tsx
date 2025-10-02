@@ -33,6 +33,12 @@ interface DashboardData {
     date: string
     time: string
   }>
+  setupStatus: string
+  nextSteps: string[]
+  onboardingCompleted: boolean
+  hasPhoneNumber: boolean
+  hasAgent: boolean
+  timeframe: string
 }
 
 export default function Dashboard() {
@@ -228,6 +234,84 @@ export default function Dashboard() {
               )}
             </div>
           </motion.div>
+
+          {/* Next Steps Section */}
+          {dashboardData?.nextSteps && dashboardData.nextSteps.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-8"
+            >
+              <h3 className="text-lg font-semibold mb-4">Next Steps to Get Started</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {dashboardData.nextSteps.map((step, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center gap-3 p-4 bg-white/5 rounded-lg border border-white/10"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
+                      <span className="text-sm font-semibold text-purple-400">{index + 1}</span>
+                    </div>
+                    <span className="text-sm text-gray-300">{step}</span>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Quick Actions */}
+              <div className="border-t border-white/10 pt-6">
+                <h4 className="text-sm font-semibold text-gray-300 mb-4">Quick Actions:</h4>
+                <div className="flex flex-wrap gap-3">
+                  {!dashboardData?.onboardingCompleted && (
+                    <Link href="/register-simple">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-lg font-medium hover:bg-blue-600/30 transition-all"
+                      >
+                        Complete Setup
+                      </motion.button>
+                    </Link>
+                  )}
+                  
+                  {dashboardData?.onboardingCompleted && !dashboardData?.hasPhoneNumber && (
+                    <Link href="/billing">
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="px-4 py-2 bg-green-600/20 border border-green-500/30 text-green-400 rounded-lg font-medium hover:bg-green-600/30 transition-all"
+                      >
+                        Get Phone Number
+                      </motion.button>
+                    </Link>
+                  )}
+                  
+                  <Link href="/demo">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-4 py-2 bg-purple-600/20 border border-purple-500/30 text-purple-400 rounded-lg font-medium hover:bg-purple-600/30 transition-all"
+                    >
+                      Try Demo
+                    </motion.button>
+                  </Link>
+                  
+                  <Link href="/test-agent">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-4 py-2 bg-orange-600/20 border border-orange-500/30 text-orange-400 rounded-lg font-medium hover:bg-orange-600/30 transition-all"
+                    >
+                      Test Agent
+                    </motion.button>
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           {/* Stats Grid */}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
