@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
     // Send confirmation SMS (if SMS service is configured)
     if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
       try {
-        const twilio = require('twilio')(
+        // Dynamic import to avoid build-time dependency issues
+        const twilio = (await import('twilio')).default(
           process.env.TWILIO_ACCOUNT_SID,
           process.env.TWILIO_AUTH_TOKEN
         )

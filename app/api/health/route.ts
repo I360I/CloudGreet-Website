@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
       
       // Decode JWT token
-      const jwt = require('jsonwebtoken')
+      const jwt = (await import('jsonwebtoken')).default
       const decoded = jwt.verify(token, jwtSecret)
       const userId = decoded.userId
       const userBusinessId = decoded.businessId
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
       const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
       
       // Decode JWT token
-      const jwt = require('jsonwebtoken')
+      const jwt = (await import('jsonwebtoken')).default
       const decoded = jwt.verify(token, jwtSecret)
       const userId = decoded.userId
       const userBusinessId = decoded.businessId
