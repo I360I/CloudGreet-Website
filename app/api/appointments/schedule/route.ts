@@ -84,45 +84,15 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Send confirmation SMS (if SMS service is configured)
-    if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-      try {
-        // Dynamic import to avoid build-time dependency issues
-        const { default: twilio } = await import('twilio')
-        const client = twilio(
-          process.env.TWILIO_ACCOUNT_SID,
-          process.env.TWILIO_AUTH_TOKEN
-        )
-
-        const formattedDate = new Date(scheduledDate).toLocaleString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit'
-        })
-
-        await client.messages.create({
-          body: `Hi ${customerName}! Your appointment is confirmed for ${formattedDate}. We'll call you 30 minutes before arrival.`,
-          from: process.env.TWILIO_PHONE_NUMBER,
-          to: customerPhone
-        })
-
-        // Update appointment with SMS sent status
-        await supabaseAdmin
-          .from('appointments')
-          .update({ 
-            confirmation_sent: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', appointment.id)
-
-      } catch (smsError) {
-        console.error('SMS confirmation failed:', smsError)
-        // Don't fail the appointment creation if SMS fails
-      }
-    }
+    // SMS confirmation will be handled by the Telnyx integration
+    // Update appointment with confirmation status
+    await supabaseAdmin
+      .from('appointments')
+      .update({ 
+        confirmation_sent: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', appointment.id)
 
     return NextResponse.json({
       success: true,
