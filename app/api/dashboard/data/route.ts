@@ -194,17 +194,46 @@ export async function GET(request: NextRequest) {
       time: new Date(apt.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     })) || []
 
+    // Get onboarding status and next steps
+    const onboardingCompleted = business.onboarding_completed || false
+    const hasPhoneNumber = business.phone_number && business.phone_number !== '5551234567'
+    const hasAgent = agent?.is_active || false
+
+    // Determine setup status
+    let setupStatus = 'incomplete'
+    let nextSteps = []
+    
+    if (!onboardingCompleted) {
+      setupStatus = 'setup_needed'
+      nextSteps = ['Complete business profile', 'Configure AI settings', 'Get phone number']
+    } else if (!hasPhoneNumber) {
+      setupStatus = 'phone_needed'
+      nextSteps = ['Get a phone number', 'Test your AI agent', 'Go live']
+    } else if (!hasAgent) {
+      setupStatus = 'agent_needed'
+      nextSteps = ['Activate AI agent', 'Test call handling', 'Monitor performance']
+    } else {
+      setupStatus = 'active'
+      nextSteps = ['Monitor calls', 'Review appointments', 'Optimize settings']
+    }
+
     const dashboardData = {
       success: true,
       data: {
         businessName: business.business_name,
-        phoneNumber: business.phone_number,
-        isActive: agent?.is_active || false,
+        phoneNumber: business.phone_number || 'Not assigned',
+        isActive: hasAgent,
         totalCalls,
         totalAppointments: appointments?.length || 0,
         totalRevenue,
         recentCalls: formattedRecentCalls,
-        upcomingAppointments: formattedUpcomingAppointments
+        upcomingAppointments: formattedUpcomingAppointments,
+        setupStatus,
+        nextSteps,
+        onboardingCompleted,
+        hasPhoneNumber,
+        hasAgent,
+        timeframe
       }
     }
     
