@@ -13,7 +13,7 @@ import SilkRibbon from '../components/SilkRibbon'
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white" style={{color: 'white'}}>
       {/* Navigation */}
       <motion.nav 
         initial={{ opacity: 0, y: -20 }}
@@ -28,7 +28,7 @@ export default function LandingPage() {
                 whileHover={{ scale: 1.05 }}
                 className="flex items-center"
               >
-                <span className="text-2xl font-bold text-white from-blue-300 to-purple-300">CloudGreet</span>
+                <span className="text-2xl font-bold text-white" style={{color: 'white'}}>CloudGreet</span>
               </motion.div>
             </Link>
             <div className="hidden md:flex items-center space-x-8">
