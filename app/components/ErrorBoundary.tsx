@@ -1,120 +1,152 @@
-'use client'
+"use client"
 
-import React from 'react'
+import React, { Component, ErrorInfo, ReactNode } from 'react'
 import { motion } from 'framer-motion'
+import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react'
+import Link from 'next/link'
 
-interface ErrorBoundaryState {
+interface Props {
+  children: ReactNode
+  fallback?: ReactNode
+}
+
+interface State {
   hasError: boolean
-  error?: Error
+  error: Error | null
+  errorInfo: ErrorInfo | null
 }
 
-interface ErrorBoundaryProps {
-  children: React.ReactNode
-  fallback?: React.ComponentType<{ error?: Error; resetError: () => void }>
-}
-
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
     super(props)
-    this.state = { hasError: false }
+    this.state = { hasError: false, error: null, errorInfo: null }
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error }
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error, errorInfo: null }
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo)
-    
-    // Log to monitoring service
-    if (typeof window !== 'undefined') {
-      fetch('/api/health', {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    this.setState({
+      error,
+      errorInfo
+    })
+
+    // Log error to monitoring service
+    this.logError(error, errorInfo)
+  }
+
+  logError = async (error: Error, errorInfo: ErrorInfo) => {
+    try {
+      await fetch('/api/monitoring', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'error',
-          error: error.message,
-          stack: error.stack,
-          componentStack: errorInfo.componentStack
+          action: 'error_boundary',
+          data: {
+            message: error.message,
+            stack: error.stack,
+            componentStack: errorInfo.componentStack,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            url: window.location.href
+          },
+          severity: 'error'
         })
-      }).catch(console.error)
+      })
+    } catch (logError) {
+      console.error('Failed to log error:', logError)
     }
   }
 
-  resetError = () => {
-    this.setState({ hasError: false, error: undefined })
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null })
   }
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        const FallbackComponent = this.props.fallback
-        return <FallbackComponent error={this.state.error} resetError={this.resetError} />
+        return this.props.fallback
       }
 
-      return <DefaultErrorFallback error={this.state.error} resetError={this.resetError} />
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-2xl w-full bg-black/30 backdrop-blur-xl rounded-2xl p-8 border border-red-500/20"
+          >
+            <div className="text-center">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6"
+              >
+                <AlertTriangle className="w-10 h-10 text-red-400" />
+              </motion.div>
+
+              <h1 className="text-3xl font-bold mb-4 text-red-400">
+                Something went wrong
+              </h1>
+              
+              <p className="text-gray-300 mb-6 text-lg">
+                We're sorry, but something unexpected happened. Our team has been notified and is working to fix this issue.
+              </p>
+
+              <div className="space-y-4">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={this.handleRetry}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  Try Again
+                </motion.button>
+
+                <Link href="/dashboard">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 flex items-center justify-center gap-2"
+                  >
+                    <Home className="w-5 h-5" />
+                    Go to Dashboard
+                  </motion.button>
+                </Link>
+              </div>
+
+              {process.env.NODE_ENV === 'development' && (
+                <details className="mt-8 text-left">
+                  <summary className="cursor-pointer text-gray-400 hover:text-gray-300 flex items-center gap-2">
+                    <Bug className="w-4 h-4" />
+                    Error Details (Development)
+                  </summary>
+                  <div className="mt-4 p-4 bg-gray-900/50 rounded-lg text-sm">
+                    <pre className="text-red-400 whitespace-pre-wrap">
+                      {this.state.error?.message}
+                    </pre>
+                    <pre className="text-gray-400 whitespace-pre-wrap mt-2">
+                      {this.state.error?.stack}
+                    </pre>
+                  </div>
+                </details>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )
     }
 
     return this.props.children
   }
 }
 
-function DefaultErrorFallback({ error, resetError }: { error?: Error; resetError: () => void }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center"
-      >
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-        </div>
-        
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Something went wrong
-        </h2>
-        
-        <p className="text-gray-600 mb-4">
-          We're sorry, but something unexpected happened. Please try refreshing the page.
-        </p>
-        
-        {error && process.env.NODE_ENV === 'development' && (
-          <details className="text-left mb-4 p-3 bg-gray-100 rounded text-sm">
-            <summary className="cursor-pointer font-medium">Error Details</summary>
-            <pre className="mt-2 text-xs overflow-auto">
-              {error.message}
-              {error.stack}
-            </pre>
-          </details>
-        )}
-        
-        <div className="flex gap-3 justify-center">
-          <button
-            onClick={resetError}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Try Again
-          </button>
-          
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </motion.div>
-    </div>
-  )
-}
-
-// HOC for wrapping components with error boundary
+// HOC for easier usage
 export function withErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
-  fallback?: React.ComponentType<{ error?: Error; resetError: () => void }>
+  fallback?: ReactNode
 ) {
   return function WrappedComponent(props: P) {
     return (
@@ -122,5 +154,30 @@ export function withErrorBoundary<P extends object>(
         <Component {...props} />
       </ErrorBoundary>
     )
+  }
+}
+
+// Hook for error boundary functionality
+export function useErrorHandler() {
+  return (error: Error, errorInfo?: { componentStack: string }) => {
+    console.error('Error caught by useErrorHandler:', error)
+    
+    // Log to monitoring service
+    fetch('/api/monitoring', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'error_handler',
+        data: {
+          message: error.message,
+          stack: error.stack,
+          componentStack: errorInfo?.componentStack,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent,
+          url: window.location.href
+        },
+        severity: 'error'
+      })
+    }).catch(console.error)
   }
 }
