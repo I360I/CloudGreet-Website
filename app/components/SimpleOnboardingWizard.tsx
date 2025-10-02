@@ -373,7 +373,7 @@ export default function SimpleOnboardingWizard({ isOpen, onClose, onComplete }: 
                 </div>
                 <h3 className="text-2xl font-bold text-white mb-4">Welcome to CloudGreet!</h3>
                 <p className="text-gray-400 mb-8">
-                  Your AI receptionist is ready to handle calls 24/7. Let's personalize it for your business in just 2 minutes.
+                  Your AI receptionist is ready to handle calls 24/7. Let&apos;s personalize it for your business in just 2 minutes.
                 </p>
                 <div className="space-y-4 text-left">
                   <div className="flex items-center space-x-3 p-4 bg-white/5 rounded-xl">
@@ -521,7 +521,7 @@ export default function SimpleOnboardingWizard({ isOpen, onClose, onComplete }: 
                 <div className="w-20 h-20 bg-green-500/20 rounded-full mx-auto mb-6 flex items-center justify-center">
                   <CheckCircle className="w-10 h-10 text-green-400" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-4">You're All Set!</h3>
+                <h3 className="text-2xl font-bold text-white mb-4">You&apos;re All Set!</h3>
                 <p className="text-gray-400 mb-8">
                   Your AI receptionist is configured and ready to handle calls. You can always update these settings later.
                 </p>

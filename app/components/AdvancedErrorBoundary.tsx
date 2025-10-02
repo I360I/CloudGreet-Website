@@ -191,7 +191,7 @@ function DefaultErrorFallback({ error, resetError, retryCount, errorId }: ErrorF
         </h1>
         
         <p className="text-gray-300 mb-6">
-          We encountered an unexpected error. Don't worry, we're on it!
+          We encountered an unexpected error. Don&apos;t worry, we&apos;re on it!
         </p>
 
         {retryCount > 0 && (

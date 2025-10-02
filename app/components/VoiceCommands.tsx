@@ -350,7 +350,7 @@ export default function VoiceCommands({ enabled = true, onCommand, children }: V
           >
             <div className="text-green-400 text-sm flex items-center space-x-2">
               <Mic className="w-4 h-4" />
-              <span>Executed: "{lastCommand}"</span>
+              <span>Executed: &quot;{lastCommand}&quot;</span>
             </div>
           </motion.div>
         )}
@@ -391,7 +391,7 @@ export default function VoiceCommands({ enabled = true, onCommand, children }: V
                     <command.icon className="w-4 h-4 text-blue-400 flex-shrink-0" />
                     <div className="flex-1">
                       <h4 className="text-white font-medium text-sm">
-                        "{command.phrase}"
+                        &quot;{command.phrase}&quot;
                       </h4>
                       <p className="text-white/70 text-xs mt-1">
                         {command.description}
