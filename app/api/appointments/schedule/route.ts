@@ -88,7 +88,8 @@ export async function POST(request: NextRequest) {
     if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
       try {
         // Dynamic import to avoid build-time dependency issues
-        const twilio = (await import('twilio')).default(
+        const { default: twilio } = await import('twilio')
+        const client = twilio(
           process.env.TWILIO_ACCOUNT_SID,
           process.env.TWILIO_AUTH_TOKEN
         )
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
           minute: '2-digit'
         })
 
-        await twilio.messages.create({
+        await client.messages.create({
           body: `Hi ${customerName}! Your appointment is confirmed for ${formattedDate}. We'll call you 30 minutes before arrival.`,
           from: process.env.TWILIO_PHONE_NUMBER,
           to: customerPhone
