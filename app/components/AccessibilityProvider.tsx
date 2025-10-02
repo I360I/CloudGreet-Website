@@ -43,11 +43,11 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     return () => {
       mediaQuery.removeEventListener('change', () => {})
     }
-  }, [applyAccessibilityStyles])
+  }, [])
 
   useEffect(() => {
     applyAccessibilityStyles()
-  }, [reducedMotion, highContrast, fontSize, applyAccessibilityStyles])
+  }, [reducedMotion, highContrast, fontSize])
 
   const applyAccessibilityStyles = () => {
     const root = document.documentElement

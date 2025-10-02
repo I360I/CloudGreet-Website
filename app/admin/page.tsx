@@ -43,6 +43,10 @@ import {
 import AdminCharts from '../components/AdminCharts'
 import SystemManagement from '../components/SystemManagement'
 import RevenueAnalytics from '../components/RevenueAnalytics'
+import AdminRealTimeNotifications from '../components/AdminRealTimeNotifications'
+import AdminPerformanceMetrics from '../components/AdminPerformanceMetrics'
+import AdminKeyboardShortcuts from '../components/AdminKeyboardShortcuts'
+import AdminAIInsights from '../components/AdminAIInsights'
 
 interface AdminStats {
   totalClients: number
@@ -92,6 +96,48 @@ export default function AdminDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+  // Keyboard shortcuts initialization
+  useEffect(() => {
+    const initializeShortcuts = () => {
+      if (typeof window !== 'undefined' && (window as any).initializeAdminShortcuts) {
+        (window as any).initializeAdminShortcuts({
+          onSearch: () => {
+            const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement
+            if (searchInput) {
+              searchInput.focus()
+            }
+          },
+          onClients: () => setActiveTab('clients'),
+          onAnalytics: () => setActiveTab('analytics'),
+          onSettings: () => setActiveTab('system'),
+          onNotifications: () => {
+            // Trigger notifications dropdown
+            const notificationButton = document.querySelector('[data-notification-button]')
+            if (notificationButton) {
+              (notificationButton as HTMLElement).click()
+            }
+          },
+          onExport: () => {
+            const exportButton = document.querySelector('[data-export-button]')
+            if (exportButton) {
+              (exportButton as HTMLElement).click()
+            }
+          },
+          onAddClient: () => {
+            const addButton = document.querySelector('[data-add-client]')
+            if (addButton) {
+              (addButton as HTMLElement).click()
+            }
+          },
+          onRefresh: () => fetchAdminData()
+        })
+      }
+    }
+
+    // Initialize shortcuts after component mounts
+    setTimeout(initializeShortcuts, 100)
+  }, [])
 
   useEffect(() => {
     // Check admin authentication
@@ -322,15 +368,8 @@ export default function AdminDashboard() {
                       <Download className="w-4 h-4 mr-3" />
                       Export Data
                     </button>
-                    <button 
-                      onClick={() => {
-                        window.open('/notifications', '_blank')
-                      }}
-                      className="w-full flex items-center px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
-                    >
-                      <Bell className="w-4 h-4 mr-3" />
-                      Notifications
-                    </button>
+                    <AdminRealTimeNotifications />
+                    <AdminKeyboardShortcuts />
                   </div>
                 </div>
 
@@ -525,7 +564,7 @@ export default function AdminDashboard() {
                     <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="Search clients..."
+                      placeholder="Search clients... (Press 'S' to focus)"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-700/50 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-400"
@@ -743,7 +782,10 @@ export default function AdminDashboard() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
+              className="space-y-6"
             >
+              <AdminAIInsights />
+              <AdminPerformanceMetrics />
               <AdminCharts stats={stats} clients={clients} />
             </motion.div>
           )}

@@ -57,7 +57,7 @@ export default function EdgeOptimization({ children }: EdgeOptimizationProps) {
     }
 
     initializeEdgeNodes()
-  }, [findOptimalNode, getUserLocation])
+  }, [])
 
   // Get user location for edge optimization
   const getUserLocation = useCallback(() => {
@@ -154,7 +154,7 @@ export default function EdgeOptimization({ children }: EdgeOptimizationProps) {
     }
     
     setIsOptimizing(false)
-  }, [optimizationLevel, applyAdvancedOptimizations, applyMaximumOptimizations])
+  }, [optimizationLevel])
 
   const applyBasicOptimizations = async () => {
     // Basic optimizations

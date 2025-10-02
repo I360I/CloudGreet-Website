@@ -19,10 +19,6 @@ export default function TestAgentPage() {
   const [isCallActive, setIsCallActive] = useState(false)
   const { showSuccess, showError } = useToast()
 
-  useEffect(() => {
-    loadBusinessInfo()
-  }, [loadBusinessInfo])
-
   const loadBusinessInfo = async () => {
     try {
       const token = localStorage.getItem('token')
@@ -53,6 +49,10 @@ export default function TestAgentPage() {
       showError('Failed to load business information')
     }
   }
+
+  useEffect(() => {
+    loadBusinessInfo()
+  }, [])
 
   const simulateCall = () => {
     setIsCallActive(true)

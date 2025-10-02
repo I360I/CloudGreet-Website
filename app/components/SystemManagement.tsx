@@ -62,40 +62,8 @@ export default function SystemManagement() {
           errorRate: healthData.data.errorRate || 0
         })
         
-        // Generate mock alerts based on system status
-        const mockAlerts: SystemAlert[] = []
-        
-        if (healthData.data.memoryUsage > 80) {
-          mockAlerts.push({
-            id: 'memory-high',
-            type: 'warning',
-            message: 'High memory usage detected',
-            timestamp: new Date().toISOString(),
-            resolved: false
-          })
-        }
-        
-        if (healthData.data.cpuUsage > 90) {
-          mockAlerts.push({
-            id: 'cpu-high',
-            type: 'error',
-            message: 'High CPU usage detected',
-            timestamp: new Date().toISOString(),
-            resolved: false
-          })
-        }
-        
-        if (healthData.data.errorRate > 5) {
-          mockAlerts.push({
-            id: 'error-rate-high',
-            type: 'error',
-            message: 'High error rate detected',
-            timestamp: new Date().toISOString(),
-            resolved: false
-          })
-        }
-        
-        setAlerts(mockAlerts)
+        // Use real alerts from system health data
+        setAlerts(healthData.data.alerts || [])
       }
     } catch (error) {
       console.error('Failed to fetch system data:', error)

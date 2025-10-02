@@ -44,10 +44,6 @@ export default function RevenueAnalytics({ businessId }: { businessId: string })
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
 
-  useEffect(() => {
-    fetchRevenueData()
-  }, [businessId, fetchRevenueData])
-
   const fetchRevenueData = async () => {
     try {
       setLoading(true)
@@ -89,6 +85,10 @@ export default function RevenueAnalytics({ businessId }: { businessId: string })
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchRevenueData()
+  }, [businessId])
 
   const runUpsellAnalysis = async () => {
     try {

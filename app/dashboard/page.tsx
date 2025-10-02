@@ -79,7 +79,13 @@ export default function Dashboard() {
             totalAppointments: data.data.totalAppointments || 0,
             totalRevenue: data.data.totalRevenue || 0,
             recentCalls: data.data.recentCalls || [],
-            upcomingAppointments: data.data.upcomingAppointments || []
+            upcomingAppointments: data.data.upcomingAppointments || [],
+            setupStatus: data.data.setupStatus || 'incomplete',
+            nextSteps: data.data.nextSteps || ['Complete setup'],
+            onboardingCompleted: data.data.onboardingCompleted || false,
+            hasPhoneNumber: data.data.hasPhoneNumber || false,
+            hasAgent: data.data.hasAgent || false,
+            timeframe: data.data.timeframe || '30d'
           })
         } else {
           setError(data.message || 'Failed to load dashboard data')

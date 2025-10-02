@@ -25,18 +25,22 @@ export async function POST(request: NextRequest) {
       const demoNumber = `+1${sanitizedAreaCode}${Math.floor(Math.random() * 9000000) + 1000000}`
       
       // Log audit event
-      await supabaseAdmin.from('audit_logs').insert({
-        user_id: null,
-        business_id: null,
-        action_type: 'test_phone_provision',
-        action_details: {
-          demoNumber,
-          areaCode: sanitizedAreaCode,
-          timestamp: new Date().toISOString(),
-          ip: request.headers.get('x-forwarded-for') || 'unknown'
-        },
-        created_at: new Date().toISOString()
-      }).catch(console.error)
+      try {
+        await supabaseAdmin.from('audit_logs').insert({
+          user_id: null,
+          business_id: null,
+          action_type: 'test_phone_provision',
+          action_details: {
+            demoNumber,
+            areaCode: sanitizedAreaCode,
+            timestamp: new Date().toISOString(),
+            ip: request.headers.get('x-forwarded-for') || 'unknown'
+          },
+          created_at: new Date().toISOString()
+        })
+      } catch (error) {
+        console.error('Failed to log audit event:', error)
+      }
       
       const response = NextResponse.json({
         success: true,
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
       
       // Decode JWT token
       const jwt = (await import('jsonwebtoken')).default
-      const decoded = jwt.verify(token, jwtSecret)
+      const decoded = jwt.verify(token, jwtSecret) as any
       const userId = decoded.userId
       const userBusinessId = decoded.businessId
 
@@ -147,7 +151,7 @@ export async function POST(request: NextRequest) {
       
       // Decode JWT token
       const jwt = (await import('jsonwebtoken')).default
-      const decoded = jwt.verify(token, jwtSecret)
+      const decoded = jwt.verify(token, jwtSecret) as any
       const userId = decoded.userId
       const userBusinessId = decoded.businessId
 
