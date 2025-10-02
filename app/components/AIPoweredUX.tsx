@@ -112,7 +112,7 @@ export default function AIPoweredUX({ children }: AIPoweredUXProps) {
     }
 
     analyzeBehavior()
-  }, [userBehavior.clicks.length])
+  }, [userBehavior.clicks.length, calculateEngagementScore, calculateNextActionProbability, determineUserType, generateOptimizationSuggestions, generateSmartSuggestions])
 
   const calculateEngagementScore = (): number => {
     const clicks = userBehavior.clicks.length
