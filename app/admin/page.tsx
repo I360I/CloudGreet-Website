@@ -410,7 +410,7 @@ export default function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-2xl font-bold mb-2">Welcome back, Anthony! 👋</h2>
-                    <p className="text-gray-300">Here's what's happening with your CloudGreet business today.</p>
+                    <p className="text-gray-300">Here&apos;s what&apos;s happening with your CloudGreet business today.</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-400">Last updated</p>
@@ -456,7 +456,7 @@ export default function AdminDashboard() {
                 <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
                   <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
                     <Activity className="w-5 h-5 mr-2 text-purple-400" />
-                    Today's Activity
+                    Today&apos;s Activity
                   </h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -1107,7 +1107,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center space-x-3 p-3 bg-gray-700/50 rounded-lg">
                       <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                       <div className="flex-1">
-                        <p className="text-white text-sm">New client registration: "Test Business"</p>
+                        <p className="text-white text-sm">New client registration: &quot;Test Business&quot;</p>
                         <p className="text-gray-400 text-xs">2 minutes ago</p>
                       </div>
                     </div>

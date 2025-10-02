@@ -42,7 +42,7 @@ export default function Hero() {
             Never Miss a Call Again
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto leading-relaxed">
-            CloudGreet answers, qualifies, and books jobs so you don't lose revenue.
+            CloudGreet answers, qualifies, and books jobs so you don&apos;t lose revenue.
             <br />
             <span className="text-blue-400 font-semibold">Simple pricing: $200/mo + $50 per booking</span>
           </p>

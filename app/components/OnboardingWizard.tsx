@@ -236,7 +236,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
                   <CheckCircle className="w-5 h-5 text-blue-400" />
                   <div>
                     <p className="text-blue-300 font-medium">Information Pre-filled</p>
-                    <p className="text-gray-400 text-sm">We've filled in your business details from your signup. You can edit any field below.</p>
+                    <p className="text-gray-400 text-sm">We&apos;ve filled in your business details from your signup. You can edit any field below.</p>
                   </div>
                 </div>
               </div>
@@ -518,7 +518,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
           <div className="space-y-6">
             <div className="text-center mb-8">
               <h3 className="text-xl font-bold text-white mb-2">Review Your Setup</h3>
-              <p className="text-gray-400">Everything looks good? Let's get your AI receptionist ready!</p>
+              <p className="text-gray-400">Everything looks good? Let&apos;s get your AI receptionist ready!</p>
             </div>
             
             <div className="space-y-4">
