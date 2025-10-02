@@ -474,16 +474,27 @@ export default function LandingPage() {
                   ))}
                 </div>
                 
-                {/* CTA Button */}
-                <Link
-                  href="/start"
-                  className="w-full bg-white/15 backdrop-blur-xl text-white px-12 py-5 rounded-2xl text-xl font-semibold border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-2xl inline-block"
-                >
-                  <div className="flex items-center justify-center gap-3">
-                    <Zap className="w-6 h-6" />
-                    Test for Free
-                  </div>
-                </Link>
+                {/* CTA Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 w-full">
+                  <Link
+                    href="/demo"
+                    className="flex-1 bg-white/15 backdrop-blur-xl text-white px-8 py-4 rounded-2xl text-lg font-semibold border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-2xl inline-block"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <Play className="w-5 h-5" />
+                      Try Demo
+                    </div>
+                  </Link>
+                  <Link
+                    href="/register-simple"
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-2xl text-lg font-semibold transition-all duration-300 shadow-2xl inline-block"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      <Zap className="w-5 h-5" />
+                      Start Free Trial
+                    </div>
+                  </Link>
+                </div>
                 
                 {/* Professional messaging for exclusive feel */}
                 <p className="text-gray-400 text-sm mt-6">
