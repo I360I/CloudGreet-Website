@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { securitySchemas, sanitizeInput, sanitizePhoneNumber, securityHeaders } from '@/lib/security';
 
 export const dynamic = 'force-dynamic'
 
@@ -10,16 +11,46 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, areaCode = '555' } = body
 
+    // Validate and sanitize input
+    const sanitizedAreaCode = sanitizePhoneNumber(areaCode.toString())
+    if (!/^\d{3}$/.test(sanitizedAreaCode)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid area code format'
+      }, { status: 400 })
+    }
+
     if (action === 'test-phone-provision') {
       // Test phone provisioning logic
-      const demoNumber = `+1${areaCode}${Math.floor(Math.random() * 9000000) + 1000000}`
+      const demoNumber = `+1${sanitizedAreaCode}${Math.floor(Math.random() * 9000000) + 1000000}`
       
-      return NextResponse.json({
+      // Log audit event
+      await supabaseAdmin.from('audit_logs').insert({
+        user_id: null,
+        business_id: null,
+        action_type: 'test_phone_provision',
+        action_details: {
+          demoNumber,
+          areaCode: sanitizedAreaCode,
+          timestamp: new Date().toISOString(),
+          ip: request.headers.get('x-forwarded-for') || 'unknown'
+        },
+        created_at: new Date().toISOString()
+      }).catch(console.error)
+      
+      const response = NextResponse.json({
         success: true,
         message: 'Phone provisioning test successful',
         demoNumber: demoNumber,
         timestamp: new Date().toISOString()
       })
+
+      // Add security headers
+      Object.entries(securityHeaders).forEach(([key, value]) => {
+        response.headers.set(key, value)
+      })
+      
+      return response
     }
 
     if (action === 'provision-phone') {
