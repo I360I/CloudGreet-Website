@@ -264,37 +264,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    
-    // Log client-side errors
-    if (body.error) {
-      console.error('Client error:', body.error);
-      
-      // Store error in database for monitoring
-      try {
-        await supabaseAdmin.from('audit_logs').insert({
-          action: 'client_error',
-          details: {
-            error: body.error,
-            url: body.url,
-            userAgent: request.headers.get('user-agent'),
-            timestamp: new Date().toISOString(),
-          },
-        });
-      } catch (dbError) {
-        console.error('Failed to log client error to database:', dbError);
-      }
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error handling client error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to process error log' },
-      { status: 500 }
-    );
-  }
-}
