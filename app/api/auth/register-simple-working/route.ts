@@ -82,7 +82,23 @@ export async function POST(request: NextRequest) {
         address: address.trim(),
         owner_id: user.id,
         is_active: true,
-        onboarding_completed: false,
+        onboarding_completed: true,
+        greeting_message: `Hello! Thank you for calling ${business_name.trim()}. How can I help you today?`,
+        ai_tone: 'professional',
+        services: business_type === 'HVAC' ? ['HVAC Repair', 'HVAC Installation', 'HVAC Maintenance'] :
+                 business_type === 'Paint' ? ['Interior Painting', 'Exterior Painting', 'Commercial Painting'] :
+                 business_type === 'Roofing' ? ['Roofing Installation', 'Roof Repair', 'Roof Maintenance'] :
+                 ['General Services'],
+        service_areas: ['Local Area'],
+        business_hours: {
+          monday: '9 AM - 5 PM',
+          tuesday: '9 AM - 5 PM',
+          wednesday: '9 AM - 5 PM',
+          thursday: '9 AM - 5 PM',
+          friday: '9 AM - 5 PM',
+          saturday: 'closed',
+          sunday: 'closed'
+        },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })

@@ -221,13 +221,13 @@ export default function Dashboard() {
               </div>
               
               {!dashboardData?.isActive && (
-                <Link href="/billing">
+                <Link href="/test-agent-simple">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
                   >
-                    Complete Setup
+                    Test Agent
                     <ArrowRight className="w-4 h-4" />
                   </motion.button>
                 </Link>
@@ -278,7 +278,7 @@ export default function Dashboard() {
                   )}
                   
                   {dashboardData?.onboardingCompleted && !dashboardData?.hasPhoneNumber && (
-                    <Link href="/billing">
+                    <Link href="/get-phone">
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -299,7 +299,7 @@ export default function Dashboard() {
                     </motion.button>
                   </Link>
                   
-                  <Link href="/test-agent">
+                  <Link href="/test-agent-simple">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
