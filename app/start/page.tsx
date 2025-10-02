@@ -140,7 +140,7 @@ export default function StartPage() {
             <span className="text-green-400 text-sm font-medium">✨ 7-Day Free Trial - No Credit Card Required</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-            Let's Get Started
+            Let&apos;s Get Started
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
             Start your free trial and see how your AI receptionist can help your business
@@ -290,9 +290,9 @@ export default function StartPage() {
               </div>
             </div>
 
-            {/* What's Next */}
+            {/* What&apos;s Next */}
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-blue-400 mb-3">What's Next?</h3>
+              <h3 className="text-lg font-semibold text-blue-400 mb-3">What&apos;s Next?</h3>
               <div className="space-y-2 text-gray-300">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-green-400" />

@@ -333,7 +333,7 @@ export default function TestAgentPage() {
           {!isCallActive && callTranscript.length === 0 && (
             <div className="text-center py-12">
               <Phone className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">Click "Start Test Call" to begin the simulation</p>
+              <p className="text-gray-400">Click &quot;Start Test Call&quot; to begin the simulation</p>
             </div>
           )}
         </motion.div>

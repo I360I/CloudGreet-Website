@@ -39,7 +39,7 @@ export default function NotFound() {
             transition={{ delay: 0.4, duration: 0.6 }}
             className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto"
           >
-            The page you're looking for doesn't exist. It might have been moved, deleted, 
+            The page you&apos;re looking for doesn&apos;t exist. It might have been moved, deleted, 
             or you entered the wrong URL.
           </motion.p>
 

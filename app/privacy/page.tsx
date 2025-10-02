@@ -118,7 +118,7 @@ export default function PrivacyPage() {
               Your data may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place for such transfers.
             </p>
 
-            <h2 className="text-2xl font-bold text-white mb-6">10. Children's Privacy</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">10. Children&apos;s Privacy</h2>
             <p className="text-gray-300 leading-relaxed mb-6">
               Our service is not intended for children under 13. We do not knowingly collect personal information from children under 13.
             </p>

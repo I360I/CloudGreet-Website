@@ -289,7 +289,7 @@ export default function LoginPage() {
                   <form onSubmit={handleForgotPassword} className="space-y-6">
                     <div className="text-center mb-6">
                       <h2 className="text-2xl font-bold text-white mb-2">Reset Password</h2>
-                      <p className="text-gray-400">Enter your email and we'll send you a reset link</p>
+                      <p className="text-gray-400">Enter your email and we&apos;ll send you a reset link</p>
                     </div>
                     
                     <div>
@@ -370,7 +370,7 @@ export default function LoginPage() {
                     <div>
                       <h2 className="text-2xl font-bold text-white mb-2">Check Your Email</h2>
                       <p className="text-gray-400">
-                        We've sent a password reset link to <span className="text-blue-400">{forgotPasswordEmail}</span>
+                        We&apos;ve sent a password reset link to <span className="text-blue-400">{forgotPasswordEmail}</span>
                       </p>
                     </div>
 
@@ -393,7 +393,7 @@ export default function LoginPage() {
             {!showForgotPassword && (
               <div className="mt-6 text-center">
                 <p className="text-gray-400 text-sm">
-                  Don't have an account?{' '}
+                  Don&apos;t have an account?{' '}
                   <Link href="/landing" className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
                     Create one here
                   </Link>

@@ -108,8 +108,8 @@ export default function TCPAA2PPage() {
               Recipients can opt out of messages by:
             </p>
             <ul className="list-disc list-inside text-gray-300 space-y-2 mb-6">
-              <li>Replying "STOP" to any message</li>
-              <li>Replying "UNSUBSCRIBE" to any message</li>
+              <li>Replying &quot;STOP&quot; to any message</li>
+              <li>Replying &quot;UNSUBSCRIBE&quot; to any message</li>
               <li>Calling our support number</li>
               <li>Contacting us through our website</li>
               <li>Emailing us at support@cloudgreet.ai</li>
@@ -122,7 +122,7 @@ export default function TCPAA2PPage() {
             <ul className="list-disc list-inside text-gray-300 space-y-2 mb-6">
               <li>Clear identification of the sender (your business name)</li>
               <li>Purpose of the message</li>
-              <li>Opt-out instructions ("Reply STOP to opt out")</li>
+              <li>Opt-out instructions (&quot;Reply STOP to opt out&quot;)</li>
               <li>Contact information for questions</li>
               <li>Professional, non-promotional language</li>
             </ul>

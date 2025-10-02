@@ -46,7 +46,7 @@ export default function TermsPage() {
           <div className="bg-gray-800/30 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50">
             <h2 className="text-2xl font-bold text-white mb-6">1. Acceptance of Terms</h2>
             <p className="text-gray-300 leading-relaxed mb-6">
-              By accessing and using CloudGreet's services, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+              By accessing and using CloudGreet&apos;s services, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
             </p>
 
             <h2 className="text-2xl font-bold text-white mb-6">2. Description of Service</h2>
@@ -97,7 +97,7 @@ export default function TermsPage() {
 
             <h2 className="text-2xl font-bold text-white mb-6">7. Limitation of Liability</h2>
             <p className="text-gray-300 leading-relaxed mb-6">
-              CloudGreet's liability is limited to the amount you paid for the service in the 12 months preceding the claim. We are not liable for indirect, incidental, or consequential damages.
+              CloudGreet&apos;s liability is limited to the amount you paid for the service in the 12 months preceding the claim. We are not liable for indirect, incidental, or consequential damages.
             </p>
 
             <h2 className="text-2xl font-bold text-white mb-6">8. Termination</h2>
