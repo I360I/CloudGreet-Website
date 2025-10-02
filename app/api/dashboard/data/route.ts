@@ -175,37 +175,36 @@ export async function GET(request: NextRequest) {
       .eq('business_id', businessId)
       .single()
 
+    // Format recent calls for dashboard
+    const formattedRecentCalls = calls?.slice(0, 5).map(call => ({
+      id: call.id,
+      caller: call.from_number || 'Unknown',
+      duration: `${call.duration || 0}s`,
+      status: call.status || 'unknown',
+      date: new Date(call.created_at).toLocaleDateString()
+    })) || []
+
+    // Format upcoming appointments
+    const formattedUpcomingAppointments = appointments?.slice(0, 5).map(apt => ({
+      id: apt.id,
+      customer: apt.customer_name || 'Unknown',
+      service: apt.service_type || 'General Service',
+      date: new Date(apt.scheduled_date).toLocaleDateString(),
+      time: new Date(apt.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    })) || []
+
     const dashboardData = {
-      totalCalls,
-      totalRevenue,
-      activeCalls,
-      conversionRate: bookingConversionRate, // Use booking conversion instead of call completion
-      emergencyCalls,
-      todayBookings,
-      missedCalls,
-      avgCallDuration,
-      customerSatisfaction,
-      monthlyRecurring,
-      timeframe,
-      phoneNumber: business.phone_number,
-      businessName: business.business_name,
-      isLive: agent?.is_active || false,
-      onboardingCompleted: business.onboarding_completed || false,
-      recentCalls: calls?.slice(0, 10) || [],
-      recentAppointments: appointments?.slice(0, 10) || [],
-      recentSMS: sms?.slice(0, 10) || [],
-      // Additional metrics for 5-10+ calls per day
-      callsToday: calls?.filter(call => {
-        const callDate = new Date(call.created_at).toDateString()
-        return callDate === today
-      }).length || 0,
-      callsThisWeek: calls?.filter(call => {
-        const callDate = new Date(call.created_at)
-        const weekAgo = new Date()
-        weekAgo.setDate(weekAgo.getDate() - 7)
-        return callDate >= weekAgo
-      }).length || 0,
-      avgCallsPerDay: calls?.length > 0 ? Math.round((calls.length / Math.max(1, Math.ceil((now.getTime() - new Date(calls[calls.length - 1]?.created_at || now).getTime()) / (1000 * 60 * 60 * 24)))) * 10) / 10 : 0
+      success: true,
+      data: {
+        businessName: business.business_name,
+        phoneNumber: business.phone_number,
+        isActive: agent?.is_active || false,
+        totalCalls,
+        totalAppointments: appointments?.length || 0,
+        totalRevenue,
+        recentCalls: formattedRecentCalls,
+        upcomingAppointments: formattedUpcomingAppointments
+      }
     }
     
     return NextResponse.json(dashboardData)
