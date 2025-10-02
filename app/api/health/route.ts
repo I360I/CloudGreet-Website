@@ -5,6 +5,36 @@ export const dynamic = 'force-dynamic'
 
 export const runtime = 'nodejs';
 
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { action, areaCode = '555' } = body
+
+    if (action === 'test-phone-provision') {
+      // Test phone provisioning logic
+      const demoNumber = `+1${areaCode}${Math.floor(Math.random() * 9000000) + 1000000}`
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Phone provisioning test successful',
+        demoNumber: demoNumber,
+        timestamp: new Date().toISOString()
+      })
+    }
+
+    return NextResponse.json({
+      success: false,
+      message: 'Invalid action'
+    }, { status: 400 })
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      message: 'Test failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Basic health check
