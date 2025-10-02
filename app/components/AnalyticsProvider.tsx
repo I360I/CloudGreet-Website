@@ -56,7 +56,7 @@ export function AnalyticsProvider({
     if (isOnline && events.length > 0) {
       flush()
     }
-  }, [isOnline, events.length])
+  }, [isOnline, events.length, flush])
 
   // Track user interactions
   useEffect(() => {
@@ -107,7 +107,7 @@ export function AnalyticsProvider({
       window.removeEventListener('scroll', trackScroll)
       window.removeEventListener('resize', trackResize)
     }
-  }, [isEnabled])
+  }, [isEnabled, track])
 
   const track = useCallback((event: string, properties?: Record<string, any>) => {
     if (!isEnabled) return
@@ -139,7 +139,7 @@ export function AnalyticsProvider({
     if (['signup', 'login', 'purchase', 'error'].includes(event)) {
       sendEvent(analyticsEvent)
     }
-  }, [isEnabled, userId, sessionId])
+  }, [isEnabled, userId, sessionId, sendEvent])
 
   const identify = useCallback((newUserId: string, traits?: Record<string, any>) => {
     if (!isEnabled) return
@@ -158,7 +158,7 @@ export function AnalyticsProvider({
     }
 
     sendEvent(identifyEvent)
-  }, [isEnabled, sessionId])
+  }, [isEnabled, sessionId, sendEvent])
 
   const page = useCallback((name: string, properties?: Record<string, any>) => {
     if (!isEnabled) return
@@ -204,7 +204,7 @@ export function AnalyticsProvider({
     } catch (error) {
       console.warn('Failed to flush analytics events:', error)
     }
-  }, [events, isEnabled])
+  }, [events, isEnabled, sendEvent])
 
   // Auto-flush every 30 seconds
   useEffect(() => {
