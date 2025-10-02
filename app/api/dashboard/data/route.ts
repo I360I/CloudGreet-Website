@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// Force redeploy - dashboard API v2
 
 export async function GET(request: NextRequest) {
   try {
