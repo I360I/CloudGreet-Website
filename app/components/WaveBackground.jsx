@@ -300,7 +300,7 @@ export default function WaveBackground({
       clearInterval(buttonUpdateInterval);
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [intensity, updateButtonPosition]);
+  }, [intensity, updateButtonPosition, animate, initializeWaves]);
 
   return (
     <canvas

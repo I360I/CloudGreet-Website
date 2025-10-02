@@ -48,7 +48,7 @@ export default function ValidatedInput({
       setError(null)
       setIsValid(null)
     }
-  }, [value, validation])
+  }, [value, validation, validateInput])
 
   const validateInput = (inputValue: string) => {
     if (!validation) return

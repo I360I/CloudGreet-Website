@@ -187,23 +187,24 @@ function TwistingStrand({
       pathLengthPx,
       baseAmplitudePx,
       turns,
-      laneYOffsetPx,
-      ellipseBoost,
-      ellipseWidthPct,
-      THREE,
-    });
-    return new THREE.TubeGeometry(curve, tubeSegments, tubeRadiusWorld, radialSegments, false);
-  }, [
-    tubeSegments,
-    pathLengthPx,
-    baseAmplitudePx,
-    turns,
     laneYOffsetPx,
     ellipseBoost,
     ellipseWidthPct,
-    tubeRadiusWorld,
-    radialSegments,
-  ]);
+    THREE,
+  });
+  return new THREE.TubeGeometry(curve, tubeSegments, tubeRadiusWorld, radialSegments, false);
+}, [
+  tubeSegments,
+  pathLengthPx,
+  baseAmplitudePx,
+  turns,
+  laneYOffsetPx,
+  ellipseBoost,
+  ellipseWidthPct,
+  tubeRadiusWorld,
+  radialSegments,
+  THREE,
+]);
 
   // Material: subtle glow + screen-like look
   const material = useMemo(() => {
@@ -219,7 +220,7 @@ function TwistingStrand({
       depthWrite: false,
     });
     return m;
-  }, [color, emissiveIntensity, opacity]);
+  }, [color, emissiveIntensity, opacity, THREE.AdditiveBlending, THREE.Color, THREE.MeshStandardMaterial]);
 
   // Animate: slide horizontally, rotate slowly, run a highlight pulse
   useFrame(({ clock }) => {
@@ -279,7 +280,7 @@ function BottomWave({
     }
     const curve = new THREE.CatmullRomCurve3(pts);
     return new THREE.TubeGeometry(curve, segments, tubeRadiusWorld, radialSegments, false);
-  }, [pathLengthPx, tubeSegments, radialSegments, amplitudePx, yOffsetPx, tubeRadiusWorld]);
+  }, [pathLengthPx, tubeSegments, radialSegments, amplitudePx, yOffsetPx, tubeRadiusWorld, THREE.CatmullRomCurve3, THREE.TubeGeometry, THREE.Vector3]);
 
   const material = useMemo(
     () =>
@@ -294,7 +295,7 @@ function BottomWave({
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       }),
-    [color, opacity]
+    [color, opacity, THREE.AdditiveBlending, THREE.Color, THREE.MeshStandardMaterial]
   );
 
   useFrame(({ clock }) => {

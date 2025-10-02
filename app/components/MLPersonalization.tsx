@@ -177,7 +177,7 @@ export default function MLPersonalization({ children }: MLPersonalizationProps) 
     setMlInsights(analysis.insights)
     generateRecommendations(analysis.userProfile, analysis.insights)
     setIsAnalyzing(false)
-  }, [])
+  }, [generateRecommendations])
 
   // ML Helper Functions
   const extractFeatureInterest = (clicks: Array<{ element: string; page: string }>): string[] => {
