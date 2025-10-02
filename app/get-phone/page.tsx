@@ -16,11 +16,25 @@ export default function GetPhonePage() {
         return
       }
 
-      // Simulate getting a phone number
-      const phoneNumber = `(555) ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`
-      
+      // Provision a real phone number
+      const provisionResponse = await fetch('/api/phone/provision', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ areaCode: '555' })
+      })
+
+      const provisionResult = await provisionResponse.json()
+
+      if (!provisionResult.success) {
+        alert(`❌ Error provisioning phone: ${provisionResult.message}`)
+        return
+      }
+
       // Activate the agent
-      const response = await fetch('/api/agent/activate', {
+      const activateResponse = await fetch('/api/agent/activate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -29,17 +43,17 @@ export default function GetPhonePage() {
         body: JSON.stringify({})
       })
 
-      const result = await response.json()
+      const activateResult = await activateResponse.json()
 
-      if (result.success) {
-        alert(`🎉 Success! Your AI receptionist is now active!\n\nPhone: ${phoneNumber}\n\nYou can now receive calls at this number. Your AI will handle them professionally.`)
+      if (activateResult.success) {
+        alert(`🎉 Success! Your AI receptionist is now live!\n\nPhone: ${provisionResult.phoneNumber}\n\nYour AI will now handle all calls to this number professionally.`)
         // Redirect to dashboard
         window.location.href = '/dashboard'
       } else {
-        alert(`❌ Error: ${result.message}`)
+        alert(`❌ Error activating agent: ${activateResult.message}`)
       }
     } catch (error) {
-      alert('❌ Failed to activate agent. Please try again.')
+      alert('❌ Failed to get phone number. Please try again.')
     }
   }
 
