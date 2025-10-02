@@ -1,633 +1,425 @@
-"use client"
+'use client'
 
 import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import SimpleOnboardingWizard from '../components/SimpleOnboardingWizard'
-// import AIInsightsPanel from '../components/AIInsightsPanel' // Removed - component not used
+import { motion } from 'framer-motion'
 import { 
-  Phone, Brain, DollarSign, Calendar, TrendingUp,
-  ChevronRight, BarChart3, Activity, Clock,
-  ArrowUpRight, ArrowDownRight, Settings, Bell,
-  MessageSquare, MapPin, User, RefreshCw,
-  Star as StarIcon, Calendar as CalendarIcon,
-  Clock as ClockIcon, Zap, FileText, LogOut,
-  Eye, Play, Pause, Volume2, Download, Users,
-  Target, Award, AlertCircle, CheckCircle
+  Phone, Calendar, Users, DollarSign, TrendingUp, 
+  Settings, LogOut, Bell, ArrowRight, CheckCircle, 
+  Clock, AlertCircle, Play, Pause, Eye
 } from 'lucide-react'
 import Link from 'next/link'
-import { ConnectionStatus } from '../contexts/RealtimeProvider'
 import NetworkErrorHandler from '../components/NetworkErrorHandler'
 import ConnectionStatusIndicator from '../components/ConnectionStatus'
+import { useToast } from '../contexts/ToastContext'
+
+interface DashboardData {
+  businessName: string
+  phoneNumber: string
+  isActive: boolean
+  totalCalls: number
+  totalAppointments: number
+  totalRevenue: number
+  recentCalls: Array<{
+    id: string
+    caller: string
+    duration: string
+    status: string
+    date: string
+  }>
+  upcomingAppointments: Array<{
+    id: string
+    customer: string
+    service: string
+    date: string
+    time: string
+  }>
+}
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [selectedTab, setSelectedTab] = useState('overview')
-  const [selectedTimeframe, setSelectedTimeframe] = useState('7d')
-  const [isLive, setIsLive] = useState(false)
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
-  const [focusedElement, setFocusedElement] = useState(null)
-  
-  // Focus management functions
-  const handleFocus = (elementId: string) => {
-    setFocusedElement(elementId)
-  }
-  
-  const handleBlur = () => {
-    setFocusedElement(null)
-  }
-  
-  const [dashboardData, setDashboardData] = useState({
-    totalCalls: 0,
-    totalRevenue: 0,
-    activeCalls: 0,
-    conversionRate: 0,
-    emergencyCalls: 0,
-    todayBookings: 0,
-    missedCalls: 0,
-    avgCallDuration: 0,
-    customerSatisfaction: 0,
-    monthlyRecurring: 0,
-    callsToday: 0,
-    callsThisWeek: 0,
-    avgCallsPerDay: 0,
-    businessName: '',
-    phoneNumber: ''
-  })
-
-  const [recentCalls, setRecentCalls] = useState([])
-
-  const [upcomingAppointments, setUpcomingAppointments] = useState([])
+  const [error, setError] = useState<string | null>(null)
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const { showSuccess, showError } = useToast()
 
   useEffect(() => {
-    // Check authentication first
-    const token = localStorage.getItem('token')
-    if (!token) {
-      window.location.href = '/login'
-      return
-    }
-
-    // Check if user just created account and needs onboarding
-    const accountStatus = localStorage.getItem('accountStatus')
-    if (accountStatus === 'new_account') {
-      setShowOnboarding(true)
-    }
-    
     loadDashboardData()
-    
-    // Set up real-time refresh every 30 seconds for live data
-    const refreshInterval = setInterval(() => {
-      loadDashboardData()
-    }, 30000)
-    
-    // Set up WebSocket connection for real-time updates (future enhancement)
-    // WebSocket connection for real-time updates (configure when needed)
-    // ws.onmessage = (event) => {
-    //   const data = JSON.parse(event.data)
-    //   if (data.type === 'dashboard_update') {
-    //     loadDashboardData()
-    //   }
-    // }
-    
-    return () => clearInterval(refreshInterval)
-  }, [selectedTimeframe]) // Reload when timeframe changes
+  }, [])
 
   const loadDashboardData = async () => {
-    const startTime = performance.now()
     try {
+      setIsLoading(true)
       setError(null)
+      
       const token = localStorage.getItem('token')
       if (!token) {
-        window.location.href = '/login'
+        setError('Please log in to view dashboard')
         return
       }
 
-      const response = await fetch(`/api/dashboard/data?timeframe=${selectedTimeframe}`, {
+      const response = await fetch('/api/dashboard/data', {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Cache-Control': 'no-cache'
+          'Authorization': `Bearer ${token}`
         }
       })
-      
+
       if (response.ok) {
         const data = await response.json()
-        // Dashboard API Response received
-        
-        // Validate and sanitize data from API response
-        const sanitizedData = {
-          totalCalls: Math.max(0, parseInt(data.totalCalls) || 0),
-          totalRevenue: Math.max(0, parseFloat(data.totalRevenue) || 0),
-          activeCalls: Math.max(0, parseInt(data.activeCalls) || 0),
-          conversionRate: Math.min(100, Math.max(0, parseFloat(data.conversionRate) || 0)),
-          emergencyCalls: Math.max(0, parseInt(data.emergencyCalls) || 0),
-          todayBookings: Math.max(0, parseInt(data.todayBookings) || 0),
-          missedCalls: Math.max(0, parseInt(data.missedCalls) || 0),
-          avgCallDuration: Math.max(0, parseFloat(data.avgCallDuration) || 0),
-          customerSatisfaction: Math.min(5, Math.max(0, parseFloat(data.customerSatisfaction) || 0)),
-          monthlyRecurring: Math.max(0, parseFloat(data.monthlyRecurring) || 0),
-          callsToday: Math.max(0, parseInt(data.callsToday) || 0),
-          callsThisWeek: Math.max(0, parseInt(data.callsThisWeek) || 0),
-          avgCallsPerDay: Math.max(0, parseFloat(data.avgCallsPerDay) || 0),
-          businessName: String(data.businessName || '').trim(),
-          phoneNumber: String(data.phoneNumber || '').trim()
+        if (data.success) {
+          setDashboardData({
+            businessName: data.data.businessName || 'Your Business',
+            phoneNumber: data.data.phoneNumber || 'Not configured',
+            isActive: data.data.isActive || false,
+            totalCalls: data.data.totalCalls || 0,
+            totalAppointments: data.data.totalAppointments || 0,
+            totalRevenue: data.data.totalRevenue || 0,
+            recentCalls: data.data.recentCalls || [],
+            upcomingAppointments: data.data.upcomingAppointments || []
+          })
+        } else {
+          setError(data.message || 'Failed to load dashboard data')
         }
-        
-        // Update dashboard data with validated values
-        setDashboardData(prevData => ({
-          ...prevData,
-          ...sanitizedData
-        }))
-        
-        // Update lists with real data or empty arrays
-        setRecentCalls(data.recentCalls || [])
-        setUpcomingAppointments(data.recentAppointments || [])
-        setIsLive(data.isLive || false)
-        setOnboardingCompleted(data.onboardingCompleted || false)
       } else {
-        setError('Unable to load dashboard data. Please try again later.')
-        // Don't fall back to mock data - show empty state instead
-        setRecentCalls([])
-        setUpcomingAppointments([])
+        setError('Failed to load dashboard data')
       }
     } catch (error) {
-      setError('Network connection error. Please check your internet connection and try again.')
-      // Don't fall back to mock data - show empty state instead
-      setRecentCalls([])
-      setUpcomingAppointments([])
+      console.error('Dashboard error:', error)
+      setError('Network error. Please try again.')
     } finally {
-      const endTime = performance.now()
-      const loadTime = endTime - startTime
-      // Dashboard data loaded successfully
       setIsLoading(false)
     }
   }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
-    localStorage.removeItem('businessData')
-    localStorage.removeItem('accountStatus')
-    
-    // Clear authentication cookie
+    localStorage.removeItem('user')
     document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-    
     window.location.href = '/login'
   }
 
-  const handleRefresh = () => {
-    setIsLoading(true)
-    loadDashboardData()
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount)
+  }
+
+  const formatPhoneNumber = (phone: string) => {
+    if (!phone || phone === 'Not configured') return phone
+    return phone.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3')
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full mx-auto mb-6"
-          />
-          <h2 className="text-2xl font-bold text-white mb-2">Loading Dashboard</h2>
-          <p className="text-gray-400">Setting up your AI receptionist...</p>
+      <NetworkErrorHandler>
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 text-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full mx-auto mb-4 animate-spin" />
+            <p className="text-gray-400">Loading dashboard...</p>
+          </div>
         </div>
-      </div>
+      </NetworkErrorHandler>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-4">Dashboard Error</h2>
-          <p className="text-gray-300 mb-6">{error}</p>
-          <div className="space-y-3">
+      <NetworkErrorHandler>
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 text-white flex items-center justify-center">
+          <div className="text-center">
+            <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Error Loading Dashboard</h2>
+            <p className="text-gray-400 mb-4">{error}</p>
             <button
-              onClick={handleRefresh}
-              className="w-full bg-purple-600 text-white py-3 px-6 rounded-xl font-semibold hover:bg-purple-700 transition-colors"
+              onClick={loadDashboardData}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
             >
               Try Again
             </button>
-            <button
-              onClick={handleLogout}
-              className="w-full bg-gray-700 text-white py-3 px-6 rounded-xl font-semibold hover:bg-gray-600 transition-colors"
-            >
-              Sign Out
-            </button>
           </div>
         </div>
-      </div>
+      </NetworkErrorHandler>
     )
   }
 
   return (
     <NetworkErrorHandler>
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white">
-      {/* Premium Header */}
-      <header className="border-b border-purple-500/20 bg-black/30 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <motion.div 
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center"
-              >
-                <Brain className="w-7 h-7 text-white" />
-              </motion.div>
-              <div>
-                <h1 className="text-3xl font-bold text-white">
-                  CloudGreet Dashboard
-                </h1>
-                <p className="text-gray-400 text-sm">AI Receptionist Control Center</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 text-white">
+        {/* Header */}
+        <header className="border-b border-purple-500/20 bg-black/30 backdrop-blur-xl sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold">Dashboard</h1>
+                  <p className="text-gray-400">{dashboardData?.businessName}</p>
+                </div>
               </div>
-            </div>
-            
-            <div className="flex items-center space-x-6">
-              <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="flex items-center space-x-3 px-4 py-2 bg-gray-800/50 rounded-xl border border-gray-700/50"
-              >
-                <div className={`w-3 h-3 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
-                <span className="text-sm font-medium text-gray-300">
-                  {isLive ? 'AI Active' : 'AI Inactive'}
-                </span>
-              </motion.div>
               
-              <Link href="/settings">
-                <motion.button 
+              <div className="flex items-center gap-4">
+                <ConnectionStatusIndicator />
+                
+                <Link href="/settings">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="p-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg hover:bg-white/20 transition-colors"
+                  >
+                    <Settings className="w-5 h-5" />
+                  </motion.button>
+                </Link>
+                
+                <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-3 rounded-xl bg-gray-800/50 hover:bg-gray-700/50 transition-all border border-gray-700/50"
+                  onClick={handleLogout}
+                  className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
                 >
-                  <Settings className="w-5 h-5 text-gray-300" />
+                  <LogOut className="w-5 h-5 text-red-400" />
                 </motion.button>
-              </Link>
-              
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-3 rounded-xl bg-gray-800/50 hover:bg-gray-700/50 transition-all border border-gray-700/50"
-              >
-                <Bell className="w-5 h-5 text-gray-300" />
-              </motion.button>
-              
-              <ConnectionStatusIndicator />
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleLogout}
-                className="p-3 rounded-xl bg-gray-800/50 hover:bg-red-600/20 transition-all border border-gray-700/50 hover:border-red-500/30"
-              >
-                <LogOut className="w-5 h-5 text-gray-300 hover:text-red-400" />
-              </motion.button>
-              
-              <Link href="/account">
-                <motion.div 
-                  whileHover={{ scale: 1.05 }}
-                  className="w-10 h-10 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center hover:border-white/30 transition-colors cursor-pointer"
-                >
-                  <User className="w-6 h-6 text-white" />
-                </motion.div>
-              </Link>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Dashboard Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-4xl font-bold text-white mb-2">
-              Welcome Back
-            </h2>
-            <p className="text-gray-400 text-lg">Here's what's happening with your AI receptionist</p>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            {['24h', '7d', '30d', '90d'].map((timeframe) => (
-              <motion.button
-                key={timeframe}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedTimeframe(timeframe)}
-                className={`px-4 py-2 rounded-xl font-medium transition-all ${
-                  selectedTimeframe === timeframe
-                    ? 'bg-white/20 backdrop-blur-sm border border-white/30 text-white'
-                    : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700/50'
-                }`}
-              >
-                {timeframe}
-              </motion.button>
-            ))}
-          </div>
-        </div>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Status Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-8"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                  dashboardData?.isActive 
+                    ? 'bg-green-500/20 border border-green-500/30' 
+                    : 'bg-yellow-500/20 border border-yellow-500/30'
+                }`}>
+                  {dashboardData?.isActive ? (
+                    <CheckCircle className="w-6 h-6 text-green-400" />
+                  ) : (
+                    <AlertCircle className="w-6 h-6 text-yellow-400" />
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {dashboardData?.isActive ? 'AI Agent Active' : 'Setup Required'}
+                  </h2>
+                  <p className="text-gray-400">
+                    {dashboardData?.isActive 
+                      ? `Phone: ${formatPhoneNumber(dashboardData.phoneNumber)}`
+                      : 'Complete setup to activate your AI agent'
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              {!dashboardData?.isActive && (
+                <Link href="/billing">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                  >
+                    Complete Setup
+                    <ArrowRight className="w-4 h-4" />
+                  </motion.button>
+                </Link>
+              )}
+            </div>
+          </motion.div>
 
-        {/* KPI Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <motion.div 
-            whileHover={{ y: -5, scale: 1.02 }}
-            className="group relative"
-          >
-            <div className="absolute inset-0 bg-white/5 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
-            <div className="relative bg-gray-800/20 backdrop-blur-xl p-6 rounded-2xl border border-blue-500/20 group-hover:border-blue-400/40 transition-all duration-500">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center">
-                  <Phone className="w-6 h-6 text-white" />
-                </div>
-                <motion.div
-                  animate={{ rotate: [0, 5, -5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"
-                >
-                  <TrendingUp className="w-5 h-5 text-green-400" />
-                </motion.div>
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-200">Total Calls</h3>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-blue-400">{dashboardData.totalCalls}</p>
-                <span className="text-sm text-green-400 font-semibold">+12%</span>
-              </div>
-              <p className="text-sm text-gray-400 mt-2">This week</p>
-            </div>
-          </motion.div>
-          
-          <motion.div 
-            whileHover={{ y: -5, scale: 1.02 }}
-            className="group relative"
-          >
-            <div className="absolute inset-0 bg-white/5 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
-            <div className="relative bg-gray-800/20 backdrop-blur-xl p-6 rounded-2xl border border-green-500/20 group-hover:border-green-400/40 transition-all duration-500">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-white" />
-                </div>
-                <motion.div
-                  animate={{ rotate: [0, 5, -5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 0.2 }}
-                  className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"
-                >
-                  <TrendingUp className="w-5 h-5 text-green-400" />
-                </motion.div>
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-200">Revenue</h3>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-green-400">${dashboardData.totalRevenue.toLocaleString()}</p>
-                <span className="text-sm text-green-400 font-semibold">+23%</span>
-              </div>
-              <p className="text-sm text-gray-400 mt-2">This week</p>
-            </div>
-          </motion.div>
-          
-          <motion.div 
-            whileHover={{ y: -5, scale: 1.02 }}
-            className="group relative"
-          >
-            <div className="absolute inset-0 bg-white/5 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
-            <div className="relative bg-gray-800/20 backdrop-blur-xl p-6 rounded-2xl border border-purple-500/20 group-hover:border-purple-400/40 transition-all duration-500">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-white" />
-                </div>
-                <motion.div
-                  animate={{ rotate: [0, 5, -5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 0.4 }}
-                  className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"
-                >
-                  <TrendingUp className="w-5 h-5 text-green-400" />
-                </motion.div>
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-200">Bookings</h3>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-purple-400">{dashboardData.todayBookings}</p>
-                <span className="text-sm text-green-400 font-semibold">+18%</span>
-              </div>
-              <p className="text-sm text-gray-400 mt-2">Today</p>
-            </div>
-          </motion.div>
-          
-          <motion.div 
-            whileHover={{ y: -5, scale: 1.02 }}
-            className="group relative"
-          >
-            <div className="absolute inset-0 bg-white/5 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
-            <div className="relative bg-gray-800/20 backdrop-blur-xl p-6 rounded-2xl border border-yellow-500/20 group-hover:border-yellow-400/40 transition-all duration-500">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center">
-                  <Target className="w-6 h-6 text-white" />
-                </div>
-                <motion.div
-                  animate={{ rotate: [0, 5, -5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
-                  className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"
-                >
-                  <TrendingUp className="w-5 h-5 text-green-400" />
-                </motion.div>
-              </div>
-              <h3 className="text-xl font-bold mb-2 text-gray-200">Conversion</h3>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-yellow-400">{dashboardData.conversionRate}%</p>
-                <span className="text-sm text-green-400 font-semibold">+5%</span>
-              </div>
-              <p className="text-sm text-gray-400 mt-2">Call to booking</p>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Recent Calls */}
-          <div className="lg:col-span-2">
+          {/* Stats Grid */}
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="bg-gray-800/20 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6"
+              transition={{ delay: 0.1 }}
+              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-white">Recent Calls</h3>
-                <motion.button
-                  onClick={handleRefresh}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600/20 text-purple-400 rounded-xl border border-purple-500/30 hover:bg-purple-600/30 transition-all"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Refresh
-                </motion.button>
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                  <Phone className="w-6 h-6 text-blue-400" />
+                </div>
               </div>
-              
-              <div className="space-y-4">
-                {recentCalls.length > 0 ? (
-                  recentCalls.map((call, index) => (
-                    <motion.div
-                      key={call.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: index * 0.1 }}
-                      className="flex items-center justify-between p-4 bg-gray-700/30 rounded-xl border border-gray-600/30 hover:border-purple-500/30 transition-all"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          call.status === 'emergency' ? 'bg-red-500/20 border border-red-500/30' :
-                          call.status === 'booked' ? 'bg-green-500/20 border border-green-500/30' :
-                          'bg-blue-500/20 border border-blue-500/30'
-                        }`}>
-                          <Phone className={`w-6 h-6 ${
-                            call.status === 'emergency' ? 'text-red-400' :
-                            call.status === 'booked' ? 'text-green-400' :
-                            'text-blue-400'
-                          }`} />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-white">{call.caller || call.from_number}</h4>
-                          <p className="text-sm text-gray-400">{call.phone || call.from_number} • {call.service || 'Service'}</p>
-                          <p className="text-xs text-gray-500">{call.timestamp || new Date(call.created_at).toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-green-400">${call.revenue || call.estimated_value || 0}</p>
-                        <p className="text-sm text-gray-400">{call.duration || `${call.duration || 0}s`}</p>
-                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                          call.status === 'emergency' ? 'bg-red-500/20 text-red-400' :
-                          call.status === 'booked' || call.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                          'bg-blue-500/20 text-blue-400'
-                        }`}>
-                          {call.status === 'emergency' && <AlertCircle className="w-3 h-3" />}
-                          {(call.status === 'booked' || call.status === 'completed') && <CheckCircle className="w-3 h-3" />}
-                          {call.status}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="text-center py-12">
-                    <Phone className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-400 mb-2">No Recent Calls</h3>
-                    <p className="text-gray-500">Your AI receptionist hasn't received any calls yet.</p>
-                  </div>
-                )}
+              <h3 className="text-2xl font-bold mb-1">{dashboardData?.totalCalls || 0}</h3>
+              <p className="text-gray-400">Total Calls</p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-green-400" />
+                </div>
               </div>
+              <h3 className="text-2xl font-bold mb-1">{dashboardData?.totalAppointments || 0}</h3>
+              <p className="text-gray-400">Appointments</p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-purple-400" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold mb-1">{formatCurrency(dashboardData?.totalRevenue || 0)}</h3>
+              <p className="text-gray-400">Revenue</p>
             </motion.div>
           </div>
 
-          {/* Right Column */}
-          <div className="space-y-8">
-            {/* Upcoming Appointments */}
+          {/* Quick Actions */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 mb-8"
+          >
+            <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+            <div className="grid md:grid-cols-4 gap-4">
+              <Link href="/test-agent">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl p-4 transition-colors text-left"
+                >
+                  <Play className="w-8 h-8 text-blue-400 mb-2" />
+                  <h3 className="font-semibold">Test Agent</h3>
+                  <p className="text-sm text-gray-400">Test your AI receptionist</p>
+                </motion.button>
+              </Link>
+              
+              <Link href="/calls">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl p-4 transition-colors text-left"
+                >
+                  <Phone className="w-8 h-8 text-green-400 mb-2" />
+                  <h3 className="font-semibold">Call Logs</h3>
+                  <p className="text-sm text-gray-400">View call history</p>
+                </motion.button>
+              </Link>
+              
+              <Link href="/appointments">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl p-4 transition-colors text-left"
+                >
+                  <Calendar className="w-8 h-8 text-purple-400 mb-2" />
+                  <h3 className="font-semibold">Appointments</h3>
+                  <p className="text-sm text-gray-400">Manage bookings</p>
+                </motion.button>
+              </Link>
+              
+              <Link href="/billing">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl p-4 transition-colors text-left"
+                >
+                  <Settings className="w-8 h-8 text-yellow-400 mb-2" />
+                  <h3 className="font-semibold">Billing</h3>
+                  <p className="text-sm text-gray-400">Manage subscription</p>
+                </motion.button>
+              </Link>
+            </div>
+          </motion.div>
+
+          {/* Recent Activity */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Recent Calls */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="bg-gray-800/20 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6"
+              transition={{ delay: 0.5 }}
+              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-white">Upcoming</h3>
-                <Link
-                  href="/appointments"
-                  className="text-purple-400 hover:text-purple-300 transition-colors text-sm font-medium"
-                >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Recent Calls</h2>
+                <Link href="/calls" className="text-blue-400 hover:text-blue-300 text-sm">
                   View All
                 </Link>
               </div>
               
-              <div className="space-y-4">
-                {upcomingAppointments.length > 0 ? (
-                  upcomingAppointments.map((appointment, index) => (
-                    <motion.div
-                      key={appointment.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.4, delay: index * 0.1 }}
-                      className="p-4 bg-gray-700/30 rounded-xl border border-gray-600/30 hover:border-purple-500/30 transition-all"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-white">{appointment.customer || appointment.customer_name}</h4>
-                        <span className="text-sm text-purple-400 font-medium">{appointment.time || new Date(appointment.scheduled_date).toLocaleTimeString()}</span>
+              {dashboardData?.recentCalls && dashboardData.recentCalls.length > 0 ? (
+                <div className="space-y-3">
+                  {dashboardData.recentCalls.slice(0, 3).map((call) => (
+                    <div key={call.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                      <div>
+                        <p className="font-medium">{call.caller}</p>
+                        <p className="text-sm text-gray-400">{call.date}</p>
                       </div>
-                      <p className="text-sm text-gray-400 mb-1">{appointment.service || 'Service'}</p>
-                      <p className="text-xs text-gray-500">{appointment.date || new Date(appointment.scheduled_date).toLocaleDateString()} • {appointment.address || 'No address provided'}</p>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="text-center py-12">
-                    <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-400 mb-2">No Upcoming Appointments</h3>
-                    <p className="text-gray-500">No appointments are scheduled yet.</p>
-                  </div>
-                )}
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{call.duration}</p>
+                        <p className={`text-xs ${
+                          call.status === 'answered' ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {call.status}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Phone className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-400">No calls yet</p>
+                  <p className="text-sm text-gray-500">Calls will appear here once your agent is active</p>
+                </div>
+              )}
+            </motion.div>
+
+            {/* Upcoming Appointments */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Upcoming Appointments</h2>
+                <Link href="/appointments" className="text-blue-400 hover:text-blue-300 text-sm">
+                  View All
+                </Link>
               </div>
+              
+              {dashboardData?.upcomingAppointments && dashboardData.upcomingAppointments.length > 0 ? (
+                <div className="space-y-3">
+                  {dashboardData.upcomingAppointments.slice(0, 3).map((appointment) => (
+                    <div key={appointment.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                      <div>
+                        <p className="font-medium">{appointment.customer}</p>
+                        <p className="text-sm text-gray-400">{appointment.service}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{appointment.date}</p>
+                        <p className="text-xs text-gray-400">{appointment.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-400">No appointments yet</p>
+                  <p className="text-sm text-gray-500">Appointments will appear here once booked</p>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-8 bg-gray-800/20 backdrop-blur-xl rounded-2xl border border-gray-700/50 p-6"
-        >
-          <h3 className="text-2xl font-bold text-white mb-6">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              href="/calls"
-              className="group p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/20 hover:border-white/30 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <Phone className="w-6 h-6 text-blue-400 group-hover:text-blue-300" />
-                <span className="font-medium text-white">Call Logs</span>
-              </div>
-            </Link>
-            
-            <Link
-              href="/appointments"
-              className="group p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/20 hover:border-white/30 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <Calendar className="w-6 h-6 text-green-400 group-hover:text-green-300" />
-                <span className="font-medium text-white">Appointments</span>
-              </div>
-            </Link>
-            
-            <Link
-              href="/quotes"
-              className="group p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/20 hover:border-white/30 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="w-6 h-6 text-purple-400 group-hover:text-purple-300" />
-                <span className="font-medium text-white">AI Quotes</span>
-              </div>
-            </Link>
-            
-            <Link
-              href="/test-agent"
-              className="group p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/20 hover:border-white/30 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <Play className="w-6 h-6 text-green-400 group-hover:text-green-300" />
-                <span className="font-medium text-white">Test Agent</span>
-              </div>
-            </Link>
-          </div>
-        </motion.div>
-      </main>
-      
-      {/* Onboarding Wizard */}
-      <SimpleOnboardingWizard
-        isOpen={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-        onComplete={() => {
-          setOnboardingCompleted(true)
-          setShowOnboarding(false)
-          setIsLive(true)
-          localStorage.removeItem('accountStatus')
-          loadDashboardData()
-        }}
-      />
-    </div>
+      </div>
     </NetworkErrorHandler>
   )
 }
