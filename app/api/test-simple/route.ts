@@ -1,0 +1,17 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    message: 'Simple test API working',
+    timestamp: new Date().toISOString()
+  })
+}
+
+export async function POST() {
+  return NextResponse.json({
+    success: true,
+    message: 'Simple test API POST working',
+    timestamp: new Date().toISOString()
+  })
+}
