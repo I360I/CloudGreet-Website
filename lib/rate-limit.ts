@@ -188,7 +188,7 @@ export function isWebhookRequest(request: NextRequest): boolean {
   return webhookUserAgents.some(agent => userAgent.includes(agent))
 }
 
-export default {
+const rateLimitExports = {
   RateLimiter,
   authRateLimit,
   apiRateLimit,
@@ -199,4 +199,6 @@ export default {
   isAdminRequest,
   isWebhookRequest
 }
+
+export default rateLimitExports
 

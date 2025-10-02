@@ -21,7 +21,7 @@ export default function TestAgentPage() {
 
   useEffect(() => {
     loadBusinessInfo()
-  }, [])
+  }, [loadBusinessInfo])
 
   const loadBusinessInfo = async () => {
     try {

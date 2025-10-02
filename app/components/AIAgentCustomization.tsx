@@ -37,7 +37,7 @@ export default function AIAgentCustomization({ businessId }: AIAgentCustomizatio
 
   useEffect(() => {
     fetchAgentSettings()
-  }, [businessId])
+  }, [businessId, fetchAgentSettings])
 
   const fetchAgentSettings = async () => {
     try {

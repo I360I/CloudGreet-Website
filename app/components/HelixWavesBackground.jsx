@@ -14,6 +14,8 @@
 "use client";
 
 import React, { useMemo, useRef, useEffect, useState } from "react";
+import * as THREE from "three";
+import { PerspectiveCamera } from "@react-three/fiber";
 
 /* ================================
    1) CONFIG DEFAULTS

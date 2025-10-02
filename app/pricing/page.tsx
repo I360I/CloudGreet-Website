@@ -48,7 +48,7 @@ export default function PricingPage() {
         loadPricingRules()
       }
     }
-  }, [])
+  }, [loadPricingRules])
 
   const loadPricingRules = async () => {
     try {
