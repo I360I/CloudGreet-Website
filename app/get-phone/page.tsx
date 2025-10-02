@@ -8,9 +8,39 @@ import { Phone, CheckCircle, ArrowLeft, CreditCard, Star } from 'lucide-react'
 export default function GetPhonePage() {
   const [selectedPlan, setSelectedPlan] = useState('pro')
 
-  const handleGetPhone = () => {
-    // For now, show a success message and simulate getting a phone number
-    alert('🎉 Phone number assigned! Your AI receptionist is now active!\n\nPhone: (555) 123-4567\n\nYou can now receive calls at this number.')
+  const handleGetPhone = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Please log in to get a phone number')
+        return
+      }
+
+      // Simulate getting a phone number
+      const phoneNumber = `(555) ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`
+      
+      // Activate the agent
+      const response = await fetch('/api/agent/activate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({})
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        alert(`🎉 Success! Your AI receptionist is now active!\n\nPhone: ${phoneNumber}\n\nYou can now receive calls at this number. Your AI will handle them professionally.`)
+        // Redirect to dashboard
+        window.location.href = '/dashboard'
+      } else {
+        alert(`❌ Error: ${result.message}`)
+      }
+    } catch (error) {
+      alert('❌ Failed to activate agent. Please try again.')
+    }
   }
 
   return (
