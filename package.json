@@ -1,0 +1,52 @@
+{
+  "name": "cloudgreet",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "setup": "node setup.js",
+    "test-apis": "node test-apis.js",
+    "check-trials": "node scripts/check-trials.js"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.6",
+    "@react-three/fiber": "^9.3.0",
+    "@supabase/supabase-js": "^2.57.4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@vercel/speed-insights": "^1.2.0",
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^17.2.2",
+    "framer-motion": "^10.18.0",
+    "has-flag": "^5.0.1",
+    "is-number": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.294.0",
+    "next": "^14.2.33",
+    "openai": "^4.20.1",
+    "react": "^18",
+    "react-dom": "^18",
+    "stripe": "^14.7.0",
+    "three": "^0.180.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.4",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
+  }
+}
