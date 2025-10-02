@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import jwt from 'jsonwebtoken'
 
 // Rate limiting store (in production, use Redis)
 const rateLimitMap = new Map()
@@ -61,22 +60,6 @@ export async function middleware(request: NextRequest) {
     
     // Pass token to API routes via header
     response.headers.set('x-auth-token', token)
-    
-    // Decode JWT and set user/business headers for API routes that need them
-    try {
-      const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
-      const decoded = jwt.verify(token, jwtSecret) as any
-      
-      if (decoded.userId) {
-        response.headers.set('x-user-id', decoded.userId)
-      }
-      if (decoded.businessId) {
-        response.headers.set('x-business-id', decoded.businessId)
-      }
-    } catch (error) {
-      // If JWT is invalid, let the API route handle it
-      console.warn('Invalid JWT in middleware:', error)
-    }
     
     // Security headers
     response.headers.set('X-Frame-Options', 'DENY')
