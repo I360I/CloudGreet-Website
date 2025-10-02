@@ -15,7 +15,7 @@ export default function TestAgentPage() {
     isActive: false
   })
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
-  const [callTranscript, setCallTranscript] = useState<string[]>([])
+  const [callTranscript, setCallTranscript] = useState<{speaker: string, text: string, delay: number}[]>([])
   const [isCallActive, setIsCallActive] = useState(false)
   const { showSuccess, showError } = useToast()
 
