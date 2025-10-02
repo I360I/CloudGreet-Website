@@ -27,7 +27,7 @@ export default function BillingPage() {
 
   useEffect(() => {
     loadBillingInfo()
-  }, [])
+  }, [loadBillingInfo])
 
   const loadBillingInfo = async () => {
     try {

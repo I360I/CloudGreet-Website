@@ -52,7 +52,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     loadSettings()
-  }, [])
+  }, [loadSettings])
 
   const loadSettings = async () => {
     try {

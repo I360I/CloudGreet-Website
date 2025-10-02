@@ -44,7 +44,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     loadAnalytics()
-  }, [timeframe])
+  }, [timeframe, loadAnalytics])
 
   const loadAnalytics = async () => {
     try {
