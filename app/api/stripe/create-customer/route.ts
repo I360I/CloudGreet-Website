@@ -11,6 +11,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Stripe is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json({
+        success: false,
+        message: 'Billing service not configured. Please contact support.'
+      }, { status: 503 })
+    }
+
     const body = await request.json()
     const { businessId, email, businessName } = body
 
@@ -37,13 +45,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Stripe customer
-    const customer = await stripe.customers.create({
-      email,
-      name: businessName,
-      metadata: {
-        business_id: businessId
-      }
-    })
+    let customer
+    try {
+      customer = await stripe.customers.create({
+        email,
+        name: businessName,
+        metadata: {
+          business_id: businessId
+        }
+      })
+    } catch (stripeError) {
+      logger.error('Stripe customer creation failed', { 
+        error: stripeError, 
+        businessId, 
+        email, 
+        businessName 
+      })
+      return NextResponse.json({
+        success: false,
+        message: 'Failed to create billing account. Please try again later.'
+      }, { status: 500 })
+    }
 
     // Update business with Stripe customer ID
     const { error: updateError } = await supabaseAdmin
