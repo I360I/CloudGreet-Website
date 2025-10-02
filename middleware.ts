@@ -30,12 +30,7 @@ export async function middleware(request: NextRequest) {
   // Skip middleware for public routes
   if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api/auth') ||
-    pathname.startsWith('/api/health') ||
-    pathname.startsWith('/api/telynyx/voice-webhook') ||
-    pathname.startsWith('/api/telynyx/sms-webhook') ||
-    pathname.startsWith('/api/stripe/webhook') ||
-    pathname.startsWith('/api/admin') ||
+    pathname.startsWith('/api/') ||  // Allow all API routes
     pathname === '/landing' ||
     pathname === '/login' ||
     pathname === '/register' ||
