@@ -143,7 +143,6 @@ export async function POST(request: NextRequest) {
         // Don't fail the request if email fails, just log it
       } else {
         const result = await emailResponse.json()
-        console.log(`Password reset email sent successfully to ${user.email}. Email ID: ${result.id}`)
       }
     } catch (emailError) {
       console.error('Email sending error:', emailError)

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // 3. Alert development team for critical errors
     // 4. Aggregate error statistics
     
-    console.log('Client Error Received:', {
+    // Client Error Received and logged
       errorId: errorInfo.errorId,
       message: errorInfo.message,
       url: errorInfo.url,

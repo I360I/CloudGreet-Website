@@ -69,7 +69,6 @@ export async function POST(request: NextRequest) {
     try {
       // Check if we have a valid business phone for SMS
       if (!process.env.TELYNX_API_KEY || !BUSINESS_PHONE) {
-        console.log('SMS skipped: Missing API key or business phone')
         return NextResponse.json({ 
           success: true, 
           message: 'Notification logged (SMS not configured)' 
@@ -122,7 +121,7 @@ export async function POST(request: NextRequest) {
         })
       } else {
         const errorData = await smsResponse.text()
-        console.log('SMS API Error:', {
+        // SMS API Error logged
           status: smsResponse.status,
           statusText: smsResponse.statusText,
           error: errorData,
