@@ -16,6 +16,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { ConnectionStatus } from '../contexts/RealtimeProvider'
+import NetworkErrorHandler from '../components/NetworkErrorHandler'
+import ConnectionStatusIndicator from '../components/ConnectionStatus'
 
 export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
@@ -220,7 +222,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white">
+    <NetworkErrorHandler>
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white">
       {/* Premium Header */}
       <header className="border-b border-purple-500/20 bg-black/30 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -269,7 +272,7 @@ export default function Dashboard() {
                 <Bell className="w-5 h-5 text-gray-300" />
               </motion.button>
               
-              <ConnectionStatus />
+              <ConnectionStatusIndicator />
               
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -625,5 +628,6 @@ export default function Dashboard() {
         }}
       />
     </div>
+    </NetworkErrorHandler>
   )
 }
