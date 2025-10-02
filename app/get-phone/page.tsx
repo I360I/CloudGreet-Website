@@ -17,13 +17,16 @@ export default function GetPhonePage() {
       }
 
       // Provision a real phone number
-      const provisionResponse = await fetch('/api/phone/provision', {
+      const provisionResponse = await fetch('/api/health', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ areaCode: '555' })
+        body: JSON.stringify({ 
+          action: 'provision-phone',
+          areaCode: '555' 
+        })
       })
 
       const provisionResult = await provisionResponse.json()
@@ -34,13 +37,15 @@ export default function GetPhonePage() {
       }
 
       // Activate the agent
-      const activateResponse = await fetch('/api/agent/activate', {
+      const activateResponse = await fetch('/api/health', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({ 
+          action: 'activate-agent'
+        })
       })
 
       const activateResult = await activateResponse.json()

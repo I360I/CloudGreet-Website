@@ -22,6 +22,148 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    if (action === 'provision-phone') {
+      // Get token from Authorization header
+      const authHeader = request.headers.get('authorization')
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+
+      const token = authHeader.replace('Bearer ', '')
+      const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+      
+      // Decode JWT token
+      const jwt = require('jsonwebtoken')
+      const decoded = jwt.verify(token, jwtSecret)
+      const userId = decoded.userId
+      const userBusinessId = decoded.businessId
+
+      if (!userId || !userBusinessId) {
+        return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
+      }
+
+      // Check if Telnyx is configured
+      if (!process.env.TELYNX_API_KEY) {
+        // Generate a demo phone number for development
+        const demoNumber = `+1${areaCode}${Math.floor(Math.random() * 9000000) + 1000000}`
+        
+        // Store the demo number
+        const { data: phoneRecord, error: phoneError } = await supabaseAdmin
+          .from('toll_free_numbers')
+          .insert({
+            number: demoNumber,
+            business_id: userBusinessId,
+            status: 'assigned',
+            provider: 'demo',
+            monthly_cost: 200,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single()
+
+        if (phoneError) {
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Failed to store demo phone number',
+            details: phoneError.message 
+          }, { status: 500 })
+        }
+
+        // Update business with phone number
+        const { error: businessError } = await supabaseAdmin
+          .from('businesses')
+          .update({ 
+            phone_number: demoNumber,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userBusinessId)
+
+        if (businessError) {
+          return NextResponse.json({ 
+            success: false, 
+            error: 'Failed to update business with phone number',
+            details: businessError.message 
+          }, { status: 500 })
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: 'Demo phone number provisioned successfully',
+          phoneNumber: demoNumber,
+          businessId: userBusinessId,
+          timestamp: new Date().toISOString()
+        })
+      }
+
+      // TODO: Add real Telnyx integration here
+      return NextResponse.json({
+        success: false,
+        message: 'Telnyx integration not implemented yet'
+      }, { status: 501 })
+    }
+
+    if (action === 'activate-agent') {
+      // Get token from Authorization header
+      const authHeader = request.headers.get('authorization')
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+
+      const token = authHeader.replace('Bearer ', '')
+      const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+      
+      // Decode JWT token
+      const jwt = require('jsonwebtoken')
+      const decoded = jwt.verify(token, jwtSecret)
+      const userId = decoded.userId
+      const userBusinessId = decoded.businessId
+
+      if (!userId || !userBusinessId) {
+        return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
+      }
+
+      // Activate AI agent
+      const { data: agent, error: agentError } = await supabaseAdmin
+        .from('ai_agents')
+        .update({ 
+          is_active: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('business_id', userBusinessId)
+        .select()
+        .single()
+
+      if (agentError) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to activate AI agent',
+          details: agentError.message 
+        }, { status: 500 })
+      }
+
+      // Update business onboarding status
+      const { error: businessError } = await supabaseAdmin
+        .from('businesses')
+        .update({ 
+          onboarding_completed: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userBusinessId)
+
+      if (businessError) {
+        console.warn('Failed to update business onboarding status:', businessError)
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'AI agent activated successfully',
+        agentId: agent?.id,
+        businessId: userBusinessId,
+        timestamp: new Date().toISOString()
+      })
+    }
+
     return NextResponse.json({
       success: false,
       message: 'Invalid action'
