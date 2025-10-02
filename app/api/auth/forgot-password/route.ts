@@ -58,6 +58,14 @@ export async function POST(request: NextRequest) {
     // Create reset link
     const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/reset-password?token=${resetToken}`
 
+    // Check if Resend is configured
+    if (!process.env.RESEND_API_KEY) {
+      return NextResponse.json({
+        success: false,
+        error: 'Email service not configured. Please contact support.'
+      }, { status: 503 })
+    }
+
     // Send email with reset link using Resend
     try {
       const emailResponse = await fetch('https://api.resend.com/emails', {
