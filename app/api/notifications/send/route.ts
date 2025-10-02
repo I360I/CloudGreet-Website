@@ -122,6 +122,7 @@ export async function POST(request: NextRequest) {
       } else {
         const errorData = await smsResponse.text()
         // SMS API Error logged
+        console.error('SMS API Error:', {
           status: smsResponse.status,
           statusText: smsResponse.statusText,
           error: errorData,

@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     // 4. Aggregate error statistics
     
     // Client Error Received and logged
+    console.log('Error logged:', {
       errorId: errorInfo.errorId,
       message: errorInfo.message,
       url: errorInfo.url,
