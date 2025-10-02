@@ -3,19 +3,28 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { Phone, CheckCircle, ArrowLeft, CreditCard, Star } from 'lucide-react'
+import { Phone, CheckCircle, ArrowLeft, CreditCard, Star, Shield, Zap, Clock } from 'lucide-react'
+import { PhoneProvisioningLoader } from '../components/LoadingStates'
 
 export default function GetPhonePage() {
   const [selectedPlan, setSelectedPlan] = useState('pro')
+  const [isLoading, setIsLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState(1)
 
   const handleGetPhone = async () => {
+    setIsLoading(true)
+    setLoadingStep(1)
+    
     try {
       const token = localStorage.getItem('token')
       if (!token) {
         alert('Please log in to get a phone number')
+        setIsLoading(false)
         return
       }
 
+      setLoadingStep(2)
+      
       // Provision a real phone number
       const provisionResponse = await fetch('/api/health', {
         method: 'POST',
@@ -33,8 +42,11 @@ export default function GetPhonePage() {
 
       if (!provisionResult.success) {
         alert(`❌ Error provisioning phone: ${provisionResult.message}`)
+        setIsLoading(false)
         return
       }
+
+      setLoadingStep(3)
 
       // Activate the agent
       const activateResponse = await fetch('/api/health', {
@@ -50,20 +62,31 @@ export default function GetPhonePage() {
 
       const activateResult = await activateResponse.json()
 
+      setLoadingStep(4)
+
       if (activateResult.success) {
-        alert(`🎉 Success! Your AI receptionist is now live!\n\nPhone: ${provisionResult.phoneNumber}\n\nYour AI will now handle all calls to this number professionally.`)
-        // Redirect to dashboard
-        window.location.href = '/dashboard'
+        setTimeout(() => {
+          alert(`🎉 Success! Your AI receptionist is now live!\n\nPhone: ${provisionResult.phoneNumber}\n\nYour AI will now handle all calls to this number professionally.`)
+          // Redirect to dashboard
+          window.location.href = '/dashboard'
+        }, 1000)
       } else {
         alert(`❌ Error activating agent: ${activateResult.message}`)
+        setIsLoading(false)
       }
     } catch (error) {
       alert('❌ Failed to get phone number. Please try again.')
+      setIsLoading(false)
     }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 text-white">
+      {isLoading && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <PhoneProvisioningLoader step={loadingStep} totalSteps={4} />
+        </div>
+      )}
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
