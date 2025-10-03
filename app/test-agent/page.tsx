@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Settings, CheckCircle, AlertCircle, Brain, Loader2, Phone, Volume2 } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '../contexts/ToastContext'
-import VoiceDemo from '../components/VoiceDemo'
+import OpenAIVoiceDemo from '../components/OpenAIVoiceDemo'
 
 export default function TestAgentPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -174,7 +174,7 @@ export default function TestAgentPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <VoiceDemo 
+            <OpenAIVoiceDemo 
               businessName={businessInfo.businessName}
               greetingMessage={businessInfo.greetingMessage}
             />
@@ -192,8 +192,8 @@ export default function TestAgentPage() {
             <div className="bg-blue-500/20 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
               <Volume2 className="w-6 h-6 text-blue-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Real Voice</h3>
-            <p className="text-gray-400 text-sm">Actual speech recognition and text-to-speech, not just text simulation</p>
+            <h3 className="text-lg font-semibold text-white mb-2">OpenAI Voice</h3>
+            <p className="text-gray-400 text-sm">Real OpenAI TTS voice generation with professional quality speech</p>
           </div>
           
           <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 text-center">
