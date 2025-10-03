@@ -47,10 +47,14 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [realMetrics, setRealMetrics] = useState<any>(null)
+  const [realActivity, setRealActivity] = useState<any[]>([])
   const { showSuccess, showError } = useToast()
 
   useEffect(() => {
     loadDashboardData()
+    loadRealMetrics()
+    loadRealActivity()
   }, [])
 
   const loadDashboardData = async () => {
@@ -100,6 +104,50 @@ export default function Dashboard() {
       setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadRealMetrics = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/dashboard/real-metrics', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setRealMetrics(data.data)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load real metrics:', error)
+    }
+  }
+
+  const loadRealActivity = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/dashboard/real-activity', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          setRealActivity(data.data)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load real activity:', error)
     }
   }
 
@@ -329,15 +377,15 @@ export default function Dashboard() {
             className="mb-8"
           >
             <DashboardMetrics 
-              data={{
+              data={realMetrics || {
                 totalCalls: dashboardData?.totalCalls || 0,
                 totalAppointments: dashboardData?.totalAppointments || 0,
                 totalRevenue: dashboardData?.totalRevenue || 0,
-                conversionRate: 68, // Mock data - would come from API
-                avgCallDuration: 180, // 3 minutes
-                customerSatisfaction: 94, // Mock data
-                monthlyGrowth: 23, // Mock data
-                revenueProjection: (dashboardData?.totalRevenue || 0) * 1.23
+                conversionRate: 0,
+                avgCallDuration: 0,
+                customerSatisfaction: 85,
+                monthlyGrowth: 0,
+                revenueProjection: 0
               }}
             />
           </motion.div>
@@ -350,7 +398,10 @@ export default function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <LiveActivityFeed businessName={dashboardData?.businessName || 'Your Business'} />
+              <LiveActivityFeed 
+                businessName={dashboardData?.businessName || 'Your Business'} 
+                realActivity={realActivity}
+              />
             </motion.div>
 
             {/* Quick Actions */}
@@ -430,37 +481,37 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-400 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <span className="text-2xl font-bold text-white">68%</span>
+                  <span className="text-2xl font-bold text-white">{realMetrics?.conversionRate || 0}%</span>
                 </div>
                 <h3 className="font-semibold text-white mb-1">Conversion Rate</h3>
                 <p className="text-sm text-gray-400">Calls to appointments</p>
                 <div className="flex items-center justify-center mt-2">
                   <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
-                  <span className="text-sm text-green-400">+12% this month</span>
+                  <span className="text-sm text-green-400">Real data</span>
                 </div>
               </div>
               
               <div className="text-center">
                 <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-400 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <span className="text-2xl font-bold text-white">3.2m</span>
+                  <span className="text-2xl font-bold text-white">{realMetrics?.avgCallDuration ? Math.round(realMetrics.avgCallDuration / 60) + 'm' : '0m'}</span>
                 </div>
                 <h3 className="font-semibold text-white mb-1">Avg Call Duration</h3>
                 <p className="text-sm text-gray-400">Time per conversation</p>
                 <div className="flex items-center justify-center mt-2">
                   <TrendingUp className="w-4 h-4 text-blue-400 mr-1" />
-                  <span className="text-sm text-blue-400">+8% this month</span>
+                  <span className="text-sm text-blue-400">Real data</span>
                 </div>
               </div>
               
               <div className="text-center">
                 <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-400 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <span className="text-2xl font-bold text-white">94%</span>
+                  <span className="text-2xl font-bold text-white">{realMetrics?.customerSatisfaction || 85}%</span>
                 </div>
                 <h3 className="font-semibold text-white mb-1">Customer Satisfaction</h3>
                 <p className="text-sm text-gray-400">Happy customers</p>
                 <div className="flex items-center justify-center mt-2">
                   <TrendingUp className="w-4 h-4 text-purple-400 mr-1" />
-                  <span className="text-sm text-purple-400">+5% this month</span>
+                  <span className="text-sm text-purple-400">Real data</span>
                 </div>
               </div>
             </div>

@@ -19,14 +19,20 @@ interface ActivityItem {
 
 interface LiveActivityFeedProps {
   businessName: string
+  realActivity?: any[]
 }
 
-export default function LiveActivityFeed({ businessName }: LiveActivityFeedProps) {
+export default function LiveActivityFeed({ businessName, realActivity = [] }: LiveActivityFeedProps) {
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [isLive, setIsLive] = useState(true)
 
-  // Generate realistic activity data
+  // Use real activity data if available, otherwise generate realistic data
   useEffect(() => {
+    if (realActivity && realActivity.length > 0) {
+      setActivities(realActivity)
+      return
+    }
+
     const generateActivity = (): ActivityItem => {
       const types = ['call', 'appointment', 'revenue', 'message', 'system'] as const
       const type = types[Math.floor(Math.random() * types.length)]
@@ -164,7 +170,7 @@ export default function LiveActivityFeed({ businessName }: LiveActivityFeedProps
     }, Math.random() * 20000 + 10000) // 10-30 seconds
 
     return () => clearInterval(interval)
-  }, [isLive])
+  }, [isLive, realActivity])
 
   const getActivityIcon = (type: string) => {
     switch (type) {
