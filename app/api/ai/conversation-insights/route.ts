@@ -102,8 +102,14 @@ export async function GET(request: NextRequest) {
       return acc
     }, {} as Record<string, number>) || {}
 
-    // Response time analysis (if we had response times)
-    const avgResponseTime = 2.3 // Mock for now - would calculate from actual timestamps
+    // Response time analysis - calculate from conversation timestamps
+    const avgResponseTime = conversations?.length > 1 
+      ? conversations.slice(1).reduce((total, conv, index) => {
+          const prevConv = conversations[index]
+          const timeDiff = new Date(conv.created_at).getTime() - new Date(prevConv.created_at).getTime()
+          return total + (timeDiff / 1000) // Convert to seconds
+        }, 0) / (conversations.length - 1)
+      : 0
 
     // Conversion analysis
     const bookingIntents = conversations?.filter(conv => conv.intent === 'booking').length || 0

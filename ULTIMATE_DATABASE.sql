@@ -780,6 +780,58 @@ CREATE TABLE contact_submissions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create conversation_history table for AI conversation engine
+CREATE TABLE conversation_history (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  conversation_id VARCHAR(255) NOT NULL,
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  customer_message TEXT NOT NULL,
+  ai_response TEXT NOT NULL,
+  sentiment VARCHAR(50),
+  intent VARCHAR(50),
+  urgency_level VARCHAR(20),
+  lead_score INTEGER DEFAULT 0,
+  extracted_info JSONB,
+  emotional_state VARCHAR(50),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create customers table for customer management
+CREATE TABLE customers (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  name VARCHAR(255),
+  phone VARCHAR(20) NOT NULL,
+  email VARCHAR(255),
+  address TEXT,
+  customer_type VARCHAR(20) DEFAULT 'new',
+  total_calls INTEGER DEFAULT 0,
+  last_call_date TIMESTAMP WITH TIME ZONE,
+  lead_score INTEGER DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(business_id, phone)
+);
+
+-- Create conversation_analytics table for insights
+CREATE TABLE conversation_analytics (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  total_conversations INTEGER DEFAULT 0,
+  avg_sentiment_score DECIMAL(3,2) DEFAULT 0,
+  avg_lead_score DECIMAL(5,2) DEFAULT 0,
+  intent_distribution JSONB,
+  urgency_distribution JSONB,
+  emotional_state_distribution JSONB,
+  conversion_rate DECIMAL(5,2) DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(business_id, date)
+);
+
 -- =====================================================
 -- STEP 10: ADD FOREIGN KEY CONSTRAINTS
 -- =====================================================
@@ -961,6 +1013,24 @@ CREATE INDEX idx_contact_submissions_email ON contact_submissions(email);
 CREATE INDEX idx_contact_submissions_status ON contact_submissions(status);
 CREATE INDEX idx_contact_submissions_created_at ON contact_submissions(created_at);
 
+-- Indexes for conversation_history table
+CREATE INDEX idx_conversation_history_business_id ON conversation_history(business_id);
+CREATE INDEX idx_conversation_history_conversation_id ON conversation_history(conversation_id);
+CREATE INDEX idx_conversation_history_created_at ON conversation_history(created_at);
+CREATE INDEX idx_conversation_history_sentiment ON conversation_history(sentiment);
+CREATE INDEX idx_conversation_history_intent ON conversation_history(intent);
+CREATE INDEX idx_conversation_history_lead_score ON conversation_history(lead_score);
+
+-- Indexes for customers table
+CREATE INDEX idx_customers_business_id ON customers(business_id);
+CREATE INDEX idx_customers_phone ON customers(phone);
+CREATE INDEX idx_customers_customer_type ON customers(customer_type);
+CREATE INDEX idx_customers_lead_score ON customers(lead_score);
+
+-- Indexes for conversation_analytics table
+CREATE INDEX idx_conversation_analytics_business_id ON conversation_analytics(business_id);
+CREATE INDEX idx_conversation_analytics_date ON conversation_analytics(date);
+
 -- =====================================================
 -- STEP 12: CREATE FUNCTIONS AND TRIGGERS
 -- =====================================================
@@ -1110,6 +1180,9 @@ ALTER TABLE pricing_optimization_log DISABLE ROW LEVEL SECURITY;
 ALTER TABLE competitor_analysis DISABLE ROW LEVEL SECURITY;
 ALTER TABLE retention_analysis DISABLE ROW LEVEL SECURITY;
 ALTER TABLE contact_submissions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE conversation_history DISABLE ROW LEVEL SECURITY;
+ALTER TABLE customers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE conversation_analytics DISABLE ROW LEVEL SECURITY;
 -- NEW AUTOMATION TABLES
 ALTER TABLE calls DISABLE ROW LEVEL SECURITY;
 ALTER TABLE leads DISABLE ROW LEVEL SECURITY;
