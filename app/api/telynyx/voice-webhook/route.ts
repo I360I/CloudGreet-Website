@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate proper Telynyx webhook response
+    // Generate proper Telnyx webhook response
     const webhookResponse = {
       call_id: call_control_id,
       status: 'answered',

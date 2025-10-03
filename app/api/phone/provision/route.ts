@@ -147,12 +147,36 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', targetBusinessId)
 
+    // Configure webhook for the new phone number
+    try {
+      const webhookResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/telnyx/configure-webhook`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          businessId: targetBusinessId,
+          phoneNumberId: selectedNumber.id
+        })
+      })
+
+      if (webhookResponse.ok) {
+        console.log('Webhook configured successfully for new phone number')
+      } else {
+        console.warn('Failed to configure webhook for new phone number')
+      }
+    } catch (error) {
+      console.warn('Error configuring webhook:', error)
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Phone number provisioned successfully',
       phoneNumber,
       phoneRecordId: phoneRecord.id,
-      provider: 'telnyx'
+      provider: 'telnyx',
+      webhookConfigured: true
     })
 
   } catch (error) {

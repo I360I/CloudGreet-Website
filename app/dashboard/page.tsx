@@ -15,6 +15,7 @@ import LiveActivityFeed from '../components/LiveActivityFeed'
 import AIConversationInsights from '../components/AIConversationInsights'
 import QuickStartWidget from '../components/QuickStartWidget'
 import SupportWidget from '../components/SupportWidget'
+import CallTestWidget from '../components/CallTestWidget'
 import { useToast } from '../contexts/ToastContext'
 
 interface DashboardData {
@@ -537,14 +538,31 @@ export default function Dashboard() {
           </motion.div>
 
           {/* AI Conversation Insights */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="mb-8"
-          >
-            <SupportWidget businessName={dashboardData?.businessName || 'Your Business'} />
-          </motion.div>
+          {/* Support & Call Test Widgets */}
+          <div className="grid lg:grid-cols-2 gap-6 mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <SupportWidget businessName={dashboardData?.businessName || 'Your Business'} />
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+            >
+              <CallTestWidget 
+                businessName={dashboardData?.businessName || 'Your Business'}
+                phoneNumber={dashboardData?.phoneNumber}
+                onTestComplete={() => {
+                  loadRealActivity()
+                  loadRealMetrics()
+                }}
+              />
+            </motion.div>
+          </div>
 
           {/* Recent Activity */}
           <div className="grid md:grid-cols-2 gap-6">
