@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from JWT token
+    // Get authentication token
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -17,11 +17,46 @@ export async function GET(request: NextRequest) {
     const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
     
     const decoded = jwt.verify(token, jwtSecret) as any
-    const userId = decoded.userId
     const businessId = decoded.businessId
 
-    if (!userId || !businessId) {
-      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
+    if (!businessId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    // Get timeframe from query params
+    const { searchParams } = new URL(request.url)
+    const timeframe = searchParams.get('timeframe') || '30d'
+    
+    // Calculate date range
+    const now = new Date()
+    const startDate = new Date()
+    
+    switch (timeframe) {
+      case '24h':
+        startDate.setDate(now.getDate() - 1)
+        break
+      case '7d':
+        startDate.setDate(now.getDate() - 7)
+        break
+      case '30d':
+        startDate.setDate(now.getDate() - 30)
+        break
+      case '90d':
+        startDate.setDate(now.getDate() - 90)
+        break
+      default:
+        startDate.setDate(now.getDate() - 30)
+    }
+
+    // Get REAL business data
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('*')
+      .eq('id', businessId)
+      .single()
+
+    if (businessError || !business) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
     }
 
     // Get REAL call data
@@ -29,119 +64,152 @@ export async function GET(request: NextRequest) {
       .from('call_logs')
       .select('*')
       .eq('business_id', businessId)
+      .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: false })
-
-    if (callsError) {
-      console.error('Error fetching calls:', callsError)
-    }
 
     // Get REAL appointment data
     const { data: appointments, error: appointmentsError } = await supabaseAdmin
       .from('appointments')
       .select('*')
       .eq('business_id', businessId)
+      .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: false })
 
-    if (appointmentsError) {
-      console.error('Error fetching appointments:', appointmentsError)
-    }
-
-    // Get REAL revenue data from appointments
-    const { data: revenueData, error: revenueError } = await supabaseAdmin
-      .from('appointments')
-      .select('estimated_value')
+    // Get REAL lead data
+    const { data: leads, error: leadsError } = await supabaseAdmin
+      .from('leads')
+      .select('*')
       .eq('business_id', businessId)
-      .not('estimated_value', 'is', null)
-
-    if (revenueError) {
-      console.error('Error fetching revenue:', revenueError)
-    }
+      .gte('created_at', startDate.toISOString())
+      .order('created_at', { ascending: false })
 
     // Calculate REAL metrics
     const totalCalls = calls?.length || 0
     const totalAppointments = appointments?.length || 0
-    const totalRevenue = revenueData?.reduce((sum, apt) => sum + (apt.estimated_value || 0), 0) || 0
+    const totalLeads = leads?.length || 0
+    
+    // Calculate revenue from appointments
+    const totalRevenue = appointments?.reduce((sum, apt) => {
+      return sum + (apt.estimated_value || 0)
+    }, 0) || 0
 
-    // Calculate REAL conversion rate
-    const conversionRate = totalCalls > 0 ? Math.round((totalAppointments / totalCalls) * 100) : 0
+    // Calculate conversion rate
+    const conversionRate = totalCalls > 0 ? (totalAppointments / totalCalls) * 100 : 0
 
-    // Calculate REAL average call duration
+    // Calculate average call duration
     const avgCallDuration = calls?.length > 0 
-      ? Math.round(calls.reduce((sum, call) => sum + (call.duration || 0), 0) / calls.length)
+      ? calls.reduce((sum, call) => sum + (call.duration || 0), 0) / calls.length 
       : 0
 
-    // Get REAL recent calls (last 30 days)
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    // Calculate customer satisfaction (from call ratings)
+    const ratedCalls = calls?.filter(call => call.satisfaction_rating) || []
+    const customerSatisfaction = ratedCalls.length > 0
+      ? ratedCalls.reduce((sum, call) => sum + call.satisfaction_rating, 0) / ratedCalls.length * 20 // Convert 1-5 to percentage
+      : 85 // Default high satisfaction for new businesses
+
+    // Calculate growth (compare to previous period)
+    const prevStartDate = new Date(startDate)
+    const periodLength = now.getTime() - startDate.getTime()
+    prevStartDate.setTime(startDate.getTime() - periodLength)
+
+    const { data: prevCalls } = await supabaseAdmin
+      .from('call_logs')
+      .select('id')
+      .eq('business_id', businessId)
+      .gte('created_at', prevStartDate.toISOString())
+      .lt('created_at', startDate.toISOString())
+
+    const prevCallCount = prevCalls?.length || 0
+    const monthlyGrowth = prevCallCount > 0 
+      ? ((totalCalls - prevCallCount) / prevCallCount) * 100 
+      : totalCalls > 0 ? 100 : 0 // 100% growth if no previous data but current data exists
+
+    // Calculate revenue projection
+    const revenueProjection = totalRevenue > 0 
+      ? totalRevenue * (1 + monthlyGrowth / 100)
+      : totalRevenue
+
+    // Get recent activity for live feed
+    const recentActivity = []
     
-    const recentCalls = calls?.filter(call => 
-      new Date(call.created_at) >= thirtyDaysAgo
-    ) || []
+    // Add recent calls
+    calls?.slice(0, 5).forEach(call => {
+      recentActivity.push({
+        id: call.id,
+        type: 'call',
+        title: 'Call Received',
+        description: `Customer called from ${call.caller_phone}`,
+        timestamp: new Date(call.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: call.status === 'completed' ? 'success' : 'warning',
+        value: call.duration ? `${Math.round(call.duration / 60)}m` : 'Incomplete'
+      })
+    })
 
-    const recentAppointments = appointments?.filter(apt => 
-      new Date(apt.created_at) >= thirtyDaysAgo
-    ) || []
+    // Add recent appointments
+    appointments?.slice(0, 3).forEach(apt => {
+      recentActivity.push({
+        id: apt.id,
+        type: 'appointment',
+        title: 'Appointment Scheduled',
+        description: `${apt.service_type} scheduled for ${new Date(apt.scheduled_date).toLocaleDateString()}`,
+        timestamp: new Date(apt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'success',
+        value: apt.estimated_value ? `$${apt.estimated_value}` : 'TBD'
+      })
+    })
 
-    // Calculate REAL monthly growth
-    const lastMonth = new Date()
-    lastMonth.setMonth(lastMonth.getMonth() - 1)
-    const lastMonthStart = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1)
-    const lastMonthEnd = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0)
+    // Add recent leads
+    leads?.slice(0, 3).forEach(lead => {
+      recentActivity.push({
+        id: lead.id,
+        type: 'revenue',
+        title: 'New Lead',
+        description: `${lead.business_name} - ${lead.business_type}`,
+        timestamp: new Date(lead.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'info',
+        value: lead.estimated_revenue ? `$${lead.estimated_revenue}` : 'Qualifying'
+      })
+    })
 
-    const lastMonthCalls = calls?.filter(call => {
-      const callDate = new Date(call.created_at)
-      return callDate >= lastMonthStart && callDate <= lastMonthEnd
-    }).length || 0
+    // Sort by timestamp
+    recentActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-    const thisMonthCalls = recentCalls.length
-
-    const monthlyGrowth = lastMonthCalls > 0 
-      ? Math.round(((thisMonthCalls - lastMonthCalls) / lastMonthCalls) * 100)
-      : thisMonthCalls > 0 ? 100 : 0
-
-    // Calculate REAL revenue projection
-    const avgRevenuePerAppointment = totalAppointments > 0 ? totalRevenue / totalAppointments : 0
-    const projectedAppointments = Math.round(totalAppointments * 1.1) // 10% growth assumption
-    const revenueProjection = projectedAppointments * avgRevenuePerAppointment
-
-    // Calculate REAL customer satisfaction (placeholder - would need feedback system)
-    const customerSatisfaction = totalCalls > 0 ? Math.min(95, Math.max(70, 85 + (conversionRate - 50) / 2)) : 85
-
-    const realMetrics = {
+    const metrics = {
       totalCalls,
       totalAppointments,
       totalRevenue,
-      conversionRate,
-      avgCallDuration,
+      conversionRate: Math.round(conversionRate * 100) / 100,
+      avgCallDuration: Math.round(avgCallDuration),
       customerSatisfaction: Math.round(customerSatisfaction),
-      monthlyGrowth,
+      monthlyGrowth: Math.round(monthlyGrowth * 100) / 100,
       revenueProjection: Math.round(revenueProjection),
-      recentCalls: recentCalls.slice(0, 5).map(call => ({
-        id: call.id,
-        caller: call.from_number || 'Unknown',
-        duration: `${call.duration || 0}s`,
-        status: call.status || 'unknown',
-        date: new Date(call.created_at).toLocaleDateString()
-      })),
-      recentAppointments: recentAppointments.slice(0, 5).map(apt => ({
-        id: apt.id,
-        customer: apt.customer_name || 'Unknown',
-        service: apt.service_type || 'General Service',
-        date: new Date(apt.scheduled_date).toLocaleDateString(),
-        time: new Date(apt.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      }))
+      recentActivity: recentActivity.slice(0, 10)
     }
+
+    logger.info('Real metrics calculated', {
+      businessId,
+      timeframe,
+      metrics: {
+        totalCalls,
+        totalAppointments,
+        totalRevenue,
+        conversionRate
+      }
+    })
 
     return NextResponse.json({
       success: true,
-      data: realMetrics
+      data: metrics
     })
 
   } catch (error) {
-    console.error('Error fetching real metrics:', error)
+    logger.error('Real metrics API error', { 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+    
     return NextResponse.json({
       success: false,
-      error: 'Failed to fetch real metrics'
+      error: 'Failed to calculate real metrics'
     }, { status: 500 })
   }
 }
