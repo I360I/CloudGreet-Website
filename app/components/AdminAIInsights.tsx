@@ -51,7 +51,7 @@ export default function AdminAIInsights() {
     setIsLoading(true)
     
     // Simulate AI-generated insights based on current data
-    const mockInsights: AIInsight[] = [
+    const defaultInsights: AIInsight[] = [
       {
         id: '1',
         type: 'opportunity',
@@ -128,7 +128,7 @@ export default function AdminAIInsights() {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    setInsights(mockInsights)
+    setInsights(defaultInsights)
     setLastUpdated(new Date())
     setIsLoading(false)
   }

@@ -52,35 +52,13 @@ export default function AdminCharts({ stats: propStats, clients }: AdminChartsPr
       if (data.success) {
         setStats(data.data)
       } else {
-        // Use demo data if API fails
-        setStats({
-          totalClients: 156,
-          activeClients: 142,
-          totalRevenue: 284750,
-          monthlyRevenue: 45680,
-          averageClientValue: 1825,
-          conversionRate: 23.5,
-          callsToday: 45,
-          appointmentsToday: 12,
-          smsSent: 89,
-          systemHealth: 'healthy'
-        })
+        // No fallback - show empty state if API fails
+        setStats(null)
       }
     } catch (error) {
       console.error('Failed to fetch admin stats:', error)
-      // Use demo data on error
-      setStats({
-        totalClients: 156,
-        activeClients: 142,
-        totalRevenue: 284750,
-        monthlyRevenue: 45680,
-        averageClientValue: 1825,
-        conversionRate: 23.5,
-        callsToday: 45,
-        appointmentsToday: 12,
-        smsSent: 89,
-        systemHealth: 'healthy'
-      })
+      // No fallback - show empty state on error
+      setStats(null)
     } finally {
       setLoading(false)
     }
