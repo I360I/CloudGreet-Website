@@ -12,6 +12,7 @@ import NetworkErrorHandler from '../components/NetworkErrorHandler'
 import ConnectionStatusIndicator from '../components/ConnectionStatus'
 import DashboardMetrics from '../components/DashboardMetrics'
 import LiveActivityFeed from '../components/LiveActivityFeed'
+import AIConversationInsights from '../components/AIConversationInsights'
 import { useToast } from '../contexts/ToastContext'
 
 interface DashboardData {
@@ -515,6 +516,16 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+          </motion.div>
+
+          {/* AI Conversation Insights */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="mb-8"
+          >
+            <AIConversationInsights businessId={dashboardData?.businessName || 'default'} />
           </motion.div>
 
           {/* Recent Activity */}
