@@ -13,6 +13,8 @@ import ConnectionStatusIndicator from '../components/ConnectionStatus'
 import DashboardMetrics from '../components/DashboardMetrics'
 import LiveActivityFeed from '../components/LiveActivityFeed'
 import AIConversationInsights from '../components/AIConversationInsights'
+import QuickStartWidget from '../components/QuickStartWidget'
+import SupportWidget from '../components/SupportWidget'
 import { useToast } from '../contexts/ToastContext'
 
 interface DashboardData {
@@ -135,7 +137,7 @@ export default function Dashboard() {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const response = await fetch('/api/dashboard/real-activity', {
+      const response = await fetch('/api/dashboard/real-metrics?timeframe=7d', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -144,7 +146,8 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          setRealActivity(data.data)
+          setRealActivity(data.data.recentActivity || [])
+          setRealMetrics(data.data)
         }
       }
     } catch (error) {
@@ -391,13 +394,28 @@ export default function Dashboard() {
             />
           </motion.div>
 
-          {/* Live Activity & Quick Actions Grid */}
+          {/* Live Activity & Quick Start Grid */}
           <div className="grid lg:grid-cols-2 gap-6 mb-8">
-            {/* Live Activity Feed */}
+            {/* Quick Start Widget */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
+            >
+              <QuickStartWidget 
+                businessName={dashboardData?.businessName || 'Your Business'}
+                onDataGenerated={() => {
+                  loadRealActivity()
+                  loadRealMetrics()
+                }}
+              />
+            </motion.div>
+
+            {/* Live Activity Feed */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
             >
               <LiveActivityFeed 
                 businessName={dashboardData?.businessName || 'Your Business'} 
@@ -525,7 +543,7 @@ export default function Dashboard() {
             transition={{ delay: 0.6 }}
             className="mb-8"
           >
-            <AIConversationInsights businessId={dashboardData?.businessName || 'default'} />
+            <SupportWidget businessName={dashboardData?.businessName || 'Your Business'} />
           </motion.div>
 
           {/* Recent Activity */}
