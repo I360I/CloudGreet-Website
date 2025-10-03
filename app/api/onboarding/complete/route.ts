@@ -188,6 +188,14 @@ export async function POST(request: NextRequest) {
         agentId
       })
 
+      // AI agent is ready for OpenAI voice conversations
+      await logger.info('AI agent ready for OpenAI voice conversations', {
+        requestId,
+        businessId,
+        agentId,
+        voice: validatedData.voice || 'alloy'
+      })
+
     } catch (agentError) {
       console.error('AI agent creation failed:', {
         agentError,
@@ -207,51 +215,63 @@ export async function POST(request: NextRequest) {
       console.warn('AI agent creation failed, continuing with onboarding:', agentError)
     }
 
-    // Purchase phone number from Telynyx
+    // Provision phone number for the business
     let phoneNumber = null
-    let telynyxPhoneId = null
+    let phoneRecordId = null
     
     try {
       // Extract area code from business phone or use default
       const areaCode = validatedData.phone ? validatedData.phone.replace(/\D/g, '').substring(0, 3) : '555'
       
-      await logger.info('Purchasing phone number from Telynyx', {
+      await logger.info('Provisioning phone number', {
         requestId,
         businessId,
         areaCode
       })
       
-      const purchasedPhone = await telynyx.purchasePhoneNumber(
-        areaCode,
-        `${validatedData.businessName} - ${validatedData.businessType}`
-      )
-      
-      phoneNumber = purchasedPhone.phone_number
-      telynyxPhoneId = purchasedPhone.id
-      
-      await logger.info('Phone number purchased successfully', {
-        requestId,
-        businessId,
-        phoneNumber,
-        telynyxPhoneId
+      // Call our phone provisioning API
+      const provisionResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/phone/provision`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          businessId,
+          areaCode
+        })
       })
+      
+      if (provisionResponse.ok) {
+        const provisionData = await provisionResponse.json()
+        phoneNumber = provisionData.phoneNumber
+        phoneRecordId = provisionData.phoneRecordId
+        
+        await logger.info('Phone number provisioned successfully', {
+          requestId,
+          businessId,
+          phoneNumber,
+          phoneRecordId
+        })
+      } else {
+        throw new Error('Phone provisioning API failed')
+      }
     } catch (phoneError) {
-      logger.error("Error", { 
+      logger.error("Error provisioning phone number", { 
         error: phoneError instanceof Error ? phoneError.message : 'Unknown error', 
         requestId,
         businessId,
-        action: 'purchase_phone_number'
+        action: 'provision_phone_number'
       })
       // Continue without phone number - user can set it up later
     }
 
-    // Update business with phone number if purchased
+    // Update business with phone number if provisioned
     if (phoneNumber) {
       await supabaseAdmin
         .from('businesses')
         .update({
           phone_number: phoneNumber,
-          telynyx_phone_id: telynyxPhoneId,
           updated_at: new Date().toISOString()
         })
         .eq('id', businessId)

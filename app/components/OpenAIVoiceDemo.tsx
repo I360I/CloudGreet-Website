@@ -4,21 +4,22 @@ import React, { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Mic, MicOff, Volume2, VolumeX, Phone, PhoneOff, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
-interface VoiceDemoProps {
+interface OpenAIVoiceDemoProps {
   businessName: string
   greetingMessage: string
 }
 
-export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoProps) {
+export default function OpenAIVoiceDemo({ businessName, greetingMessage }: OpenAIVoiceDemoProps) {
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [isCallActive, setIsCallActive] = useState(false)
   const [transcript, setTranscript] = useState<string[]>([])
   const [currentMessage, setCurrentMessage] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
   
   const recognitionRef = useRef<any>(null)
-  const synthRef = useRef<SpeechSynthesis>(typeof window !== 'undefined' ? window.speechSynthesis : null)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
     // Initialize speech recognition
@@ -47,45 +48,23 @@ export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoPr
         setIsListening(false)
       }
     }
-
-    // Initialize speech synthesis
-    if (synthRef.current) {
-      synthRef.current.onvoiceschanged = () => {
-        // Voices loaded
-      }
-    }
   }, [])
 
-  const speak = (text: string) => {
-    if (!synthRef.current) return
-
-    setIsSpeaking(true)
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.rate = 0.9
-    utterance.pitch = 1.0
-    utterance.volume = 0.8
-
-    // Try to use a natural voice
-    const voices = synthRef.current.getVoices()
-    const naturalVoice = voices.find((voice: any) => 
-      voice.name.includes('Google') || 
-      voice.name.includes('Microsoft') ||
-      voice.name.includes('Samantha') ||
-      voice.name.includes('Alex')
-    )
-    if (naturalVoice) {
-      utterance.voice = naturalVoice
+  const playAudio = (audioBlob: Blob) => {
+    const url = URL.createObjectURL(audioBlob)
+    setAudioUrl(url)
+    
+    if (audioRef.current) {
+      audioRef.current.src = url
+      audioRef.current.play()
+      setIsSpeaking(true)
+      
+      audioRef.current.onended = () => {
+        setIsSpeaking(false)
+        URL.revokeObjectURL(url)
+        setAudioUrl(null)
+      }
     }
-
-    utterance.onend = () => {
-      setIsSpeaking(false)
-    }
-
-    utterance.onerror = () => {
-      setIsSpeaking(false)
-    }
-
-    synthRef.current.speak(utterance)
   }
 
   const handleUserInput = async (input: string) => {
@@ -95,90 +74,56 @@ export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoPr
     setTranscript(prev => [...prev, `Customer: ${input}`])
     
     try {
-      // Get real AI response
-      const response = await generateAIResponse(input)
-      setTranscript(prev => [...prev, `AI: ${response}`])
-      speak(response)
-    } catch (error) {
-      console.error('Error generating AI response:', error)
-      const fallbackResponse = "I'm sorry, I'm having trouble processing that. Could you please try again?"
-      setTranscript(prev => [...prev, `AI: ${fallbackResponse}`])
-      speak(fallbackResponse)
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const generateAIResponse = async (input: string): Promise<string> => {
-    try {
-      // Get business token for API call
-      const token = localStorage.getItem('token')
-      if (!token) {
-        return "I'm sorry, I need to verify your account to provide personalized assistance."
-      }
-
-      // Call real AI API
-      const response = await fetch('/api/ai/conversation', {
+      // Get real AI response with voice
+      const response = await fetch('/api/ai/conversation-with-voice', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           message: input,
           context: {
             businessName,
             greetingMessage,
-            conversationType: 'demo'
+            conversationType: 'demo',
+            voice: 'alloy' // Use OpenAI voice
           }
         })
       })
 
       if (response.ok) {
         const data = await response.json()
-        return data.response || "I understand. Let me help you with that. Can you provide a bit more detail so I can assist you better?"
+        const aiResponse = data.response
+        setTranscript(prev => [...prev, `AI: ${aiResponse}`])
+        
+        // Play the AI voice response
+        if (data.audioBlob) {
+          // Convert base64 to blob
+          const binaryString = atob(data.audioBlob)
+          const bytes = new Uint8Array(binaryString.length)
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i)
+          }
+          const audioBlob = new Blob([bytes], { type: 'audio/mpeg' })
+          playAudio(audioBlob)
+        }
+      } else {
+        throw new Error('AI API failed')
       }
     } catch (error) {
-      console.error('AI API error:', error)
+      console.error('Error generating AI response:', error)
+      const fallbackResponse = "I'm sorry, I'm having trouble processing that. Could you please try again?"
+      setTranscript(prev => [...prev, `AI: ${fallbackResponse}`])
+      
+      // Use browser speech synthesis as fallback
+      const utterance = new SpeechSynthesisUtterance(fallbackResponse)
+      utterance.onstart = () => setIsSpeaking(true)
+      utterance.onend = () => setIsSpeaking(false)
+      speechSynthesis.speak(utterance)
+    } finally {
+      setIsProcessing(false)
     }
-
-    // Fallback responses if API fails
-    const lowerInput = input.toLowerCase()
-    
-    if (lowerInput.includes('hello') || lowerInput.includes('hi')) {
-      return greetingMessage || `Hello! Thank you for calling ${businessName}. How can I help you today?`
-    }
-    
-    if (lowerInput.includes('hvac') || lowerInput.includes('heating') || lowerInput.includes('cooling')) {
-      return "I understand you need HVAC services. What specific issue are you experiencing? Is it heating, cooling, or both?"
-    }
-    
-    if (lowerInput.includes('broken') || lowerInput.includes('not working') || lowerInput.includes('problem')) {
-      return "I'm sorry to hear about the issue. Can you describe what's happening? Is it making unusual noises, not turning on, or something else?"
-    }
-    
-    if (lowerInput.includes('emergency') || lowerInput.includes('urgent') || lowerInput.includes('asap')) {
-      return "I understand this is urgent. We have emergency services available. Can you provide your address so I can check our service area?"
-    }
-    
-    if (lowerInput.includes('price') || lowerInput.includes('cost') || lowerInput.includes('how much')) {
-      return "Our pricing varies based on the specific service needed. We offer free estimates for all jobs. Would you like me to schedule a technician to come out and provide a detailed quote?"
-    }
-    
-    if (lowerInput.includes('schedule') || lowerInput.includes('appointment') || lowerInput.includes('when')) {
-      return "I'd be happy to schedule an appointment for you. What's your preferred time? We have availability tomorrow morning or afternoon."
-    }
-    
-    if (lowerInput.includes('address') || lowerInput.includes('location')) {
-      return "Perfect! We do service that area. What's your full address so I can schedule the appointment?"
-    }
-    
-    if (lowerInput.includes('thank') || lowerInput.includes('bye') || lowerInput.includes('goodbye')) {
-      return "You're very welcome! Is there anything else I can help you with today?"
-    }
-    
-    // Default response
-    return "I understand. Let me help you with that. Can you provide a bit more detail so I can assist you better?"
   }
 
   const startListening = () => {
@@ -196,15 +141,55 @@ export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoPr
     }
   }
 
-  const startCall = () => {
+  const startCall = async () => {
     setIsCallActive(true)
     setTranscript([])
-    // Start with AI greeting
-    setTimeout(() => {
+    
+    // Start with AI greeting using OpenAI voice
+    try {
+      const response = await fetch('/api/ai/conversation-with-voice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          message: 'start_call',
+          context: {
+            businessName,
+            greetingMessage,
+            conversationType: 'demo',
+            voice: 'alloy'
+          }
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const greeting = data.response || greetingMessage || `Hello! Thank you for calling ${businessName}. How can I help you today?`
+        setTranscript([`AI: ${greeting}`])
+        
+        if (data.audioBlob) {
+          // Convert base64 to blob
+          const binaryString = atob(data.audioBlob)
+          const bytes = new Uint8Array(binaryString.length)
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i)
+          }
+          const audioBlob = new Blob([bytes], { type: 'audio/mpeg' })
+          playAudio(audioBlob)
+        }
+      }
+    } catch (error) {
+      // Fallback to browser speech synthesis
       const greeting = greetingMessage || `Hello! Thank you for calling ${businessName}. How can I help you today?`
       setTranscript([`AI: ${greeting}`])
-      speak(greeting)
-    }, 1000)
+      
+      const utterance = new SpeechSynthesisUtterance(greeting)
+      utterance.onstart = () => setIsSpeaking(true)
+      utterance.onend = () => setIsSpeaking(false)
+      speechSynthesis.speak(utterance)
+    }
   }
 
   const endCall = () => {
@@ -216,17 +201,18 @@ export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoPr
     if (recognitionRef.current) {
       recognitionRef.current.stop()
     }
-    if (synthRef.current) {
-      synthRef.current.cancel()
+    if (audioRef.current) {
+      audioRef.current.pause()
     }
+    speechSynthesis.cancel()
   }
 
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-white mb-4">Live Voice Demo</h2>
-          <p className="text-gray-300">Experience real conversation with your AI receptionist</p>
+          <h2 className="text-3xl font-bold text-white mb-4">Real OpenAI Voice Demo</h2>
+          <p className="text-gray-300">Experience actual AI conversations with OpenAI's voice technology</p>
         </div>
 
         {/* Call Status */}
@@ -239,7 +225,7 @@ export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoPr
               whileTap={{ scale: 0.95 }}
             >
               <Phone className="w-6 h-6" />
-              <span>Start Demo Call</span>
+              <span>Start Real AI Call</span>
             </motion.button>
           ) : (
             <motion.button
@@ -293,7 +279,7 @@ export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoPr
                 </div>
               )}
               <span className="text-white text-sm">
-                {isSpeaking ? 'AI Speaking' : 'AI Listening'}
+                {isSpeaking ? 'AI Speaking (OpenAI Voice)' : 'AI Listening'}
               </span>
             </div>
           </div>
@@ -303,7 +289,7 @@ export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoPr
         {isProcessing && (
           <div className="flex items-center justify-center mb-4">
             <Loader2 className="w-6 h-6 text-blue-400 animate-spin mr-2" />
-            <span className="text-blue-400">AI is thinking...</span>
+            <span className="text-blue-400">AI is thinking and generating voice...</span>
           </div>
         )}
 
@@ -317,9 +303,9 @@ export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoPr
 
         {/* Transcript */}
         <div className="bg-black/20 rounded-lg p-6 max-h-96 overflow-y-auto">
-          <h3 className="text-white font-semibold mb-4">Conversation Transcript</h3>
+          <h3 className="text-white font-semibold mb-4">Real AI Conversation</h3>
           {transcript.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">Start the demo call to begin the conversation</p>
+            <p className="text-gray-400 text-center py-8">Start the demo call to begin the conversation with real OpenAI voice</p>
           ) : (
             <div className="space-y-4">
               {transcript.map((message, index) => (
@@ -337,7 +323,7 @@ export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoPr
                   <p className={`text-sm font-medium mb-1 ${
                     message.startsWith('Customer:') ? 'text-blue-300' : 'text-purple-300'
                   }`}>
-                    {message.startsWith('Customer:') ? 'Customer' : 'AI Receptionist'}
+                    {message.startsWith('Customer:') ? 'Customer' : 'AI Receptionist (OpenAI Voice)'}
                   </p>
                   <p className="text-white">{message.split(': ')[1]}</p>
                 </motion.div>
@@ -346,11 +332,14 @@ export default function VoiceDemo({ businessName, greetingMessage }: VoiceDemoPr
           )}
         </div>
 
+        {/* Audio Element */}
+        <audio ref={audioRef} className="hidden" />
+
         {/* Instructions */}
         <div className="mt-6 text-center">
           <p className="text-gray-400 text-sm">
-            <strong>How to use:</strong> Click "Start Demo Call" then use the microphone button to speak. 
-            The AI will respond with voice and text. Try asking about HVAC services, scheduling, or pricing!
+            <strong>Real OpenAI Voice:</strong> This demo uses actual OpenAI voice generation, not browser speech synthesis. 
+            Click "Start Real AI Call" then use the microphone to speak. The AI will respond with real OpenAI-generated voice!
           </p>
         </div>
       </div>
