@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Phone, Calendar, DollarSign, User, Clock, 
-  CheckCircle, AlertCircle, MessageSquare, Bell 
+  CheckCircle, AlertCircle, MessageSquare, Bell, Activity 
 } from 'lucide-react'
 
 interface ActivityItem {

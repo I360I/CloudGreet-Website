@@ -616,3 +616,4 @@ export default function SimpleOnboardingWizard({ isOpen, onClose, onComplete }: 
     </AnimatePresence>
   )
 }
+}
