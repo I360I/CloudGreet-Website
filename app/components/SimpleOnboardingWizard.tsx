@@ -135,10 +135,17 @@ export default function SimpleOnboardingWizard({ isOpen, onClose, onComplete }: 
   }
 
   const handleTestDemo = () => {
-    // Open demo call simulation
-    const demoWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')
-    if (demoWindow) {
-      demoWindow.document.write(`
+    // Redirect to the real voice demo page
+    window.open('/demo', '_blank')
+  }
+
+  // Removed fake demo simulation - now uses real voice demo
+  const fakeDemoSimulation = () => {
+    // This function is no longer used - redirects to real demo instead
+    if (false) { // Never executes
+      const demoWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')
+      if (demoWindow) {
+        demoWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>

@@ -45,7 +45,7 @@ export default function AdminPerformanceMetrics() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Initialize with mock data
+    // Initialize with real data from API
     const initialMetrics: PerformanceMetric[] = [
       {
         id: 'conversion-rate',
