@@ -1,28 +1,15 @@
 "use client"
 
-import React, { Suspense } from 'react'
+import React from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
 import { 
   Phone, Play, CheckCircle, Calendar, Zap, 
   TrendingUp, Users, DollarSign
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
-
-// Dynamic import to prevent SSR issues with Three.js
-const VoiceHelixOrb = dynamic(() => import('../components/VoiceHelixOrb'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-[400px] md:h-[500px] flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full mx-auto mb-4 animate-spin" />
-        <p className="text-gray-400">Loading 3D experience...</p>
-      </div>
-    </div>
-  )
-})
+import VoiceOrbDemo from '../components/VoiceOrbDemo'
 
 export default function LandingPage() {
   return (
@@ -103,7 +90,7 @@ export default function LandingPage() {
               Try It Right Now
             </h2>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Click the helix orb to speak with our AI receptionist. Watch the strands pulse with the AI's voice.
+              Click the orb to speak with our AI receptionist. Experience real voice AI powered by OpenAI.
             </p>
           </motion.div>
           
@@ -113,8 +100,8 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="max-w-4xl mx-auto"
           >
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 overflow-hidden">
-              <VoiceHelixOrb businessName="CloudGreet" isDemo={true} />
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12">
+              <VoiceOrbDemo businessName="CloudGreet" isDemo={true} />
             </div>
           </motion.div>
 
