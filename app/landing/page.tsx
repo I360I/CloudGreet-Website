@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
+import VoiceOrbDemo from '../components/VoiceOrbDemo'
 
 export default function LandingPage() {
   return (
@@ -100,104 +101,7 @@ export default function LandingPage() {
             className="max-w-3xl mx-auto"
           >
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12">
-              {/* Import and use the voice orb component */}
-              <div className="flex flex-col items-center">
-                <div className="w-full max-w-md">
-                  {/* Orb visualization */}
-                  <div className="relative">
-                    <div className="flex flex-col items-center justify-center py-8 relative">
-                      {/* Glow Effects */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <motion.div
-                          animate={{
-                            scale: [1, 1.2, 1],
-                            opacity: [0.15, 0.25, 0.15]
-                          }}
-                          transition={{
-                            duration: 3,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                          }}
-                          className="w-72 h-72 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 blur-3xl"
-                        />
-                      </div>
-
-                      {/* Rotating Rings */}
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                        className="absolute w-64 h-64 rounded-full border-2 border-purple-500/20"
-                      />
-
-                      <motion.div
-                        animate={{ rotate: -360 }}
-                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                        className="absolute w-48 h-48 rounded-full border-2 border-blue-500/30"
-                      />
-
-                      {/* Main Orb */}
-                      <motion.a
-                        href="/demo"
-                        animate={{
-                          scale: [1, 1.05, 1],
-                          boxShadow: [
-                            '0 0 40px rgba(99, 102, 241, 0.3), 0 0 80px rgba(139, 92, 246, 0.2)',
-                            '0 0 60px rgba(99, 102, 241, 0.5), 0 0 120px rgba(139, 92, 246, 0.3)',
-                            '0 0 40px rgba(99, 102, 241, 0.3), 0 0 80px rgba(139, 92, 246, 0.2)'
-                          ]
-                        }}
-                        transition={{
-                          duration: 3,
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                        className="relative w-40 h-40 rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-blue-600 flex items-center justify-center cursor-pointer group"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        aria-label="Try voice demo"
-                      >
-                        {/* Inner Glow */}
-                        <div className="absolute inset-4 rounded-full bg-gradient-to-br from-blue-400/50 to-purple-400/50 blur-xl" />
-                        
-                        {/* Icon */}
-                        <div className="relative z-10">
-                          <motion.div
-                            animate={{ rotate: [0, 10, -10, 0] }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                          >
-                            <Phone className="w-16 h-16 text-white" aria-hidden="true" />
-                          </motion.div>
-                        </div>
-
-                        {/* Pulse Effect */}
-                        <motion.div
-                          animate={{
-                            scale: [1, 1.5],
-                            opacity: [0.4, 0]
-                          }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: "easeOut"
-                          }}
-                          className="absolute inset-0 rounded-full border-4 border-white/30 group-hover:border-white/50"
-                        />
-                      </motion.a>
-
-                      {/* Status Text */}
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        className="mt-8 text-center"
-                      >
-                        <h3 className="text-2xl font-bold mb-2">Click to Experience</h3>
-                        <p className="text-gray-400">Real voice AI powered by GPT-4</p>
-                      </motion.div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <VoiceOrbDemo businessName="CloudGreet" isDemo={true} />
             </div>
           </motion.div>
 
