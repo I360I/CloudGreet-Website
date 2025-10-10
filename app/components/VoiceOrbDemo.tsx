@@ -508,15 +508,21 @@ export default function VoiceOrbDemo({
     }
     
     if (isListening) {
-      console.log('Stopping speech recognition...')
+      console.log('🛑 Stopping speech recognition...')
       recognitionRef.current.stop()
+      setIsListening(false)
     } else {
       try {
-        console.log('Starting speech recognition...')
+        console.log('▶️▶️▶️ STARTING SPEECH RECOGNITION NOW!')
+        console.log('Recognition object:', recognitionRef.current)
+        console.log('Mic permission:', micPermission)
+        
         recognitionRef.current.start()
+        console.log('✅ .start() called successfully')
       } catch (e: any) {
-        console.error('❌ Speech recognition start failed:', e.message)
-        setError('Could not start listening: ' + e.message + '. Try refreshing the page.')
+        console.error('❌❌❌ Speech recognition start FAILED:', e.message, e)
+        setError('Could not start listening: ' + e.message + '. Your microphone may be in use by another app.')
+        setIsListening(false)
       }
     }
   }
@@ -600,7 +606,18 @@ export default function VoiceOrbDemo({
             background: 'radial-gradient(ellipse at 35% 35%, rgba(30,25,45,0.8), rgba(0,0,0,1) 60%, rgba(0,0,0,1))',
             backdropFilter: 'blur(20px)'
           }}
-          onClick={hasStarted ? (isProcessing || isSpeaking ? undefined : toggleListening) : startDemo}
+          onClick={() => {
+            console.log('🖱️ ORB CLICKED! State:', { hasStarted, isProcessing, isSpeaking, isListening })
+            if (!hasStarted) {
+              console.log('Starting demo...')
+              startDemo()
+            } else if (isProcessing || isSpeaking) {
+              console.log('Busy - ignoring click')
+            } else {
+              console.log('Toggling listening...')
+              toggleListening()
+            }
+          }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           animate={{
