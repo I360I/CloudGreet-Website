@@ -28,7 +28,6 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Initialize Web Speech API for listening
       if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
         recognitionRef.current = new SpeechRecognition()
@@ -46,17 +45,10 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
           }
         }
 
-        recognitionRef.current.onerror = (event: any) => {
-          console.error('Speech recognition error:', event.error)
-          setIsListening(false)
-        }
-
-        recognitionRef.current.onend = () => {
-          setIsListening(false)
-        }
+        recognitionRef.current.onerror = () => setIsListening(false)
+        recognitionRef.current.onend = () => setIsListening(false)
       }
 
-      // Initialize Audio Context for audio analysis
       audioContextRef.current = new ((window as any).AudioContext || (window as any).webkitAudioContext)()
     }
 
@@ -66,16 +58,12 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
         audioRef.current.pause()
         audioRef.current = null
       }
-      if (audioContextRef.current) {
-        audioContextRef.current.close()
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
+      if (audioContextRef.current) audioContextRef.current.close()
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
     }
   }, [])
 
-  // Draw flowing waves around the orb
+  // Draw EXACT hero-style waves around the orb
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -88,24 +76,33 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
     const baseRadius = 120
     let time = 0
 
+    // Electric purple colors from hero
+    const purpleColors = ['#8B5CF6', '#A855F7', '#9333EA', '#C084FC', '#A78BFA']
+
     const drawWaves = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.globalCompositeOperation = 'screen' // Screen blend like hero
 
-      // Draw multiple wave rings around the orb
-      const numWaves = 5
+      const numWaves = 8
       for (let i = 0; i < numWaves; i++) {
-        const waveOffset = (i / numWaves) * Math.PI * 2
-        const radiusOffset = i * 15
+        const color = purpleColors[i % purpleColors.length]
+        const radiusOffset = i * 12
+        const phaseOffset = (i / numWaves) * Math.PI * 2
+        const frequency = 0.015 + (i * 0.002)
+        const amplitude = 15 + (i * 2)
         
+        // Audio reactive amplitude
+        const audioBoost = isSpeaking ? audioLevel * 25 : 0
+        const finalAmplitude = amplitude + audioBoost
+
         ctx.beginPath()
         
-        for (let angle = 0; angle < Math.PI * 2; angle += 0.05) {
-          // Create flowing wave effect
-          const wave1 = Math.sin(angle * 3 + time + waveOffset) * 8
-          const wave2 = Math.sin(angle * 5 - time * 1.5 + waveOffset) * 5
-          const audioWave = isSpeaking ? Math.sin(angle * 2 + time * 3) * audioLevel * 15 : 0
+        for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
+          // EXACT hero wave formula - sine waves with frequency
+          const baseWave = Math.sin((angle * 15) + time + phaseOffset) * finalAmplitude
+          const secondaryWave = Math.sin((angle * 22.5) + time * 1.2 + phaseOffset) * finalAmplitude * 0.2
           
-          const radius = baseRadius + radiusOffset + wave1 + wave2 + audioWave
+          const radius = baseRadius + radiusOffset + baseWave + secondaryWave
           const x = centerX + Math.cos(angle) * radius
           const y = centerY + Math.sin(angle) * radius
           
@@ -118,30 +115,42 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
         
         ctx.closePath()
         
-        // Color gradient based on state
-        const hue = isSpeaking ? 280 + i * 10 : isListening ? 220 + i * 10 : 260 + i * 10
-        const alpha = 0.3 - i * 0.04
-        const glowIntensity = isSpeaking ? 0.8 : isListening ? 0.6 : 0.4
+        // Dynamic opacity based on state
+        const baseOpacity = 0.5 - (i * 0.04)
+        const pulse = Math.sin(time + phaseOffset) * 0.2 + 0.8
+        const opacity = baseOpacity * pulse * (isSpeaking ? 1.2 : 1)
         
-        ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${alpha})`
-        ctx.lineWidth = 2
-        ctx.shadowBlur = 20 * glowIntensity
-        ctx.shadowColor = `hsla(${hue}, 80%, 60%, ${glowIntensity})`
+        // Create gradient like hero (transparent → opaque → transparent)
+        const gradient = ctx.createRadialGradient(centerX, centerY, baseRadius - 30, centerX, centerY, baseRadius + radiusOffset + 60)
+        gradient.addColorStop(0, `${color}00`)
+        gradient.addColorStop(0.3, `${color}${Math.floor(opacity * 0.3 * 255).toString(16).padStart(2, '0')}`)
+        gradient.addColorStop(0.6, `${color}${Math.floor(opacity * 255).toString(16).padStart(2, '0')}`)
+        gradient.addColorStop(1, `${color}00`)
+        
+        ctx.strokeStyle = gradient
+        ctx.lineWidth = 2 + (isSpeaking ? 0.5 : 0)
+        ctx.lineCap = 'round'
+        ctx.shadowColor = color
+        ctx.shadowBlur = 12
+        ctx.stroke()
+        
+        // Add glow layer like hero
+        ctx.strokeStyle = `${color}${Math.floor(opacity * 0.2 * 255).toString(16).padStart(2, '0')}`
+        ctx.lineWidth = 3.6
+        ctx.shadowBlur = 12
         ctx.stroke()
       }
 
-      time += 0.02
+      time += 0.008
       animationFrameRef.current = requestAnimationFrame(drawWaves)
     }
 
     drawWaves()
 
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
     }
-  }, [isSpeaking, isListening, audioLevel])
+  }, [isSpeaking, audioLevel])
 
   const playAudioFromText = async (text: string) => {
     try {
@@ -151,10 +160,7 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       const response = await fetch('/api/ai/text-to-speech', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          text,
-          voice: 'nova'
-        })
+        body: JSON.stringify({ text, voice: 'nova' })
       })
 
       if (!response.ok) {
@@ -163,16 +169,12 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       }
 
       const audioBlob = await response.blob()
-      
-      if (audioBlob.type === 'application/json') {
-        throw new Error('API returned error instead of audio')
-      }
+      if (audioBlob.type === 'application/json') throw new Error('API returned error')
 
       const audioUrl = URL.createObjectURL(audioBlob)
-      
       audioRef.current = new Audio(audioUrl)
       
-      // Connect audio to analyser for visualization
+      // Audio analysis for wave reactivity
       if (audioContextRef.current && audioRef.current) {
         try {
           const source = audioContextRef.current.createMediaElementSource(audioRef.current)
@@ -181,7 +183,6 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
           source.connect(analyserRef.current)
           analyserRef.current.connect(audioContextRef.current.destination)
           
-          // Update audio level for visualization
           const updateAudioLevel = () => {
             if (analyserRef.current && isSpeaking) {
               const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
@@ -192,9 +193,7 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
             }
           }
           updateAudioLevel()
-        } catch (e) {
-          // Fallback if audio context fails
-        }
+        } catch (e) {}
       }
       
       audioRef.current.onended = () => {
@@ -205,16 +204,14 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       audioRef.current.onerror = () => {
         setIsSpeaking(false)
         setAudioLevel(0)
-        setError('Audio playback failed')
         URL.revokeObjectURL(audioUrl)
       }
 
       await audioRef.current.play()
     } catch (error: any) {
-      console.error('Audio playback error:', error)
       setIsSpeaking(false)
       setAudioLevel(0)
-      setError(error.message || 'Voice system unavailable')
+      setError(error.message || 'Voice unavailable')
     }
   }
 
@@ -225,49 +222,32 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
     setIsProcessing(true)
 
     try {
-      const newHistory = [
-        ...conversationHistory,
-        { role: 'user', content: userText }
-      ]
-
+      const newHistory = [...conversationHistory, { role: 'user', content: userText }]
       const response = await fetch('/api/ai/conversation-demo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newHistory,
-          businessName
-        })
+        body: JSON.stringify({ messages: newHistory, businessName })
       })
 
-      if (!response.ok) {
-        throw new Error('AI conversation failed')
-      }
-
+      if (!response.ok) throw new Error('Conversation failed')
+      
       const data = await response.json()
       const aiResponse = data.response
 
-      setConversationHistory([
-        ...newHistory,
-        { role: 'assistant', content: aiResponse }
-      ])
-
+      setConversationHistory([...newHistory, { role: 'assistant', content: aiResponse }])
       setIsProcessing(false)
       await playAudioFromText(aiResponse)
-
     } catch (error) {
-      console.error('Conversation error:', error)
       setIsProcessing(false)
-      const fallback = "I'm having a bit of trouble right now, but I'm here to help. Could you try again?"
-      await playAudioFromText(fallback)
+      await playAudioFromText("Sorry, could you say that again?")
     }
   }
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      alert('Voice chat requires Chrome, Edge, or Safari browser')
+      alert('Voice requires Chrome, Edge, or Safari')
       return
     }
-
     if (isListening) {
       recognitionRef.current.stop()
     } else {
@@ -278,102 +258,66 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
 
   const startDemo = async () => {
     setHasStarted(true)
-    const greeting = `Hey there! Thanks for trying CloudGreet. I'm your AI receptionist. How can I help you today?`
+    const greeting = `Hey there! Thanks for trying CloudGreet. I'm your AI receptionist. What can I help you with today?`
     setConversationHistory([{ role: 'assistant', content: greeting }])
     await playAudioFromText(greeting)
   }
 
-  const isActive = isListening || isSpeaking || isProcessing
-
   return (
     <div className="relative w-full">
-      {/* Canvas for flowing waves */}
+      {/* Canvas for hero-style waves */}
       <div className="relative w-full h-[500px] flex items-center justify-center">
         <canvas
           ref={canvasRef}
-          width={400}
-          height={400}
+          width={500}
+          height={500}
           className="absolute"
-          style={{ filter: 'blur(0.5px)' }}
         />
 
-        {/* Dark Orb Center (Ring movie style) */}
+        {/* Dark Orb Center */}
         <motion.div
           className="relative z-10 w-48 h-48 rounded-full bg-gradient-to-br from-black via-slate-950 to-black cursor-pointer overflow-hidden"
           onClick={hasStarted ? (isProcessing || isSpeaking ? undefined : toggleListening) : startDemo}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           animate={{
-            boxShadow: isActive
-              ? [
-                  '0 0 60px rgba(139, 92, 246, 0.6), inset 0 0 40px rgba(139, 92, 246, 0.2)',
-                  '0 0 80px rgba(139, 92, 246, 0.8), inset 0 0 60px rgba(139, 92, 246, 0.3)',
-                  '0 0 60px rgba(139, 92, 246, 0.6), inset 0 0 40px rgba(139, 92, 246, 0.2)',
-                ]
-              : '0 0 40px rgba(99, 102, 241, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.8)'
+            boxShadow: [
+              '0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.9)',
+              '0 0 60px rgba(139, 92, 246, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.9)',
+              '0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.9)',
+            ]
           }}
-          transition={{
-            boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-          }}
+          transition={{ boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" } }}
         >
-          {/* Inner dark void */}
+          {/* Inner void */}
           <div className="absolute inset-8 rounded-full bg-black" />
           
-          {/* Subtle inner glow when active */}
-          {isActive && (
+          {/* Subtle glow when active */}
+          {(isListening || isSpeaking || isProcessing) && (
             <motion.div
-              animate={{
-                opacity: [0.1, 0.3, 0.1],
-                scale: [0.8, 1, 0.8]
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
+              animate={{ opacity: [0.1, 0.3, 0.1], scale: [0.8, 1, 0.8] }}
+              transition={{ duration: 2, repeat: Infinity }}
               className="absolute inset-12 rounded-full bg-gradient-to-br from-purple-600/20 via-blue-600/20 to-purple-600/20 blur-xl"
             />
           )}
 
-          {/* Minimal icon - small and subtle */}
+          {/* Small subtle icon */}
           <div className="absolute inset-0 flex items-center justify-center">
             <AnimatePresence mode="wait">
               {isProcessing ? (
-                <motion.div
-                  key="processing"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 0.6, rotate: 360 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{ rotate: { duration: 2, repeat: Infinity, ease: "linear" } }}
-                >
+                <motion.div key="processing" initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 0.6, rotate: 360 }} exit={{ scale: 0, opacity: 0 }} transition={{ rotate: { duration: 2, repeat: Infinity, ease: "linear" } }}>
                   <Sparkles className="w-8 h-8 text-purple-400/60" />
                 </motion.div>
               ) : isListening ? (
-                <motion.div
-                  key="mic"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 0.6 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                >
+                <motion.div key="mic" initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 0.6 }} exit={{ scale: 0, opacity: 0 }}>
                   <Mic className="w-8 h-8 text-blue-400/60" />
                 </motion.div>
               ) : isSpeaking ? (
-                <motion.div
-                  key="volume"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: [1, 1.2, 1], opacity: 0.6 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  transition={{ scale: { duration: 1, repeat: Infinity } }}
-                >
+                <motion.div key="volume" initial={{ scale: 0, opacity: 0 }} animate={{ scale: [1, 1.2, 1], opacity: 0.6 }} exit={{ scale: 0, opacity: 0 }} transition={{ scale: { duration: 1, repeat: Infinity } }}>
                   <Volume2 className="w-8 h-8 text-purple-400/60" />
                 </motion.div>
               ) : hasStarted ? (
-                <motion.div
-                  key="micoff"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 0.4 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                >
+                <motion.div key="micoff" initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 0.4 }} exit={{ scale: 0, opacity: 0 }}>
                   <MicOff className="w-6 h-6 text-gray-500/60" />
                 </motion.div>
               ) : null}
@@ -383,65 +327,43 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       </div>
 
       {/* Status Text */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="text-center mt-8"
-      >
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="text-center mt-8">
         <AnimatePresence mode="wait">
           {!hasStarted ? (
             <motion.div key="start" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <h3 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Click the Dark Orb
+                Click to Talk
               </h3>
-              <p className="text-gray-400 text-base md:text-lg">Watch the glowing waves react to the AI's voice</p>
+              <p className="text-gray-400 text-base md:text-lg">Have a real conversation with AI</p>
             </motion.div>
           ) : isProcessing ? (
             <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h3 className="text-2xl md:text-3xl font-bold mb-3 text-purple-400">Thinking...</h3>
-              <p className="text-gray-300 text-base">AI is crafting a response</p>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3 text-purple-400">One moment...</h3>
             </motion.div>
           ) : isListening ? (
             <motion.div key="listening" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h3 className="text-2xl md:text-3xl font-bold mb-3 text-blue-400">I'm Listening</h3>
-              <p className="text-gray-300 text-base md:text-lg">{transcript || 'Speak naturally...'}</p>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3 text-blue-400">Listening</h3>
+              <p className="text-gray-300 text-base md:text-lg">{transcript || 'Say something...'}</p>
             </motion.div>
           ) : isSpeaking ? (
             <motion.div key="speaking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <h3 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                AI Speaking...
+                Speaking
               </h3>
-              <p className="text-gray-300 text-base">Waves pulsing with voice</p>
             </motion.div>
           ) : (
             <motion.div key="ready" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h3 className="text-2xl md:text-3xl font-bold mb-3 text-white">Your Turn</h3>
-              <p className="text-gray-400 text-base md:text-lg">Click the orb to speak</p>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3 text-white">Your turn</h3>
+              <p className="text-gray-400 text-base md:text-lg">Click to continue</p>
             </motion.div>
           )}
         </AnimatePresence>
       </motion.div>
 
-      {/* Error Display */}
       {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center max-w-md mx-auto"
-        >
-          <p className="text-red-400 text-sm font-medium mb-1">Voice API Error</p>
-          <p className="text-red-300 text-xs">{error}</p>
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center max-w-md mx-auto">
+          <p className="text-red-400 text-sm">{error}</p>
         </motion.div>
-      )}
-
-      {/* Compatibility Note */}
-      {isDemo && !error && (
-        <div className="text-center mt-4">
-          <p className="text-xs text-gray-500">
-            🎙️ OpenAI TTS HD 'nova' voice | Waves react to speech | Best in Chrome/Edge/Safari
-          </p>
-        </div>
       )}
     </div>
   )
