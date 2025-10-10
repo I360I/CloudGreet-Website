@@ -17,7 +17,7 @@ import QuickStartWidget from '../components/QuickStartWidget'
 import SupportWidget from '../components/SupportWidget'
 import CallTestWidget from '../components/CallTestWidget'
 import OnboardingWizard from '../components/OnboardingWizard'
-import ROICalculator from '../components/ROICalculator'
+// import ROICalculator from '../components/ROICalculator' // Temporarily disabled for build
 import RealTimeUpdates from '../components/RealTimeUpdates'
 import { useToast } from '../contexts/ToastContext'
 
@@ -457,7 +457,7 @@ export default function Dashboard() {
           </motion.div>
 
           {/* ROI Calculator - Temporarily disabled due to build issue */}
-          {dashboardData?.hasPhoneNumber && dashboardData?.businessId && (
+          {/* {dashboardData?.hasPhoneNumber && dashboardData?.businessId && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -466,7 +466,7 @@ export default function Dashboard() {
             >
               <ROICalculator businessId={dashboardData.businessId} />
             </motion.div>
-          )}
+          )} */}
 
           {/* Live Activity & Quick Start Grid */}
           <div className="grid lg:grid-cols-2 gap-6 mb-8">
