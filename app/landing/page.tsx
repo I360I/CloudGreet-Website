@@ -1,15 +1,28 @@
 "use client"
 
-import React from 'react'
+import React, { Suspense } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { 
   Phone, Play, CheckCircle, Calendar, Zap, 
   TrendingUp, Users, DollarSign
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
-import VoiceHelixOrb from '../components/VoiceHelixOrb'
+
+// Dynamic import to prevent SSR issues with Three.js
+const VoiceHelixOrb = dynamic(() => import('../components/VoiceHelixOrb'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] md:h-[500px] flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full mx-auto mb-4 animate-spin" />
+        <p className="text-gray-400">Loading 3D experience...</p>
+      </div>
+    </div>
+  )
+})
 
 export default function LandingPage() {
   return (
