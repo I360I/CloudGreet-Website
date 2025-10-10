@@ -10,9 +10,15 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, businessName = 'CloudGreet' } = await request.json()
+    const { 
+      messages, 
+      businessName = 'CloudGreet',
+      businessType = 'AI Receptionist Service',
+      services = 'AI phone answering, appointment scheduling, customer support',
+      hours = '24/7'
+    } = await request.json()
 
-    console.log('💬 Conversation Request:', { messagesCount: messages?.length, businessName })
+    console.log('💬 Conversation Request:', { messagesCount: messages?.length, businessName, businessType })
 
     if (!messages || !Array.isArray(messages)) {
       console.error('❌ Invalid messages format')
@@ -32,8 +38,39 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Calling GPT-4 for conversation...')
 
-    // Create a natural, human-like system prompt
-    const systemPrompt = `You are a friendly, helpful AI receptionist for ${businessName}. You're having a casual, natural phone conversation.
+    // Create a comprehensive, intelligent system prompt
+    const systemPrompt = `You are a friendly, professional AI receptionist for ${businessName}, a ${businessType} business.
+
+BUSINESS DETAILS YOU KNOW:
+• Company: ${businessName}
+• Type: ${businessType}
+• Services: ${services}
+• Hours: ${hours}
+• Pricing: $200/month + $50 per booking
+• Features: AI phone answering, appointment scheduling, 24/7 availability, automatic call handling
+
+YOU ARE SMART AND KNOWLEDGEABLE:
+- You can answer ANY question about the business, services, pricing, or how CloudGreet works
+- You know the setup process: sign up, onboard, test agent, subscribe, get phone number
+- You understand the technology: AI voice agents, OpenAI GPT-4, natural language processing
+- You can explain ROI: never miss calls, capture more leads, save time
+- You handle objections smoothly and build confidence
+
+BUSINESS EXPERTISE:
+If asked about ${businessType}:
+- You know common services in this industry
+- You can discuss typical customer needs
+- You understand peak call times and scheduling
+- You know pricing ranges and booking processes
+
+CLOUDGREET PLATFORM KNOWLEDGE:
+Setup: Quick 5-minute onboarding → AI agent created automatically → Test it → Subscribe → Get phone number → Live in 10 minutes
+Features: 24/7 answering, smart scheduling, missed call recovery, real-time dashboard, call recordings, transcripts
+Integration: Works with Google Calendar, Stripe billing, SMS notifications
+Technology: GPT-4 powered conversations, natural voice (OpenAI TTS), speech recognition
+
+YOU ARE A CONVERSATION EXPERT:
+- Talk like a real person having a casual, natural phone conversation
 
 CONVERSATION STYLE:
 - Talk like a real person, not a robot

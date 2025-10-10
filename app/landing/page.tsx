@@ -5,11 +5,97 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { 
   Phone, Play, CheckCircle, Calendar, Zap, 
-  TrendingUp, Users, DollarSign
+  TrendingUp, Users, DollarSign, Settings
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
 import VoiceOrbDemo from '../components/VoiceOrbDemo'
+
+function VoiceOrbDemoWithSettings() {
+  const [businessInfo, setBusinessInfo] = React.useState({
+    name: 'CloudGreet Demo',
+    type: 'HVAC Company',
+    services: 'AC repair, heating installation, maintenance',
+    hours: '8 AM - 6 PM Mon-Fri'
+  })
+  const [showForm, setShowForm] = React.useState(false)
+
+  return (
+    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12">
+      {/* Business Info Form */}
+      <motion.div className="mb-6">
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="text-sm text-purple-400 hover:text-purple-300 mb-3 flex items-center gap-2"
+        >
+          <Settings className="w-4 h-4" />
+          {showForm ? 'Hide' : 'Customize'} Business Info for Testing
+        </button>
+        
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-black/30 rounded-xl"
+          >
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Business Name</label>
+              <input
+                type="text"
+                value={businessInfo.name}
+                onChange={(e) => setBusinessInfo({...businessInfo, name: e.target.value})}
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
+                placeholder="e.g., ABC HVAC Services"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Business Type</label>
+              <input
+                type="text"
+                value={businessInfo.type}
+                onChange={(e) => setBusinessInfo({...businessInfo, type: e.target.value})}
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
+                placeholder="e.g., Roofing Company"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Services Offered</label>
+              <input
+                type="text"
+                value={businessInfo.services}
+                onChange={(e) => setBusinessInfo({...businessInfo, services: e.target.value})}
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
+                placeholder="e.g., Roof repair, installation, inspection"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Business Hours</label>
+              <input
+                type="text"
+                value={businessInfo.hours}
+                onChange={(e) => setBusinessInfo({...businessInfo, hours: e.target.value})}
+                className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
+                placeholder="e.g., 7 AM - 5 PM Mon-Sat"
+              />
+            </div>
+          </motion.div>
+        )}
+        
+        <p className="text-xs text-gray-500 mb-4">
+          💡 Try asking: "What services do you offer?", "What are your hours?", "How much does it cost?", "How do I get started?"
+        </p>
+      </motion.div>
+
+      <VoiceOrbDemo 
+        businessName={businessInfo.name}
+        businessType={businessInfo.type}
+        services={businessInfo.services}
+        hours={businessInfo.hours}
+        isDemo={true} 
+      />
+    </div>
+  )
+}
 
 export default function LandingPage() {
   return (
@@ -97,9 +183,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="max-w-4xl mx-auto"
           >
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12">
-              <VoiceOrbDemo businessName="CloudGreet" isDemo={true} />
-            </div>
+            <VoiceOrbDemoWithSettings />
           </motion.div>
 
           {/* Benefits Below Demo */}
