@@ -1,53 +1,41 @@
--- SIMPLE PERMISSIONS FIX FOR CLOUDGREET
--- This script fixes the "permission denied" errors
--- Run this in your Supabase SQL Editor
+-- Simple permissions fix for custom_users table
+-- Run this in Supabase SQL Editor
 
--- Step 1: Grant all necessary permissions to service_role
-GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
-GRANT USAGE ON SCHEMA public TO service_role;
+-- Drop RLS on custom_users table temporarily
+ALTER TABLE custom_users DISABLE ROW LEVEL SECURITY;
 
--- Step 2: Grant permissions to authenticated role
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
-GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
-GRANT USAGE ON SCHEMA public TO authenticated;
+-- Drop existing policies
+DROP POLICY IF EXISTS "Service role can access all custom_users" ON custom_users;
+DROP POLICY IF EXISTS "Users can access their own data" ON custom_users;
+DROP POLICY IF EXISTS "Anon users can insert new users" ON custom_users;
 
--- Step 3: Grant permissions to anon role (for contact form)
-GRANT INSERT ON public.contact_submissions TO anon;
-GRANT USAGE ON SCHEMA public TO anon;
+-- Grant all permissions to service_role
+GRANT ALL ON TABLE custom_users TO service_role;
+GRANT ALL ON TABLE businesses TO service_role;
+GRANT ALL ON TABLE ai_agents TO service_role;
 
--- Step 4: Disable RLS temporarily to allow all operations
--- (This is the simplest fix - we'll re-enable it later with proper policies)
-ALTER TABLE public.businesses DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ai_agents DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.appointments DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.contact_submissions DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.call_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.sms_logs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.audit_logs DISABLE ROW LEVEL SECURITY;
+-- Grant permissions to authenticated users
+GRANT ALL ON TABLE custom_users TO authenticated;
+GRANT ALL ON TABLE businesses TO authenticated;
+GRANT ALL ON TABLE ai_agents TO authenticated;
 
--- Step 5: Disable RLS on all other tables dynamically
-DO $$
-DECLARE
-    table_name text;
-BEGIN
-    FOR table_name IN 
-        SELECT tablename 
-        FROM pg_tables 
-        WHERE schemaname = 'public' 
-        AND tablename NOT IN ('businesses', 'users', 'ai_agents', 'appointments', 'contact_submissions', 'call_logs', 'sms_logs', 'audit_logs')
-    LOOP
-        EXECUTE format('ALTER TABLE public.%I DISABLE ROW LEVEL SECURITY', table_name);
-        RAISE NOTICE 'Disabled RLS on table: %', table_name;
-    END LOOP;
-END $$;
+-- Grant permissions to anon users
+GRANT ALL ON TABLE custom_users TO anon;
+GRANT ALL ON TABLE businesses TO anon;
+GRANT ALL ON TABLE ai_agents TO anon;
 
--- Success message
-DO $$
-BEGIN
-    RAISE NOTICE '✅ PERMISSIONS FIXED! All tables are now accessible.';
-    RAISE NOTICE '🔧 RLS has been temporarily disabled for all tables';
-    RAISE NOTICE '🎯 Registration system should now work properly!';
-    RAISE NOTICE '⚠️  Note: RLS is disabled - consider re-enabling with proper policies for production';
-END $$;
+-- Verify permissions (using correct system tables)
+SELECT 
+    schemaname,
+    tablename,
+    tableowner
+FROM pg_tables 
+WHERE tablename IN ('custom_users', 'businesses', 'ai_agents');
+
+-- Check if RLS is enabled
+SELECT 
+    schemaname,
+    tablename,
+    rowsecurity
+FROM pg_tables 
+WHERE tablename IN ('custom_users', 'businesses', 'ai_agents');

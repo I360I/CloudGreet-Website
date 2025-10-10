@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+    const jwtSecret = process.env.JWT_SECRET
     
     if (!jwtSecret) {
       return NextResponse.json({

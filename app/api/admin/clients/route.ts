@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       (businesses || []).map(async (business) => {
         // Get call count
         const { count: callsCount } = await supabaseAdmin
-          .from('call_logs')
+          .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('business_id', business.id)
 

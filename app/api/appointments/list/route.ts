@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,11 +114,33 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id')
-    const businessId = request.headers.get('x-business-id')
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    
+    if (!jwtSecret) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+
+    // Decode JWT token
+    let decoded
+    try {
+      decoded = jwt.verify(token, jwtSecret) as any
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const userId = decoded.userId
+    const businessId = decoded.businessId
     
     if (!userId || !businessId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -137,8 +160,9 @@ export async function POST(request: NextRequest) {
         customer_name: body.customer_name,
         customer_phone: body.customer_phone,
         customer_email: body.customer_email,
-        service: body.service,
-        scheduled_date: body.scheduled_date,
+        service_type: body.service,
+        appointment_date: body.scheduled_date, // Map to appointment_date (NOT NULL)
+        scheduled_date: body.scheduled_date,    // Also set scheduled_date
         status: body.status || 'scheduled',
         estimated_value: body.estimated_value || 0,
         address: body.address,
@@ -173,7 +197,7 @@ export async function POST(request: NextRequest) {
         })
       })
     } catch (error) {
-      console.log('Failed to send appointment notification:', error)
+      logger.error('Failed to send appointment notification', { error })
     }
 
     logger.info('Appointment created successfully', {

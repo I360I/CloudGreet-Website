@@ -73,7 +73,7 @@ Reply STOP to opt out; HELP for help.`
 
     // Store the SMS in database
     const { data: sms, error: smsError } = await supabaseAdmin
-      .from('sms_logs')
+      .from('sms_messages')
       .insert({
         message_id: `review_${appointmentId}_${Date.now()}`,
         from_number: business.phone_number,

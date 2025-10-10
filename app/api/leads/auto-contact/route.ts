@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Lead contact automation error:', error)
+    logger.error('Lead contact automation error', { error })
     return NextResponse.json({
       success: false,
       error: 'Internal server error',
@@ -55,13 +56,13 @@ async function sendAutomatedEmail(leadId: string, contactInfo: any) {
     const resendApiKey = process.env.RESEND_API_KEY
     
     if (!resendApiKey) {
-      // Fallback to logging if Resend not configured
-      console.log(`Email would be sent to ${contactInfo.email} for lead ${leadId}`)
+      // Email service not configured
+      logger.error('Email service not configured', { leadId, contactEmail: contactInfo.email })
       return NextResponse.json({
-        success: true,
-        message: 'Email logged (Resend not configured)',
+        success: false,
+        error: 'Email service not configured. Please configure RESEND_API_KEY environment variable.',
         email_content: generateEmailContent(contactInfo)
-      })
+      }, { status: 503 })
     }
 
     const emailContent = generateEmailContent(contactInfo)
@@ -120,7 +121,7 @@ async function sendAutomatedEmail(leadId: string, contactInfo: any) {
               
               <div style="background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 16px; margin: 20px 0;">
                 <p style="color: #92400E; font-size: 14px; margin: 0;">
-                  💰 <strong>Special Offer:</strong> 30-day free trial with no setup fees for qualified businesses.
+                  💰 <strong>Professional Service:</strong> AI receptionist service with no setup fees for qualified businesses.
                 </p>
               </div>
               
@@ -170,14 +171,14 @@ async function sendAutomatedEmail(leadId: string, contactInfo: any) {
       message: 'Email sent successfully',
       email_content: emailContent,
       email_id: result.id
-    })
-
-  } catch (error) {
-    console.error('Email automation error:', error)
+      })
+      
+    } catch (error) {
+    logger.error('Email automation error', { error })
     return NextResponse.json({
-      success: false,
+        success: false,
       error: 'Email sending failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }
@@ -188,12 +189,12 @@ async function sendAutomatedSMS(leadId: string, contactInfo: any) {
     const telnyxApiKey = process.env.TELYNX_API_KEY
     
     if (!telnyxApiKey) {
-      console.log(`SMS would be sent to ${contactInfo.phone} for lead ${leadId}`)
+      logger.error('SMS service not configured', { leadId, contactPhone: contactInfo.phone })
       return NextResponse.json({
-        success: true,
-        message: 'SMS logged (Telnyx not configured)',
+        success: false,
+        error: 'SMS service not configured. Please configure TELYNX_API_KEY environment variable.',
         sms_content: generateSMSContent(contactInfo)
-      })
+      }, { status: 503 })
     }
 
     const smsContent = generateSMSContent(contactInfo)
@@ -235,7 +236,7 @@ async function sendAutomatedSMS(leadId: string, contactInfo: any) {
     })
 
   } catch (error) {
-    console.error('SMS automation error:', error)
+    logger.error('SMS automation error', { error })
     return NextResponse.json({
       success: false,
       error: 'SMS sending failed',
@@ -287,7 +288,7 @@ async function addToCRM(leadId: string, contactInfo: any) {
     })
 
   } catch (error) {
-    console.error('CRM automation error:', error)
+    logger.error('CRM automation error', { error })
     return NextResponse.json({
       success: false,
       error: 'CRM integration failed',
@@ -324,10 +325,10 @@ async function createFollowUpTask(leadId: string, contactInfo: any) {
       task_id: data.id
     })
 
-  } catch (error) {
-    console.error('Follow-up automation error:', error)
+    } catch (error) {
+    logger.error('Follow-up automation error', { error })
     return NextResponse.json({
-      success: false,
+        success: false,
       error: 'Follow-up task creation failed',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
@@ -369,7 +370,7 @@ async function scheduleAutomatedCall(leadId: string, contactInfo: any) {
     })
 
   } catch (error) {
-    console.error('Call scheduling automation error:', error)
+    logger.error('Call scheduling automation error', { error })
     return NextResponse.json({
       success: false,
       error: 'Call scheduling failed',
@@ -434,7 +435,7 @@ Our AI receptionist answers every call 24/7, qualifies leads automatically, and 
 
 🎯 **Real Results:** Businesses like yours typically see a 40-60% increase in bookings within the first month.
 
-⚡ **Special Offer:** 30-day free trial with no setup fees. If you don't see results, you pay nothing.
+⚡ **Professional Service:** AI receptionist with no setup fees. Professional results guaranteed.
 
 Would you be interested in a quick 10-minute demo to see exactly how this works for ${contactInfo.business_name}?
 
@@ -454,13 +455,13 @@ function generateSMSContent(contactInfo: any) {
   let text = ''
   
   if (contactInfo.urgency_level === 'urgent') {
-    text = `🚨 Hi ${contactInfo.name}! ${contactInfo.business_name} is missing ~$${lostRevenue}/month in lost calls. Our AI receptionist captures every lead 24/7. 30-day free trial. Interested? Reply YES`
+    text = `🚨 Hi ${contactInfo.name}! ${contactInfo.business_name} is missing ~$${lostRevenue}/month in lost calls. Our AI receptionist captures every lead 24/7. Professional service available. Interested? Reply YES`
   } else if (businessType.includes('hvac') || businessType.includes('plumbing')) {
     text = `Hi ${contactInfo.name}! ${contactInfo.business_name} (${rating}/5 stars) - How many emergency calls do you miss after hours? Our AI answers 24/7. Free demo? Reply YES`
   } else if (businessType.includes('painting') || businessType.includes('roofing')) {
     text = `Hi ${contactInfo.name}! Peak season = more calls. ${contactInfo.business_name} (${rating}/5 stars) - Never miss a quote request again. AI receptionist demo? Reply YES`
   } else {
-    text = `Hi ${contactInfo.name}! ${contactInfo.business_name} (${rating}/5 stars, ${reviews} reviews) - Never miss another call. AI receptionist captures every lead 24/7. Free trial? Reply YES`
+    text = `Hi ${contactInfo.name}! ${contactInfo.business_name} (${rating}/5 stars, ${reviews} reviews) - Never miss another call. AI receptionist captures every lead 24/7. Professional service? Reply YES`
   }
 
   return {
@@ -480,6 +481,6 @@ async function logContactActivity(leadId: string, activityType: string, details:
         timestamp: new Date().toISOString()
       })
   } catch (error) {
-    console.error('Failed to log contact activity:', error)
+    logger.error('Failed to log contact activity', { error, leadId, activityType })
   }
 }

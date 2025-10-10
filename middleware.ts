@@ -59,7 +59,11 @@ export async function middleware(request: NextRequest) {
     
     // Decode JWT and set user/business headers for API routes that need them
     try {
-      const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+      const jwtSecret = process.env.JWT_SECRET
+      if (!jwtSecret) {
+        // No JWT secret configured - skip token decoding
+        return response
+      }
       const decoded = jwt.verify(token, jwtSecret) as any
       
       if (decoded.userId) {
@@ -70,7 +74,7 @@ export async function middleware(request: NextRequest) {
       }
     } catch (error) {
       // If JWT is invalid, let the API route handle it
-      console.warn('Invalid JWT in middleware:', error)
+      // Silent fail - API routes will handle auth validation
     }
     
     // Security headers

@@ -1,104 +1,140 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
-import bcrypt from 'bcryptjs'
+import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import jwt from 'jsonwebtoken'
+import { z } from 'zod'
+import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+const registerSchema = z.object({
+  business_name: z.string().min(2, 'Business name required'),
+  business_type: z.enum(['HVAC', 'Paint', 'Roofing', 'Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'General']),
+  email: z.string().email('Valid email required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  phone: z.string().min(10, 'Valid phone number required'),
+  address: z.string().min(5, 'Address required')
+})
+
 export async function POST(request: NextRequest) {
+  const startTime = Date.now()
+  const requestId = Math.random().toString(36).substring(7)
+  
   try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({
+        success: false,
+        message: 'Service temporarily unavailable. Please try again later.'
+      }, { status: 503 })
+    }
+
+    // Parse and validate request
     const body = await request.json()
+    const validatedData = registerSchema.parse(body)
     
-    // Extract required fields
-    const { 
-      business_name, 
-      business_type, 
-      email, 
-      password, 
-      phone, 
-      address 
-    } = body
-
-    // Basic validation
-    if (!business_name || !email || !password || !phone || !address) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Missing required fields' 
-      }, { status: 400 })
-    }
-
-    // Check if user already exists
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', email.toLowerCase().trim())
-      .single()
-
-    if (existingUser) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'User already exists with this email' 
-      }, { status: 400 })
-    }
-
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 12)
-
-    // Create user
-    const { data: user, error: userError } = await supabaseAdmin
-      .from('users')
-      .insert({
-        email: email.toLowerCase().trim(),
-        password_hash: passwordHash,
-        name: business_name.trim(),
-        first_name: business_name.split(' ')[0] || business_name,
-        last_name: business_name.split(' ').slice(1).join(' ') || '',
-        phone: phone.replace(/\D/g, ''),
-        is_active: true,
-        is_admin: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (userError) {
-      console.error('User creation error:', userError)
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Failed to create user' 
+    const { business_name, business_type, email, password, phone, address } = validatedData
+    
+    // Sanitize inputs
+    const sanitizedEmail = email.toLowerCase().trim()
+    const sanitizedBusinessName = business_name.trim()
+    const sanitizedPhone = phone.replace(/\D/g, '')
+    
+    // Check JWT secret
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret || jwtSecret.length < 32) {
+      logger.error('JWT_SECRET not properly configured')
+      return NextResponse.json({
+        success: false,
+        message: 'Server configuration error'
       }, { status: 500 })
     }
 
-    // Create business
+    // Check for existing email
+    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers()
+    const emailExists = existingUser?.users?.some((u: any) => u.email === sanitizedEmail)
+    
+    if (emailExists) {
+      return NextResponse.json({
+        success: false,
+        message: 'An account with this email already exists'
+      }, { status: 409 })
+    }
+
+    // Check for existing phone number
+    const { data: existingBusiness } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('phone', sanitizedPhone)
+      .single()
+    
+    if (existingBusiness) {
+      return NextResponse.json({
+        success: false,
+        message: 'A business with this phone number already exists'
+      }, { status: 409 })
+    }
+
+    // Create user in Supabase Auth
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: sanitizedEmail,
+      password: password,
+      user_metadata: {
+        first_name: sanitizedBusinessName.split(' ')[0] || sanitizedBusinessName,
+        last_name: sanitizedBusinessName.split(' ').slice(1).join(' ') || '',
+        phone: sanitizedPhone,
+        is_admin: false,
+        created_via: 'register_simple'
+      },
+      email_confirm: true
+    })
+
+    if (authError) {
+      logger.error('User creation failed', { 
+        error: authError,
+        requestId,
+        email: sanitizedEmail
+      })
+      return NextResponse.json({
+        success: false,
+        message: authError.message || 'Account creation failed'
+      }, { status: 500 })
+    }
+
+    const user = authUser.user
+
+    // Create business record
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
       .insert({
-        business_name: business_name.trim(),
-        business_type: business_type || 'General',
-        email: email.toLowerCase().trim(),
-        phone: phone.replace(/\D/g, ''),
-        address: address.trim(),
         owner_id: user.id,
-        is_active: true,
-        onboarding_completed: true,
-        greeting_message: `Hello! Thank you for calling ${business_name.trim()}. How can I help you today?`,
-        ai_tone: 'professional',
-        services: business_type === 'HVAC' ? ['HVAC Repair', 'HVAC Installation', 'HVAC Maintenance'] :
-                 business_type === 'Paint' ? ['Interior Painting', 'Exterior Painting', 'Commercial Painting'] :
-                 business_type === 'Roofing' ? ['Roofing Installation', 'Roof Repair', 'Roof Maintenance'] :
-                 ['General Services'],
+        business_name: sanitizedBusinessName,
+        business_type: business_type,
+        email: sanitizedEmail,
+        phone: sanitizedPhone,
+        phone_number: sanitizedPhone,
+        address: address,
+        city: 'To be determined',
+        state: 'To be determined',
+        zip_code: '00000',
+        description: `Professional ${business_type} services`,
+        services: [`${business_type} Services`],
         service_areas: ['Local Area'],
         business_hours: {
-          monday: '9 AM - 5 PM',
-          tuesday: '9 AM - 5 PM',
-          wednesday: '9 AM - 5 PM',
-          thursday: '9 AM - 5 PM',
-          friday: '9 AM - 5 PM',
-          saturday: 'closed',
-          sunday: 'closed'
+          monday: { open: '08:00', close: '17:00', closed: false },
+          tuesday: { open: '08:00', close: '17:00', closed: false },
+          wednesday: { open: '08:00', close: '17:00', closed: false },
+          thursday: { open: '08:00', close: '17:00', closed: false },
+          friday: { open: '08:00', close: '17:00', closed: false },
+          saturday: { open: '09:00', close: '15:00', closed: true },
+          sunday: { open: '09:00', close: '15:00', closed: true }
         },
+        greeting_message: `Thank you for calling ${sanitizedBusinessName}. How can I help you today?`,
+        tone: 'professional',
+        voice: 'alloy',
+        onboarding_completed: false,
+        account_status: 'new_account',
+        subscription_status: 'inactive',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -106,53 +142,89 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (businessError) {
-      console.error('Business creation error:', businessError)
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Failed to create business' 
+      // Cleanup: Delete auth user if business creation fails
+      await supabaseAdmin.auth.admin.deleteUser(user.id)
+      logger.error('Business creation failed', {
+        error: businessError,
+        requestId,
+        userId: user.id
+      })
+      return NextResponse.json({
+        success: false,
+        message: 'Failed to create business account'
       }, { status: 500 })
     }
 
-    // Update user with business_id
-    await supabaseAdmin
-      .from('users')
-      .update({ business_id: business.id })
-      .eq('id', user.id)
+    // Update user metadata with business_id
+    await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      user_metadata: {
+        ...user.user_metadata,
+        business_id: business.id
+      }
+    })
 
     // Create JWT token
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
     const token = jwt.sign(
       { 
-        userId: user.id, 
-        businessId: business.id,
+        userId: user.id,
         email: user.email,
-        role: 'owner'
+        businessId: business.id,
+        role: 'owner',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60),
+        iss: 'cloudgreet',
+        aud: 'cloudgreet-api'
       },
       jwtSecret,
-      { expiresIn: '7d' }
+      { algorithm: 'HS256', keyid: 'v1' }
     )
+
+    logger.info('Registration successful', {
+      requestId,
+      userId: user.id,
+      businessId: business.id,
+      businessType: business_type,
+      responseTime: Date.now() - startTime
+    })
 
     return NextResponse.json({
       success: true,
-      message: 'Registration successful',
       token,
       user: {
         id: user.id,
         email: user.email,
-        business_id: business.id
+        business_id: business.id,
+        first_name: user.user_metadata?.first_name || '',
+        last_name: user.user_metadata?.last_name || '',
+        role: 'owner'
       },
       business: {
         id: business.id,
         business_name: business.business_name,
-        business_type: business.business_type
-      }
+        business_type: business.business_type,
+        onboarding_completed: false,
+        phone_number: business.phone_number
+      },
+      message: 'Account created successfully'
     })
 
   } catch (error) {
-    console.error('Registration error:', error)
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Registration failed. Please try again.' 
+    logger.error('Registration error', {
+      requestId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({
+        success: false,
+        message: error.issues[0]?.message || 'Validation failed'
+      }, { status: 400 })
+    }
+
+    return NextResponse.json({
+      success: false,
+      message: 'Registration failed. Please try again.'
     }, { status: 500 })
   }
 }
+

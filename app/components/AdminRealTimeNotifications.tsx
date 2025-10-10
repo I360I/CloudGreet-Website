@@ -213,7 +213,11 @@ export default function AdminRealTimeNotifications() {
                             </span>
                             {notification.action && (
                               <button
-                                onClick={notification.action.onClick}
+                                onClick={() => {
+                                  if (notification.action && notification.action.onClick) {
+                                    notification.action.onClick()
+                                  }
+                                }}
                                 className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                               >
                                 {notification.action.label}

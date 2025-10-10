@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import Stripe from 'stripe'
+import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,27 +20,64 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    const body = await request.json()
-    const { businessId, email, businessName } = body
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
 
-    if (!businessId || !email || !businessName) {
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    
+    if (!jwtSecret) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+
+    // Decode JWT token
+    let decoded
+    try {
+      decoded = jwt.verify(token, jwtSecret) as any
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const userId = decoded.userId
+    const businessId = decoded.businessId
+    
+    if (!userId || !businessId) {
+      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
+    }
+
+    // Get business info from database
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('business_name, email, stripe_customer_id')
+      .eq('id', businessId)
+      .eq('owner_id', userId)
+      .single()
+
+    if (businessError || !business) {
       return NextResponse.json({
         success: false,
-        message: 'Business ID, email, and business name are required'
+        message: 'Business not found'
+      }, { status: 404 })
+    }
+
+    const { business_name, email } = business
+
+    if (!email || !business_name) {
+      return NextResponse.json({
+        success: false,
+        message: 'Business email and name are required'
       }, { status: 400 })
     }
 
     // Check if customer already exists
-    const { data: existingBusiness } = await supabaseAdmin
-      .from('businesses')
-      .select('stripe_customer_id')
-      .eq('id', businessId)
-      .single()
-
-    if (existingBusiness?.stripe_customer_id) {
+    if (business.stripe_customer_id) {
       return NextResponse.json({
         success: true,
-        customerId: existingBusiness.stripe_customer_id,
+        customerId: business.stripe_customer_id,
         message: 'Customer already exists'
       })
     }
@@ -49,7 +87,7 @@ export async function POST(request: NextRequest) {
     try {
       customer = await stripe.customers.create({
         email,
-        name: businessName,
+        name: business_name,
         metadata: {
           business_id: businessId
         }
@@ -59,16 +97,10 @@ export async function POST(request: NextRequest) {
         error: stripeError, 
         businessId, 
         email, 
-        businessName 
+        businessName: business_name 
       })
       
-      // Return a fallback response for testing
-      return NextResponse.json({
-        success: true,
-        message: 'Billing account created (demo mode - Stripe integration pending)',
-        customerId: 'demo_customer_' + businessId,
-        demo: true
-      })
+      throw new Error(`Stripe customer creation failed: ${stripeError}`)
     }
 
     // Update business with Stripe customer ID

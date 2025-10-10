@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     const { data: calls } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('*')
       .eq('business_id', businessId)
       .gte('created_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())

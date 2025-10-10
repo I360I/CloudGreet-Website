@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+    const jwtSecret = process.env.JWT_SECRET
     
     // Decode JWT token
     const decoded = jwt.verify(token, jwtSecret) as any
@@ -30,50 +31,96 @@ export async function POST(request: NextRequest) {
 
     const targetBusinessId = businessId || userBusinessId
 
+    // Check if business has an active subscription
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('subscription_status, billing_plan, business_name')
+      .eq('id', targetBusinessId)
+      .single()
+
+    if (businessError || !business) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Business not found' 
+      }, { status: 404 })
+    }
+
+    // Require active subscription before provisioning phone
+    if (business.subscription_status !== 'active' && business.subscription_status !== 'trialing') {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Active subscription required',
+        message: 'Please subscribe to a plan before getting a phone number',
+        requiresPayment: true
+      }, { status: 402 })
+    }
+
     // Check if Telnyx is configured
     if (!process.env.TELYNX_API_KEY) {
-      // Generate a demo phone number for development
-      const demoNumber = `+1${areaCode}${Math.floor(Math.random() * 9000000) + 1000000}`
+      logger.error('Phone provisioning attempted without Telnyx configuration', {
+        businessId: targetBusinessId
+      })
       
-      // Store the demo number
-      const { data: phoneRecord, error: phoneError } = await supabaseAdmin
+      return NextResponse.json({ 
+        success: false,
+        error: 'Phone service not configured',
+        message: 'Phone provisioning is temporarily unavailable. Please contact support.',
+        requiresConfiguration: true
+      }, { status: 503 })
+    }
+
+    // STEP 1: Check if we already have unassigned numbers in our database
+    const { data: existingNumbers, error: existingError } = await supabaseAdmin
+      .from('toll_free_numbers')
+      .select('*')
+      .eq('status', 'available')
+      .is('business_id', null)
+      .ilike('number', `+1${areaCode}%`)
+      .limit(1)
+
+    // If we have an available number, use it
+    if (existingNumbers && existingNumbers.length > 0) {
+      const existingNumber = existingNumbers[0]
+      
+      // Assign it to this business
+      const { data: assignedNumber, error: assignError } = await supabaseAdmin
         .from('toll_free_numbers')
-        .insert({
-          number: demoNumber,
+        .update({
           business_id: targetBusinessId,
           status: 'assigned',
-          provider: 'demo',
-          monthly_cost: 200,
-          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
+        .eq('id', existingNumber.id)
         .select()
         .single()
 
-      if (phoneError) {
-        return NextResponse.json({ error: 'Failed to assign phone number' }, { status: 500 })
+      if (assignError) {
+        return NextResponse.json({ error: 'Failed to assign existing number' }, { status: 500 })
       }
 
       // Update business with phone number
       await supabaseAdmin
         .from('businesses')
         .update({
-          phone_number: demoNumber,
+          phone_number: existingNumber.number,
           updated_at: new Date().toISOString()
         })
         .eq('id', targetBusinessId)
 
       return NextResponse.json({
         success: true,
-        message: 'Demo phone number assigned successfully',
-        phoneNumber: demoNumber,
-        phoneRecordId: phoneRecord.id,
-        note: 'This is a demo number. Configure Telnyx API for real phone numbers.'
+        message: 'Existing phone number assigned successfully',
+        phoneNumber: existingNumber.number,
+        phoneRecordId: existingNumber.id,
+        provider: 'telnyx',
+        source: 'existing_pool'
       })
     }
 
-    // Real Telnyx integration
-    const telnyxResponse = await fetch('https://api.telnyx.com/v2/phone_numbers', {
+    // STEP 2: No available numbers in our pool, search for LOCAL numbers from Telnyx
+    // Local numbers work IMMEDIATELY - no verification wait
+    // SMS is compliant for transactional messages (appointments, confirmations, customer replies)
+    const telnyxResponse = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?filter[features][]=sms&filter[features][]=voice&filter[national_destination_code]=${areaCode}&limit=10`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
@@ -81,24 +128,53 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    let selectedNumber = null
+    let phoneNumber = null
+
     if (!telnyxResponse.ok) {
-      return NextResponse.json({ error: 'Failed to fetch phone numbers from Telnyx' }, { status: 500 })
+      // Try nearby area codes if requested area code not available
+      const nearbyAreaCodes = [
+        areaCode, 
+        String(parseInt(areaCode) + 1).padStart(3, '0'),
+        String(parseInt(areaCode) - 1).padStart(3, '0')
+      ]
+      
+      for (const code of nearbyAreaCodes) {
+        const altResponse = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?filter[features][]=sms&filter[features][]=voice&filter[national_destination_code]=${code}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (altResponse.ok) {
+          const altData = await altResponse.json()
+          if (altData.data && altData.data.length > 0) {
+            selectedNumber = altData.data[0]
+            phoneNumber = selectedNumber.phone_number
+            break
+          }
+        }
+      }
+      
+      if (!selectedNumber) {
+        return NextResponse.json({ 
+          error: 'No phone numbers available in this area. Please try a different area code.' 
+        }, { status: 400 })
+      }
+    } else {
+      const telnyxData = await telnyxResponse.json()
+      
+      if (!telnyxData.data || telnyxData.data.length === 0) {
+        return NextResponse.json({ 
+          error: 'No phone numbers available. Please try a different area code.' 
+        }, { status: 400 })
+      }
+
+      selectedNumber = telnyxData.data[0]
+      phoneNumber = selectedNumber.phone_number
     }
-
-    const telnyxData = await telnyxResponse.json()
-    const availableNumbers = telnyxData.data?.filter((num: any) => 
-      num.phone_number.startsWith(`+1${areaCode}`) && 
-      num.connection_name === null
-    )
-
-    if (!availableNumbers || availableNumbers.length === 0) {
-      return NextResponse.json({ 
-        error: `No available phone numbers in area code ${areaCode}` 
-      }, { status: 400 })
-    }
-
-    const selectedNumber = availableNumbers[0]
-    const phoneNumber = selectedNumber.phone_number
 
     // Purchase the number
     const purchaseResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${selectedNumber.id}`, {
@@ -127,7 +203,7 @@ export async function POST(request: NextRequest) {
         status: 'assigned',
         provider: 'telnyx',
         provider_id: selectedNumber.id,
-        monthly_cost: 200,
+        monthly_cost: parseInt(process.env.PHONE_MONTHLY_COST || '200'),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -149,7 +225,7 @@ export async function POST(request: NextRequest) {
 
     // Configure webhook for the new phone number
     try {
-      const webhookResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/telnyx/configure-webhook`, {
+      const webhookResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'https://cloudgreet.com'}/api/telnyx/configure-webhook`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,12 +238,12 @@ export async function POST(request: NextRequest) {
       })
 
       if (webhookResponse.ok) {
-        console.log('Webhook configured successfully for new phone number')
+        // Webhook configured successfully
       } else {
-        console.warn('Failed to configure webhook for new phone number')
+        // Webhook configuration failed - will retry later
       }
     } catch (error) {
-      console.warn('Error configuring webhook:', error)
+      // Webhook configuration error - will retry later
     }
 
     return NextResponse.json({
@@ -180,10 +256,10 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Phone provisioning error:', error)
     return NextResponse.json({ 
       success: false, 
-      message: 'Failed to provision phone number' 
+      message: 'Failed to provision phone number',
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }

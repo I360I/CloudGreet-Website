@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
           created_at: new Date().toISOString()
         })
       } catch (error) {
-        console.error('Failed to log audit event:', error)
+        // Audit log failure is non-critical, skip logging
       }
       
       const response = NextResponse.json({
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       }
 
       const token = authHeader.replace('Bearer ', '')
-      const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+      const jwtSecret = process.env.JWT_SECRET
       
       // Decode JWT token
       const jwt = (await import('jsonwebtoken')).default
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       }
 
       const token = authHeader.replace('Bearer ', '')
-      const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+      const jwtSecret = process.env.JWT_SECRET
       
       // Decode JWT token
       const jwt = (await import('jsonwebtoken')).default
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
         .eq('id', userBusinessId)
 
       if (businessError) {
-        console.warn('Failed to update business onboarding status:', businessError)
+        // Business update warning is non-critical, skip logging
       }
 
       return NextResponse.json({
@@ -257,7 +257,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(healthStatus, { status: statusCode });
   } catch (error) {
-    console.error('Health check error:', error);
     return NextResponse.json(
       {
         status: 'unhealthy',

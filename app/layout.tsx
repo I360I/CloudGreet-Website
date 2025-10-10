@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AdvancedErrorBoundary } from './components/AdvancedErrorBoundary'
@@ -13,6 +13,7 @@ import SecurityEnhancer from './components/SecurityEnhancer'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://cloudgreet.ai'),
   title: 'CloudGreet - AI Voice Assistant for HVAC, Roofing & Painting Contractors',
   description: 'Professional AI receptionist for service contractors. Handle calls 24/7, schedule appointments, provide estimates, and never miss another opportunity. Built specifically for HVAC, roofing, and painting businesses.',
   keywords: 'AI receptionist, HVAC contractor, roofing contractor, painting contractor, voice assistant, appointment scheduling, call handling, business automation',
@@ -51,7 +52,6 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://cloudgreet.ai'),
   alternates: {
     canonical: '/',
   },
@@ -67,8 +67,15 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: 'G-XXXXXXXXXX', // Replace with actual Google Analytics verification code
+    google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION_CODE || '',
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: '#0f172a',
 }
 
 export default function RootLayout({
@@ -82,8 +89,6 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#0f172a" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -112,11 +117,9 @@ export default function RootLayout({
             <AnalyticsProvider>
               <AccessibilityProvider>
                 <RealtimeProvider>
-                <ToastProvider>
-                  <SecurityEnhancer>
+                  <ToastProvider>
                     {children}
-                  </SecurityEnhancer>
-                </ToastProvider>
+                  </ToastProvider>
                 </RealtimeProvider>
               </AccessibilityProvider>
             </AnalyticsProvider>

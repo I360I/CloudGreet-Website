@@ -103,7 +103,7 @@ P.S. We're currently offering a 30-day free trial with no setup fees. No risk, a
 Common objections and responses:
 
 "It sounds expensive"
-- "It's actually $200/month plus 40% of new bookings we generate. Since you're only paying when we bring you new business, it's really a revenue-sharing partnership."
+- "It's actually $200/month plus $50 per booking we generate. Since you're only paying when we bring you new business, it's really a performance-based partnership."
 
 "What if it doesn't work for my business?"
 - "That's why we offer a 30-day free trial. If you don't see results, you pay nothing."

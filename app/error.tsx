@@ -11,8 +11,19 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    // Log the error to an error reporting service
-    console.error('Application error:', error)
+    // Log error to monitoring service
+    fetch('/api/monitoring/error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: error.message,
+        stack: error.stack,
+        errorId: error.digest || `error_${Date.now()}`,
+        timestamp: new Date().toISOString()
+      })
+    }).catch(() => {
+      // Silent fail - error logging is non-critical
+    })
   }, [error])
 
   return (

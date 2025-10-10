@@ -130,8 +130,9 @@ export function handleError(error: unknown): AppError {
 export function logError(error: unknown, context?: any) {
   const appError = handleError(error);
   
-  // Log error with context
-  console.error('CloudGreet Error:', {
+  // Use proper logger instead of console
+  const { logger } = require('@/lib/monitoring')
+  logger.error('CloudGreet Error', {
     code: appError.code,
     message: appError.message,
     statusCode: appError.statusCode,

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+    const jwtSecret = process.env.JWT_SECRET
     
     const decoded = jwt.verify(token, jwtSecret) as any
     const businessId = decoded.businessId
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     // Get REAL call data
     const { data: calls, error: callsError } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('*')
       .eq('business_id', businessId)
       .gte('created_at', startDate.toISOString())
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     prevStartDate.setTime(startDate.getTime() - periodLength)
 
     const { data: prevCalls } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('id')
       .eq('business_id', businessId)
       .gte('created_at', prevStartDate.toISOString())

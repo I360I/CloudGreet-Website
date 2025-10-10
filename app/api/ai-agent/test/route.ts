@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import OpenAI from 'openai'
+import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,25 +15,55 @@ export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7)
   
   try {
-    const userId = request.headers.get('x-user-id')
-    const businessId = request.headers.get('x-business-id')
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization')
     
-    if (!userId || !businessId) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({
         success: false,
         message: 'Authentication required'
       }, { status: 401 })
     }
 
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    
+    if (!jwtSecret) {
+      return NextResponse.json({
+        success: false,
+        message: 'Server configuration error'
+      }, { status: 500 })
+    }
+
+    // Decode JWT token
+    let decoded
+    try {
+      decoded = jwt.verify(token, jwtSecret) as any
+    } catch (error) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid token'
+      }, { status: 401 })
+    }
+
+    const userId = decoded.userId
+    const businessId = decoded.businessId
+    
+    if (!userId || !businessId) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid token data'
+      }, { status: 401 })
+    }
+
     const body = await request.json()
     const { testMessage, testScenario } = body
 
-    // Get AI agent configuration
+    // Get AI agent configuration (for testing, get any agent regardless of active status)
     const { data: agent, error: agentError } = await supabaseAdmin
       .from('ai_agents')
       .select('*')
       .eq('business_id', businessId)
-      .eq('is_active', true)
       .single()
 
     if (agentError || !agent) {
@@ -56,20 +87,67 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Create test conversation
-    const systemPrompt = agent.prompt_template || `You are an AI assistant for ${business.business_name}.`
+    // Create highly optimized human-like system prompt
+    const config = agent.configuration || {}
+    const personalizedSystemPrompt = `You are Sarah, the friendly and professional AI receptionist for ${business.business_name}. You're having a natural phone conversation with a potential customer.
+
+CRITICAL: You are NOT a chatbot. You are a REAL PERSON having a REAL CONVERSATION. Act human, use natural speech patterns, and show genuine interest.
+
+BUSINESS CONTEXT:
+- Company: ${business.business_name} (${config.business_type || business.business_type})
+- Services: ${(config.services || business.services || ['General Services']).join(', ')}
+- Service Areas: ${(config.service_areas || business.service_areas || ['Local Area']).join(', ')}
+- Business Hours: ${JSON.stringify(config.business_hours || business.business_hours || {})}
+- Phone: ${business.phone_number}
+- Address: ${business.address}
+
+CONVERSATION STYLE:
+- Speak naturally like a real receptionist would
+- Use conversational language, not formal business speak
+- Show genuine interest in their needs
+- Ask follow-up questions naturally
+- Use phrases like "Oh, that sounds like...", "Let me see...", "Absolutely!"
+- Match their energy level and urgency
+- Be empathetic if they mention problems
+
+HUMAN-LIKE BEHAVIORS:
+- Use natural pauses and "um", "let me think"
+- Express understanding: "I hear you", "That makes sense"
+- Show enthusiasm for helping: "I'd love to help with that!"
+- Be personable: "How's your day going?" (if appropriate)
+- Use their name if provided
+- Acknowledge their specific situation
+
+CUSTOM INSTRUCTIONS:
+${config.custom_instructions || ''}
+
+GREETING: ${config.greeting_message || `Hi there! Thank you for calling ${business.business_name}. This is Sarah, how can I help you today?`}
+
+GOALS:
+1. Have a natural, helpful conversation
+2. Understand exactly what they need
+3. Provide helpful information about your services
+4. Schedule appointments when it makes sense
+5. Make them feel valued and heard
+6. Only transfer to human for emergencies or complex issues
+
+Remember: You're a real person having a real conversation. Be warm, helpful, and genuinely interested in helping them.`
     
     const messages = [
-      { role: 'system', content: systemPrompt },
+      { role: 'system', content: personalizedSystemPrompt },
       { role: 'user', content: testMessage || 'Hello, I need help with your services.' }
     ]
 
-    // Test the AI response
+    // Test the AI response with optimized human-like settings
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4-turbo-preview', // Latest and most capable model
       messages: messages as any,
-      max_tokens: 500,
-      temperature: 0.7
+      max_tokens: 300, // Shorter responses for phone calls
+      temperature: 0.8, // Higher creativity for natural conversation
+      presence_penalty: 0.3, // Reduce repetition
+      frequency_penalty: 0.2, // Encourage varied responses
+      top_p: 0.9, // Focus on most likely tokens
+      stop: ['\n\n', 'Customer:', 'Caller:'] // Stop at conversation boundaries
     })
 
     const aiResponse = completion.choices[0]?.message?.content || 'No response generated'

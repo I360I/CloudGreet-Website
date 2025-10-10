@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+    const jwtSecret = process.env.JWT_SECRET
     
     // Decode JWT token
     const decoded = jwt.verify(token, jwtSecret) as any
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // Get call analytics
     const { data: calls, error: callsError } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('*')
       .eq('business_id', businessId)
       .gte('created_at', startDate.toISOString())

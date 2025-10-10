@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     // Log the follow-up
     await supabaseAdmin
-      .from('sms_logs')
+      .from('sms_messages')
       .insert({
         business_id: businessId,
         to_number: customerData.phone,

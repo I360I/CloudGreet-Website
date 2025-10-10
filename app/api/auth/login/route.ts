@@ -34,51 +34,30 @@ export async function POST(request: NextRequest) {
     const sanitizedEmail = email.toLowerCase().trim()
     const sanitizedPassword = password.trim()
 
-    // Get user from database with proper error handling - match actual schema
-    const { data: user, error: userError } = await supabaseAdmin
-      .from('users')
-      .select(`
-        id,
-        email,
-        password_hash,
-        first_name,
-        last_name,
-        business_id,
-        is_active,
-        last_login,
-        created_at
-      `)
-      .eq('email', sanitizedEmail)
-      .eq('is_active', true)
-      .single()
+    // Authenticate with Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.signInWithPassword({
+      email: sanitizedEmail,
+      password: sanitizedPassword
+    })
+    
+    if (authError || !authData?.user) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } },
+        { status: 401 }
+      )
+    }
+    
+    const user = authData.user
 
     const clientIP = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
 
-    if (userError || !user) {
-      
-      // Login failed - no audit logging needed
-      
-      return NextResponse.json(
-        { error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } },
-        { status: 401 }
-      )
-    }
-
-    // Verify password with proper timing attack protection
-    const isValidPassword = await bcrypt.compare(sanitizedPassword, user.password_hash)
-    if (!isValidPassword) {
-      // Invalid password - no audit logging needed
-      
-      return NextResponse.json(
-        { error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } },
-        { status: 401 }
-      )
-    }
+    // Get business_id from user metadata
+    const businessId = user.user_metadata?.business_id
 
     // Check if JWT secret is properly configured
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET not properly configured')
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret || jwtSecret.includes('fallback') || jwtSecret.length < 32) {
+      throw new Error('JWT_SECRET not properly configured - must be set in production')
     }
 
         // Create JWT token with proper claims
@@ -86,7 +65,7 @@ export async function POST(request: NextRequest) {
           {
             userId: user.id,
             email: user.email,
-            businessId: user.business_id || null,
+            businessId: businessId || null,
             role: 'owner',
             iat: Math.floor(Date.now() / 1000),
             exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 days
@@ -102,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     // Get business data if user has a business_id
     let business = null
-    if (user.business_id) {
+    if (businessId) {
       const { data: businessData, error: businessError } = await supabaseAdmin
         .from('businesses')
         .select(`
@@ -112,7 +91,7 @@ export async function POST(request: NextRequest) {
           phone_number,
           onboarding_completed
         `)
-        .eq('id', user.business_id)
+        .eq('id', businessId)
         .single()
       
       if (!businessError && businessData) {
@@ -120,13 +99,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update last login
-    await supabaseAdmin
-      .from('users')
-      .update({ 
+    // Update last login in user metadata
+    await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      user_metadata: {
+        ...user.user_metadata,
         last_login: new Date().toISOString()
-      })
-      .eq('id', user.id)
+      }
+    })
 
     // Login successful - no audit logging needed
 
@@ -141,11 +120,11 @@ export async function POST(request: NextRequest) {
         user: {
           id: user.id,
           email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          business_id: user.business_id || null,
+          first_name: user.user_metadata?.first_name || '',
+          last_name: user.user_metadata?.last_name || '',
+          business_id: businessId || null,
           role: 'owner',
-          last_login: user.last_login
+          last_login: user.user_metadata?.last_login || new Date().toISOString()
         },
         business: business
       },

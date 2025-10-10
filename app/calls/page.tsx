@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Phone, Clock, User, MapPin, DollarSign, MessageSquare, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Phone, Clock, User, MapPin, DollarSign, MessageSquare, CheckCircle, XCircle, AlertCircle, Play, Pause, Volume2, FileText, Download } from 'lucide-react'
 import Link from 'next/link'
 
 interface CallLog {
@@ -20,6 +20,8 @@ interface CallLog {
   budget_mentioned?: number
   notes?: string
   follow_up_required: boolean
+  recording_url?: string
+  transcription_text?: string
   created_at: string
 }
 
@@ -27,6 +29,9 @@ export default function CallsPage() {
   const [calls, setCalls] = useState<CallLog[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [playingCallId, setPlayingCallId] = useState<string | null>(null)
+  const [expandedTranscript, setExpandedTranscript] = useState<string | null>(null)
+  const audioRefs = useRef<Record<string, HTMLAudioElement | null>>({})
 
   useEffect(() => {
     loadCalls()
@@ -99,6 +104,25 @@ export default function CallsPage() {
       default:
         return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
     }
+  }
+
+  const toggleAudio = (callId: string) => {
+    const audio = audioRefs.current[callId]
+    if (!audio) return
+
+    if (playingCallId === callId) {
+      audio.pause()
+      setPlayingCallId(null)
+    } else {
+      // Pause any currently playing audio
+      Object.values(audioRefs.current).forEach(a => a?.pause())
+      audio.play()
+      setPlayingCallId(callId)
+    }
+  }
+
+  const toggleTranscript = (callId: string) => {
+    setExpandedTranscript(expandedTranscript === callId ? null : callId)
   }
 
   if (loading) {
@@ -279,6 +303,87 @@ export default function CallsPage() {
                 {call.notes && (
                   <div className="bg-gray-800/30 rounded-xl p-4 mb-4">
                     <p className="text-gray-300 text-sm">{call.notes}</p>
+                  </div>
+                )}
+
+                {/* Audio Player */}
+                {call.recording_url && (
+                  <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl p-4 mb-4 border border-blue-500/20">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <Volume2 className="w-5 h-5 text-blue-400" />
+                        <span className="text-sm font-medium text-white">Call Recording</span>
+                      </div>
+                      <a
+                        href={call.recording_url}
+                        download
+                        className="flex items-center space-x-1 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Download</span>
+                      </a>
+                    </div>
+                    
+                    <audio
+                      ref={(el) => { audioRefs.current[call.id] = el }}
+                      src={call.recording_url}
+                      onEnded={() => setPlayingCallId(null)}
+                      className="hidden"
+                    />
+                    
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => toggleAudio(call.id)}
+                        className="p-3 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+                      >
+                        {playingCallId === call.id ? (
+                          <Pause className="w-5 h-5 text-white" />
+                        ) : (
+                          <Play className="w-5 h-5 text-white" />
+                        )}
+                      </button>
+                      
+                      <div className="flex-1">
+                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                            initial={{ width: '0%' }}
+                            animate={{ width: playingCallId === call.id ? '100%' : '0%' }}
+                            transition={{ duration: call.duration || 1 }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <span className="text-sm text-gray-400 font-mono">
+                        {formatDuration(call.duration)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transcript */}
+                {call.transcription_text && (
+                  <div className="mb-4">
+                    <button
+                      onClick={() => toggleTranscript(call.id)}
+                      className="flex items-center space-x-2 text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors mb-2"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>{expandedTranscript === call.id ? 'Hide' : 'Show'} Transcript</span>
+                    </button>
+                    
+                    {expandedTranscript === call.id && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-gray-800/50 rounded-xl p-4 border border-gray-700"
+                      >
+                        <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans">
+                          {call.transcription_text}
+                        </pre>
+                      </motion.div>
+                    )}
                   </div>
                 )}
 

@@ -446,7 +446,11 @@ export default function MLPersonalization({ children }: MLPersonalizationProps) 
                   key={rec.id}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={rec.action}
+                  onClick={() => {
+                    if (rec.action && typeof rec.action === 'function') {
+                      rec.action()
+                    }
+                  }}
                   className={`w-full p-3 rounded-lg text-left transition-colors ${
                     rec.priority === 'high' 
                       ? 'bg-red-500/20 border border-red-500/30 hover:bg-red-500/30' 

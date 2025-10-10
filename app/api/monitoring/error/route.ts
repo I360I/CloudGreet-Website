@@ -43,15 +43,6 @@ export async function POST(request: NextRequest) {
     // 3. Alert development team for critical errors
     // 4. Aggregate error statistics
     
-    // Client Error Received and logged
-    console.log('Error logged:', {
-      errorId: errorInfo.errorId,
-      message: errorInfo.message,
-      url: errorInfo.url,
-      retryCount: errorInfo.retryCount,
-      timestamp: errorInfo.timestamp
-    })
-
     return NextResponse.json({ 
       success: true,
       message: 'Error logged successfully',
@@ -59,7 +50,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Failed to log client error:', error)
+    logger.error('Failed to log client error', { error })
     
     return NextResponse.json(
       { error: 'Failed to log error' },

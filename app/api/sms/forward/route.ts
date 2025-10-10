@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Store SMS in database
     const { data: smsLog, error: smsError } = await supabaseAdmin
-      .from('sms_logs')
+      .from('sms_messages')
       .insert({
         from_number: from,
         to_number: to,

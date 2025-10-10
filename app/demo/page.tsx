@@ -154,7 +154,7 @@ export default function DemoPage() {
               href="/start"
               className="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold transition-all transform hover:scale-105"
             >
-              Start Your Free Trial
+              Get Started Now
               <ArrowLeft className="w-5 h-5 ml-2 rotate-180" />
             </Link>
           </div>

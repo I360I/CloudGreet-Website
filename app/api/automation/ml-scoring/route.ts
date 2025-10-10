@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -8,17 +9,17 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const { leadId, leadData, trainingData } = await request.json()
-    
-    if (!leadId && !leadData) {
+      
+      if (!leadId && !leadData) {
       return NextResponse.json({
-        success: false,
-        error: 'Lead data required'
+          success: false,
+          error: 'Lead data required'
       }, { status: 400 })
-    }
+      }
 
-    // Get lead data from database if not provided
-    let lead = leadData
-    if (!lead && leadId) {
+      // Get lead data from database if not provided
+      let lead = leadData
+      if (!lead && leadId) {
       const { data, error } = await supabaseAdmin
         .from('leads')
         .select('*')
@@ -27,21 +28,21 @@ export async function POST(request: NextRequest) {
 
       if (error || !data) {
         return NextResponse.json({
-          success: false,
-          error: 'Lead not found'
+            success: false,
+            error: 'Lead not found'
         }, { status: 404 })
-      }
+        }
       
       lead = data
-    }
+      }
 
-    // Get historical data for machine learning
-    const historicalData = await getHistoricalConversionData()
-    
-    // Perform ML scoring
-    const mlScore = await performMLScoring(lead, historicalData)
-    
-    // Update lead with ML score
+      // Get historical data for machine learning
+      const historicalData = await getHistoricalConversionData()
+      
+      // Perform ML scoring
+      const mlScore = await performMLScoring(lead, historicalData)
+      
+      // Update lead with ML score
     const { error: updateError } = await supabaseAdmin
       .from('leads')
       .update({
@@ -55,17 +56,17 @@ export async function POST(request: NextRequest) {
       .eq('id', lead.id || leadId)
 
     if (updateError) {
-      console.error('Failed to update ML score:', updateError)
+      logger.error('Failed to update ML score', { error: updateError })
     }
 
     // If training data provided, update the model
-    if (trainingData) {
+      if (trainingData) {
       await updateMLModel(trainingData)
-    }
+      }
 
     return NextResponse.json({
-      success: true,
-      data: {
+        success: true,
+        data: {
         lead_id: lead.id || leadId,
         ml_score: mlScore.score,
         conversion_probability: mlScore.conversionProbability,
@@ -74,18 +75,18 @@ export async function POST(request: NextRequest) {
         recommendations: mlScore.recommendations,
         model_version: mlScore.modelVersion,
         last_updated: mlScore.lastUpdated
-      }
-    })
+        }
+      })
 
-  } catch (error) {
-    console.error('ML scoring error:', error)
+    } catch (error) {
+    logger.error('ML scoring error', { error })
     return NextResponse.json({
-      success: false,
-      error: 'ML scoring failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+        success: false,
+        error: 'ML scoring failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
+    }
   }
-}
 
 async function getHistoricalConversionData() {
   try {
@@ -98,13 +99,13 @@ async function getHistoricalConversionData() {
       .limit(1000)
 
     if (error) {
-      console.error('Failed to get historical data:', error)
+      logger.error('Failed to get historical data', { error })
       return []
     }
 
     return data || []
   } catch (error) {
-    console.error('Error fetching historical data:', error)
+    logger.error('Error fetching historical data', { error })
     return []
   }
 }
@@ -580,8 +581,8 @@ async function updateMLModel(trainingData: any) {
       })
     
     // In a real implementation, this would trigger model retraining
-    console.log('Training data stored for model update')
+    logger.info('Training data stored for model update', { leadId: trainingData.leadId })
   } catch (error) {
-    console.error('Failed to store training data:', error)
+    logger.error('Failed to store training data', { error })
   }
-}
+  }

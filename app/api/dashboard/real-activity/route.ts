@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+    const jwtSecret = process.env.JWT_SECRET
     
     const decoded = jwt.verify(token, jwtSecret) as any
     const userId = decoded.userId
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     // Get REAL recent calls
     const { data: recentCalls, error: callsError } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('*')
       .eq('business_id', businessId)
       .order('created_at', { ascending: false })
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 
     // Get REAL recent SMS messages
     const { data: recentSMS, error: smsError } = await supabaseAdmin
-      .from('sms_logs')
+      .from('sms_messages')
       .select('*')
       .eq('business_id', businessId)
       .order('created_at', { ascending: false })

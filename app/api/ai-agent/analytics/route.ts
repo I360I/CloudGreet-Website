@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     // Get call analytics
     const { data: calls, error: callsError } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('*')
       .eq('business_id', businessId)
       .gte('created_at', startDate.toISOString())
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     // Get SMS analytics
     const { data: sms, error: smsError } = await supabaseAdmin
-      .from('sms_logs')
+      .from('sms_messages')
       .select('*')
       .eq('business_id', businessId)
       .gte('created_at', startDate.toISOString())

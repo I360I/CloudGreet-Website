@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+    const jwtSecret = process.env.JWT_SECRET
     
     const decoded = jwt.verify(token, jwtSecret) as any
     const businessId = decoded.businessId
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       if (customer) {
         // Get previous call count
         const { count: callCount } = await supabaseAdmin
-          .from('call_logs')
+          .from('calls')
           .select('*', { count: 'exact', head: true })
           .eq('from_number', customerPhone)
           .eq('business_id', businessId)
@@ -261,7 +261,7 @@ Respond in a conversational, helpful tone that builds trust and solves the custo
     }
 
     return NextResponse.json({
-      success: true,
+        success: true,
       data: {
         response,
         analysis: {
@@ -277,11 +277,11 @@ Respond in a conversational, helpful tone that builds trust and solves the custo
       }
     })
 
-  } catch (error) {
+    } catch (error) {
     console.error('Conversation engine error:', error)
     return NextResponse.json({
-      success: false,
+        success: false,
       error: 'Failed to process conversation'
     }, { status: 500 })
   }
-}
+    }

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     // Log the incoming call
     const { data: callLog, error: logError } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .insert({
         call_id: callId,
         from_number: fromNumber,
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     // Update call log with business info
     if (callLog) {
       await supabaseAdmin
-        .from('call_logs')
+        .from('calls')
         .update({ business_id: business.id })
         .eq('id', callLog.id)
     }
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     // Store the call context for future interactions
     await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .update({
         status: 'in_progress',
         ai_agent_id: agent?.id,
@@ -160,7 +160,7 @@ export async function PUT(request: NextRequest) {
 
     // Update call log
     await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .update({
         status: callState,
         duration: duration || 0,
@@ -171,7 +171,7 @@ export async function PUT(request: NextRequest) {
     // If call ended, log the completion
     if (callState === 'completed' || callState === 'failed') {
       await supabaseAdmin
-        .from('call_logs')
+        .from('calls')
         .update({
           status: callState,
           ended_at: new Date().toISOString(),

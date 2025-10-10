@@ -39,11 +39,20 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Define pricing based on plan
+    // Define pricing based on plan - amounts from environment variables
     const pricing = {
-      starter: { priceId: process.env.STRIPE_STARTER_PRICE_ID || 'price_starter', amount: 97 },
-      pro: { priceId: process.env.STRIPE_PRO_PRICE_ID || 'price_pro', amount: 197 },
-      premium: { priceId: process.env.STRIPE_PREMIUM_PRICE_ID || 'price_premium', amount: 397 }
+      starter: { 
+        priceId: process.env.STRIPE_STARTER_PRICE_ID || 'price_starter', 
+        amount: parseInt(process.env.STRIPE_STARTER_AMOUNT || '97') 
+      },
+      pro: { 
+        priceId: process.env.STRIPE_PRO_PRICE_ID || 'price_pro', 
+        amount: parseInt(process.env.STRIPE_PRO_AMOUNT || '200') 
+      },
+      premium: { 
+        priceId: process.env.STRIPE_PREMIUM_PRICE_ID || 'price_premium', 
+        amount: parseInt(process.env.STRIPE_PREMIUM_AMOUNT || '397') 
+      }
     }
 
     const selectedPlan = pricing[planId as keyof typeof pricing] || pricing.pro

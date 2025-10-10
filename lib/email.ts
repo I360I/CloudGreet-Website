@@ -1,13 +1,9 @@
 // lib/email.ts
-// Email utility functions for CloudGreet
+// Email utility functions for CloudGreet using Resend
 
-interface EmailConfig {
-  host: string
-  port: number
-  user: string
-  password: string
-  from: string
-}
+import { Resend } from 'resend'
+import { logger } from '@/lib/monitoring'
+import { resendWithRetry } from '@/lib/retry-logic'
 
 interface EmailData {
   to: string
@@ -16,42 +12,68 @@ interface EmailData {
   text?: string
 }
 
+// Initialize Resend with API key
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
+
 export class EmailService {
-  private config: EmailConfig
+  private fromEmail: string
 
   constructor() {
-    this.config = {
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      user: process.env.SMTP_USER || '',
-      password: process.env.SMTP_PASS || '',
-      from: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || ''
-    }
+    // Resend requires format: "Name <email@domain.com>" or "email@domain.com"
+    const email = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@cloudgreet.com'
+    // Clean any whitespace
+    const cleanEmail = email.trim()
+    // Format as "CloudGreet <email@domain.com>"
+    this.fromEmail = cleanEmail.includes('<') ? cleanEmail : `CloudGreet <${cleanEmail}>`
   }
 
   async sendEmail(emailData: EmailData): Promise<{ success: boolean; message?: string; error?: string }> {
     try {
-      // For development, just log the email
-      if (process.env.NODE_ENV === 'development') {
-        console.log('📧 EMAIL SENT (Development Mode):', {
+      // Check if Resend is configured
+      if (!resend) {
+        logger.error('Email service not configured', { 
+          reason: 'RESEND_API_KEY not set',
           to: emailData.to,
-          subject: emailData.subject,
-          from: this.config.from
+          subject: emailData.subject 
         })
-        return { success: true, message: 'Email sent (development mode)' }
+        return { 
+          success: false, 
+          error: 'Email service not configured. Please set RESEND_API_KEY environment variable.' 
+        }
       }
 
-      // In production, you would integrate with a real email service
-      // For now, we'll simulate success
-      console.log('📧 EMAIL SENT:', {
-        to: emailData.to,
+      // Clean the 'to' email address (remove any whitespace)
+      const cleanTo = emailData.to.trim()
+
+      // Send email via Resend with retry logic
+      const { data, error } = await resendWithRetry(
+        () => resend.emails.send({
+          from: this.fromEmail,
+          to: cleanTo,
+          subject: emailData.subject,
+          html: emailData.html,
+          text: emailData.text || emailData.subject
+        }),
+        { to: cleanTo, subject: emailData.subject }
+      )
+
+      if (error) {
+        logger.error('Failed to send email via Resend', { error, emailData })
+        return { 
+          success: false, 
+          error: error.message || 'Failed to send email' 
+        }
+      }
+
+      logger.info('Email sent successfully', { 
+        to: emailData.to, 
         subject: emailData.subject,
-        from: this.config.from
+        messageId: data?.id 
       })
 
       return { success: true, message: 'Email sent successfully' }
     } catch (error) {
-      console.error('❌ EMAIL SEND ERROR:', error)
+      logger.error('Email send error', { error, emailData })
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown email error' 
@@ -64,20 +86,42 @@ export class EmailService {
       to,
       subject: `Welcome to CloudGreet, ${businessName}!`,
       html: `
-        <h1>Welcome to CloudGreet!</h1>
-        <p>Hi ${businessName},</p>
-        <p>Your AI receptionist is now active and ready to handle calls and messages for your business.</p>
-        <p>Key features now available:</p>
-        <ul>
-          <li>24/7 AI receptionist</li>
-          <li>Call handling and routing</li>
-          <li>SMS automation</li>
-          <li>Lead qualification</li>
-          <li>Appointment booking</li>
-        </ul>
-        <p>Best regards,<br>The CloudGreet Team</p>
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .feature { margin: 15px 0; padding-left: 25px; position: relative; }
+            .feature:before { content: "✓"; position: absolute; left: 0; color: #667eea; font-weight: bold; }
+            .cta { background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Welcome to CloudGreet!</h1>
+            </div>
+            <div class="content">
+              <p>Hi ${businessName},</p>
+              <p>Your AI receptionist is now active and ready to handle calls and messages for your business.</p>
+              <p><strong>Key features now available:</strong></p>
+              <div class="feature">24/7 AI receptionist</div>
+              <div class="feature">Call handling and routing</div>
+              <div class="feature">SMS automation</div>
+              <div class="feature">Lead qualification</div>
+              <div class="feature">Appointment booking</div>
+              <div class="feature">Real-time analytics</div>
+              <a href="https://cloudgreet.com/dashboard" class="cta">Go to Dashboard</a>
+              <p style="margin-top: 30px;">Best regards,<br><strong>The CloudGreet Team</strong></p>
+            </div>
+          </div>
+        </body>
+        </html>
       `,
-      text: `Welcome to CloudGreet! Your AI receptionist is now active for ${businessName}.`
+      text: `Welcome to CloudGreet! Your AI receptionist is now active for ${businessName}. Visit https://cloudgreet.com/dashboard to get started.`
     }
 
     return this.sendEmail(emailData)
@@ -88,9 +132,25 @@ export class EmailService {
       to,
       subject,
       html: `
-        <h2>CloudGreet Notification</h2>
-        <p>${message}</p>
-        <p>Best regards,<br>The CloudGreet Team</p>
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="content">
+              <h2>CloudGreet Notification</h2>
+              <p>${message}</p>
+              <p style="margin-top: 30px;">Best regards,<br><strong>The CloudGreet Team</strong></p>
+            </div>
+          </div>
+        </body>
+        </html>
       `,
       text: message
     }
@@ -120,11 +180,35 @@ export const sendContactEmail = async (to: string, subject: string, message: str
     to,
     subject,
     html: `
-      <h2>New Contact Form Submission</h2>
-      <p><strong>From:</strong> ${fromEmail || 'Contact Form'}</p>
-      <p><strong>Subject:</strong> ${subject}</p>
-      <p><strong>Message:</strong></p>
-      <p>${message}</p>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 10px; }
+          .field { margin: 15px 0; }
+          .label { font-weight: bold; color: #667eea; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="content">
+            <h2>New Contact Form Submission</h2>
+            <div class="field">
+              <span class="label">From:</span> ${fromEmail || 'Contact Form'}
+            </div>
+            <div class="field">
+              <span class="label">Subject:</span> ${subject}
+            </div>
+            <div class="field">
+              <span class="label">Message:</span>
+              <p>${message}</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
     `,
     text: `New contact form submission from ${fromEmail || 'Contact Form'}: ${subject} - ${message}`
   }

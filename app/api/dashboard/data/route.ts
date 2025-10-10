@@ -25,10 +25,10 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+    const jwtSecret = process.env.JWT_SECRET
     
-    if (!jwtSecret) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    if (!jwtSecret || jwtSecret.includes('fallback') || jwtSecret.length < 32) {
+      return NextResponse.json({ error: 'Server configuration error - JWT_SECRET not properly configured' }, { status: 500 })
     }
 
     // Decode JWT token
@@ -87,27 +87,33 @@ export async function GET(request: NextRequest) {
         startDate.setDate(now.getDate() - 7)
     }
     
-            // Fetch real data from Supabase using business_id (consistent with schema)
-            const { data: calls, error: callsError } = await supabaseAdmin
-              .from('call_logs')
-              .select('*')
-              .eq('business_id', businessId)
-              .gte('created_at', startDate.toISOString())
-              .order('created_at', { ascending: false })
+            // Fetch real data from Supabase using business_id (PARALLEL for performance)
+            const [callsResult, appointmentsResult, smsResult] = await Promise.all([
+              supabaseAdmin
+                .from('calls')
+                .select('*')
+                .eq('business_id', businessId)
+                .gte('created_at', startDate.toISOString())
+                .order('created_at', { ascending: false }),
+              
+              supabaseAdmin
+                .from('appointments')
+                .select('*')
+                .eq('business_id', businessId)
+                .gte('created_at', startDate.toISOString())
+                .order('scheduled_date', { ascending: true }),
+              
+              supabaseAdmin
+                .from('sms_messages')
+                .select('*')
+                .eq('business_id', businessId)
+                .gte('created_at', startDate.toISOString())
+                .order('created_at', { ascending: false })
+            ])
             
-            const { data: appointments, error: appointmentsError } = await supabaseAdmin
-              .from('appointments')
-              .select('*')
-              .eq('business_id', businessId)
-              .gte('created_at', startDate.toISOString())
-              .order('scheduled_date', { ascending: true })
-            
-            const { data: sms, error: smsError } = await supabaseAdmin
-              .from('sms_logs')
-              .select('*')
-              .eq('business_id', businessId)
-              .gte('created_at', startDate.toISOString())
-              .order('created_at', { ascending: false })
+            const { data: calls, error: callsError } = callsResult
+            const { data: appointments, error: appointmentsError } = appointmentsResult
+            const { data: sms, error: smsError } = smsResult
     
     if (callsError) {
       logger.error('Failed to fetch calls data', { 
@@ -220,6 +226,7 @@ export async function GET(request: NextRequest) {
     const dashboardData = {
       success: true,
       data: {
+        businessId: businessId,
         businessName: business.business_name,
         phoneNumber: business.phone_number || 'Not assigned',
         isActive: hasAgent,

@@ -88,37 +88,97 @@ export async function getCalendarConfig(businessId: string): Promise<CalendarCon
 
 export async function createCalendarEvent(businessId: string, event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent | null> {
   try {
-    if (!isSupabaseConfigured()) {
-      logger.info('Calendar event creation requested (demo mode)', { businessId, event })
-      return {
-        id: `demo-${Date.now()}`,
-        ...event
-      }
-    }
-
-    // In a real implementation, this would create an event in Google Calendar
-    // For now, we'll store it in our database
-    const { data: appointment, error } = await supabaseAdmin
+    // Get calendar configuration
+    const config = await getCalendarConfig(businessId)
+    
+    // Create appointment in database first
+    const { data: appointment, error: dbError } = await supabaseAdmin
       .from('appointments')
       .insert({
         business_id: businessId,
         customer_name: event.title,
         appointment_date: event.start,
+        scheduled_date: event.start,
         duration_minutes: Math.round((new Date(event.end).getTime() - new Date(event.start).getTime()) / 60000),
         status: 'scheduled',
         notes: event.description,
-        location: event.location
+        address: event.location,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select()
       .single()
 
-    if (error) {
-      logger.error('Failed to create calendar event', { 
-        error: error instanceof Error ? error.message : error, 
+    if (dbError) {
+      logger.error('Failed to create appointment in database', { 
+        error: dbError, 
         businessId, 
         event 
       })
       return null
+    }
+
+    // If Google Calendar is connected, create event there too
+    if (config?.calendar_connected && config.google_access_token) {
+      try {
+        const googleEvent = {
+          summary: event.title,
+          description: event.description || '',
+          location: event.location || '',
+          start: {
+            dateTime: event.start,
+            timeZone: config.timezone || 'America/New_York'
+          },
+          end: {
+            dateTime: event.end,
+            timeZone: config.timezone || 'America/New_York'
+          },
+          attendees: event.attendees?.map(email => ({ email })) || [],
+          reminders: {
+            useDefault: false,
+            overrides: [
+              { method: 'email', minutes: 24 * 60 }, // 1 day before
+              { method: 'popup', minutes: 60 } // 1 hour before
+            ]
+          }
+        }
+
+        const calendarResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${config.google_access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(googleEvent)
+        })
+
+        if (calendarResponse.ok) {
+          const googleEventData = await calendarResponse.json()
+          
+          // Update appointment with Google Calendar event ID
+          await supabaseAdmin
+            .from('appointments')
+            .update({
+              google_event_id: googleEventData.id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', appointment.id)
+
+          logger.info('Appointment created in Google Calendar', {
+            appointmentId: appointment.id,
+            googleEventId: googleEventData.id,
+            businessId
+          })
+        } else {
+          logger.error('Failed to create Google Calendar event', {
+            status: calendarResponse.status,
+            statusText: calendarResponse.statusText
+          })
+        }
+      } catch (googleError) {
+        logger.error('Google Calendar API error', { error: googleError })
+        // Continue anyway - appointment is in our database
+      }
     }
 
     return {

@@ -1,18 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { checkVoiceRateLimit } from '@/lib/webhook-rate-limit'
+import { verifyTelynyxSignature } from '@/lib/webhook-verification'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    // Webhook signature verification for security
+    const signature = request.headers.get('telnyx-signature-ed25519')
+    const timestamp = request.headers.get('telnyx-timestamp')
+    
+    // Get raw body for signature verification
+    const rawBody = await request.text()
+    
+    // Verify signature in production
+    if (process.env.NODE_ENV === 'production') {
+      const isValid = verifyTelynyxSignature(rawBody, signature, timestamp)
+      
+      if (!isValid) {
+        logger.error('Invalid Telnyx webhook signature')
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      }
+    }
+
     // Check if Telnyx is configured
     if (!process.env.TELYNX_API_KEY) {
       logger.error('Telnyx webhook called but Telnyx not configured')
       return NextResponse.json({ error: 'Telnyx not configured' }, { status: 503 })
     }
 
-    const body = await request.json()
+    const body = JSON.parse(rawBody)
     
     // Validate webhook structure
     if (!body.data || !body.data.event_type || !body.data.payload) {
@@ -42,9 +61,21 @@ export async function POST(request: NextRequest) {
       }
     } = body
 
+    // Rate limiting check
+    if (from) {
+      const rateLimit = checkVoiceRateLimit(from)
+      if (!rateLimit.allowed) {
+        logger.warn('Voice webhook rate limit exceeded', { from, to })
+        return NextResponse.json({ 
+          error: 'Rate limit exceeded',
+          resetTime: rateLimit.resetTime
+        }, { status: 429 })
+      }
+    }
+
     // Check for duplicate webhook (idempotency)
     const { data: existingCall } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('id')
       .eq('call_id', call_control_id)
       .single()
@@ -82,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     // Store call in database with comprehensive data
     const { data: call, error: callError } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .insert({
         business_id: business.id,
         call_id: call_control_id,
@@ -153,27 +184,23 @@ export async function POST(request: NextRequest) {
     }
 
     if (isBusinessHours) {
-      // Business hours - connect to AI agent
+      // Business hours - start AI conversation immediately
       webhookResponse.instructions = [
         {
           instruction: 'say',
-          text: agent.greeting_message || `Thank you for calling ${business.business_name}. How can I help you today?`,
-          voice: agent.voice || 'alloy',
+          text: agent.greeting_message || agent.configuration?.greeting_message || `Thank you for calling ${business.business_name}. How can I help you today?`,
+          voice: agent.voice || agent.configuration?.voice || 'alloy',
           language: agent.configuration?.voice?.language || 'en'
         },
         {
           instruction: 'gather',
-          input: ['dtmf', 'speech'],
-          num_digits: 1,
-          timeout: 10,
-          speech_timeout_secs: 5,
+          input: ['speech'],
+          timeout: 15,
+          speech_timeout: 'auto',
+          speech_model: 'default',
+          action_on_empty_result: true,
+          finish_on_key: '#',
           action: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
-        },
-        {
-          instruction: 'say',
-          text: 'Press 1 to speak with our AI assistant, or press 2 to be transferred to a human.',
-          voice: agent.voice || 'alloy',
-          language: agent.configuration?.voice?.language || 'en'
         }
       ]
     } else {

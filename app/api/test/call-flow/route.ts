@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+    const jwtSecret = process.env.JWT_SECRET
     
     const decoded = jwt.verify(token, jwtSecret) as any
     const targetBusinessId = businessId || decoded.businessId
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: callLog, error: callLogError } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .insert(testCallData)
       .select()
       .single()
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
       // Update call log with webhook test results
       await supabaseAdmin
-        .from('call_logs')
+        .from('calls')
         .update({
           status: 'completed',
           duration: 30, // 30 second test call
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     } catch (webhookError) {
       // Update call log with error
       await supabaseAdmin
-        .from('call_logs')
+        .from('calls')
         .update({
           status: 'failed',
           transcript: `Webhook test failed: ${webhookError instanceof Error ? webhookError.message : 'Unknown error'}`,

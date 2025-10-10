@@ -10,6 +10,39 @@ export default function GetPhonePage() {
   const [selectedPlan, setSelectedPlan] = useState('pro')
   const [isLoading, setIsLoading] = useState(false)
   const [loadingStep, setLoadingStep] = useState(1)
+  const [hasSubscription, setHasSubscription] = useState(false)
+
+  React.useEffect(() => {
+    // Check if user has active subscription
+    const checkSubscription = async () => {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        window.location.href = '/login'
+        return
+      }
+
+      const response = await fetch('/api/business/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          const status = data.data.subscription_status
+          if (status !== 'active' && status !== 'trialing') {
+            // No active subscription - redirect to subscribe page
+            window.location.href = '/subscribe'
+            return
+          }
+          setHasSubscription(true)
+        }
+      }
+    }
+
+    checkSubscription()
+  }, [])
 
   const handleGetPhone = async () => {
     setIsLoading(true)
@@ -131,7 +164,7 @@ export default function GetPhonePage() {
 
           {/* Pricing Plans */}
           <div className="grid md:grid-cols-2 gap-6 mb-8">
-            {/* Free Trial */}
+            {/* Service Plan */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -143,9 +176,9 @@ export default function GetPhonePage() {
               onClick={() => setSelectedPlan('trial')}
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold">Free Trial</h3>
+                <h3 className="text-xl font-semibold">Professional Plan</h3>
                 <div className="px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full">
-                  <span className="text-green-400 text-sm font-medium">7 Days Free</span>
+                  <span className="text-green-400 text-sm font-medium">Standard</span>
                 </div>
               </div>
               
@@ -205,7 +238,7 @@ export default function GetPhonePage() {
               <ul className="space-y-3 mb-6">
                 <li className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-green-400" />
-                  <span className="text-sm">Everything in Free Trial</span>
+                  <span className="text-sm">Everything in Professional</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <CheckCircle className="w-5 h-5 text-green-400" />

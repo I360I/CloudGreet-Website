@@ -1,3 +1,5 @@
+"use client"
+
 export default function TestStylingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white p-8">

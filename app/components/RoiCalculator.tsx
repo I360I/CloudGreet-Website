@@ -1,323 +1,265 @@
-"use client"
+'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Calculator, TrendingUp, DollarSign, Percent, Calendar, HelpCircle } from 'lucide-react'
-import { z } from 'zod'
+import { TrendingUp, DollarSign, Phone, Calendar, Target, ArrowUp, Sparkles } from 'lucide-react'
 
-// Validation schema
-const roiInputSchema = z.object({
-  appointments: z.number().min(0).max(1000),
-  closeRate: z.number().min(0).max(100),
-  avgTicket: z.number().min(0).max(100000),
-  missedCallsPerMonth: z.number().min(0).max(1000),
-})
+interface ROIData {
+  totalCalls: number
+  answeredCalls: number
+  missedCalls: number
+  appointmentsBooked: number
+  estimatedRevenue: number
+  platformCost: number
+  netROI: number
+  roiPercentage: number
+  callsRecovered: number
+  recoveryRevenue: number
+}
 
-type RoiInputs = z.infer<typeof roiInputSchema>
-
-interface RoiCalculatorProps {
+interface ROICalculatorProps {
+  businessId: string
   className?: string
 }
 
-export default function RoiCalculator({ className = '' }: RoiCalculatorProps) {
-  // Fixed values
-  const BOOKING_FEE = 50
-  const SUBSCRIPTION = 200
-
-  // State with defaults
-  const [inputs, setInputs] = useState<RoiInputs>({
-    appointments: 30,
+export default function ROICalculator({ businessId, className = '' }: ROICalculatorProps) {
+  const [roiData, setRoiData] = useState<ROIData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [settings] = useState({
+    avgTicketSize: 750,
     closeRate: 35,
-    avgTicket: 750,
-    missedCallsPerMonth: 20,
+    missedCallRecoveryRate: 60
   })
 
-  const [errors, setErrors] = useState<Partial<RoiInputs>>({})
-  const [showTooltip, setShowTooltip] = useState(false)
-
-  // Load from URL params on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const params = new URLSearchParams(window.location.search)
-        const urlInputs = {
-          appointments: parseInt(params.get('appointments') || '30'),
-          closeRate: parseInt(params.get('closeRate') || '35'),
-          avgTicket: parseInt(params.get('avgTicket') || '750'),
-          missedCallsPerMonth: parseInt(params.get('missedCallsPerMonth') || '20'),
-        }
-
-        // Validate URL params
-        const validated = roiInputSchema.parse(urlInputs)
-        setInputs(validated)
-      } catch (error) {
-        // Use defaults if URL params are invalid
-        // URL params invalid, using defaults
-      }
+    if (!businessId) {
+      setLoading(false)
+      return
     }
-  }, [])
-
-  // Update URL when inputs change
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const params = new URLSearchParams(window.location.search)
-        params.set('appointments', inputs.appointments.toString())
-        params.set('closeRate', inputs.closeRate.toString())
-        params.set('avgTicket', inputs.avgTicket.toString())
-        params.set('missedCallsPerMonth', inputs.missedCallsPerMonth.toString())
-        
-        const newUrl = `${window.location.pathname}?${params.toString()}`
-        window.history.replaceState({}, '', newUrl)
-      } catch (error) {
-        // Failed to update URL, continuing silently
-      }
-    }
-  }, [inputs])
-
-  const handleInputChange = (field: keyof RoiInputs, value: string) => {
-    const numValue = parseFloat(value) || 0
     
+    loadROIData()
+    // Refresh every 30 seconds
+    const interval = setInterval(loadROIData, 30000)
+    return () => clearInterval(interval)
+  }, [businessId])
+
+  const loadROIData = async () => {
     try {
-      const newInputs = { ...inputs, [field]: numValue }
-      roiInputSchema.parse(newInputs)
-      setInputs(newInputs)
-      setErrors({ ...errors, [field]: undefined })
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const fieldError = error.issues.find(e => e.path[0] === field)
-        setErrors({ ...errors, [field]: fieldError?.message })
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setLoading(false)
+        return
       }
+
+      // Fetch call and appointment data
+      const [callsRes, appointmentsRes] = await Promise.all([
+        fetch('/api/calls/history', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('/api/appointments/list', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+      ])
+
+      const callsData = await callsRes.json()
+      const appointmentsData = await appointmentsRes.json()
+
+      // Calculate ROI metrics
+      const calls = callsData.calls || []
+      const appointments = appointmentsData.appointments || []
+
+      const totalCalls = calls.length
+      const answeredCalls = calls.filter((c: any) => c.status === 'answered' || c.status === 'completed').length
+      const missedCalls = calls.filter((c: any) => c.status === 'missed' || c.status === 'no-answer').length
+      const callsRecovered = calls.filter((c: any) => c.recovery_sms_sent).length
+      const appointmentsBooked = appointments.length
+
+      // Calculate revenue
+      const estimatedRevenue = appointmentsBooked * settings.avgTicketSize * (settings.closeRate / 100)
+      const recoveryRevenue = callsRecovered * settings.avgTicketSize * (settings.closeRate / 100) * (settings.missedCallRecoveryRate / 100)
+      
+      // Calculate platform cost (base subscription + per-booking fees)
+      const subscriptionCost = 200 // $200/month base
+      const bookingFees = appointmentsBooked * 50 // $50 per booking
+      const platformCost = subscriptionCost + bookingFees
+
+      // Calculate net ROI
+      const totalRevenue = estimatedRevenue + recoveryRevenue
+      const netROI = totalRevenue - platformCost
+      const roiPercentage = platformCost > 0 ? ((netROI / platformCost) * 100) : 0
+
+      setRoiData({
+        totalCalls,
+        answeredCalls,
+        missedCalls,
+        appointmentsBooked,
+        estimatedRevenue: totalRevenue,
+        platformCost,
+        netROI,
+        roiPercentage,
+        callsRecovered,
+        recoveryRevenue
+      })
+
+      setLoading(false)
+    } catch (error) {
+      setLoading(false)
     }
   }
 
-  // Calculations
-  const additionalAppointments = Math.round(inputs.missedCallsPerMonth * (inputs.closeRate / 100))
-  const effectiveAppointments = inputs.appointments + additionalAppointments
-  const estimatedRevenue = effectiveAppointments * (inputs.closeRate / 100) * inputs.avgTicket
-  const totalCost = SUBSCRIPTION + (effectiveAppointments * BOOKING_FEE)
-  const netRoi = estimatedRevenue - totalCost
-  const roiPercentage = totalCost > 0 ? (netRoi / totalCost) * 100 : 0
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
+  if (!businessId) {
+    return null
   }
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('en-US').format(Math.round(num))
+  if (loading || !roiData) {
+    return (
+      <div className={`bg-gradient-to-br from-green-500/10 to-blue-500/10 rounded-2xl border border-green-500/20 p-6 ${className}`}>
+        <div className="animate-pulse">
+          <div className="h-6 bg-white/10 rounded w-1/3 mb-4"></div>
+          <div className="h-20 bg-white/10 rounded mb-4"></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-16 bg-white/10 rounded"></div>
+            <div className="h-16 bg-white/10 rounded"></div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className={`bg-gray-800/50 backdrop-blur-lg rounded-3xl border border-gray-700/50 p-8 ${className}`}>
-      <div className="text-center mb-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-center gap-3 mb-4"
-        >
-          <Calculator className="w-8 h-8 text-blue-400" />
-          <h2 className="text-3xl font-bold text-white">ROI Calculator</h2>
-          <button
-            onClick={() => setShowTooltip(!showTooltip)}
-            className="text-gray-400 hover:text-white transition-colors"
-            aria-label="Show calculation formulas"
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
-        </motion.div>
-        <p className="text-gray-300">See how much revenue CloudGreet can generate for your business</p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-gradient-to-br from-green-500/10 to-blue-500/10 rounded-2xl border border-green-500/20 p-6 ${className}`}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-3">
+          <div className="p-3 bg-green-500/20 rounded-xl">
+            <TrendingUp className="w-6 h-6 text-green-400" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-white">ROI Calculator</h3>
+            <p className="text-sm text-gray-400">Real-time revenue tracking</p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2 px-3 py-1 bg-green-500/20 rounded-full">
+          <Sparkles className="w-4 h-4 text-green-400" />
+          <span className="text-sm font-medium text-green-400">Live</span>
+        </div>
       </div>
 
-      {/* Tooltip with formulas */}
-      {showTooltip && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6"
-        >
-          <h4 className="text-blue-400 font-semibold mb-2">Calculation Formulas:</h4>
-          <div className="text-sm text-gray-300 space-y-1">
-            <div>• Effective Appointments = Appointments × (1 + Missed-Call Recovery %)</div>
-            <div>• Estimated Revenue = Effective Appointments × (Close Rate %) × Average Ticket</div>
-            <div>• Total Cost = $200 + (Effective Appointments × $50)</div>
-            <div>• Net ROI ($) = Estimated Revenue − Total Cost</div>
-            <div>• ROI (%) = (Net ROI ÷ Total Cost) × 100</div>
+      {/* Main ROI Display */}
+      <div className="bg-gradient-to-r from-green-600/20 to-blue-600/20 rounded-xl p-6 mb-6 border border-green-500/30">
+        <div className="text-center">
+          <p className="text-sm text-gray-400 mb-2">Estimated Revenue Generated</p>
+          <div className="flex items-center justify-center space-x-2">
+            <DollarSign className="w-8 h-8 text-green-400" />
+            <motion.span
+              key={roiData.estimatedRevenue}
+              initial={{ scale: 1.2, color: '#4ade80' }}
+              animate={{ scale: 1, color: '#ffffff' }}
+              className="text-5xl font-bold text-white"
+            >
+              {roiData.estimatedRevenue.toLocaleString()}
+            </motion.span>
           </div>
-        </motion.div>
+          
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="flex items-center justify-center space-x-4 text-sm">
+              <div>
+                <span className="text-gray-400">Platform Cost: </span>
+                <span className="text-white font-semibold">${roiData.platformCost.toLocaleString()}</span>
+              </div>
+              <div className="w-px h-4 bg-white/20"></div>
+              <div>
+                <span className="text-gray-400">Net Profit: </span>
+                <span className={`font-semibold ${roiData.netROI > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  ${roiData.netROI.toLocaleString()}
+                </span>
+              </div>
+            </div>
+            
+            {roiData.roiPercentage > 0 && (
+              <div className="mt-3 flex items-center justify-center space-x-2">
+                <ArrowUp className="w-5 h-5 text-green-400" />
+                <span className="text-2xl font-bold text-green-400">
+                  {roiData.roiPercentage.toFixed(0)}% ROI
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+          <div className="flex items-center space-x-2 mb-2">
+            <Phone className="w-4 h-4 text-blue-400" />
+            <span className="text-xs text-gray-400">Total Calls</span>
+          </div>
+          <p className="text-2xl font-bold text-white">{roiData.totalCalls}</p>
+        </div>
+
+        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+          <div className="flex items-center space-x-2 mb-2">
+            <Calendar className="w-4 h-4 text-green-400" />
+            <span className="text-xs text-gray-400">Appointments</span>
+          </div>
+          <p className="text-2xl font-bold text-white">{roiData.appointmentsBooked}</p>
+        </div>
+
+        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+          <div className="flex items-center space-x-2 mb-2">
+            <Target className="w-4 h-4 text-purple-400" />
+            <span className="text-xs text-gray-400">Recovered</span>
+          </div>
+          <p className="text-2xl font-bold text-white">{roiData.callsRecovered}</p>
+        </div>
+
+        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+          <div className="flex items-center space-x-2 mb-2">
+            <TrendingUp className="w-4 h-4 text-green-400" />
+            <span className="text-xs text-gray-400">Answer Rate</span>
+          </div>
+          <p className="text-2xl font-bold text-white">
+            {roiData.totalCalls > 0 ? Math.round((roiData.answeredCalls / roiData.totalCalls) * 100) : 0}%
+          </p>
+        </div>
+      </div>
+
+      {/* Recovery Impact */}
+      {roiData.callsRecovered > 0 && (
+        <div className="bg-purple-500/10 rounded-xl p-4 border border-purple-500/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-400 mb-1">Missed Call Recovery Impact</p>
+              <p className="text-lg font-bold text-white">
+                +${roiData.recoveryRevenue.toLocaleString()} recovered revenue
+              </p>
+            </div>
+            <div className="p-3 bg-purple-500/20 rounded-xl">
+              <Target className="w-6 h-6 text-purple-400" />
+            </div>
+          </div>
+        </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Inputs */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-6"
-        >
-          <div>
-            <label className="block text-gray-300 font-medium mb-3">
-              <Calendar className="w-4 h-4 inline mr-2" />
-              Appointments per Month
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="1000"
-              value={inputs.appointments}
-              onChange={(e) => handleInputChange('appointments', e.target.value)}
-              className={`w-full px-4 py-3 bg-gray-700/50 border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                errors.appointments ? 'border-red-500' : 'border-gray-600'
-              }`}
-              placeholder="30"
-            />
-            {errors.appointments && (
-              <p className="text-red-400 text-sm mt-1">{errors.appointments}</p>
-            )}
+      {/* Calculation Details */}
+      <div className="mt-4 pt-4 border-t border-white/10">
+        <details className="text-sm text-gray-400">
+          <summary className="cursor-pointer hover:text-gray-300 transition-colors">
+            How is this calculated?
+          </summary>
+          <div className="mt-3 space-y-2 pl-4">
+            <p>• Revenue = Appointments × Avg Ticket (${settings.avgTicketSize}) × Close Rate ({settings.closeRate}%)</p>
+            <p>• Recovery Revenue = Recovered Calls × Avg Ticket × Close Rate × Recovery Rate ({settings.missedCallRecoveryRate}%)</p>
+            <p>• Platform Cost = Base Subscription ($200) + Booking Fees ({roiData.appointmentsBooked} × $50)</p>
+            <p>• Net ROI = Total Revenue - Platform Cost</p>
           </div>
-
-          <div>
-            <label className="block text-gray-300 font-medium mb-3">
-              <Percent className="w-4 h-4 inline mr-2" />
-              Close Rate %
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={inputs.closeRate}
-              onChange={(e) => handleInputChange('closeRate', e.target.value)}
-              className={`w-full px-4 py-3 bg-gray-700/50 border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                errors.closeRate ? 'border-red-500' : 'border-gray-600'
-              }`}
-              placeholder="35"
-            />
-            {errors.closeRate && (
-              <p className="text-red-400 text-sm mt-1">{errors.closeRate}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-gray-300 font-medium mb-3">
-              <DollarSign className="w-4 h-4 inline mr-2" />
-              Average Ticket $
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="100000"
-              value={inputs.avgTicket}
-              onChange={(e) => handleInputChange('avgTicket', e.target.value)}
-              className={`w-full px-4 py-3 bg-gray-700/50 border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                errors.avgTicket ? 'border-red-500' : 'border-gray-600'
-              }`}
-              placeholder="750"
-            />
-            {errors.avgTicket && (
-              <p className="text-red-400 text-sm mt-1">{errors.avgTicket}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-gray-300 font-medium mb-3">
-              <TrendingUp className="w-4 h-4 inline mr-2" />
-              Missed Calls Per Month
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="1000"
-              value={inputs.missedCallsPerMonth}
-              onChange={(e) => handleInputChange('missedCallsPerMonth', e.target.value)}
-              className={`w-full px-4 py-3 bg-gray-700/50 border rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-                errors.missedCallsPerMonth ? 'border-red-500' : 'border-gray-600'
-              }`}
-              placeholder="20"
-            />
-            <p className="text-gray-400 text-sm mt-1">
-              Number of calls you currently miss each month
-            </p>
-            {errors.missedCallsPerMonth && (
-              <p className="text-red-400 text-sm mt-1">{errors.missedCallsPerMonth}</p>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Results */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-4"
-        >
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6">
-            <h3 className="text-green-400 font-semibold mb-3 flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2" />
-              Estimated Revenue
-            </h3>
-            <div className="text-3xl font-bold text-white">
-              {formatCurrency(estimatedRevenue)}
-            </div>
-            <div className="text-sm text-gray-400 mt-1">
-              {formatNumber(inputs.appointments)} current + {formatNumber(additionalAppointments)} recovered = {formatNumber(effectiveAppointments)} total
-            </div>
-          </div>
-
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
-            <h3 className="text-blue-400 font-semibold mb-3">Total Cost</h3>
-            <div className="text-3xl font-bold text-white">
-              {formatCurrency(totalCost)}
-            </div>
-            <div className="text-sm text-gray-400 mt-1">
-              $200/mo + {formatNumber(effectiveAppointments)} × $50
-            </div>
-          </div>
-
-          <div className={`border rounded-xl p-6 ${
-            netRoi > 0 
-              ? 'bg-green-500/10 border-green-500/30' 
-              : 'bg-red-500/10 border-red-500/30'
-          }`}>
-            <h3 className={`font-semibold mb-3 ${
-              netRoi > 0 ? 'text-green-400' : 'text-red-400'
-            }`}>
-              Net ROI
-            </h3>
-            <div className={`text-3xl font-bold ${
-              netRoi > 0 ? 'text-green-400' : 'text-red-400'
-            }`}>
-              {formatCurrency(netRoi)}
-            </div>
-            <div className="text-2xl font-semibold text-white mt-2">
-              {roiPercentage.toFixed(1)}% ROI
-            </div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="text-center pt-4"
-          >
-            <a
-              href="/start"
-              className="inline-flex items-center justify-center w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
-            >
-              Start Free Setup
-            </a>
-          </motion.div>
-        </motion.div>
+        </details>
       </div>
-
-      <div className="mt-6 text-center">
-        <p className="text-gray-400 text-sm">
-          Estimates only. Edit inputs to match your business.
-        </p>
-      </div>
-    </div>
+    </motion.div>
   )
 }

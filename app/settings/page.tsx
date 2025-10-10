@@ -105,10 +105,29 @@ export default function SettingsPage() {
       const token = localStorage.getItem('token')
       if (!token) {
         setError('Please log in to save settings')
+        setIsSaving(false)
         return
       }
 
-      const response = await fetch('/api/business/profile', {
+      // Parse user data to get business ID
+      const userData = localStorage.getItem('user')
+      if (!userData) {
+        setError('User data not found')
+        setIsSaving(false)
+        return
+      }
+
+      const user = JSON.parse(userData)
+      const businessId = user.business_id
+
+      if (!businessId) {
+        setError('Business ID not found')
+        setIsSaving(false)
+        return
+      }
+
+      // STEP 1: Update business profile
+      const businessResponse = await fetch('/api/business/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -117,14 +136,49 @@ export default function SettingsPage() {
         body: JSON.stringify(settings)
       })
 
-      if (response.ok) {
-        setSuccess('Settings saved successfully!')
-        setTimeout(() => setSuccess(null), 3000)
-      } else {
-        const errorData = await response.json()
-        setError(errorData.message || 'Failed to save settings')
+      if (!businessResponse.ok) {
+        const errorData = await businessResponse.json()
+        setError(errorData.message || 'Failed to save business settings')
+        setIsSaving(false)
+        return
       }
+
+      // STEP 2: Update AI agent configuration (THIS IS CRITICAL!)
+      const aiUpdateResponse = await fetch('/api/ai-agent/update-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          businessId: businessId,
+          greetingMessage: settings.greetingMessage,
+          tone: settings.tone,
+          voice: settings.voice,
+          services: settings.services,
+          serviceAreas: settings.serviceAreas,
+          businessHours: settings.businessHours,
+          customInstructions: `Represent ${settings.businessName} professionally. Business type: ${settings.businessType}. Always be helpful and efficient.`
+        })
+      })
+
+      if (!aiUpdateResponse.ok) {
+        const aiError = await aiUpdateResponse.json()
+        console.error('AI update failed:', aiError)
+        // Don't fail the whole save if AI update fails
+        setSuccess('⚠️ Business settings saved, but AI agent update had issues. Your AI may not reflect latest changes until next update.')
+      } else {
+        setSuccess('✅ All settings saved successfully! Your AI agent is updated and ready.')
+      }
+
+      // Reload settings to show updated values
+      setTimeout(() => {
+        loadSettings()
+        setSuccess(null)
+      }, 2000)
+
     } catch (err) {
+      console.error('Save error:', err)
       setError('Network error saving settings')
     } finally {
       setIsSaving(false)
@@ -201,7 +255,8 @@ export default function SettingsPage() {
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:ring-4 focus:ring-blue-500/50 focus:outline-none"
+                aria-label="Save all settings changes"
               >
                 {isSaving ? (
                   <>

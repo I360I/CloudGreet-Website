@@ -181,13 +181,13 @@ export default function BillingPage() {
                   <Clock className="w-4 h-4" />
                 )}
                 <span className="text-sm font-medium">
-                  {subscriptionStatus === 'active' ? 'Active' : 'Free Trial'}
+                  {subscriptionStatus === 'active' ? 'Active' : 'Inactive'}
                 </span>
               </div>
               <p className="text-sm text-gray-400 mt-2">
                 {subscriptionStatus === 'active' 
                   ? 'Professional plan - $200/month + $50 per booking'
-                  : '7-day free trial - No credit card required'
+                  : 'No active subscription'
                 }
               </p>
             </div>

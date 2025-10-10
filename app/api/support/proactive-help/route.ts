@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+    const jwtSecret = process.env.JWT_SECRET
     
     const decoded = jwt.verify(token, jwtSecret) as any
     const targetBusinessId = businessId || decoded.businessId
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
         // Check recent activity
         const { data: recentCalls } = await supabaseAdmin
-          .from('call_logs')
+          .from('calls')
           .select('id')
           .eq('business_id', targetBusinessId)
           .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())

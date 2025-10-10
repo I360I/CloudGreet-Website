@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   try {
     // Fetch real analytics data from database
     const { data: calls } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('*')
 
     const { data: appointments } = await supabaseAdmin
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       .select('*')
 
     const { data: smsLogs } = await supabaseAdmin
-      .from('sms_logs')
+      .from('sms_messages')
       .select('*')
 
     // Calculate real analytics

@@ -16,9 +16,13 @@ import AIConversationInsights from '../components/AIConversationInsights'
 import QuickStartWidget from '../components/QuickStartWidget'
 import SupportWidget from '../components/SupportWidget'
 import CallTestWidget from '../components/CallTestWidget'
+import OnboardingWizard from '../components/OnboardingWizard'
+import ROICalculator from '../components/ROICalculator'
+import RealTimeUpdates from '../components/RealTimeUpdates'
 import { useToast } from '../contexts/ToastContext'
 
 interface DashboardData {
+  businessId: string
   businessName: string
   phoneNumber: string
   isActive: boolean
@@ -53,6 +57,7 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [realMetrics, setRealMetrics] = useState<any>(null)
   const [realActivity, setRealActivity] = useState<any[]>([])
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const { showSuccess, showError } = useToast()
 
   useEffect(() => {
@@ -82,6 +87,7 @@ export default function Dashboard() {
         const data = await response.json()
         if (data.success) {
           setDashboardData({
+            businessId: data.data.businessId || '',
             businessName: data.data.businessName || 'Your Business',
             phoneNumber: data.data.phoneNumber || 'Not configured',
             isActive: data.data.isActive || false,
@@ -104,7 +110,6 @@ export default function Dashboard() {
         setError('Failed to load dashboard data')
       }
     } catch (error) {
-      console.error('Dashboard error:', error)
       setError('Network error. Please try again.')
     } finally {
       setIsLoading(false)
@@ -129,7 +134,7 @@ export default function Dashboard() {
         }
       }
     } catch (error) {
-      console.error('Failed to load real metrics:', error)
+      // Silent fail - real metrics are optional
     }
   }
 
@@ -209,7 +214,22 @@ export default function Dashboard() {
   }
 
   return (
-    <NetworkErrorHandler>
+    <>
+      <OnboardingWizard 
+        isOpen={showOnboarding} 
+        onClose={() => setShowOnboarding(false)}
+        onComplete={() => {
+          setShowOnboarding(false)
+          loadDashboardData()
+          showSuccess('Onboarding completed! Your AI agent is ready to test.')
+        }}
+      />
+      <NetworkErrorHandler>
+      {/* Real-time Updates */}
+      {dashboardData?.businessId && (
+        <RealTimeUpdates businessId={dashboardData.businessId} />
+      )}
+      
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 text-white">
         {/* Header */}
         <header className="border-b border-purple-500/20 bg-black/30 backdrop-blur-xl sticky top-0 z-50">
@@ -229,9 +249,10 @@ export default function Dashboard() {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="p-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg hover:bg-white/20 transition-colors"
+                    className="p-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg hover:bg-white/20 transition-colors focus:ring-4 focus:ring-blue-500/50 focus:outline-none"
+                    aria-label="Open settings"
                   >
-                    <Settings className="w-5 h-5" />
+                    <Settings className="w-5 h-5" aria-hidden="true" />
                   </motion.button>
                 </Link>
                 
@@ -239,9 +260,10 @@ export default function Dashboard() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleLogout}
-                  className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
+                  className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors focus:ring-4 focus:ring-red-500/50 focus:outline-none"
+                  aria-label="Log out of account"
                 >
-                  <LogOut className="w-5 h-5 text-red-400" />
+                  <LogOut className="w-5 h-5 text-red-400" aria-hidden="true" />
                 </motion.button>
               </div>
             </div>
@@ -260,35 +282,62 @@ export default function Dashboard() {
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                   dashboardData?.isActive 
                     ? 'bg-green-500/20 border border-green-500/30' 
+                    : dashboardData?.hasAgent
+                    ? 'bg-blue-500/20 border border-blue-500/30'
                     : 'bg-yellow-500/20 border border-yellow-500/30'
                 }`}>
                   {dashboardData?.isActive ? (
                     <CheckCircle className="w-6 h-6 text-green-400" />
+                  ) : dashboardData?.hasAgent ? (
+                    <Clock className="w-6 h-6 text-blue-400" />
                   ) : (
                     <AlertCircle className="w-6 h-6 text-yellow-400" />
                   )}
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold">
-                    {dashboardData?.isActive ? 'AI Agent Active' : 'Setup Required'}
+                    {dashboardData?.isActive 
+                      ? 'AI Agent Active' 
+                      : dashboardData?.hasAgent
+                      ? 'Agent Ready - Setup Phone'
+                      : dashboardData?.onboardingCompleted
+                      ? 'Onboarding Complete'
+                      : 'Complete Onboarding'
+                    }
                   </h2>
                   <p className="text-gray-400">
                     {dashboardData?.isActive 
                       ? `Phone: ${formatPhoneNumber(dashboardData.phoneNumber)}`
-                      : 'Complete setup to activate your AI agent'
+                      : dashboardData?.hasAgent
+                      ? 'Test your agent, then connect a phone number'
+                      : dashboardData?.onboardingCompleted
+                      ? 'Your business details are saved'
+                      : 'Tell us about your business to create your AI agent'
                     }
                   </p>
                 </div>
               </div>
               
-              {!dashboardData?.isActive && (
+              {!dashboardData?.onboardingCompleted && (
+                <motion.button
+                  onClick={() => setShowOnboarding(true)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                >
+                  Start Onboarding
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+              )}
+              
+              {dashboardData?.onboardingCompleted && dashboardData?.hasAgent && !dashboardData?.isActive && (
                 <Link href="/test-agent-simple">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
                   >
-                    Test Agent
+                    Test Your Agent
                     <ArrowRight className="w-4 h-4" />
                   </motion.button>
                 </Link>
@@ -327,27 +376,39 @@ export default function Dashboard() {
                 <h4 className="text-sm font-semibold text-gray-300 mb-4">Quick Actions:</h4>
                 <div className="flex flex-wrap gap-3">
                   {!dashboardData?.onboardingCompleted && (
-                    <Link href="/register-simple">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-lg font-medium hover:bg-blue-600/30 transition-all"
-                      >
-                        Complete Setup
-                      </motion.button>
-                    </Link>
+                    <motion.button
+                      onClick={() => setShowOnboarding(true)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-lg font-medium hover:bg-blue-600/30 transition-all"
+                    >
+                      Complete Onboarding
+                    </motion.button>
                   )}
                   
-                  {dashboardData?.onboardingCompleted && !dashboardData?.hasPhoneNumber && (
-                    <Link href="/get-phone">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-green-600/20 border border-green-500/30 text-green-400 rounded-lg font-medium hover:bg-green-600/30 transition-all"
-                      >
-                        Get Phone Number
-                      </motion.button>
-                    </Link>
+                  {dashboardData?.onboardingCompleted && dashboardData?.hasAgent && (
+                    <>
+                      <Link href="/test-agent-simple">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="px-4 py-2 bg-purple-600/20 border border-purple-500/30 text-purple-400 rounded-lg font-medium hover:bg-purple-600/30 transition-all"
+                        >
+                          Test Agent
+                        </motion.button>
+                      </Link>
+                      {!dashboardData?.hasPhoneNumber && (
+                        <Link href="/billing">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-4 py-2 bg-green-600/20 border border-green-500/30 text-green-400 rounded-lg font-medium hover:bg-green-600/30 transition-all"
+                          >
+                            Subscribe & Get Phone
+                          </motion.button>
+                        </Link>
+                      )}
+                    </>
                   )}
                   
                   <Link href="/demo">
@@ -394,6 +455,18 @@ export default function Dashboard() {
               }}
             />
           </motion.div>
+
+          {/* ROI Calculator - Temporarily disabled due to build issue */}
+          {dashboardData?.hasPhoneNumber && dashboardData?.businessId && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mb-8"
+            >
+              <ROICalculator businessId={dashboardData.businessId} />
+            </motion.div>
+          )}
 
           {/* Live Activity & Quick Start Grid */}
           <div className="grid lg:grid-cols-2 gap-6 mb-8">
@@ -582,20 +655,46 @@ export default function Dashboard() {
               
               {dashboardData?.recentCalls && dashboardData.recentCalls.length > 0 ? (
                 <div className="space-y-3">
-                  {dashboardData.recentCalls.slice(0, 3).map((call) => (
-                    <div key={call.id} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-                      <div>
-                        <p className="font-medium">{call.caller}</p>
-                        <p className="text-sm text-gray-400">{call.date}</p>
+                  {dashboardData.recentCalls.slice(0, 3).map((call: any) => (
+                    <div key={call.id} className="p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-all">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium">{call.caller || call.from_number || 'Unknown'}</p>
+                          <p className="text-sm text-gray-400">{call.date || new Date(call.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium">{call.duration || '0:00'}</p>
+                          <p className={`text-xs ${
+                            call.status === 'answered' || call.status === 'completed' ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            {call.status}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">{call.duration}</p>
-                        <p className={`text-xs ${
-                          call.status === 'answered' ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {call.status}
-                        </p>
-                      </div>
+                      {call.recording_url && (
+                        <div className="mt-2">
+                          <audio 
+                            controls 
+                            className="w-full h-8"
+                            style={{ 
+                              filter: 'invert(0.9) hue-rotate(180deg)',
+                              borderRadius: '6px'
+                            }}
+                          >
+                            <source src={call.recording_url} type="audio/mpeg" />
+                            <source src={call.recording_url} type="audio/wav" />
+                            Your browser does not support audio playback.
+                          </audio>
+                        </div>
+                      )}
+                      {call.transcription_text && (
+                        <details className="mt-2">
+                          <summary className="text-xs text-blue-400 hover:text-blue-300 cursor-pointer">View Transcript</summary>
+                          <div className="mt-2 p-2 bg-black/30 rounded text-xs text-gray-300 max-h-40 overflow-y-auto">
+                            {call.transcription_text}
+                          </div>
+                        </details>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -649,5 +748,6 @@ export default function Dashboard() {
         </div>
       </div>
     </NetworkErrorHandler>
+    </>
   )
 }

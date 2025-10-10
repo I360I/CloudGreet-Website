@@ -365,7 +365,6 @@ Estimated Bookings: ${business.ai_receptionist_value?.estimated_bookings_per_mon
       const result = await response.json()
       
       if (result.success) {
-        console.log('Lead scored:', result.data)
         // Start follow-up sequence
         await startFollowUpSequence(leadId)
       }
@@ -391,7 +390,7 @@ Estimated Bookings: ${business.ai_receptionist_value?.estimated_bookings_per_mon
       const result = await response.json()
       
       if (result.success) {
-        console.log('Optimized follow-up sequence started:', result.data)
+        // Follow-up sequence started successfully
       }
     } catch (error) {
       console.error('Follow-up sequence error:', error)
@@ -473,7 +472,7 @@ Estimated Bookings: ${business.ai_receptionist_value?.estimated_bookings_per_mon
       
       const result = await response.json()
       if (result.success) {
-        console.log('Optimal follow-up scheduled:', result.data)
+        // Optimal follow-up scheduled successfully
       }
     } catch (error) {
       console.error('Follow-up scheduling error:', error)

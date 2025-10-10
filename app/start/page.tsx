@@ -137,13 +137,13 @@ export default function StartPage() {
           className="text-center mb-12"
         >
           <div className="inline-block bg-green-500/20 border border-green-500/30 rounded-full px-4 py-2 mb-6">
-            <span className="text-green-400 text-sm font-medium">✨ 7-Day Free Trial - No Credit Card Required</span>
+            <span className="text-green-400 text-sm font-medium">✨ Professional AI Receptionist Service</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
             Let&apos;s Get Started
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Start your free trial and see how your AI receptionist can help your business
+            Get started and see how your AI receptionist can help your business
           </p>
         </motion.div>
 

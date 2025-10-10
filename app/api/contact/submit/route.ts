@@ -23,17 +23,11 @@ export async function POST(request: NextRequest) {
     
     // Check if Supabase is configured
     if (!isSupabaseConfigured()) {
-      // Log the contact form submission without database
-      console.log('Contact form submission (no DB):', {
-        email: validatedData.email,
-        subject: validatedData.subject,
-        business: validatedData.business
-      })
-      
+      logger.error('Database not configured for contact form')
       return NextResponse.json({
-        success: true,
-        message: 'Message received successfully (demo mode)'
-      })
+        success: false,
+        error: 'Contact form service unavailable. Database not configured.'
+      }, { status: 503 })
     }
     
     // Store contact form submission in database

@@ -3,6 +3,8 @@ import { supabase, supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { registerSchema } from '@/lib/validation'
+import { validatePhoneWithError, phoneNumberExists } from '@/lib/phone-validation'
+import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +57,26 @@ export async function POST(request: NextRequest) {
     const sanitizedEmail = email.toLowerCase().trim()
     const sanitizedPassword = password.trim()
     const sanitizedBusinessName = business_name.trim()
+    
+    // Validate and format phone number
+    const phoneValidation = validatePhoneWithError(phone)
+    if (!phoneValidation.isValid) {
+      return NextResponse.json({
+        success: false,
+        message: phoneValidation.error || 'Invalid phone number'
+      }, { status: 400 })
+    }
+    
     const sanitizedPhone = phone.replace(/\D/g, '') // Remove non-digits
+    
+    // Check if phone number already exists
+    const phoneExists = await phoneNumberExists(phone, supabaseAdmin)
+    if (phoneExists) {
+      return NextResponse.json({
+        success: false,
+        message: 'A business with this phone number already exists'
+      }, { status: 409 })
+    }
     
     // Check if JWT secret is properly configured
     const jwtSecret = process.env.JWT_SECRET
@@ -63,45 +84,30 @@ export async function POST(request: NextRequest) {
       throw new Error('JWT_SECRET not properly configured')
     }
 
-    // Check if user already exists
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', sanitizedEmail)
-      .single()
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: { code: 'EMAIL_EXISTS', message: 'An account with this email already exists' } },
-        { status: 409 }
-      )
-    }
-
-    // Hash password with proper salt rounds
-    const saltRounds = 12
-    const passwordHash = await bcrypt.hash(sanitizedPassword, saltRounds)
-
-    // Create user record first - match your exact database schema
-    const { data: user, error: userError } = await supabaseAdmin
-      .from('users')
-      .insert({
-        email: sanitizedEmail,
-        password_hash: passwordHash,
-        name: sanitizedBusinessName, // Use business name as fallback
+    // Create user using Supabase Auth API
+    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: sanitizedEmail,
+      password: sanitizedPassword,
+      user_metadata: {
         first_name: sanitizedBusinessName.split(' ')[0] || sanitizedBusinessName,
         last_name: sanitizedBusinessName.split(' ').slice(1).join(' ') || '',
         phone: sanitizedPhone,
-        is_active: true,
-        is_admin: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
+        is_admin: false
+      },
+      email_confirm: true
+    })
 
-    if (userError) {
-      throw new Error(`User creation failed: ${userError.message}`)
+    if (authError) {
+      if (authError.message.includes('already registered')) {
+        return NextResponse.json(
+          { error: { code: 'EMAIL_EXISTS', message: 'An account with this email already exists' } },
+          { status: 409 }
+        )
+      }
+      throw new Error(`User creation failed: ${authError.message}`)
     }
+
+    const user = authUser.user
 
     // Create business record with owner_id
     const { data: business, error: businessError } = await supabaseAdmin
@@ -134,52 +140,31 @@ export async function POST(request: NextRequest) {
         tone: 'professional',
         onboarding_completed: false,
         account_status: 'new_account',
-        subscription_status: 'inactive',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        subscription_status: 'inactive'
       })
       .select()
       .single()
 
     if (businessError) {
-      // Cleanup user record if business creation fails
-      await supabaseAdmin
-        .from('users')
-        .delete()
-        .eq('id', user.id)
-      
+      // Cleanup auth user if business creation fails
+      await supabaseAdmin.auth.admin.deleteUser(user.id)
       throw new Error(`Business creation failed: ${businessError.message}`)
     }
 
-    // Update user with business_id - your schema has this column
-    await supabaseAdmin
-      .from('users')
-      .update({ business_id: business.id })
-      .eq('id', user.id)
-
-    // Create AI agent record - match your exact database schema
-    const { data: agent, error: agentError } = await supabaseAdmin
-      .from('ai_agents')
-      .insert({
-        business_id: business.id,
-        business_name: sanitizedBusinessName, // Required field
-        agent_name: 'CloudGreet AI Assistant',
-        is_active: false, // Will be activated after phone setup
-        configuration: {
-          greeting_message: `Thank you for calling ${sanitizedBusinessName}. How can I help you today?`,
-          tone: 'professional',
-          max_call_duration: 10,
-          escalation_threshold: 5
-        },
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (agentError) {
-      throw new Error(`Agent creation failed: ${agentError.message}`)
+    // Update user metadata with business_id
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      user_metadata: {
+        ...user.user_metadata,
+        business_id: business.id
+      }
+    })
+    
+    if (updateError) {
+      throw new Error(`Failed to update user with business_id: ${updateError.message}`)
     }
+
+    // NOTE: AI agent will be created AFTER onboarding is completed
+    // This allows us to collect all necessary information first
 
     // Create JWT token
     const token = jwt.sign(
@@ -217,7 +202,7 @@ export async function POST(request: NextRequest) {
         })
       })
     } catch (error) {
-      console.log('Failed to send new client notification:', error)
+      // Notification failed - continue with registration
     }
 
     // Calculate response time
@@ -231,8 +216,8 @@ export async function POST(request: NextRequest) {
         user: {
           id: user.id,
           email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
+          first_name: user.user_metadata?.first_name || business_name.split(' ')[0] || '',
+          last_name: user.user_metadata?.last_name || business_name.split(' ').slice(1).join(' ') || '',
           business_id: business.id,
           role: 'owner'
         },
@@ -240,11 +225,8 @@ export async function POST(request: NextRequest) {
           id: business.id,
           business_name: business.business_name,
           business_type: business.business_type,
-          onboarding_completed: business.onboarding_completed
-        },
-        agent: {
-          id: agent.id,
-          is_active: agent.is_active
+          onboarding_completed: business.onboarding_completed,
+          phone_number: business.phone_number
         }
       },
       meta: {
@@ -281,3 +263,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+

@@ -186,7 +186,7 @@ export default function SEOHead({
                 name: 'How much does CloudGreet cost?',
                 acceptedAnswer: {
                   '@type': 'Answer',
-                  text: 'CloudGreet starts at $99/month with a 7-day free trial. No credit card required to get started.'
+                  text: 'CloudGreet starts at $200/month for professional AI receptionist services. Get started today.'
                 }
               },
               {

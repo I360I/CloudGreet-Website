@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     const testResult = await testWorkingConfiguration(validatedData, business.business_name)
 
     return NextResponse.json({
-      success: true,
+        success: true,
       message: 'Agent settings updated successfully - ALL SETTINGS WILL WORK',
       agentId: agent.id,
       testResult: testResult,
@@ -151,9 +151,9 @@ export async function POST(request: NextRequest) {
         customInstructions: validatedData.customInstructions
       },
       promptPreview: newPrompt.substring(0, 300) + '...'
-    })
-
-  } catch (error) {
+      })
+      
+    } catch (error) {
     console.error('Error updating agent settings:', error)
     
     if (error instanceof z.ZodError) {
@@ -199,7 +199,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      success: true,
+        success: true,
       data: {
         currentSettings: {
           voice: agent.voice,
@@ -328,7 +328,7 @@ async function testWorkingConfiguration(settings: any, businessName: string): Pr
       greeting: settings.greetingMessage || `Thank you for calling ${businessName}`,
       workingSettings: true
     }
-  } catch (error) {
+    } catch (error) {
     console.error('Error testing configuration:', error)
     return {
       testResponse: 'Configuration updated successfully.',

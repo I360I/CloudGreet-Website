@@ -70,7 +70,7 @@ async function fetchPerformanceMetrics() {
     
     // Call metrics
     supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('id, created_at, duration, status')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
     

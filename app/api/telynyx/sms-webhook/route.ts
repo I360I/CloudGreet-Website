@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     // Store SMS in database
     const { data: sms, error: smsError } = await supabaseAdmin
-      .from('sms_logs')
+      .from('sms_messages')
       .insert({
         message_id: MessageSid,
         from_number: From,
@@ -128,16 +128,92 @@ export async function POST(request: NextRequest) {
           created_at: new Date().toISOString()
         })
 
-      // SMS sending would be implemented here
-      // SMS opt-out processed
+      // Send STOP confirmation
+      try {
+        await fetch('https://api.telnyx.com/v2/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: To,
+            to: From,
+            text: `You have been unsubscribed from ${business.business_name} SMS messages. You will not receive further texts. Text START to resubscribe.`,
+            type: 'SMS'
+          })
+        })
+
+        logger.info('STOP command processed', { from: From, businessId: business.id })
+      } catch (error) {
+        logger.error('Failed to send STOP confirmation', { error, from: From })
+      }
 
       return NextResponse.json({ success: true })
     }
 
     if (message === 'help') {
-      // Send help message
-      // SMS sending would be implemented here
-      // SMS help requested
+      // Send HELP response
+      try {
+        const helpText = `${business.business_name} - AI Receptionist
+        
+Services: ${business.services?.join(', ') || 'General services'}
+Hours: Mon-Fri 9AM-5PM
+Call: ${business.phone_number || To}
+Website: ${business.website || 'N/A'}
+
+Reply STOP to opt out.`
+
+        await fetch('https://api.telnyx.com/v2/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: To,
+            to: From,
+            text: helpText,
+            type: 'SMS'
+          })
+        })
+
+        logger.info('HELP command processed', { from: From, businessId: business.id })
+      } catch (error) {
+        logger.error('Failed to send HELP response', { error, from: From })
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    if (message === 'start' || message === 'unstop') {
+      // Handle opt-in (remove from opt-out list)
+      await supabaseAdmin
+        .from('sms_opt_outs')
+        .delete()
+        .eq('phone_number', From)
+        .eq('business_id', business.id)
+
+      // Send START confirmation
+      try {
+        await fetch('https://api.telnyx.com/v2/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: To,
+            to: From,
+            text: `You have been resubscribed to ${business.business_name} SMS messages. Reply STOP to opt out; HELP for help.`,
+            type: 'SMS'
+          })
+        })
+
+        logger.info('START command processed', { from: From, businessId: business.id })
+      } catch (error) {
+        logger.error('Failed to send START confirmation', { error, from: From })
+      }
 
       return NextResponse.json({ success: true })
     }

@@ -169,7 +169,6 @@ export default function AutomationDashboard() {
       ))
 
       // Here you would make an API call to update the automation status
-      console.log(`Automation ${automationId} status changed to ${newStatus}`)
     } catch (error) {
       console.error('Failed to toggle automation:', error)
     }
@@ -178,7 +177,6 @@ export default function AutomationDashboard() {
   const executeAutomation = async (automationId: string) => {
     try {
       // Here you would trigger the automation manually
-      console.log(`Executing automation ${automationId}`)
       
       // Update last run time
       setAutomations(prev => prev.map(a => 

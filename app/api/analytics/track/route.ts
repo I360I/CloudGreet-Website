@@ -36,14 +36,6 @@ export async function POST(request: NextRequest) {
     // 1. Store in analytics database
     // 2. Send to analytics service (Google Analytics, Mixpanel, etc.)
     // 3. Process for real-time dashboards
-    
-    // For now, we'll just log it and return success
-    console.log('Analytics Event Received:', {
-      event: analyticsData.event,
-      userId: analyticsData.userId,
-      timestamp: new Date(analyticsData.timestamp).toISOString(),
-      properties: Object.keys(analyticsData.properties).length
-    })
 
     return NextResponse.json({ 
       success: true,

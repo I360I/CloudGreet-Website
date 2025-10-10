@@ -101,7 +101,7 @@ async function updateAISettings(settings: any) {
           } catch (error) {
             logger.warn('Telnyx agent voice update error', {
               agentId: agent.id,
-              error: error.message
+              error: error instanceof Error ? error.message : 'Unknown error'
             })
           }
         }
@@ -109,7 +109,7 @@ async function updateAISettings(settings: any) {
     }
 
     return NextResponse.json({
-      success: true,
+        success: true,
       message: 'AI agent settings updated successfully'
     })
   } catch (error) {
@@ -145,7 +145,7 @@ async function updateSMSTemplates(settings: any) {
       success: true,
       message: 'SMS templates updated successfully'
     })
-  } catch (error) {
+    } catch (error) {
     logger.error('SMS templates update failed', { 
       error: error instanceof Error ? error.message : 'Unknown error',
       settings 
@@ -238,7 +238,7 @@ export async function GET(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 })
     }
-  } catch (error) {
+    } catch (error) {
     logger.error('Admin customization fetch error', { 
       error: error instanceof Error ? error.message : 'Unknown error',
       endpoint: 'admin/customization',

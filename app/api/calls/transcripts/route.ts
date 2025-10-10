@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch call logs with transcripts
     const { data: calls, error: callsError } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('*')
       .eq('business_id', businessId)
       .order('created_at', { ascending: false })

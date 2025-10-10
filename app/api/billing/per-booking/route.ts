@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import Stripe from 'stripe'
+import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,24 +15,44 @@ export async function POST(request: NextRequest) {
   const requestId = Math.random().toString(36).substring(7)
   
   try {
-    const userId = request.headers.get('x-user-id')
-    const businessId = request.headers.get('x-business-id')
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    
+    if (!jwtSecret) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+
+    // Decode JWT token
+    let decoded
+    try {
+      decoded = jwt.verify(token, jwtSecret) as any
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const userId = decoded.userId
+    const businessId = decoded.businessId
     
     if (!userId || !businessId) {
-      return NextResponse.json({
-        success: false,
-        message: 'Authentication required'
-      }, { status: 401 })
+      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
     }
 
     const body = await request.json()
     const { appointmentId, customerName, serviceType, estimatedValue } = body
 
     // Get business Stripe customer ID
-    const { data: business, error: businessError } = await supabase
+    const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
       .select('stripe_customer_id, business_name, email, subscription_status')
       .eq('id', businessId)
+      .eq('owner_id', userId)
       .single()
 
     if (businessError || !business) {
@@ -91,7 +112,7 @@ export async function POST(request: NextRequest) {
     const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id)
 
     // Update appointment with billing info
-    await supabase
+    await supabaseAdmin
       .from('appointments')
       .update({
         stripe_invoice_id: invoice.id,
@@ -101,7 +122,7 @@ export async function POST(request: NextRequest) {
       .eq('id', appointmentId)
 
     // Log billing event
-    await supabase
+    await supabaseAdmin
       .from('billing_history')
       .insert({
         business_id: businessId,
@@ -116,7 +137,7 @@ export async function POST(request: NextRequest) {
       })
 
     // Log audit event
-    await supabase
+    await supabaseAdmin
       .from('audit_logs')
       .insert({
         action: 'per_booking_fee_charged',
@@ -201,14 +222,14 @@ export async function GET(request: NextRequest) {
     nextMonth.setMonth(nextMonth.getMonth() + 1)
 
     // Get base subscription
-    const { data: business } = await supabase
+    const { data: business } = await supabaseAdmin
       .from('businesses')
       .select('subscription_status, billing_plan')
       .eq('id', businessId)
       .single()
 
     // Get per-booking fees for current month
-    const { data: bookingFees } = await supabase
+    const { data: bookingFees } = await supabaseAdmin
       .from('billing_history')
       .select('amount, status, created_at')
       .eq('business_id', businessId)
@@ -216,7 +237,7 @@ export async function GET(request: NextRequest) {
       .lt('created_at', nextMonth.toISOString())
 
     // Get appointments for current month
-    const { data: appointments } = await supabase
+    const { data: appointments } = await supabaseAdmin
       .from('appointments')
       .select('id, estimated_value, booking_fee_charged, created_at')
       .eq('business_id', businessId)

@@ -16,11 +16,11 @@ export async function GET(request: NextRequest) {
       .select('*')
 
     const { data: calls } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('*')
 
     const { data: smsLogs } = await supabaseAdmin
-      .from('sms_logs')
+      .from('sms_messages')
       .select('*')
 
     // Calculate today's date

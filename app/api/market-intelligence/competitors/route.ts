@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     // Get business performance data
     const { data: calls } = await supabaseAdmin
-      .from('call_logs')
+      .from('calls')
       .select('*')
       .eq('business_id', businessId)
       .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())

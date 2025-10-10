@@ -77,12 +77,12 @@ export async function POST(request: NextRequest) {
         recommendations,
         nextActions: getNextActions(priority, leadScore)
       }
-    })
-
-  } catch (error) {
+      })
+      
+    } catch (error) {
     logger.error('Lead scoring error', error as Error)
     return NextResponse.json({
-      success: false,
+        success: false,
       message: 'Failed to score lead'
     }, { status: 500 })
   }

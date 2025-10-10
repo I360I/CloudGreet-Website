@@ -88,45 +88,47 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
   const steps = [
     {
       id: 'business',
-      title: 'Business Information',
+      title: 'Business Basics',
       icon: Building,
-      description: 'Review and confirm your business details'
+      description: 'Quick info about your business',
+      timeEstimate: '1 min',
+      why: 'So your AI can introduce your business properly'
     },
     {
       id: 'services',
-      title: 'Services & Areas',
+      title: 'Services',
       icon: Target,
-      description: 'Define your services and coverage'
-    },
-    {
-      id: 'hours',
-      title: 'Business Hours',
-      icon: Clock,
-      description: 'Set your availability and after-hours policy'
+      description: 'What services do you offer?',
+      timeEstimate: '1 min',
+      why: 'So your AI knows what to book appointments for'
     },
     {
       id: 'ai-config',
-      title: 'AI Configuration',
+      title: 'AI Personality',
       icon: Zap,
-      description: 'Customize your AI receptionist'
+      description: 'How should your AI sound?',
+      timeEstimate: '2 min',
+      why: 'Your AI will answer calls in your brand voice'
     },
     {
-      id: 'integrations',
-      title: 'Review & Confirm',
+      id: 'launch',
+      title: 'Launch',
       icon: CheckCircle,
-      description: 'Review your setup and launch your AI receptionist'
+      description: 'Review and go live!',
+      timeEstimate: '1 min',
+      why: 'Get your phone number and start taking calls'
     }
   ]
 
   const businessTypes = [
     { value: 'HVAC', label: 'HVAC Services', icon: '🌡️' },
-    { value: 'Painting', label: 'Painting Services', icon: '🎨' },
+    { value: 'Paint', label: 'Painting Services', icon: '🎨' },
     { value: 'Roofing', label: 'Roofing Services', icon: '🏠' }
   ]
 
   const serviceOptions = {
     HVAC: ['AC Repair', 'Heating Repair', 'Maintenance', 'Installation', 'Emergency Service'],
-    Painting: ['Interior Painting', 'Exterior Painting', 'Commercial Painting', 'Pressure Washing', 'Color Consultation'],
+    Paint: ['Interior Painting', 'Exterior Painting', 'Commercial Painting', 'Pressure Washing', 'Color Consultation'],
     Roofing: ['Roof Repair', 'Roof Replacement', 'Gutter Services', 'Siding', 'Emergency Repair']
   }
 
@@ -200,24 +202,23 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
         
         // Verify the result actually contains success data
         if (result.success && result.businessId) {
-          // Close onboarding and refresh dashboard
-          onComplete()
-          onClose()
+          // Show success celebration
+          setCurrentStep(steps.length) // Move to celebration step
           
-          // Refresh the page to show updated dashboard
-          window.location.reload()
+          // Auto-close and refresh after 3 seconds
+          setTimeout(() => {
+            onComplete()
+            onClose()
+            window.location.reload()
+          }, 3000)
         } else {
           setError('Onboarding completed but verification failed. Please check your dashboard.')
         }
       } else {
         const errorData = await response.json()
-        console.error('Onboarding failed:', errorData)
-        console.error('Response status:', response.status)
-        console.error('Full error data:', errorData)
         setError(errorData.error || errorData.message || 'Failed to complete setup. Please try again.')
       }
     } catch (error) {
-      console.error('Onboarding error:', error)
       setError('Network error. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
@@ -513,7 +514,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
           </div>
         )
         
-      case 4: // Review & Confirm
+      case 3: // Review & Launch
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
@@ -599,6 +600,74 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
 
 
         
+      case 4: // Success Celebration
+        return (
+          <div className="space-y-6 text-center py-12">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="mx-auto w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mb-6"
+            >
+              <CheckCircle className="w-16 h-16 text-green-400" />
+            </motion.div>
+            
+            <motion.h3
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-3xl font-bold text-white mb-4"
+            >
+              🎉 You&apos;re All Set!
+            </motion.h3>
+            
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-gray-300 text-lg mb-6"
+            >
+              Your AI receptionist is ready to start taking calls!
+            </motion.p>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 max-w-md mx-auto"
+            >
+              <h4 className="text-white font-semibold mb-3">What&apos;s Next:</h4>
+              <ul className="text-left space-y-2 text-gray-300">
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span>Your toll-free number is being provisioned</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span>AI agent is configured and ready</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span>Connect your calendar in the dashboard</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span>Test your AI with a quick call</span>
+                </li>
+              </ul>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-gray-400 text-sm mt-6"
+            >
+              Redirecting to your dashboard...
+            </motion.div>
+          </div>
+        )
+        
       default:
         return null
     }
@@ -622,12 +691,21 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
         >
           {/* Header */}
           <div className="border-b border-gray-700/50 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  {steps[currentStep].title}
-                </h2>
-                <p className="text-gray-400">{steps[currentStep].description}</p>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h2 className="text-2xl font-bold text-white">
+                    {steps[currentStep].title}
+                  </h2>
+                  <span className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-blue-300 text-xs font-medium">
+                    {steps[currentStep].timeEstimate}
+                  </span>
+                </div>
+                <p className="text-gray-400 text-sm mb-2">{steps[currentStep].description}</p>
+                <div className="flex items-center gap-2 text-gray-500 text-xs">
+                  <Star className="w-3 h-3" />
+                  <span>{steps[currentStep].why}</span>
+                </div>
               </div>
               <button
                 onClick={onClose}
@@ -642,26 +720,26 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
               <div className="flex items-center space-x-2 mb-2">
                 {steps.map((step, index) => (
                   <React.Fragment key={step.id}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      index <= currentStep ? 'bg-white/20 backdrop-blur-sm border border-white/30' : 'bg-gray-600/50'
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                      index <= currentStep ? 'bg-white/20 backdrop-blur-sm border border-white/30 scale-110' : 'bg-gray-600/50'
                     }`}>
                       {index < currentStep ? (
-                        <CheckCircle className="w-5 h-5 text-white" />
+                        <CheckCircle className="w-5 h-5 text-green-400" />
                       ) : (
                         <span className="text-white text-sm font-bold">{index + 1}</span>
                       )}
                     </div>
                     {index < steps.length - 1 && (
-                      <div className={`flex-1 h-1 rounded ${
-                        index < currentStep ? 'bg-white/30' : 'bg-gray-600/50'
+                      <div className={`flex-1 h-1 rounded transition-all ${
+                        index < currentStep ? 'bg-green-400/50' : 'bg-gray-600/50'
                       }`} />
                     )}
                   </React.Fragment>
                 ))}
               </div>
               <div className="flex justify-between text-xs text-gray-400">
-                <span>Step {currentStep + 1} of {steps.length}</span>
-                <span>{Math.round(((currentStep + 1) / steps.length) * 100)}% Complete</span>
+                <span>Step {currentStep + 1} of {steps.length} • About 5 minutes total</span>
+                <span className="text-green-400 font-medium">{Math.round(((currentStep + 1) / steps.length) * 100)}% Complete</span>
               </div>
             </div>
           </div>

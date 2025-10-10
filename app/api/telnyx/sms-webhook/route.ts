@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
 import { telynyx } from '../../../../lib/telynyx'
 import { logger } from '../../../../lib/monitoring'
+import { verifyTelynyxSignature } from '@/lib/webhook-verification'
 import OpenAI from 'openai'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +13,24 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    // Webhook signature verification for security
+    const signature = request.headers.get('telnyx-signature-ed25519')
+    const timestamp = request.headers.get('telnyx-timestamp')
+    
+    // Get raw body for verification
+    const rawBody = await request.text()
+    
+    // Verify signature in production
+    if (process.env.NODE_ENV === 'production') {
+      const isValid = verifyTelynyxSignature(rawBody, signature, timestamp)
+      
+      if (!isValid) {
+        logger.error('Invalid Telnyx SMS webhook signature')
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      }
+    }
+
+    const body = JSON.parse(rawBody)
     const {
       MessageSid,
       From,
@@ -112,6 +130,94 @@ export async function POST(request: NextRequest) {
             error: error instanceof Error ? error.message : 'Unknown error'
           })
         }
+      }
+
+      // Handle special SMS commands first
+      const messageCommand = messageText.toLowerCase().trim()
+      
+      if (messageCommand === 'stop' || messageCommand === 'unsubscribe') {
+        // Handle opt-out
+        await supabaseAdmin
+          .from('sms_opt_outs')
+          .insert({
+            phone_number: fromNumber,
+            business_id: business.id,
+            created_at: new Date().toISOString()
+          })
+
+        // Send STOP confirmation
+        await fetch('https://api.telnyx.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: toNumber,
+            to: fromNumber,
+            text: `You have been unsubscribed from ${business.business_name}. You will not receive further texts. Text START to resubscribe.`,
+            type: 'SMS'
+          })
+        })
+
+        logger.info('STOP command processed', { from: fromNumber, businessId: business.id })
+        return NextResponse.json({ success: true })
+      }
+
+      if (messageCommand === 'help') {
+        // Send HELP response
+        const helpText = `${business.business_name} - AI Receptionist
+
+Services: ${business.services?.join(', ') || 'General services'}
+Hours: ${business.business_hours ? 'Mon-Fri 9AM-5PM' : 'Call for hours'}
+Phone: ${business.phone_number || toNumber}
+${business.website ? `Web: ${business.website}` : ''}
+
+Reply STOP to opt out.`
+
+        await fetch('https://api.telnyx.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: toNumber,
+            to: fromNumber,
+            text: helpText,
+            type: 'SMS'
+          })
+        })
+
+        logger.info('HELP command processed', { from: fromNumber, businessId: business.id })
+        return NextResponse.json({ success: true })
+      }
+
+      if (messageCommand === 'start' || messageCommand === 'unstop') {
+        // Handle opt-in
+        await supabaseAdmin
+          .from('sms_opt_outs')
+          .delete()
+          .eq('phone_number', fromNumber)
+          .eq('business_id', business.id)
+
+        // Send START confirmation
+        await fetch('https://api.telnyx.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: toNumber,
+            to: fromNumber,
+            text: `Welcome back! You are now resubscribed to ${business.business_name}. Reply STOP to opt out; HELP for help.`,
+            type: 'SMS'
+          })
+        })
+
+        logger.info('START command processed', { from: fromNumber, businessId: business.id })
+        return NextResponse.json({ success: true })
       }
 
       // Process with AI if needed

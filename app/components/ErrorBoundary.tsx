@@ -55,7 +55,7 @@ export class ErrorBoundary extends Component<Props, State> {
         })
       })
     } catch (logError) {
-      console.error('Failed to log error:', logError)
+      // Silent fail - error logging is non-critical
     }
   }
 

@@ -7,15 +7,15 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const { leadData, templateType, personalizationLevel } = await request.json()
-    
-    if (!leadData) {
+      
+      if (!leadData) {
       return NextResponse.json({
-        success: false,
-        error: 'Lead data required'
+          success: false,
+          error: 'Lead data required'
       }, { status: 400 })
-    }
+      }
 
-    // Generate dynamic email template
+      // Generate dynamic email template
     const emailTemplate = await generateDynamicEmailTemplate({
       leadData,
       templateType: templateType || 'initial_contact',
@@ -23,22 +23,22 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      success: true,
-      data: {
-        subject: emailTemplate.subject,
-        html_content: emailTemplate.htmlContent,
-        text_content: emailTemplate.textContent,
-        personalization_data: emailTemplate.personalizationData,
-        template_metadata: emailTemplate.metadata
-      }
-    })
+        success: true,
+        data: {
+          subject: emailTemplate.subject,
+          html_content: emailTemplate.htmlContent,
+          text_content: emailTemplate.textContent,
+          personalization_data: emailTemplate.personalizationData,
+          template_metadata: emailTemplate.metadata
+        }
+      })
 
-  } catch (error) {
+    } catch (error) {
     console.error('Email template generation error:', error)
     return NextResponse.json({
-      success: false,
-      error: 'Email template generation failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+        success: false,
+        error: 'Email template generation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }
@@ -421,7 +421,7 @@ function generateROIProjection(personalizationData: any): string {
   const monthlyIncrease = Math.round(estimatedRevenue * 0.4 / 12)
   const annualIncrease = Math.round(monthlyIncrease * 12)
   
-  return `Based on your estimated annual revenue of $${estimatedRevenue.toLocaleString()}, our AI receptionist could generate an additional $${monthlyIncrease.toLocaleString()} per month ($${annualIncrease.toLocaleString()} annually). With our $200/month base fee plus 40% commission on new bookings, your net profit would be approximately $${Math.round(monthlyIncrease * 0.6)} per month.`
+  return `Based on your estimated annual revenue of $${estimatedRevenue.toLocaleString()}, our AI receptionist could generate an additional $${monthlyIncrease.toLocaleString()} per month ($${annualIncrease.toLocaleString()} annually). With our $200/month base fee plus $50 per booking, your net profit would be approximately $${Math.round(monthlyIncrease - 50)} per month.`
 }
 
 function generateUrgency(templateType: string, personalizationData: any): string {

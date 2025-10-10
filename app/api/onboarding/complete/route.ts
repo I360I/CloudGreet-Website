@@ -2,30 +2,51 @@ import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { telynyx } from '@/lib/telynyx'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 
+// Accept both old and new format for backwards compatibility
 const completeOnboardingSchema = z.object({
-  businessName: z.string().min(1, 'Business name is required'),
-  businessType: z.enum(['HVAC', 'Paint', 'Roofing', 'Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'General'], {
-    message: 'Invalid business type'
-  }),
-  email: z.string().email('Invalid email'),
-  phone: z.string().min(1, 'Phone number is required'),
-  website: z.string().url().optional().or(z.literal('')),
-  address: z.string().min(1, 'Address is required'),
-  services: z.array(z.string()).min(1, 'At least one service is required'),
-  serviceAreas: z.array(z.string()).min(1, 'At least one service area is required'),
-  businessHours: z.record(z.string(), z.any()),
-  greetingMessage: z.string().min(1, 'Greeting message is required'),
-  tone: z.enum(['professional', 'friendly', 'casual'], {
-    message: 'Invalid tone'
-  }),
-  billingPlan: z.string().optional(),
-  promoCode: z.string().optional()
-})
+  // From existing OnboardingWizard component
+  businessName: z.string().optional(),
+  businessType: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  website: z.string().optional(),
+  address: z.string().optional(),
+  services: z.array(z.string()).optional(),
+  serviceAreas: z.array(z.string()).optional(),
+  businessHours: z.record(z.string(), z.any()).optional(),
+  greetingMessage: z.string().optional(),
+  tone: z.enum(['professional', 'friendly', 'casual']).optional(),
+  specialties: z.array(z.string()).optional(),
+  afterHoursPolicy: z.string().optional(),
+  calendarProvider: z.string().optional(),
+  promoCode: z.string().optional(),
+  
+  // New format (optional for backwards compat)
+  business_description: z.string().optional(),
+  years_in_business: z.string().optional(),
+  team_size: z.string().optional(),
+  service_radius: z.string().optional(),
+  primary_services: z.array(z.string()).optional(),
+  service_descriptions: z.record(z.string()).optional(),
+  typical_project_value: z.string().optional(),
+  emergency_services: z.boolean().optional(),
+  business_hours: z.record(z.string(), z.any()).optional(),
+  agent_name: z.string().optional(),
+  agent_personality: z.enum(['professional', 'friendly', 'casual', 'enthusiastic']).optional(),
+  greeting_style: z.string().optional(),
+  custom_instructions: z.string().optional(),
+  appointment_types: z.array(z.string()).optional(),
+  qualification_questions: z.array(z.string()).optional(),
+  escalation_triggers: z.array(z.string()).optional(),
+  emergency_protocol: z.string().optional()
+}).refine(data => 
+  data.businessName || data.services || data.primary_services,
+  { message: "At least basic business information is required" }
+)
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
@@ -40,16 +61,7 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Parse and validate request
-    const body = await request.json()
-    const validatedData = completeOnboardingSchema.parse(body)
-
-    await logger.info('Completing onboarding', {
-      requestId,
-      businessName: validatedData.businessName
-    })
-
-    // Get authentication token from Authorization header
+    // Get authentication token
     const authHeader = request.headers.get('authorization')
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -60,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-jwt-secret-for-development-only-32-chars'
+    const jwtSecret = process.env.JWT_SECRET
     
     if (!jwtSecret) {
       return NextResponse.json({
@@ -90,266 +102,250 @@ export async function POST(request: NextRequest) {
       }, { status: 401 })
     }
 
+    // Parse and validate request
+    const body = await request.json()
+    const rawData = completeOnboardingSchema.parse(body)
+
+    // Normalize data from both old and new formats
+    const services = rawData.services || rawData.primary_services || ['General Services']
+    const serviceAreas = rawData.serviceAreas || ['Local Area']
+    const businessHours = rawData.businessHours || rawData.business_hours || {}
+    const greetingMessage = rawData.greetingMessage || rawData.greeting_style || ''
+    const tone = rawData.tone || rawData.agent_personality || 'professional'
+    const agentName = rawData.agent_name || `${rawData.businessName} AI Assistant` || 'AI Assistant'
+
+    // Get current business data
+    const { data: business, error: businessFetchError } = await supabaseAdmin
+      .from('businesses')
+      .select('*')
+      .eq('id', businessId)
+      .single()
+
+    if (businessFetchError || !business) {
+      return NextResponse.json({
+        success: false,
+        message: 'Business not found'
+      }, { status: 404 })
+    }
+
+    // Extract additional fields
+    const specialties = rawData.specialties || []
+    const afterHoursPolicy = rawData.afterHoursPolicy || 'voicemail'
+    const calendarProvider = rawData.calendarProvider || 'google'
+    
     // Update business with onboarding data
-    const { data: business, error: businessError } = await supabaseAdmin
+    const { error: businessUpdateError } = await supabaseAdmin
       .from('businesses')
       .update({
-        business_name: validatedData.businessName,
-        business_type: validatedData.businessType,
-        email: validatedData.email,
-        phone: validatedData.phone,
-        website: validatedData.website,
-        address: validatedData.address,
-        city: 'Unknown',
-        state: 'Unknown', 
-        zip_code: '00000',
-        phone_number: validatedData.phone,
-        services: validatedData.services,
-        service_areas: validatedData.serviceAreas,
-        business_hours: validatedData.businessHours,
-        greeting_message: validatedData.greetingMessage,
-        ai_tone: validatedData.tone,
-        billing_plan: validatedData.billingPlan || 'pro',
+        description: rawData.business_description || `Professional ${business.business_type} services`,
+        services: services,
+        service_areas: serviceAreas,
+        business_hours: businessHours,
+        greeting_message: greetingMessage || `Thank you for calling ${business.business_name}. How can I help you today?`,
+        tone: tone,
+        specialties: specialties,
+        after_hours_policy: afterHoursPolicy,
+        calendar_provider: calendarProvider,
         onboarding_completed: true,
-        promo_code_used: validatedData.promoCode || null,
         updated_at: new Date().toISOString()
       })
       .eq('id', businessId)
-      .eq('owner_id', userId)
-      .select()
-      .single()
 
-    if (businessError || !business) {
-      console.error('Business update failed:', {
-        businessError,
-        business,
-        businessId,
-        userId,
-        validatedData: {
-          businessName: validatedData.businessName,
-          businessType: validatedData.businessType,
-          email: validatedData.email,
-          phone: validatedData.phone
-        }
-      })
-      logger.error("Error", { 
-        error: businessError || new Error('Business not found'), 
+    if (businessUpdateError) {
+      logger.error("Error updating business", { 
+        error: businessUpdateError, 
         requestId,
-        businessId,
-        userId,
-        action: 'update_business_onboarding'
+        businessId
       })
       return NextResponse.json({
         success: false,
-        message: 'Failed to complete onboarding',
-        error: businessError?.message || 'Business not found'
+        message: 'Failed to update business'
       }, { status: 500 })
     }
 
-    // Create AI agent record in database
-    let agentId = null
-    try {
-      await logger.info('Creating AI agent record', {
-        requestId,
-        businessId,
-        businessName: validatedData.businessName
-      })
-
-        const { data: agent, error: agentError } = await supabaseAdmin
-        .from('ai_agents')
-        .insert({
-          business_id: businessId,
-          agent_name: `${validatedData.businessName} AI Assistant`,
-          business_name: validatedData.businessName,
-          is_active: true,
-          greeting_message: validatedData.greetingMessage,
-          tone: validatedData.tone,
-          configuration: {
-            services: validatedData.services,
-            service_areas: validatedData.serviceAreas,
-            business_hours: validatedData.businessHours,
-            created_at: new Date().toISOString()
-          },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-
-      if (agentError) {
-        throw new Error(`Agent creation failed: ${agentError.message}`)
-      }
-
-      agentId = agent.id
-
-      await logger.info('AI agent created successfully', {
-        requestId,
-        businessId,
-        agentId
-      })
-
-      // AI agent is ready for OpenAI voice conversations
-      await logger.info('AI agent ready for OpenAI voice conversations', {
-        requestId,
-        businessId,
-        agentId,
-        voice: validatedData.voice || 'alloy'
-      })
-
-    } catch (agentError) {
-      console.error('AI agent creation failed:', {
-        agentError,
-        businessId,
-        businessName: validatedData.businessName,
-        requestId
-      })
-      logger.error("Error creating AI agent", { 
-        error: agentError instanceof Error ? agentError.message : 'Unknown error', 
-        requestId,
-        businessId,
-        userId,
-        action: 'create_ai_agent'
-      })
-      // Don't fail the entire onboarding for agent creation issues
-      // The business can still function without the agent initially
-      console.warn('AI agent creation failed, continuing with onboarding:', agentError)
+    // Determine voice based on personality and business type
+    let voice = 'alloy'
+    const personality = tone as string
+    if (personality === 'professional') {
+      voice = business.business_type === 'HVAC' ? 'nova' : 'onyx'
+    } else if (personality === 'friendly') {
+      voice = 'shimmer'
+    } else if (personality === 'casual') {
+      voice = 'echo'
+    } else if (personality === 'enthusiastic') {
+      voice = 'fable'
     }
 
-    // Provision phone number for the business
-    let phoneNumber = null
-    let phoneRecordId = null
+    // Create comprehensive AI agent with all collected data
+    const customInstructions = rawData.custom_instructions || `Be a professional, helpful AI receptionist for ${business.business_name}.`
     
-    try {
-      // Extract area code from business phone or use default
-      const areaCode = validatedData.phone ? validatedData.phone.replace(/\D/g, '').substring(0, 3) : '555'
-      
-      await logger.info('Provisioning phone number', {
-        requestId,
-        businessId,
-        areaCode
-      })
-      
-      // Call our phone provisioning API
-      const provisionResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/phone/provision`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+    const { data: agent, error: agentError } = await supabaseAdmin
+      .from('ai_agents')
+      .insert({
+        business_id: businessId,
+        business_name: business.business_name,
+        agent_name: agentName,
+        is_active: false, // Will be activated after testing
+        configuration: {
+          // Business Context
+          business_type: business.business_type,
+          business_description: rawData.business_description || `Professional ${business.business_type} services`,
+          years_in_business: rawData.years_in_business || '5',
+          team_size: rawData.team_size || '1-5',
+          service_radius: rawData.service_radius || '25',
+          
+          // Services
+          services: services,
+          service_descriptions: rawData.service_descriptions || {},
+          typical_project_value: rawData.typical_project_value || '$500-$1,000',
+          emergency_services: rawData.emergency_services || false,
+          
+          // Hours
+          business_hours: businessHours,
+          
+          // AI Personality
+          personality: tone,
+          tone: tone,
+          voice: voice,
+          greeting_message: greetingMessage || `Thank you for calling ${business.business_name}. This is ${agentName}, how can I help you today?`,
+          custom_instructions: `You are ${agentName}, the ${tone} AI receptionist for ${business.business_name}.
+
+BUSINESS CONTEXT:
+- Company: ${business.business_name} (${business.business_type})
+- Location: ${business.address || 'Local area'}
+- Description: ${rawData.business_description || `Professional ${business.business_type} services`}
+- Services Offered: ${services.join(', ')}
+- Service Areas: ${serviceAreas.join(', ')}
+${specialties.length > 0 ? `- Specialties: ${specialties.join(', ')}` : ''}
+- Contact: ${business.phone_number}
+${business.website ? `- Website: ${business.website}` : ''}
+
+BUSINESS HOURS:
+${Object.entries(businessHours).map(([day, hours]: [string, any]) => 
+  `- ${day.charAt(0).toUpperCase() + day.slice(1)}: ${hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`}`
+).join('\n')}
+
+AFTER HOURS POLICY: ${afterHoursPolicy === 'voicemail' ? 'Take voicemail' : afterHoursPolicy === 'sms' ? 'Offer to text' : 'Take message'}
+
+PERSONALITY & STYLE:
+- Tone: ${tone} and ${tone === 'professional' ? 'courteous' : tone === 'friendly' ? 'warm and approachable' : 'relaxed and conversational'}
+- Voice: ${voice}
+- Use natural, conversational language
+- Show genuine interest in helping customers
+- Be empathetic and understanding
+${customInstructions ? `- ${customInstructions}` : ''}
+
+YOUR RESPONSIBILITIES:
+1. Answer calls with: "${greetingMessage || `Thank you for calling ${business.business_name}. How can I help you today?`}"
+2. Listen carefully to understand customer needs
+3. Ask clarifying questions about:
+   - What service they need
+   - Property type and location
+   - Timeline/urgency
+   - Budget range (if appropriate)
+4. Qualify leads by matching their needs to our services
+5. Schedule appointments during business hours
+6. Provide accurate service information
+7. Handle pricing questions professionally
+8. Take detailed messages when needed
+9. Make customers feel valued and heard
+
+CONVERSATION GUIDELINES:
+- Be warm, natural, and genuinely helpful
+- Don't sound robotic or scripted
+- Use the customer's name when they provide it
+- Acknowledge their concerns with empathy
+- Provide specific information, not generic responses
+- If unsure, say "Let me have ${business.business_name} call you back to discuss that"
+- Always end calls professionally with next steps
+
+APPOINTMENT BOOKING:
+- Check if requested time is during business hours
+- Confirm customer name, phone, and service needed
+- Provide appointment confirmation
+- Offer to send SMS confirmation
+
+Remember: You're representing ${business.business_name}. Every conversation is an opportunity to win a customer. Be professional, helpful, and make them feel like they called the right place.`,
+          
+          // Call Handling
+          appointment_types: rawData.appointment_types || ['Service Call', 'Estimate', 'Emergency'],
+          qualification_questions: rawData.qualification_questions || ['What type of property?', 'When do you need service?'],
+          escalation_triggers: rawData.escalation_triggers || ['Customer is angry', 'Complex issue'],
+          emergency_protocol: rawData.emergency_protocol || 'Dispatch ASAP',
+          
+          // AI Model Settings
+          ai_model: 'gpt-4-turbo-preview',
+          temperature: 0.8,
+          presence_penalty: 0.3,
+          frequency_penalty: 0.2,
+          top_p: 0.9,
+          max_tokens: 300,
+          
+          // Features
+          conversation_style: 'human-like',
+          emotional_intelligence: true,
+          natural_speech_patterns: true,
+          empathy_enabled: true,
+          enable_call_recording: true,
+          enable_transcription: true,
+          enable_sms_forwarding: true,
+          
+          // Contact
+          notification_phone: business.phone_number,
+          escalation_phone: business.phone_number,
+          emergency_contact: business.phone_number,
+          
+          created_at: new Date().toISOString()
         },
-        body: JSON.stringify({
-          businessId,
-          areaCode
-        })
+        performance_metrics: {
+          total_calls: 0,
+          successful_calls: 0,
+          appointments_scheduled: 0,
+          average_call_duration: 0,
+          customer_satisfaction: 5.0,
+          last_updated: new Date().toISOString()
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
-      
-      if (provisionResponse.ok) {
-        const provisionData = await provisionResponse.json()
-        phoneNumber = provisionData.phoneNumber
-        phoneRecordId = provisionData.phoneRecordId
-        
-        await logger.info('Phone number provisioned successfully', {
-          requestId,
-          businessId,
-          phoneNumber,
-          phoneRecordId
-        })
-      } else {
-        throw new Error('Phone provisioning API failed')
-      }
-    } catch (phoneError) {
-      logger.error("Error provisioning phone number", { 
-        error: phoneError instanceof Error ? phoneError.message : 'Unknown error', 
+      .select()
+      .single()
+
+    if (agentError) {
+      logger.error("Error creating AI agent", { 
+        error: agentError, 
         requestId,
-        businessId,
-        action: 'provision_phone_number'
+        businessId
       })
-      // Continue without phone number - user can set it up later
+      return NextResponse.json({
+        success: false,
+        message: 'Failed to create AI agent'
+      }, { status: 500 })
     }
 
-    // Update business with phone number if provisioned
-    if (phoneNumber) {
-      await supabaseAdmin
-        .from('businesses')
-        .update({
-          phone_number: phoneNumber,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', businessId)
-    }
-
-    // Handle promo code if provided
-    if (validatedData.promoCode) {
-      try {
-        // Validate and apply promo code
-        const { data: promo } = await supabaseAdmin
-          .from('promo_codes')
-          .select('*')
-          .eq('code', validatedData.promoCode.toUpperCase())
-          .eq('is_active', true)
-          .single()
-
-        if (promo) {
-          const now = new Date()
-          const trialEndDate = new Date(now.getTime() + (promo.trial_days * 24 * 60 * 60 * 1000))
-
-          await supabaseAdmin
-            .from('businesses')
-            .update({
-              promo_code_used: promo.code,
-              trial_start_date: now.toISOString(),
-              trial_end_date: trialEndDate.toISOString(),
-              is_trial_active: true,
-              subscription_status: 'trialing',
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', businessId)
-
-          // Increment promo code usage
-          await supabaseAdmin
-            .from('promo_codes')
-            .update({
-              current_uses: promo.current_uses + 1,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', promo.id)
-        }
-      } catch (promoError) {
-        logger.error("Error", { 
-          error: promoError instanceof Error ? promoError.message : 'Unknown error', 
-          requestId,
-          businessId,
-          action: 'apply_promo_code_onboarding'
-        })
-        // Continue without failing the onboarding
-      }
-    }
-
-    // Onboarding completed successfully - no audit logging needed
-
-    await logger.info('Onboarding completed successfully', {
+    logger.info('Onboarding completed successfully', {
       requestId,
       businessId,
-      userId,
-      businessName: validatedData.businessName,
+      agentId: agent.id,
       responseTime: Date.now() - startTime
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Onboarding completed successfully',
-      businessId: business.id,
-      agentId: agentId,
+      message: 'Onboarding completed successfully! Your AI agent is ready to test.',
+      businessId: businessId,
+      agentId: agent.id,
       data: {
         business: {
-          id: business.id,
+          id: businessId,
           business_name: business.business_name,
-          onboarding_completed: business.onboarding_completed,
-          phone_number: phoneNumber
+          onboarding_completed: true
         },
         agent: {
-          id: agentId,
-          name: `${validatedData.businessName} AI Receptionist`,
-          is_active: !!agentId
+          id: agent.id,
+          name: agentName,
+          personality: tone,
+          is_active: false
         }
       },
       meta: {
@@ -360,12 +356,12 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error("Error", { 
+    logger.error("Onboarding error", { 
       error: error instanceof Error ? error.message : 'Unknown error', 
       requestId,
-      endpoint: 'complete_onboarding',
-      responseTime: Date.now() - startTime
+      endpoint: 'complete_onboarding'
     })
+    
     if (error instanceof z.ZodError) {
       return NextResponse.json({
         success: false,

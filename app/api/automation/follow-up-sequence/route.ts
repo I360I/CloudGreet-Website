@@ -273,8 +273,6 @@ async function executeFollowUpAction(action: any) {
 
 async function executeEmailAction(lead: any, message: string) {
   // This would integrate with your email service
-  console.log(`Email would be sent to ${lead.email}: ${message}`)
-  
   return {
     success: true,
     action: 'email_sent',
@@ -285,8 +283,6 @@ async function executeEmailAction(lead: any, message: string) {
 
 async function executeCallAction(lead: any, message: string) {
   // This would integrate with your calling system
-  console.log(`Call would be made to ${lead.phone}: ${message}`)
-  
   return {
     success: true,
     action: 'call_scheduled',
@@ -297,8 +293,6 @@ async function executeCallAction(lead: any, message: string) {
 
 async function executeDemoScheduleAction(lead: any, message: string) {
   // This would integrate with your calendar system
-  console.log(`Demo would be scheduled for ${lead.business_name}: ${message}`)
-  
   return {
     success: true,
     action: 'demo_scheduled',
