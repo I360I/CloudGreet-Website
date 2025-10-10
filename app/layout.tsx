@@ -1,14 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { AdvancedErrorBoundary } from './components/AdvancedErrorBoundary'
 import { ToastProvider } from './contexts/ToastContext'
-import { AccessibilityProvider } from './components/AccessibilityProvider'
-import { RealtimeProvider } from './contexts/RealtimeProvider'
-import { AnalyticsProvider } from './components/AnalyticsProvider'
-import PerformanceMonitor from './components/PerformanceMonitor'
-import MobileOptimizer from './components/MobileOptimizer'
-import SecurityEnhancer from './components/SecurityEnhancer'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -112,19 +105,9 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} overscroll-none bg-slate-900`}>
-        <SecurityEnhancer>
-          <AdvancedErrorBoundary>
-            <AnalyticsProvider>
-              <AccessibilityProvider>
-                <RealtimeProvider>
-                  <ToastProvider>
-                    {children}
-                  </ToastProvider>
-                </RealtimeProvider>
-              </AccessibilityProvider>
-            </AnalyticsProvider>
-          </AdvancedErrorBoundary>
-        </SecurityEnhancer>
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   )
