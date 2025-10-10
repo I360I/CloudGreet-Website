@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
-import VoiceOrbDemo from '../components/VoiceOrbDemo'
+import VoiceHelixOrb from '../components/VoiceHelixOrb'
 
 export default function LandingPage() {
   return (
@@ -90,7 +90,7 @@ export default function LandingPage() {
               Try It Right Now
             </h2>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Click the orb below to speak with our AI receptionist. No signup required.
+              Click the helix orb to speak with our AI receptionist. Watch the strands pulse with the AI's voice.
             </p>
           </motion.div>
           
@@ -98,10 +98,10 @@ export default function LandingPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="max-w-3xl mx-auto"
+            className="max-w-4xl mx-auto"
           >
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12">
-              <VoiceOrbDemo businessName="CloudGreet" isDemo={true} />
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 overflow-hidden">
+              <VoiceHelixOrb businessName="CloudGreet" isDemo={true} />
             </div>
           </motion.div>
 
