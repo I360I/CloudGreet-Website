@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       model: 'tts-1-hd', // Highest quality model
       voice: voice as 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer',
       input: text,
-      speed: 0.95 // Slightly slower for more natural, conversational feel
+      speed: 1.05 // Slightly faster for more natural, energetic conversational feel
     })
 
     console.log('✅ OpenAI TTS response received')

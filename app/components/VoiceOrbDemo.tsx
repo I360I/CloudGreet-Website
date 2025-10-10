@@ -31,6 +31,7 @@ export default function VoiceOrbDemo({
   const [selectedVoice, setSelectedVoice] = useState('nova')
   const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt' | 'checking'>('checking')
   const [showSettings, setShowSettings] = useState(false)
+  const [isCapturingAudio, setIsCapturingAudio] = useState(false)
   
   const recognitionRef = useRef<any>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -81,17 +82,54 @@ export default function VoiceOrbDemo({
       recognitionRef.current.maxAlternatives = 1
 
       recognitionRef.current.onstart = () => {
-        console.log('✅ Speech recognition started')
+        console.log('✅✅✅ SPEECH RECOGNITION STARTED - SPEAK NOW!')
+        console.log('🎤 Microphone is active and listening for your voice...')
         setIsListening(true)
         setError(null)
       }
+      
+      recognitionRef.current.onaudiostart = () => {
+        console.log('🎤🎤🎤 AUDIO DETECTED - Microphone is picking up sound!')
+        setIsCapturingAudio(true)
+      }
+      
+      recognitionRef.current.onsoundstart = () => {
+        console.log('🔊🔊🔊 SOUND DETECTED - Speech is being captured!')
+        setIsCapturingAudio(true)
+      }
+      
+      recognitionRef.current.onspeechstart = () => {
+        console.log('🗣️🗣️🗣️ SPEECH STARTED - Processing your words...')
+        setIsCapturingAudio(true)
+      }
+      
+      recognitionRef.current.onspeechend = () => {
+        console.log('🗣️ Speech ended, processing transcript...')
+        setIsCapturingAudio(false)
+      }
+      
+      recognitionRef.current.onsoundend = () => {
+        console.log('🔊 Sound ended')
+        setIsCapturingAudio(false)
+      }
+      
+      recognitionRef.current.onaudioend = () => {
+        console.log('🎤 Audio capture ended')
+        setIsCapturingAudio(false)
+      }
 
       recognitionRef.current.onresult = (event: any) => {
+        console.log('🎤 Speech recognition result event:', event.results.length, 'results')
+        
         let finalTranscript = ''
         let interimTranscript = ''
         
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript
+          const confidence = event.results[i][0].confidence
+          
+          console.log(`Result ${i}:`, transcript, 'isFinal:', event.results[i].isFinal, 'confidence:', confidence)
+          
           if (event.results[i].isFinal) {
             finalTranscript += transcript
           } else {
@@ -101,16 +139,24 @@ export default function VoiceOrbDemo({
         
         // Show interim results as user speaks
         if (interimTranscript) {
-          console.log('Interim:', interimTranscript)
+          console.log('📝 Interim:', interimTranscript)
           setTranscript(interimTranscript)
         }
         
         // Process final results
         if (finalTranscript) {
-          console.log('✅ Final transcript:', finalTranscript)
+          console.log('✅✅✅ FINAL TRANSCRIPT:', finalTranscript)
           setTranscript(finalTranscript)
-          recognitionRef.current.stop() // Stop listening while AI responds
-          processUserSpeech(finalTranscript)
+          
+          // Stop listening before processing
+          if (recognitionRef.current) {
+            recognitionRef.current.stop()
+          }
+          
+          // Small delay to ensure recognition has stopped
+          setTimeout(() => {
+            processUserSpeech(finalTranscript)
+          }, 100)
         }
       }
 
@@ -680,14 +726,31 @@ export default function VoiceOrbDemo({
               >
                 🎤 Listening...
               </motion.h3>
+              {isCapturingAudio && (
+                <motion.div 
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: [0.9, 1, 0.9] }}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                  className="mb-2"
+                >
+                  <p className="text-green-400 text-sm font-bold">🔊 Capturing your voice...</p>
+                </motion.div>
+              )}
               {transcript ? (
                 <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
                   <p className="text-white text-base font-medium">"{transcript}"</p>
                 </div>
               ) : (
-                <p className="text-gray-400 text-base">Start speaking now...</p>
+                <>
+                  <p className="text-gray-400 text-base">Speak now...</p>
+                  {!isCapturingAudio && (
+                    <p className="text-xs text-yellow-400 mt-1">
+                      If nothing appears, check your mic is unmuted
+                    </p>
+                  )}
+                </>
               )}
-              <p className="text-xs text-gray-500 mt-2">Click orb again to stop listening</p>
+              <p className="text-xs text-gray-500 mt-2">Click orb to stop listening</p>
             </motion.div>
             ) : isSpeaking ? (
               <motion.div key="speaking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
