@@ -219,42 +219,56 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       setVoiceStatus('openai')
 
       const audioUrl = URL.createObjectURL(audioBlob)
-      audioRef.current = new Audio(audioUrl)
       
-      // Audio analysis for wave reactivity
-      if (audioContextRef.current && audioRef.current) {
-        try {
-          const source = audioContextRef.current.createMediaElementSource(audioRef.current)
-          analyserRef.current = audioContextRef.current.createAnalyser()
-          analyserRef.current.fftSize = 256
-          source.connect(analyserRef.current)
-          analyserRef.current.connect(audioContextRef.current.destination)
-          
-          const updateAudioLevel = () => {
-            if (analyserRef.current && isSpeaking) {
-              const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
-              analyserRef.current.getByteFrequencyData(dataArray)
-              const avg = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length / 255
-              setAudioLevel(avg)
-              requestAnimationFrame(updateAudioLevel)
-            }
-          }
-          updateAudioLevel()
-        } catch (e) {}
+      console.log('✅ Audio blob received:', audioBlob.size, 'bytes', 'type:', audioBlob.type)
+      
+      // Resume audio context if suspended (browser autoplay policy)
+      if (audioContextRef.current?.state === 'suspended') {
+        console.log('Resuming audio context...')
+        await audioContextRef.current.resume()
+      }
+      
+      audioRef.current = new Audio(audioUrl)
+      audioRef.current.volume = 1.0
+      audioRef.current.preload = 'auto'
+      
+      audioRef.current.oncanplaythrough = () => {
+        console.log('✅ Audio ready to play')
       }
       
       audioRef.current.onended = () => {
+        console.log('✅ Audio playback ended')
         setIsSpeaking(false)
         setAudioLevel(0)
         URL.revokeObjectURL(audioUrl)
       }
-      audioRef.current.onerror = () => {
+      
+      audioRef.current.onerror = (e) => {
+        console.error('❌ Audio playback error:', e)
         setIsSpeaking(false)
         setAudioLevel(0)
+        setError('Audio failed to play - check console')
         URL.revokeObjectURL(audioUrl)
+      }
+      
+      audioRef.current.onloadeddata = () => {
+        console.log('✅ Audio loaded, duration:', audioRef.current?.duration, 'seconds')
+      }
+      
+      audioRef.current.onplay = () => {
+        console.log('✅ Audio is now playing')
       }
 
-      await audioRef.current.play()
+      console.log('▶️ Attempting to play audio...')
+      
+      try {
+        await audioRef.current.play()
+        console.log('✅ Audio.play() successful')
+      } catch (playError: any) {
+        console.error('❌ Audio.play() failed:', playError.message)
+        setError('Browser blocked audio playback - ' + playError.message)
+        throw playError
+      }
     } catch (error: any) {
       setIsSpeaking(false)
       setAudioLevel(0)

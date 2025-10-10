@@ -12,7 +12,10 @@ export async function POST(request: NextRequest) {
   try {
     const { text, voice = 'nova' } = await request.json()
 
+    console.log('🎙️ TTS Request:', { textLength: text?.length, voice })
+
     if (!text || typeof text !== 'string') {
+      console.error('❌ No text provided')
       return NextResponse.json(
         { error: 'Text is required' },
         { status: 400 }
@@ -20,11 +23,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!process.env.OPENAI_API_KEY) {
+      console.error('❌ OPENAI_API_KEY not configured')
       return NextResponse.json(
         { error: 'OpenAI API key not configured' },
         { status: 500 }
       )
     }
+
+    console.log('✅ Calling OpenAI TTS HD with nova voice...')
 
     // Use OpenAI TTS HD for ultra-natural voice
     // 'nova' is the warmest, most natural female voice for receptionist work
@@ -35,15 +41,19 @@ export async function POST(request: NextRequest) {
       speed: 0.95 // Slightly slower for more natural, conversational feel
     })
 
+    console.log('✅ OpenAI TTS response received')
+
     // Convert response to buffer
     const buffer = Buffer.from(await mp3Response.arrayBuffer())
+
+    console.log('✅ Audio buffer created:', buffer.length, 'bytes')
 
     // Return audio with proper headers
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
         'Content-Length': buffer.length.toString(),
-        'Cache-Control': 'public, max-age=31536000, immutable'
+        'Cache-Control': 'no-cache' // Changed from immutable for testing
       }
     })
 
