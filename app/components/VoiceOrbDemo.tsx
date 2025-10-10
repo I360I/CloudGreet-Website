@@ -417,6 +417,14 @@ export default function VoiceOrbDemo({
         setIsSpeaking(false)
         setAudioLevel(0)
         URL.revokeObjectURL(audioUrl)
+        
+        // Automatically restart listening after AI finishes speaking
+        console.log('🔄 Auto-restarting listening for continuous conversation...')
+        setTimeout(() => {
+          if (hasStarted && !isProcessing) {
+            toggleListening()
+          }
+        }, 300)
       }
       
       audioRef.current.onerror = (e) => {
@@ -465,6 +473,7 @@ export default function VoiceOrbDemo({
       return
     }
 
+    const totalStartTime = Date.now()
     console.log('🗣️ User said:', userText)
     setTranscript('')
     setIsProcessing(true)
@@ -472,13 +481,8 @@ export default function VoiceOrbDemo({
     try {
       const newHistory = [...conversationHistory, { role: 'user', content: userText }]
       
-      console.log('Sending to AI:', { 
-        userText, 
-        businessName, 
-        businessType, 
-        services, 
-        hours 
-      })
+      console.log('📤 Sending to AI...')
+      const aiStartTime = Date.now()
       
       const response = await fetch('/api/ai/conversation-demo', {
         method: 'POST',
@@ -500,11 +504,19 @@ export default function VoiceOrbDemo({
       const data = await response.json()
       const aiResponse = data.response
       
+      const aiTime = Date.now() - aiStartTime
+      console.log(`⚡ AI conversation took: ${aiTime}ms`)
       console.log('🤖 AI response:', aiResponse)
 
       setConversationHistory([...newHistory, { role: 'assistant', content: aiResponse }])
       setIsProcessing(false)
+      
+      const ttsStartTime = Date.now()
       await playAudioFromText(aiResponse)
+      const ttsTime = Date.now() - ttsStartTime
+      
+      const totalTime = Date.now() - totalStartTime
+      console.log(`⏱️ TOTAL RESPONSE TIME: ${totalTime}ms (AI: ${aiTime}ms, TTS: ${ttsTime}ms)`)
     } catch (error: any) {
       console.error('❌ Conversation error:', error)
       setIsProcessing(false)

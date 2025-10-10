@@ -106,18 +106,23 @@ BAD - TOO FORMAL:
 
 CRITICAL: Sound like you're texting a friend on the phone. Super casual. Super brief. Real human.`
 
+    const startTime = Date.now()
+    
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'gpt-4o-mini', // Fastest model - 10x faster than gpt-4-turbo
       messages: [
         { role: 'system', content: systemPrompt },
         ...messages
       ],
-      max_tokens: 50, // VERY short - force brevity like real human
+      max_tokens: 35, // Ultra short for speed
       temperature: 1.0, // Maximum natural variation
       presence_penalty: 0.6, // Strong topic variation
       frequency_penalty: 0.5, // Avoid repetitive patterns
       stop: ['\n', 'Customer:', 'User:', 'AI:'] // Stop at line breaks
     })
+    
+    const responseTime = Date.now() - startTime
+    console.log(`⚡ GPT-4o-mini response time: ${responseTime}ms (should be <1000ms)`)
 
     const response = completion.choices[0]?.message?.content?.trim() || 
       "Hey! I'm here to help. What do you need?"
