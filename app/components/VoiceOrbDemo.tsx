@@ -18,6 +18,8 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
   const [conversationHistory, setConversationHistory] = useState<any[]>([])
   const [error, setError] = useState<string | null>(null)
   const [audioLevel, setAudioLevel] = useState(0)
+  const [voiceStatus, setVoiceStatus] = useState<'openai' | 'browser' | 'text' | 'checking'>('checking')
+  const [lastAIResponse, setLastAIResponse] = useState('')
   
   const recognitionRef = useRef<any>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -50,6 +52,21 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       }
 
       audioContextRef.current = new ((window as any).AudioContext || (window as any).webkitAudioContext)()
+      
+      // Test OpenAI TTS availability
+      testVoiceAPI()
+    }
+
+    // Load available browser voices
+    if ('speechSynthesis' in window) {
+      const loadVoices = () => {
+        const voices = window.speechSynthesis.getVoices()
+        if (voices.length > 0) {
+          console.log('Available voices:', voices.map(v => v.name))
+        }
+      }
+      loadVoices()
+      window.speechSynthesis.onvoiceschanged = loadVoices
     }
 
     return () => {
@@ -157,6 +174,60 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
     }
   }, [isSpeaking, audioLevel])
 
+  // Test if OpenAI TTS is available
+  const testVoiceAPI = async () => {
+    try {
+      const response = await fetch('/api/ai/text-to-speech', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'test', voice: 'nova' })
+      })
+      
+      if (response.ok) {
+        setVoiceStatus('openai')
+        console.log('✅ OpenAI TTS available')
+      } else {
+        setVoiceStatus('browser')
+        console.log('⚠️ OpenAI TTS unavailable, will use browser voice')
+      }
+    } catch (error) {
+      setVoiceStatus('browser')
+      console.log('⚠️ OpenAI TTS test failed, will use browser voice')
+    }
+  }
+
+  // Find best browser voice
+  const getBestBrowserVoice = () => {
+    if (!('speechSynthesis' in window)) return null
+    const voices = window.speechSynthesis.getVoices()
+    
+    // Priority order for best voices
+    const preferredVoices = [
+      'Microsoft Zira - English (United States)',
+      'Microsoft Eva - English (United States)', 
+      'Google US English Female',
+      'Google UK English Female',
+      'Samantha',
+      'Alex',
+      'Karen',
+      'Moira',
+      'Tessa'
+    ]
+    
+    for (const preferred of preferredVoices) {
+      const voice = voices.find(v => v.name === preferred)
+      if (voice) return voice
+    }
+    
+    // Fallback to any female voice
+    return voices.find(v => 
+      v.name.toLowerCase().includes('female') || 
+      v.name.toLowerCase().includes('woman') ||
+      v.name.includes('Zira') ||
+      v.name.includes('Eva')
+    ) || voices[0]
+  }
+
   const playAudioFromText = async (text: string) => {
     try {
       setIsSpeaking(true)
@@ -169,41 +240,44 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       })
 
       if (!response.ok) {
-        // Fallback to browser speech synthesis
+        console.warn('OpenAI TTS failed, showing text response instead')
+        setVoiceStatus('text')
+        setLastAIResponse(text)
+        
+        // Show response for 4 seconds then clear
+        setTimeout(() => {
+          setIsSpeaking(false)
+          setAudioLevel(0)
+          setLastAIResponse('')
+        }, 4000)
+        
+        return
+      }
+
+      const audioBlob = await response.blob()
+      if (audioBlob.type === 'application/json') {
+        setVoiceStatus('browser')
+        
+        // Enhanced browser fallback
         if ('speechSynthesis' in window) {
           const utterance = new SpeechSynthesisUtterance(text)
-          utterance.rate = 0.95
-          utterance.pitch = 1.0
-          const voices = window.speechSynthesis.getVoices()
-          const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha'))
-          if (femaleVoice) utterance.voice = femaleVoice
+          utterance.rate = 0.85
+          utterance.pitch = 1.1
+          const bestVoice = getBestBrowserVoice()
+          if (bestVoice) utterance.voice = bestVoice
           
           utterance.onend = () => {
             setIsSpeaking(false)
             setAudioLevel(0)
           }
-          utterance.onerror = () => {
-            setIsSpeaking(false)
-            setAudioLevel(0)
-          }
-          
           window.speechSynthesis.speak(utterance)
           return
         }
-        throw new Error('Voice unavailable')
+        throw new Error('No voice available')
       }
 
-      const audioBlob = await response.blob()
-      if (audioBlob.type === 'application/json') {
-        // Try browser fallback
-        if ('speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance(text)
-          utterance.onend = () => setIsSpeaking(false)
-          window.speechSynthesis.speak(utterance)
-          return
-        }
-        throw new Error('Voice unavailable')
-      }
+      // OpenAI TTS Success
+      setVoiceStatus('openai')
 
       const audioUrl = URL.createObjectURL(audioBlob)
       audioRef.current = new Audio(audioUrl)
@@ -400,12 +474,17 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
               <h3 className="text-2xl md:text-3xl font-bold mb-3 text-blue-400">Listening</h3>
               <p className="text-gray-300 text-base md:text-lg">{transcript || 'Say something...'}</p>
             </motion.div>
-          ) : isSpeaking ? (
-            <motion.div key="speaking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h3 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Speaking
-              </h3>
-            </motion.div>
+            ) : isSpeaking ? (
+              <motion.div key="speaking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <h3 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  {voiceStatus === 'text' ? 'AI Response' : 'Speaking'}
+                </h3>
+                {lastAIResponse && voiceStatus === 'text' && (
+                  <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl max-w-md mx-auto">
+                    <p className="text-white text-sm">{lastAIResponse}</p>
+                  </div>
+                )}
+              </motion.div>
           ) : (
             <motion.div key="ready" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <h3 className="text-2xl md:text-3xl font-bold mb-3 text-white">Your turn</h3>
@@ -420,6 +499,30 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
           <p className="text-red-400 text-sm">{error}</p>
         </motion.div>
       )}
+
+      {/* Voice Status Indicator */}
+      <div className="text-center mt-4">
+        {voiceStatus === 'openai' && (
+          <p className="text-xs text-green-400">
+            🎙️ Using OpenAI TTS HD 'nova' voice (premium quality)
+          </p>
+        )}
+        {voiceStatus === 'browser' && (
+          <p className="text-xs text-yellow-400">
+            ⚠️ Using browser voice (OpenAI API unavailable) | Chrome/Edge/Safari recommended
+          </p>
+        )}
+        {voiceStatus === 'text' && (
+          <p className="text-xs text-blue-400">
+            💬 Text mode (OpenAI voice unavailable) | Response shown as text
+          </p>
+        )}
+        {voiceStatus === 'checking' && (
+          <p className="text-xs text-gray-500">
+            🔍 Voice system loading...
+          </p>
+        )}
+      </div>
     </div>
   )
 }
