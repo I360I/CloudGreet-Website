@@ -44,6 +44,9 @@ export default function VoiceOrbDemo({
       // Check microphone permission
       checkMicrophonePermission()
       
+      // Initialize speech recognition immediately
+      initializeSpeechRecognition()
+      
       audioContextRef.current = new ((window as any).AudioContext || (window as any).webkitAudioContext)()
       
       // Test OpenAI TTS availability on startup
@@ -61,6 +64,76 @@ export default function VoiceOrbDemo({
     }
   }, [])
 
+  const initializeSpeechRecognition = () => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+      recognitionRef.current = new SpeechRecognition()
+      recognitionRef.current.continuous = true // Keep listening until manually stopped
+      recognitionRef.current.interimResults = true
+      recognitionRef.current.lang = 'en-US'
+      recognitionRef.current.maxAlternatives = 1
+
+      recognitionRef.current.onstart = () => {
+        console.log('✅ Speech recognition started')
+        setIsListening(true)
+        setError(null)
+      }
+
+      recognitionRef.current.onresult = (event: any) => {
+        let finalTranscript = ''
+        let interimTranscript = ''
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript
+          } else {
+            interimTranscript += transcript
+          }
+        }
+        
+        // Show interim results as user speaks
+        if (interimTranscript) {
+          console.log('Interim:', interimTranscript)
+          setTranscript(interimTranscript)
+        }
+        
+        // Process final results
+        if (finalTranscript) {
+          console.log('✅ Final transcript:', finalTranscript)
+          setTranscript(finalTranscript)
+          recognitionRef.current.stop() // Stop listening while AI responds
+          processUserSpeech(finalTranscript)
+        }
+      }
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('❌ Speech recognition error:', event.error)
+        setIsListening(false)
+        if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+          setError('Microphone blocked. Click the 🔒 in your address bar and allow microphone access.')
+          setMicPermission('denied')
+        } else if (event.error === 'no-speech') {
+          console.log('No speech detected, continuing to listen...')
+          // Don't show error, just keep listening
+        } else if (event.error === 'aborted') {
+          console.log('Recognition aborted by user')
+        } else {
+          setError('Speech recognition error: ' + event.error)
+        }
+      }
+
+      recognitionRef.current.onend = () => {
+        console.log('Speech recognition ended')
+        setIsListening(false)
+      }
+      
+      console.log('✅ Speech recognition initialized')
+    } else {
+      console.error('❌ Speech recognition not supported in this browser')
+    }
+  }
+
   const checkMicrophonePermission = async () => {
     try {
       const result = await navigator.permissions.query({ name: 'microphone' as PermissionName })
@@ -76,36 +149,17 @@ export default function VoiceOrbDemo({
 
   const requestMicrophoneAccess = async () => {
     try {
+      console.log('Requesting microphone access...')
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      console.log('✅ Microphone access granted')
       stream.getTracks().forEach(track => track.stop())
       setMicPermission('granted')
-      
-      // Initialize speech recognition after permission granted
-      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
-        recognitionRef.current = new SpeechRecognition()
-        recognitionRef.current.continuous = false
-        recognitionRef.current.interimResults = true
-        recognitionRef.current.lang = 'en-US'
-
-        recognitionRef.current.onresult = (event: any) => {
-          const current = event.resultIndex
-          const text = event.results[current][0].transcript
-          setTranscript(text)
-
-          if (event.results[current].isFinal) {
-            processUserSpeech(text)
-          }
-        }
-
-        recognitionRef.current.onerror = () => setIsListening(false)
-        recognitionRef.current.onend = () => setIsListening(false)
-      }
-      
+      setError(null)
       return true
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Microphone access denied:', error)
       setMicPermission('denied')
-      setError('Microphone access denied. Please allow microphone in your browser settings.')
+      setError('Microphone access denied. Please click the 🔒 icon in your address bar and allow microphone access.')
       return false
     }
   }
@@ -319,13 +373,26 @@ export default function VoiceOrbDemo({
   }
 
   const processUserSpeech = async (userText: string) => {
-    if (!userText.trim()) return
+    if (!userText.trim()) {
+      console.log('Empty transcript, skipping...')
+      return
+    }
 
+    console.log('🗣️ User said:', userText)
     setTranscript('')
     setIsProcessing(true)
 
     try {
       const newHistory = [...conversationHistory, { role: 'user', content: userText }]
+      
+      console.log('Sending to AI:', { 
+        userText, 
+        businessName, 
+        businessType, 
+        services, 
+        hours 
+      })
+      
       const response = await fetch('/api/ai/conversation-demo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -338,47 +405,58 @@ export default function VoiceOrbDemo({
         })
       })
 
-      if (!response.ok) throw new Error('Conversation failed')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'AI conversation failed')
+      }
       
       const data = await response.json()
       const aiResponse = data.response
+      
+      console.log('🤖 AI response:', aiResponse)
 
       setConversationHistory([...newHistory, { role: 'assistant', content: aiResponse }])
       setIsProcessing(false)
       await playAudioFromText(aiResponse)
     } catch (error: any) {
+      console.error('❌ Conversation error:', error)
       setIsProcessing(false)
-      setError(error.message || 'AI conversation failed')
-      console.error('Conversation error:', error)
+      setError('AI error: ' + (error.message || 'Failed to get response'))
     }
   }
 
   const toggleListening = async () => {
-    // Check microphone permission first
+    console.log('toggleListening called, current state:', { isListening, micPermission, hasRecognition: !!recognitionRef.current })
+    
+    // Check if browser supports speech recognition
+    if (!recognitionRef.current) {
+      setError('Voice chat requires Chrome, Edge, or Safari browser')
+      console.error('❌ Speech recognition not available')
+      return
+    }
+    
+    // Check microphone permission
     if (micPermission === 'denied') {
       setError('Microphone access denied. Please enable it in your browser settings (click the 🔒 lock icon in the address bar)')
       return
     }
     
     if (micPermission !== 'granted') {
+      console.log('Requesting microphone access...')
       const granted = await requestMicrophoneAccess()
       if (!granted) return
     }
     
-    if (!recognitionRef.current) {
-      alert('Voice requires Chrome, Edge, or Safari browser')
-      return
-    }
-    
     if (isListening) {
+      console.log('Stopping speech recognition...')
       recognitionRef.current.stop()
     } else {
       try {
+        console.log('Starting speech recognition...')
         recognitionRef.current.start()
-        setIsListening(true)
-      } catch (e) {
-        console.error('Speech recognition start failed:', e)
-        setError('Could not start listening. Please try again.')
+      } catch (e: any) {
+        console.error('❌ Speech recognition start failed:', e.message)
+        setError('Could not start listening: ' + e.message + '. Try refreshing the page.')
       }
     }
   }
@@ -581,8 +659,21 @@ export default function VoiceOrbDemo({
             </motion.div>
           ) : isListening ? (
             <motion.div key="listening" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <h3 className="text-2xl md:text-3xl font-bold mb-3 text-blue-400">Listening</h3>
-              <p className="text-gray-300 text-base md:text-lg">{transcript || 'Say something...'}</p>
+              <motion.h3 
+                className="text-2xl md:text-3xl font-bold mb-3 text-blue-400"
+                animate={{ opacity: [1, 0.6, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                🎤 Listening...
+              </motion.h3>
+              {transcript ? (
+                <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <p className="text-white text-base font-medium">"{transcript}"</p>
+                </div>
+              ) : (
+                <p className="text-gray-400 text-base">Start speaking now...</p>
+              )}
+              <p className="text-xs text-gray-500 mt-2">Click orb again to stop listening</p>
             </motion.div>
             ) : isSpeaking ? (
               <motion.div key="speaking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
