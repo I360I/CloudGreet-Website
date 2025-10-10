@@ -10,6 +10,7 @@ import {
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
 import VoiceOrbDemo from '../components/VoiceOrbDemo'
+import WaveBackground from '../components/WaveBackground.jsx'
 
 export default function LandingPage() {
   return (
@@ -74,10 +75,20 @@ export default function LandingPage() {
       <Hero />
 
       {/* Interactive Voice Demo */}
-      <section className="py-24 relative overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.1)_0%,transparent_50%)]" />
-        <div className="absolute top-1/4 left-1/2 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      <section className="py-24 relative overflow-hidden bg-gradient-to-b from-slate-900 via-black to-slate-900">
+        {/* SAME WAVE BACKGROUND AS HERO */}
+        <WaveBackground intensity={1.0} />
+        
+        {/* Vignette overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none" />
+        
+        {/* Premium Background Effects */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.15)_0%,transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(147,51,234,0.15)_0%,transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(16,185,129,0.1)_0%,transparent_50%)]"></div>
+        
+        {/* Additional glow overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-purple-500/6 to-blue-500/3 pointer-events-none z-1"></div>
         
         <div className="max-w-5xl mx-auto px-4 relative z-10">
           <motion.div
