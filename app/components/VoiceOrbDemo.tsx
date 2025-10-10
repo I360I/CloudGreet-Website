@@ -128,16 +128,21 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
         gradient.addColorStop(1, `${color}00`)
         
         ctx.strokeStyle = gradient
-        ctx.lineWidth = 2 + (isSpeaking ? 0.5 : 0)
+        ctx.lineWidth = 2.5 + (isSpeaking ? 1 : 0)
         ctx.lineCap = 'round'
         ctx.shadowColor = color
-        ctx.shadowBlur = 12
+        ctx.shadowBlur = 20
         ctx.stroke()
         
-        // Add glow layer like hero
-        ctx.strokeStyle = `${color}${Math.floor(opacity * 0.2 * 255).toString(16).padStart(2, '0')}`
-        ctx.lineWidth = 3.6
-        ctx.shadowBlur = 12
+        // Multiple glow layers for intense effect
+        ctx.strokeStyle = `${color}${Math.floor(opacity * 0.3 * 255).toString(16).padStart(2, '0')}`
+        ctx.lineWidth = 5
+        ctx.shadowBlur = 25
+        ctx.stroke()
+        
+        ctx.strokeStyle = `${color}${Math.floor(opacity * 0.15 * 255).toString(16).padStart(2, '0')}`
+        ctx.lineWidth = 8
+        ctx.shadowBlur = 35
         ctx.stroke()
       }
 
@@ -164,12 +169,41 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Voice API failed')
+        // Fallback to browser speech synthesis
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(text)
+          utterance.rate = 0.95
+          utterance.pitch = 1.0
+          const voices = window.speechSynthesis.getVoices()
+          const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Samantha'))
+          if (femaleVoice) utterance.voice = femaleVoice
+          
+          utterance.onend = () => {
+            setIsSpeaking(false)
+            setAudioLevel(0)
+          }
+          utterance.onerror = () => {
+            setIsSpeaking(false)
+            setAudioLevel(0)
+          }
+          
+          window.speechSynthesis.speak(utterance)
+          return
+        }
+        throw new Error('Voice unavailable')
       }
 
       const audioBlob = await response.blob()
-      if (audioBlob.type === 'application/json') throw new Error('API returned error')
+      if (audioBlob.type === 'application/json') {
+        // Try browser fallback
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(text)
+          utterance.onend = () => setIsSpeaking(false)
+          window.speechSynthesis.speak(utterance)
+          return
+        }
+        throw new Error('Voice unavailable')
+      }
 
       const audioUrl = URL.createObjectURL(audioBlob)
       audioRef.current = new Audio(audioUrl)
@@ -274,9 +308,14 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
           className="absolute"
         />
 
-        {/* Dark Orb Center */}
+        {/* Dark Orb Center - Organic imperfect circle */}
         <motion.div
-          className="relative z-10 w-48 h-48 rounded-full bg-gradient-to-br from-black via-slate-950 to-black cursor-pointer overflow-hidden"
+          className="relative z-10 w-48 h-48 cursor-pointer overflow-hidden"
+          style={{
+            borderRadius: '47% 53% 52% 48% / 51% 49% 51% 49%', // Organic imperfect shape
+            background: 'radial-gradient(ellipse at 35% 35%, rgba(30,25,45,0.8), rgba(0,0,0,1) 60%, rgba(0,0,0,1))',
+            backdropFilter: 'blur(20px)'
+          }}
           onClick={hasStarted ? (isProcessing || isSpeaking ? undefined : toggleListening) : startDemo}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -285,12 +324,28 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
               '0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.9)',
               '0 0 60px rgba(139, 92, 246, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.9)',
               '0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.9)',
+            ],
+            borderRadius: [ // Subtle morphing
+              '47% 53% 52% 48% / 51% 49% 51% 49%',
+              '50% 50% 48% 52% / 49% 51% 49% 51%',
+              '47% 53% 52% 48% / 51% 49% 51% 49%',
             ]
           }}
-          transition={{ boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" } }}
+          transition={{ 
+            boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+            borderRadius: { duration: 8, repeat: Infinity, ease: "easeInOut" }
+          }}
         >
-          {/* Inner void */}
-          <div className="absolute inset-8 rounded-full bg-black" />
+          {/* Noise texture overlay for organic feel */}
+          <div className="absolute inset-0 opacity-30 mix-blend-overlay pointer-events-none"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' /%3E%3C/svg%3E")`,
+              backgroundSize: 'cover'
+            }}
+          />
+          
+          {/* Subtle swirl effect inside */}
+          <div className="absolute inset-12 rounded-full bg-gradient-to-br from-purple-950/20 via-black to-black" />
           
           {/* Subtle glow when active */}
           {(isListening || isSpeaking || isProcessing) && (
