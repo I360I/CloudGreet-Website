@@ -13,9 +13,9 @@ import ConnectionStatusIndicator from '../components/ConnectionStatus'
 import DashboardMetrics from '../components/DashboardMetrics'
 import LiveActivityFeed from '../components/LiveActivityFeed'
 import AIConversationInsights from '../components/AIConversationInsights'
-import QuickStartWidget from '../components/QuickStartWidget'
-import SupportWidget from '../components/SupportWidget'
-import CallTestWidget from '../components/CallTestWidget'
+// import QuickStartWidget from '../components/QuickStartWidget'
+// import SupportWidget from '../components/SupportWidget'
+// import CallTestWidget from '../components/CallTestWidget'
 import OnboardingWizard from '../components/OnboardingWizard'
 // import ROICalculator from '../components/ROICalculator' // Temporarily disabled for build
 import RealTimeUpdates from '../components/RealTimeUpdates'
@@ -468,23 +468,8 @@ export default function Dashboard() {
             </motion.div>
           )} */}
 
-          {/* Live Activity & Quick Start Grid */}
-          <div className="grid lg:grid-cols-2 gap-6 mb-8">
-            {/* Quick Start Widget */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <QuickStartWidget 
-                businessName={dashboardData?.businessName || 'Your Business'}
-                onDataGenerated={() => {
-                  loadRealActivity()
-                  loadRealMetrics()
-                }}
-              />
-            </motion.div>
-
+          {/* Live Activity Grid */}
+          <div className="grid lg:grid-cols-1 gap-6 mb-8">
             {/* Live Activity Feed */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -611,8 +596,8 @@ export default function Dashboard() {
           </motion.div>
 
           {/* AI Conversation Insights */}
-          {/* Support & Call Test Widgets */}
-          <div className="grid lg:grid-cols-2 gap-6 mb-8">
+          {/* Support & Call Test Widgets - Temporarily disabled */}
+          {/* <div className="grid lg:grid-cols-2 gap-6 mb-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -635,7 +620,7 @@ export default function Dashboard() {
                 }}
               />
             </motion.div>
-          </div>
+          </div> */}
 
           {/* Recent Activity */}
           <div className="grid md:grid-cols-2 gap-6">
