@@ -18,8 +18,7 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
   const [conversationHistory, setConversationHistory] = useState<any[]>([])
   const [error, setError] = useState<string | null>(null)
   const [audioLevel, setAudioLevel] = useState(0)
-  const [voiceStatus, setVoiceStatus] = useState<'openai' | 'browser' | 'text' | 'checking'>('checking')
-  const [lastAIResponse, setLastAIResponse] = useState('')
+  const [voiceStatus, setVoiceStatus] = useState<'openai' | 'error' | 'checking'>('checking')
   
   const recognitionRef = useRef<any>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -53,20 +52,8 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
 
       audioContextRef.current = new ((window as any).AudioContext || (window as any).webkitAudioContext)()
       
-      // Test OpenAI TTS availability
+      // Test OpenAI TTS availability on startup
       testVoiceAPI()
-    }
-
-    // Load available browser voices
-    if ('speechSynthesis' in window) {
-      const loadVoices = () => {
-        const voices = window.speechSynthesis.getVoices()
-        if (voices.length > 0) {
-          console.log('Available voices:', voices.map(v => v.name))
-        }
-      }
-      loadVoices()
-      window.speechSynthesis.onvoiceschanged = loadVoices
     }
 
     return () => {
@@ -185,47 +172,18 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       
       if (response.ok) {
         setVoiceStatus('openai')
-        console.log('✅ OpenAI TTS available')
+        console.log('✅ OpenAI TTS HD available - using premium voice')
       } else {
-        setVoiceStatus('browser')
-        console.log('⚠️ OpenAI TTS unavailable, will use browser voice')
+        const errorData = await response.json().catch(() => ({}))
+        setVoiceStatus('error')
+        setError(errorData.error || 'OpenAI API not configured')
+        console.error('❌ OpenAI TTS unavailable:', errorData.error)
       }
     } catch (error) {
-      setVoiceStatus('browser')
-      console.log('⚠️ OpenAI TTS test failed, will use browser voice')
+      setVoiceStatus('error')
+      setError('Cannot connect to voice API - check OPENAI_API_KEY in Vercel')
+      console.error('❌ OpenAI TTS test failed:', error)
     }
-  }
-
-  // Find best browser voice
-  const getBestBrowserVoice = () => {
-    if (!('speechSynthesis' in window)) return null
-    const voices = window.speechSynthesis.getVoices()
-    
-    // Priority order for best voices
-    const preferredVoices = [
-      'Microsoft Zira - English (United States)',
-      'Microsoft Eva - English (United States)', 
-      'Google US English Female',
-      'Google UK English Female',
-      'Samantha',
-      'Alex',
-      'Karen',
-      'Moira',
-      'Tessa'
-    ]
-    
-    for (const preferred of preferredVoices) {
-      const voice = voices.find(v => v.name === preferred)
-      if (voice) return voice
-    }
-    
-    // Fallback to any female voice
-    return voices.find(v => 
-      v.name.toLowerCase().includes('female') || 
-      v.name.toLowerCase().includes('woman') ||
-      v.name.includes('Zira') ||
-      v.name.includes('Eva')
-    ) || voices[0]
   }
 
   const playAudioFromText = async (text: string) => {
@@ -240,40 +198,21 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       })
 
       if (!response.ok) {
-        console.warn('OpenAI TTS failed, showing text response instead')
-        setVoiceStatus('text')
-        setLastAIResponse(text)
-        
-        // Show response for 4 seconds then clear
-        setTimeout(() => {
-          setIsSpeaking(false)
-          setAudioLevel(0)
-          setLastAIResponse('')
-        }, 4000)
-        
-        return
+        const errorData = await response.json().catch(() => ({}))
+        setVoiceStatus('error')
+        throw new Error(errorData.error || 'OpenAI TTS API failed - OPENAI_API_KEY must be configured in Vercel')
       }
 
       const audioBlob = await response.blob()
+      
       if (audioBlob.type === 'application/json') {
-        setVoiceStatus('browser')
-        
-        // Enhanced browser fallback
-        if ('speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance(text)
-          utterance.rate = 0.85
-          utterance.pitch = 1.1
-          const bestVoice = getBestBrowserVoice()
-          if (bestVoice) utterance.voice = bestVoice
-          
-          utterance.onend = () => {
-            setIsSpeaking(false)
-            setAudioLevel(0)
-          }
-          window.speechSynthesis.speak(utterance)
-          return
-        }
-        throw new Error('No voice available')
+        setVoiceStatus('error')
+        throw new Error('OpenAI TTS API configuration error')
+      }
+
+      if (audioBlob.size === 0) {
+        setVoiceStatus('error')
+        throw new Error('OpenAI TTS returned no audio data')
       }
 
       // OpenAI TTS Success
@@ -319,7 +258,15 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
     } catch (error: any) {
       setIsSpeaking(false)
       setAudioLevel(0)
-      setError(error.message || 'Voice unavailable')
+      const errorMsg = error.message || 'Voice system error'
+      console.error('Voice Error:', errorMsg)
+      
+      // Clear error message
+      if (errorMsg.includes('OPENAI_API_KEY') || errorMsg.includes('failed')) {
+        setError('⚠️ OPENAI_API_KEY must be set in Vercel Environment Variables for voice to work')
+      } else {
+        setError(errorMsg)
+      }
     }
   }
 
@@ -345,9 +292,10 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       setConversationHistory([...newHistory, { role: 'assistant', content: aiResponse }])
       setIsProcessing(false)
       await playAudioFromText(aiResponse)
-    } catch (error) {
+    } catch (error: any) {
       setIsProcessing(false)
-      await playAudioFromText("Sorry, could you say that again?")
+      setError(error.message || 'AI conversation failed')
+      console.error('Conversation error:', error)
     }
   }
 
@@ -477,13 +425,9 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
             ) : isSpeaking ? (
               <motion.div key="speaking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <h3 className="text-2xl md:text-3xl font-bold mb-3 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  {voiceStatus === 'text' ? 'AI Response' : 'Speaking'}
+                  Speaking
                 </h3>
-                {lastAIResponse && voiceStatus === 'text' && (
-                  <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl max-w-md mx-auto">
-                    <p className="text-white text-sm">{lastAIResponse}</p>
-                  </div>
-                )}
+                <p className="text-gray-400 text-sm">Listen to the AI receptionist</p>
               </motion.div>
           ) : (
             <motion.div key="ready" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -495,34 +439,38 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       </motion.div>
 
       {error && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center max-w-md mx-auto">
-          <p className="text-red-400 text-sm">{error}</p>
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="mt-6 p-6 bg-red-500/10 border-2 border-red-500/40 rounded-xl text-center max-w-xl mx-auto"
+        >
+          <p className="text-red-400 text-base font-semibold mb-2">Voice Demo Unavailable</p>
+          <p className="text-red-300 text-sm mb-3">{error}</p>
+          <div className="text-left bg-black/30 p-3 rounded text-xs text-gray-300 font-mono">
+            <p className="text-white mb-1">Required Setup:</p>
+            <p>1. Go to Vercel Dashboard → Project Settings</p>
+            <p>2. Navigate to Environment Variables</p>
+            <p>3. Add: OPENAI_API_KEY = sk-proj-...</p>
+            <p>4. Redeploy the application</p>
+          </div>
         </motion.div>
       )}
 
       {/* Voice Status Indicator */}
-      <div className="text-center mt-4">
-        {voiceStatus === 'openai' && (
-          <p className="text-xs text-green-400">
-            🎙️ Using OpenAI TTS HD 'nova' voice (premium quality)
-          </p>
-        )}
-        {voiceStatus === 'browser' && (
-          <p className="text-xs text-yellow-400">
-            ⚠️ Using browser voice (OpenAI API unavailable) | Chrome/Edge/Safari recommended
-          </p>
-        )}
-        {voiceStatus === 'text' && (
-          <p className="text-xs text-blue-400">
-            💬 Text mode (OpenAI voice unavailable) | Response shown as text
-          </p>
-        )}
-        {voiceStatus === 'checking' && (
-          <p className="text-xs text-gray-500">
-            🔍 Voice system loading...
-          </p>
-        )}
-      </div>
+      {!error && (
+        <div className="text-center mt-4">
+          {voiceStatus === 'openai' && (
+            <p className="text-xs text-green-400 font-medium">
+              ✓ Premium OpenAI Voice Active
+            </p>
+          )}
+          {voiceStatus === 'checking' && (
+            <p className="text-xs text-gray-500">
+              Connecting to voice system...
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
