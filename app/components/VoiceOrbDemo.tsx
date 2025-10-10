@@ -65,7 +65,14 @@ export default function VoiceOrbDemo({
   }, [])
 
   const initializeSpeechRecognition = () => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      console.error('❌ Speech recognition not supported')
+      console.log('Browser info:', navigator.userAgent)
+      setError('Your browser does not support speech recognition. Please use Chrome, Edge, or Safari.')
+      return
+    }
+
+    try {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
       recognitionRef.current = new SpeechRecognition()
       recognitionRef.current.continuous = true // Keep listening until manually stopped
@@ -128,9 +135,10 @@ export default function VoiceOrbDemo({
         setIsListening(false)
       }
       
-      console.log('✅ Speech recognition initialized')
-    } else {
-      console.error('❌ Speech recognition not supported in this browser')
+      console.log('✅ Speech recognition initialized successfully')
+    } catch (error: any) {
+      console.error('❌ Failed to initialize speech recognition:', error)
+      setError('Could not initialize speech recognition: ' + error.message)
     }
   }
 
@@ -428,11 +436,17 @@ export default function VoiceOrbDemo({
   const toggleListening = async () => {
     console.log('toggleListening called, current state:', { isListening, micPermission, hasRecognition: !!recognitionRef.current })
     
-    // Check if browser supports speech recognition
+    // Re-initialize if recognition ref is null
     if (!recognitionRef.current) {
-      setError('Voice chat requires Chrome, Edge, or Safari browser')
-      console.error('❌ Speech recognition not available')
-      return
+      console.log('Recognition ref is null, attempting to initialize...')
+      initializeSpeechRecognition()
+      
+      // Check again after initialization
+      if (!recognitionRef.current) {
+        setError('Voice chat requires Chrome, Edge, or Safari browser. Your browser may not support speech recognition.')
+        console.error('❌ Speech recognition not available in this browser')
+        return
+      }
     }
     
     // Check microphone permission
