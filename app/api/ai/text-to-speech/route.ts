@@ -10,7 +10,7 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, voice = 'alloy' } = await request.json()
+    const { text, voice = 'nova' } = await request.json()
 
     if (!text || typeof text !== 'string') {
       return NextResponse.json(
@@ -19,12 +19,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use OpenAI TTS for ultra-natural voice
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: 'OpenAI API key not configured' },
+        { status: 500 }
+      )
+    }
+
+    // Use OpenAI TTS HD for ultra-natural voice
+    // 'nova' is the warmest, most natural female voice for receptionist work
     const mp3Response = await openai.audio.speech.create({
-      model: 'tts-1-hd', // High quality model
+      model: 'tts-1-hd', // Highest quality model
       voice: voice as 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer',
       input: text,
-      speed: 1.0
+      speed: 0.95 // Slightly slower for more natural, conversational feel
     })
 
     // Convert response to buffer

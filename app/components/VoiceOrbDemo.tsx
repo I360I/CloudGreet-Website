@@ -16,6 +16,7 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
   const [transcript, setTranscript] = useState('')
   const [hasStarted, setHasStarted] = useState(false)
   const [conversationHistory, setConversationHistory] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
   
   const recognitionRef = useRef<any>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -70,22 +71,31 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
   const playAudioFromText = async (text: string) => {
     try {
       setIsSpeaking(true)
+      setError(null)
       
-      // Call OpenAI TTS API via our backend
+      // Call OpenAI TTS HD API via our backend
+      // Using 'nova' - the warmest, most natural female voice
       const response = await fetch('/api/ai/text-to-speech', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           text,
-          voice: 'alloy' // Options: alloy, echo, fable, onyx, nova, shimmer
+          voice: 'nova' // Most natural, warm female voice for receptionist
         })
       })
 
       if (!response.ok) {
-        throw new Error('TTS failed')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Voice API failed - OpenAI key may not be configured in Vercel')
       }
 
       const audioBlob = await response.blob()
+      
+      // Verify we got audio, not an error JSON
+      if (audioBlob.type === 'application/json') {
+        throw new Error('API returned error instead of audio')
+      }
+
       const audioUrl = URL.createObjectURL(audioBlob)
       
       audioRef.current = new Audio(audioUrl)
@@ -95,13 +105,15 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
       }
       audioRef.current.onerror = () => {
         setIsSpeaking(false)
+        setError('Audio playback failed')
         URL.revokeObjectURL(audioUrl)
       }
 
       await audioRef.current.play()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Audio playback error:', error)
       setIsSpeaking(false)
+      setError(error.message || 'Voice system unavailable - using OpenAI TTS HD requires API key')
     }
   }
 
@@ -484,10 +496,27 @@ export default function VoiceOrbDemo({ businessName = 'CloudGreet', isDemo = tru
         </motion.div>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center"
+        >
+          <p className="text-red-400 text-sm font-medium mb-1">Voice API Error</p>
+          <p className="text-red-300 text-xs">{error}</p>
+          <p className="text-gray-400 text-xs mt-2">
+            ⚠️ OpenAI TTS HD requires OPENAI_API_KEY in Vercel environment variables
+          </p>
+        </motion.div>
+      )}
+
       {/* Compatibility Note */}
-      {isDemo && (
+      {isDemo && !error && (
         <div className="text-center mt-4">
-          <p className="text-xs text-gray-500">💡 Best in Chrome, Edge, or Safari</p>
+          <p className="text-xs text-gray-500">
+            🎙️ Using OpenAI TTS HD 'nova' voice | Best in Chrome, Edge, or Safari
+          </p>
         </div>
       )}
     </div>
