@@ -60,6 +60,9 @@ export default function VoiceOrbDemo({
         audioRef.current.pause()
         audioRef.current = null
       }
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach(track => track.stop())
+      }
       if (audioContextRef.current) audioContextRef.current.close()
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
     }
@@ -201,12 +204,27 @@ export default function VoiceOrbDemo({
     }
   }
 
+  const micStreamRef = useRef<MediaStream | null>(null)
+  const micAnalyserRef = useRef<AnalyserNode | null>(null)
+
   const requestMicrophoneAccess = async () => {
     try {
       console.log('Requesting microphone access...')
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       console.log('✅ Microphone access granted')
-      stream.getTracks().forEach(track => track.stop())
+      
+      // Keep the stream for visualization
+      micStreamRef.current = stream
+      
+      // Create analyser for mic input visualization
+      if (audioContextRef.current) {
+        const source = audioContextRef.current.createMediaStreamSource(stream)
+        micAnalyserRef.current = audioContextRef.current.createAnalyser()
+        micAnalyserRef.current.fftSize = 256
+        source.connect(micAnalyserRef.current)
+        console.log('✅ Microphone analyser connected for wave visualization')
+      }
+      
       setMicPermission('granted')
       setError(null)
       return true
@@ -246,7 +264,22 @@ export default function VoiceOrbDemo({
         const frequency = 0.015 + (i * 0.002)
         const amplitude = 15 + (i * 2)
         
-        const audioBoost = isSpeaking ? audioLevel * 25 : 0
+        // React to BOTH AI voice AND user microphone
+        let audioBoost = 0
+        
+        if (isSpeaking) {
+          // AI is speaking - use AI audio level
+          audioBoost = audioLevel * 25
+        } else if (isListening && micAnalyserRef.current) {
+          // User is speaking - analyze microphone input
+          try {
+            const dataArray = new Uint8Array(micAnalyserRef.current.frequencyBinCount)
+            micAnalyserRef.current.getByteFrequencyData(dataArray)
+            const micLevel = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length / 255
+            audioBoost = micLevel * 30 // Slightly more sensitive for mic input
+          } catch (e) {}
+        }
+        
         const finalAmplitude = amplitude + audioBoost
 
         ctx.beginPath()
@@ -305,7 +338,7 @@ export default function VoiceOrbDemo({
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current)
     }
-  }, [isSpeaking, audioLevel])
+  }, [isSpeaking, isListening, audioLevel])
 
   const testVoiceAPI = async () => {
     try {
@@ -528,8 +561,11 @@ export default function VoiceOrbDemo({
   }
 
   const startDemo = async () => {
+    console.log('🚀 Starting demo...')
+    
     // Request microphone access before starting
     if (micPermission !== 'granted') {
+      console.log('Requesting mic permission...')
       const granted = await requestMicrophoneAccess()
       if (!granted) {
         setError('Microphone access is required for voice conversation. Please allow microphone access.')
@@ -538,9 +574,17 @@ export default function VoiceOrbDemo({
     }
     
     setHasStarted(true)
-    const greeting = `Hey! Thanks for trying ${businessName}. I'm your AI receptionist. What can I help you with today?`
+    const greeting = `Hey! Thanks for trying ${businessName}. I'm your AI receptionist. What can I help you with?`
     setConversationHistory([{ role: 'assistant', content: greeting }])
+    
+    // Play greeting then automatically start listening
     await playAudioFromText(greeting)
+    
+    // After greeting finishes, automatically start listening
+    console.log('🎤 Greeting finished, auto-starting listening...')
+    setTimeout(() => {
+      toggleListening()
+    }, 500)
   }
 
   const voiceOptions = [
