@@ -105,17 +105,17 @@ export default function TestAgentSimplePage() {
     setError(null)
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/ai/conversation-optimized', {
+      const response = await fetch('/api/ai/conversation-demo', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          message: userText,
-          conversationHistory: conversationHistory,
-          callContext: 'test_agent'
+          messages: [...conversationHistory, userMessage],
+          businessName: businessInfo.businessName,
+          businessType: 'Your Business',
+          services: 'Your services',
+          hours: '24/7'
         })
       })
 

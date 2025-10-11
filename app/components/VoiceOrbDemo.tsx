@@ -391,13 +391,14 @@ export default function VoiceOrbDemo({
         setAudioLevel(0)
         URL.revokeObjectURL(audioUrl)
         
-        // Immediate restart
-        if (shouldContinueListeningRef.current && recognitionRef.current) {
+        // Single consolidated auto-restart
+        if (shouldContinueListeningRef.current && recognitionRef.current && !isListening) {
           setTimeout(() => {
             try {
               recognitionRef.current.start()
+              console.log('✅ Auto-restarted')
             } catch (e) {}
-          }, 200)
+          }, 150)
         }
       }
       
@@ -528,14 +529,12 @@ export default function VoiceOrbDemo({
     }
     
     setHasStarted(true)
-    shouldContinueListeningRef.current = true // Enable continuous listening
+    shouldContinueListeningRef.current = true
     
-    const greeting = `Hi! Thanks for trying ${businessName}. I'm your AI receptionist. How can I help you today?`
+    const greeting = `Hi! I'm your AI. What can I help with?`
     setConversationHistory([{ role: 'assistant', content: greeting }])
     
-    console.log('🔊 Playing greeting...')
     await playAudioFromText(greeting)
-    // Auto-listening starts via onended callback
   }
 
   const voiceOptions = [
@@ -584,13 +583,13 @@ export default function VoiceOrbDemo({
         </motion.div>
       )}
 
-      {/* Canvas for hero-style waves */}
-      <div className="relative w-full h-[500px] flex items-center justify-center">
+      {/* Canvas for hero-style waves - Responsive */}
+      <div className="relative w-full h-[400px] md:h-[500px] flex items-center justify-center">
         <canvas
           ref={canvasRef}
           width={500}
           height={500}
-          className="absolute"
+          className="absolute max-w-full max-h-full"
         />
 
         {/* Dark Orb Center */}
