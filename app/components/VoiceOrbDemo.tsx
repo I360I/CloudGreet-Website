@@ -86,53 +86,24 @@ export default function VoiceOrbDemo({
       recognitionRef.current.maxAlternatives = 1
 
       recognitionRef.current.onstart = () => {
-        console.log('✅✅✅ SPEECH RECOGNITION STARTED - SPEAK NOW!')
-        console.log('🎤 Microphone is active and listening for your voice...')
+        console.log('🎤 Listening...')
         setIsListening(true)
         setError(null)
       }
       
-      recognitionRef.current.onaudiostart = () => {
-        console.log('🎤🎤🎤 AUDIO DETECTED - Microphone is picking up sound!')
-        setIsCapturingAudio(true)
-      }
-      
-      recognitionRef.current.onsoundstart = () => {
-        console.log('🔊🔊🔊 SOUND DETECTED - Speech is being captured!')
-        setIsCapturingAudio(true)
-      }
-      
-      recognitionRef.current.onspeechstart = () => {
-        console.log('🗣️🗣️🗣️ SPEECH STARTED - Processing your words...')
-        setIsCapturingAudio(true)
-      }
-      
-      recognitionRef.current.onspeechend = () => {
-        console.log('🗣️ Speech ended, processing transcript...')
-        setIsCapturingAudio(false)
-      }
-      
-      recognitionRef.current.onsoundend = () => {
-        console.log('🔊 Sound ended')
-        setIsCapturingAudio(false)
-      }
-      
-      recognitionRef.current.onaudioend = () => {
-        console.log('🎤 Audio capture ended')
-        setIsCapturingAudio(false)
-      }
+      recognitionRef.current.onaudiostart = () => setIsCapturingAudio(true)
+      recognitionRef.current.onsoundstart = () => setIsCapturingAudio(true)
+      recognitionRef.current.onspeechstart = () => setIsCapturingAudio(true)
+      recognitionRef.current.onspeechend = () => setIsCapturingAudio(false)
+      recognitionRef.current.onsoundend = () => setIsCapturingAudio(false)
+      recognitionRef.current.onaudioend = () => setIsCapturingAudio(false)
 
       recognitionRef.current.onresult = (event: any) => {
-        console.log('🎤 Speech recognition result event:', event.results.length, 'results')
-        
         let finalTranscript = ''
         let interimTranscript = ''
         
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const transcript = event.results[i][0].transcript
-          const confidence = event.results[i][0].confidence
-          
-          console.log(`Result ${i}:`, transcript, 'isFinal:', event.results[i].isFinal, 'confidence:', confidence)
           
           if (event.results[i].isFinal) {
             finalTranscript += transcript
@@ -141,26 +112,17 @@ export default function VoiceOrbDemo({
           }
         }
         
-        // Show interim results as user speaks
         if (interimTranscript) {
-          console.log('📝 Interim:', interimTranscript)
           setTranscript(interimTranscript)
         }
         
-        // Process final results
         if (finalTranscript) {
-          console.log('✅✅✅ FINAL TRANSCRIPT:', finalTranscript)
+          console.log('✅', finalTranscript)
           setTranscript(finalTranscript)
+          recognitionRef.current?.stop()
           
-          // Stop listening before processing
-          if (recognitionRef.current) {
-            recognitionRef.current.stop()
-          }
-          
-          // Small delay to ensure recognition has stopped
-          setTimeout(() => {
-            processUserSpeech(finalTranscript)
-          }, 100)
+          // Process immediately
+          setTimeout(() => processUserSpeech(finalTranscript), 50)
         }
       }
 
@@ -186,26 +148,14 @@ export default function VoiceOrbDemo({
       }
 
       recognitionRef.current.onend = () => {
-        console.log('🛑 Speech recognition ended. Auto-restart:', shouldContinueListeningRef.current)
         setIsListening(false)
         
-        // Always try to restart if conversation is active
-        if (shouldContinueListeningRef.current && hasStarted) {
-          console.log('🔄 Auto-restarting in 200ms...')
+        if (shouldContinueListeningRef.current && hasStarted && !isProcessing && !isSpeaking) {
           setTimeout(() => {
-            if (recognitionRef.current && !isProcessing && !isSpeaking) {
-              try {
-                console.log('▶️ AUTO-RESTART attempt')
-                recognitionRef.current.start()
-              } catch (e: any) {
-                if (e.message.includes('already started')) {
-                  console.log('Already running, skipping')
-                } else {
-                  console.error('Restart failed:', e.message)
-                }
-              }
-            }
-          }, 200)
+            try {
+              if (recognitionRef.current) recognitionRef.current.start()
+            } catch (e) {}
+          }, 150)
         }
       }
       
@@ -422,69 +372,42 @@ export default function VoiceOrbDemo({
 
       const audioUrl = URL.createObjectURL(audioBlob)
       
-      console.log('✅ Audio blob received:', audioBlob.size, 'bytes', 'type:', audioBlob.type)
-      
       if (audioContextRef.current?.state === 'suspended') {
-        console.log('Resuming audio context...')
         await audioContextRef.current.resume()
+      }
+      
+      // Cleanup previous audio
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
       }
       
       audioRef.current = new Audio(audioUrl)
       audioRef.current.volume = 1.0
-      audioRef.current.preload = 'auto'
       
-      audioRef.current.oncanplaythrough = () => {
-        console.log('✅ Audio ready to play')
-      }
-      
+      // Optimized event handlers
       audioRef.current.onended = () => {
-        console.log('✅ Audio playback ended')
         setIsSpeaking(false)
         setAudioLevel(0)
         URL.revokeObjectURL(audioUrl)
         
-        // Auto-restart listening - simpler approach
-        console.log('🔄 Audio ended, will auto-restart listening in 300ms')
-        if (shouldContinueListeningRef.current) {
+        // Immediate restart
+        if (shouldContinueListeningRef.current && recognitionRef.current) {
           setTimeout(() => {
-            if (recognitionRef.current && !isProcessing) {
-              try {
-                recognitionRef.current.start()
-                console.log('✅ Listening restarted')
-              } catch (e) {
-                console.log('Restart pending or already active')
-              }
-            }
-          }, 300)
+            try {
+              recognitionRef.current.start()
+            } catch (e) {}
+          }, 200)
         }
       }
       
-      audioRef.current.onerror = (e) => {
-        console.error('❌ Audio playback error:', e)
+      audioRef.current.onerror = () => {
         setIsSpeaking(false)
         setAudioLevel(0)
-        setError('Audio failed to play - check console')
         URL.revokeObjectURL(audioUrl)
       }
-      
-      audioRef.current.onloadeddata = () => {
-        console.log('✅ Audio loaded, duration:', audioRef.current?.duration, 'seconds')
-      }
-      
-      audioRef.current.onplay = () => {
-        console.log('✅ Audio is now playing')
-      }
 
-      console.log('▶️ Attempting to play audio...')
-      
-      try {
-        await audioRef.current.play()
-        console.log('✅ Audio.play() successful')
-      } catch (playError: any) {
-        console.error('❌ Audio.play() failed:', playError.message)
-        setError('Browser blocked audio - click the page first to enable audio')
-        throw playError
-      }
+      await audioRef.current.play()
     } catch (error: any) {
       setIsSpeaking(false)
       setAudioLevel(0)
@@ -500,108 +423,91 @@ export default function VoiceOrbDemo({
   }
 
   const processUserSpeech = async (userText: string) => {
-    if (!userText.trim()) {
-      console.log('Empty transcript, skipping...')
-      return
-    }
+    if (!userText.trim()) return
 
-    const totalStartTime = Date.now()
-    console.log('🗣️ User said:', userText)
+    const total = Date.now()
+    console.log('🗣️', userText)
     setTranscript('')
     setIsProcessing(true)
 
     try {
       const newHistory = [...conversationHistory, { role: 'user', content: userText }]
       
-      console.log('📤 Sending to AI...')
-      const aiStartTime = Date.now()
-      
-      const response = await fetch('/api/ai/conversation-demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          messages: newHistory, 
-          businessName,
-          businessType,
-          services,
-          hours
+      // Fetch AI response
+      const aiStart = Date.now()
+      const [aiRes] = await Promise.all([
+        fetch('/api/ai/conversation-demo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            messages: newHistory, 
+            businessName,
+            businessType,
+            services,
+            hours
+          })
         })
-      })
+      ])
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'AI conversation failed')
-      }
+      if (!aiRes.ok) throw new Error('AI failed')
       
-      const data = await response.json()
+      const data = await aiRes.json()
       const aiResponse = data.response
       
-      const aiTime = Date.now() - aiStartTime
-      console.log(`⚡ AI conversation took: ${aiTime}ms`)
-      console.log('🤖 AI response:', aiResponse)
+      console.log(`⚡ ${Date.now() - aiStart}ms | Response: ${aiResponse}`)
       
-      // Update conversation history (maintains memory)
-      const updatedHistory = [...newHistory, { role: 'assistant', content: aiResponse }]
+      // Update history (keep last 10 messages for memory)
+      const updatedHistory = [...newHistory, { role: 'assistant', content: aiResponse }].slice(-10)
       setConversationHistory(updatedHistory)
-      console.log('💾 Conversation history length:', updatedHistory.length, 'messages')
       setIsProcessing(false)
       
-      const ttsStartTime = Date.now()
+      // Play response
       await playAudioFromText(aiResponse)
-      const ttsTime = Date.now() - ttsStartTime
       
-      const totalTime = Date.now() - totalStartTime
-      console.log(`⏱️ TOTAL RESPONSE TIME: ${totalTime}ms (AI: ${aiTime}ms, TTS: ${ttsTime}ms)`)
+      console.log(`⏱️ TOTAL: ${Date.now() - total}ms`)
     } catch (error: any) {
-      console.error('❌ Conversation error:', error)
+      console.error('Error:', error)
       setIsProcessing(false)
-      setError('AI error: ' + (error.message || 'Failed to get response'))
+      
+      // Restart listening even on error
+      setTimeout(() => {
+        if (recognitionRef.current && shouldContinueListeningRef.current) {
+          try {
+            recognitionRef.current.start()
+          } catch (e) {}
+        }
+      }, 500)
     }
   }
 
   const toggleListening = async () => {
-    console.log('toggleListening called, current state:', { isListening, micPermission, hasRecognition: !!recognitionRef.current })
-    
-    // Re-initialize if recognition ref is null
     if (!recognitionRef.current) {
-      console.log('Recognition ref is null, attempting to initialize...')
       initializeSpeechRecognition()
-      
-      // Check again after initialization
       if (!recognitionRef.current) {
-        setError('Voice chat requires Chrome, Edge, or Safari browser. Your browser may not support speech recognition.')
-        console.error('❌ Speech recognition not available in this browser')
+        setError('Browser not supported. Use Chrome, Edge, or Safari.')
         return
       }
     }
     
-    // Check microphone permission
     if (micPermission === 'denied') {
-      setError('Microphone access denied. Please enable it in your browser settings (click the 🔒 lock icon in the address bar)')
+      setError('Mic blocked. Click 🔒 in address bar → Allow Microphone')
       return
     }
     
     if (micPermission !== 'granted') {
-      console.log('Requesting microphone access...')
       const granted = await requestMicrophoneAccess()
       if (!granted) return
     }
     
     if (isListening) {
-      console.log('🛑 Stopping speech recognition...')
       recognitionRef.current.stop()
       setIsListening(false)
     } else {
       try {
-        console.log('▶️▶️▶️ STARTING SPEECH RECOGNITION NOW!')
-        console.log('Recognition object:', recognitionRef.current)
-        console.log('Mic permission:', micPermission)
-        
         recognitionRef.current.start()
-        console.log('✅ .start() called successfully')
       } catch (e: any) {
-        console.error('❌❌❌ Speech recognition start FAILED:', e.message, e)
-        setError('Could not start listening: ' + e.message + '. Your microphone may be in use by another app.')
+        console.error('Start failed:', e.message)
+        setError('Microphone in use by another app')
         setIsListening(false)
       }
     }
@@ -696,14 +602,9 @@ export default function VoiceOrbDemo({
             backdropFilter: 'blur(20px)'
           }}
           onClick={() => {
-            console.log('🖱️ ORB CLICKED! State:', { hasStarted, isProcessing, isSpeaking, isListening })
             if (!hasStarted) {
-              console.log('Starting demo...')
               startDemo()
-            } else if (isProcessing || isSpeaking) {
-              console.log('Busy - ignoring click')
-            } else {
-              console.log('Toggling listening...')
+            } else if (!isProcessing && !isSpeaking) {
               toggleListening()
             }
           }}
