@@ -9,14 +9,14 @@ import {
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
-import VoiceOrbDemo from '../components/VoiceOrbDemo'
+import VoiceRealtimeOrb from '../components/VoiceRealtimeOrb'
 
 function VoiceOrbDemoWithSettings() {
   const [businessInfo, setBusinessInfo] = React.useState({
-    name: 'CloudGreet Demo',
-    type: 'HVAC Company',
-    services: 'AC repair, heating installation, maintenance',
-    hours: '8 AM - 6 PM Mon-Fri'
+    name: 'CloudGreet',
+    type: 'AI Receptionist Service',
+    services: 'AI phone answering, appointment scheduling, 24/7 support',
+    hours: '24/7'
   })
   const [showForm, setShowForm] = React.useState(false)
 
@@ -29,7 +29,7 @@ function VoiceOrbDemoWithSettings() {
           className="text-sm text-purple-400 hover:text-purple-300 mb-3 flex items-center gap-2"
         >
           <Settings className="w-4 h-4" />
-          {showForm ? 'Hide' : 'Customize'} Business Info for Testing
+          {showForm ? 'Hide' : 'Customize'} Business Info
         </button>
         
         {showForm && (
@@ -45,7 +45,6 @@ function VoiceOrbDemoWithSettings() {
                 value={businessInfo.name}
                 onChange={(e) => setBusinessInfo({...businessInfo, name: e.target.value})}
                 className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="e.g., ABC HVAC Services"
               />
             </div>
             <div>
@@ -55,43 +54,39 @@ function VoiceOrbDemoWithSettings() {
                 value={businessInfo.type}
                 onChange={(e) => setBusinessInfo({...businessInfo, type: e.target.value})}
                 className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="e.g., Roofing Company"
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Services Offered</label>
+              <label className="text-xs text-gray-400 mb-1 block">Services</label>
               <input
                 type="text"
                 value={businessInfo.services}
                 onChange={(e) => setBusinessInfo({...businessInfo, services: e.target.value})}
                 className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="e.g., Roof repair, installation, inspection"
               />
             </div>
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Business Hours</label>
+              <label className="text-xs text-gray-400 mb-1 block">Hours</label>
               <input
                 type="text"
                 value={businessInfo.hours}
                 onChange={(e) => setBusinessInfo({...businessInfo, hours: e.target.value})}
                 className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
-                placeholder="e.g., 7 AM - 5 PM Mon-Sat"
               />
             </div>
           </motion.div>
         )}
         
         <p className="text-xs text-gray-500 mb-4">
-          💡 Try asking: "What services do you offer?", "What are your hours?", "How much does it cost?", "How do I get started?"
+          💡 Real-time AI • Ask anything about services, hours, pricing, or setup
         </p>
       </motion.div>
 
-      <VoiceOrbDemo 
+      <VoiceRealtimeOrb 
         businessName={businessInfo.name}
         businessType={businessInfo.type}
         services={businessInfo.services}
         hours={businessInfo.hours}
-        isDemo={true} 
       />
     </div>
   )
