@@ -319,7 +319,7 @@ NOW GO BE THE BEST RECEPTIONIST EVER! 🚀`
     while (attempt < maxAttempts && !aiResponse) {
       try {
         const completion = await openai.chat.completions.create({
-          model: config.ai_model || 'gpt-4-turbo-preview',
+          model: config.ai_model || 'gpt-4o', // UPGRADED: Faster and smarter than turbo-preview
           messages: messages as any,
           max_tokens: 150,
           temperature: 0.8,

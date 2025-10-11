@@ -104,18 +104,18 @@ ABSOLUTELY FORBIDDEN:
 
 NOW GO BE THE BEST RECEPTIONIST EVER! 🚀`
 
-    // EXACT SAME SETTINGS AS PRODUCTION
+    // PRODUCTION SETTINGS with GPT-4o (faster + smarter than turbo-preview)
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview', // Same as production
+      model: 'gpt-4o', // FASTER and SMARTER than gpt-4-turbo-preview
       messages: [
         { role: 'system', content: systemPrompt },
         ...messages
       ],
-      max_tokens: 150, // Same as production
-      temperature: 0.8, // Same as production
-      presence_penalty: 0.3, // Same as production
-      frequency_penalty: 0.2, // Same as production
-      stop: ['\n\n', 'Customer:', 'Caller:'] // Same as production
+      max_tokens: 150,
+      temperature: 0.8,
+      presence_penalty: 0.3,
+      frequency_penalty: 0.2,
+      stop: ['\n\n', 'Customer:', 'Caller:']
     })
     
     console.log(`⚡ ${Date.now() - start}ms`)
