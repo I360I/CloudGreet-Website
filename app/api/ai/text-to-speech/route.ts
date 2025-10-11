@@ -12,10 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     const { text, voice = 'nova' } = await request.json()
 
-    console.log('🎙️ TTS Request:', { textLength: text?.length, voice })
-
     if (!text || typeof text !== 'string') {
-      console.error('❌ No text provided')
       return NextResponse.json(
         { error: 'Text is required' },
         { status: 400 }
@@ -23,34 +20,24 @@ export async function POST(request: NextRequest) {
     }
 
     if (!process.env.OPENAI_API_KEY) {
-      console.error('❌ OPENAI_API_KEY not configured')
       return NextResponse.json(
         { error: 'OpenAI API key not configured' },
         { status: 500 }
       )
     }
 
-    console.log('✅ Calling OpenAI TTS HD with voice:', voice)
+    const start = Date.now()
 
-    const ttsStartTime = Date.now()
-
-    // Use OpenAI TTS HD for best quality natural voice
     const mp3Response = await openai.audio.speech.create({
-      model: 'tts-1-hd', // Highest quality for professional sound
+      model: 'tts-1',
       voice: voice as 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer',
       input: text,
-      speed: 0.98 // Slightly slower for clarity and warmth
+      speed: 1.15
     })
-    
-    const ttsTime = Date.now() - ttsStartTime
-    console.log(`⚡ TTS HD generation time: ${ttsTime}ms`)
 
-    console.log('✅ OpenAI TTS response received')
-
-    // Convert response to buffer
     const buffer = Buffer.from(await mp3Response.arrayBuffer())
-
-    console.log('✅ Audio buffer created:', buffer.length, 'bytes')
+    
+    console.log(`⚡ TTS: ${Date.now() - start}ms for ${buffer.length} bytes`)
 
     // Return audio with proper headers
     return new NextResponse(buffer, {
