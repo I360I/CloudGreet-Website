@@ -17,6 +17,7 @@ import ExportButton from '../components/ExportButton'
 import SearchFilter from '../components/SearchFilter'
 import CallDetailModal from '../components/CallDetailModal'
 import MobileDashboardNav from '../components/MobileDashboardNav'
+import { DashboardSkeleton } from '../components/SkeletonLoader'
 import LiveActivityFeed from '../components/LiveActivityFeed'
 import AIConversationInsights from '../components/AIConversationInsights'
 import OnboardingWizard from '../components/OnboardingWizard'
@@ -259,12 +260,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <NetworkErrorHandler>
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 text-white flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full mx-auto mb-4 animate-spin" />
-            <p className="text-gray-400">Loading dashboard...</p>
-          </div>
-        </div>
+        <DashboardSkeleton />
       </NetworkErrorHandler>
     )
   }
