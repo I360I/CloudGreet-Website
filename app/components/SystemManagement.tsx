@@ -5,7 +5,7 @@ import { Card } from './ui/Card'
 import { Button } from './ui/Button'
 import { Badge } from './ui/Badge'
 import { Progress } from './ui/Progress'
-import { LoadingSpinner } from './ui/LoadingSpinner'
+import LoadingSpinner from './LoadingSpinner'
 
 interface SystemStats {
   totalUsers: number

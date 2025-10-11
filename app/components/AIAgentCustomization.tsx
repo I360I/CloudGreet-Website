@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Card } from './ui/Card'
-import { LoadingSpinner } from './ui/LoadingSpinner'
+import LoadingSpinner from './LoadingSpinner'
 
 interface AIAgentSettings {
   id: string
