@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import jwt from 'jsonwebtoken'
+import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+const appointmentSchema = z.object({
+  customerName: z.string().min(1, 'Customer name is required').max(100),
+  customerPhone: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format'),
+  customerEmail: z.string().email('Invalid email').optional().or(z.literal('')),
+  serviceType: z.string().min(1).max(100).optional(),
+  scheduledDate: z.string().refine((date) => !isNaN(Date.parse(date)), 'Invalid date format'),
+  notes: z.string().max(500).optional(),
+  source: z.enum(['ai_agent', 'manual', 'website', 'phone']).default('ai_agent')
+})
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { 
-      customerName, 
-      customerPhone, 
-      serviceType, 
-      scheduledDate, 
-      notes,
-      source = 'ai_agent'
-    } = body
-
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -35,12 +36,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
     }
 
-    // Validate required fields
-    if (!customerName || !customerPhone || !scheduledDate) {
+    // Parse and validate request body
+    const body = await request.json()
+    const validationResult = appointmentSchema.safeParse(body)
+
+    if (!validationResult.success) {
       return NextResponse.json({ 
-        error: 'Missing required fields: customerName, customerPhone, scheduledDate' 
+        error: 'Validation failed',
+        details: validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
       }, { status: 400 })
     }
+
+    const { customerName, customerPhone, customerEmail, serviceType, scheduledDate, notes, source } = validationResult.data
 
     // Check for conflicting appointments
     const { data: conflicts } = await supabaseAdmin
