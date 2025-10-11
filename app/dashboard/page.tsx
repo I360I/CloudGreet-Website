@@ -16,6 +16,7 @@ import DateRangePicker from '../components/DateRangePicker'
 import ExportButton from '../components/ExportButton'
 import SearchFilter from '../components/SearchFilter'
 import CallDetailModal from '../components/CallDetailModal'
+import MobileDashboardNav from '../components/MobileDashboardNav'
 import LiveActivityFeed from '../components/LiveActivityFeed'
 import AIConversationInsights from '../components/AIConversationInsights'
 import OnboardingWizard from '../components/OnboardingWizard'
@@ -310,25 +311,35 @@ export default function Dashboard() {
         <header className="border-b border-purple-500/20 bg-black/30 backdrop-blur-xl sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              {/* Left: Title + Mobile Menu */}
+              <div className="flex items-center gap-3">
+                <MobileDashboardNav 
+                  businessName={dashboardData?.businessName || 'Your Business'}
+                  onLogout={handleLogout}
+                />
                 <div>
-                  <h1 className="text-2xl font-bold">Dashboard</h1>
-                  <p className="text-gray-400">{dashboardData?.businessName}</p>
+                  <h1 className="text-xl md:text-2xl font-bold">Dashboard</h1>
+                  <p className="text-xs md:text-sm text-gray-400 hidden sm:block">{dashboardData?.businessName}</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
-                <DateRangePicker value={dateRange} onChange={setDateRange} />
+              {/* Right: Tools (hide some on mobile) */}
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="hidden md:block">
+                  <DateRangePicker value={dateRange} onChange={setDateRange} />
+                </div>
                 
-                <ExportButton 
-                  data={dashboardData} 
-                  filename="dashboard-export" 
-                  businessName={dashboardData?.businessName || 'CloudGreet'}
-                />
+                <div className="hidden sm:block">
+                  <ExportButton 
+                    data={dashboardData} 
+                    filename="dashboard-export" 
+                    businessName={dashboardData?.businessName || 'CloudGreet'}
+                  />
+                </div>
                 
                 <ConnectionStatusIndicator />
                 
-                <Link href="/settings">
+                <Link href="/settings" className="hidden md:inline-block">
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -343,7 +354,7 @@ export default function Dashboard() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleLogout}
-                  className="p-2 bg-red-500/20 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors focus:ring-4 focus:ring-red-500/50 focus:outline-none"
+                  className="hidden lg:block p-2 bg-red-500/20 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors focus:ring-4 focus:ring-red-500/50 focus:outline-none"
                   aria-label="Log out of account"
                 >
                   <LogOut className="w-5 h-5 text-red-400" aria-hidden="true" />
