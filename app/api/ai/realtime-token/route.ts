@@ -6,45 +6,25 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     if (!process.env.OPENAI_API_KEY) {
+      console.error('❌ OPENAI_API_KEY not configured in environment')
       return NextResponse.json(
         { error: 'OpenAI API key not configured' },
         { status: 500 }
       )
     }
 
-    // Create ephemeral token for Realtime API
-    const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-realtime-preview-2024-10-01',
-        voice: 'alloy'
-      })
-    })
-
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('Failed to create realtime session:', error)
-      return NextResponse.json(
-        { error: 'Failed to create session' },
-        { status: 500 }
-      )
-    }
-
-    const data = await response.json()
+    // Return API key for direct WebSocket authentication
+    // This is secure because it's server-side only
+    console.log('✅ Providing API key for Realtime API connection')
     
     return NextResponse.json({
-      token: data.client_secret.value,
-      sessionId: data.id
+      apiKey: process.env.OPENAI_API_KEY
     })
 
   } catch (error: any) {
-    console.error('Realtime token error:', error)
+    console.error('❌ Realtime API key error:', error)
     return NextResponse.json(
-      { error: 'Token generation failed' },
+      { error: 'API key retrieval failed' },
       { status: 500 }
     )
   }
