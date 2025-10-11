@@ -15,18 +15,37 @@ export default function AdminLogin() {
     setLoading(true)
     setError('')
 
-    // Simulate authentication delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      // Call secure admin auth endpoint
+      const response = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          password,
+          email: 'admin@cloudgreet.com' // Could add email field if you want
+        })
+      })
 
-    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin123'
-    if (password === adminPassword) {
-      localStorage.setItem('admin_token', 'authenticated')
-      window.location.href = '/admin'
-    } else {
-      setError('Invalid admin credentials')
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        // Store secure JWT token
+        localStorage.setItem('admin_token', data.token)
+        localStorage.setItem('admin_user', JSON.stringify(data.admin))
+        
+        // Redirect to admin dashboard
+        window.location.href = '/admin'
+      } else {
+        setError(data.message || 'Invalid admin credentials')
+      }
+    } catch (err) {
+      console.error('Admin login error:', err)
+      setError('Authentication failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   return (

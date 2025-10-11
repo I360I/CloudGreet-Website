@@ -143,7 +143,7 @@ export default function AdminDashboard() {
     // Check admin authentication
     const checkAdmin = () => {
       const adminToken = localStorage.getItem('admin_token')
-      if (adminToken === 'authenticated') {
+      if (adminToken) {
         setIsAdmin(true)
         fetchAdminData()
       } else {
@@ -159,10 +159,22 @@ export default function AdminDashboard() {
       setLoading(true)
       setError(null)
       
-      // Fetch stats and clients in parallel
+      // Get admin token for authentication
+      const adminToken = localStorage.getItem('admin_token')
+      if (!adminToken) {
+        window.location.href = '/admin/login'
+        return
+      }
+      
+      // Fetch stats and clients in parallel with auth header
+      const headers = {
+        'Authorization': `Bearer ${adminToken}`,
+        'Content-Type': 'application/json'
+      }
+      
       const [statsResponse, clientsResponse] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch('/api/admin/clients')
+        fetch('/api/admin/stats', { headers }),
+        fetch('/api/admin/clients', { headers })
       ])
 
       if (!statsResponse.ok) {

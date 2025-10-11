@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
   const requestId = Math.random().toString(36).substring(7)
+  
+  // Require admin authentication
+  const authCheck = requireAdmin(request)
+  if (authCheck.error) {
+    logger.warn('Unauthorized admin API access attempt', {
+      requestId,
+      endpoint: '/api/admin/clients',
+      ip: request.ip || 'unknown'
+    })
+    return authCheck.response
+  }
   
   try {
     // Get real clients from database

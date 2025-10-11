@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  // Require admin authentication
+  const authCheck = requireAdmin(request)
+  if (authCheck.error) return authCheck.response
+  
   try {
     // REAL system health data - check actual system status
     const startTime = Date.now()
