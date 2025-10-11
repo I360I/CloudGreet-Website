@@ -11,6 +11,9 @@ import Link from 'next/link'
 import NetworkErrorHandler from '../components/NetworkErrorHandler'
 import ConnectionStatusIndicator from '../components/ConnectionStatus'
 import DashboardMetrics from '../components/DashboardMetrics'
+import DashboardCharts from '../components/DashboardCharts'
+import DateRangePicker from '../components/DateRangePicker'
+import ExportButton from '../components/ExportButton'
 import LiveActivityFeed from '../components/LiveActivityFeed'
 import AIConversationInsights from '../components/AIConversationInsights'
 import OnboardingWizard from '../components/OnboardingWizard'
@@ -54,6 +57,7 @@ export default function Dashboard() {
   const [realMetrics, setRealMetrics] = useState<any>(null)
   const [realActivity, setRealActivity] = useState<any[]>([])
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [dateRange, setDateRange] = useState('30d')
   const { showSuccess, showError } = useToast()
 
   useEffect(() => {
@@ -307,7 +311,15 @@ export default function Dashboard() {
                 </div>
               </div>
               
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <DateRangePicker value={dateRange} onChange={setDateRange} />
+                
+                <ExportButton 
+                  data={dashboardData} 
+                  filename="dashboard-export" 
+                  businessName={dashboardData?.businessName || 'CloudGreet'}
+                />
+                
                 <ConnectionStatusIndicator />
                 
                 <Link href="/settings">
@@ -521,17 +533,15 @@ export default function Dashboard() {
             />
           </motion.div>
 
-          {/* ROI Calculator - Temporarily disabled due to build issue */}
-          {/* {dashboardData?.hasPhoneNumber && dashboardData?.businessId && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="mb-8"
-            >
-              <ROICalculator businessId={dashboardData.businessId} />
-            </motion.div>
-          )} */}
+          {/* Analytics Charts */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mb-8"
+          >
+            <DashboardCharts />
+          </motion.div>
 
           {/* Live Activity Grid */}
           <div className="grid lg:grid-cols-1 gap-6 mb-8">
