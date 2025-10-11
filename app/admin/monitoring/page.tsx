@@ -177,7 +177,7 @@ export default function MonitoringPage() {
             </div>
           </motion.div>
 
-          {/* Telynyx */}
+          {/* Telnyx */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -186,7 +186,7 @@ export default function MonitoringPage() {
           >
             <div className="flex items-center gap-3 mb-4">
               <Phone className="w-6 h-6" />
-              <h3 className="text-lg font-semibold">Telynyx</h3>
+              <h3 className="text-lg font-semibold">Telnyx</h3>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between">

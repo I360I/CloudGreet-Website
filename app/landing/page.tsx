@@ -725,7 +725,7 @@ export default function LandingPage() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium">Telynyx Powered</span>
+                <span className="text-sm font-medium">Telnyx Powered</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" />
