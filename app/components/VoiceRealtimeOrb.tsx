@@ -225,18 +225,20 @@ Be conversational and natural - you're having a phone conversation.`,
 
     const audioContext = audioContextRef.current!
     const source = audioContext.createMediaStreamSource(mediaStreamRef.current!)
+    // NOTE: createScriptProcessor is deprecated but still widely supported
+    // TODO: Migrate to AudioWorklet when we have time to properly implement it
     const processor = audioContext.createScriptProcessor(2048, 1, 1)
 
     source.connect(processor)
-      processor.connect(audioContext.destination)
+    processor.connect(audioContext.destination)
 
     processor.onaudioprocess = (e) => {
-      if (!isConnected) return
+      if (!isConnected || ws.readyState !== WebSocket.OPEN) return
       
       const inputData = e.inputBuffer.getChannelData(0)
       const pcm16 = float32ToPCM16(inputData)
       
-      // Send audio to OpenAI
+      // Send audio to OpenAI Realtime API
       ws.send(JSON.stringify({
         type: 'input_audio_buffer.append',
         audio: arrayBufferToBase64(pcm16.buffer as ArrayBuffer)
