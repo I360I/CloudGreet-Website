@@ -72,11 +72,11 @@ class DashboardCache {
   invalidatePattern(pattern: RegExp): void {
     const keysToDelete: string[] = []
     
-    for (const key of this.cache.keys()) {
+    this.cache.forEach((_, key) => {
       if (pattern.test(key)) {
         keysToDelete.push(key)
       }
-    }
+    })
 
     keysToDelete.forEach(key => this.cache.delete(key))
   }
@@ -89,14 +89,14 @@ class DashboardCache {
     let expired = 0
     const now = Date.now()
 
-    for (const [key, entry] of this.cache.entries()) {
+    this.cache.forEach((entry) => {
       const isExpired = (now - entry.timestamp) > entry.ttl
       if (isExpired) {
         expired++
       } else {
         valid++
       }
-    }
+    })
 
     return {
       total: this.cache.size,
@@ -113,12 +113,12 @@ class DashboardCache {
     const now = Date.now()
     const keysToDelete: string[] = []
 
-    for (const [key, entry] of this.cache.entries()) {
+    this.cache.forEach((entry, key) => {
       const isExpired = (now - entry.timestamp) > entry.ttl
       if (isExpired) {
         keysToDelete.push(key)
       }
-    }
+    })
 
     keysToDelete.forEach(key => this.cache.delete(key))
   }
