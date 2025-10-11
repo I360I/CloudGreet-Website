@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Phone, Volume2, Brain, CheckCircle, Star } from 'lucide-react'
 import Link from 'next/link'
-import VoiceDemo from '../components/VoiceDemo'
+import VoiceRealtimeOrb from '../components/VoiceRealtimeOrb'
 
 export default function DemoPage() {
   const [selectedBusiness, setSelectedBusiness] = useState('HVAC')
@@ -12,15 +12,21 @@ export default function DemoPage() {
   const businessConfigs = {
     HVAC: {
       name: 'ABC HVAC Services',
-      greeting: 'Hello! Thank you for calling ABC HVAC Services. My name is Alex, your AI receptionist. How can I help you today?'
+      type: 'HVAC',
+      services: 'AC repair, heating installation, maintenance contracts',
+      hours: 'Monday-Friday 8AM-6PM, Saturday 9AM-3PM'
     },
     Paint: {
-      name: 'Premier Painting Services', 
-      greeting: 'Hello! Thank you for calling Premier Painting Services. My name is Sarah, your AI receptionist. How can I help you today?'
+      name: 'Premier Painting Services',
+      type: 'Painting',
+      services: 'Interior/exterior painting, cabinet refinishing, commercial painting',
+      hours: 'Monday-Friday 7AM-5PM'
     },
     Roofing: {
       name: 'Elite Roofing Solutions',
-      greeting: 'Hello! Thank you for calling Elite Roofing Solutions. My name is Mike, your AI receptionist. How can I help you today?'
+      type: 'Roofing',
+      services: 'Roof repairs, replacements, inspections, emergency services',
+      hours: 'Monday-Friday 7AM-6PM, 24/7 emergency'
     }
   }
 
@@ -99,10 +105,13 @@ export default function DemoPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12"
         >
-          <VoiceDemo 
+          <VoiceRealtimeOrb 
             businessName={businessConfigs[selectedBusiness as keyof typeof businessConfigs].name}
-            greetingMessage={businessConfigs[selectedBusiness as keyof typeof businessConfigs].greeting}
+            businessType={businessConfigs[selectedBusiness as keyof typeof businessConfigs].type}
+            services={businessConfigs[selectedBusiness as keyof typeof businessConfigs].services}
+            hours={businessConfigs[selectedBusiness as keyof typeof businessConfigs].hours}
           />
         </motion.div>
 
