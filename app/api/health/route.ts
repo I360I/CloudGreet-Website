@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if Telnyx is configured
-      if (!process.env.TELYNX_API_KEY) {
+      if (!process.env.TELNYX_API_KEY) {
         // Generate a demo phone number for development
         const demoNumber = `+1${areaCode}${Math.floor(Math.random() * 9000000) + 1000000}`
         
@@ -246,7 +246,7 @@ export async function GET(request: NextRequest) {
     const services = {
       resend: !!process.env.RESEND_API_KEY,
       stripe: !!process.env.STRIPE_SECRET_KEY,
-      telnyx: !!process.env.TELYNX_API_KEY,
+      telnyx: !!process.env.TELNYX_API_KEY,
       openai: !!process.env.OPENAI_API_KEY,
       supabase: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
     };

@@ -1,13 +1,13 @@
-// Telynyx API integration for CloudGreet
-export class TelynyxClient {
+// Telnyx API integration for CloudGreet
+export class TelnyxClient {
   private apiKey: string
   private connectionId: string
   private messagingProfileId: string
 
   constructor() {
-    this.apiKey = process.env.TELYNX_API_KEY || ''
-    this.connectionId = process.env.TELYNX_CONNECTION_ID || ''
-    this.messagingProfileId = process.env.TELYNX_MESSAGING_PROFILE_ID || ''
+    this.apiKey = process.env.TELNYX_API_KEY || ''
+    this.connectionId = process.env.TELNYX_CONNECTION_ID || ''
+    this.messagingProfileId = process.env.TELNYX_MESSAGING_PROFILE_ID || ''
   }
 
   // Send SMS message
@@ -28,12 +28,11 @@ export class TelynyxClient {
       })
 
       if (!response.ok) {
-        throw new Error(`Telynyx API error: ${response.statusText}`)
+        throw new Error(`Telnyx API error: ${response.statusText}`)
       }
 
       return await response.json()
     } catch (error) {
-      // Console error removed for production
       throw error
     }
   }
@@ -54,12 +53,11 @@ export class TelynyxClient {
       })
 
       if (!response.ok) {
-        throw new Error(`Telynyx API error: ${response.statusText}`)
+        throw new Error(`Telnyx API error: ${response.statusText}`)
       }
 
       return await response.json()
     } catch (error) {
-      // Console error removed for production
       throw error
     }
   }
@@ -74,12 +72,11 @@ export class TelynyxClient {
       })
 
       if (!response.ok) {
-        throw new Error(`Telynyx API error: ${response.statusText}`)
+        throw new Error(`Telnyx API error: ${response.statusText}`)
       }
 
       return await response.json()
     } catch (error) {
-      // Console error removed for production
       throw error
     }
   }
@@ -97,12 +94,11 @@ export class TelynyxClient {
       })
 
       if (!response.ok) {
-        throw new Error(`Telynyx API error: ${response.statusText}`)
+        throw new Error(`Telnyx API error: ${response.statusText}`)
       }
 
       return await response.json()
     } catch (error) {
-      // Console error removed for production
       throw error
     }
   }
@@ -141,18 +137,19 @@ export class TelynyxClient {
       })
 
       if (!response.ok) {
-        throw new Error(`Telynyx API error: ${response.statusText}`)
+        throw new Error(`Telnyx API error: ${response.statusText}`)
       }
 
       return await response.json()
     } catch (error) {
-      // Console error removed for production
       throw error
     }
   }
 }
 
-export const telynyxClient = new TelynyxClient()
+export const telnyxClient = new TelnyxClient()
 
-// Alias for backward compatibility
-export const telynyx = telynyxClient
+// Backward compatibility aliases
+export const telynyxClient = telnyxClient
+export const telynyx = telnyxClient
+

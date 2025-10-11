@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const recoveryMessage = generateRecoveryMessage(business, callerName, reason)
 
     // Send SMS via Telnyx
-    if (!process.env.TELYNX_API_KEY) {
+    if (!process.env.TELNYX_API_KEY) {
       logger.error('Telnyx not configured for missed call recovery')
       return NextResponse.json({
         success: false,
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const smsResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({

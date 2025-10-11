@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '../../../../lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { checkVoiceRateLimit } from '@/lib/webhook-rate-limit'
 import { verifyTelynyxSignature } from '@/lib/webhook-verification'
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if Telnyx is configured
-    if (!process.env.TELYNX_API_KEY) {
+    if (!process.env.TELNYX_API_KEY) {
       logger.error('Telnyx webhook called but Telnyx not configured')
       return NextResponse.json({ error: 'Telnyx not configured' }, { status: 503 })
     }
@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       .insert({
         business_id: business.id,
         call_id: call_control_id,
+        call_leg_id: call_leg_id,
         from_number: from,
         to_number: to,
         status: state,
@@ -267,8 +268,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Voice webhook error', { 
       error: error instanceof Error ? error.message : 'Unknown error',
-      endpoint: 'voice_webhook', 
-      body: await request.json().catch(() => ({}))
+      endpoint: 'voice_webhook'
     })
     return NextResponse.json({
       call_id: 'unknown',
@@ -286,3 +286,4 @@ export async function POST(request: NextRequest) {
     }, { status: 500 })
   }
 }
+

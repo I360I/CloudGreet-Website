@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 // Get phone numbers from environment variables
 const PERSONAL_PHONE = process.env.NOTIFICATION_PHONE || '+17372960092'
-const BUSINESS_PHONE = process.env.TELYNX_PHONE_NUMBER || '+17372448305' // Real CloudGreet business phone
+const BUSINESS_PHONE = process.env.TELNYX_PHONE_NUMBER || '+17372448305' // Real CloudGreet business phone
 const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'admin@cloudgreet.com'
 
 export async function POST(request: NextRequest) {
@@ -74,9 +74,9 @@ export async function POST(request: NextRequest) {
     // Send SMS notification
     try {
       // Check if we have a valid business phone for SMS
-      if (!process.env.TELYNX_API_KEY || !BUSINESS_PHONE) {
+      if (!process.env.TELNYX_API_KEY || !BUSINESS_PHONE) {
         logger.warn('SMS service not configured, will use email fallback', {
-          hasTelnyxKey: !!process.env.TELYNX_API_KEY,
+          hasTelnyxKey: !!process.env.TELNYX_API_KEY,
           hasBusinessPhone: !!BUSINESS_PHONE
         })
         // Don't return error, continue to email fallback
@@ -86,20 +86,20 @@ export async function POST(request: NextRequest) {
         logger.info('Attempting to send SMS', {
           from: BUSINESS_PHONE,
           to: smsRecipient,
-          messagingProfileId: process.env.TELYNX_MESSAGING_PROFILE_ID
+          messagingProfileId: process.env.TELNYX_MESSAGING_PROFILE_ID
         })
 
         const smsResponse = await fetch('https://api.telnyx.com/v2/messages', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             from: BUSINESS_PHONE,
             to: smsRecipient,
             text: notificationText,
-            messaging_profile_id: process.env.TELYNX_MESSAGING_PROFILE_ID
+            messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
           })
         })
 

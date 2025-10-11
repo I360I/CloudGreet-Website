@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       
       // Test Telnyx API
       fetch('https://api.telnyx.com/v2/phone_numbers', {
-        headers: { 'Authorization': `Bearer ${process.env.TELYNX_API_KEY}` }
+        headers: { 'Authorization': `Bearer ${process.env.TELNYX_API_KEY}` }
       }).then(r => r.ok),
       
       // Test Resend API
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         telynyx: {
           status: apiTests[1].status === 'fulfilled' && apiTests[1].value ? 'healthy' : 'not_configured',
           lastCheck: new Date().toISOString(),
-          configured: !!process.env.TELYNX_API_KEY
+          configured: !!process.env.TELNYX_API_KEY
         },
         openai: {
           status: apiTests[0].status === 'fulfilled' && apiTests[0].value ? 'healthy' : 'not_configured',

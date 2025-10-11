@@ -114,7 +114,7 @@ async function sendBulkSMS(clientId: string, message: string) {
     }
 
     // Check if Telnyx is configured
-    if (!process.env.TELYNX_API_KEY || !process.env.TELYNX_PHONE_NUMBER) {
+    if (!process.env.TELNYX_API_KEY || !process.env.TELNYX_PHONE_NUMBER) {
       throw new Error('SMS service not configured')
     }
 
@@ -122,14 +122,14 @@ async function sendBulkSMS(clientId: string, message: string) {
     const smsResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: process.env.TELYNX_PHONE_NUMBER,
+        from: process.env.TELNYX_PHONE_NUMBER,
         to: client.phone_number,
         text: message,
-        messaging_profile_id: process.env.TELYNX_MESSAGING_PROFILE_ID
+        messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
       })
     })
 
@@ -145,7 +145,7 @@ async function sendBulkSMS(clientId: string, message: string) {
       .from('sms_messages')
       .insert({
         business_id: clientId,
-        from_number: process.env.TELYNX_PHONE_NUMBER,
+        from_number: process.env.TELNYX_PHONE_NUMBER,
         to_number: client.phone_number,
         message: message,
         direction: 'outbound',
@@ -330,16 +330,16 @@ async function scheduleMaintenance(clientId: string, maintenanceDate: string) {
     }
 
     // Send notification SMS
-    if (process.env.TELYNX_API_KEY && client.phone_number) {
+    if (process.env.TELNYX_API_KEY && client.phone_number) {
       try {
         await fetch('https://api.telnyx.com/v2/messages', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: process.env.TELYNX_PHONE_NUMBER,
+            from: process.env.TELNYX_PHONE_NUMBER,
             to: client.phone_number,
             text: `Hi ${client.business_name}, your CloudGreet system maintenance is scheduled for ${new Date(maintenanceDate).toLocaleDateString()}. No action needed. Reply STOP to opt out.`,
             type: 'SMS'
@@ -354,7 +354,7 @@ async function scheduleMaintenance(clientId: string, maintenanceDate: string) {
       maintenanceId: maintenance.id, 
       scheduledDate: maintenanceDate,
       businessName: client.business_name,
-      notificationSent: !!process.env.TELYNX_API_KEY
+      notificationSent: !!process.env.TELNYX_API_KEY
     }
   } catch (error) {
     logger.error('Maintenance scheduling failed', { error, clientId, maintenanceDate })

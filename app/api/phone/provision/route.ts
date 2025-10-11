@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if Telnyx is configured
-    if (!process.env.TELYNX_API_KEY) {
+    if (!process.env.TELNYX_API_KEY) {
       logger.error('Phone provisioning attempted without Telnyx configuration', {
         businessId: targetBusinessId
       })
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     const telnyxResponse = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?filter[features][]=sms&filter[features][]=voice&filter[national_destination_code]=${areaCode}&limit=10`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       }
     })
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
         const altResponse = await fetch(`https://api.telnyx.com/v2/available_phone_numbers?filter[features][]=sms&filter[features][]=voice&filter[national_destination_code]=${code}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
             'Content-Type': 'application/json'
           }
         })
@@ -180,13 +180,13 @@ export async function POST(request: NextRequest) {
     const purchaseResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${selectedNumber.id}`, {
       method: 'PATCH',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         connection_name: `cloudgreet-${targetBusinessId}`,
-        webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telynyx/voice-webhook`,
-        webhook_failover_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telynyx/voice-webhook`
+        webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
+        webhook_failover_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`
       })
     })
 

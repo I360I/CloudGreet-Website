@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update Telnyx voice settings if agent has Telnyx ID
-    if (agent.telynyx_agent_id) {
+    if (agent.telnyx_agent_id) {
       try {
         const telnyxUpdate = {
           voice: validatedData.voiceSettings.voice,
@@ -110,10 +110,10 @@ export async function POST(request: NextRequest) {
           instructions: personalizedPrompt
         }
 
-        const telnyxResponse = await fetch(`https://api.telnyx.com/v2/ai_agents/${agent.telynyx_agent_id}`, {
+        const telnyxResponse = await fetch(`https://api.telnyx.com/v2/ai_agents/${agent.telnyx_agent_id}`, {
           method: 'PATCH',
           headers: {
-            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(telnyxUpdate)

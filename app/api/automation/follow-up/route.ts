@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { telynyxClient } from '@/lib/telynyx'
+import { telnyxClient } from '@/lib/telnyx'
 import OpenAI from 'openai'
 
 export const dynamic = 'force-dynamic'
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     // Send the follow-up message
     if (customerData.phone) {
       try {
-        await telynyxClient.sendSMS(
+        await telnyxClient.sendSMS(
           customerData.phone,
           followUpMessage,
           business.phone_number

@@ -8,10 +8,10 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     // Check if Telnyx is configured
-    if (!process.env.TELYNX_API_KEY) {
+    if (!process.env.TELNYX_API_KEY) {
       return NextResponse.json({
         success: false,
-        message: 'Telnyx not configured. Please add TELYNX_API_KEY to environment variables.'
+        message: 'Telnyx not configured. Please add TELNYX_API_KEY to environment variables.'
       }, { status: 503 })
     }
 
@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Configure webhook URL
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telynyx/voice-webhook`
-    const smsWebhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telynyx/sms-webhook`
+    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`
+    const smsWebhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/sms-webhook`
 
     // Configure voice webhook for the phone number
     if (phoneNumberId) {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       const webhookResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${phoneNumberId}`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+          'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(webhookConfig)
@@ -86,11 +86,11 @@ export async function POST(request: NextRequest) {
       const smsWebhookResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${phoneNumberId}`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+          'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          messaging_profile_id: process.env.TELYNX_MESSAGING_PROFILE_ID
+          messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
         })
       })
 
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
             const webhookResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${phoneRecord.provider_id}`, {
               method: 'PATCH',
               headers: {
-                'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+                'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify(webhookConfig)

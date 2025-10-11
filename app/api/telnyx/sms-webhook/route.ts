@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
-import { telynyx } from '../../../../lib/telynyx'
+import { telynyx } from '@/lib/telnyx'
 import { logger } from '../../../../lib/monitoring'
 import { verifyTelynyxSignature } from '@/lib/webhook-verification'
 import OpenAI from 'openai'
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
           const forwardResponse = await fetch('https://api.telnyx.com/v1/messages', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+              'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
         await fetch('https://api.telnyx.com/v1/messages', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -178,7 +178,7 @@ Reply STOP to opt out.`
         await fetch('https://api.telnyx.com/v1/messages', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -205,7 +205,7 @@ Reply STOP to opt out.`
         await fetch('https://api.telnyx.com/v1/messages', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -245,7 +245,7 @@ Reply STOP to opt out.`
           const replyResponse = await fetch('https://api.telnyx.com/v1/messages', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+              'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({

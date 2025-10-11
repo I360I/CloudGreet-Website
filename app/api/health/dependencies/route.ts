@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       const telnyxStart = Date.now()
       const response = await fetch('https://api.telnyx.com/v2/connections', {
         headers: {
-          'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+          'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         },
       })
       healthChecks.telnyx = {

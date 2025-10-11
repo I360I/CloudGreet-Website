@@ -186,13 +186,13 @@ async function sendAutomatedEmail(leadId: string, contactInfo: any) {
 // Real SMS automation using Telnyx
 async function sendAutomatedSMS(leadId: string, contactInfo: any) {
   try {
-    const telnyxApiKey = process.env.TELYNX_API_KEY
+    const telnyxApiKey = process.env.TELNYX_API_KEY
     
     if (!telnyxApiKey) {
       logger.error('SMS service not configured', { leadId, contactPhone: contactInfo.phone })
       return NextResponse.json({
         success: false,
-        error: 'SMS service not configured. Please configure TELYNX_API_KEY environment variable.',
+        error: 'SMS service not configured. Please configure TELNYX_API_KEY environment variable.',
         sms_content: generateSMSContent(contactInfo)
       }, { status: 503 })
     }
@@ -200,10 +200,10 @@ async function sendAutomatedSMS(leadId: string, contactInfo: any) {
     const smsContent = generateSMSContent(contactInfo)
     
     const smsData = {
-      from: process.env.TELYNX_PHONE_NUMBER,
+      from: process.env.TELNYX_PHONE_NUMBER,
       to: contactInfo.phone,
       text: smsContent.text,
-      messaging_profile_id: process.env.TELYNX_MESSAGING_PROFILE_ID
+      messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
     }
 
     const response = await fetch('https://api.telnyx.com/v2/messages', {

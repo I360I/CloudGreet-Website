@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // Send SMS via Telnyx
     if (type === 'sms') {
-      if (!process.env.TELYNX_API_KEY || !process.env.TELYNX_PHONE_NUMBER) {
+      if (!process.env.TELNYX_API_KEY || !process.env.TELNYX_PHONE_NUMBER) {
         return NextResponse.json({ 
           success: false,
           error: 'SMS service not configured' 
@@ -60,11 +60,11 @@ export async function POST(request: NextRequest) {
         const smsResponse = await fetch('https://api.telnyx.com/v2/messages', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: process.env.TELYNX_PHONE_NUMBER,
+            from: process.env.TELNYX_PHONE_NUMBER,
             to: client.phone_number,
             text: `${message}\n\nReply STOP to opt out; HELP for help.`,
             type: 'SMS'

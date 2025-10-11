@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { count = 5 } = body
 
-    if (!process.env.TELYNX_API_KEY) {
+    if (!process.env.TELNYX_API_KEY) {
       return NextResponse.json({ error: 'Telnyx not configured' }, { status: 503 })
     }
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+          'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
           'Content-Type': 'application/json'
         }
       }
@@ -68,13 +68,13 @@ export async function POST(request: NextRequest) {
         const purchaseResponse = await fetch('https://api.telnyx.com/v2/number_orders', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             phone_numbers: [{ phone_number: phoneNumber }],
-            connection_id: process.env.TELYNX_CONNECTION_ID,
-            messaging_profile_id: process.env.TELYNX_MESSAGING_PROFILE_ID
+            connection_id: process.env.TELNYX_CONNECTION_ID,
+            messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
           })
         })
 

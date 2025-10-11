@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Test the webhook endpoint
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telynyx/voice-webhook`
+    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`
     
     try {
       const webhookResponse = await fetch(webhookUrl, {

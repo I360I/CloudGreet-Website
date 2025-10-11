@@ -37,14 +37,14 @@ async function testSMS(phoneNumber: string, message: string) {
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.TELYNX_PHONE_NUMBER || process.env.TELYNX_BUSINESS_PHONE || '+17372448305',
+        from: process.env.TELNYX_PHONE_NUMBER || process.env.TELNYX_BUSINESS_PHONE || '+17372448305',
         to: phoneNumber,
         text: `[TEST] ${message}`,
-        messaging_profile_id: process.env.TELYNX_MESSAGING_PROFILE_ID
+        messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
       })
     })
 
@@ -87,13 +87,13 @@ async function testVoiceCall(phoneNumber: string, businessId: string) {
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.TELYNX_PHONE_NUMBER || process.env.TELYNX_BUSINESS_PHONE || '+17372448305',
+        from: process.env.TELNYX_PHONE_NUMBER || process.env.TELNYX_BUSINESS_PHONE || '+17372448305',
         to: phoneNumber,
-        connection_id: process.env.TELYNX_CONNECTION_ID,
+        connection_id: process.env.TELNYX_CONNECTION_ID,
         webhook_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/telnyx/voice-handler`,
         webhook_failover_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/telnyx/voice-handler`
       })
@@ -111,7 +111,7 @@ async function testVoiceCall(phoneNumber: string, businessId: string) {
       .insert({
         business_id: businessId || 'admin-test',
         caller_phone: phoneNumber,
-        business_phone: process.env.TELYNX_PHONE_NUMBER || process.env.TELYNX_BUSINESS_PHONE || '+17372448305',
+        business_phone: process.env.TELNYX_PHONE_NUMBER || process.env.TELNYX_BUSINESS_PHONE || '+17372448305',
         status: 'initiated',
         call_type: 'test_call',
         telnyx_call_id: result.data.id,
@@ -182,7 +182,7 @@ async function testSystemHealth() {
     // Test Telnyx API
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/balance', {
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
       }
     })
 

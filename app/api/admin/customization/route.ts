@@ -83,7 +83,7 @@ async function updateAISettings(settings: any) {
             const telnyxResponse = await fetch(`https://api.telnyx.com/v2/ai_agents/${agent.telynyx_agent_id}`, {
               method: 'PATCH',
               headers: {
-                'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+                'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({

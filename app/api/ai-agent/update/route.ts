@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { telynyxClient } from '@/lib/telynyx'
+import { telnyxClient } from '@/lib/telnyx'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
@@ -178,15 +178,15 @@ Always be professional, helpful, and try to convert calls into appointments.`
       }, { status: 500 })
     }
 
-    // Update Telynyx agent if voice changed
-    if (validatedData.voice && agent.telynyx_agent_id) {
+    // Update Telnyx agent if voice changed
+    if (validatedData.voice && agent.telnyx_agent_id) {
       try {
-        await telynyxClient.updateAgent(agent.telynyx_agent_id, {
+        await telnyxClient.updateAgent(agent.telnyx_agent_id, {
           voice: validatedData.voice,
           instructions: agentUpdates.prompt_template
         })
       } catch (error) {
-        logger.warn('Failed to update Telynyx agent', {
+        logger.warn('Failed to update Telnyx agent', {
           requestId,
           businessId,
           error: error.message
