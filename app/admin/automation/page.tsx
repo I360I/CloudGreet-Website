@@ -53,85 +53,22 @@ export default function AutomationDashboard() {
 
   const loadAutomations = async () => {
     try {
-      // Mock data - replace with real API call
-      const mockAutomations: AutomationRule[] = [
-        {
-          id: '1',
-          name: 'Lead Scoring & Prioritization',
-          type: 'lead_scoring',
-          status: 'active',
-          trigger: 'New lead added to CRM',
-          action: 'Calculate AI score and set priority level',
-          executions: 1247,
-          success_rate: 98.5,
-          last_run: '2 minutes ago',
-          created_at: '2025-01-15'
-        },
-        {
-          id: '2',
-          name: 'High-Value Lead Follow-up',
-          type: 'follow_up',
-          status: 'active',
-          trigger: 'Lead score >= 80',
-          action: 'Schedule immediate follow-up sequence',
-          executions: 234,
-          success_rate: 89.2,
-          last_run: '5 minutes ago',
-          created_at: '2025-01-15'
-        },
-        {
-          id: '3',
-          name: 'Email Sequence Starter',
-          type: 'email_sequence',
-          status: 'active',
-          trigger: 'Lead contacted via phone',
-          action: 'Send follow-up email within 4 hours',
-          executions: 567,
-          success_rate: 94.7,
-          last_run: '1 hour ago',
-          created_at: '2025-01-14'
-        },
-        {
-          id: '4',
-          name: 'Demo Scheduling Automation',
-          type: 'call_scheduling',
-          status: 'active',
-          trigger: 'Lead expresses interest',
-          action: 'Schedule demo call and send calendar invite',
-          executions: 89,
-          success_rate: 91.0,
-          last_run: '3 hours ago',
-          created_at: '2025-01-14'
-        },
-        {
-          id: '5',
-          name: 'CRM Data Enrichment',
-          type: 'crm_update',
-          status: 'paused',
-          trigger: 'Lead information incomplete',
-          action: 'Auto-research and fill missing data',
-          executions: 445,
-          success_rate: 76.8,
-          last_run: '1 day ago',
-          created_at: '2025-01-13'
-        },
-        {
-          id: '6',
-          name: 'Nurture Campaign',
-          type: 'email_sequence',
-          status: 'draft',
-          trigger: 'No response after 7 days',
-          action: 'Send re-engagement email sequence',
-          executions: 0,
-          success_rate: 0,
-          last_run: 'Never',
-          created_at: '2025-01-12'
+      const response = await fetch('/api/admin/automation/rules', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         }
-      ]
+      })
 
-      setAutomations(mockAutomations)
+      if (response.ok) {
+        const data = await response.json()
+        setAutomations(data.rules || [])
+      } else {
+        console.error('Failed to load automations')
+        setAutomations([])
+      }
     } catch (error) {
       console.error('Failed to load automations:', error)
+      setAutomations([])
     } finally {
       setLoading(false)
     }
@@ -139,18 +76,24 @@ export default function AutomationDashboard() {
 
   const loadStats = async () => {
     try {
-      // Mock stats - replace with real API call
-      const mockStats: AutomationStats = {
-        total_rules: 6,
-        active_rules: 4,
-        executions_today: 47,
-        success_rate: 92.3,
-        leads_processed: 1247,
-        emails_sent: 567,
-        calls_scheduled: 89
-      }
+      const response = await fetch('/api/admin/automation/stats', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      })
 
-      setStats(mockStats)
+      if (response.ok) {
+        const data = await response.json()
+        setStats(data.stats || {
+          total_rules: 0,
+          active_rules: 0,
+          executions_today: 0,
+          success_rate: 0,
+          leads_processed: 0,
+          emails_sent: 0,
+          calls_scheduled: 0
+        })
+      }
     } catch (error) {
       console.error('Failed to load stats:', error)
     }

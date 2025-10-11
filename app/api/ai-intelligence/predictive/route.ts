@@ -19,17 +19,43 @@ export async function GET(request: NextRequest) {
       }, { status: 503 })
     }
 
-    const userId = request.headers.get('x-user-id')
-    const businessId = request.headers.get('x-business-id')
-    
-    // For now, allow requests without headers to prevent 401 errors during testing
-    // In production, you'd want proper authentication
-    if (!userId || !businessId) {
-      console.warn('AI intelligence API called without authentication headers')
+    // Require proper authentication
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized - Authentication required'
+      }, { status: 401 })
     }
 
-    // Get comprehensive business data
+    const token = authHeader.substring(7)
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    
+    if (authError || !user) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid authentication token'
+      }, { status: 401 })
+    }
+
+    // Get business ID from authenticated user
     const { data: business } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!business) {
+      return NextResponse.json({
+        success: false,
+        error: 'Business not found'
+      }, { status: 404 })
+    }
+
+    const businessId = business.id
+
+    // Get comprehensive business data
+    const { data: businessData } = await supabaseAdmin
       .from('businesses')
       .select('*')
       .eq('id', businessId)
@@ -53,7 +79,7 @@ export async function GET(request: NextRequest) {
     const analysisPrompt = `
     Analyze this business data and provide predictive insights:
 
-    Business: ${business?.business_name} (${business?.business_type})
+    Business: ${businessData?.business_name} (${businessData?.business_type})
     Total Calls (90 days): ${calls?.length || 0}
     Total Appointments (90 days): ${appointments?.length || 0}
     

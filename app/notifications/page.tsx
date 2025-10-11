@@ -32,50 +32,19 @@ export default function NotificationsPage() {
         return
       }
 
-      // Simulate loading notifications
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Mock notifications for demo
-      const mockNotifications: Notification[] = [
-        {
-          id: '1',
-          type: 'call',
-          title: 'New Call Received',
-          message: 'Customer called about HVAC service request',
-          timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-          read: false,
-          priority: 'high'
-        },
-        {
-          id: '2',
-          type: 'sms',
-          title: 'SMS Sent Successfully',
-          message: 'Appointment confirmation sent to customer',
-          timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-          read: true,
-          priority: 'medium'
-        },
-        {
-          id: '3',
-          type: 'system',
-          title: 'AI Agent Updated',
-          message: 'Your AI receptionist settings have been updated',
-          timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          read: false,
-          priority: 'low'
-        },
-        {
-          id: '4',
-          type: 'billing',
-          title: 'Payment Processed',
-          message: 'Monthly subscription payment successful',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          read: true,
-          priority: 'medium'
+      // Load real notifications from API
+      const response = await fetch('/api/notifications/list', {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      ]
-      
-      setNotifications(mockNotifications)
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setNotifications(data.notifications || [])
+      } else {
+        setNotifications([])
+      }
     } catch (error) {
       console.error('Failed to load notifications:', error)
     } finally {

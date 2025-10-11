@@ -33,46 +33,35 @@ export default function LeadsManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
 
-  // Mock data - replace with real API calls
+  // Load real leads from API
   useEffect(() => {
-    const mockLeads: Lead[] = [
-      {
-        id: '1',
-        business_name: 'ABC HVAC Services',
-        owner_name: 'John Smith',
-        email: 'john@abchvac.com',
-        phone: '(555) 123-4567',
-        business_type: 'HVAC',
-        location: 'Austin, TX',
-        estimated_revenue: 2400,
-        status: 'cold',
-        last_contact: 'Never',
-        notes: 'Found on Google Maps - 4.8 stars, 150+ reviews',
-        source: 'Google Maps',
-        created_at: '2025-01-15'
-      },
-      {
-        id: '2',
-        business_name: 'Premier Painting Co',
-        owner_name: 'Sarah Johnson',
-        email: 'sarah@premierpainting.com',
-        phone: '(555) 987-6543',
-        business_type: 'Painting',
-        location: 'Dallas, TX',
-        estimated_revenue: 2000,
-        status: 'contacted',
-        last_contact: '2 days ago',
-        notes: 'Called - interested but wants to see demo first',
-        source: 'Cold Call',
-        created_at: '2025-01-14'
-      }
-    ]
-    
-    setTimeout(() => {
-      setLeads(mockLeads)
-      setLoading(false)
-    }, 1000)
+    loadLeads()
   }, [])
+
+  const loadLeads = async () => {
+    try {
+      setLoading(true)
+      
+      const response = await fetch('/api/admin/leads', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setLeads(data.leads || [])
+      } else {
+        console.error('Failed to load leads')
+        setLeads([])
+      }
+    } catch (error) {
+      console.error('Error loading leads:', error)
+      setLeads([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
