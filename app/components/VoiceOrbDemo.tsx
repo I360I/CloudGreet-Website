@@ -39,6 +39,7 @@ export default function VoiceOrbDemo({
   const analyserRef = useRef<AnalyserNode | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const animationFrameRef = useRef<number | null>(null)
+  const shouldContinueListeningRef = useRef(true)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -165,23 +166,43 @@ export default function VoiceOrbDemo({
 
       recognitionRef.current.onerror = (event: any) => {
         console.error('❌ Speech recognition error:', event.error)
-        setIsListening(false)
+        
         if (event.error === 'not-allowed' || event.error === 'permission-denied') {
           setError('Microphone blocked. Click the 🔒 in your address bar and allow microphone access.')
           setMicPermission('denied')
+          setIsListening(false)
+          shouldContinueListeningRef.current = false
         } else if (event.error === 'no-speech') {
-          console.log('No speech detected, continuing to listen...')
-          // Don't show error, just keep listening
+          console.log('⚠️ No speech detected, will auto-restart...')
+          // Don't stop - let onend handle restart
         } else if (event.error === 'aborted') {
-          console.log('Recognition aborted by user')
+          console.log('Recognition aborted')
+          setIsListening(false)
         } else {
-          setError('Speech recognition error: ' + event.error)
+          console.error('Other error:', event.error)
+          setIsListening(false)
+          // Still try to restart
         }
       }
 
       recognitionRef.current.onend = () => {
-        console.log('Speech recognition ended')
+        console.log('🛑 Speech recognition ended')
         setIsListening(false)
+        
+        // If we should keep listening and not currently processing, restart
+        if (shouldContinueListeningRef.current && !isProcessing && !isSpeaking) {
+          console.log('🔄 onend triggered - attempting to restart recognition...')
+          setTimeout(() => {
+            try {
+              if (recognitionRef.current && shouldContinueListeningRef.current) {
+                console.log('▶️ Restarting from onend...')
+                recognitionRef.current.start()
+              }
+            } catch (e: any) {
+              console.log('Could not restart from onend:', e.message)
+            }
+          }, 300)
+        }
       }
       
       console.log('✅ Speech recognition initialized successfully')
@@ -419,12 +440,27 @@ export default function VoiceOrbDemo({
         URL.revokeObjectURL(audioUrl)
         
         // Automatically restart listening after AI finishes speaking
-        console.log('🔄 Auto-restarting listening for continuous conversation...')
-        setTimeout(() => {
-          if (hasStarted && !isProcessing) {
-            toggleListening()
-          }
-        }, 300)
+        console.log('🔄🔄🔄 AUTO-RESTARTING LISTENING NOW!')
+        
+        if (shouldContinueListeningRef.current && recognitionRef.current) {
+          setTimeout(() => {
+            try {
+              console.log('▶️▶️ AUTO-START: Calling recognition.start()...')
+              recognitionRef.current.start()
+              console.log('✅ Auto-restart successful!')
+            } catch (e: any) {
+              console.error('❌ Auto-restart failed:', e.message)
+              // Try one more time
+              setTimeout(() => {
+                try {
+                  recognitionRef.current.start()
+                } catch (e2) {
+                  console.error('❌ Second auto-restart attempt failed')
+                }
+              }, 500)
+            }
+          }, 500)
+        }
       }
       
       audioRef.current.onerror = (e) => {
@@ -507,8 +543,11 @@ export default function VoiceOrbDemo({
       const aiTime = Date.now() - aiStartTime
       console.log(`⚡ AI conversation took: ${aiTime}ms`)
       console.log('🤖 AI response:', aiResponse)
-
-      setConversationHistory([...newHistory, { role: 'assistant', content: aiResponse }])
+      
+      // Update conversation history (maintains memory)
+      const updatedHistory = [...newHistory, { role: 'assistant', content: aiResponse }]
+      setConversationHistory(updatedHistory)
+      console.log('💾 Conversation history length:', updatedHistory.length, 'messages')
       setIsProcessing(false)
       
       const ttsStartTime = Date.now()
@@ -581,22 +620,20 @@ export default function VoiceOrbDemo({
       const granted = await requestMicrophoneAccess()
       if (!granted) {
         setError('Microphone access is required for voice conversation. Please allow microphone access.')
+        shouldContinueListeningRef.current = false
         return
       }
     }
     
     setHasStarted(true)
-    const greeting = `Hey! Thanks for trying ${businessName}. I'm your AI receptionist. What can I help you with?`
+    shouldContinueListeningRef.current = true // Enable continuous listening
+    
+    const greeting = `Hey! I'm your AI for ${businessName}. What can I help with?`
     setConversationHistory([{ role: 'assistant', content: greeting }])
     
-    // Play greeting then automatically start listening
+    console.log('🔊 Playing greeting...')
     await playAudioFromText(greeting)
-    
-    // After greeting finishes, automatically start listening
-    console.log('🎤 Greeting finished, auto-starting listening...')
-    setTimeout(() => {
-      toggleListening()
-    }, 500)
+    // Auto-listening starts via onended callback
   }
 
   const voiceOptions = [
