@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Phone, Calendar, Users, DollarSign, TrendingUp, 
@@ -23,6 +23,7 @@ import AIConversationInsights from '../components/AIConversationInsights'
 import OnboardingWizard from '../components/OnboardingWizard'
 import RealTimeUpdates from '../components/RealTimeUpdates'
 import { useToast } from '../contexts/ToastContext'
+import { useDashboardAnalytics, useRealtimeMetrics } from '../../hooks/useDashboardData'
 
 interface DashboardData {
   businessId: string
@@ -67,6 +68,10 @@ export default function Dashboard() {
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
   const [showCallDetail, setShowCallDetail] = useState(false)
   const { showSuccess, showError } = useToast()
+  
+  // Cached data hooks
+  const { data: analyticsData, isLoading: analyticsLoading } = useDashboardAnalytics(dateRange)
+  const { data: metricsData, isLoading: metricsLoading } = useRealtimeMetrics()
 
   useEffect(() => {
     loadDashboardData()
@@ -553,7 +558,17 @@ export default function Dashboard() {
             transition={{ delay: 0.15 }}
             className="mb-8"
           >
-            <DashboardCharts />
+            {analyticsLoading ? (
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 h-64 flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+              </div>
+            ) : (
+              <DashboardCharts 
+                revenueData={analyticsData?.revenueData}
+                callData={analyticsData?.callData}
+                conversionData={analyticsData?.conversionData}
+              />
+            )}
           </motion.div>
 
           {/* Search & Filter */}
