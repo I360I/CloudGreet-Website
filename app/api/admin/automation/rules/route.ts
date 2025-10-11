@@ -17,9 +17,9 @@ const supabase = createClient(
 export async function GET(request: NextRequest) {
   try {
     // Require admin authentication
-    const adminAuth = await requireAdmin(request)
-    if (!adminAuth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const adminAuth = requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
     }
 
     // Query automation rules from database
@@ -94,9 +94,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Require admin authentication
-    const adminAuth = await requireAdmin(request)
-    if (!adminAuth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const adminAuth = requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
     }
 
     const body = await request.json()
@@ -148,9 +148,9 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     // Require admin authentication
-    const adminAuth = await requireAdmin(request)
-    if (!adminAuth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const adminAuth = requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
     }
 
     const body = await request.json()

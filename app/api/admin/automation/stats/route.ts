@@ -17,9 +17,9 @@ const supabase = createClient(
 export async function GET(request: NextRequest) {
   try {
     // Require admin authentication
-    const adminAuth = await requireAdmin(request)
-    if (!adminAuth.authenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const adminAuth = requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
     }
 
     const { searchParams } = new URL(request.url)
