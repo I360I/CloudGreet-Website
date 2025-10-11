@@ -160,9 +160,7 @@ export function withErrorBoundary<P extends object>(
 // Hook for error boundary functionality
 export function useErrorHandler() {
   return (error: Error, errorInfo?: { componentStack: string }) => {
-    console.error('Error caught by useErrorHandler:', error)
-    
-    // Log to monitoring service
+    // Log to monitoring service (silent fail)
     fetch('/api/monitoring', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -178,6 +176,8 @@ export function useErrorHandler() {
         },
         severity: 'error'
       })
-    }).catch(console.error)
+    }).catch(() => {
+      // Error logging failed - non-critical
+    })
   }
 }

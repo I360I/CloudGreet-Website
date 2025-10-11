@@ -84,8 +84,6 @@ export default function VoiceRealtimeOrb({
       setError(null)
 
       // Connect to OpenAI Realtime API
-      console.log('🚀 Connecting to OpenAI Realtime API...')
-      
       // Get ephemeral session token from backend (SECURE)
       const sessionRes = await fetch('/api/ai/realtime-token', {
         method: 'POST'
@@ -97,7 +95,6 @@ export default function VoiceRealtimeOrb({
       }
       
       const { clientSecret, sessionId } = await sessionRes.json()
-      console.log(`✅ Got ephemeral token for session: ${sessionId}`)
 
       // Connect with ephemeral token (secure, expires after session)
       const ws = new WebSocket(
@@ -106,7 +103,6 @@ export default function VoiceRealtimeOrb({
       )
 
       ws.onopen = () => {
-        console.log('✅ Connected to OpenAI Realtime')
         setIsConnected(true)
         
         // Send session configuration
@@ -150,7 +146,6 @@ Be conversational and natural - you're having a phone conversation.`,
         switch (data.type) {
           case 'conversation.item.input_audio_transcription.completed':
             setTranscript(data.transcript)
-            console.log('You:', data.transcript)
             break
             
           case 'response.audio.delta':
@@ -164,21 +159,17 @@ Be conversational and natural - you're having a phone conversation.`,
             
           case 'response.audio_transcript.delta':
             // AI's text response (for display)
-            console.log('AI:', data.delta)
             break
             
           case 'response.done':
-            console.log('✅ Response complete')
             break
             
           case 'input_audio_buffer.speech_started':
             setIsListening(true)
-            console.log('🎤 Speech detected')
             break
             
           case 'input_audio_buffer.speech_stopped':
             setIsListening(false)
-            console.log('🛑 Speech ended')
             break
             
           case 'response.audio.start':
@@ -202,7 +193,6 @@ Be conversational and natural - you're having a phone conversation.`,
       }
 
       ws.onclose = () => {
-        console.log('❌ Disconnected')
         setIsConnected(false)
         setIsListening(false)
         setIsSpeaking(false)
