@@ -28,16 +28,17 @@ export async function POST(request: NextRequest) {
 
     const start = Date.now()
 
+    // Use TTS-1-HD for production-quality voice (same as phone system would use)
     const mp3Response = await openai.audio.speech.create({
-      model: 'tts-1',
+      model: 'tts-1-hd',
       voice: voice as 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer',
       input: text,
-      speed: 1.15
+      speed: 1.0 // Normal speed for natural sound
     })
 
     const buffer = Buffer.from(await mp3Response.arrayBuffer())
     
-    console.log(`⚡ TTS: ${Date.now() - start}ms for ${buffer.length} bytes`)
+    console.log(`⚡ TTS: ${Date.now() - start}ms`)
 
     // Return audio with proper headers
     return new NextResponse(buffer, {

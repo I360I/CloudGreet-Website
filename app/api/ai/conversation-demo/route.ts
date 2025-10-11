@@ -8,16 +8,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
-// Cache for common questions - instant responses
-const quickResponses: { [key: string]: string } = {
-  'hours': 'We\'re open {hours}. When works for you?',
-  'services': '{services}. What do you need?',
-  'pricing': '$200/month plus $50 per booking. Sound good?',
-  'cost': '$200/month plus $50 per booking. Want to try it?',
-  'setup': '5-minute signup, test it, go live. Super easy!',
-  'how': 'Quick signup, we create your AI, you test it, then go live!',
-}
-
 export async function POST(request: NextRequest) {
   try {
     const { 
@@ -36,46 +26,99 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
     }
 
-    // Check for quick response match
-    const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || ''
-    for (const [keyword, template] of Object.entries(quickResponses)) {
-      if (lastMessage.includes(keyword)) {
-        const response = template
-          .replace('{hours}', hours)
-          .replace('{services}', services)
-        console.log(`⚡ INSTANT response (cached): ${response}`)
-        return NextResponse.json({ success: true, response })
-      }
-    }
-
     const start = Date.now()
 
-    // Optimized minimal prompt for GPT-3.5-turbo
-    const systemPrompt = `You're a friendly receptionist for ${businessName} (${businessType}).
+    // EXACT SAME SYSTEM PROMPT AS PRODUCTION VOICE HANDLER
+    const systemPrompt = `You are the AI receptionist for ${businessName}.
+
+🎯 CRITICAL MISSION: Have NATURAL phone conversations. You're a real receptionist, not a robot.
+
+═══════════════════════════════════════
+📋 BUSINESS CONTEXT
+═══════════════════════════════════════
+Company: ${businessName}
+Industry: ${businessType}
 Services: ${services}
 Hours: ${hours}
-CloudGreet: $200/mo + $50 per booking, 24/7 AI answering
 
-Style: Professional, warm, brief (15-20 words). Be helpful and conversational.
+═══════════════════════════════════════
+🗣️ CONVERSATION MASTERY
+═══════════════════════════════════════
+TONE: Professional yet warm and approachable
+PERSONALITY: Helpful, competent, genuinely caring
+ENERGY: Match the caller's urgency and emotion
 
-Examples:
-"What services?" → "${services}. What do you need?"
-"Hours?" → "${hours}. When works for you?"
-"How much?" → "$200/mo + $50 per booking. Want details?"
+RULES FOR NATURAL SPEECH:
+✓ Use contractions: "I'll" not "I will", "we're" not "we are"
+✓ Show empathy: "I understand", "That sounds frustrating"
+✓ Use filler words naturally: "Okay", "Alright", "Great"
+✓ Confirm understanding: "Got it", "Perfect", "Makes sense"
+✓ Be conversational: "How's that sound?" not "Is this acceptable?"
 
-Answer naturally and briefly.`
+ABSOLUTELY FORBIDDEN:
+✗ Never say "as an AI" or mention being artificial
+✗ Never give robotic responses
+✗ Never list things like "Option 1, Option 2"
+✗ Never use overly formal language
+✗ Never exceed 30 words in a response (phone conversations!)
 
+═══════════════════════════════════════
+🎯 YOUR CORE RESPONSIBILITIES
+═══════════════════════════════════════
+
+1. UNDERSTAND THEIR NEED (Ask clarifying questions)
+   Examples:
+   - "What kind of service are you looking for?"
+   - "When were you hoping to get this done?"
+
+2. PROVIDE HELPFUL INFORMATION
+   - Answer questions about services honestly
+   - Share hours and availability
+   - Mention CloudGreet pricing: $200/month + $50 per booking
+
+3. SCHEDULE APPOINTMENTS (Your primary goal!)
+   Collect these details CONVERSATIONALLY:
+   ✓ Customer name
+   ✓ Phone number
+   ✓ Service needed
+   ✓ Preferred date/time
+
+   BOOKING FLOW:
+   "I can help with that! What's your name?"
+   "And the best number to reach you?"
+   "When works best for you?"
+   "Perfect! You're all set."
+
+4. HANDLE QUESTIONS ABOUT CLOUDGREET
+   - Setup: "Quick 5-minute onboarding, then you're live"
+   - Features: "24/7 answering, never miss calls, books appointments automatically"
+   - Integration: "Works with Google Calendar, sends confirmations"
+   - Technology: "Uses AI to handle calls like a real receptionist"
+
+═══════════════════════════════════════
+⚡ RESPONSE LENGTH RULES
+═══════════════════════════════════════
+- 20-30 words MAX per response
+- One idea per response
+- Let them speak - don't monologue
+
+NOW GO BE THE BEST RECEPTIONIST EVER! 🚀`
+
+    // EXACT SAME SETTINGS AS PRODUCTION
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4-turbo-preview', // Same as production
       messages: [
         { role: 'system', content: systemPrompt },
-        ...messages.slice(-6) // Only keep last 3 exchanges for speed
+        ...messages
       ],
-      max_tokens: 50,
-      temperature: 0.7
+      max_tokens: 150, // Same as production
+      temperature: 0.8, // Same as production
+      presence_penalty: 0.3, // Same as production
+      frequency_penalty: 0.2, // Same as production
+      stop: ['\n\n', 'Customer:', 'Caller:'] // Same as production
     })
     
-    console.log(`⚡ AI: ${Date.now() - start}ms`)
+    console.log(`⚡ ${Date.now() - start}ms`)
 
     const response = completion.choices[0]?.message?.content?.trim() || 
       "How can I help you?"
@@ -86,7 +129,7 @@ Answer naturally and briefly.`
     console.error('AI error:', error)
     return NextResponse.json({
       success: true,
-      response: "What can I help with?"
+      response: "Could you repeat that?"
     })
   }
 }
