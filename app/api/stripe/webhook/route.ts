@@ -102,7 +102,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription, reque
     return
   }
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('businesses')
     .update({
       stripe_subscription_id: subscription.id,
@@ -110,6 +110,15 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription, reque
       updated_at: new Date().toISOString()
     })
     .eq('id', businessId)
+
+  if (updateError) {
+    logger.error('Failed to update business subscription status', {
+      error: updateError,
+      requestId,
+      businessId,
+      subscriptionId: subscription.id
+    })
+  }
 
   await supabase
     .from('audit_logs')
@@ -141,13 +150,22 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, requ
     return
   }
 
-  await supabase
+  const { error: cancelError } = await supabase
     .from('businesses')
     .update({
       subscription_status: 'cancelled',
       updated_at: new Date().toISOString()
     })
     .eq('id', businessId)
+
+  if (cancelError) {
+    logger.error('Failed to cancel business subscription', {
+      error: cancelError,
+      requestId,
+      businessId,
+      subscriptionId: subscription.id
+    })
+  }
 
   await supabase
     .from('audit_logs')

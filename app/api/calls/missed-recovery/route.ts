@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     const smsResult = await smsResponse.json()
 
     // Log the recovery attempt
-    await supabaseAdmin
+    const { error: smsLogError } = await supabaseAdmin
       .from('sms_messages')
       .insert({
         business_id: businessId,
@@ -104,8 +104,17 @@ export async function POST(request: NextRequest) {
         created_at: new Date().toISOString()
       })
 
+    if (smsLogError) {
+      logger.warn('Failed to log SMS recovery message', {
+        error: smsLogError,
+        requestId,
+        businessId,
+        callId
+      })
+    }
+
     // Update call record
-    await supabaseAdmin
+    const { error: callUpdateError } = await supabaseAdmin
       .from('calls')
       .update({
         recovery_sms_sent: true,
@@ -113,6 +122,14 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString()
       })
       .eq('call_id', callId)
+
+    if (callUpdateError) {
+      logger.warn('Failed to update call record with recovery status', {
+        error: callUpdateError,
+        requestId,
+        callId
+      })
+    }
 
     // Send notification to business owner
     await fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'https://cloudgreet.com'}/api/notifications/send`, {
