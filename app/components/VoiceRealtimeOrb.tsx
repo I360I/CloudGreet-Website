@@ -24,6 +24,9 @@ export default function VoiceRealtimeOrb({
   const [error, setError] = useState<string | null>(null)
   const [audioLevel, setAudioLevel] = useState(0)
   const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
+  const [useRealtimeAPI, setUseRealtimeAPI] = useState(true) // Try Realtime API first
+  const [conversationHistory, setConversationHistory] = useState<Array<{role: string, content: string}>>([])
+  const [isProcessing, setIsProcessing] = useState(false)
   
   const wsRef = useRef<WebSocket | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -83,20 +86,30 @@ export default function VoiceRealtimeOrb({
 
       setError(null)
 
-      // Get ephemeral token from our backend
-      const tokenRes = await fetch('/api/ai/realtime-token', {
-        method: 'POST'
-      })
-      
-      if (!tokenRes.ok) throw new Error('Failed to get token')
-      
-      const { token } = await tokenRes.json()
+      // Try Realtime API first
+      if (useRealtimeAPI) {
+        console.log('🚀 Attempting OpenAI Realtime API connection...')
+        
+        try {
+          // Get ephemeral token from our backend
+          const tokenRes = await fetch('/api/ai/realtime-token', {
+            method: 'POST'
+          })
+          
+          if (!tokenRes.ok) {
+            console.warn('⚠️ Realtime API not available, falling back to GPT-4o + TTS')
+            setUseRealtimeAPI(false)
+            connectWithFallback()
+            return
+          }
+          
+          const { token } = await tokenRes.json()
 
-      // Connect to OpenAI Realtime API
-      const ws = new WebSocket(
-        'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01',
-        ['realtime', `openai-insecure-api-key.${token}`]
-      )
+          // Connect to OpenAI Realtime API
+          const ws = new WebSocket(
+            'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01',
+            ['realtime', `openai-insecure-api-key.${token}`]
+          )
 
       ws.onopen = () => {
         console.log('✅ Connected to OpenAI Realtime')
@@ -202,11 +215,151 @@ Be conversational and natural - you're having a phone conversation.`,
       }
 
       wsRef.current = ws
+        
+        } catch (realtimeError: any) {
+          console.warn('❌ Realtime API failed:', realtimeError.message)
+          console.log('🔄 Falling back to GPT-4o + TTS')
+          setUseRealtimeAPI(false)
+          connectWithFallback()
+        }
+      } else {
+        // Use fallback directly
+        connectWithFallback()
+      }
 
     } catch (error: any) {
       console.error('Connection failed:', error)
       setError('Failed to connect: ' + error.message)
     }
+  }
+
+  const connectWithFallback = async () => {
+    console.log('🎯 Using GPT-4o + TTS fallback system')
+    setIsConnected(true)
+    startSpeechRecognition()
+  }
+
+  const startSpeechRecognition = () => {
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      setError('Speech recognition not supported in this browser')
+      return
+    }
+
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
+    const recognition = new SpeechRecognition()
+    
+    recognition.continuous = false
+    recognition.interimResults = false
+    recognition.lang = 'en-US'
+    recognition.maxAlternatives = 1
+
+    recognition.onstart = () => {
+      console.log('🎤 Started listening')
+      setIsListening(true)
+    }
+
+    recognition.onresult = async (event: any) => {
+      const userInput = event.results[0][0].transcript
+      console.log('📝 You said:', userInput)
+      setTranscript(userInput)
+      setIsListening(false)
+      setIsProcessing(true)
+
+      // Update conversation history
+      const newHistory = [...conversationHistory, { role: 'user', content: userInput }]
+      setConversationHistory(newHistory)
+
+      try {
+        // Get AI response
+        const aiResponse = await fetch('/api/ai/conversation-demo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userInput,
+            conversationHistory: newHistory.slice(-10),
+            businessName,
+            businessType,
+            services,
+            hours
+          })
+        })
+
+        if (!aiResponse.ok) throw new Error('AI response failed')
+        
+        const { response } = await aiResponse.json()
+        console.log('🤖 AI said:', response)
+
+        // Update history with AI response
+        setConversationHistory([...newHistory, { role: 'assistant', content: response }])
+        setIsProcessing(false)
+        setIsSpeaking(true)
+
+        // Convert to speech
+        const ttsResponse = await fetch('/api/ai/text-to-speech', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: response, voice: 'nova' })
+        })
+
+        if (!ttsResponse.ok) throw new Error('TTS failed')
+
+        const audioBlob = await ttsResponse.blob()
+        const audioUrl = URL.createObjectURL(audioBlob)
+        const audio = new Audio(audioUrl)
+
+        audio.onended = () => {
+          setIsSpeaking(false)
+          URL.revokeObjectURL(audioUrl)
+          // Automatically restart listening
+          setTimeout(() => {
+            if (isConnected) {
+              startSpeechRecognition()
+            }
+          }, 500)
+        }
+
+        audio.play()
+
+      } catch (err: any) {
+        console.error('❌ Fallback error:', err)
+        setError('Response failed: ' + err.message)
+        setIsProcessing(false)
+        setIsSpeaking(false)
+        // Retry listening
+        setTimeout(() => {
+          if (isConnected) {
+            startSpeechRecognition()
+          }
+        }, 1000)
+      }
+    }
+
+    recognition.onerror = (event: any) => {
+      console.error('❌ Speech recognition error:', event.error)
+      if (event.error !== 'no-speech') {
+        setError('Recognition error: ' + event.error)
+      }
+      setIsListening(false)
+      // Retry
+      setTimeout(() => {
+        if (isConnected) {
+          startSpeechRecognition()
+        }
+      }, 1000)
+    }
+
+    recognition.onend = () => {
+      console.log('🛑 Recognition ended')
+      setIsListening(false)
+      // Auto-restart if still connected and not speaking
+      if (isConnected && !isSpeaking && !isProcessing) {
+        setTimeout(() => {
+          startSpeechRecognition()
+        }, 500)
+      }
+    }
+
+    recognition.start()
   }
 
   const startAudioStreaming = async (ws: WebSocket) => {
@@ -269,15 +422,22 @@ Be conversational and natural - you're having a phone conversation.`,
   }
 
   const cleanup = () => {
+    setIsConnected(false)
+    setIsListening(false)
+    setIsSpeaking(false)
+    setIsProcessing(false)
+    
     if (wsRef.current) {
       wsRef.current.close()
       wsRef.current = null
     }
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop())
+      mediaStreamRef.current = null
     }
     if (audioContextRef.current) {
       audioContextRef.current.close()
+      audioContextRef.current = null
     }
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
@@ -308,7 +468,7 @@ Be conversational and natural - you're having a phone conversation.`,
         const color = purpleColors[i % purpleColors.length]
         const radiusOffset = i * 12
         const phaseOffset = (i / numWaves) * Math.PI * 2
-        const amplitude = 15 + (i * 2) + (isSpeaking || isListening ? audioLevel * 25 : 0)
+        const amplitude = 15 + (i * 2) + (isSpeaking || isListening || isProcessing ? audioLevel * 25 : 0)
 
         ctx.beginPath()
         
@@ -447,10 +607,10 @@ Be conversational and natural - you're having a phone conversation.`,
           
           <div className="absolute inset-12 rounded-full bg-gradient-to-br from-purple-950/20 via-black to-black" />
           
-          {(isListening || isSpeaking) && (
+          {(isListening || isSpeaking || isProcessing) && (
             <motion.div
               animate={{ opacity: [0.1, 0.3, 0.1], scale: [0.8, 1, 0.8] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              transition={{ duration: isProcessing ? 1.5 : 2, repeat: Infinity }}
               className="absolute inset-12 rounded-full bg-gradient-to-br from-purple-600/20 via-blue-600/20 to-purple-600/20 blur-xl"
             />
           )}
@@ -525,9 +685,19 @@ Be conversational and natural - you're having a phone conversation.`,
       {isConnected && !error && (
         <div className="text-center mt-4">
           <p className="text-xs text-green-400 font-medium">
-            ✓ OpenAI Realtime • 300-600ms latency
+            {useRealtimeAPI ? '✓ OpenAI Realtime • 300-600ms latency' : '✓ GPT-4o + TTS • 0.8-1.5s latency'}
           </p>
         </div>
+      )}
+      
+      {isProcessing && (
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          className="text-center mt-4"
+        >
+          <p className="text-xs text-purple-400">Processing...</p>
+        </motion.div>
       )}
     </div>
   )
