@@ -80,7 +80,7 @@ export default function VoiceOrbDemo({
     try {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition
       recognitionRef.current = new SpeechRecognition()
-      recognitionRef.current.continuous = true // Keep listening until manually stopped
+      recognitionRef.current.continuous = false // One phrase at a time for reliability
       recognitionRef.current.interimResults = true
       recognitionRef.current.lang = 'en-US'
       recognitionRef.current.maxAlternatives = 1
@@ -186,22 +186,26 @@ export default function VoiceOrbDemo({
       }
 
       recognitionRef.current.onend = () => {
-        console.log('🛑 Speech recognition ended')
+        console.log('🛑 Speech recognition ended. Auto-restart:', shouldContinueListeningRef.current)
         setIsListening(false)
         
-        // If we should keep listening and not currently processing, restart
-        if (shouldContinueListeningRef.current && !isProcessing && !isSpeaking) {
-          console.log('🔄 onend triggered - attempting to restart recognition...')
+        // Always try to restart if conversation is active
+        if (shouldContinueListeningRef.current && hasStarted) {
+          console.log('🔄 Auto-restarting in 200ms...')
           setTimeout(() => {
-            try {
-              if (recognitionRef.current && shouldContinueListeningRef.current) {
-                console.log('▶️ Restarting from onend...')
+            if (recognitionRef.current && !isProcessing && !isSpeaking) {
+              try {
+                console.log('▶️ AUTO-RESTART attempt')
                 recognitionRef.current.start()
+              } catch (e: any) {
+                if (e.message.includes('already started')) {
+                  console.log('Already running, skipping')
+                } else {
+                  console.error('Restart failed:', e.message)
+                }
               }
-            } catch (e: any) {
-              console.log('Could not restart from onend:', e.message)
             }
-          }, 300)
+          }, 200)
         }
       }
       
@@ -439,27 +443,19 @@ export default function VoiceOrbDemo({
         setAudioLevel(0)
         URL.revokeObjectURL(audioUrl)
         
-        // Automatically restart listening after AI finishes speaking
-        console.log('🔄🔄🔄 AUTO-RESTARTING LISTENING NOW!')
-        
-        if (shouldContinueListeningRef.current && recognitionRef.current) {
+        // Auto-restart listening - simpler approach
+        console.log('🔄 Audio ended, will auto-restart listening in 300ms')
+        if (shouldContinueListeningRef.current) {
           setTimeout(() => {
-            try {
-              console.log('▶️▶️ AUTO-START: Calling recognition.start()...')
-              recognitionRef.current.start()
-              console.log('✅ Auto-restart successful!')
-            } catch (e: any) {
-              console.error('❌ Auto-restart failed:', e.message)
-              // Try one more time
-              setTimeout(() => {
-                try {
-                  recognitionRef.current.start()
-                } catch (e2) {
-                  console.error('❌ Second auto-restart attempt failed')
-                }
-              }, 500)
+            if (recognitionRef.current && !isProcessing) {
+              try {
+                recognitionRef.current.start()
+                console.log('✅ Listening restarted')
+              } catch (e) {
+                console.log('Restart pending or already active')
+              }
             }
-          }, 500)
+          }, 300)
         }
       }
       
@@ -628,7 +624,7 @@ export default function VoiceOrbDemo({
     setHasStarted(true)
     shouldContinueListeningRef.current = true // Enable continuous listening
     
-    const greeting = `Hey! I'm your AI for ${businessName}. What can I help with?`
+    const greeting = `Hi! Thanks for trying ${businessName}. I'm your AI receptionist. How can I help you today?`
     setConversationHistory([{ role: 'assistant', content: greeting }])
     
     console.log('🔊 Playing greeting...')

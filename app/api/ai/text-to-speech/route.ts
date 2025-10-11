@@ -30,21 +30,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('✅ Calling OpenAI TTS with nova voice...')
+    console.log('✅ Calling OpenAI TTS HD with voice:', voice)
 
     const ttsStartTime = Date.now()
 
-    // Use OpenAI TTS for ultra-natural voice (tts-1 is faster than tts-1-hd, still great quality)
-    // 'nova' is the warmest, most natural female voice for receptionist work
+    // Use OpenAI TTS HD for best quality natural voice
     const mp3Response = await openai.audio.speech.create({
-      model: 'tts-1', // Faster than tts-1-hd, still excellent quality
+      model: 'tts-1-hd', // Highest quality for professional sound
       voice: voice as 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer',
       input: text,
-      speed: 1.05 // Slightly faster for more natural, energetic conversational feel
+      speed: 0.98 // Slightly slower for clarity and warmth
     })
     
     const ttsTime = Date.now() - ttsStartTime
-    console.log(`⚡ TTS generation time: ${ttsTime}ms`)
+    console.log(`⚡ TTS HD generation time: ${ttsTime}ms`)
 
     console.log('✅ OpenAI TTS response received')
 

@@ -36,46 +36,67 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('✅ Calling GPT-4 for conversation...')
+    console.log('✅ Calling GPT-4o for conversation...')
 
-    // ULTRA-LEAN system prompt for maximum speed
-    const systemPrompt = `You're the receptionist for ${businessName} (${businessType}). Services: ${services}. Hours: ${hours}.
+    // Professional, warm system prompt - balanced approach
+    const systemPrompt = `You are a professional, friendly AI receptionist for ${businessName}, a ${businessType}.
 
-RULES:
-- 5-10 words MAX per response
-- Super casual: "Yeah!", "Cool!", "For sure!"
-- Use: um, like, so, totally
-- NO formal language
+BUSINESS INFORMATION:
+• Services: ${services}
+• Hours: ${hours}
+• About CloudGreet: AI phone system ($200/mo + $50 per booking) with 24/7 answering, smart scheduling, Google Calendar integration
 
-EXAMPLES:
-"What services?" → "AC repair, heating, maintenance!"
-"Your hours?" → "${hours}!"  
-"How much?" → "Just $200/mo plus $50 per booking!"
-"How's it work?" → "Sign up, test it, go live in 10 mins!"
+YOUR PERSONALITY:
+• Professional yet warm and approachable
+• Helpful and knowledgeable
+• Efficient communicator
+• Naturally conversational
 
-Be friendly, brief, human.`
+CONVERSATION GUIDELINES:
+✓ Keep responses brief (15-25 words)
+✓ Be friendly and welcoming
+✓ Answer questions clearly and directly
+✓ Use natural, conversational language
+✓ Show genuine interest in helping
+✓ Handle multiple topics smoothly
+
+ANSWER THESE TYPES OF QUESTIONS:
+• Services: List what ${businessName} offers
+• Hours: Share business hours
+• Pricing: Explain CloudGreet pricing
+• Setup: Describe quick onboarding process
+• Features: Mention 24/7 availability, scheduling, missed call recovery
+• Integration: Google Calendar, Stripe billing, SMS
+
+STYLE EXAMPLES:
+"What services?" → "We offer ${services}. What are you looking for?"
+"Your hours?" → "We're open ${hours}. When works best for you?"
+"How much?" → "CloudGreet is $200 a month plus $50 per booking. Want to learn more?"
+"How does it work?" → "Quick 5-minute setup, test it out, then you're live. Pretty simple!"
+
+Remember: Professional, warm, brief, and helpful.`
 
     const startTime = Date.now()
     
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Fastest model
+      model: 'gpt-4o', // Good balance of speed and quality
       messages: [
         { role: 'system', content: systemPrompt },
         ...messages
       ],
-      max_tokens: 25, // VERY short for speed
-      temperature: 0.9, // High but not max for consistency
-      presence_penalty: 0.3,
+      max_tokens: 60, // Enough for complete responses
+      temperature: 0.8, // Natural but consistent
+      presence_penalty: 0.4,
       frequency_penalty: 0.3
     })
     
     const responseTime = Date.now() - startTime
-    console.log(`⚡ GPT-4o-mini response time: ${responseTime}ms (should be <1000ms)`)
+    console.log(`⚡ GPT-4o response time: ${responseTime}ms`)
 
     const response = completion.choices[0]?.message?.content?.trim() || 
-      "Hey! I'm here to help. What do you need?"
+      "Hello! How can I help you today?"
 
-    console.log('✅ GPT-4 response:', response.substring(0, 50) + '...')
+    console.log('✅ AI response:', response)
 
     return NextResponse.json({
       success: true,
@@ -85,11 +106,9 @@ Be friendly, brief, human.`
   } catch (error: any) {
     console.error('Conversation error:', error)
     
-    // Friendly fallback response
     return NextResponse.json({
       success: true,
-      response: "Hey! I'm having a tiny tech hiccup. Can you repeat that for me?"
+      response: "I'm here to help. What do you need?"
     })
   }
 }
-
