@@ -86,21 +86,23 @@ export default function VoiceRealtimeOrb({
       // Connect to OpenAI Realtime API
       console.log('🚀 Connecting to OpenAI Realtime API...')
       
-      // Get API key from backend (secure)
-      const keyRes = await fetch('/api/ai/realtime-token', {
+      // Get ephemeral session token from backend (SECURE)
+      const sessionRes = await fetch('/api/ai/realtime-token', {
         method: 'POST'
       })
       
-      if (!keyRes.ok) {
-        throw new Error('Failed to get API credentials')
+      if (!sessionRes.ok) {
+        const errorData = await sessionRes.json()
+        throw new Error(errorData.error || 'Failed to create session')
       }
       
-      const { apiKey } = await keyRes.json()
+      const { clientSecret, sessionId } = await sessionRes.json()
+      console.log(`✅ Got ephemeral token for session: ${sessionId}`)
 
-      // Connect with direct API key authentication
+      // Connect with ephemeral token (secure, expires after session)
       const ws = new WebSocket(
         'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01',
-        ['realtime', `openai-insecure-api-key.${apiKey}`]
+        ['realtime', `openai-insecure-api-key.${clientSecret}`]
       )
 
       ws.onopen = () => {
