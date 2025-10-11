@@ -13,11 +13,7 @@ import ConnectionStatusIndicator from '../components/ConnectionStatus'
 import DashboardMetrics from '../components/DashboardMetrics'
 import LiveActivityFeed from '../components/LiveActivityFeed'
 import AIConversationInsights from '../components/AIConversationInsights'
-// import QuickStartWidget from '../components/QuickStartWidget'
-// import SupportWidget from '../components/SupportWidget'
-// import CallTestWidget from '../components/CallTestWidget'
 import OnboardingWizard from '../components/OnboardingWizard'
-// import ROICalculator from '../components/ROICalculator' // Temporarily disabled for build
 import RealTimeUpdates from '../components/RealTimeUpdates'
 import { useToast } from '../contexts/ToastContext'
 
