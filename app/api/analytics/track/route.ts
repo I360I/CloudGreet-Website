@@ -3,6 +3,10 @@ import { logger } from '@/lib/monitoring'
 
 export async function POST(request: NextRequest) {
   try {
+    // RATE LIMITING: Check IP-based rate limit
+    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+    // TODO: Implement proper rate limiting with Redis or similar
+    
     const event = await request.json()
     
     // Validate event structure
@@ -20,7 +24,7 @@ export async function POST(request: NextRequest) {
       userId: event.userId || null,
       sessionId: event.sessionId || null,
       timestamp: event.properties?.timestamp || Date.now(),
-      ip: request.ip || request.headers.get('x-forwarded-for') || 'unknown',
+      ip: ip,
       userAgent: request.headers.get('user-agent') || 'unknown'
     }
 

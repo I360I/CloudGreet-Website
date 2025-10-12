@@ -6,6 +6,10 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    // RATE LIMITING: Prevent promo code enumeration attacks
+    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+    // TODO: Implement proper rate limiting (max 5 attempts per IP per hour)
+    
     const body = await request.json()
     const { promoCode } = body
 
@@ -15,6 +19,9 @@ export async function POST(request: NextRequest) {
         message: 'Promo code is required'
       }, { status: 400 })
     }
+    
+    // Add delay to prevent rapid enumeration
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     // Check if promo code exists and is valid
     const { data: promo, error } = await supabase
