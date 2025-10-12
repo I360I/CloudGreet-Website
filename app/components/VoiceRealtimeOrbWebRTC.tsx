@@ -22,6 +22,8 @@ export default function VoiceRealtimeOrbWebRTC({
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [visualIntensity, setVisualIntensity] = useState(0)
+  const [audioQuality, setAudioQuality] = useState<'excellent' | 'good' | 'poor' | null>(null)
+  const [latency, setLatency] = useState<number>(0)
   
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const dataChannelRef = useRef<RTCDataChannel | null>(null)
@@ -30,6 +32,9 @@ export default function VoiceRealtimeOrbWebRTC({
   const analyzerRef = useRef<AnalyserNode | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const animationFrameRef = useRef<number | null>(null)
+  const qualityCheckIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const lastAudioTimeRef = useRef<number>(Date.now())
+  const connectionAttemptsRef = useRef<number>(0)
 
   useEffect(() => {
     return () => {
@@ -40,6 +45,13 @@ export default function VoiceRealtimeOrbWebRTC({
   const connectToOpenAI = async () => {
     try {
       setError(null)
+      connectionAttemptsRef.current += 1
+      
+      // If multiple failures, suggest fallback
+      if (connectionAttemptsRef.current > 3) {
+        setError('Multiple connection failures. Consider using the standard phone system instead.')
+        return
+      }
 
       // Get microphone access
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -172,6 +184,12 @@ Be conversational and natural - you're having a phone conversation.`,
         sdp: answerSdp
       }
       await pc.setRemoteDescription(answer)
+      
+      // Start quality monitoring
+      startQualityMonitoring(pc)
+      
+      // Reset attempts on success
+      connectionAttemptsRef.current = 0
 
     } catch (error: any) {
       console.error('❌ WebRTC connection failed:', error)
@@ -195,6 +213,9 @@ Be conversational and natural - you're having a phone conversation.`,
   }
 
   const handleServerEvent = (event: any) => {
+    // Track latency for quality monitoring
+    lastAudioTimeRef.current = Date.now()
+    
     switch (event.type) {
       // Session events
       case 'session.created':
@@ -294,16 +315,72 @@ Be conversational and natural - you're having a phone conversation.`,
     
     checkLevel()
   }
+  
+  const startQualityMonitoring = (pc: RTCPeerConnection) => {
+    // Monitor connection quality every 2 seconds
+    qualityCheckIntervalRef.current = setInterval(async () => {
+      try {
+        const stats = await pc.getStats()
+        let packetsLost = 0
+        let packetsReceived = 0
+        let currentRoundTripTime = 0
+        
+        stats.forEach((report) => {
+          if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+            packetsLost += report.packetsLost || 0
+            packetsReceived += report.packetsReceived || 1
+          }
+          if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+            currentRoundTripTime = report.currentRoundTripTime || 0
+          }
+        })
+        
+        // Calculate quality metrics
+        const packetLossRate = packetsLost / (packetsReceived + packetsLost)
+        const latencyMs = Math.round(currentRoundTripTime * 1000)
+        setLatency(latencyMs)
+        
+        // Determine quality
+        if (latencyMs < 150 && packetLossRate < 0.01) {
+          setAudioQuality('excellent')
+        } else if (latencyMs < 300 && packetLossRate < 0.05) {
+          setAudioQuality('good')
+        } else {
+          setAudioQuality('poor')
+        }
+        
+        // Check for connection timeout (no audio for 30 seconds)
+        const timeSinceLastAudio = Date.now() - lastAudioTimeRef.current
+        if (timeSinceLastAudio > 30000 && isConnected) {
+          console.warn('Connection timeout - no audio activity')
+          setError('Connection timeout. Reconnecting...')
+          cleanup()
+          // Auto-reconnect after 2 seconds
+          setTimeout(() => connectToOpenAI(), 2000)
+        }
+        
+      } catch (error) {
+        console.error('Failed to get stats:', error)
+      }
+    }, 2000)
+  }
 
   const cleanup = () => {
     setIsConnected(false)
     setIsListening(false)
     setIsSpeaking(false)
     setVisualIntensity(0)
+    setAudioQuality(null)
+    setLatency(0)
     
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
       animationFrameRef.current = null
+    }
+    
+    if (qualityCheckIntervalRef.current) {
+      clearInterval(qualityCheckIntervalRef.current)
+      qualityCheckIntervalRef.current = null
     }
     
     if (dataChannelRef.current) {
@@ -542,6 +619,32 @@ Be conversational and natural - you're having a phone conversation.`,
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center max-w-md mx-auto">
           <AlertCircle className="w-6 h-6 text-red-400 mx-auto mb-2" />
           <p className="text-red-400 text-sm">{error}</p>
+          {connectionAttemptsRef.current > 2 && (
+            <p className="text-red-300 text-xs mt-2">
+              Try refreshing the page or use our production phone system: {businessName || 'CloudGreet'}
+            </p>
+          )}
+        </motion.div>
+      )}
+      
+      {/* Connection Quality Indicator */}
+      {isConnected && audioQuality && (
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          className="mt-4 flex items-center justify-center gap-2 text-sm"
+        >
+          <div className={`w-2 h-2 rounded-full ${
+            audioQuality === 'excellent' ? 'bg-green-500' :
+            audioQuality === 'good' ? 'bg-yellow-500' :
+            'bg-red-500'
+          }`} />
+          <span className="text-gray-400">
+            {audioQuality === 'excellent' ? 'Excellent' :
+             audioQuality === 'good' ? 'Good' :
+             'Poor'} connection
+            {latency > 0 && ` • ${latency}ms`}
+          </span>
         </motion.div>
       )}
     </div>
