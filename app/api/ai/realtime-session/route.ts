@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
 
     console.log('🔐 Creating client secret using GA endpoint...')
 
-    // Use /v1/realtime/client_secrets for GA API (as error message states)
+    // Use /v1/realtime/client_secrets for GA API
+    // This endpoint doesn't accept 'model' parameter - model is set in WebSocket connection
     const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: {
@@ -23,7 +24,6 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o-realtime-preview-2024-12-17',
         voice: 'verse'
       })
     })
