@@ -141,34 +141,12 @@ export default function VoiceRealtimeOrb({
       ws.onopen = () => {
         setIsConnected(true)
         
-        // Send session configuration
+        // Send minimal session configuration
+        // Start with bare minimum, only add what's actually supported
         ws.send(JSON.stringify({
           type: 'session.update',
           session: {
-            type: 'realtime',
-            instructions: `You are a professional AI receptionist for ${businessName}, a ${businessType}.
-
-Services: ${services}
-Hours: ${hours}
-
-Be warm, professional, and helpful. Keep responses brief (20-30 words). 
-Answer questions about services, hours, and pricing clearly.
-Help schedule appointments if asked.
-Be conversational and natural - you're having a phone conversation.`,
-            voice: 'verse',
-            input_audio_format: 'pcm16',
-            output_audio_format: 'pcm16',
-            input_audio_transcription: {
-              model: 'whisper-1'
-            },
-            turn_detection: {
-              type: 'server_vad',
-              threshold: 0.5,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 500
-            },
-            temperature: 0.8,
-            max_response_output_tokens: 150
+            type: 'realtime'
           }
         }))
 
