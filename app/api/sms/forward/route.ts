@@ -1,17 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
 
-// Your personal phone number for notifications
-const PERSONAL_PHONE = '+17372960092'
-const BUSINESS_PHONE = '+17372448305'
-
 export async function POST(request: NextRequest) {
   try {
+    // AUTH CHECK: Verify business access
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    const decoded = jwt.verify(token, jwtSecret) as any
+    const businessId = decoded.businessId
+    
+    if (!businessId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+    
     const body = await request.json()
-    const { from, to, text, message_id } = body
+    const { from, to, text, message_id, forwardTo } = body
+    
+    // Get business forwarding settings from database
+    const { data: business } = await supabaseAdmin
+      .from('businesses')
+      .select('notification_phone, owner_phone')
+      .eq('id', businessId)
+      .single()
+    
+    const forwardPhone = forwardTo || business?.notification_phone || business?.owner_phone
+    
+    if (!forwardPhone) {
+      return NextResponse.json({ error: 'No forward phone number configured' }, { status: 400 })
+    }
 
     // Log the incoming SMS
     logger.info('SMS received', {

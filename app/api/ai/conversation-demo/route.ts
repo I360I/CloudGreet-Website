@@ -10,6 +10,10 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+    // RATE LIMIT: Demo endpoint should be rate limited to prevent abuse
+    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+    // TODO: Implement proper rate limiting (max 10 requests per IP per hour for demo)
+    
     const { 
       messages, 
       businessName = 'CloudGreet',
@@ -21,6 +25,9 @@ export async function POST(request: NextRequest) {
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'Messages required' }, { status: 400 })
     }
+    
+    // Limit message history to prevent abuse
+    const limitedMessages = messages.slice(-20) // Only last 20 messages
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
