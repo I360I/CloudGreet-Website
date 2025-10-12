@@ -11,6 +11,22 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
+    // AUTH CHECK: Verify business access - CRITICAL for billing
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    const jwt = (await import('jsonwebtoken')).default
+    const decoded = jwt.verify(token, jwtSecret) as any
+    const userBusinessId = decoded.businessId
+    
+    if (!userBusinessId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+    
     const body = await request.json()
     const { businessId, customerId, planId = 'pro' } = body
 
@@ -19,6 +35,11 @@ export async function POST(request: NextRequest) {
         success: false,
         message: 'Business ID and customer ID are required'
       }, { status: 400 })
+    }
+    
+    // Verify user owns this business
+    if (userBusinessId !== businessId) {
+      return NextResponse.json({ error: 'Unauthorized - Access denied' }, { status: 403 })
     }
 
     // Get business info
