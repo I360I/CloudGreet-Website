@@ -5,6 +5,12 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    // ADMIN AUTH: Performance metrics should only be visible to admins
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 })
+    }
+    
     const systemHealth = await performanceMonitor.getHealth()
     const recentMetrics = await performanceMonitor.getMetrics()
 
@@ -26,6 +32,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // ADMIN AUTH: Only admins should submit performance metrics
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 })
+    }
+    
     const body = await request.json()
     const { metrics } = body
 

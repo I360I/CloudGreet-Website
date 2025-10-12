@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  // ADMIN AUTH: Dependency health should only be visible to admins
+  const authHeader = request.headers.get('authorization')
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 })
+  }
+  
   const startTime = Date.now()
   const healthChecks = {
     database: { status: 'unknown', responseTime: 0, error: null },

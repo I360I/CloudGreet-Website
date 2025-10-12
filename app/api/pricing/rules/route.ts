@@ -25,12 +25,28 @@ const pricingRuleSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    // AUTH CHECK: Verify user has access to this business
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    const jwt = (await import('jsonwebtoken')).default
+    const decoded = jwt.verify(token, jwtSecret) as any
+    
     const { searchParams } = new URL(request.url)
     const businessId = searchParams.get('business_id')
     const serviceType = searchParams.get('service_type')
 
     if (!businessId) {
       return NextResponse.json({ error: 'Business ID is required' }, { status: 400 })
+    }
+    
+    // Verify user owns this business
+    if (decoded.businessId !== businessId) {
+      return NextResponse.json({ error: 'Unauthorized - Access denied' }, { status: 403 })
     }
 
     let query = supabaseAdmin
