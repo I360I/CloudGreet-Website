@@ -198,11 +198,11 @@ Be conversational and natural - you're having a phone conversation.`,
             setIsListening(false)
             break
             
-          case 'response.audio.start':
+          case 'response.output_audio.start':
             setIsSpeaking(true)
             break
             
-          case 'response.audio.done':
+          case 'response.output_audio.done':
             setIsSpeaking(false)
             break
             
