@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { verifyTelnyxSignature } from '@/lib/telnyx'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    // WEBHOOK SECURITY: Verify Telnyx signature
+    const signature = request.headers.get('telnyx-signature-ed25519')
+    const timestamp = request.headers.get('telnyx-timestamp')
+    const rawBody = await request.text()
+    
+    if (process.env.NODE_ENV === 'production') {
+      const isValid = verifyTelnyxSignature(rawBody, signature, timestamp)
+      if (!isValid) {
+        logger.error('Invalid Telnyx voicemail webhook signature')
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+      }
+    }
+    
+    const body = JSON.parse(rawBody)
     const { 
       call_control_id,
       call_leg_id,
