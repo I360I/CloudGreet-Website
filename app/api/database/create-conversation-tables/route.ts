@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
+    // CRITICAL: Only admins can create database tables
+    const adminAuth = await requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
+    }
+    
     // Create conversation_history table
     const { error: convError } = await supabaseAdmin.rpc('exec_sql', {
       sql: `

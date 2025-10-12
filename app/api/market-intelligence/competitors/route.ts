@@ -11,14 +11,22 @@ const openai = new OpenAI({
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id')
-    const businessId = request.headers.get('x-business-id')
+    // AUTH CHECK: Use proper JWT authentication instead of weak header auth
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    const jwt = (await import('jsonwebtoken')).default
+    const decoded = jwt.verify(token, jwtSecret) as any
+    
+    const userId = decoded.userId
+    const businessId = decoded.businessId
     
     if (!userId || !businessId) {
-      return NextResponse.json({
-        success: false,
-        message: 'Authentication required'
-      }, { status: 401 })
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
     // Get business data
