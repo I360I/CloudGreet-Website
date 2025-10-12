@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import VoiceRealtimeOrb from '../components/VoiceRealtimeOrb'
+import VoiceRealtimeOrbWebRTC from '../components/VoiceRealtimeOrbWebRTC'
 
 export default function TestAgentSimplePage() {
   const [businessInfo, setBusinessInfo] = useState({
@@ -111,7 +111,7 @@ export default function TestAgentSimplePage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <VoiceRealtimeOrb
+          <VoiceRealtimeOrbWebRTC
             businessName={businessInfo.businessName}
             businessType={businessInfo.businessType}
             services={businessInfo.services}
