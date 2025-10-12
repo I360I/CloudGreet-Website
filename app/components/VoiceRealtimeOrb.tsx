@@ -145,7 +145,6 @@ export default function VoiceRealtimeOrb({
         ws.send(JSON.stringify({
           type: 'session.update',
           session: {
-            type: 'session',
             modalities: ['text', 'audio'],
             instructions: `You are a professional AI receptionist for ${businessName}, a ${businessType}.
 
