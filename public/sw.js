@@ -2,17 +2,11 @@ const CACHE_NAME = 'cloudgreet-v1.0.0'
 const STATIC_CACHE = 'cloudgreet-static-v1.0.0'
 const DYNAMIC_CACHE = 'cloudgreet-dynamic-v1.0.0'
 
-// Assets to cache immediately
+// Assets to cache immediately (only actual files, not directories)
 const STATIC_ASSETS = [
   '/',
-  '/dashboard',
-  '/login',
-  '/start',
   '/manifest.json',
-  '/favicon.ico',
-  '/_next/static/css/',
-  '/_next/static/js/',
-  '/_next/static/media/'
+  '/favicon.ico'
 ]
 
 // API routes that should be cached
