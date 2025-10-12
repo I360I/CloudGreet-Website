@@ -38,14 +38,26 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json()
-    console.log('✅ Session created:', data)
+    console.log('✅ Client secret created:', JSON.stringify(data, null, 2))
     
-    // Return the client secret and session details
+    // Parse the response correctly based on OpenAI's format
+    // The response has: { client_secret: { value: "...", expires_at: ... }, ... }
+    const clientSecretValue = typeof data.client_secret === 'string' 
+      ? data.client_secret 
+      : data.client_secret?.value || data.value
+    
+    if (!clientSecretValue) {
+      console.error('❌ No client secret in response:', data)
+      return NextResponse.json(
+        { error: 'Invalid session response from OpenAI' },
+        { status: 500 }
+      )
+    }
+    
+    // Return the client secret
     return NextResponse.json({
-      clientSecret: data.client_secret?.value || data.client_secret,
-      sessionId: data.id,
-      expiresAt: data.expires_at,
-      model: data.model
+      clientSecret: clientSecretValue,
+      expiresAt: data.client_secret?.expires_at || data.expires_at
     })
 
   } catch (error: any) {
