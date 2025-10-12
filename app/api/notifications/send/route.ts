@@ -2,16 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { sendEmail } from '@/lib/email'
+import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
 
-// Get phone numbers from environment variables
-const PERSONAL_PHONE = process.env.NOTIFICATION_PHONE || '+17372960092'
-const BUSINESS_PHONE = process.env.TELNYX_PHONE_NUMBER || '+17372448305' // Real CloudGreet business phone
-const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || 'admin@cloudgreet.com'
-
 export async function POST(request: NextRequest) {
   try {
+    // AUTH CHECK: Verify business access
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    const decoded = jwt.verify(token, jwtSecret) as any
+    const userBusinessId = decoded.businessId
+    
+    if (!userBusinessId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+    
     const body = await request.json()
     const { 
       type, 
@@ -21,11 +32,26 @@ export async function POST(request: NextRequest) {
       clientId, 
       priority = 'normal' 
     } = body
+    
+    // Verify user owns this business
+    if (businessId && userBusinessId !== businessId) {
+      return NextResponse.json({ error: 'Unauthorized - Access denied' }, { status: 403 })
+    }
 
     // Validate required fields
     if (!type || !message) {
       return NextResponse.json({ error: 'Type and message are required' }, { status: 400 })
     }
+    
+    // Get business notification settings from database (no hardcoded phones)
+    const { data: business } = await supabaseAdmin
+      .from('businesses')
+      .select('notification_phone, owner_phone, notification_email, owner_email')
+      .eq('id', userBusinessId)
+      .single()
+    
+    const notificationPhone = recipient || business?.notification_phone || business?.owner_phone
+    const notificationEmail = business?.notification_email || business?.owner_email
 
     // Create notification message based on type
     let notificationText = ''

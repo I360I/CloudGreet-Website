@@ -6,6 +6,22 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    // AUTH CHECK: Verify business access - CRITICAL for transcript privacy!
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    const jwt = (await import('jsonwebtoken')).default
+    const decoded = jwt.verify(token, jwtSecret) as any
+    const userBusinessId = decoded.businessId
+    
+    if (!userBusinessId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+    
     // Get business ID from middleware or query params
     const { searchParams } = new URL(request.url)
     const businessId = searchParams.get('businessId')
@@ -15,6 +31,11 @@ export async function GET(request: NextRequest) {
         success: false,
         message: 'Business ID is required'
       }, { status: 400 })
+    }
+    
+    // Verify user owns this business - prevent transcript snooping!
+    if (userBusinessId !== businessId) {
+      return NextResponse.json({ error: 'Unauthorized - Access denied' }, { status: 403 })
     }
 
     // Fetch call logs with transcripts

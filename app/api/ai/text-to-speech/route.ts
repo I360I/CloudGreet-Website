@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { logger } from '@/lib/monitoring'
+import jwt from 'jsonwebtoken'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -10,11 +12,33 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+    // AUTH CHECK: Prevent OpenAI API abuse
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', ')
+    const jwtSecret = process.env.JWT_SECRET
+    const decoded = jwt.verify(token, jwtSecret) as any
+    
+    if (!decoded.businessId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+    
     const { text, voice = 'nova' } = await request.json()
 
     if (!text || typeof text !== 'string') {
       return NextResponse.json(
         { error: 'Text is required' },
+        { status: 400 }
+      )
+    }
+    
+    // Limit text length to prevent abuse
+    if (text.length > 4000) {
+      return NextResponse.json(
+        { error: 'Text too long (max 4000 characters)' },
         { status: 400 }
       )
     }
@@ -38,7 +62,11 @@ export async function POST(request: NextRequest) {
 
     const buffer = Buffer.from(await mp3Response.arrayBuffer())
     
-    console.log(`⚡ TTS: ${Date.now() - start}ms`)
+    logger.info('TTS generated', { 
+      duration: Date.now() - start,
+      textLength: text.length,
+      voice
+    })
 
     // Return audio with proper headers
     return new NextResponse(buffer, {
