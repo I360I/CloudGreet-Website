@@ -13,8 +13,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔐 Creating client secret using GA endpoint...')
-
     // Use /v1/realtime/client_secrets for GA API
     // This endpoint accepts NO parameters - all config done in WebSocket session.update
     const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
@@ -36,7 +34,6 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json()
-    console.log('✅ Client secret created:', JSON.stringify(data, null, 2))
     
     // Parse the response correctly based on OpenAI's format
     // The response has: { client_secret: { value: "...", expires_at: ... }, ... }
