@@ -308,22 +308,32 @@ Be conversational and natural - you're having a phone conversation.`,
     setIsConnected(false)
     setIsListening(false)
     setIsSpeaking(false)
+    setAudioLevel(0)
+    setVisualIntensity(0)
     
+    // Cancel all animation frames
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
+    
+    // Close WebSocket
     if (wsRef.current) {
       wsRef.current.close()
       wsRef.current = null
     }
+    
+    // Stop media stream
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach(track => track.stop())
       mediaStreamRef.current = null
     }
-    if (audioContextRef.current) {
-      audioContextRef.current.close()
-      audioContextRef.current = null
-    }
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-    }
+    
+    // Clear analyzer
+    analyzerRef.current = null
+    
+    // Note: Keep audioContext alive for reconnection
+    // Only close on unmount
   }
 
   const drawWaves = () => {
