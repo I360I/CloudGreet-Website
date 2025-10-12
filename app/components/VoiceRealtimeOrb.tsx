@@ -145,6 +145,7 @@ export default function VoiceRealtimeOrb({
         ws.send(JSON.stringify({
           type: 'session.update',
           session: {
+            type: 'session',
             modalities: ['text', 'audio'],
             instructions: `You are a professional AI receptionist for ${businessName}, a ${businessType}.
 
@@ -455,17 +456,18 @@ Be conversational and natural - you're having a phone conversation.`,
           className="absolute max-w-full max-h-full"
         />
 
-        {/* Reactive Voice Orb */}
+        {/* Premium Voice Orb */}
         <motion.div
-          className="relative z-10 w-64 h-64 cursor-pointer overflow-hidden"
+          className="relative z-10 w-80 h-80 cursor-pointer overflow-hidden"
           style={{
-            borderRadius: '47% 53% 52% 48% / 51% 49% 51% 49%',
+            borderRadius: '50%',
             background: isListening 
-              ? 'radial-gradient(ellipse at 35% 35%, rgba(59, 130, 246, 0.4), rgba(20, 15, 45, 0.95) 50%, rgba(0, 0, 0, 1))'
+              ? 'radial-gradient(circle at 30% 30%, rgba(59, 130, 246, 0.6), rgba(37, 99, 235, 0.4) 40%, rgba(29, 78, 216, 0.2) 70%, rgba(0, 0, 0, 0.95))'
               : isSpeaking
-              ? 'radial-gradient(ellipse at 35% 35%, rgba(147, 51, 234, 0.4), rgba(30, 20, 50, 0.95) 50%, rgba(0, 0, 0, 1))'
-              : 'radial-gradient(ellipse at 35% 35%, rgba(30,25,45,0.8), rgba(0,0,0,1) 60%, rgba(0,0,0,1))',
-            backdropFilter: 'blur(20px)'
+              ? 'radial-gradient(circle at 30% 30%, rgba(147, 51, 234, 0.6), rgba(126, 34, 206, 0.4) 40%, rgba(107, 33, 168, 0.2) 70%, rgba(0, 0, 0, 0.95))'
+              : 'radial-gradient(circle at 30% 30%, rgba(88, 28, 135, 0.3), rgba(59, 7, 100, 0.2) 50%, rgba(0, 0, 0, 0.95))',
+            backdropFilter: 'blur(30px)',
+            border: isListening || isSpeaking ? '2px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.05)'
           }}
           onClick={() => {
             if (!isConnected) {
@@ -518,122 +520,155 @@ Be conversational and natural - you're having a phone conversation.`,
           {/* Inner glow layer */}
           <div className="absolute inset-12 rounded-full bg-gradient-to-br from-purple-950/20 via-black to-black" />
           
-          {/* Voice-reactive pulse rings */}
+          {/* Premium Voice-Reactive Glow Rings */}
           {isListening && (
             <>
+              {/* Inner glow */}
               <motion.div
                 animate={{ 
-                  opacity: [0.3, 0.6, 0.3],
-                  scale: [1, 1.2 + visualIntensity * 0.3, 1]
+                  opacity: [0.4, 0.7, 0.4],
+                  scale: [0.9, 1 + visualIntensity * 0.2, 0.9]
                 }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="absolute inset-8 rounded-full bg-gradient-to-br from-blue-500/40 via-blue-600/30 to-transparent blur-xl"
+                transition={{ duration: 1.2, repeat: Infinity }}
+                className="absolute inset-12 rounded-full bg-gradient-to-br from-blue-400/60 via-cyan-500/50 to-blue-600/40 blur-2xl"
               />
+              {/* Middle ring */}
+              <motion.div
+                animate={{ 
+                  opacity: [0.3, 0.5, 0.3],
+                  scale: [1, 1.15 + visualIntensity * 0.3, 1]
+                }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+                className="absolute inset-8 rounded-full bg-gradient-to-br from-blue-500/40 via-blue-600/30 to-cyan-400/20 blur-3xl"
+              />
+              {/* Outer halo */}
               <motion.div
                 animate={{ 
                   opacity: [0.2, 0.4, 0.2],
-                  scale: [1.1, 1.4 + visualIntensity * 0.4, 1.1]
+                  scale: [1.05, 1.25 + visualIntensity * 0.4, 1.05]
                 }}
-                transition={{ duration: 1.8, repeat: Infinity, delay: 0.3 }}
-                className="absolute inset-4 rounded-full bg-gradient-to-br from-blue-400/30 via-purple-500/20 to-transparent blur-2xl"
+                transition={{ duration: 1.8, repeat: Infinity, delay: 0.4 }}
+                className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400/30 via-cyan-500/20 to-transparent blur-[40px]"
               />
             </>
           )}
           
           {isSpeaking && (
             <>
+              {/* Inner glow */}
               <motion.div
                 animate={{ 
-                  opacity: [0.3, 0.7, 0.3],
-                  scale: [1, 1.3 + visualIntensity * 0.4, 1]
+                  opacity: [0.5, 0.8, 0.5],
+                  scale: [0.9, 1.1 + visualIntensity * 0.3, 0.9]
                 }}
-                transition={{ duration: 1.2, repeat: Infinity }}
-                className="absolute inset-8 rounded-full bg-gradient-to-br from-purple-500/50 via-pink-600/40 to-transparent blur-xl"
+                transition={{ duration: 1, repeat: Infinity }}
+                className="absolute inset-12 rounded-full bg-gradient-to-br from-purple-400/70 via-fuchsia-500/60 to-purple-600/50 blur-2xl"
               />
+              {/* Middle ring */}
+              <motion.div
+                animate={{ 
+                  opacity: [0.3, 0.6, 0.3],
+                  scale: [1, 1.2 + visualIntensity * 0.4, 1]
+                }}
+                transition={{ duration: 1.3, repeat: Infinity, delay: 0.15 }}
+                className="absolute inset-8 rounded-full bg-gradient-to-br from-purple-500/50 via-pink-500/40 to-fuchsia-400/30 blur-3xl"
+              />
+              {/* Outer halo */}
               <motion.div
                 animate={{ 
                   opacity: [0.2, 0.5, 0.2],
-                  scale: [1.1, 1.5 + visualIntensity * 0.5, 1.1]
+                  scale: [1.05, 1.3 + visualIntensity * 0.5, 1.05]
                 }}
-                transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
-                className="absolute inset-4 rounded-full bg-gradient-to-br from-purple-400/40 via-pink-500/30 to-transparent blur-2xl"
+                transition={{ duration: 1.6, repeat: Infinity, delay: 0.3 }}
+                className="absolute inset-0 rounded-full bg-gradient-to-br from-purple-400/40 via-pink-500/30 to-fuchsia-600/20 blur-[50px]"
               />
             </>
           )}
 
-          {/* Icon with audio reactivity */}
+          {/* Premium Icon with Glass Morphism */}
           <div className="absolute inset-0 flex items-center justify-center">
             <AnimatePresence mode="wait">
               {!isConnected ? (
                 <motion.div 
                   key="start" 
-                  initial={{ scale: 0 }} 
-                  animate={{ scale: 1 }} 
-                  exit={{ scale: 0 }}
-                  className="bg-white/10 rounded-full p-6 backdrop-blur-sm"
+                  initial={{ scale: 0, rotate: -180 }} 
+                  animate={{ scale: 1, rotate: 0 }} 
+                  exit={{ scale: 0, rotate: 180 }}
+                  transition={{ type: "spring", duration: 0.7 }}
+                  className="bg-gradient-to-br from-white/20 to-white/5 rounded-full p-8 backdrop-blur-xl border border-white/20 shadow-2xl"
                 >
-                  <Mic className="w-12 h-12 text-white/80" />
+                  <Mic className="w-16 h-16 text-white drop-shadow-lg" />
                 </motion.div>
               ) : isSpeaking ? (
                 <motion.div 
                   key="speaking" 
                   initial={{ scale: 0 }} 
                   animate={{ 
-                    scale: [1, 1.1 + visualIntensity * 0.2, 1],
-                    opacity: [0.8, 1, 0.8]
+                    scale: [1, 1.08 + visualIntensity * 0.15, 1],
+                    rotate: [0, 5, -5, 0]
                   }} 
                   exit={{ scale: 0 }} 
-                  transition={{ duration: 0.8, repeat: Infinity }}
-                  className="bg-purple-500/20 rounded-full p-6 backdrop-blur-sm"
+                  transition={{ 
+                    scale: { duration: 0.6, repeat: Infinity },
+                    rotate: { duration: 2, repeat: Infinity }
+                  }}
+                  className="bg-gradient-to-br from-purple-500/30 to-fuchsia-600/20 rounded-full p-8 backdrop-blur-xl border-2 border-purple-400/50 shadow-[0_0_40px_rgba(168,85,247,0.4)]"
                 >
-                  <Volume2 className="w-12 h-12 text-purple-300" />
+                  <Volume2 className="w-16 h-16 text-purple-200 drop-shadow-[0_0_10px_rgba(168,85,247,0.8)]" />
                 </motion.div>
               ) : isListening ? (
                 <motion.div 
                   key="listening" 
                   initial={{ scale: 0 }} 
                   animate={{ 
-                    scale: 1 + visualIntensity * 0.3,
-                    opacity: 0.7 + visualIntensity * 0.3
+                    scale: 1 + visualIntensity * 0.25,
+                    opacity: 0.85 + visualIntensity * 0.15
                   }} 
                   exit={{ scale: 0 }}
                   transition={{ duration: 0.1 }}
-                  className="bg-blue-500/20 rounded-full p-6 backdrop-blur-sm border-2 border-blue-400/40"
+                  className="bg-gradient-to-br from-blue-500/30 to-cyan-600/20 rounded-full p-8 backdrop-blur-xl border-2 border-blue-400/60 shadow-[0_0_40px_rgba(59,130,246,0.5)]"
                 >
-                  <Mic className="w-12 h-12 text-blue-300" />
+                  <Mic className="w-16 h-16 text-blue-200 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
                 </motion.div>
               ) : (
                 <motion.div 
                   key="ready" 
                   initial={{ scale: 0 }} 
-                  animate={{ scale: 1, opacity: 0.5 }} 
+                  animate={{ 
+                    scale: 1,
+                    rotate: [0, 360]
+                  }} 
                   exit={{ scale: 0 }}
-                  className="bg-white/5 rounded-full p-6 backdrop-blur-sm"
+                  transition={{
+                    rotate: { duration: 20, repeat: Infinity, ease: "linear" }
+                  }}
+                  className="bg-gradient-to-br from-white/10 to-purple-500/10 rounded-full p-8 backdrop-blur-xl border border-white/10 shadow-xl"
                 >
-                  <Sparkles className="w-10 h-10 text-gray-400" />
+                  <Sparkles className="w-14 h-14 text-purple-300/80 drop-shadow-lg" />
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Audio level indicator bars */}
-          {isListening && visualIntensity > 0.1 && (
-            <div className="absolute inset-0 flex items-center justify-center gap-2 pointer-events-none">
-              {[...Array(5)].map((_, i) => (
+          {/* Premium Audio Level Visualizer */}
+          {isListening && visualIntensity > 0.05 && (
+            <div className="absolute inset-0 flex items-center justify-center gap-3 pointer-events-none">
+              {[...Array(7)].map((_, i) => (
                 <motion.div
                   key={i}
                   animate={{
-                    height: [20, 20 + visualIntensity * 80 * (1 - i * 0.15), 20],
-                    opacity: [0.4, 0.8, 0.4]
+                    height: [30, 30 + visualIntensity * 100 * (1 - Math.abs(i - 3) * 0.2), 30],
+                    opacity: [0.5, 0.9, 0.5]
                   }}
                   transition={{
-                    duration: 0.5,
+                    duration: 0.4,
                     repeat: Infinity,
-                    delay: i * 0.1
+                    delay: i * 0.08,
+                    ease: "easeInOut"
                   }}
-                  className="w-1.5 bg-gradient-to-t from-blue-400 to-blue-600 rounded-full"
+                  className="w-2 bg-gradient-to-t from-blue-500 via-cyan-400 to-blue-300 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.6)]"
                   style={{
-                    height: 20 + visualIntensity * 60 * (1 - i * 0.15)
+                    height: 30 + visualIntensity * 80 * (1 - Math.abs(i - 3) * 0.2)
                   }}
                 />
               ))}

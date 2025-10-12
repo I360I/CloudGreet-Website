@@ -20,18 +20,28 @@ export default function RoiCalculator() {
   const roi = ((parseFloat(netGain) / annualCost) * 100).toFixed(0)
 
   return (
-    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12">
+    <div className="bg-gradient-to-br from-white/10 via-white/5 to-purple-500/5 backdrop-blur-2xl border border-white/20 rounded-[2rem] p-8 md:p-16 shadow-[0_20px_80px_rgba(0,0,0,0.3)]">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="text-center mb-10"
+        className="text-center mb-14"
       >
-        <h3 className="text-4xl md:text-5xl font-bold mb-4 text-white">
+        <motion.div
+          initial={{ scale: 0 }}
+          whileInView={{ scale: 1 }}
+          transition={{ type: "spring", duration: 0.8 }}
+          className="inline-block mb-6"
+        >
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-[0_10px_40px_rgba(147,51,234,0.4)]">
+            <DollarSign className="w-10 h-10 text-white" />
+          </div>
+        </motion.div>
+        <h3 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
           Calculate Your ROI
         </h3>
-        <p className="text-gray-400 text-lg">
-          See how much revenue you're losing to missed calls
+        <p className="text-gray-300 text-xl max-w-2xl mx-auto leading-relaxed">
+          Discover exactly how much revenue you're losing to missed calls — and how much CloudGreet can recover
         </p>
       </motion.div>
 
@@ -44,13 +54,15 @@ export default function RoiCalculator() {
           className="space-y-8"
         >
           {/* Missed Calls */}
-          <div>
-            <label className="flex items-center justify-between text-white font-semibold mb-3">
-              <span className="flex items-center gap-2">
-                <Phone className="w-5 h-5 text-red-400" />
+          <div className="bg-gradient-to-br from-red-500/10 to-red-600/5 border border-red-500/20 rounded-2xl p-6 backdrop-blur-sm">
+            <label className="flex items-center justify-between text-white font-semibold mb-4">
+              <span className="flex items-center gap-3 text-lg">
+                <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-400/30 flex items-center justify-center">
+                  <Phone className="w-5 h-5 text-red-400" />
+                </div>
                 Missed Calls Per Month
               </span>
-              <span className="text-3xl font-bold text-red-400">{missedCalls}</span>
+              <span className="text-4xl font-bold bg-gradient-to-r from-red-400 to-red-500 bg-clip-text text-transparent">{missedCalls}</span>
             </label>
             <input
               type="range"
@@ -58,22 +70,24 @@ export default function RoiCalculator() {
               max="50"
               value={missedCalls}
               onChange={(e) => setMissedCalls(parseInt(e.target.value))}
-              className="w-full h-3 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-r [&::-webkit-slider-thumb]:from-blue-500 [&::-webkit-slider-thumb]:to-purple-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg"
+              className="w-full h-4 bg-gradient-to-r from-red-900/30 to-red-800/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-red-400 [&::-webkit-slider-thumb]:to-red-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-[0_4px_20px_rgba(239,68,68,0.5)] [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white/20"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-2">
-              <span>1</span>
-              <span>50</span>
+            <div className="flex justify-between text-sm text-red-300/70 mt-3 font-medium">
+              <span>1 call</span>
+              <span>50 calls</span>
             </div>
           </div>
 
           {/* Average Job Value */}
-          <div>
-            <label className="flex items-center justify-between text-white font-semibold mb-3">
-              <span className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-green-400" />
+          <div className="bg-gradient-to-br from-green-500/10 to-emerald-600/5 border border-green-500/20 rounded-2xl p-6 backdrop-blur-sm">
+            <label className="flex items-center justify-between text-white font-semibold mb-4">
+              <span className="flex items-center gap-3 text-lg">
+                <div className="w-10 h-10 rounded-xl bg-green-500/20 border border-green-400/30 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-green-400" />
+                </div>
                 Average Job Value
               </span>
-              <span className="text-3xl font-bold text-green-400">${avgJobValue}</span>
+              <span className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">${avgJobValue.toLocaleString()}</span>
             </label>
             <input
               type="range"
@@ -82,22 +96,24 @@ export default function RoiCalculator() {
               step="100"
               value={avgJobValue}
               onChange={(e) => setAvgJobValue(parseInt(e.target.value))}
-              className="w-full h-3 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-r [&::-webkit-slider-thumb]:from-blue-500 [&::-webkit-slider-thumb]:to-purple-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg"
+              className="w-full h-4 bg-gradient-to-r from-green-900/30 to-emerald-800/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-green-400 [&::-webkit-slider-thumb]:to-emerald-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-[0_4px_20px_rgba(34,197,94,0.5)] [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white/20"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-2">
+            <div className="flex justify-between text-sm text-green-300/70 mt-3 font-medium">
               <span>$500</span>
               <span>$10,000</span>
             </div>
           </div>
 
           {/* Close Rate */}
-          <div>
-            <label className="flex items-center justify-between text-white font-semibold mb-3">
-              <span className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-blue-400" />
+          <div className="bg-gradient-to-br from-blue-500/10 to-cyan-600/5 border border-blue-500/20 rounded-2xl p-6 backdrop-blur-sm">
+            <label className="flex items-center justify-between text-white font-semibold mb-4">
+              <span className="flex items-center gap-3 text-lg">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-blue-400" />
+                </div>
                 Close Rate
               </span>
-              <span className="text-3xl font-bold text-blue-400">{closeRate}%</span>
+              <span className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-cyan-500 bg-clip-text text-transparent">{closeRate}%</span>
             </label>
             <input
               type="range"
@@ -105,9 +121,9 @@ export default function RoiCalculator() {
               max="80"
               value={closeRate}
               onChange={(e) => setCloseRate(parseInt(e.target.value))}
-              className="w-full h-3 bg-white/10 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-r [&::-webkit-slider-thumb]:from-blue-500 [&::-webkit-slider-thumb]:to-purple-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg"
+              className="w-full h-4 bg-gradient-to-r from-blue-900/30 to-cyan-800/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-blue-400 [&::-webkit-slider-thumb]:to-cyan-600 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-[0_4px_20px_rgba(59,130,246,0.5)] [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white/20"
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-2">
+            <div className="flex justify-between text-sm text-blue-300/70 mt-3 font-medium">
               <span>10%</span>
               <span>80%</span>
             </div>
@@ -122,18 +138,24 @@ export default function RoiCalculator() {
           className="space-y-6"
         >
           {/* Monthly Lost Revenue */}
-          <div className="bg-gradient-to-br from-red-500/20 to-red-600/20 border border-red-500/30 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-red-300 text-sm font-medium">Monthly Lost Revenue</span>
-              <Zap className="w-5 h-5 text-red-400" />
+          <motion.div 
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ type: "spring", stiffness: 300 }}
+            className="bg-gradient-to-br from-red-500/20 via-red-600/15 to-red-700/10 border-2 border-red-500/30 rounded-3xl p-8 backdrop-blur-xl shadow-[0_8px_32px_rgba(239,68,68,0.2)] hover:shadow-[0_12px_48px_rgba(239,68,68,0.3)]"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-red-200 text-base font-semibold uppercase tracking-wide">Lost Monthly</span>
+              <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-400/40 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-red-400" />
+              </div>
             </div>
-            <div className="text-4xl md:text-5xl font-bold text-red-400">
+            <div className="text-5xl md:text-6xl font-black bg-gradient-to-br from-red-300 to-red-500 bg-clip-text text-transparent mb-2">
               ${parseInt(missedRevenue).toLocaleString()}
             </div>
-            <div className="text-red-300/70 text-sm mt-2">
-              From {missedCalls} missed calls per month
+            <div className="text-red-200/60 text-sm font-medium">
+              💔 {missedCalls} missed opportunities
             </div>
-          </div>
+          </motion.div>
 
           {/* Annual Impact */}
           <div className="bg-gradient-to-br from-yellow-500/20 to-orange-600/20 border border-yellow-500/30 rounded-2xl p-6">
