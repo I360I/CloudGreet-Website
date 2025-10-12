@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +10,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
+    // ADMIN ONLY: Test endpoint should be protected
+    const adminAuth = await requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
+    }
+    
     const body = await request.json()
     const { email, name } = body
 
