@@ -134,19 +134,38 @@ export default function VoiceRealtimeOrb({
 
       // Connect with ephemeral token using GA endpoint
       const ws = new WebSocket(
-        'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17',
+        'wss://api.openai.com/v1/realtime?model=gpt-realtime',
         ['realtime', `openai-insecure-api-key.${clientSecret}`]
       )
 
       ws.onopen = () => {
         setIsConnected(true)
         
-        // Send minimal session configuration
-        // Start with bare minimum, only add what's actually supported
+        // Send session configuration (per OpenAI GA docs)
         ws.send(JSON.stringify({
           type: 'session.update',
           session: {
-            type: 'realtime'
+            type: 'realtime',
+            model: 'gpt-realtime',
+            instructions: `You are a professional AI receptionist for ${businessName}, a ${businessType}.
+
+Services: ${services}
+Hours: ${hours}
+
+Be warm, professional, and helpful. Keep responses brief (20-30 words). 
+Answer questions about services, hours, and pricing clearly.
+Help schedule appointments if asked.
+Be conversational and natural - you're having a phone conversation.`,
+            audio: {
+              output: { voice: 'verse' }
+            },
+            turn_detection: {
+              type: 'server_vad',
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 500
+            },
+            temperature: 0.8
           }
         }))
 
@@ -162,8 +181,8 @@ export default function VoiceRealtimeOrb({
             setTranscript(data.transcript)
             break
             
-          case 'response.audio.delta':
-            // Received audio chunk from AI
+          case 'response.output_audio.delta':
+            // Received audio chunk from AI (GA API event name)
             const audioData = base64ToArrayBuffer(data.delta)
             audioQueueRef.current.push(new Int16Array(audioData))
             if (!isPlayingRef.current) {
@@ -171,8 +190,8 @@ export default function VoiceRealtimeOrb({
             }
             break
             
-          case 'response.audio_transcript.delta':
-            // AI's text response (for display)
+          case 'response.output_audio_transcript.delta':
+            // AI's text response (GA API event name)
             break
             
           case 'response.done':
