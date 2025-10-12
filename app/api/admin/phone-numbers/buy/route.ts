@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/monitoring'
+import { requireAdmin } from '@/lib/admin-auth'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,6 +12,12 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    // CRITICAL: Require admin authentication
+    const adminAuth = await requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
+    }
+    
     const body = await request.json()
     const { count = 5 } = body
 
