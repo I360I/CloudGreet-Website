@@ -155,7 +155,7 @@ Be warm, professional, and helpful. Keep responses brief (20-30 words).
 Answer questions about services, hours, and pricing clearly.
 Help schedule appointments if asked.
 Be conversational and natural - you're having a phone conversation.`,
-            voice: 'alloy',
+            voice: 'verse',
             input_audio_format: 'pcm16',
             output_audio_format: 'pcm16',
             input_audio_transcription: {
