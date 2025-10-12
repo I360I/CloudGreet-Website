@@ -158,71 +158,118 @@ export default function RoiCalculator() {
           </motion.div>
 
           {/* Annual Impact */}
-          <div className="bg-gradient-to-br from-yellow-500/20 to-orange-600/20 border border-yellow-500/30 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-yellow-300 text-sm font-medium">Annual Lost Revenue</span>
-              <Calendar className="w-5 h-5 text-yellow-400" />
+          <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ type: "spring", stiffness: 300 }}
+            className="bg-gradient-to-br from-yellow-500/20 via-orange-500/15 to-amber-600/10 border-2 border-yellow-500/30 rounded-3xl p-8 backdrop-blur-xl shadow-[0_8px_32px_rgba(251,191,36,0.2)] hover:shadow-[0_12px_48px_rgba(251,191,36,0.3)]"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-yellow-200 text-base font-semibold uppercase tracking-wide">Lost Annually</span>
+              <div className="w-10 h-10 rounded-xl bg-yellow-500/20 border border-yellow-400/40 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-yellow-400" />
+              </div>
             </div>
-            <div className="text-4xl md:text-5xl font-bold text-yellow-400">
+            <div className="text-5xl md:text-6xl font-black bg-gradient-to-br from-yellow-300 to-orange-500 bg-clip-text text-transparent mb-2">
               ${parseInt(annualMissedRevenue).toLocaleString()}
             </div>
-            <div className="text-yellow-300/70 text-sm mt-2">
-              That's revenue walking away every year
+            <div className="text-yellow-200/60 text-sm font-medium">
+              📉 Revenue walking away every year
             </div>
-          </div>
+          </motion.div>
 
           {/* With CloudGreet */}
-          <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-green-300 text-sm font-medium">Annual Revenue Recovered</span>
-              <TrendingUp className="w-5 h-5 text-green-400" />
+          <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ type: "spring", stiffness: 300 }}
+            className="bg-gradient-to-br from-green-500/20 via-emerald-500/15 to-teal-600/10 border-2 border-green-500/30 rounded-3xl p-8 backdrop-blur-xl shadow-[0_8px_32px_rgba(34,197,94,0.2)] hover:shadow-[0_12px_48px_rgba(34,197,94,0.3)]"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-green-200 text-base font-semibold uppercase tracking-wide">Recovered</span>
+              <div className="w-10 h-10 rounded-xl bg-green-500/20 border border-green-400/40 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-green-400" />
+              </div>
             </div>
-            <div className="text-4xl md:text-5xl font-bold text-green-400">
+            <div className="text-5xl md:text-6xl font-black bg-gradient-to-br from-green-300 to-emerald-500 bg-clip-text text-transparent mb-2">
               ${parseInt(annualRecoveredRevenue).toLocaleString()}
             </div>
-            <div className="text-green-300/70 text-sm mt-2">
-              80% of missed calls converted to bookings
+            <div className="text-green-200/60 text-sm font-medium">
+              ✨ 80% of missed calls converted annually
             </div>
-          </div>
+          </motion.div>
 
           {/* Net Gain */}
-          <div className="bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-blue-500/30 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-blue-300 text-sm font-medium">Annual Net Gain</span>
-              <DollarSign className="w-5 h-5 text-blue-400" />
+          <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ type: "spring", stiffness: 300 }}
+            className="bg-gradient-to-br from-blue-500/20 via-indigo-500/15 to-purple-600/10 border-2 border-blue-500/30 rounded-3xl p-8 backdrop-blur-xl shadow-[0_8px_32px_rgba(59,130,246,0.2)] hover:shadow-[0_12px_48px_rgba(59,130,246,0.3)]"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-blue-200 text-base font-semibold uppercase tracking-wide">Net Profit</span>
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-blue-400" />
+              </div>
             </div>
-            <div className="text-4xl md:text-5xl font-bold text-blue-400">
+            <div className="text-5xl md:text-6xl font-black bg-gradient-to-br from-blue-300 to-indigo-500 bg-clip-text text-transparent mb-2">
               ${parseInt(netGain).toLocaleString()}
             </div>
-            <div className="text-blue-300/70 text-sm mt-2">
-              After CloudGreet subscription (${cloudGreetCost}/mo)
+            <div className="text-blue-200/60 text-sm font-medium">
+              💰 After ${cloudGreetCost}/mo subscription
             </div>
-          </div>
+          </motion.div>
 
-          {/* ROI */}
-          <div className="bg-gradient-to-br from-purple-500/20 to-pink-600/20 border border-purple-500/30 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-purple-300 text-sm font-medium">Return on Investment</span>
-              <TrendingUp className="w-5 h-5 text-purple-400" />
+          {/* ROI - Featured Card */}
+          <motion.div
+            whileHover={{ scale: 1.03, y: -8 }}
+            transition={{ type: "spring", stiffness: 300 }}
+            className="relative bg-gradient-to-br from-purple-500/30 via-fuchsia-500/20 to-pink-600/15 border-2 border-purple-400/40 rounded-3xl p-10 backdrop-blur-xl shadow-[0_20px_60px_rgba(168,85,247,0.4)] hover:shadow-[0_24px_80px_rgba(168,85,247,0.5)] overflow-hidden"
+          >
+            {/* Animated background gradient */}
+            <motion.div
+              animate={{
+                opacity: [0.3, 0.5, 0.3],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-fuchsia-500/10 to-pink-600/20 blur-2xl"
+            />
+            
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-purple-100 text-lg font-bold uppercase tracking-wider">ROI</span>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/30 to-fuchsia-500/30 border border-purple-400/50 flex items-center justify-center shadow-lg">
+                  <TrendingUp className="w-6 h-6 text-purple-300" />
+                </div>
+              </div>
+              <div className="text-6xl md:text-7xl font-black bg-gradient-to-r from-purple-200 via-fuchsia-300 to-pink-300 bg-clip-text text-transparent mb-3 drop-shadow-[0_0_30px_rgba(168,85,247,0.3)]">
+                {roi}%
+              </div>
+              <div className="text-purple-100/70 text-base font-semibold">
+                🚀 Every $1 → ${(parseFloat(roi)/100 + 1).toFixed(2)} return
+              </div>
             </div>
-            <div className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-              {roi}% ROI
-            </div>
-            <div className="text-purple-300/70 text-sm mt-2">
-              For every $1 spent, earn ${(parseFloat(roi)/100 + 1).toFixed(2)}
-            </div>
-          </div>
+          </motion.div>
 
           {/* CTA */}
           <motion.div
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.03, y: -3 }}
             whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 400 }}
           >
             <a
               href="/register-simple"
-              className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-center font-bold py-4 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
+              className="relative block w-full bg-gradient-to-r from-blue-600 via-purple-600 to-fuchsia-600 hover:from-blue-500 hover:via-purple-500 hover:to-fuchsia-500 text-white text-center font-black text-lg py-6 px-8 rounded-2xl transition-all shadow-[0_10px_40px_rgba(147,51,234,0.4)] hover:shadow-[0_15px_60px_rgba(147,51,234,0.6)] overflow-hidden group"
             >
-              Start Recovering Revenue Today →
+              <span className="relative z-10 flex items-center justify-center gap-3">
+                <Zap className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+                Start Recovering Revenue Today
+                <motion.span
+                  animate={{ x: [0, 5, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  →
+                </motion.span>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
             </a>
           </motion.div>
         </motion.div>
@@ -230,14 +277,16 @@ export default function RoiCalculator() {
 
       {/* Bottom Note */}
       <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="mt-10 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8 }}
+        className="mt-12 text-center"
       >
-        <p className="text-gray-400 text-sm">
-          ⚡ <span className="text-white font-semibold">Real Results</span>: Most contractors see 40-60% increase in bookings within 30 days
-        </p>
+        <div className="inline-block bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-fuchsia-500/10 border border-white/10 rounded-2xl px-8 py-4 backdrop-blur-sm">
+          <p className="text-gray-200 text-base">
+            ⚡ <span className="text-white font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Real Results</span>: Most contractors see <span className="text-green-400 font-bold">40-60% increase</span> in bookings within <span className="text-white font-semibold">30 days</span>
+          </p>
+        </div>
       </motion.div>
     </div>
   )
