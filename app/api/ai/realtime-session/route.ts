@@ -13,10 +13,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔐 Creating Realtime session...')
+    console.log('🔐 Creating client secret using GA endpoint...')
 
-    // Create a session using the correct GA endpoint
-    const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
+    // Use /v1/realtime/client_secrets for GA API (as error message states)
+    const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -24,23 +24,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         model: 'gpt-4o-realtime-preview-2024-12-17',
-        voice: 'verse',
-        instructions: `You are a professional AI receptionist for ${request.headers.get('x-business-name') || 'CloudGreet'}.
-Your role is to help customers by providing information about services, scheduling appointments, and answering questions professionally.
-Be friendly, helpful, and efficient. Keep responses concise and natural.`,
-        input_audio_format: 'pcm16',
-        output_audio_format: 'pcm16',
-        input_audio_transcription: {
-          model: 'whisper-1'
-        },
-        turn_detection: {
-          type: 'server_vad',
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 500
-        },
-        temperature: 0.8,
-        max_response_output_tokens: 4096
+        voice: 'verse'
       })
     })
 
