@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Follow-up sequence automation error:', error)
+    logger.error('Follow-up sequence automation failed', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'automation/follow-up-sequence' })
     return NextResponse.json({
       success: false,
       error: 'Follow-up sequence creation failed',

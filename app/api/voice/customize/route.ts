@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Voice customization error:', error)
+    logger.error('Voice customization failed', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'voice/customize' })
     
     if (error instanceof z.ZodError) {
       return NextResponse.json({
@@ -241,7 +241,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Get voice settings error:', error)
+    logger.error('Failed to get voice settings', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'voice/customize' })
     return NextResponse.json({
       success: false,
       message: 'Failed to get voice settings'
@@ -309,7 +309,7 @@ Make it professional yet ${personalitySettings.tone}, and ensure it represents $
 
     return response.choices[0].message.content || ''
   } catch (error) {
-    console.error('Error generating personalized prompt:', error)
+    logger.error('Failed to generate personalized prompt', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'voice/customize' })
     // Fallback to basic prompt
     return `You are an AI receptionist for ${business.business_name}, a ${business.business_type} business. 
 
@@ -360,7 +360,7 @@ async function testVoiceConfiguration(
 
     return response.choices[0].message.content || 'Test greeting generated successfully.'
   } catch (error) {
-    console.error('Error testing voice configuration:', error)
+    logger.error('Failed to test voice configuration', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'voice/customize' })
     return 'Voice configuration updated successfully.'
   }
 }

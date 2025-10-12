@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
       })
       
     } catch (error) {
-    console.error('Error updating agent settings:', error)
+    logger.error('Agent settings update failed', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'agent/update-working' })
     
     if (error instanceof z.ZodError) {
       return NextResponse.json({
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error getting agent settings:', error)
+    logger.error('Failed to get agent settings', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'agent/update-working' })
     return NextResponse.json({
       success: false,
       message: 'Failed to get agent settings'
@@ -350,7 +350,7 @@ async function testWorkingConfiguration(settings: any, businessName: string): Pr
       workingSettings: true
     }
     } catch (error) {
-    console.error('Error testing configuration:', error)
+    logger.error('Failed to test configuration', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'agent/update-working' })
     return {
       testResponse: 'Configuration updated successfully.',
       voice: settings.voice || 'alloy',

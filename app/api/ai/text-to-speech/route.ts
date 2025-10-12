@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('TTS error:', error)
+    logger.error('TTS generation failed', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'ai/text-to-speech' })
     return NextResponse.json(
       { error: 'Text-to-speech conversion failed', details: error.message },
       { status: 500 }

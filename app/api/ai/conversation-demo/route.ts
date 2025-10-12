@@ -125,7 +125,7 @@ NOW GO BE THE BEST RECEPTIONIST EVER! 🚀`
       stop: ['\n\n', 'Customer:', 'Caller:']
     })
     
-    console.log(`⚡ ${Date.now() - start}ms`)
+    logger.info('Demo conversation generated', { duration: Date.now() - start, messageCount: limitedMessages.length })
 
     const response = completion.choices[0]?.message?.content?.trim() || 
       "How can I help you?"
@@ -133,7 +133,7 @@ NOW GO BE THE BEST RECEPTIONIST EVER! 🚀`
     return NextResponse.json({ success: true, response })
 
   } catch (error: any) {
-    console.error('AI error:', error)
+    logger.error('Demo conversation failed', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'ai/conversation-demo' })
     return NextResponse.json({
       success: true,
       response: "Could you repeat that?"

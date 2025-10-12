@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error updating AI agent settings:', error)
+    logger.error('AI agent settings update failed', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'ai-agent/update-settings' })
     
     if (error instanceof z.ZodError) {
       return NextResponse.json({
@@ -287,7 +287,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error getting AI agent settings:', error)
+    logger.error('Failed to get AI agent settings', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'ai-agent/update-settings' })
     return NextResponse.json({
       success: false,
       message: 'Failed to get AI agent settings'
