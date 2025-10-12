@@ -24,6 +24,7 @@ export default function VoiceRealtimeOrb({
   const [error, setError] = useState<string | null>(null)
   const [audioLevel, setAudioLevel] = useState(0)
   const [micPermission, setMicPermission] = useState<'granted' | 'denied' | 'prompt'>('prompt')
+  const [visualIntensity, setVisualIntensity] = useState(0)
   
   const wsRef = useRef<WebSocket | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -32,6 +33,7 @@ export default function VoiceRealtimeOrb({
   const isPlayingRef = useRef(false)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const animationFrameRef = useRef<number | null>(null)
+  const analyzerRef = useRef<AnalyserNode | null>(null)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -66,12 +68,46 @@ export default function VoiceRealtimeOrb({
       })
       mediaStreamRef.current = stream
       setMicPermission('granted')
+      
+      // Set up audio analyzer for visualizations
+      if (audioContextRef.current) {
+        const analyzer = audioContextRef.current.createAnalyser()
+        analyzer.fftSize = 256
+        const source = audioContextRef.current.createMediaStreamSource(stream)
+        source.connect(analyzer)
+        analyzerRef.current = analyzer
+        
+        // Start monitoring audio levels
+        monitorAudioLevel()
+      }
+      
       return stream
     } catch (error) {
       setMicPermission('denied')
       setError('Microphone access denied. Please allow microphone in browser settings.')
       return null
     }
+  }
+
+  const monitorAudioLevel = () => {
+    if (!analyzerRef.current) return
+    
+    const dataArray = new Uint8Array(analyzerRef.current.frequencyBinCount)
+    
+    const checkLevel = () => {
+      if (!analyzerRef.current) return
+      
+      analyzerRef.current.getByteFrequencyData(dataArray)
+      const average = dataArray.reduce((a, b) => a + b) / dataArray.length
+      const normalizedLevel = Math.min(average / 128, 1)
+      
+      setAudioLevel(normalizedLevel)
+      setVisualIntensity(normalizedLevel * 2) // Amplify for visuals
+      
+      animationFrameRef.current = requestAnimationFrame(checkLevel)
+    }
+    
+    checkLevel()
   }
 
   const connectToOpenAI = async () => {
@@ -96,9 +132,9 @@ export default function VoiceRealtimeOrb({
       
       const { clientSecret, sessionId } = await sessionRes.json()
 
-      // Connect with ephemeral token (secure, expires after session)
+      // Connect with ephemeral token using GA endpoint
       const ws = new WebSocket(
-        'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01',
+        'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17',
         ['realtime', `openai-insecure-api-key.${clientSecret}`]
       )
 
@@ -409,12 +445,16 @@ Be conversational and natural - you're having a phone conversation.`,
           className="absolute max-w-full max-h-full"
         />
 
-        {/* Dark Orb */}
+        {/* Reactive Voice Orb */}
         <motion.div
-          className="relative z-10 w-48 h-48 cursor-pointer overflow-hidden"
+          className="relative z-10 w-64 h-64 cursor-pointer overflow-hidden"
           style={{
             borderRadius: '47% 53% 52% 48% / 51% 49% 51% 49%',
-            background: 'radial-gradient(ellipse at 35% 35%, rgba(30,25,45,0.8), rgba(0,0,0,1) 60%, rgba(0,0,0,1))',
+            background: isListening 
+              ? 'radial-gradient(ellipse at 35% 35%, rgba(59, 130, 246, 0.4), rgba(20, 15, 45, 0.95) 50%, rgba(0, 0, 0, 1))'
+              : isSpeaking
+              ? 'radial-gradient(ellipse at 35% 35%, rgba(147, 51, 234, 0.4), rgba(30, 20, 50, 0.95) 50%, rgba(0, 0, 0, 1))'
+              : 'radial-gradient(ellipse at 35% 35%, rgba(30,25,45,0.8), rgba(0,0,0,1) 60%, rgba(0,0,0,1))',
             backdropFilter: 'blur(20px)'
           }}
           onClick={() => {
@@ -427,11 +467,24 @@ Be conversational and natural - you're having a phone conversation.`,
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           animate={{
-            boxShadow: [
-              '0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.9)',
-              '0 0 60px rgba(139, 92, 246, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.9)',
-              '0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.9)',
-            ],
+            scale: isListening || isSpeaking ? 1 + (visualIntensity * 0.15) : 1,
+            boxShadow: isListening 
+              ? [
+                  `0 0 ${60 + visualIntensity * 40}px rgba(59, 130, 246, ${0.6 + visualIntensity * 0.3}), inset 0 0 40px rgba(0, 0, 0, 0.9)`,
+                  `0 0 ${80 + visualIntensity * 60}px rgba(59, 130, 246, ${0.8 + visualIntensity * 0.2}), inset 0 0 50px rgba(0, 0, 0, 0.9)`,
+                  `0 0 ${60 + visualIntensity * 40}px rgba(59, 130, 246, ${0.6 + visualIntensity * 0.3}), inset 0 0 40px rgba(0, 0, 0, 0.9)`,
+                ]
+              : isSpeaking
+              ? [
+                  `0 0 ${60 + visualIntensity * 40}px rgba(147, 51, 234, ${0.6 + visualIntensity * 0.3}), inset 0 0 40px rgba(0, 0, 0, 0.9)`,
+                  `0 0 ${80 + visualIntensity * 60}px rgba(147, 51, 234, ${0.8 + visualIntensity * 0.2}), inset 0 0 50px rgba(0, 0, 0, 0.9)`,
+                  `0 0 ${60 + visualIntensity * 40}px rgba(147, 51, 234, ${0.6 + visualIntensity * 0.3}), inset 0 0 40px rgba(0, 0, 0, 0.9)`,
+                ]
+              : [
+                  '0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.9)',
+                  '0 0 60px rgba(139, 92, 246, 0.6), inset 0 0 40px rgba(0, 0, 0, 0.9)',
+                  '0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.9)',
+                ],
             borderRadius: [
               '47% 53% 52% 48% / 51% 49% 51% 49%',
               '50% 50% 48% 52% / 49% 51% 49% 51%',
@@ -439,7 +492,8 @@ Be conversational and natural - you're having a phone conversation.`,
             ]
           }}
           transition={{ 
-            boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+            scale: { duration: 0.2 },
+            boxShadow: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
             borderRadius: { duration: 8, repeat: Infinity, ease: "easeInOut" }
           }}
         >
@@ -451,38 +505,130 @@ Be conversational and natural - you're having a phone conversation.`,
             }}
           />
           
+          {/* Inner glow layer */}
           <div className="absolute inset-12 rounded-full bg-gradient-to-br from-purple-950/20 via-black to-black" />
           
-          {(isListening || isSpeaking) && (
-            <motion.div
-              animate={{ opacity: [0.1, 0.3, 0.1], scale: [0.8, 1, 0.8] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute inset-12 rounded-full bg-gradient-to-br from-purple-600/20 via-blue-600/20 to-purple-600/20 blur-xl"
-            />
+          {/* Voice-reactive pulse rings */}
+          {isListening && (
+            <>
+              <motion.div
+                animate={{ 
+                  opacity: [0.3, 0.6, 0.3],
+                  scale: [1, 1.2 + visualIntensity * 0.3, 1]
+                }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="absolute inset-8 rounded-full bg-gradient-to-br from-blue-500/40 via-blue-600/30 to-transparent blur-xl"
+              />
+              <motion.div
+                animate={{ 
+                  opacity: [0.2, 0.4, 0.2],
+                  scale: [1.1, 1.4 + visualIntensity * 0.4, 1.1]
+                }}
+                transition={{ duration: 1.8, repeat: Infinity, delay: 0.3 }}
+                className="absolute inset-4 rounded-full bg-gradient-to-br from-blue-400/30 via-purple-500/20 to-transparent blur-2xl"
+              />
+            </>
+          )}
+          
+          {isSpeaking && (
+            <>
+              <motion.div
+                animate={{ 
+                  opacity: [0.3, 0.7, 0.3],
+                  scale: [1, 1.3 + visualIntensity * 0.4, 1]
+                }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+                className="absolute inset-8 rounded-full bg-gradient-to-br from-purple-500/50 via-pink-600/40 to-transparent blur-xl"
+              />
+              <motion.div
+                animate={{ 
+                  opacity: [0.2, 0.5, 0.2],
+                  scale: [1.1, 1.5 + visualIntensity * 0.5, 1.1]
+                }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}
+                className="absolute inset-4 rounded-full bg-gradient-to-br from-purple-400/40 via-pink-500/30 to-transparent blur-2xl"
+              />
+            </>
           )}
 
-          {/* Icon */}
+          {/* Icon with audio reactivity */}
           <div className="absolute inset-0 flex items-center justify-center">
             <AnimatePresence mode="wait">
               {!isConnected ? (
-                <motion.div key="start" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                  <Mic className="w-8 h-8 text-white/60" />
+                <motion.div 
+                  key="start" 
+                  initial={{ scale: 0 }} 
+                  animate={{ scale: 1 }} 
+                  exit={{ scale: 0 }}
+                  className="bg-white/10 rounded-full p-6 backdrop-blur-sm"
+                >
+                  <Mic className="w-12 h-12 text-white/80" />
                 </motion.div>
               ) : isSpeaking ? (
-                <motion.div key="speaking" initial={{ scale: 0 }} animate={{ scale: [1, 1.2, 1], opacity: 0.6 }} exit={{ scale: 0 }} transition={{ scale: { duration: 1, repeat: Infinity } }}>
-                  <Volume2 className="w-8 h-8 text-purple-400/60" />
+                <motion.div 
+                  key="speaking" 
+                  initial={{ scale: 0 }} 
+                  animate={{ 
+                    scale: [1, 1.1 + visualIntensity * 0.2, 1],
+                    opacity: [0.8, 1, 0.8]
+                  }} 
+                  exit={{ scale: 0 }} 
+                  transition={{ duration: 0.8, repeat: Infinity }}
+                  className="bg-purple-500/20 rounded-full p-6 backdrop-blur-sm"
+                >
+                  <Volume2 className="w-12 h-12 text-purple-300" />
                 </motion.div>
               ) : isListening ? (
-                <motion.div key="listening" initial={{ scale: 0 }} animate={{ scale: 1, opacity: 0.6 }} exit={{ scale: 0 }}>
-                  <Mic className="w-8 h-8 text-blue-400/60" />
+                <motion.div 
+                  key="listening" 
+                  initial={{ scale: 0 }} 
+                  animate={{ 
+                    scale: 1 + visualIntensity * 0.3,
+                    opacity: 0.7 + visualIntensity * 0.3
+                  }} 
+                  exit={{ scale: 0 }}
+                  transition={{ duration: 0.1 }}
+                  className="bg-blue-500/20 rounded-full p-6 backdrop-blur-sm border-2 border-blue-400/40"
+                >
+                  <Mic className="w-12 h-12 text-blue-300" />
                 </motion.div>
               ) : (
-                <motion.div key="ready" initial={{ scale: 0 }} animate={{ scale: 1, opacity: 0.4 }} exit={{ scale: 0 }}>
-                  <MicOff className="w-6 h-6 text-gray-500/60" />
+                <motion.div 
+                  key="ready" 
+                  initial={{ scale: 0 }} 
+                  animate={{ scale: 1, opacity: 0.5 }} 
+                  exit={{ scale: 0 }}
+                  className="bg-white/5 rounded-full p-6 backdrop-blur-sm"
+                >
+                  <Sparkles className="w-10 h-10 text-gray-400" />
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
+
+          {/* Audio level indicator bars */}
+          {isListening && visualIntensity > 0.1 && (
+            <div className="absolute inset-0 flex items-center justify-center gap-2 pointer-events-none">
+              {[...Array(5)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  animate={{
+                    height: [20, 20 + visualIntensity * 80 * (1 - i * 0.15), 20],
+                    opacity: [0.4, 0.8, 0.4]
+                  }}
+                  transition={{
+                    duration: 0.5,
+                    repeat: Infinity,
+                    delay: i * 0.1
+                  }}
+                  className="w-1.5 bg-gradient-to-t from-blue-400 to-blue-600 rounded-full"
+                  style={{
+                    height: 20 + visualIntensity * 60 * (1 - i * 0.15)
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </motion.div>
       </div>
 

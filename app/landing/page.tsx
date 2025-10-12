@@ -10,6 +10,7 @@ import {
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
 import VoiceRealtimeOrb from '../components/VoiceRealtimeOrb'
+import RoiCalculator from '../components/RoiCalculator'
 
 function VoiceOrbDemoWithSettings() {
   const [businessInfo, setBusinessInfo] = React.useState({
@@ -207,13 +208,20 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Value Proposition */}
+      {/* ROI Calculator */}
       <section id="roi-calculator" className="py-24 relative overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-purple-500/5" />
         <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl" />
         
+        <div className="max-w-6xl mx-auto px-4 relative z-10">
+          <RoiCalculator />
+        </div>
+      </section>
+
+      {/* Value Proposition */}
+      <section className="py-24 relative overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}

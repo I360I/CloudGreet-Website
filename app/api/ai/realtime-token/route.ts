@@ -15,20 +15,17 @@ export async function POST(request: NextRequest) {
 
     console.log('🔐 Creating ephemeral session token...')
 
-    // SECURE: Create ephemeral token that expires and is scoped to this session
+    // SECURE: Create ephemeral client secret using GA endpoint
     // This protects the main API key
-    const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
+    const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o-realtime-preview-2024-10-01',
-        voice: 'alloy',
-        instructions: 'You are a helpful AI assistant',
-        modalities: ['text', 'audio'],
-        temperature: 0.8
+        model: 'gpt-4o-realtime-preview-2024-12-17',
+        voice: 'verse'
       })
     })
 
