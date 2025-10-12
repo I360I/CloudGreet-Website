@@ -121,7 +121,7 @@ export default function VoiceRealtimeOrb({
 
       // Connect to OpenAI Realtime API
       // Get ephemeral session token from backend (SECURE)
-      const sessionRes = await fetch('/api/ai/realtime-token', {
+      const sessionRes = await fetch('/api/ai/realtime-session', {
         method: 'POST'
       })
       
