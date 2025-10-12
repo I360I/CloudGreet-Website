@@ -2,15 +2,36 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { notifyNewBooking } from '@/lib/notifications'
+import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
 
 export async function PUT(request: NextRequest) {
   try {
+    // AUTH CHECK: Verify business access
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    const decoded = jwt.verify(token, jwtSecret) as any
+    const userBusinessId = decoded.businessId
+    
+    if (!userBusinessId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+    
     const { appointmentId, businessId, sendReviewSMS = true } = await request.json()
 
     if (!appointmentId || !businessId) {
       return NextResponse.json({ error: 'Appointment ID and Business ID are required' }, { status: 400 })
+    }
+    
+    // Verify user owns this business
+    if (userBusinessId !== businessId) {
+      return NextResponse.json({ error: 'Unauthorized - Access denied' }, { status: 403 })
     }
 
     // Update appointment status to completed

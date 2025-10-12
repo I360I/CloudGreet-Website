@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/monitoring'
+import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -6,6 +8,21 @@ export const runtime = 'nodejs'
 // Enhanced business intelligence automation
 export async function POST(request: NextRequest) {
   try {
+    // AUTH CHECK: Prevent API abuse
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    const decoded = jwt.verify(token, jwtSecret) as any
+    const businessId = decoded.businessId
+    
+    if (!businessId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+    
     const { businessType, location, keywords, businessData } = await request.json()
     
     // Enhanced research using multiple data sources
@@ -21,7 +38,10 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Enhanced research error:', error)
+    logger.error('Enhanced research error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      endpoint: 'leads/enhanced-research'
+    })
     return NextResponse.json({
       success: false,
       error: 'Enhanced research failed',

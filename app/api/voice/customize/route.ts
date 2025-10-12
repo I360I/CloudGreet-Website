@@ -34,11 +34,32 @@ const voiceCustomizationSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // AUTH CHECK: Verify business access
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    const jwt = (await import('jsonwebtoken')).default
+    const decoded = jwt.verify(token, jwtSecret) as any
+    const userBusinessId = decoded.businessId
+    
+    if (!userBusinessId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+    
     const body = await request.json()
     const validatedData = voiceCustomizationSchema.parse(body)
+    
+    // Verify user owns this business
+    if (userBusinessId !== validatedData.businessId) {
+      return NextResponse.json({ error: 'Unauthorized - Access denied' }, { status: 403 })
+    }
 
     // Get business data
-    const { data: business, error: businessError } = await supabaseAdmin
+    const { data: business, error: businessError} = await supabaseAdmin
       .from('businesses')
       .select('*')
       .eq('id', validatedData.businessId)
