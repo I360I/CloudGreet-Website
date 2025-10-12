@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { createClient } from '@supabase/supabase-js'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +12,12 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // CRITICAL: Only existing admins can create new admins
+    const adminAuth = await requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
+    }
+    
     const body = await request.json()
     const { email, password, name } = body
 

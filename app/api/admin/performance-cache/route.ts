@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -10,6 +11,12 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 export async function GET(request: NextRequest) {
   try {
+    // CRITICAL: Require admin authentication
+    const adminAuth = await requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
+    }
+    
     const cacheKey = 'admin-performance-metrics'
     const cachedData = performanceCache.get(cacheKey)
     

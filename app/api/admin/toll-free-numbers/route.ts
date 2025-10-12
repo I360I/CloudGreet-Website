@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
 import { logger } from '../../../../lib/monitoring'
+import { requireAdmin } from '../../../../lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 // GET - List all toll-free numbers
 export async function GET(request: NextRequest) {
   try {
+    // CRITICAL: Require admin authentication
+    const adminAuth = await requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
+    }
+    
     const { data: numbers, error } = await supabaseAdmin
       .from('toll_free_numbers')
       .select('*')
@@ -35,6 +42,12 @@ export async function GET(request: NextRequest) {
 // POST - Add new toll-free numbers
 export async function POST(request: NextRequest) {
   try {
+    // CRITICAL: Require admin authentication
+    const adminAuth = await requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
+    }
+    
     const body = await request.json()
     const { numbers } = body
 
