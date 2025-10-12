@@ -176,11 +176,15 @@ Be conversational and natural - you're having a phone conversation.`,
             
           case 'response.output_audio.delta':
             // Received audio chunk from AI (GA API event name)
+            if (audioContextRef.current?.state === 'suspended') {
+              audioContextRef.current.resume()
+            }
             const audioData = base64ToArrayBuffer(data.delta)
             audioQueueRef.current.push(new Int16Array(audioData))
             if (!isPlayingRef.current) {
               playAudioQueue()
             }
+            setIsSpeaking(true) // Visual feedback
             break
             
           case 'response.output_audio_transcript.delta':
@@ -200,6 +204,10 @@ Be conversational and natural - you're having a phone conversation.`,
             
           case 'response.output_audio.start':
             setIsSpeaking(true)
+            // Resume audio context if suspended
+            if (audioContextRef.current?.state === 'suspended') {
+              audioContextRef.current.resume()
+            }
             break
             
           case 'response.output_audio.done':
