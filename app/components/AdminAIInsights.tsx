@@ -50,36 +50,44 @@ export default function AdminAIInsights() {
   const generateAIInsights = async () => {
     setIsLoading(true)
     
-    // Simulate AI-generated insights based on current data
-    const defaultInsights: AIInsight[] = [
-      {
-        id: '1',
-        type: 'opportunity',
-        priority: 'high',
-        title: 'HVAC Lead Surge Opportunity',
-        description: 'HVAC businesses are showing 40% higher conversion rates this week. Your current HVAC lead generation is below average.',
-        impact: 'Potential $15,000+ additional monthly revenue',
-        action: 'Increase HVAC targeting by 25% in lead generation campaigns',
-        estimatedValue: 15000,
-        confidence: 87,
-        category: 'revenue'
-      },
-      {
-        id: '2',
-        type: 'optimization',
-        priority: 'medium',
-        title: 'Email Response Time Optimization',
-        description: 'Clients contacted within 2 hours have 60% higher conversion rates. Current average response time is 4.2 hours.',
-        impact: 'Could increase conversions by 35%',
-        action: 'Implement automated email sequences for urgent leads',
-        estimatedValue: 8500,
-        confidence: 92,
-        category: 'conversion'
-      },
-      {
-        id: '3',
-        type: 'warning',
-        priority: 'high',
+    // Load REAL AI insights from admin API
+    try {
+      const adminToken = localStorage.getItem('adminToken')
+      if (!adminToken) {
+        setInsights([])
+        setIsLoading(false)
+        return
+      }
+
+      // Fetch real insights from API endpoint
+      const response = await fetch('/api/admin/ai-insights', {
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setInsights(data.insights || [])
+      } else {
+        // No insights yet - show empty state
+        setInsights([])
+      }
+    } catch (error) {
+      console.error('Failed to load AI insights:', error)
+      setInsights([])
+    } finally {
+      setIsLoading(false)
+      setLastUpdated(new Date())
+    }
+  }
+  
+  // OLD MOCK DATA REMOVED - kept for reference of structure:
+  /*
+  const exampleInsightStructure = {
+    id: '1',
+    type: 'opportunity',
+    priority: 'high',
         title: 'High-Value Client At Risk',
         description: 'Premier Painting Co (4.8★, $8K/month) has not been contacted in 72 hours. Risk of losing to competitor.',
         impact: 'Potential loss of $8,000/month recurring revenue',
