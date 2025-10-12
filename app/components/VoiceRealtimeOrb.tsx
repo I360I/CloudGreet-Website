@@ -141,7 +141,7 @@ export default function VoiceRealtimeOrb({
       ws.onopen = () => {
         setIsConnected(true)
         
-        // Send session configuration (ONLY parameters from official docs)
+        // Send session configuration with turn detection for responses
         ws.send(JSON.stringify({
           type: 'session.update',
           session: {
@@ -158,6 +158,16 @@ Help schedule appointments if asked.
 Be conversational and natural - you're having a phone conversation.`,
             audio: {
               output: { voice: 'verse' }
+            },
+            turn_detection: {
+              type: 'server_vad',
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 1000,
+              create_response: true
+            },
+            input_audio_transcription: {
+              model: 'whisper-1'
             }
           }
         }))
