@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/monitoring'
+import { requireAdmin } from '@/lib/admin-auth'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,6 +12,12 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    // CRITICAL: Require admin authentication
+    const adminAuth = await requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
+    }
+    
     // Fetch all toll-free numbers with business info
     const { data: numbers, error } = await supabaseAdmin
       .from('toll_free_numbers')

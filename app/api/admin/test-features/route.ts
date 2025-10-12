@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    // CRITICAL: Require admin authentication
+    const adminAuth = await requireAdmin(request)
+    if (adminAuth.error) {
+      return adminAuth.response
+    }
+    
     const body = await request.json()
     const { testType, phoneNumber, message, businessId } = body
 
