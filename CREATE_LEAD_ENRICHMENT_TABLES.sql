@@ -289,10 +289,7 @@ CREATE TABLE IF NOT EXISTS public.contact_verifications (
   error_message TEXT,
   
   -- Timestamps
-  verified_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  INDEX idx_verifications_lead_id (lead_id),
-  INDEX idx_verifications_type (contact_type)
+  verified_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- ============================================================================
