@@ -58,7 +58,24 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      leads: data || []
+      leads: data || [],
+      pagination: {
+        page,
+        limit,
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
+        hasNext: offset + limit < (count || 0),
+        hasPrev: page > 1
+      },
+      filters: {
+        enrichment: enrichmentFilter,
+        minScore,
+        businessType,
+        outreachStatus,
+        assignedTo,
+        tags,
+        search: searchQuery
+      }
     })
 
   } catch (error) {
