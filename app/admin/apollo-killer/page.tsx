@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import BulkEnrichmentProgress from '@/app/components/BulkEnrichmentProgress'
 
 interface EnrichedLead {
   id: string
@@ -43,6 +44,9 @@ export default function ApolloKillerPage() {
   const [enrichingLeads, setEnrichingLeads] = useState<Set<string>>(new Set())
   const [minScore, setMinScore] = useState(0)
   const [enrichmentFilter, setEnrichmentFilter] = useState<'all' | 'enriched' | 'pending'>('all')
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set())
+  const [bulkJobId, setBulkJobId] = useState<string | null>(null)
+  const [showBulkProgress, setShowBulkProgress] = useState(false)
 
   // Load existing leads on mount
   useEffect(() => {
@@ -101,10 +105,17 @@ export default function ApolloKillerPage() {
           total_score: 0
         })))
 
-        // Auto-enrich new leads
+        // Auto-enrich new leads if less than 5
         const newLeads = data.leads.filter((l: any) => l.status === 'queued')
-        if (newLeads.length > 0) {
-          setTimeout(() => enrichBulk(newLeads.map((l: any) => l.id)), 1000)
+        if (newLeads.length > 0 && newLeads.length <= 5) {
+          setTimeout(() => {
+            newLeads.forEach(async (lead: any) => {
+              await enrichLead(lead.id)
+            })
+          }, 1000)
+        } else if (newLeads.length > 5) {
+          // For larger batches, let user choose to bulk enrich
+          setSelectedLeadIds(new Set(newLeads.map((l: any) => l.id)))
         }
       } else {
         alert(data.error || 'Search failed')
@@ -154,11 +165,47 @@ export default function ApolloKillerPage() {
   }
 
   async function enrichBulk(leadIds: string[]) {
-    for (const id of leadIds) {
-      await enrichLead(id)
-      // Stagger requests to avoid overwhelming the system
-      await new Promise(resolve => setTimeout(resolve, 2000))
+    try {
+      const response = await fetch('/api/apollo-killer/bulk-enrichment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({ leadIds })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setBulkJobId(data.jobId)
+        setShowBulkProgress(true)
+        setSelectedLeadIds(new Set()) // Clear selection
+      } else {
+        alert(data.error || 'Bulk enrichment failed')
+      }
+    } catch (error) {
+      alert('Bulk enrichment failed: ' + error)
     }
+  }
+
+  function handleLeadSelection(leadId: string, selected: boolean) {
+    const newSelection = new Set(selectedLeadIds)
+    if (selected) {
+      newSelection.add(leadId)
+    } else {
+      newSelection.delete(leadId)
+    }
+    setSelectedLeadIds(newSelection)
+  }
+
+  function selectAllVisible() {
+    const visibleIds = new Set(filteredLeads.map(l => l.id))
+    setSelectedLeadIds(visibleIds)
+  }
+
+  function clearSelection() {
+    setSelectedLeadIds(new Set())
   }
 
   function getScoreColor(score: number): string {
@@ -277,10 +324,60 @@ export default function ApolloKillerPage() {
               </select>
             </div>
 
-            <div className="ml-auto text-sm text-gray-400">
-              {filteredLeads.length} leads • {filteredLeads.filter(l => l.total_score && l.total_score >= 80).length} qualified
+            <div className="ml-auto flex items-center gap-4">
+              {selectedLeadIds.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-blue-400">
+                    {selectedLeadIds.size} selected
+                  </span>
+                  
+                  <button
+                    onClick={() => enrichBulk(Array.from(selectedLeadIds))}
+                    className="px-3 py-1 bg-purple-600/20 border border-purple-500/30 text-purple-400 rounded-md text-sm hover:bg-purple-600/30 transition-all"
+                  >
+                    ⚡ Enrich Selected ({selectedLeadIds.size})
+                  </button>
+                  
+                  <button
+                    onClick={clearSelection}
+                    className="px-2 py-1 text-gray-400 hover:text-white text-sm"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+              
+              <button
+                onClick={selectedLeadIds.size === filteredLeads.length ? clearSelection : selectAllVisible}
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                {selectedLeadIds.size === filteredLeads.length ? 'Deselect All' : 'Select All'}
+              </button>
+              
+              <div className="text-sm text-gray-400">
+                {filteredLeads.length} leads • {filteredLeads.filter(l => l.total_score && l.total_score >= 80).length} qualified
+              </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Bulk Enrichment Progress */}
+      {showBulkProgress && bulkJobId && (
+        <div className="max-w-7xl mx-auto mb-6">
+          <BulkEnrichmentProgress
+            jobId={bulkJobId}
+            onComplete={(job) => {
+              setShowBulkProgress(false)
+              setBulkJobId(null)
+              // Refresh leads to show updated data
+              loadExistingLeads()
+            }}
+            onClose={() => {
+              setShowBulkProgress(false)
+              setBulkJobId(null)
+            }}
+          />
         </div>
       )}
 
@@ -296,13 +393,31 @@ export default function ApolloKillerPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ delay: idx * 0.05 }}
-                onClick={() => setSelectedLead(lead)}
-                className={`bg-gray-800/50 backdrop-blur-lg rounded-xl p-6 border-2 cursor-pointer transition-all hover:scale-[1.02] ${
+                className={`bg-gray-800/50 backdrop-blur-lg rounded-xl p-6 border-2 transition-all hover:scale-[1.02] ${
                   selectedLead?.id === lead.id
                     ? 'border-blue-500 shadow-lg shadow-blue-500/20'
+                    : selectedLeadIds.has(lead.id)
+                    ? 'border-purple-500 shadow-lg shadow-purple-500/20'
                     : 'border-gray-700 hover:border-gray-600'
                 }`}
               >
+                <div className="flex items-start gap-3">
+                  {/* Selection Checkbox */}
+                  <input
+                    type="checkbox"
+                    checked={selectedLeadIds.has(lead.id)}
+                    onChange={(e) => {
+                      e.stopPropagation()
+                      handleLeadSelection(lead.id, e.target.checked)
+                    }}
+                    className="w-4 h-4 mt-1 accent-purple-500"
+                  />
+                  
+                  {/* Lead Content */}
+                  <div 
+                    className="flex-1 cursor-pointer"
+                    onClick={() => setSelectedLead(lead)}
+                  >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-white mb-1">
@@ -390,6 +505,7 @@ export default function ApolloKillerPage() {
                       📧 Email
                     </button>
                   )}
+                  </div>
                 </div>
               </motion.div>
             ))}

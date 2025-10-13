@@ -7,6 +7,7 @@
 
 import { logger } from '@/lib/monitoring'
 import * as cheerio from 'cheerio'
+import { retryWebsiteScrape, circuitBreakers, createFallbackResult } from './retry-handler'
 
 export interface ScrapedContact {
   ownerName?: string
@@ -23,66 +24,90 @@ export interface ScrapedContact {
  * Scrape a business website for contact information
  */
 export async function scrapeWebsite(websiteUrl: string): Promise<ScrapedContact> {
-  try {
-    const url = normalizeUrl(websiteUrl)
-    
-    // Scrape main pages
-    const homePage = await scrapePage(url)
-    const contactPage = await scrapePage(`${url}/contact`)
-    const aboutPage = await scrapePage(`${url}/about`)
-    const teamPage = await scrapePage(`${url}/team`)
-    
-    // Combine all data
-    const allData = {
-      emails: [
-        ...homePage.emails,
-        ...contactPage.emails,
-        ...aboutPage.emails,
-        ...teamPage.emails
-      ].filter((e, i, arr) => arr.indexOf(e) === i), // unique
+  return circuitBreakers.websiteScraping.execute(async () => {
+    return retryWebsiteScrape(async () => {
+      const url = normalizeUrl(websiteUrl)
       
-      phones: [
-        ...homePage.phones,
-        ...contactPage.phones,
-        ...aboutPage.phones,
-        ...teamPage.phones
-      ].filter((p, i, arr) => arr.indexOf(p) === i), // unique
+      // Scrape main pages with individual error handling
+      const [homePage, contactPage, aboutPage, teamPage] = await Promise.allSettled([
+        scrapePage(url),
+        scrapePage(`${url}/contact`),
+        scrapePage(`${url}/about`),
+        scrapePage(`${url}/team`)
+      ])
       
-      linkedinUrls: [
-        ...homePage.linkedinUrls,
-        ...contactPage.linkedinUrls,
-        ...aboutPage.linkedinUrls,
-        ...teamPage.linkedinUrls
-      ].filter((u, i, arr) => arr.indexOf(u) === i), // unique
+      // Extract successful results and track failures
+      const results = {
+        homePage: homePage.status === 'fulfilled' ? homePage.value : getEmptyPageResult(),
+        contactPage: contactPage.status === 'fulfilled' ? contactPage.value : getEmptyPageResult(),
+        aboutPage: aboutPage.status === 'fulfilled' ? aboutPage.value : getEmptyPageResult(),
+        teamPage: teamPage.status === 'fulfilled' ? teamPage.value : getEmptyPageResult()
+      }
       
-      facebookUrls: [
-        ...homePage.facebookUrls,
-        ...contactPage.facebookUrls,
-        ...aboutPage.facebookUrls,
-        ...teamPage.facebookUrls
-      ].filter((u, i, arr) => arr.indexOf(u) === i), // unique
-      
-      rawText: [
-        aboutPage.text,
-        teamPage.text,
-        contactPage.text,
-        homePage.text
-      ].join('\n\n')
-    }
+      const failures = [homePage, contactPage, aboutPage, teamPage]
+        .filter(result => result.status === 'rejected')
+        .map(result => (result as PromiseRejectedResult).reason.message)
     
-    // Use AI to extract owner name and title from text
-    const ownerInfo = await extractOwnerWithAI(allData.rawText)
+      // Combine all data
+      const allData = {
+        emails: [
+          ...results.homePage.emails,
+          ...results.contactPage.emails,
+          ...results.aboutPage.emails,
+          ...results.teamPage.emails
+        ].filter((e, i, arr) => arr.indexOf(e) === i), // unique
+        
+        phones: [
+          ...results.homePage.phones,
+          ...results.contactPage.phones,
+          ...results.aboutPage.phones,
+          ...results.teamPage.phones
+        ].filter((p, i, arr) => arr.indexOf(p) === i), // unique
+        
+        linkedinUrls: [
+          ...results.homePage.linkedinUrls,
+          ...results.contactPage.linkedinUrls,
+          ...results.aboutPage.linkedinUrls,
+          ...results.teamPage.linkedinUrls
+        ].filter((u, i, arr) => arr.indexOf(u) === i), // unique
+        
+        facebookUrls: [
+          ...results.homePage.facebookUrls,
+          ...results.contactPage.facebookUrls,
+          ...results.aboutPage.facebookUrls,
+          ...results.teamPage.facebookUrls
+        ].filter((u, i, arr) => arr.indexOf(u) === i), // unique
+        
+        rawText: [
+          results.aboutPage.text,
+          results.teamPage.text,
+          results.contactPage.text,
+          results.homePage.text
+        ].join('\n\n')
+      }
     
-    return {
-      ownerName: ownerInfo.name,
-      ownerTitle: ownerInfo.title,
-      emails: allData.emails,
-      phones: allData.phones,
-      linkedinUrls: allData.linkedinUrls,
-      facebookUrls: allData.facebookUrls,
-      confidence: calculateConfidence(allData, ownerInfo),
-      source: 'website_scrape'
-    }
+      // Use AI to extract owner name and title from text
+      const ownerInfo = await extractOwnerWithAI(allData.rawText)
+      
+      const result = {
+        ownerName: ownerInfo.name,
+        ownerTitle: ownerInfo.title,
+        emails: allData.emails,
+        phones: allData.phones,
+        linkedinUrls: allData.linkedinUrls,
+        facebookUrls: allData.facebookUrls,
+        confidence: calculateConfidence(allData, ownerInfo, failures.length),
+        source: failures.length > 0 ? 'website_scrape_partial' : 'website_scrape'
+      }
+      
+      // Add degradation info if some pages failed
+      if (failures.length > 0) {
+        return createFallbackResult(result, result, failures)
+      }
+      
+      return result
+    }, websiteUrl)
+  })
     
   } catch (error) {
     logger.error('Website scraping failed', {
@@ -276,9 +301,22 @@ If you can't find a clear owner, return null for both fields.`
 }
 
 /**
+ * Get empty page result for failed scrapes
+ */
+function getEmptyPageResult() {
+  return {
+    emails: [],
+    phones: [],
+    linkedinUrls: [],
+    facebookUrls: [],
+    text: ''
+  }
+}
+
+/**
  * Calculate confidence score based on data quality
  */
-function calculateConfidence(data: any, ownerInfo: any): number {
+function calculateConfidence(data: any, ownerInfo: any, failures: number = 0): number {
   let score = 0
   
   // Email found
@@ -298,6 +336,11 @@ function calculateConfidence(data: any, ownerInfo: any): number {
   // Social media found
   if (data.linkedinUrls.length > 0) score += 10
   if (data.facebookUrls.length > 0) score += 5
+  
+  // Reduce confidence for partial failures
+  if (failures > 0) {
+    score = Math.max(score - (failures * 15), 20) // Minimum 20% confidence
+  }
   
   return Math.min(100, score)
 }

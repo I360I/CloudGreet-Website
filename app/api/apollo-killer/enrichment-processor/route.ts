@@ -5,6 +5,7 @@ import { logger } from '@/lib/monitoring'
 import { scrapeWebsite } from '@/lib/lead-enrichment/website-scraper'
 import { discoverAndVerifyEmail } from '@/lib/lead-enrichment/email-verification'
 import { scoreLead } from '@/lib/lead-enrichment/ai-scorer'
+import { scrapeLinkedIn } from '@/lib/lead-enrichment/linkedin-scraper'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -121,7 +122,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // STEP 3: AI-powered lead scoring
+    // STEP 3: LinkedIn scraping for decision makers
+    let linkedinData: any = null
+    
+    try {
+      linkedinData = await scrapeLinkedIn(
+        lead.business_name,
+        lead.business_type || '',
+        `${lead.city || ''} ${lead.state || ''}`.trim()
+      )
+      
+      logger.info('LinkedIn scraping completed', {
+        leadId,
+        decisionMakersFound: linkedinData.decisionMakers?.length || 0,
+        confidence: linkedinData.confidence,
+        source: linkedinData.source
+      })
+    } catch (error) {
+      logger.error('LinkedIn scraping failed', {
+        leadId,
+        error: error instanceof Error ? error.message : 'Unknown'
+      })
+    }
+
+    // STEP 4: AI-powered lead scoring
     let scoringResult: any = null
     
     try {
@@ -148,7 +172,8 @@ export async function POST(request: NextRequest) {
         has_online_booking: lead.has_online_booking,
         has_live_chat: lead.has_live_chat,
         has_ai_receptionist: lead.has_ai_receptionist,
-        detected_technologies: lead.detected_technologies
+        detected_technologies: lead.detected_technologies,
+        linkedin_profiles: linkedinData?.decisionMakers || []
       })
       
       logger.info('AI scoring completed', {
@@ -163,11 +188,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // STEP 4: Update lead with enriched data
+    // STEP 5: Update lead with enriched data
     const updateData: any = {
       enrichment_status: 'enriched',
       last_enriched_at: new Date().toISOString(),
-      enrichment_sources: ['google_places', 'website_scrape', 'email_verification', 'ai_analysis']
+      enrichment_sources: ['google_places', 'website_scrape', 'email_verification', 'linkedin_scrape', 'ai_analysis']
     }
 
     // Add scraped data
@@ -183,6 +208,25 @@ export async function POST(request: NextRequest) {
       updateData.owner_email = verifiedEmail.email
       updateData.owner_email_verified = verifiedEmail.verified
       updateData.owner_email_confidence = verifiedEmail.confidence
+    }
+
+    // Add LinkedIn data
+    if (linkedinData?.decisionMakers && linkedinData.decisionMakers.length > 0) {
+      const primaryProfile = linkedinData.decisionMakers[0]
+      
+      // Use LinkedIn data to enhance owner info if not already found
+      if (!updateData.owner_name && primaryProfile.name) {
+        updateData.owner_name = primaryProfile.name
+      }
+      if (!updateData.owner_title && primaryProfile.title) {
+        updateData.owner_title = primaryProfile.title
+      }
+      if (!updateData.owner_linkedin_url && primaryProfile.profileUrl) {
+        updateData.owner_linkedin_url = primaryProfile.profileUrl
+      }
+      
+      // Store all decision makers in JSONB field
+      updateData.decision_makers = linkedinData.decisionMakers.slice(0, 10) // Limit to 10
     }
 
     // Add scoring data
@@ -233,6 +277,8 @@ export async function POST(request: NextRequest) {
         emailsFound: websiteData?.emails?.length || 0,
         emailVerified: verifiedEmail?.verified || false,
         ownerFound: !!websiteData?.ownerName,
+        linkedinProfilesFound: linkedinData?.decisionMakers?.length || 0,
+        linkedinConfidence: linkedinData?.confidence || 0,
         score: scoringResult?.total_score || 0,
         painPoints: scoringResult?.pain_points || []
       }

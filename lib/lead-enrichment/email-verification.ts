@@ -6,6 +6,7 @@
  */
 
 import { logger } from '@/lib/monitoring'
+import { retryEmailVerification, retryAPICall } from './retry-handler'
 
 export interface EmailCandidate {
   email: string
@@ -149,19 +150,33 @@ async function verifyEmail(email: string): Promise<{
   }
   
   // Step 2: Try Hunter.io API (free tier: 50 requests/month)
-  const hunterResult = await verifyWithHunter(email)
-  if (hunterResult !== null) {
-    return hunterResult
+  try {
+    const hunterResult = await retryAPICall(() => verifyWithHunter(email), 'hunter-io')
+    if (hunterResult !== null) {
+      return hunterResult
+    }
+  } catch (error) {
+    logger.warn('Hunter.io verification failed, continuing with other methods', {
+      email,
+      error: error instanceof Error ? error.message : 'Unknown'
+    })
   }
   
   // Step 3: Try EmailListVerify API (free tier: 100/day)
-  const elvResult = await verifyWithEmailListVerify(email)
-  if (elvResult !== null) {
-    return elvResult
+  try {
+    const elvResult = await retryAPICall(() => verifyWithEmailListVerify(email), 'emaillistverify')
+    if (elvResult !== null) {
+      return elvResult
+    }
+  } catch (error) {
+    logger.warn('EmailListVerify verification failed, falling back to DNS', {
+      email,
+      error: error instanceof Error ? error.message : 'Unknown'
+    })
   }
   
   // Step 4: Basic DNS check (always free)
-  const dnsResult = await verifyWithDNS(email)
+  const dnsResult = await retryEmailVerification(() => verifyWithDNS(email), email)
   return dnsResult
 }
 

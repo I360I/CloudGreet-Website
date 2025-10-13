@@ -188,7 +188,7 @@ function generateEmailContent(lead: any, template?: string, personalizedMessage?
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="https://cloudgreet.com/demo?lead=${lead.id}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+      <a href="${process.env.NEXT_PUBLIC_BASE_URL}/api/apollo-killer/tracking/email-click?leadId=${lead.id}&url=${encodeURIComponent('https://cloudgreet.com/demo?lead=' + lead.id)}&linkId=cta-demo" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
         📞 Book a 15-Min Demo
       </a>
     </div>
@@ -214,7 +214,7 @@ function generateEmailContent(lead: any, template?: string, personalizedMessage?
   </div>
 
   <!-- Tracking pixel -->
-  <img src="https://cloudgreet.com/api/track/email-open/${lead.id}" width="1" height="1" alt="" />
+  <img src="${process.env.NEXT_PUBLIC_BASE_URL}/api/apollo-killer/tracking/email-open/${lead.id}" width="1" height="1" alt="" style="display: block;" />
 </body>
 </html>
   `.trim()
