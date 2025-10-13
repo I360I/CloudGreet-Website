@@ -15,13 +15,8 @@ export async function POST(request: NextRequest) {
 
     // Create client secret with session configuration (per OpenAI docs)
     const sessionConfig = {
-      session: {
-        type: 'realtime',
-        model: 'gpt-realtime',
-        audio: {
-          output: { voice: 'verse' }
-        }
-      }
+      model: 'gpt-4o-realtime-preview-2024-12-17',
+      voice: 'verse'
     }
 
     const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {

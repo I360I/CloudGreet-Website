@@ -121,6 +121,7 @@ export default function VoiceRealtimeOrbWebRTC({
         const sessionUpdate = {
           type: 'session.update',
           session: {
+            modalities: ['text', 'audio'],
             instructions: `You are a professional AI receptionist for ${businessName}, a ${businessType}.
 
 Services: ${services}
@@ -133,11 +134,17 @@ Be conversational and natural - you're having a phone conversation.`,
             voice: 'verse',
             input_audio_format: 'pcm16',
             output_audio_format: 'pcm16',
+            input_audio_transcription: {
+              model: 'whisper-1'
+            },
             turn_detection: {
               type: 'server_vad',
               threshold: 0.5,
-              silence_duration_ms: 700
-            }
+              prefix_padding_ms: 300,
+              silence_duration_ms: 500
+            },
+            temperature: 0.8,
+            max_response_output_tokens: 4096
           }
         }
         
