@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
-import VoiceRealtimeOrb from '../components/VoiceRealtimeOrb'
+import VoiceRealtimeOrb from '../components/VoiceRealtimeOrbWebRTC'
 import RoiCalculator from '../components/RoiCalculator'
 
 function VoiceOrbDemoWithSettings() {
