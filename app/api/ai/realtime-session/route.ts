@@ -40,12 +40,22 @@ export async function POST(request: NextRequest) {
     const data = await response.json()
     
     // Parse the response correctly based on OpenAI's format
-    // The response has: { client_secret: { value: "...", expires_at: ... }, ... }
-    const clientSecretValue = typeof data.client_secret === 'string' 
-      ? data.client_secret 
-      : data.client_secret?.value || data.value
+    console.log('📥 OpenAI response:', JSON.stringify(data, null, 2))
     
-    if (!clientSecretValue) {
+    // Handle different response formats from OpenAI
+    let clientSecretValue: string
+    let expiresAt: string | undefined
+    
+    if (typeof data.client_secret === 'string') {
+      clientSecretValue = data.client_secret
+      expiresAt = data.expires_at
+    } else if (data.client_secret && typeof data.client_secret === 'object') {
+      clientSecretValue = data.client_secret.value
+      expiresAt = data.client_secret.expires_at
+    } else if (data.value) {
+      clientSecretValue = data.value
+      expiresAt = data.expires_at
+    } else {
       console.error('❌ No client secret in response:', data)
       return NextResponse.json(
         { error: 'Invalid session response from OpenAI' },
@@ -53,10 +63,19 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    if (!clientSecretValue) {
+      console.error('❌ Client secret is empty:', data)
+      return NextResponse.json(
+        { error: 'Empty client secret from OpenAI' },
+        { status: 500 }
+      )
+    }
+    
     // Return the client secret
+    console.log('✅ Generated client secret (length:', clientSecretValue.length, ')')
     return NextResponse.json({
       clientSecret: clientSecretValue,
-      expiresAt: data.client_secret?.expires_at || data.expires_at
+      expiresAt: expiresAt
     })
 
   } catch (error: any) {

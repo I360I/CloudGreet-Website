@@ -2,7 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, MicOff, Volume2, Sparkles, AlertCircle } from 'lucide-react'
+import { Mic, MicOff, Volume2, Sparkles, AlertCircle, Settings } from 'lucide-react'
+import VoiceFallbackSystem from './VoiceFallbackSystem'
+import VoiceSystemTester from './VoiceSystemTester'
 
 interface VoiceRealtimeOrbProps {
   businessName?: string
@@ -24,6 +26,8 @@ export default function VoiceRealtimeOrbWebRTC({
   const [visualIntensity, setVisualIntensity] = useState(0)
   const [audioQuality, setAudioQuality] = useState<'excellent' | 'good' | 'poor' | null>(null)
   const [latency, setLatency] = useState<number>(0)
+  const [showFallback, setShowFallback] = useState(false)
+  const [showTester, setShowTester] = useState(false)
   
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const dataChannelRef = useRef<RTCDataChannel | null>(null)
@@ -47,9 +51,10 @@ export default function VoiceRealtimeOrbWebRTC({
       setError(null)
       connectionAttemptsRef.current += 1
       
-      // If multiple failures, suggest fallback
+      // If multiple failures, show fallback
       if (connectionAttemptsRef.current > 3) {
-        setError('Multiple connection failures. Consider using the standard phone system instead.')
+        setError('Multiple connection failures. Please use alternative contact methods.')
+        setShowFallback(true)
         return
       }
 
@@ -83,9 +88,27 @@ export default function VoiceRealtimeOrbWebRTC({
       
       const { clientSecret } = await tokenRes.json()
 
-      // Create WebRTC peer connection
-      const pc = new RTCPeerConnection()
+      // Create WebRTC peer connection with proper configuration
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      })
       peerConnectionRef.current = pc
+      
+      // Add connection state monitoring
+      pc.onconnectionstatechange = () => {
+        console.log('🔗 Connection state:', pc.connectionState)
+        if (pc.connectionState === 'failed') {
+          setError('Connection failed. Please try again.')
+          cleanup()
+        }
+      }
+      
+      pc.oniceconnectionstatechange = () => {
+        console.log('🧊 ICE connection state:', pc.iceConnectionState)
+      }
 
       // Set up audio element to play remote audio from AI
       const audioElement = document.createElement('audio')
@@ -93,21 +116,41 @@ export default function VoiceRealtimeOrbWebRTC({
       audioElementRef.current = audioElement
       
       pc.ontrack = (e) => {
-        console.log('🔊 Received audio track:', e.track.kind)
+        console.log('🔊 Received audio track:', e.track.kind, e.track.label)
         audioElement.srcObject = e.streams[0]
         
-        // Ensure audio plays
-        audioElement.play().catch(err => {
-          console.error('Failed to play audio:', err)
-          // Try to resume AudioContext if suspended
-          if (audioContextRef.current?.state === 'suspended') {
-            audioContextRef.current.resume()
+        // Ensure audio plays with proper error handling
+        const playAudio = async () => {
+          try {
+            // Resume AudioContext if suspended
+            if (audioContextRef.current?.state === 'suspended') {
+              await audioContextRef.current.resume()
+            }
+            
+            // Play the audio
+            await audioElement.play()
+            console.log('✅ Audio playing successfully')
+          } catch (err) {
+            console.error('❌ Failed to play audio:', err)
+            
+            // Try user interaction workaround
+            if (err.name === 'NotAllowedError') {
+              console.log('🔧 Audio autoplay blocked, will play on next user interaction')
+            }
           }
-        })
+        }
+        
+        playAudio()
       }
 
       // Add local audio track for microphone
-      pc.addTrack(stream.getTracks()[0])
+      const audioTrack = stream.getAudioTracks()[0]
+      if (audioTrack) {
+        pc.addTrack(audioTrack, stream)
+        console.log('✅ Added local audio track:', audioTrack.label)
+      } else {
+        throw new Error('No audio track found in stream')
+      }
 
       // Set up data channel for events
       const dc = pc.createDataChannel('oai-events')
@@ -117,11 +160,10 @@ export default function VoiceRealtimeOrbWebRTC({
         console.log('✅ Data channel opened')
         setIsConnected(true)
         
-        // Send session configuration via data channel
+        // Send session configuration via data channel (simplified per OpenAI docs)
         const sessionUpdate = {
           type: 'session.update',
           session: {
-            modalities: ['text', 'audio'],
             instructions: `You are a professional AI receptionist for ${businessName}, a ${businessType}.
 
 Services: ${services}
@@ -142,9 +184,7 @@ Be conversational and natural - you're having a phone conversation.`,
               threshold: 0.5,
               prefix_padding_ms: 300,
               silence_duration_ms: 500
-            },
-            temperature: 0.8,
-            max_response_output_tokens: 4096
+            }
           }
         }
         
@@ -171,26 +211,32 @@ Be conversational and natural - you're having a phone conversation.`,
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
 
-      // Send SDP to OpenAI Realtime API
+      // Send SDP to OpenAI Realtime API with proper headers
       const sdpResponse = await fetch('https://api.openai.com/v1/realtime/calls', {
         method: 'POST',
-        body: offer.sdp,
         headers: {
           'Authorization': `Bearer ${clientSecret}`,
           'Content-Type': 'application/sdp'
-        }
+        },
+        body: offer.sdp
       })
 
       if (!sdpResponse.ok) {
-        throw new Error(`SDP exchange failed: ${sdpResponse.status}`)
+        const errorText = await sdpResponse.text()
+        console.error('❌ SDP exchange failed:', sdpResponse.status, errorText)
+        throw new Error(`SDP exchange failed: ${sdpResponse.status} - ${errorText}`)
       }
 
       const answerSdp = await sdpResponse.text()
+      console.log('✅ Received SDP answer:', answerSdp.substring(0, 100) + '...')
+      
       const answer = {
         type: 'answer' as RTCSdpType,
         sdp: answerSdp
       }
+      
       await pc.setRemoteDescription(answer)
+      console.log('✅ Remote description set successfully')
       
       // Start quality monitoring
       startQualityMonitoring(pc)
@@ -216,6 +262,11 @@ Be conversational and natural - you're having a phone conversation.`,
       setError(errorMessage)
       setIsConnected(false)
       cleanup()
+      
+      // Show fallback after 2 failures
+      if (connectionAttemptsRef.current >= 2) {
+        setShowFallback(true)
+      }
     }
   }
 
@@ -271,8 +322,8 @@ Be conversational and natural - you're having a phone conversation.`,
         console.log('🤖 AI content part added')
         break
       
-      case 'response.audio.delta':
-        // AI is sending audio chunks
+      case 'response.output_audio.delta':
+        // AI is sending audio chunks (corrected event name)
         if (!isSpeaking) {
           console.log('🔊 AI started speaking')
           setIsSpeaking(true)
@@ -280,7 +331,7 @@ Be conversational and natural - you're having a phone conversation.`,
         }
         break
         
-      case 'response.audio.done':
+      case 'response.output_audio.done':
         console.log('🔊 AI finished speaking')
         setIsSpeaking(false)
         break
@@ -416,6 +467,40 @@ Be conversational and natural - you're having a phone conversation.`,
     }
     
     analyzerRef.current = null
+  }
+
+  // Show tester if requested
+  if (showTester) {
+    return (
+      <div className="w-full">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-white">Voice System Diagnostics</h2>
+          <button
+            onClick={() => setShowTester(false)}
+            className="px-4 py-2 bg-gray-600/20 border border-gray-500/30 text-gray-400 rounded-lg hover:bg-gray-600/30 transition-all"
+          >
+            Back to Voice
+          </button>
+        </div>
+        <VoiceSystemTester />
+      </div>
+    )
+  }
+
+  // Show fallback system if voice system fails
+  if (showFallback) {
+    return (
+      <VoiceFallbackSystem
+        businessName={businessName}
+        businessPhone="(555) 123-4567"
+        businessEmail="support@cloudgreet.com"
+        onRetry={() => {
+          setShowFallback(false)
+          setError(null)
+          connectToOpenAI()
+        }}
+      />
+    )
   }
 
   return (
@@ -595,8 +680,19 @@ Be conversational and natural - you're having a phone conversation.`,
         </motion.div>
       </div>
 
+      {/* Debug/Tester Button */}
+      <div className="text-center mt-4">
+        <button
+          onClick={() => setShowTester(true)}
+          className="inline-flex items-center gap-2 px-3 py-1 text-xs text-gray-400 hover:text-white transition-colors"
+        >
+          <Settings className="w-3 h-3" />
+          System Diagnostics
+        </button>
+      </div>
+
       {/* Status */}
-      <motion.div className="text-center mt-8">
+      <motion.div className="text-center mt-4">
         <AnimatePresence mode="wait">
           {!isConnected ? (
             <motion.div key="start" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
