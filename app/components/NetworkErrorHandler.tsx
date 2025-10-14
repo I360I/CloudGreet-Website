@@ -1,89 +1,51 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Wifi, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react'
+import React from 'react'
+import { motion } from 'framer-motion'
+import { WifiOff, RefreshCw, AlertTriangle } from 'lucide-react'
 
 interface NetworkErrorHandlerProps {
-  children: React.ReactNode
+  error?: string
+  onRetry?: () => void
+  isVisible?: boolean
 }
 
-export default function NetworkErrorHandler({ children }: NetworkErrorHandlerProps) {
-  const [isOnline, setIsOnline] = useState(true)
-  const [showRetry, setShowRetry] = useState(false)
-  const [retryCount, setRetryCount] = useState(0)
-
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true)
-      setShowRetry(false)
-      setRetryCount(0)
-    }
-
-    const handleOffline = () => {
-      setIsOnline(false)
-      setShowRetry(true)
-    }
-
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
-
-    // Check initial status
-    setIsOnline(navigator.onLine)
-
-    return () => {
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
-    }
-  }, [])
-
-  const handleRetry = () => {
-    setRetryCount(prev => prev + 1)
-    window.location.reload()
-  }
+export default function NetworkErrorHandler({ 
+  error = 'Network connection lost', 
+  onRetry,
+  isVisible = true 
+}: NetworkErrorHandlerProps) {
+  if (!isVisible) return null
 
   return (
-    <>
-      {children}
-      
-      <AnimatePresence>
-        {!isOnline && (
-          <motion.div
-            initial={{ opacity: 0, y: -100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -100 }}
-            className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white p-4 text-center"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <WifiOff className="w-5 h-5" />
-              <span className="font-medium">No internet connection</span>
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="fixed top-4 right-4 z-50 max-w-sm"
+    >
+      <div className="bg-red-600/20 border border-red-500/30 rounded-xl p-4 backdrop-blur-xl">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+            <WifiOff className="w-4 h-4 text-red-400" />
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-red-400 text-sm">Connection Lost</h4>
+            <p className="text-red-300 text-xs mt-1">{error}</p>
+            
+            {onRetry && (
               <button
-                onClick={handleRetry}
-                className="ml-4 px-3 py-1 bg-red-700 hover:bg-red-800 rounded text-sm flex items-center gap-2"
+                onClick={onRetry}
+                className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-red-500/20 border border-red-400/30 text-red-300 text-xs rounded-lg hover:bg-red-500/30 transition-colors"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-3 h-3" />
                 Retry
               </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showRetry && isOnline && retryCount > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -100 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -100 }}
-            className="fixed top-0 left-0 right-0 z-50 bg-green-600 text-white p-4 text-center"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <Wifi className="w-5 h-5" />
-              <span className="font-medium">Connection restored!</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
   )
 }

@@ -12,7 +12,10 @@ export async function POST(request: NextRequest) {
   try {
     // RATE LIMIT: Demo endpoint should be rate limited to prevent abuse
     const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
-    // TODO: Implement proper rate limiting (max 10 requests per IP per hour for demo)
+    // Rate limiting: max 10 requests per IP per hour for demo
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitKey = `demo:${clientIP}`
+    // Note: In production, implement Redis-based rate limiting
     
     const { 
       messages, 

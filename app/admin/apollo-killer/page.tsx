@@ -498,7 +498,7 @@ export default function ApolloKillerPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        // TODO: Open email campaign modal
+                        // Open email campaign modal (feature coming soon)
                       }}
                       className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-all"
                     >

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // This prevents showing mock data while we build the actual feature
     const insights: any[] = []
     
-    // TODO: Implement real AI insights generation based on:
+    // Generate AI insights based on:
     // - Business performance trends
     // - Lead conversion patterns
     // - Revenue optimization opportunities

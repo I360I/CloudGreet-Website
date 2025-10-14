@@ -2,243 +2,188 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Filter, X, SlidersHorizontal } from 'lucide-react'
+import { Search, Filter, X, Calendar, User, Phone, Tag } from 'lucide-react'
+
+interface FilterOption {
+  id: string
+  label: string
+  type: 'select' | 'date' | 'text'
+  options?: { value: string; label: string }[]
+}
 
 interface SearchFilterProps {
-  searchTerm: string
-  onSearchChange: (value: string) => void
-  filters: {
-    status?: string[]
-    serviceType?: string[]
-    dateRange?: string
-  }
-  onFilterChange: (filters: any) => void
-  availableStatuses?: string[]
-  availableServices?: string[]
+  searchQuery: string
+  onSearchChange: (query: string) => void
+  filters: Record<string, any>
+  onFilterChange: (filters: Record<string, any>) => void
+  filterOptions: FilterOption[]
+  className?: string
 }
 
 export default function SearchFilter({
-  searchTerm,
+  searchQuery,
   onSearchChange,
   filters,
   onFilterChange,
-  availableStatuses = ['completed', 'missed', 'voicemail', 'in-progress'],
-  availableServices = ['HVAC', 'Roofing', 'Painting']
+  filterOptions,
+  className = ''
 }: SearchFilterProps) {
-  const [showFilters, setShowFilters] = useState(false)
-  const [tempFilters, setTempFilters] = useState(filters)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false)
+  const [localFilters, setLocalFilters] = useState(filters)
 
-  const activeFilterCount = 
-    (filters.status?.length || 0) + 
-    (filters.serviceType?.length || 0) +
-    (filters.dateRange ? 1 : 0)
-
-  const handleApplyFilters = () => {
-    onFilterChange(tempFilters)
-    setShowFilters(false)
+  const handleFilterChange = (key: string, value: any) => {
+    const newFilters = { ...localFilters, [key]: value }
+    setLocalFilters(newFilters)
+    onFilterChange(newFilters)
   }
 
-  const handleClearFilters = () => {
-    const clearedFilters = {
-      status: [],
-      serviceType: [],
-      dateRange: ''
-    }
-    setTempFilters(clearedFilters)
+  const clearFilters = () => {
+    const clearedFilters = {}
+    setLocalFilters(clearedFilters)
     onFilterChange(clearedFilters)
-    setShowFilters(false)
   }
 
-  const toggleStatus = (status: string) => {
-    const current = tempFilters.status || []
-    const updated = current.includes(status)
-      ? current.filter(s => s !== status)
-      : [...current, status]
-    setTempFilters({ ...tempFilters, status: updated })
+  const getActiveFiltersCount = () => {
+    return Object.values(filters).filter(value => 
+      value !== undefined && value !== null && value !== '' && 
+      (Array.isArray(value) ? value.length > 0 : true)
+    ).length
   }
 
-  const toggleService = (service: string) => {
-    const current = tempFilters.serviceType || []
-    const updated = current.includes(service)
-      ? current.filter(s => s !== service)
-      : [...current, service]
-    setTempFilters({ ...tempFilters, serviceType: updated })
-  }
+  const activeFiltersCount = getActiveFiltersCount()
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${className}`}>
       {/* Search Bar */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search calls, customers, phone numbers..."
-            className="w-full pl-11 pr-4 py-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-          />
-          {searchTerm && (
-            <motion.button
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => onSearchChange('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4 text-gray-400" />
-            </motion.button>
-          )}
-        </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search calls, customers, services..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-700/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => onSearchChange('')}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
-        {/* Filter Button */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-3 rounded-xl font-medium transition-all ${
-            activeFilterCount > 0
-              ? 'bg-blue-500/20 border border-blue-500/40 text-blue-400'
-              : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
-          }`}
+      {/* Filter Toggle */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+          className="flex items-center gap-2 px-4 py-2 bg-gray-800/50 border border-gray-700/50 text-gray-300 rounded-lg hover:bg-gray-800/70 hover:text-white transition-colors"
         >
-          <Filter className="w-5 h-5" />
-          <span className="hidden md:inline">Filters</span>
-          {activeFilterCount > 0 && (
-            <span className="w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-              {activeFilterCount}
+          <Filter className="w-4 h-4" />
+          <span>Filters</span>
+          {activeFiltersCount > 0 && (
+            <span className="px-2 py-0.5 bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs rounded-full">
+              {activeFiltersCount}
             </span>
           )}
-        </motion.button>
+        </button>
+
+        {activeFiltersCount > 0 && (
+          <button
+            onClick={clearFilters}
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Clear all
+          </button>
+        )}
       </div>
 
       {/* Filter Panel */}
       <AnimatePresence>
-        {showFilters && (
+        {isFiltersOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden"
+            className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4 space-y-4"
           >
-            <div className="p-6 space-y-6">
-              {/* Status Filters */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-                  <SlidersHorizontal className="w-4 h-4" />
-                  Call Status
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {availableStatuses.map((status) => (
-                    <motion.button
-                      key={status}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => toggleStatus(status)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
-                        tempFilters.status?.includes(status)
-                          ? 'bg-blue-500/30 border border-blue-500/50 text-blue-300'
-                          : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
-                      }`}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filterOptions.map((option) => (
+                <div key={option.id}>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    {option.label}
+                  </label>
+                  
+                  {option.type === 'select' && option.options ? (
+                    <select
+                      value={localFilters[option.id] || ''}
+                      onChange={(e) => handleFilterChange(option.id, e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
                     >
-                      {status}
-                    </motion.button>
-                  ))}
+                      <option value="">All</option>
+                      {option.options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : option.type === 'date' ? (
+                    <input
+                      type="date"
+                      value={localFilters[option.id] || ''}
+                      onChange={(e) => handleFilterChange(option.id, e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder={`Filter by ${option.label.toLowerCase()}`}
+                      value={localFilters[option.id] || ''}
+                      onChange={(e) => handleFilterChange(option.id, e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+                    />
+                  )}
                 </div>
-              </div>
-
-              {/* Service Type Filters */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-300 mb-3">Service Type</h4>
-                <div className="flex flex-wrap gap-2">
-                  {availableServices.map((service) => (
-                    <motion.button
-                      key={service}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => toggleService(service)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        tempFilters.serviceType?.includes(service)
-                          ? 'bg-purple-500/30 border border-purple-500/50 text-purple-300'
-                          : 'bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10'
-                      }`}
-                    >
-                      {service}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleClearFilters}
-                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors text-sm"
-                >
-                  Clear All
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleApplyFilters}
-                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg font-medium transition-all"
-                >
-                  Apply Filters
-                </motion.button>
-              </div>
+              ))}
             </div>
+
+            {/* Active Filters Display */}
+            {activeFiltersCount > 0 && (
+              <div className="border-t border-gray-700/50 pt-4">
+                <h4 className="text-sm font-medium text-gray-300 mb-2">Active Filters:</h4>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(filters).map(([key, value]) => {
+                    if (value === undefined || value === null || value === '' || 
+                        (Array.isArray(value) && value.length === 0)) {
+                      return null
+                    }
+
+                    const option = filterOptions.find(opt => opt.id === key)
+                    const displayValue = Array.isArray(value) ? value.join(', ') : value
+                    const displayLabel = option?.options?.find(opt => opt.value === value)?.label || displayValue
+
+                    return (
+                      <div
+                        key={key}
+                        className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-500/30 text-blue-400 text-sm rounded-lg"
+                      >
+                        <span>{option?.label}: {displayLabel}</span>
+                        <button
+                          onClick={() => handleFilterChange(key, option?.type === 'select' ? '' : '')}
+                          className="w-4 h-4 text-blue-400 hover:text-blue-300 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Active Filters Display */}
-      {activeFilterCount > 0 && !showFilters && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 flex-wrap"
-        >
-          <span className="text-sm text-gray-400">Active filters:</span>
-          {filters.status?.map((status) => (
-            <span
-              key={status}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-xs text-blue-400 capitalize"
-            >
-              {status}
-              <button
-                onClick={() => {
-                  const updated = filters.status?.filter(s => s !== status) || []
-                  onFilterChange({ ...filters, status: updated })
-                }}
-                className="hover:bg-blue-500/30 rounded-full p-0.5 transition-colors"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-          {filters.serviceType?.map((service) => (
-            <span
-              key={service}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full text-xs text-purple-400"
-            >
-              {service}
-              <button
-                onClick={() => {
-                  const updated = filters.serviceType?.filter(s => s !== service) || []
-                  onFilterChange({ ...filters, serviceType: updated })
-                }}
-                className="hover:bg-purple-500/30 rounded-full p-0.5 transition-colors"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-        </motion.div>
-      )}
     </div>
   )
 }
-

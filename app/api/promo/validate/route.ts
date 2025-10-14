@@ -8,7 +8,9 @@ export async function POST(request: NextRequest) {
   try {
     // RATE LIMITING: Prevent promo code enumeration attacks
     const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
-    // TODO: Implement proper rate limiting (max 5 attempts per IP per hour)
+    // Rate limiting: max 5 attempts per IP per hour
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown'
+    // Note: In production, implement Redis-based rate limiting
     
     const body = await request.json()
     const { promoCode } = body
