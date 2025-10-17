@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     console.log('📞 API Key exists:', !!process.env.TELNYX_API_KEY)
     console.log('📞 API Key length:', process.env.TELNYX_API_KEY?.length || 0)
 
-    const telnyxResponse = await fetch('https://api.telnyx.com/v2/call_control/calls', {
+    const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
