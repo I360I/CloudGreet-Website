@@ -11,9 +11,9 @@ import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
 import dynamic from 'next/dynamic'
 
-      const RealtimeWebVoice = dynamic(() => import('../components/RealtimeWebVoice'), {
+      const ClickToCallOrb = dynamic(() => import('../components/ClickToCallOrb'), {
         ssr: false,
-        loading: () => <div className="w-80 h-80 bg-black border border-gray-700 rounded-full animate-pulse flex items-center justify-center"><div className="text-white">Loading Real-Time Voice...</div></div>
+        loading: () => <div className="w-80 h-80 bg-black border border-gray-700 rounded-full animate-pulse flex items-center justify-center"><div className="text-white">Loading Voice AI...</div></div>
       })
 import RoiCalculator from '../components/RoiCalculator'
 
@@ -84,11 +84,11 @@ function VoiceOrbDemoWithSettings() {
         )}
         
         <p className="text-xs text-gray-500 mb-4">
-          💡 Real-time WebRTC • Direct browser-to-AI conversation using Telnyx
+          💡 Real phone call • Experience the same AI that handles your customers
         </p>
       </motion.div>
 
-        <RealtimeWebVoice 
+        <ClickToCallOrb 
           businessName={businessInfo.name}
           businessType={businessInfo.type}
           services={businessInfo.services}
@@ -174,7 +174,7 @@ export default function LandingPage() {
               Try It Right Now
             </h2>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Click the orb to start a real-time voice conversation with our AI receptionist. Experience true real-time voice AI in your browser.
+              Click the orb to call our AI receptionist. Experience real voice AI powered by your actual phone system.
             </p>
           </motion.div>
           
