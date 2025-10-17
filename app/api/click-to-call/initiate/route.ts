@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Create Telnyx outbound call using Call Control API
+    // Create Telnyx outbound call using Call Control API v2
     const callPayload = {
       to: formattedPhone,
       from: fromNumber,
@@ -80,8 +80,10 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('📞 Creating Telnyx outbound call:', callPayload)
+    console.log('📞 API Key exists:', !!process.env.TELNYX_API_KEY)
+    console.log('📞 API Key length:', process.env.TELNYX_API_KEY?.length || 0)
 
-    const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
+    const telnyxResponse = await fetch('https://api.telnyx.com/v2/call_control/calls', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
