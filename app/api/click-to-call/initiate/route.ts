@@ -45,25 +45,15 @@ export async function POST(request: NextRequest) {
     const agentId = 'demo-agent-id'
     console.log('📞 Using demo agent ID for click-to-call')
 
-    // Use your real toll-free number and connection ID from environment
+    // Use your real toll-free number
     const fromNumber = '+18333956731'
-    const connectionId = process.env.TELNYX_CONNECTION_ID
-    
-    if (!connectionId) {
-      console.error('❌ TELNYX_CONNECTION_ID not configured')
-      return NextResponse.json({ 
-        error: 'Telnyx connection ID not configured' 
-      }, { status: 503 })
-    }
     
     console.log('📞 Using toll-free number:', fromNumber)
-    console.log('📞 Using connection ID:', connectionId)
 
-    // Create Telnyx outbound call using Call Control API
+    // Create Telnyx outbound call using Call Control API (without connection_id for now)
     const callPayload = {
       to: formattedPhone,
       from: fromNumber,
-      connection_id: connectionId,
       webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
       webhook_failover_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
       client_state: JSON.stringify({
