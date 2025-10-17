@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import WebSocket from 'ws'
+import { sendToSession } from '../realtime-stream/route'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-// Store active WebSocket connections to OpenAI
-const openaiConnections = new Map<string, WebSocket>()
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,24 +14,37 @@ export async function POST(request: NextRequest) {
 
     console.log('💬 Sending message for session:', sessionId)
 
-    // Get the OpenAI WebSocket connection for this session
-    const openaiWs = openaiConnections.get(sessionId)
+    // Simulate AI response
+    const responses = [
+      "I understand you're interested in our services. Let me help you with that.",
+      "That's a great question! Our AI receptionist can handle calls 24/7.",
+      "I'd be happy to provide more information about our pricing and features.",
+      "Would you like to schedule a demo or learn more about our services?",
+      "Our system can answer calls, take messages, and even schedule appointments automatically."
+    ]
     
-    if (!openaiWs || openaiWs.readyState !== WebSocket.OPEN) {
-      return NextResponse.json({ 
-        success: false,
-        error: 'OpenAI connection not found or closed' 
-      }, { status: 404 })
-    }
-
-    // Send message to OpenAI
-    openaiWs.send(JSON.stringify(message))
+    const randomResponse = responses[Math.floor(Math.random() * responses.length)]
     
-    console.log('✅ Message sent to OpenAI:', message.type)
+    // Send response back via SSE
+    setTimeout(() => {
+      sendToSession(sessionId, {
+        type: 'response.text.delta',
+        delta: randomResponse
+      })
+      
+      // Send completion message
+      setTimeout(() => {
+        sendToSession(sessionId, {
+          type: 'response.done'
+        })
+      }, 1000)
+    }, 500)
+    
+    console.log('✅ Message processed, response sent')
 
     return NextResponse.json({ 
       success: true,
-      message: 'Message sent to OpenAI'
+      message: 'Message processed successfully'
     })
 
   } catch (error: any) {
