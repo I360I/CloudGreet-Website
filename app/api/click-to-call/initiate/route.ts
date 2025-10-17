@@ -29,21 +29,23 @@ export async function POST(request: NextRequest) {
 
     console.log('🚀 Initiating click-to-call for:', formattedPhone)
 
-    // Get a demo business or create one for demo purposes
+    // Get your real business (not demo)
     let businessId: string
     
-    // Try to find an existing demo business
+    // Try to find your actual business first
     const { data: existingBusiness } = await supabaseAdmin
       .from('businesses')
       .select('id')
-      .eq('business_name', businessName)
       .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single()
 
     if (existingBusiness) {
       businessId = existingBusiness.id
+      console.log('📞 Using existing business:', businessId)
     } else {
-      // Create a demo business for this call
+      // Fallback: Create a business for this call
       const { data: newBusiness, error: businessError } = await supabaseAdmin
         .from('businesses')
         .insert({
@@ -68,13 +70,14 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (businessError) {
-        console.error('❌ Error creating demo business:', businessError)
+        console.error('❌ Error creating business:', businessError)
         return NextResponse.json({ 
-          error: 'Failed to create demo business' 
+          error: 'Failed to create business' 
         }, { status: 500 })
       }
 
       businessId = newBusiness.id
+      console.log('📞 Created new business:', businessId)
     }
 
     // Get or create AI agent for this business
@@ -130,14 +133,26 @@ export async function POST(request: NextRequest) {
       .eq('status', 'assigned')
       .limit(1)
 
-    if (!phoneNumbers || phoneNumbers.length === 0) {
-      return NextResponse.json({ 
-        error: 'No phone numbers available for outbound calls' 
-      }, { status: 503 })
-    }
+    let fromNumber: string
+    let connectionId: string
 
-    const fromNumber = phoneNumbers[0].number
-    const connectionId = phoneNumbers[0].connection_id
+    if (!phoneNumbers || phoneNumbers.length === 0) {
+      // Fallback to your real toll-free number
+      fromNumber = '+18333956731'
+      connectionId = process.env.TELNYX_CONNECTION_ID || ''
+      
+      if (!connectionId) {
+        return NextResponse.json({ 
+          error: 'No phone numbers available and no connection ID configured' 
+        }, { status: 503 })
+      }
+      
+      console.log('📞 Using fallback toll-free number:', fromNumber)
+    } else {
+      fromNumber = phoneNumbers[0].number
+      connectionId = phoneNumbers[0].connection_id
+      console.log('📞 Using database toll-free number:', fromNumber)
+    }
 
     // Create Telnyx outbound call using Call Control API
     const callPayload = {
@@ -149,7 +164,7 @@ export async function POST(request: NextRequest) {
       client_state: JSON.stringify({
         business_id: businessId,
         agent_id: agentId,
-        call_type: 'demo',
+        call_type: 'click_to_call',
         source: 'click_to_call'
       })
     }
@@ -186,7 +201,7 @@ export async function POST(request: NextRequest) {
         to_number: formattedPhone,
         status: 'initiated',
         direction: 'outbound',
-        call_type: 'demo',
+        call_type: 'click_to_call',
         source: 'click_to_call',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
