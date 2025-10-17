@@ -6,8 +6,8 @@ import { motion } from 'framer-motion'
 // TypeScript declarations for speech recognition
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition
-    webkitSpeechRecognition: typeof SpeechRecognition
+    SpeechRecognition: any
+    webkitSpeechRecognition: any
   }
 }
 
