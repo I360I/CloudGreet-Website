@@ -29,6 +29,14 @@ export async function POST(request: NextRequest) {
 
     console.log('🚀 Initiating click-to-call for:', formattedPhone)
 
+    // Check if Telnyx is configured
+    if (!process.env.TELNYX_API_KEY) {
+      console.error('❌ Telnyx API key not configured')
+      return NextResponse.json({ 
+        error: 'Telnyx not configured' 
+      }, { status: 503 })
+    }
+
     // Use a simple business ID for demo calls
     const businessId = 'demo-business-id'
     console.log('📞 Using demo business ID for click-to-call')
@@ -93,9 +101,14 @@ export async function POST(request: NextRequest) {
 
     if (!telnyxResponse.ok) {
       const errorData = await telnyxResponse.text()
-      console.error('❌ Telnyx API error:', errorData)
+      console.error('❌ Telnyx API error:', {
+        status: telnyxResponse.status,
+        statusText: telnyxResponse.statusText,
+        error: errorData,
+        payload: callPayload
+      })
       return NextResponse.json({ 
-        error: 'Failed to initiate call with Telnyx' 
+        error: `Telnyx API error: ${telnyxResponse.status} - ${errorData}` 
       }, { status: 500 })
     }
 
