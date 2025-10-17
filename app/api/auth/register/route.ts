@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase, supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { registerSchema } from '@/lib/validation'
+import { registrationSchema } from '@/lib/validation'
 import { validatePhoneWithError, phoneNumberExists } from '@/lib/phone-validation'
 import { logger } from '@/lib/monitoring'
 
@@ -39,24 +39,22 @@ export async function POST(request: NextRequest) {
 
     // Parse and validate request body
     const body = await request.json()
-    const validatedData = registerSchema.parse(body)
+    const validatedData = registrationSchema.parse(body)
     
     const { 
-      business_name,
-      business_type,
+      businessName,
+      businessType,
       email, 
       password, 
       phone, 
       website,
-      address, 
-      services, 
-      service_areas 
+      address
     } = validatedData
     
     // Sanitize inputs
     const sanitizedEmail = email.toLowerCase().trim()
     const sanitizedPassword = password.trim()
-    const sanitizedBusinessName = business_name.trim()
+    const sanitizedBusinessName = businessName.trim()
     
     // Validate and format phone number
     const phoneValidation = validatePhoneWithError(phone)
@@ -115,7 +113,7 @@ export async function POST(request: NextRequest) {
       .insert({
         owner_id: user.id,
         business_name: sanitizedBusinessName,
-        business_type: business_type,
+        business_type: businessType,
         email: sanitizedEmail,
         phone: sanitizedPhone,
         phone_number: sanitizedPhone,
@@ -124,9 +122,9 @@ export async function POST(request: NextRequest) {
         state: 'Unknown',
         zip_code: '00000',
         website: website,
-        description: `Professional ${business_type} services`,
-        services: services || ['General Services'],
-        service_areas: service_areas || ['Local Area'],
+        description: `Professional ${businessType} services`,
+        services: ['General Services'],
+        service_areas: ['Local Area'],
         business_hours: {
           monday: { open: '08:00', close: '17:00' },
           tuesday: { open: '08:00', close: '17:00' },
@@ -216,8 +214,8 @@ export async function POST(request: NextRequest) {
         user: {
           id: user.id,
           email: user.email,
-          first_name: user.user_metadata?.first_name || business_name.split(' ')[0] || '',
-          last_name: user.user_metadata?.last_name || business_name.split(' ').slice(1).join(' ') || '',
+          first_name: user.user_metadata?.first_name || businessName.split(' ')[0] || '',
+          last_name: user.user_metadata?.last_name || businessName.split(' ').slice(1).join(' ') || '',
           business_id: business.id,
           role: 'owner'
         },

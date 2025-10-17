@@ -177,19 +177,7 @@ export const KeyboardShortcutHelp = () => {
     { keys: '?', description: 'Show keyboard shortcuts' }
   ]
 
-  return (
-    <div className="bg-gray-800/90 border border-gray-600 rounded-xl p-6 backdrop-blur-lg">
-      <h3 className="text-lg font-semibold text-white mb-4">Keyboard Shortcuts</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {shortcuts.map((shortcut, index) => (
-          <div key={index} className="flex items-center justify-between">
-            <span className="text-gray-300">{shortcut.description}</span>
-            <kbd className="px-2 py-1 bg-gray-700/50 border border-gray-600 rounded text-sm text-gray-300">
-              {shortcut.keys}
-            </kbd>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+  return {
+    shortcuts
+  }
 }

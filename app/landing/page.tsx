@@ -9,7 +9,12 @@ import {
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
-import VoiceRealtimeOrb from '../components/VoiceRealtimeOrbWebRTC'
+import dynamic from 'next/dynamic'
+
+      const ClickToCallOrb = dynamic(() => import('../components/ClickToCallOrb'), {
+        ssr: false,
+        loading: () => <div className="w-80 h-80 bg-black border border-gray-700 rounded-full animate-pulse flex items-center justify-center"><div className="text-white">Loading Voice AI...</div></div>
+      })
 import RoiCalculator from '../components/RoiCalculator'
 
 function VoiceOrbDemoWithSettings() {
@@ -79,16 +84,16 @@ function VoiceOrbDemoWithSettings() {
         )}
         
         <p className="text-xs text-gray-500 mb-4">
-          💡 Real-time AI • Ask anything about services, hours, pricing, or setup
+          💡 Real phone call • Experience the same AI that handles your customers
         </p>
       </motion.div>
 
-      <VoiceRealtimeOrb 
-        businessName={businessInfo.name}
-        businessType={businessInfo.type}
-        services={businessInfo.services}
-        hours={businessInfo.hours}
-      />
+        <ClickToCallOrb 
+          businessName={businessInfo.name}
+          businessType={businessInfo.type}
+          services={businessInfo.services}
+          hours={businessInfo.hours}
+        />
     </div>
   )
 }
@@ -169,7 +174,7 @@ export default function LandingPage() {
               Try It Right Now
             </h2>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Click the orb to speak with our AI receptionist. Experience real voice AI powered by OpenAI.
+              Click the orb to call our AI receptionist. Experience real voice AI powered by your actual phone system.
             </p>
           </motion.div>
           
@@ -762,7 +767,7 @@ export default function LandingPage() {
               </p>
               <div className="space-y-2">
                 <p className="text-gray-400 text-sm">
-                  <span className="text-white font-medium">Business Phone:</span> +1 (737) 244-8305
+                  <span className="text-white font-medium">Business Phone:</span> +1 (833) 395-6731
                 </p>
                 <p className="text-gray-400 text-sm">
                   <span className="text-white font-medium">Email:</span> support@cloudgreet.com
@@ -786,7 +791,7 @@ export default function LandingPage() {
               <div className="space-y-3">
                 <a href="/contact" className="block text-gray-400 hover:text-white transition-colors duration-300">Contact Us</a>
                 <a href="/help" className="block text-gray-400 hover:text-white transition-colors duration-300">Help Center</a>
-                <a href="tel:+17372448305" className="block text-gray-400 hover:text-white transition-colors duration-300">Call: +1 (737) 244-8305</a>
+                <a href="tel:+18333956731" className="block text-gray-400 hover:text-white transition-colors duration-300">Call: +1 (833) 395-6731</a>
                 <a href="mailto:support@cloudgreet.com" className="block text-gray-400 hover:text-white transition-colors duration-300">Email Support</a>
               </div>
             </div>

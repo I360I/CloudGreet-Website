@@ -3,8 +3,9 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 
-export default function TCPAA2PPage() {
+function TCPAA2PPageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white">
       {/* Navigation */}
@@ -40,7 +41,7 @@ export default function TCPAA2PPage() {
             TCPA/A2P Compliance Policy
           </h1>
           <p className="text-xl text-gray-400 mb-8">
-            Last updated: {new Date().toLocaleDateString()}
+            Last updated: 10/14/2025
           </p>
 
           <div className="bg-gray-800/30 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50">
@@ -175,5 +176,13 @@ export default function TCPAA2PPage() {
         </motion.div>
       </div>
     </div>
+  )
+}
+
+export default function TCPAA2PPage() {
+  return (
+    <ErrorBoundary>
+      <TCPAA2PPageContent />
+    </ErrorBoundary>
   )
 }

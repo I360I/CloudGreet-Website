@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
 
     // Get onboarding status and next steps
     const onboardingCompleted = business.onboarding_completed || false
-    const hasPhoneNumber = business.phone_number && business.phone_number !== '5551234567'
+    const hasPhoneNumber = business.phone_number && business.phone_number !== '8333956731'
     const hasAgent = agent?.is_active || false
 
     // Determine setup status

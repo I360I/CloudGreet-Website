@@ -1,6 +1,7 @@
 // Update AI Agent Settings - Allows clients to customize their AI receptionist
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'

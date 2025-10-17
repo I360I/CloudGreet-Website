@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Simulate a test call by creating a call log entry
     const testCallData = {
       business_id: targetBusinessId,
-      caller_phone: testPhoneNumber || '+15551234567',
+      caller_phone: testPhoneNumber || '+17372960092',
       caller_name: 'Test Caller',
       duration: 0, // Will be updated when call ends
       status: 'in_progress',
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         event_type: 'call.answered',
         payload: {
           call_control_id: `test-${Date.now()}`,
-          from: testPhoneNumber || '+15551234567',
+          from: testPhoneNumber || '+17372960092',
           to: business.phone_number,
           call_leg_id: `leg-${Date.now()}`,
           call_session_id: `session-${Date.now()}`,

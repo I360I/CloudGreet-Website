@@ -186,6 +186,7 @@ export default function LoginPage() {
                       id="email"
                       name="email"
                       required
+                      autoComplete="email"
                       className="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300"
                       placeholder="Enter your email"
                     />
@@ -203,6 +204,7 @@ export default function LoginPage() {
                       id="password"
                       name="password"
                       required
+                      autoComplete="current-password"
                       className="w-full pl-12 pr-14 py-4 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-300"
                       placeholder="Enter your password"
                     />

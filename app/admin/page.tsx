@@ -907,9 +907,9 @@ export default function AdminDashboard() {
                       <label className="block text-sm font-medium text-gray-400 mb-2">Test Phone Number</label>
                       <input
                         type="tel"
-                        placeholder="+15551234567"
+                        placeholder="+18333956731"
                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
-                        defaultValue="+15551234567"
+                        defaultValue="+18333956731"
                       />
                     </div>
                     <div>
@@ -1175,7 +1175,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center space-x-3 p-3 bg-gray-700/50 rounded-lg">
                       <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
                       <div className="flex-1">
-                        <p className="text-white text-sm">AI agent handled call from +15551234567</p>
+                        <p className="text-white text-sm">AI agent handled call from +17372960092</p>
                         <p className="text-gray-400 text-xs">8 minutes ago</p>
                       </div>
                     </div>

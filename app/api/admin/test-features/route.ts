@@ -48,7 +48,7 @@ async function testSMS(phoneNumber: string, message: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.TELNYX_PHONE_NUMBER || process.env.TELNYX_BUSINESS_PHONE || '+17372448305',
+        from: process.env.TELNYX_PHONE_NUMBER || process.env.TELNYX_BUSINESS_PHONE || '+18333956731',
         to: phoneNumber,
         text: `[TEST] ${message}`,
         messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
@@ -98,7 +98,7 @@ async function testVoiceCall(phoneNumber: string, businessId: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.TELNYX_PHONE_NUMBER || process.env.TELNYX_BUSINESS_PHONE || '+17372448305',
+        from: process.env.TELNYX_PHONE_NUMBER || process.env.TELNYX_BUSINESS_PHONE || '+18333956731',
         to: phoneNumber,
         connection_id: process.env.TELNYX_CONNECTION_ID,
         webhook_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/telnyx/voice-handler`,

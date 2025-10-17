@@ -206,7 +206,7 @@ async function processBulkEnrichment(jobId: string, leadIds: string[], batchSize
                 status: 'success',
                 message: 'Lead enriched successfully',
                 score: result.lead?.total_score || 0,
-                processing_time_ms: Date.now() - batch[0] // Approximate
+                processing_time_ms: Date.now() - (batch[0] as any) // Approximate
               })
           } else {
             failCount++

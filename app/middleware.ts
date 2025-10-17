@@ -18,6 +18,33 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Admin route protection
+  if (request.nextUrl.pathname.startsWith('/admin/') && request.nextUrl.pathname !== '/admin/login') {
+    const adminToken = request.cookies.get('adminToken')?.value
+    
+    if (!adminToken) {
+      // Redirect to admin login
+      const loginUrl = new URL('/admin/login', request.url)
+      loginUrl.searchParams.set('redirect', request.nextUrl.pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    
+    // Verify token (in production, verify JWT signature)
+    try {
+      // For now, just check if token exists and has basic format
+      if (!adminToken || adminToken.length < 10) {
+        const loginUrl = new URL('/admin/login', request.url)
+        loginUrl.searchParams.set('redirect', request.nextUrl.pathname)
+        return NextResponse.redirect(loginUrl)
+      }
+    } catch (error) {
+      // Invalid token
+      const loginUrl = new URL('/admin/login', request.url)
+      loginUrl.searchParams.set('redirect', request.nextUrl.pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+  }
+
   // Rate limiting (simplified for performance)
   const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
   const now = Date.now()

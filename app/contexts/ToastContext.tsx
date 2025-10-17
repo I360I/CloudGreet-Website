@@ -14,6 +14,10 @@ interface Toast {
 
 interface ToastContextType {
   showToast: (toast: Omit<Toast, 'id'>) => void
+  showSuccess: (title: string, message?: string) => void
+  showError: (title: string, message?: string) => void
+  showWarning: (title: string, message?: string) => void
+  showInfo: (title: string, message?: string) => void
   hideToast: (id: string) => void
 }
 
@@ -35,12 +39,28 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }, duration)
   }, [])
 
+  const showSuccess = useCallback((title: string, message?: string) => {
+    showToast({ type: 'success', title, message })
+  }, [showToast])
+
+  const showError = useCallback((title: string, message?: string) => {
+    showToast({ type: 'error', title, message })
+  }, [showToast])
+
+  const showWarning = useCallback((title: string, message?: string) => {
+    showToast({ type: 'warning', title, message })
+  }, [showToast])
+
+  const showInfo = useCallback((title: string, message?: string) => {
+    showToast({ type: 'info', title, message })
+  }, [showToast])
+
   const hideToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id))
   }, [])
 
   return (
-    <ToastContext.Provider value={{ showToast, hideToast }}>
+    <ToastContext.Provider value={{ showToast, showSuccess, showError, showWarning, showInfo, hideToast }}>
       {children}
       <ToastContainer toasts={toasts} onHide={hideToast} />
     </ToastContext.Provider>

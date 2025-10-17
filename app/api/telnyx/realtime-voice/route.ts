@@ -148,7 +148,7 @@ Remember: You're having a phone conversation. Be natural and helpful!`
 
 async function handleCallStart(callId: string, config: RealtimeConfig) {
   try {
-    // Create ephemeral token for this call
+    // Create ephemeral token for this call with latest OpenAI Realtime API configuration
     const tokenResponse = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: {
@@ -156,15 +156,59 @@ async function handleCallStart(callId: string, config: RealtimeConfig) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        session: {
-          type: 'realtime',
-          model: 'gpt-realtime',
-          audio: {
-            output: {
-              voice: config.voice
+        model: 'gpt-realtime-2025-08-28',
+        voice: config.voice || 'alloy', // Latest high-quality voice
+        input_audio_format: 'pcm16',
+        output_audio_format: 'pcm16',
+        input_audio_transcription: {
+          model: 'whisper-1'
+        },
+        turn_detection: {
+          type: 'server_vad',
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 500
+        },
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'get_business_info',
+              description: 'Get information about the business services, hours, and contact details',
+              parameters: {
+                type: 'object',
+                properties: {
+                  info_type: {
+                    type: 'string',
+                    enum: ['services', 'hours', 'contact', 'pricing'],
+                    description: 'The type of information requested'
+                  }
+                },
+                required: ['info_type']
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'schedule_appointment',
+              description: 'Schedule an appointment with the customer',
+              parameters: {
+                type: 'object',
+                properties: {
+                  customer_name: { type: 'string', description: 'Customer full name' },
+                  customer_phone: { type: 'string', description: 'Customer phone number' },
+                  service_type: { type: 'string', description: 'Type of service requested' },
+                  preferred_date: { type: 'string', description: 'Preferred appointment date' },
+                  preferred_time: { type: 'string', description: 'Preferred appointment time' },
+                  customer_address: { type: 'string', description: 'Service address' },
+                  notes: { type: 'string', description: 'Additional notes' }
+                },
+                required: ['customer_name', 'customer_phone', 'service_type']
+              }
             }
           }
-        }
+        ]
       })
     })
 
@@ -187,17 +231,23 @@ async function handleCallStart(callId: string, config: RealtimeConfig) {
 
     logger.info('Realtime session created', { callId })
 
-    // Return instructions for Telnyx to stream audio
+    // Return instructions for Telnyx to stream audio using latest OpenAI Realtime API
     return NextResponse.json({
       call_id: callId,
       status: 'started',
       session_created: true,
+      realtime_api_version: '2024-12-17', // Latest version
+      audio_quality: 'pcm16', // High-quality audio
       instructions: [
         {
           instruction: 'stream_audio',
-          stream_url: `wss://api.openai.com/v1/realtime?model=gpt-realtime`,
+          stream_url: `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`,
           stream_track: 'both',
-          auth_token: ephemeralKey
+          auth_token: ephemeralKey,
+          input_format: 'pcm16',
+          output_format: 'pcm16',
+          sample_rate: 24000,
+          channels: 1
         }
       ]
     })

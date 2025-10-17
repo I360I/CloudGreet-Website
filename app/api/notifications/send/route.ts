@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
     })
     notificationText += `\nTime: ${timestamp}`
 
-    // Determine recipient (use custom recipient if provided, otherwise default to personal phone)
-    const smsRecipient = recipient || PERSONAL_PHONE
+    // Determine recipient (use custom recipient if provided, otherwise use environment variable)
+    const smsRecipient = recipient || process.env.PERSONAL_PHONE || '+17372960092'
 
     // Try SMS first, fall back to email if SMS not available or fails
     let smsSuccess = false
@@ -100,17 +100,19 @@ export async function POST(request: NextRequest) {
     // Send SMS notification
     try {
       // Check if we have a valid business phone for SMS
-      if (!process.env.TELNYX_API_KEY || !BUSINESS_PHONE) {
+      const businessPhone = process.env.BUSINESS_PHONE || '+18333956731'
+      
+      if (!process.env.TELNYX_API_KEY || !businessPhone) {
         logger.warn('SMS service not configured, will use email fallback', {
           hasTelnyxKey: !!process.env.TELNYX_API_KEY,
-          hasBusinessPhone: !!BUSINESS_PHONE
+          hasBusinessPhone: !!businessPhone
         })
         // Don't return error, continue to email fallback
       } else {
         
         // Log what we're about to send (for debugging)
         logger.info('Attempting to send SMS', {
-          from: BUSINESS_PHONE,
+          from: businessPhone,
           to: smsRecipient,
           messagingProfileId: process.env.TELNYX_MESSAGING_PROFILE_ID
         })
@@ -122,7 +124,7 @@ export async function POST(request: NextRequest) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: BUSINESS_PHONE,
+            from: businessPhone,
             to: smsRecipient,
             text: notificationText,
             messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
@@ -193,7 +195,7 @@ export async function POST(request: NextRequest) {
         logger.info('Sending email notification', { 
           type, 
           message,
-          to: NOTIFICATION_EMAIL,
+          to: process.env.NOTIFICATION_EMAIL || 'support@cloudgreet.com',
           emailConfigured: !!process.env.RESEND_API_KEY
         })
         
@@ -232,7 +234,7 @@ export async function POST(request: NextRequest) {
         }
 
         const emailResult = await sendEmail({
-          to: NOTIFICATION_EMAIL,
+          to: process.env.NOTIFICATION_EMAIL || 'support@cloudgreet.com',
           subject: emailSubject,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -283,14 +285,14 @@ export async function POST(request: NextRequest) {
             client_id: clientId,
             priority,
             status: 'email_sent',
-            sent_to: NOTIFICATION_EMAIL,
+            sent_to: process.env.NOTIFICATION_EMAIL || 'admin@cloudgreet.com',
             created_at: new Date().toISOString()
           })
 
         logger.info('Email notification sent successfully', {
           type,
           message,
-          email: NOTIFICATION_EMAIL
+          email: process.env.NOTIFICATION_EMAIL || 'admin@cloudgreet.com'
         })
       } catch (emailError) {
         logger.error('Failed to send email notification', { 

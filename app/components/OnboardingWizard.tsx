@@ -291,7 +291,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
                   className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                  placeholder="(555) 123-4567"
+                  placeholder="(833) 395-6731"
                 />
               </div>
             </div>

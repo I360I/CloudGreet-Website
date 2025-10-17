@@ -1,338 +1,445 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
-import { logger } from '@/lib/monitoring'
-import { telnyxClient } from '@/lib/telnyx'
-import OpenAI from 'openai'
+import { createClient } from '@supabase/supabase-js'
 
-export const dynamic = 'force-dynamic'
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
+interface FollowUpSequence {
+  id: string
+  name: string
+  description: string
+  isActive: boolean
+  triggerEvent: 'lead_created' | 'no_response' | 'meeting_scheduled' | 'deal_closed' | 'custom'
+  triggerDelay: number // in hours
+  steps: FollowUpStep[]
+  conditions: {
+    field: string
+    operator: string
+    value: any
+  }[]
+  businessId: string
+  createdAt: string
+  updatedAt: string
+}
 
-export async function POST(request: NextRequest) {
+interface FollowUpStep {
+  id: string
+  stepNumber: number
+  actionType: 'email' | 'sms' | 'call' | 'task' | 'wait'
+  subject?: string
+  content: string
+  delayHours: number
+  isActive: boolean
+  templateId?: string
+  attachments?: string[]
+  metadata?: Record<string, any>
+}
+
+interface Lead {
+  id: string
+  businessName: string
+  contactName: string
+  email: string
+  phone: string
+  status: string
+  priority: string
+  score: number
+  source: string
+  assignedTo?: string
+  businessId: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface NurtureCampaign {
+  id: string
+  name: string
+  description: string
+  isActive: boolean
+  targetSegments: string[]
+  sequences: FollowUpSequence[]
+  performance: {
+    totalSent: number
+    totalOpened: number
+    totalClicked: number
+    totalConverted: number
+    openRate: number
+    clickRate: number
+    conversionRate: number
+  }
+  businessId: string
+  createdAt: string
+  updatedAt: string
+}
+
+// GET /api/automation/follow-up - Get all follow-up sequences and campaigns
+export async function GET(request: NextRequest) {
   try {
-    // AUTH CHECK: Use proper JWT authentication instead of weak header auth
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { searchParams } = new URL(request.url)
+    const businessId = searchParams.get('businessId') || 'default'
 
-    const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET
-    const jwt = (await import('jsonwebtoken')).default
-    const decoded = jwt.verify(token, jwtSecret) as any
-    
-    const userId = decoded.userId
-    const businessId = decoded.businessId
-    
-    if (!userId || !businessId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-
-    const body = await request.json()
-    const { trigger, customerData, callData } = body
-
-    // Get business configuration
-    const { data: business } = await supabaseAdmin
-      .from('businesses')
-      .select('*')
-      .eq('id', businessId)
-      .single()
-
-    const { data: agent } = await supabaseAdmin
-      .from('ai_agents')
+    // Get follow-up sequences
+    const { data: sequences, error: sequencesError } = await supabase
+      .from('follow_up_sequences')
       .select('*')
       .eq('business_id', businessId)
-      .eq('is_active', true)
-      .single()
+      .order('created_at', { ascending: false })
 
-    let followUpMessage = ''
-    let followUpType = ''
-
-    // Generate personalized follow-up based on trigger
-    switch (trigger) {
-      case 'missed_call':
-        followUpMessage = await generateMissedCallFollowUp(business, customerData)
-        followUpType = 'missed_call_recovery'
-        break
-      
-      case 'no_show':
-        followUpMessage = await generateNoShowFollowUp(business, customerData)
-        followUpType = 'no_show_follow_up'
-        break
-      
-      case 'quote_request':
-        followUpMessage = await generateQuoteFollowUp(business, customerData, callData)
-        followUpType = 'quote_follow_up'
-        break
-      
-      case 'appointment_reminder':
-        followUpMessage = await generateAppointmentReminder(business, customerData)
-        followUpType = 'appointment_reminder'
-        break
-      
-      case 'satisfaction_survey':
-        followUpMessage = await generateSatisfactionSurvey(business, customerData)
-        followUpType = 'satisfaction_survey'
-        break
-      
-      case 'win_back':
-        followUpMessage = await generateWinBackMessage(business, customerData)
-        followUpType = 'win_back_campaign'
-        break
-      
-      default:
-        followUpMessage = await generateGenericFollowUp(business, customerData)
-        followUpType = 'general_follow_up'
+    if (sequencesError) {
+      throw new Error(`Failed to fetch sequences: ${sequencesError.message}`)
     }
 
-    // Send the follow-up message
-    if (customerData.phone) {
-      try {
-        await telnyxClient.sendSMS(
-          customerData.phone,
-          followUpMessage,
-          business.phone_number
-        )
-      } catch (error) {
-        logger.error('Failed to send follow-up SMS', { 
-          error: error instanceof Error ? error.message : 'Unknown error', 
-          businessId,
-          customerPhone: customerData.phone,
-          followUpType
-        })
-      }
+    // Get nurture campaigns
+    const { data: campaigns, error: campaignsError } = await supabase
+      .from('nurture_campaigns')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: false })
+
+    if (campaignsError) {
+      throw new Error(`Failed to fetch campaigns: ${campaignsError.message}`)
     }
 
-    // Log the follow-up
-    await supabaseAdmin
-      .from('sms_messages')
-      .insert({
-        business_id: businessId,
-        to_number: customerData.phone,
-        from_number: business.phone_number,
-        message: followUpMessage,
-        direction: 'outbound',
-        type: followUpType,
-        status: 'sent',
-        created_at: new Date().toISOString()
+    // Get sequence steps for each sequence
+    const sequencesWithSteps = await Promise.all(
+      sequences.map(async (sequence) => {
+        const { data: steps, error: stepsError } = await supabase
+          .from('follow_up_steps')
+          .select('*')
+          .eq('sequence_id', sequence.id)
+          .order('step_number', { ascending: true })
+
+        if (stepsError) {
+          console.error(`Failed to fetch steps for sequence ${sequence.id}:`, stepsError.message)
+        }
+
+        return {
+          ...sequence,
+          steps: steps || []
+        }
       })
+    )
 
-    // Schedule next follow-up if needed
-    if (shouldScheduleNextFollowUp(trigger)) {
-      await scheduleNextFollowUp(businessId, customerData, trigger)
-    }
+    // Get campaign performance
+    const campaignsWithPerformance = await Promise.all(
+      campaigns.map(async (campaign) => {
+        const { data: performance, error: performanceError } = await supabase
+          .from('campaign_performance')
+          .select('*')
+          .eq('campaign_id', campaign.id)
+          .single()
 
-    logger.info('Follow-up message sent', {
-      businessId,
-      customerPhone: customerData.phone,
-      followUpType,
-      trigger
-    })
+        if (performanceError) {
+          console.error(`Failed to fetch performance for campaign ${campaign.id}:`, performanceError.message)
+        }
+
+        return {
+          ...campaign,
+          performance: performance || {
+            totalSent: 0,
+            totalOpened: 0,
+            totalClicked: 0,
+            totalConverted: 0,
+            openRate: 0,
+            clickRate: 0,
+            conversionRate: 0
+          }
+        }
+      })
+    )
 
     return NextResponse.json({
       success: true,
-      data: {
-        message: followUpMessage,
-        type: followUpType,
-        sent: true,
-        nextFollowUp: shouldScheduleNextFollowUp(trigger)
-      }
+      sequences: sequencesWithSteps,
+      campaigns: campaignsWithPerformance
     })
-
-  } catch (error) {
-    logger.error('Follow-up automation error', { 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    })
+      } catch (error) {
+    console.error('Follow-up automation error:', error)
     return NextResponse.json({
       success: false,
-      message: 'Failed to send follow-up'
+      error: error instanceof Error ? error.message : 'Failed to fetch follow-up data'
     }, { status: 500 })
   }
 }
 
-async function generateMissedCallFollowUp(business: any, customerData: any) {
-  const prompt = `Generate a professional, friendly SMS follow-up for a missed call. 
-  
-  Business: ${business.business_name} (${business.business_type})
-  Customer: ${customerData.name || 'Valued Customer'}
-  
-  The message should:
-  - Be professional but warm
-  - Acknowledge the missed call
-  - Offer to help
-  - Include a clear call-to-action
-  - Be under 160 characters
-  - Include the business phone number
-  
-  Make it sound natural and not robotic.`
+// POST /api/automation/follow-up - Create new follow-up sequence or campaign
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { type, data } = body
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: 100,
-    temperature: 0.7
-  })
-
-  return response.choices[0]?.message?.content || 
-    `Hi! We missed your call to ${business.business_name}. We'd love to help! Call us back at ${business.phone_number} or reply to this message.`
+    if (type === 'sequence') {
+      return await createFollowUpSequence(data)
+    } else if (type === 'campaign') {
+      return await createNurtureCampaign(data)
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid type. Must be "sequence" or "campaign"'
+      }, { status: 400 })
+    }
+  } catch (error) {
+    console.error('Follow-up automation creation error:', error)
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create follow-up automation'
+    }, { status: 500 })
+  }
 }
 
-async function generateNoShowFollowUp(business: any, customerData: any) {
-  const prompt = `Generate a gentle, understanding SMS follow-up for a no-show appointment.
-  
-  Business: ${business.business_name} (${business.business_type})
-  Customer: ${customerData.name || 'Valued Customer'}
-  
-  The message should:
-  - Be understanding and not accusatory
-  - Offer to reschedule
-  - Be professional but empathetic
-  - Include a clear next step
-  - Be under 160 characters
-  
-  Make it sound caring and helpful.`
+// PUT /api/automation/follow-up - Update follow-up sequence or campaign
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { type, id, data } = body
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: 100,
-    temperature: 0.7
-  })
-
-  return response.choices[0]?.message?.content || 
-    `Hi ${customerData.name}! We missed you at your appointment. No worries - life happens! Let's reschedule. Reply or call ${business.phone_number}.`
+    if (type === 'sequence') {
+      return await updateFollowUpSequence(id, data)
+    } else if (type === 'campaign') {
+      return await updateNurtureCampaign(id, data)
+    } else {
+    return NextResponse.json({
+        success: false,
+        error: 'Invalid type. Must be "sequence" or "campaign"'
+      }, { status: 400 })
+    }
+  } catch (error) {
+    console.error('Follow-up automation update error:', error)
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update follow-up automation'
+    }, { status: 500 })
+  }
 }
 
-async function generateQuoteFollowUp(business: any, customerData: any, callData: any) {
-  const prompt = `Generate a professional SMS follow-up for a quote request.
-  
-  Business: ${business.business_name} (${business.business_type})
-  Customer: ${customerData.name || 'Valued Customer'}
-  Service Requested: ${callData?.service || 'your service'}
-  
-  The message should:
-  - Thank them for their interest
-  - Mention the quote is being prepared
-  - Set expectations for delivery
-  - Include contact information
-  - Be under 160 characters
-  
-  Make it professional and reassuring.`
+// DELETE /api/automation/follow-up - Delete follow-up sequence or campaign
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const type = searchParams.get('type')
+    const id = searchParams.get('id')
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: 100,
-    temperature: 0.7
-  })
+    if (!type || !id) {
+      return NextResponse.json({
+        success: false,
+        error: 'Type and ID are required'
+      }, { status: 400 })
+    }
 
-  return response.choices[0]?.message?.content || 
-    `Hi ${customerData.name}! Thanks for your interest in our ${callData?.service || 'services'}. We're preparing your quote and will send it within 24 hours. Questions? Call ${business.phone_number}.`
+    if (type === 'sequence') {
+      return await deleteFollowUpSequence(id)
+    } else if (type === 'campaign') {
+      return await deleteNurtureCampaign(id)
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid type. Must be "sequence" or "campaign"'
+      }, { status: 400 })
+    }
+  } catch (error) {
+    console.error('Follow-up automation deletion error:', error)
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete follow-up automation'
+    }, { status: 500 })
+  }
 }
 
-async function generateAppointmentReminder(business: any, customerData: any) {
-  const prompt = `Generate a friendly appointment reminder SMS.
-  
-  Business: ${business.business_name} (${business.business_type})
-  Customer: ${customerData.name || 'Valued Customer'}
-  Appointment: ${customerData.appointmentDate || 'your appointment'}
-  
-  The message should:
-  - Be friendly and helpful
-  - Confirm appointment details
-  - Include any important preparation info
-  - Provide contact info for changes
-  - Be under 160 characters
-  
-  Make it warm and professional.`
+// Helper functions
+async function createFollowUpSequence(data: any) {
+  const { businessId = 'default', ...sequenceData } = data
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: 100,
-    temperature: 0.7
-  })
-
-  return response.choices[0]?.message?.content || 
-    `Hi ${customerData.name}! Reminder: Your appointment with ${business.business_name} is tomorrow. Need to reschedule? Call ${business.phone_number}.`
-}
-
-async function generateSatisfactionSurvey(business: any, customerData: any) {
-  const prompt = `Generate a brief satisfaction survey SMS.
-  
-  Business: ${business.business_name} (${business.business_type})
-  Customer: ${customerData.name || 'Valued Customer'}
-  
-  The message should:
-  - Thank them for their business
-  - Ask for a quick rating
-  - Be brief and easy to respond to
-  - Include contact info for issues
-  - Be under 160 characters
-  
-  Make it simple and appreciative.`
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: 100,
-    temperature: 0.7
-  })
-
-  return response.choices[0]?.message?.content || 
-    `Hi ${customerData.name}! How was your experience with ${business.business_name}? Reply 1-5 stars. Issues? Call ${business.phone_number}.`
-}
-
-async function generateWinBackMessage(business: any, customerData: any) {
-  const prompt = `Generate a win-back SMS for a customer who hasn't used services recently.
-  
-  Business: ${business.business_name} (${business.business_type})
-  Customer: ${customerData.name || 'Valued Customer'}
-  
-  The message should:
-  - Be warm and personal
-  - Offer something special
-  - Not be pushy
-  - Include a clear offer
-  - Be under 160 characters
-  
-  Make it feel personal and valuable.`
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: prompt }],
-    max_tokens: 100,
-    temperature: 0.7
-  })
-
-  return response.choices[0]?.message?.content || 
-    `Hi ${customerData.name}! We miss you at ${business.business_name}! Here's 10% off your next service. Call ${business.phone_number} to book.`
-}
-
-async function generateGenericFollowUp(business: any, customerData: any) {
-  return `Hi ${customerData.name || 'there'}! Thanks for your interest in ${business.business_name}. How can we help you today? Call ${business.phone_number}.`
-}
-
-function shouldScheduleNextFollowUp(trigger: string) {
-  const triggersWithFollowUp = ['missed_call', 'no_show', 'quote_request']
-  return triggersWithFollowUp.includes(trigger)
-}
-
-async function scheduleNextFollowUp(businessId: string, customerData: any, trigger: string) {
-  // Schedule next follow-up in 3 days
-  const nextFollowUpDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
-  
-  await supabaseAdmin
-    .from('follow_up_schedule')
+  // Create sequence
+  const { data: sequence, error: sequenceError } = await supabase
+    .from('follow_up_sequences')
     .insert({
+      ...sequenceData,
       business_id: businessId,
-      customer_phone: customerData.phone,
-      customer_name: customerData.name,
-      trigger: trigger,
-      scheduled_date: nextFollowUpDate.toISOString(),
-      status: 'scheduled',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     })
+    .select()
+    .single()
+
+  if (sequenceError) {
+    throw new Error(`Failed to create sequence: ${sequenceError.message}`)
+  }
+
+  // Create steps if provided
+  if (data.steps && data.steps.length > 0) {
+    const stepsData = data.steps.map((step: any) => ({
+      ...step,
+      sequence_id: sequence.id,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }))
+
+    const { error: stepsError } = await supabase
+      .from('follow_up_steps')
+      .insert(stepsData)
+
+    if (stepsError) {
+      console.error('Failed to create steps:', stepsError.message)
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    sequence
+  })
+}
+
+async function updateFollowUpSequence(id: string, data: any) {
+  const { data: sequence, error: sequenceError } = await supabase
+    .from('follow_up_sequences')
+    .update({
+      ...data,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (sequenceError) {
+    throw new Error(`Failed to update sequence: ${sequenceError.message}`)
+  }
+
+  // Update steps if provided
+  if (data.steps) {
+    // Delete existing steps
+    await supabase
+      .from('follow_up_steps')
+      .delete()
+      .eq('sequence_id', id)
+
+    // Insert new steps
+    if (data.steps.length > 0) {
+      const stepsData = data.steps.map((step: any) => ({
+        ...step,
+        sequence_id: id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }))
+
+      const { error: stepsError } = await supabase
+        .from('follow_up_steps')
+        .insert(stepsData)
+
+      if (stepsError) {
+        console.error('Failed to update steps:', stepsError.message)
+      }
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    sequence
+  })
+}
+
+async function deleteFollowUpSequence(id: string) {
+  // Delete steps first
+  await supabase
+    .from('follow_up_steps')
+    .delete()
+    .eq('sequence_id', id)
+
+  // Delete sequence
+  const { error } = await supabase
+    .from('follow_up_sequences')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    throw new Error(`Failed to delete sequence: ${error.message}`)
+  }
+
+  return NextResponse.json({
+    success: true
+  })
+}
+
+async function createNurtureCampaign(data: any) {
+  const { businessId = 'default', ...campaignData } = data
+
+  const { data: campaign, error: campaignError } = await supabase
+    .from('nurture_campaigns')
+    .insert({
+      ...campaignData,
+      business_id: businessId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .select()
+    .single()
+
+  if (campaignError) {
+    throw new Error(`Failed to create campaign: ${campaignError.message}`)
+  }
+
+  // Initialize performance tracking
+  await supabase
+    .from('campaign_performance')
+    .insert({
+      campaign_id: campaign.id,
+      total_sent: 0,
+      total_opened: 0,
+      total_clicked: 0,
+      total_converted: 0,
+      open_rate: 0,
+      click_rate: 0,
+      conversion_rate: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+
+  return NextResponse.json({
+    success: true,
+    campaign
+  })
+}
+
+async function updateNurtureCampaign(id: string, data: any) {
+  const { data: campaign, error: campaignError } = await supabase
+    .from('nurture_campaigns')
+    .update({
+      ...data,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (campaignError) {
+    throw new Error(`Failed to update campaign: ${campaignError.message}`)
+  }
+
+  return NextResponse.json({
+    success: true,
+    campaign
+  })
+}
+
+async function deleteNurtureCampaign(id: string) {
+  // Delete performance tracking
+  await supabase
+    .from('campaign_performance')
+    .delete()
+    .eq('campaign_id', id)
+
+  // Delete campaign
+  const { error } = await supabase
+    .from('nurture_campaigns')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    throw new Error(`Failed to delete campaign: ${error.message}`)
+  }
+
+  return NextResponse.json({
+    success: true
+  })
 }

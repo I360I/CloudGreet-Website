@@ -239,17 +239,6 @@ export async function PUT(request: NextRequest) {
 }
 
 // POST /api/apollo-killer/ab-testing/metrics: Record test metrics
-export async function POST(request: NextRequest) {
-  const url = new URL(request.url)
-  
-  if (url.pathname.endsWith('/metrics')) {
-    return recordTestMetrics(request)
-  }
-  
-  // Handle regular POST (create test) - already implemented above
-  return NextResponse.json({ error: 'Invalid endpoint' }, { status: 404 })
-}
-
 async function recordTestMetrics(request: NextRequest) {
   try {
     const adminAuth = await requireAdmin(request)

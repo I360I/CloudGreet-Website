@@ -100,7 +100,7 @@ export default function BillingPage() {
       
       // For demo purposes, show a success message
       setTimeout(() => {
-        setPhoneNumber('+1 (555) 123-4567')
+        setPhoneNumber('+1 (833) 395-6731')
         setSubscriptionStatus('active')
         showSuccess('Phone number assigned! Your AI agent is now live.')
       }, 2000)

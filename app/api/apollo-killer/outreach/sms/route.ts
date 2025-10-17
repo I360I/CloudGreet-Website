@@ -60,11 +60,11 @@ export async function POST(request: NextRequest) {
         const personalizedMessage = personalizeSMS(message, lead)
 
         // Send SMS via Telnyx
-        const smsResult = await telnyxClient.messages.create({
-          from: process.env.TELNYX_PHONE_NUMBER,
-          to: lead.owner_phone,
-          text: personalizedMessage
-        })
+        const smsResult = await telnyxClient.sendSMS(
+          lead.owner_phone,
+          personalizedMessage,
+          process.env.TELNYX_PHONE_NUMBER
+        )
 
         // Update lead outreach status
         await supabaseAdmin

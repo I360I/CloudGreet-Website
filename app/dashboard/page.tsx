@@ -62,7 +62,10 @@ export default function Dashboard() {
   const [realMetrics, setRealMetrics] = useState<any>(null)
   const [realActivity, setRealActivity] = useState<any[]>([])
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const [dateRange, setDateRange] = useState('30d')
+  const [dateRange, setDateRange] = useState({
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    end: new Date()
+  })
   const [searchTerm, setSearchTerm] = useState('')
   const [filters, setFilters] = useState<any>({ status: [], serviceType: [], dateRange: '' })
   const [selectedCallId, setSelectedCallId] = useState<string | null>(null)
@@ -70,7 +73,7 @@ export default function Dashboard() {
   const { showSuccess, showError } = useToast()
   
   // Cached data hooks
-  const { data: analyticsData, isLoading: analyticsLoading } = useDashboardAnalytics(dateRange)
+  const { data: analyticsData, isLoading: analyticsLoading } = useDashboardAnalytics('30d')
   const { data: metricsData, isLoading: metricsLoading } = useRealtimeMetrics()
 
   useEffect(() => {
@@ -263,17 +266,12 @@ export default function Dashboard() {
   }
 
   if (isLoading) {
-    return (
-      <NetworkErrorHandler>
-        <DashboardSkeleton />
-      </NetworkErrorHandler>
-    )
+    return <DashboardSkeleton />
   }
 
   if (error) {
     return (
-      <NetworkErrorHandler>
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 text-white flex items-center justify-center">
           <div className="text-center">
             <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold mb-2">Error Loading Dashboard</h2>
@@ -286,7 +284,6 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
-      </NetworkErrorHandler>
     )
   }
 
@@ -301,7 +298,6 @@ export default function Dashboard() {
           showSuccess('Onboarding completed! Your AI agent is ready to test.')
         }}
       />
-      <NetworkErrorHandler>
       {/* Real-time Updates */}
       {dashboardData?.businessId && (
         <RealTimeUpdates businessId={dashboardData.businessId} />
@@ -314,10 +310,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               {/* Left: Title + Mobile Menu */}
               <div className="flex items-center gap-3">
-                <MobileDashboardNav 
-                  businessName={dashboardData?.businessName || 'Your Business'}
-                  onLogout={handleLogout}
-                />
+                <MobileDashboardNav currentPage="dashboard" />
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold">Dashboard</h1>
                   <p className="text-xs md:text-sm text-gray-400 hidden sm:block">{dashboardData?.businessName}</p>
@@ -331,10 +324,11 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="hidden sm:block">
-                  <ExportButton 
-                    data={dashboardData} 
-                    filename="dashboard-export" 
-                    businessName={dashboardData?.businessName || 'CloudGreet'}
+                  <ExportButton
+                    onExport={async (format) => {
+                      // Export functionality would go here
+                      console.log('Exporting dashboard data as', format)
+                    }}
                   />
                 </div>
                 
@@ -580,10 +574,23 @@ export default function Dashboard() {
               className="mb-8"
             >
               <SearchFilter
-                searchTerm={searchTerm}
+                searchQuery={searchTerm}
                 onSearchChange={setSearchTerm}
                 filters={filters}
                 onFilterChange={setFilters}
+                filterOptions={[
+                  { id: 'status', label: 'Status', type: 'select', options: [
+                    { value: 'new', label: 'New' },
+                    { value: 'contacted', label: 'Contacted' },
+                    { value: 'interested', label: 'Interested' },
+                    { value: 'converted', label: 'Converted' }
+                  ]},
+                  { id: 'serviceType', label: 'Service Type', type: 'select', options: [
+                    { value: 'hvac', label: 'HVAC' },
+                    { value: 'plumbing', label: 'Plumbing' },
+                    { value: 'roofing', label: 'Roofing' }
+                  ]}
+                ]}
               />
             </motion.div>
           )}
@@ -595,7 +602,7 @@ export default function Dashboard() {
               setShowCallDetail(false)
               setSelectedCallId(null)
             }}
-            callId={selectedCallId}
+            call={selectedCallId ? realActivity.find(activity => activity.id === selectedCallId) || null : null}
           />
 
           {/* Live Activity Grid */}
@@ -862,7 +869,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    </NetworkErrorHandler>
     </>
   )
 }

@@ -145,8 +145,8 @@ export async function GET(request: NextRequest) {
       if (!assignmentStats[assigneeId]) {
         assignmentStats[assigneeId] = {
           assigneeId,
-          assigneeName: lead.admin_users?.name || 'Unassigned',
-          assigneeEmail: lead.admin_users?.email || null,
+          assigneeName: (lead.admin_users as any)?.name || 'Unassigned',
+          assigneeEmail: (lead.admin_users as any)?.email || null,
           totalLeads: 0,
           enrichedLeads: 0,
           contactedLeads: 0,

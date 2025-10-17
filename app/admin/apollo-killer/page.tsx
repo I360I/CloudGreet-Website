@@ -10,28 +10,21 @@ interface EnrichedLead {
   address?: string
   city?: string
   state?: string
-  phone?: string
-  website?: string
-  google_rating?: number
-  google_review_count?: number
+  business_type?: string
+  total_score?: number
+  enrichment_status: string
   owner_name?: string
   owner_title?: string
   owner_email?: string
-  owner_email_verified?: boolean
-  owner_email_confidence?: number
   owner_phone?: string
-  owner_linkedin_url?: string
-  total_score?: number
-  fit_score?: number
-  engagement_score?: number
-  contact_quality_score?: number
-  opportunity_score?: number
+  website_url?: string
+  google_place_id?: string
+  created_at: string
+  last_enriched_at?: string
+  enrichment_sources?: string[]
+  decision_makers?: any[]
   pain_points?: string[]
-  personalized_pitch?: string
-  enrichment_status?: string
   outreach_status?: string
-  tags?: string[]
-  priority?: string
 }
 
 export default function ApolloKillerPage() {
@@ -84,39 +77,15 @@ export default function ApolloKillerPage() {
           'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
         },
         body: JSON.stringify({
-          searchQuery,
-          location,
-          businessType
+          query: searchQuery,
+          location: location,
+          businessType: businessType
         })
       })
 
       const data = await response.json()
-
       if (data.success) {
-        setLeads(data.leads.map((l: any) => ({
-          id: l.id,
-          business_name: l.name,
-          address: l.address,
-          phone: l.phone,
-          website: l.website,
-          google_rating: l.rating,
-          google_review_count: l.reviews,
-          enrichment_status: l.status === 'existing' ? 'enriched' : 'pending',
-          total_score: 0
-        })))
-
-        // Auto-enrich new leads if less than 5
-        const newLeads = data.leads.filter((l: any) => l.status === 'queued')
-        if (newLeads.length > 0 && newLeads.length <= 5) {
-          setTimeout(() => {
-            newLeads.forEach(async (lead: any) => {
-              await enrichLead(lead.id)
-            })
-          }, 1000)
-        } else if (newLeads.length > 5) {
-          // For larger batches, let user choose to bulk enrich
-          setSelectedLeadIds(new Set(newLeads.map((l: any) => l.id)))
-        }
+        setLeads(data.leads || [])
       } else {
         alert(data.error || 'Search failed')
       }
@@ -141,20 +110,16 @@ export default function ApolloKillerPage() {
       })
 
       const data = await response.json()
-
       if (data.success) {
-        // Update lead in list
-        setLeads(prev => prev.map(l => 
-          l.id === leadId ? data.lead : l
+        // Update the lead in the list
+        setLeads(prev => prev.map(lead => 
+          lead.id === leadId ? { ...lead, ...data.lead } : lead
         ))
-
-        // Update selected lead if it's the one we enriched
-        if (selectedLead?.id === leadId) {
-          setSelectedLead(data.lead)
-        }
+      } else {
+        alert(data.error || 'Enrichment failed')
       }
     } catch (error) {
-      console.error('Enrichment failed:', error)
+      alert('Enrichment failed: ' + error)
     } finally {
       setEnrichingLeads(prev => {
         const next = new Set(prev)
@@ -227,6 +192,7 @@ export default function ApolloKillerPage() {
     return null
   }
 
+  // Filter and sort leads
   const filteredLeads = leads
     .filter(l => minScore === 0 || (l.total_score || 0) >= minScore)
     .sort((a, b) => (b.total_score || 0) - (a.total_score || 0))
@@ -247,120 +213,89 @@ export default function ApolloKillerPage() {
       <div className="max-w-7xl mx-auto mb-8">
         <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm text-gray-400 mb-2">Search Query</label>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="e.g., HVAC contractors in Dallas"
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Location</label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="City, State"
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Business Type</label>
-              <select
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-              >
-                <option value="HVAC">HVAC</option>
-                <option value="Roofing">Roofing</option>
-                <option value="Painting">Painting</option>
-              </select>
-            </div>
+            <input
+              type="text"
+              placeholder="Search businesses (e.g., 'HVAC contractors')"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+            <input
+              type="text"
+              placeholder="Location (e.g., 'Miami, FL')"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+            <select
+              value={businessType}
+              onChange={(e) => setBusinessType(e.target.value)}
+              className="px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            >
+              <option value="HVAC">HVAC</option>
+              <option value="Roofing">Roofing</option>
+              <option value="Paint">Paint</option>
+            </select>
+            <button
+              onClick={handleSearch}
+              disabled={isSearching || !searchQuery.trim()}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold transition-all"
+            >
+              {isSearching ? 'Searching...' : '🔍 Search & Enrich'}
+            </button>
           </div>
 
-          <button
-            onClick={handleSearch}
-            disabled={isSearching}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSearching ? '🔍 Searching...' : '🚀 Search & Enrich'}
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      {leads.length > 0 && (
-        <div className="max-w-7xl mx-auto mb-6">
-          <div className="flex items-center gap-4">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Min Score:</span>
-              <select
+              <label className="text-sm text-gray-300">Min Score:</label>
+              <input
+                type="range"
+                min="0"
+                max="100"
                 value={minScore}
                 onChange={(e) => setMinScore(Number(e.target.value))}
-                className="px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white text-sm"
-              >
-                <option value="0">All</option>
-                <option value="70">70+</option>
-                <option value="80">80+</option>
-                <option value="90">90+</option>
-              </select>
+                className="w-24"
+              />
+              <span className="text-sm text-gray-400 w-8">{minScore}</span>
             </div>
+            
+            <select
+              value={enrichmentFilter}
+              onChange={(e) => setEnrichmentFilter(e.target.value as any)}
+              className="px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white text-sm"
+            >
+              <option value="all">All Leads</option>
+              <option value="enriched">Enriched Only</option>
+              <option value="pending">Pending Only</option>
+            </select>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">Status:</span>
-              <select
-                value={enrichmentFilter}
-                onChange={(e) => setEnrichmentFilter(e.target.value as any)}
-                className="px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-lg text-white text-sm"
-              >
-                <option value="all">All</option>
-                <option value="enriched">Enriched</option>
-                <option value="pending">Pending</option>
-              </select>
-            </div>
-
-            <div className="ml-auto flex items-center gap-4">
-              {selectedLeadIds.size > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-blue-400">
-                    {selectedLeadIds.size} selected
-                  </span>
-                  
-                  <button
-                    onClick={() => enrichBulk(Array.from(selectedLeadIds))}
-                    className="px-3 py-1 bg-purple-600/20 border border-purple-500/30 text-purple-400 rounded-md text-sm hover:bg-purple-600/30 transition-all"
-                  >
-                    ⚡ Enrich Selected ({selectedLeadIds.size})
-                  </button>
-                  
-                  <button
-                    onClick={clearSelection}
-                    className="px-2 py-1 text-gray-400 hover:text-white text-sm"
-                  >
-                    Clear
-                  </button>
-                </div>
-              )}
-              
-              <button
-                onClick={selectedLeadIds.size === filteredLeads.length ? clearSelection : selectAllVisible}
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                {selectedLeadIds.size === filteredLeads.length ? 'Deselect All' : 'Select All'}
-              </button>
-              
-              <div className="text-sm text-gray-400">
-                {filteredLeads.length} leads • {filteredLeads.filter(l => l.total_score && l.total_score >= 80).length} qualified
+            {selectedLeadIds.size > 0 && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => enrichBulk(Array.from(selectedLeadIds))}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold"
+                >
+                  Enrich Selected ({selectedLeadIds.size})
+                </button>
+                <button
+                  onClick={clearSelection}
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-sm font-semibold"
+                >
+                  Clear
+                </button>
               </div>
-            </div>
+            )}
+
+            <button
+              onClick={selectAllVisible}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold"
+            >
+              Select All
+            </button>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Bulk Enrichment Progress */}
       {showBulkProgress && bulkJobId && (
@@ -391,15 +326,12 @@ export default function ApolloKillerPage() {
                 key={lead.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                exit={{ opacity: 0, y: -20 }}
                 transition={{ delay: idx * 0.05 }}
-                className={`bg-gray-800/50 backdrop-blur-lg rounded-xl p-6 border-2 transition-all hover:scale-[1.02] ${
-                  selectedLead?.id === lead.id
-                    ? 'border-blue-500 shadow-lg shadow-blue-500/20'
-                    : selectedLeadIds.has(lead.id)
-                    ? 'border-purple-500 shadow-lg shadow-purple-500/20'
-                    : 'border-gray-700 hover:border-gray-600'
+                className={`bg-gray-800/50 backdrop-blur-lg rounded-xl p-4 border cursor-pointer transition-all hover:bg-gray-800/70 ${
+                  selectedLead?.id === lead.id ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700'
                 }`}
+                onClick={() => setSelectedLead(lead)}
               >
                 <div className="flex items-start gap-3">
                   {/* Selection Checkbox */}
@@ -414,205 +346,229 @@ export default function ApolloKillerPage() {
                   />
                   
                   {/* Lead Content */}
-                  <div 
-                    className="flex-1 cursor-pointer"
-                    onClick={() => setSelectedLead(lead)}
-                  >
-                <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
-                    <h3 className="text-lg font-bold text-white mb-1">
-                      {lead.business_name}
-                    </h3>
-                    {lead.google_rating && (
-                      <div className="text-sm text-gray-400">
-                        ⭐ {lead.google_rating.toFixed(1)} ({lead.google_review_count} reviews)
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="font-semibold text-white text-lg">{lead.business_name}</h3>
+                        <p className="text-gray-400 text-sm">{lead.city}, {lead.state}</p>
+                        <p className="text-gray-500 text-xs">{lead.business_type}</p>
                       </div>
-                    )}
-                  </div>
-
-                  {lead.total_score !== undefined && lead.total_score > 0 ? (
-                    <div className="text-right">
-                      <div className={`text-3xl font-bold ${getScoreColor(lead.total_score)}`}>
-                        {lead.total_score}
+                      <div className="text-right">
+                        {lead.total_score && (
+                          <div className={`text-2xl font-bold ${getScoreColor(lead.total_score)}`}>
+                            {lead.total_score}
+                          </div>
+                        )}
+                        {getPriorityBadge(lead)}
                       </div>
-                      <div className="text-xs text-gray-400">score</div>
                     </div>
-                  ) : (
-                    <div className="text-gray-500 text-sm">Not scored</div>
-                  )}
-                </div>
 
-                {lead.owner_name && (
-                  <div className="mb-3">
-                    <div className="text-sm text-blue-400 font-semibold">
-                      👤 {lead.owner_name}
-                      {lead.owner_title && <span className="text-gray-400"> • {lead.owner_title}</span>}
+                    <div className="flex items-center gap-4 mb-3">
+                      {lead.owner_name && (
+                        <div className="flex items-center gap-1 text-sm text-gray-300">
+                          <span>👤</span>
+                          <span>{lead.owner_name}</span>
+                          {lead.owner_title && <span className="text-gray-500">({lead.owner_title})</span>}
+                        </div>
+                      )}
+                      {lead.owner_email && (
+                        <div className="flex items-center gap-1 text-sm text-gray-300">
+                          <span>📧</span>
+                          <span>{lead.owner_email}</span>
+                        </div>
+                      )}
                     </div>
-                    {lead.owner_email && (
-                      <div className="text-sm text-gray-400 flex items-center gap-2">
-                        ✅ {lead.owner_email}
-                        {lead.owner_email_verified && (
-                          <span className="text-xs text-green-500">verified</span>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-2">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          lead.enrichment_status === 'enriched' 
+                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                            : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                        }`}>
+                          {lead.enrichment_status === 'enriched' ? '✓ Enriched' : '⏳ Pending'}
+                        </span>
+                        {lead.enrichment_sources && (
+                          <span className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                            {lead.enrichment_sources.length} sources
+                          </span>
                         )}
                       </div>
-                    )}
-                    {lead.owner_phone && (
-                      <div className="text-sm text-gray-400">
-                        📱 {lead.owner_phone}
+                      
+                      <div className="flex gap-2">
+                        {lead.owner_email && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              // Open email campaign modal (feature coming soon)
+                            }}
+                            className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-all"
+                          >
+                            📧 Email
+                          </button>
+                        )}
+                        {lead.owner_phone && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              // Open SMS campaign modal (feature coming soon)
+                            }}
+                            className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition-all"
+                          >
+                            📱 SMS
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            enrichLead(lead.id)
+                          }}
+                          disabled={enrichingLeads.has(lead.id)}
+                          className="py-2 px-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-lg text-sm font-semibold transition-all"
+                        >
+                          {enrichingLeads.has(lead.id) ? '⏳' : '🔍'}
+                        </button>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2 mb-3">
-                  {getPriorityBadge(lead)}
-                  
-                  {lead.enrichment_status === 'pending' && (
-                    <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-700">
-                      ⏳ Pending
-                    </span>
-                  )}
-
-                  {lead.enrichment_status === 'enriched' && (
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
-                      ✓ Enriched
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  {lead.enrichment_status !== 'enriched' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        enrichLead(lead.id)
-                      }}
-                      disabled={enrichingLeads.has(lead.id)}
-                      className="flex-1 py-2 px-4 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
-                    >
-                      {enrichingLeads.has(lead.id) ? '⚡ Enriching...' : '⚡ Enrich Now'}
-                    </button>
-                  )}
-                  
-                  {lead.owner_email && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        // Open email campaign modal (feature coming soon)
-                      }}
-                      className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-all"
-                    >
-                      📧 Email
-                    </button>
-                  )}
+                    </div>
                   </div>
                 </div>
               </motion.div>
             ))}
           </AnimatePresence>
-
-          {filteredLeads.length === 0 && !isSearching && (
-            <div className="text-center py-12 text-gray-400">
-              <div className="text-4xl mb-4">🔍</div>
-              <div className="text-lg">No leads yet</div>
-              <div className="text-sm">Search for businesses to get started</div>
-            </div>
-          )}
         </div>
 
         {/* Lead Detail Panel */}
-        <div className="sticky top-8 h-fit">
-          {selectedLead ? (
-            <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl p-6 border-2 border-blue-500">
-              <h2 className="text-2xl font-bold mb-4">{selectedLead.business_name}</h2>
+        {selectedLead && (
+          <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl p-6 border border-gray-700 sticky top-4">
+            <div className="flex items-start justify-between mb-4">
+              <h2 className="text-2xl font-bold text-white">{selectedLead.business_name}</h2>
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="w-8 h-8 bg-gray-700/50 border border-gray-600 rounded-lg flex items-center justify-center hover:bg-gray-600/50 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
 
-              {/* Score Breakdown */}
-              {selectedLead.total_score !== undefined && selectedLead.total_score > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-gray-400 mb-3">LEAD QUALITY SCORES</h3>
-                  
-                  <div className="space-y-2">
-                    <ScoreBar label="Overall" score={selectedLead.total_score} color="blue" />
-                    {selectedLead.fit_score !== undefined && (
-                      <ScoreBar label="Fit" score={selectedLead.fit_score} color="green" />
+            {/* Business Info */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-2">Business Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Address:</span>
+                    <span className="text-white">{selectedLead.address || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">City/State:</span>
+                    <span className="text-white">{selectedLead.city}, {selectedLead.state}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Type:</span>
+                    <span className="text-white">{selectedLead.business_type}</span>
+                  </div>
+                  {selectedLead.website_url && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Website:</span>
+                      <a href={selectedLead.website_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                        Visit Site
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Owner Info */}
+              {(selectedLead.owner_name || selectedLead.owner_email || selectedLead.owner_phone) && (
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Owner Information</h3>
+                  <div className="space-y-2 text-sm">
+                    {selectedLead.owner_name && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Name:</span>
+                        <span className="text-white">{selectedLead.owner_name}</span>
+                      </div>
                     )}
-                    {selectedLead.engagement_score !== undefined && (
-                      <ScoreBar label="Engagement" score={selectedLead.engagement_score} color="purple" />
+                    {selectedLead.owner_title && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Title:</span>
+                        <span className="text-white">{selectedLead.owner_title}</span>
+                      </div>
                     )}
-                    {selectedLead.contact_quality_score !== undefined && (
-                      <ScoreBar label="Contact Quality" score={selectedLead.contact_quality_score} color="yellow" />
+                    {selectedLead.owner_email && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Email:</span>
+                        <span className="text-white">{selectedLead.owner_email}</span>
+                      </div>
                     )}
-                    {selectedLead.opportunity_score !== undefined && (
-                      <ScoreBar label="Opportunity" score={selectedLead.opportunity_score} color="red" />
+                    {selectedLead.owner_phone && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Phone:</span>
+                        <span className="text-white">{selectedLead.owner_phone}</span>
+                      </div>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Contact Info */}
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-400 mb-3">CONTACT INFORMATION</h3>
-                <div className="space-y-2 text-sm">
-                  {selectedLead.owner_name && (
-                    <div><strong>Owner:</strong> {selectedLead.owner_name} {selectedLead.owner_title && `(${selectedLead.owner_title})`}</div>
-                  )}
-                  {selectedLead.owner_email && (
-                    <div><strong>Email:</strong> {selectedLead.owner_email}</div>
-                  )}
-                  {selectedLead.owner_phone && (
-                    <div><strong>Phone:</strong> {selectedLead.owner_phone}</div>
-                  )}
-                  {selectedLead.website && (
-                    <div><strong>Website:</strong> <a href={selectedLead.website} target="_blank" className="text-blue-400 hover:underline">{selectedLead.website}</a></div>
-                  )}
-                  {selectedLead.owner_linkedin_url && (
-                    <div><strong>LinkedIn:</strong> <a href={selectedLead.owner_linkedin_url} target="_blank" className="text-blue-400 hover:underline">View Profile</a></div>
-                  )}
+              {/* AI Analysis */}
+              {selectedLead.total_score && (
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">AI Analysis</h3>
+                  <div className="space-y-3">
+                    <ScoreBar label="Overall Score" score={selectedLead.total_score} color="blue" />
+                    {selectedLead.pain_points && selectedLead.pain_points.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-300 mb-2">Pain Points:</h4>
+                        <div className="space-y-1">
+                          {selectedLead.pain_points.map((point, idx) => (
+                            <div key={idx} className="text-xs text-gray-400 bg-gray-700/50 rounded px-2 py-1">
+                              • {point}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Pain Points */}
-              {selectedLead.pain_points && selectedLead.pain_points.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-gray-400 mb-3">💡 PAIN POINTS DETECTED</h3>
-                  <ul className="space-y-1 text-sm">
-                    {selectedLead.pain_points.map((point, idx) => (
-                      <li key={idx} className="text-yellow-400">• {point}</li>
+              {/* Decision Makers */}
+              {selectedLead.decision_makers && selectedLead.decision_makers.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Decision Makers</h3>
+                  <div className="space-y-2">
+                    {selectedLead.decision_makers.map((maker, idx) => (
+                      <div key={idx} className="bg-gray-700/50 rounded-lg p-3">
+                        <div className="font-semibold text-white">{maker.name}</div>
+                        <div className="text-sm text-gray-400">{maker.title}</div>
+                        {maker.profileUrl && (
+                          <a href={maker.profileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-sm">
+                            View LinkedIn
+                          </a>
+                        )}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
 
-              {/* Personalized Pitch */}
-              {selectedLead.personalized_pitch && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-semibold text-gray-400 mb-3">🎯 PERSONALIZED PITCH</h3>
-                  <p className="text-sm text-gray-300 bg-gray-900/50 p-4 rounded-lg italic">
-                    "{selectedLead.personalized_pitch}"
-                  </p>
+              {/* Enrichment Sources */}
+              {selectedLead.enrichment_sources && selectedLead.enrichment_sources.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Data Sources</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedLead.enrichment_sources.map((source, idx) => (
+                      <span key={idx} className="px-2 py-1 text-xs rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                        {source.replace(/_/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
-
-              {/* Actions */}
-              <div className="space-y-2">
-                <button className="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
-                  📧 Send Email Campaign
-                </button>
-                <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
-                  📱 Send SMS
-                </button>
-                <button className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all">
-                  ➕ Add to CRM
-                </button>
-              </div>
             </div>
-          ) : (
-            <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl p-12 border border-gray-700 text-center text-gray-400">
-              <div className="text-4xl mb-4">👈</div>
-              <div>Select a lead to view details</div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -642,4 +598,3 @@ function ScoreBar({ label, score, color }: { label: string; score: number; color
     </div>
   )
 }
-

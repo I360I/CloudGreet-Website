@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
           {
             instruction: 'say',
             text: agent.configuration?.greeting_message || `Thank you for calling ${business.business_name}. How can I help you today?`,
-            voice: agent.configuration?.voice || 'alloy',
+            voice: agent.configuration?.voice || 'alloy', // Latest high-quality voice
             language: 'en'
           },
           {
@@ -319,13 +319,14 @@ NOW GO BE THE BEST RECEPTIONIST EVER! 🚀`
     while (attempt < maxAttempts && !aiResponse) {
       try {
         const completion = await openai.chat.completions.create({
-          model: config.ai_model || 'gpt-4o', // UPGRADED: Faster and smarter than turbo-preview
+          model: config.ai_model || 'gpt-4o-realtime-preview-2024-12-17', // LATEST: Latest OpenAI Realtime model
           messages: messages as any,
           max_tokens: 150,
           temperature: 0.8,
           presence_penalty: 0.3,
           frequency_penalty: 0.2,
-          stop: ['\n\n', 'Customer:', 'Caller:']
+          stop: ['\n\n', 'Customer:', 'Caller:'],
+          response_format: { type: 'text' } // Ensure fast text responses
         })
 
         aiResponse = completion.choices[0]?.message?.content?.trim() || ''

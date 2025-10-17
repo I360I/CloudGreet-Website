@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import OpenAI from 'openai'
 import { z } from 'zod'
+import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
 

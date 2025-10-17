@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          from: BUSINESS_PHONE,
-          to: PERSONAL_PHONE,
+          from: process.env.BUSINESS_PHONE || '+18333956731',
+          to: process.env.PERSONAL_PHONE || '+17372960092',
           text: `[CloudGreet SMS] From: ${from}\nMessage: ${text}`,
           type: 'SMS'
         })
@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
 
       if (forwardResponse.ok) {
         logger.info('SMS forwarded successfully', {
-          from: BUSINESS_PHONE,
-          to: PERSONAL_PHONE,
+          from: process.env.BUSINESS_PHONE || '+18333956731',
+          to: process.env.PERSONAL_PHONE || '+17372960092',
           original_from: from,
           original_text: text
         })

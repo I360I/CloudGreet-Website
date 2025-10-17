@@ -17,9 +17,16 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const filter = searchParams.get('filter') || 'all'
+    const enrichmentFilter = filter
     const minScore = Number(searchParams.get('minScore')) || 0
     const businessType = searchParams.get('businessType')
     const limit = Number(searchParams.get('limit')) || 100
+    const page = Number(searchParams.get('page')) || 1
+    const outreachStatus = searchParams.get('outreachStatus')
+    const assignedTo = searchParams.get('assignedTo')
+    const tags = searchParams.get('tags')
+    const searchQuery = searchParams.get('search')
+    const offset = (page - 1) * limit
 
     let query = supabaseAdmin
       .from('enriched_leads')
@@ -47,7 +54,7 @@ export async function GET(request: NextRequest) {
     query = query.order('created_at', { ascending: false })
     query = query.limit(limit)
 
-    const { data, error } = await query
+    const { data, count, error } = await query
 
     if (error) {
       logger.error('Failed to fetch leads', { error: error.message })

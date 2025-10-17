@@ -194,7 +194,7 @@ function generateEmailContent(lead: any, template?: string, personalizedMessage?
     </div>
 
     <p style="font-size: 14px; color: #666; margin: 30px 0 0 0;">
-      Want to see it in action first? Call our AI receptionist: <strong>(555) 123-4567</strong>
+      Want to see it in action first? Call our AI receptionist: <strong>(833) 395-6731</strong>
     </p>
 
     <div style="border-top: 2px solid #e0e0e0; margin-top: 30px; padding-top: 20px;">

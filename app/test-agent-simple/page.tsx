@@ -4,7 +4,12 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import VoiceRealtimeOrbWebRTC from '../components/VoiceRealtimeOrbWebRTC'
+import dynamic from 'next/dynamic'
+
+const SimpleWorkingVoice = dynamic(() => import('../components/SimpleWorkingVoice'), {
+  ssr: false,
+  loading: () => <div className="w-96 h-96 rounded-full bg-black border-2 border-gray-800 animate-pulse flex items-center justify-center"><div className="text-white">Loading Voice AI...</div></div>
+})
 
 export default function TestAgentSimplePage() {
   const [businessInfo, setBusinessInfo] = useState({
@@ -111,7 +116,7 @@ export default function TestAgentSimplePage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <VoiceRealtimeOrbWebRTC
+          <SimpleWorkingVoice
             businessName={businessInfo.businessName}
             businessType={businessInfo.businessType}
             services={businessInfo.services}

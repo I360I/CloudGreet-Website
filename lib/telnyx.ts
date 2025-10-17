@@ -147,6 +147,24 @@ export class TelnyxClient {
   }
 }
 
+// Verify Telnyx webhook signature
+export function verifyTelnyxSignature(payload: string, signature: string, secret: string): boolean {
+  try {
+    const crypto = require('crypto')
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(payload)
+      .digest('hex')
+    
+    return crypto.timingSafeEqual(
+      Buffer.from(signature, 'hex'),
+      Buffer.from(expectedSignature, 'hex')
+    )
+  } catch (error) {
+    return false
+  }
+}
+
 export const telnyxClient = new TelnyxClient()
 
 // Backward compatibility aliases

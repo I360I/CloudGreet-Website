@@ -35,8 +35,15 @@ export default function AdminLogin() {
         localStorage.setItem('admin_token', data.token)
         localStorage.setItem('admin_user', JSON.stringify(data.admin))
         
-        // Redirect to admin dashboard
-        window.location.href = '/admin'
+        // Also store in cookie for middleware access
+        document.cookie = `adminToken=${data.token}; path=/; max-age=86400; secure; samesite=strict`
+        
+        // Get redirect URL from query params
+        const urlParams = new URLSearchParams(window.location.search)
+        const redirectPath = urlParams.get('redirect') || '/admin'
+        
+        // Redirect to intended page or admin dashboard
+        window.location.href = redirectPath
       } else {
         setError(data.message || 'Invalid admin credentials')
       }
@@ -95,6 +102,7 @@ export default function AdminLogin() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent backdrop-blur-sm transition-all"
                   placeholder="Enter password"
+                  autoComplete="current-password"
                   required
                 />
                 <button

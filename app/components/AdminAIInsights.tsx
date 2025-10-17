@@ -4,175 +4,93 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Brain, 
-  TrendingUp, 
-  AlertTriangle, 
-  Lightbulb, 
-  Target,
-  Zap,
-  Star,
-  DollarSign,
-  Users,
-  Phone,
-  Mail,
-  ArrowRight,
-  RefreshCw
+  RefreshCw, 
+  DollarSign, 
+  Zap, 
+  Target, 
+  Users, 
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  Clock
 } from 'lucide-react'
 
 interface AIInsight {
   id: string
-  type: 'opportunity' | 'warning' | 'optimization' | 'success'
-  priority: 'high' | 'medium' | 'low'
+  type: 'revenue' | 'efficiency' | 'conversion' | 'retention'
   title: string
   description: string
-  impact: string
+  impact: 'high' | 'medium' | 'low'
+  confidence: number
   action: string
   estimatedValue?: number
-  confidence: number
-  category: 'revenue' | 'efficiency' | 'conversion' | 'retention'
+  timeframe?: string
+  createdAt: string
 }
 
 export default function AdminAIInsights() {
   const [insights, setInsights] = useState<AIInsight[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
-
-  useEffect(() => {
-    generateAIInsights()
-    
-    // Refresh insights every 5 minutes
-    const interval = setInterval(() => {
-      generateAIInsights()
-    }, 5 * 60 * 1000)
-
-    return () => clearInterval(interval)
-  }, [])
+  const [isLoading, setIsLoading] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState(new Date())
 
   const generateAIInsights = async () => {
     setIsLoading(true)
-    
-    // Load REAL AI insights from admin API
     try {
-      const adminToken = localStorage.getItem('adminToken')
-      if (!adminToken) {
-        setInsights([])
-        setIsLoading(false)
-        return
-      }
-
-      // Fetch real insights from API endpoint
       const response = await fetch('/api/admin/ai-insights', {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${adminToken}`
+          'Content-Type': 'application/json'
         }
       })
 
       if (response.ok) {
         const data = await response.json()
         setInsights(data.insights || [])
-      } else {
-        // No insights yet - show empty state
-        setInsights([])
+        setLastUpdated(new Date())
       }
     } catch (error) {
-      console.error('Failed to load AI insights:', error)
-      setInsights([])
+      console.error('Failed to generate insights:', error)
     } finally {
       setIsLoading(false)
-      setLastUpdated(new Date())
     }
   }
-  
-  // OLD MOCK DATA REMOVED - kept for reference of structure:
-  /*
-  const exampleInsightStructure = {
-    id: '1',
-    type: 'opportunity',
-    priority: 'high',
-        title: 'High-Value Client At Risk',
-        description: 'Premier Painting Co (4.8★, $8K/month) has not been contacted in 72 hours. Risk of losing to competitor.',
-        impact: 'Potential loss of $8,000/month recurring revenue',
-        action: 'Immediate personal outreach via phone call',
-        estimatedValue: -8000,
-        confidence: 95,
-        category: 'retention'
-      },
-      {
-        id: '4',
-        type: 'success',
-        priority: 'low',
-        title: 'Peak Performance Achieved',
-        description: 'System uptime reached 99.9% this week, exceeding target of 99.5%. All services operating optimally.',
-        impact: 'Zero client complaints, improved satisfaction',
-        action: 'Maintain current system monitoring protocols',
-        confidence: 98,
-        category: 'efficiency'
-      },
-      {
-        id: '5',
-        type: 'opportunity',
-        priority: 'medium',
-        title: 'Geographic Expansion Opportunity',
-        description: 'Dallas market shows 200% higher lead quality scores. Consider expanding lead generation to Dallas area.',
-        impact: 'Potential $25,000+ monthly revenue from new market',
-        action: 'Launch Dallas-focused lead generation campaign',
-        estimatedValue: 25000,
-        confidence: 78,
-        category: 'revenue'
-      },
-      {
-        id: '6',
-        type: 'optimization',
-        priority: 'low',
-        title: 'Follow-up Sequence Optimization',
-        description: 'Follow-up emails sent on Tuesday/Thursday have 25% higher open rates than Monday/Friday.',
-        impact: 'Could improve email engagement by 25%',
-        action: 'Adjust automated follow-up schedule to Tuesday/Thursday',
-        estimatedValue: 3000,
-        confidence: 85,
-        category: 'efficiency'
-      }
-    ]
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    setInsights(defaultInsights)
-    setLastUpdated(new Date())
-    setIsLoading(false)
+  useEffect(() => {
+    generateAIInsights()
+  }, [])
+
+  const getInsightColor = (type: string) => {
+    switch (type) {
+      case 'revenue':
+        return 'border-green-500 bg-green-500/10'
+      case 'efficiency':
+        return 'border-blue-500 bg-blue-500/10'
+      case 'conversion':
+        return 'border-purple-500 bg-purple-500/10'
+      case 'retention':
+        return 'border-orange-500 bg-orange-500/10'
+      default:
+        return 'border-gray-500 bg-gray-500/10'
+    }
   }
 
   const getInsightIcon = (type: string) => {
     switch (type) {
-      case 'opportunity':
-        return <TrendingUp className="w-5 h-5 text-green-400" />
-      case 'warning':
-        return <AlertTriangle className="w-5 h-5 text-red-400" />
-      case 'optimization':
+      case 'revenue':
+        return <DollarSign className="w-5 h-5 text-green-400" />
+      case 'efficiency':
         return <Zap className="w-5 h-5 text-blue-400" />
-      case 'success':
-        return <Star className="w-5 h-5 text-yellow-400" />
+      case 'conversion':
+        return <Target className="w-5 h-5 text-purple-400" />
+      case 'retention':
+        return <Users className="w-5 h-5 text-orange-400" />
       default:
-        return <Lightbulb className="w-5 h-5 text-purple-400" />
+        return <Brain className="w-5 h-5 text-gray-400" />
     }
   }
 
-  const getInsightColor = (type: string) => {
-    switch (type) {
-      case 'opportunity':
-        return 'border-l-green-500 bg-green-500/5'
-      case 'warning':
-        return 'border-l-red-500 bg-red-500/5'
-      case 'optimization':
-        return 'border-l-blue-500 bg-blue-500/5'
-      case 'success':
-        return 'border-l-yellow-500 bg-yellow-500/5'
-      default:
-        return 'border-l-purple-500 bg-purple-500/5'
-    }
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
+  const getImpactColor = (impact: string) => {
+    switch (impact) {
       case 'high':
         return 'bg-red-500/20 text-red-400 border-red-500/30'
       case 'medium':
@@ -184,28 +102,13 @@ export default function AdminAIInsights() {
     }
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'revenue':
-        return <DollarSign className="w-4 h-4" />
-      case 'efficiency':
-        return <Zap className="w-4 h-4" />
-      case 'conversion':
-        return <Target className="w-4 h-4" />
-      case 'retention':
-        return <Users className="w-4 h-4" />
-      default:
-        return <Brain className="w-4 h-4" />
-    }
-  }
-
   if (isLoading) {
     return (
       <div className="bg-gray-900 rounded-lg p-6">
         <div className="animate-pulse">
           <div className="h-6 bg-gray-700 rounded w-1/3 mb-4"></div>
           <div className="space-y-4">
-            {[1,2,3].map(i => (
+            {[1,2,3].map((i) => (
               <div key={i} className="bg-gray-800 rounded-lg p-4">
                 <div className="h-4 bg-gray-700 rounded w-1/2 mb-2"></div>
                 <div className="h-3 bg-gray-700 rounded w-full mb-2"></div>
@@ -242,74 +145,76 @@ export default function AdminAIInsights() {
 
       {/* Insights List */}
       <div className="space-y-4">
-        {insights.map((insight, index) => (
-          <motion.div
-            key={insight.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className={`border-l-4 ${getInsightColor(insight.type)} bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800 transition-colors`}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                {getInsightIcon(insight.type)}
-                <div>
-                  <h4 className="text-lg font-medium text-white mb-1">
-                    {insight.title}
-                  </h4>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(insight.priority)}`}>
-                      {insight.priority.toUpperCase()}
-                    </span>
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      {getCategoryIcon(insight.category)}
-                      {insight.category}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {insight.confidence}% confidence
-                    </span>
+        {insights.length === 0 ? (
+          <div className="text-center py-8">
+            <Brain className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-400">No insights available yet</p>
+            <button
+              onClick={generateAIInsights}
+              className="mt-2 px-4 py-2 bg-purple-600/20 border border-purple-500/30 text-purple-400 rounded-lg hover:bg-purple-600/30 transition-colors"
+            >
+              Generate Insights
+            </button>
+          </div>
+        ) : (
+          insights.map((insight, index) => (
+            <motion.div
+              key={insight.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`border-l-4 ${getInsightColor(insight.type)} bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800 transition-colors`}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  {getInsightIcon(insight.type)}
+                  <div>
+                    <h4 className="text-lg font-medium text-white mb-1">
+                      {insight.title}
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 text-xs rounded-full border ${getImpactColor(insight.impact)}`}>
+                        {insight.impact} impact
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {Math.round(insight.confidence * 100)}% confidence
+                      </span>
+                    </div>
                   </div>
                 </div>
+                {insight.estimatedValue && (
+                  <div className="text-right">
+                    <p className="text-green-400 font-semibold">
+                      +${insight.estimatedValue.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-gray-400">potential</p>
+                  </div>
+                )}
               </div>
-            </div>
 
-            <p className="text-gray-300 mb-3">
-              {insight.description}
-            </p>
+              <p className="text-gray-300 mb-3">{insight.description}</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <h5 className="text-sm font-medium text-gray-400 mb-1">Impact</h5>
-                <p className="text-sm text-white">{insight.impact}</p>
-              </div>
-              <div>
-                <h5 className="text-sm font-medium text-gray-400 mb-1">Recommended Action</h5>
-                <p className="text-sm text-white">{insight.action}</p>
-              </div>
-            </div>
-
-            {insight.estimatedValue && (
               <div className="flex items-center justify-between">
-                <span className={`text-lg font-bold ${
-                  insight.estimatedValue > 0 ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  {insight.estimatedValue > 0 ? '+' : ''}${Math.abs(insight.estimatedValue).toLocaleString()}/month
-                </span>
-                <button className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors text-sm">
-                  <span>Take Action</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <Clock className="w-4 h-4" />
+                  <span>Action: {insight.action}</span>
+                  {insight.timeframe && (
+                    <>
+                      <span>•</span>
+                      <span>{insight.timeframe}</span>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-400" />
+                  <span className="text-green-400 text-sm font-medium">
+                    Implement
+                  </span>
+                </div>
               </div>
-            )}
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Footer */}
-      <div className="mt-6 pt-4 border-t border-gray-700">
-        <p className="text-xs text-gray-400 text-center">
-          AI insights are generated based on real-time data analysis and machine learning algorithms
-        </p>
+            </motion.div>
+          ))
+        )}
       </div>
     </div>
   )

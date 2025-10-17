@@ -380,7 +380,7 @@ export default function SettingsPage() {
                       value={settings.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
                       className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-                      placeholder="(555) 123-4567"
+                      placeholder="(833) 395-6731"
                     />
                   </div>
                   

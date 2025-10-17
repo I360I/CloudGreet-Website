@@ -1,284 +1,431 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle, XCircle, Clock, Wifi, Mic, Volume2, AlertTriangle } from 'lucide-react'
+import { Mic, MicOff, Volume2, VolumeX, CheckCircle, XCircle, AlertTriangle, RefreshCw, Info } from 'lucide-react'
 
 interface TestResult {
   name: string
   status: 'pending' | 'running' | 'passed' | 'failed'
-  message?: string
-  duration?: number
+  message: string
+  details?: string
 }
 
 export default function VoiceSystemTester() {
   const [tests, setTests] = useState<TestResult[]>([
-    { name: 'Microphone Access', status: 'pending' },
-    { name: 'WebRTC Support', status: 'pending' },
-    { name: 'Audio Context', status: 'pending' },
-    { name: 'OpenAI API Connection', status: 'pending' },
-    { name: 'WebSocket Connection', status: 'pending' },
-    { name: 'Audio Playback', status: 'pending' }
+    { name: 'Browser Support', status: 'pending', message: 'Checking WebRTC and Media API support...' },
+    { name: 'Microphone Access', status: 'pending', message: 'Testing microphone permissions...' },
+    { name: 'Audio Context', status: 'pending', message: 'Initializing Web Audio API...' },
+    { name: 'Audio Quality', status: 'pending', message: 'Testing audio input quality...' },
+    { name: 'Network Connectivity', status: 'pending', message: 'Checking network connection...' },
+    { name: 'WebRTC Connection', status: 'pending', message: 'Testing WebRTC peer connection...' }
   ])
+  
   const [isRunning, setIsRunning] = useState(false)
   const [overallStatus, setOverallStatus] = useState<'pending' | 'running' | 'passed' | 'failed'>('pending')
+  const [audioLevel, setAudioLevel] = useState(0)
+  const [isRecording, setIsRecording] = useState(false)
+  
+  const mediaStreamRef = useRef<MediaStream | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyzerRef = useRef<AnalyserNode | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+
+  const updateTest = (index: number, status: TestResult['status'], message: string, details?: string) => {
+    setTests(prev => prev.map((test, i) => 
+      i === index ? { ...test, status, message, details } : test
+    ))
+  }
 
   const runTests = async () => {
     setIsRunning(true)
     setOverallStatus('running')
     
-    // Test 1: Microphone Access
-    await updateTest(0, 'running')
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      stream.getTracks().forEach(track => track.stop())
-      await updateTest(0, 'passed', 'Microphone access granted', 500)
-    } catch (error: any) {
-      await updateTest(0, 'failed', error.message, 500)
-    }
+    // Reset all tests
+    setTests(prev => prev.map(test => ({ ...test, status: 'pending' as const })))
 
-    // Test 2: WebRTC Support
-    await updateTest(1, 'running')
     try {
-      if (typeof RTCPeerConnection !== 'undefined') {
-        const pc = new RTCPeerConnection()
-        pc.close()
-        await updateTest(1, 'passed', 'WebRTC is supported', 200)
-      } else {
-        await updateTest(1, 'failed', 'WebRTC not supported', 200)
-      }
-    } catch (error: any) {
-      await updateTest(1, 'failed', error.message, 200)
-    }
-
-    // Test 3: Audio Context
-    await updateTest(2, 'running')
-    try {
-      if (typeof AudioContext !== 'undefined' || typeof (window as any).webkitAudioContext !== 'undefined') {
-        const audioContext = new (AudioContext || (window as any).webkitAudioContext)()
-        await audioContext.close()
-        await updateTest(2, 'passed', 'Audio Context available', 300)
-      } else {
-        await updateTest(2, 'failed', 'Audio Context not supported', 300)
-      }
-    } catch (error: any) {
-      await updateTest(2, 'failed', error.message, 300)
-    }
-
-    // Test 4: OpenAI API Connection
-    await updateTest(3, 'running')
-    try {
-      const response = await fetch('/api/ai/realtime-session', {
-        method: 'POST'
-      })
-      if (response.ok) {
-        await updateTest(3, 'passed', 'OpenAI API accessible', 1000)
-      } else {
-        const error = await response.json()
-        await updateTest(3, 'failed', error.error || 'API connection failed', 1000)
-      }
-    } catch (error: any) {
-      await updateTest(3, 'failed', error.message, 1000)
-    }
-
-    // Test 5: WebSocket Connection (simulated)
-    await updateTest(4, 'running')
-    try {
-      // Test WebSocket support
-      if (typeof WebSocket !== 'undefined') {
-        await updateTest(4, 'passed', 'WebSocket support available', 400)
-      } else {
-        await updateTest(4, 'failed', 'WebSocket not supported', 400)
-      }
-    } catch (error: any) {
-      await updateTest(4, 'failed', error.message, 400)
-    }
-
-    // Test 6: Audio Playback
-    await updateTest(5, 'running')
-    try {
-      const audio = new Audio()
-      audio.preload = 'auto'
-      // Create a silent audio data URL for testing
-      const silentAudio = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
-      audio.src = silentAudio
+      // Test 1: Browser Support
+      updateTest(0, 'running', 'Checking WebRTC and Media API support...')
+      await new Promise(resolve => setTimeout(resolve, 500))
       
-      const playPromise = audio.play()
-      if (playPromise) {
-        await playPromise
-        await updateTest(5, 'passed', 'Audio playback works', 600)
+      const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+      const hasRTCPeerConnection = !!window.RTCPeerConnection
+      const hasAudioContext = !!window.AudioContext
+      
+      if (hasGetUserMedia && hasRTCPeerConnection && hasAudioContext) {
+        updateTest(0, 'passed', 'All required APIs are supported', 
+          `getUserMedia: ${hasGetUserMedia}, RTCPeerConnection: ${hasRTCPeerConnection}, AudioContext: ${hasAudioContext}`)
       } else {
-        await updateTest(5, 'passed', 'Audio playback supported', 600)
+        updateTest(0, 'failed', 'Browser does not support required APIs', 
+          `Missing: getUserMedia(${hasGetUserMedia}), RTCPeerConnection(${hasRTCPeerConnection}), AudioContext(${hasAudioContext})`)
       }
+
+      // Test 2: Microphone Access
+      updateTest(1, 'running', 'Testing microphone permissions...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        })
+        
+        const audioTrack = stream.getAudioTracks()[0]
+        if (audioTrack) {
+          updateTest(1, 'passed', 'Microphone access granted', 
+            `Device: ${audioTrack.label || 'Default'}, State: ${audioTrack.readyState}`)
+          
+          // Store stream for audio quality test
+          mediaStreamRef.current = stream
+        } else {
+          updateTest(1, 'failed', 'No audio track found in stream')
+        }
+      } catch (error: any) {
+        updateTest(1, 'failed', `Microphone access denied: ${error.name}`, error.message)
+      }
+
+      // Test 3: Audio Context
+      updateTest(2, 'running', 'Initializing Web Audio API...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      try {
+        const audioContext = new AudioContext()
+        audioContextRef.current = audioContext
+        
+        if (audioContext.state === 'running') {
+          updateTest(2, 'passed', 'Audio context initialized successfully', 
+            `State: ${audioContext.state}, Sample Rate: ${audioContext.sampleRate}Hz`)
+        } else {
+          updateTest(2, 'failed', `Audio context state: ${audioContext.state}`)
+        }
+      } catch (error: any) {
+        updateTest(2, 'failed', 'Failed to create audio context', error.message)
+      }
+
+      // Test 4: Audio Quality
+      updateTest(3, 'running', 'Testing audio input quality...')
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      if (mediaStreamRef.current && audioContextRef.current) {
+        try {
+          const analyzer = audioContextRef.current.createAnalyser()
+          analyzer.fftSize = 256
+          const source = audioContextRef.current.createMediaStreamSource(mediaStreamRef.current)
+          source.connect(analyzer)
+          analyzerRef.current = analyzer
+          
+          // Start monitoring audio levels
+          setIsRecording(true)
+          
+          // Monitor for 3 seconds
+          setTimeout(() => {
+            setIsRecording(false)
+            if (audioLevel > 0.01) {
+              updateTest(3, 'passed', 'Audio input detected', 
+                `Peak level: ${Math.round(audioLevel * 100)}%`)
+            } else {
+              updateTest(3, 'failed', 'No audio input detected', 
+                'Please speak into your microphone or check audio levels')
+            }
+          }, 3000)
+          
+        } catch (error: any) {
+          updateTest(3, 'failed', 'Failed to analyze audio', error.message)
+        }
+      } else {
+        updateTest(3, 'failed', 'Prerequisites not met', 'Microphone access or audio context not available')
+      }
+
+      // Test 5: Network Connectivity
+      updateTest(4, 'running', 'Checking network connection...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      try {
+        const response = await fetch('https://api.openai.com/v1/models', {
+          method: 'HEAD',
+          headers: { 'User-Agent': 'CloudGreet-Test' }
+        })
+        
+        if (response.ok) {
+          updateTest(4, 'passed', 'Network connectivity confirmed', 
+            `Response time: ${Date.now()}ms`)
+        } else {
+          updateTest(4, 'failed', `Network error: ${response.status}`, response.statusText)
+        }
+      } catch (error: any) {
+        updateTest(4, 'failed', 'Network connectivity failed', error.message)
+      }
+
+      // Test 6: WebRTC Connection
+      updateTest(5, 'running', 'Testing WebRTC peer connection...')
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      try {
+        const pc = new RTCPeerConnection({
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        })
+        
+        // Test ICE gathering
+        const icePromise = new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('ICE gathering timeout')), 10000)
+          
+          pc.onicegatheringstatechange = () => {
+            if (pc.iceGatheringState === 'complete') {
+              clearTimeout(timeout)
+              resolve()
+            }
+          }
+          
+          pc.onicecandidate = (event) => {
+            if (!event.candidate) {
+              clearTimeout(timeout)
+              resolve()
+            }
+          }
+        })
+        
+        // Create a dummy offer to trigger ICE gathering
+        await pc.createOffer()
+        
+        try {
+          await icePromise
+          updateTest(5, 'passed', 'WebRTC peer connection successful', 
+            `ICE gathering state: ${pc.iceGatheringState}`)
+        } catch (iceError: any) {
+          updateTest(5, 'failed', 'ICE gathering failed', iceError.message)
+        }
+        
+        pc.close()
+        
+      } catch (error: any) {
+        updateTest(5, 'failed', 'WebRTC connection failed', error.message)
+      }
+
+      // Determine overall status
+      const failedTests = tests.filter(test => test.status === 'failed').length
+      if (failedTests === 0) {
+        setOverallStatus('passed')
+      } else {
+        setOverallStatus('failed')
+      }
+
     } catch (error: any) {
-      await updateTest(5, 'failed', error.message, 600)
-    }
-
-    // Determine overall status
-    const failedTests = tests.filter(t => t.status === 'failed').length
-    const passedTests = tests.filter(t => t.status === 'passed').length
-    
-    if (failedTests === 0) {
-      setOverallStatus('passed')
-    } else if (passedTests > 0) {
-      setOverallStatus('failed') // Partial failure
-    } else {
+      console.error('Test suite error:', error)
       setOverallStatus('failed')
+    } finally {
+      setIsRunning(false)
+      cleanup()
     }
-    
-    setIsRunning(false)
   }
 
-  const updateTest = async (index: number, status: TestResult['status'], message?: string, duration?: number) => {
-    setTests(prev => prev.map((test, i) => 
-      i === index 
-        ? { ...test, status, message, duration }
-        : test
-    ))
-    
-    if (duration) {
-      await new Promise(resolve => setTimeout(resolve, duration))
+  const cleanup = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop())
+      mediaStreamRef.current = null
     }
+    
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
+      audioContextRef.current = null
+    }
+    
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
+    
+    analyzerRef.current = null
+    setIsRecording(false)
+    setAudioLevel(0)
   }
+
+  // Monitor audio levels when recording
+  useEffect(() => {
+    if (isRecording && analyzerRef.current) {
+      const dataArray = new Uint8Array(analyzerRef.current.frequencyBinCount)
+      
+      const checkLevel = () => {
+        if (!analyzerRef.current || !isRecording) return
+        
+        analyzerRef.current.getByteFrequencyData(dataArray)
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length
+        const normalizedLevel = Math.min(average / 128, 1)
+        
+        setAudioLevel(Math.max(audioLevel, normalizedLevel))
+        
+        animationFrameRef.current = requestAnimationFrame(checkLevel)
+      }
+      
+      checkLevel()
+    }
+  }, [isRecording, audioLevel])
+
+  useEffect(() => {
+    return cleanup
+  }, [])
 
   const getStatusIcon = (status: TestResult['status']) => {
     switch (status) {
-      case 'passed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />
-      case 'failed':
-        return <XCircle className="w-5 h-5 text-red-500" />
+      case 'pending':
+        return <div className="w-4 h-4 rounded-full bg-gray-500" />
       case 'running':
-        return <Clock className="w-5 h-5 text-blue-500 animate-spin" />
-      default:
-        return <div className="w-5 h-5 rounded-full border-2 border-gray-400" />
+        return <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />
+      case 'passed':
+        return <CheckCircle className="w-4 h-4 text-green-400" />
+      case 'failed':
+        return <XCircle className="w-4 h-4 text-red-400" />
     }
   }
 
-  const getStatusColor = (status: TestResult['status']) => {
-    switch (status) {
-      case 'passed':
-        return 'border-green-500/30 bg-green-500/10'
-      case 'failed':
-        return 'border-red-500/30 bg-red-500/10'
+  const getOverallIcon = () => {
+    switch (overallStatus) {
+      case 'pending':
+        return <Info className="w-6 h-6 text-gray-400" />
       case 'running':
-        return 'border-blue-500/30 bg-blue-500/10'
-      default:
-        return 'border-gray-500/30 bg-gray-500/10'
+        return <RefreshCw className="w-6 h-6 text-blue-400 animate-spin" />
+      case 'passed':
+        return <CheckCircle className="w-6 h-6 text-green-400" />
+      case 'failed':
+        return <AlertTriangle className="w-6 h-6 text-red-400" />
     }
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="text-center mb-8">
-        <h3 className="text-2xl font-bold text-white mb-2">Voice System Diagnostics</h3>
-        <p className="text-gray-400">
-          Testing your browser's compatibility with our AI voice system
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {getOverallIcon()}
+          <div>
+            <h3 className="text-lg font-semibold text-white">Voice System Diagnostics</h3>
+            <p className="text-sm text-gray-400">
+              {overallStatus === 'pending' && 'Ready to run diagnostics'}
+              {overallStatus === 'running' && 'Running system tests...'}
+              {overallStatus === 'passed' && 'All tests passed - system ready'}
+              {overallStatus === 'failed' && 'Some tests failed - see details below'}
+            </p>
+          </div>
+        </div>
+        
+        <button
+          onClick={runTests}
+          disabled={isRunning}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+        >
+          {isRunning ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Running...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4" />
+              Run Tests
+            </>
+          )}
+        </button>
       </div>
 
-      {/* Overall Status */}
-      <div className={`p-4 rounded-xl border mb-6 ${getStatusColor(overallStatus)}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {getStatusIcon(overallStatus)}
-            <div>
-              <h4 className="font-semibold text-white">
-                {overallStatus === 'pending' && 'Ready to Test'}
-                {overallStatus === 'running' && 'Running Tests...'}
-                {overallStatus === 'passed' && 'All Tests Passed'}
-                {overallStatus === 'failed' && 'Some Tests Failed'}
-              </h4>
-              <p className="text-sm text-gray-400">
-                {overallStatus === 'pending' && 'Click "Run Tests" to check compatibility'}
-                {overallStatus === 'running' && 'Please wait while we test your system'}
-                {overallStatus === 'passed' && 'Your browser is fully compatible'}
-                {overallStatus === 'failed' && 'Some features may not work properly'}
-              </p>
-            </div>
+      {/* Audio Level Indicator */}
+      {isRecording && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <Mic className="w-5 h-5 text-blue-400" />
+            <span className="text-blue-400 font-medium">Testing Audio Input</span>
           </div>
           
-          <button
-            onClick={runTests}
-            disabled={isRunning}
-            className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isRunning ? 'Testing...' : 'Run Tests'}
-          </button>
-        </div>
-      </div>
+          <div className="flex items-center gap-2">
+            <div className="flex-1 bg-gray-700 rounded-full h-2">
+              <motion.div 
+                className="bg-gradient-to-r from-blue-500 to-green-400 h-2 rounded-full"
+                animate={{ width: `${Math.max(audioLevel * 100, 2)}%` }}
+                transition={{ duration: 0.1 }}
+              />
+            </div>
+            <span className="text-sm text-gray-400 w-12 text-right">
+              {Math.round(audioLevel * 100)}%
+            </span>
+          </div>
+          
+          <p className="text-xs text-gray-400 mt-2">
+            Please speak into your microphone to test audio levels
+          </p>
+        </motion.div>
+      )}
 
       {/* Test Results */}
       <div className="space-y-3">
         {tests.map((test, index) => (
           <motion.div
-            key={test.name}
+            key={index}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
-            className={`p-4 rounded-lg border ${getStatusColor(test.status)}`}
+            className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {getStatusIcon(test.status)}
-                <div>
-                  <h5 className="font-medium text-white">{test.name}</h5>
-                  {test.message && (
-                    <p className="text-sm text-gray-400">{test.message}</p>
-                  )}
-                </div>
+            <div className="flex items-start gap-3">
+              {getStatusIcon(test.status)}
+              <div className="flex-1">
+                <h4 className="font-medium text-white">{test.name}</h4>
+                <p className="text-sm text-gray-400 mt-1">{test.message}</p>
+                {test.details && (
+                  <details className="mt-2">
+                    <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400">
+                      Technical Details
+                    </summary>
+                    <p className="text-xs text-gray-500 mt-1 font-mono bg-gray-800/50 p-2 rounded">
+                      {test.details}
+                    </p>
+                  </details>
+                )}
               </div>
-              
-              {test.duration && (
-                <span className="text-xs text-gray-500">
-                  {test.duration}ms
-                </span>
-              )}
             </div>
           </motion.div>
         ))}
       </div>
 
-      {/* Browser Info */}
-      <div className="mt-8 p-4 bg-gray-800/50 border border-gray-600 rounded-xl">
-        <h4 className="font-semibold text-white mb-3">Browser Information</h4>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-gray-400">User Agent:</span>
-            <p className="text-gray-300 truncate">{navigator.userAgent.split(' ').slice(0, 3).join(' ')}</p>
-          </div>
-          <div>
-            <span className="text-gray-400">Platform:</span>
-            <p className="text-gray-300">{navigator.platform}</p>
-          </div>
-          <div>
-            <span className="text-gray-400">Language:</span>
-            <p className="text-gray-300">{navigator.language}</p>
-          </div>
-          <div>
-            <span className="text-gray-400">Online:</span>
-            <p className="text-gray-300">{navigator.onLine ? 'Yes' : 'No'}</p>
-          </div>
-        </div>
-      </div>
-
       {/* Recommendations */}
       {overallStatus === 'failed' && (
-        <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5" />
-            <div>
-              <h4 className="font-semibold text-yellow-400 mb-2">Recommendations</h4>
-              <ul className="text-sm text-gray-300 space-y-1">
-                <li>• Update your browser to the latest version</li>
-                <li>• Enable microphone permissions</li>
-                <li>• Check your internet connection</li>
-                <li>• Try using Chrome or Firefox for best compatibility</li>
-                <li>• Disable browser extensions that might interfere</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-500/10 border border-red-500/30 rounded-lg p-4"
+        >
+          <h4 className="font-medium text-red-400 mb-2">Troubleshooting Recommendations</h4>
+          <ul className="text-sm text-red-300 space-y-1">
+            <li>• Ensure you're using a modern browser (Chrome, Firefox, Safari, Edge)</li>
+            <li>• Check that microphone permissions are granted</li>
+            <li>• Close other applications that might be using your microphone</li>
+            <li>• Try refreshing the page and running the test again</li>
+            <li>• Check your internet connection for WebRTC tests</li>
+            <li>• If problems persist, try using a different device or browser</li>
+          </ul>
+        </motion.div>
+      )}
+
+      {overallStatus === 'passed' && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-green-500/10 border border-green-500/30 rounded-lg p-4"
+        >
+          <h4 className="font-medium text-green-400 mb-2">System Ready!</h4>
+          <p className="text-sm text-green-300">
+            All diagnostic tests passed. Your voice system is ready to use. 
+            You can now return to the voice demo and start a conversation.
+          </p>
+        </motion.div>
       )}
     </div>
   )

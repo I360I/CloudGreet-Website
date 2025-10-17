@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Phone, Volume2, Brain, CheckCircle, Star } from 'lucide-react'
 import Link from 'next/link'
-import VoiceRealtimeOrb from '../components/VoiceRealtimeOrb'
+import PerfectVoiceSystem from '../components/PerfectVoiceSystem'
 
 export default function DemoPage() {
   const [selectedBusiness, setSelectedBusiness] = useState('HVAC')
@@ -107,7 +107,7 @@ export default function DemoPage() {
           transition={{ delay: 0.3 }}
           className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12"
         >
-          <VoiceRealtimeOrb 
+          <PerfectVoiceSystem 
             businessName={businessConfigs[selectedBusiness as keyof typeof businessConfigs].name}
             businessType={businessConfigs[selectedBusiness as keyof typeof businessConfigs].type}
             services={businessConfigs[selectedBusiness as keyof typeof businessConfigs].services}

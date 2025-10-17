@@ -42,6 +42,7 @@ export interface EnrichedLeadData {
   has_live_chat?: boolean
   has_ai_receptionist?: boolean
   detected_technologies?: string[]
+  linkedin_profiles?: any[]
 }
 
 /**

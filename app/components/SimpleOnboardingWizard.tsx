@@ -250,7 +250,7 @@ export default function SimpleOnboardingWizard({ isOpen, onClose, onComplete }: 
               { type: 'ai', text: 'That sounds like it could be a heat exchanger issue. For safety, I\'d recommend having a technician take a look. Would you like me to schedule an appointment?' },
               { type: 'customer', text: 'Yes, that would be great!' },
               { type: 'ai', text: 'Perfect! I can schedule someone for today between 2-4 PM. What\'s your name and phone number?' },
-              { type: 'customer', text: 'Sarah Johnson, 555-123-4567.' },
+              { type: 'customer', text: 'Sarah Johnson, 737-296-0092.' },
               { type: 'ai', text: 'Excellent, Sarah. I have you scheduled for today. Our technician will call you 30 minutes before arriving. Is there anything else I can help with?' },
               { type: 'customer', text: 'No, that\'s all. Thank you!' },
               { type: 'ai', text: 'You\'re welcome! We look forward to helping you. Have a great day!' }
@@ -467,7 +467,7 @@ export default function SimpleOnboardingWizard({ isOpen, onClose, onComplete }: 
                       value={formData.phone}
                       onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                       className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-                      placeholder="(555) 123-4567"
+                      placeholder="(833) 395-6731"
                     />
                   </div>
                   
