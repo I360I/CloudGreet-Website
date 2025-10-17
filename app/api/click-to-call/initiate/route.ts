@@ -86,8 +86,10 @@ export async function POST(request: NextRequest) {
     console.log('📞 From number being used:', fromNumber)
     console.log('📞 To number being used:', formattedPhone)
 
-    // First, let's verify the connection exists
+    // First, let's verify the connection exists and get Call Control Apps
     console.log('📞 Verifying connection exists...')
+    
+    // Check regular connections
     const connectionCheckResponse = await fetch('https://api.telnyx.com/v2/connections', {
       method: 'GET',
       headers: {
@@ -98,14 +100,36 @@ export async function POST(request: NextRequest) {
 
     if (connectionCheckResponse.ok) {
       const connections = await connectionCheckResponse.json()
-      console.log('📞 Available connections:', connections.data?.map((c: any) => ({ id: c.id, name: c.connection_name })))
+      console.log('📞 Available connections:', connections.data?.map((c: any) => ({ id: c.id, name: c.connection_name, type: c.connection_type })))
       const foundConnection = connections.data?.find((c: any) => c.id === connectionId)
       console.log('📞 Connection found:', !!foundConnection)
       if (foundConnection) {
-        console.log('📞 Connection details:', { id: foundConnection.id, name: foundConnection.connection_name, active: foundConnection.active })
+        console.log('📞 Connection details:', { id: foundConnection.id, name: foundConnection.connection_name, active: foundConnection.active, type: foundConnection.connection_type })
       }
     } else {
       console.log('📞 Failed to fetch connections:', connectionCheckResponse.status)
+    }
+
+    // Check Call Control Apps specifically
+    console.log('📞 Checking Call Control Apps...')
+    const callControlResponse = await fetch('https://api.telnyx.com/v2/call_control_applications', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (callControlResponse.ok) {
+      const callControlApps = await callControlResponse.json()
+      console.log('📞 Available Call Control Apps:', callControlApps.data?.map((c: any) => ({ id: c.id, name: c.application_name, active: c.active })))
+      const foundCallControlApp = callControlApps.data?.find((c: any) => c.id === connectionId)
+      console.log('📞 Call Control App found:', !!foundCallControlApp)
+      if (foundCallControlApp) {
+        console.log('📞 Call Control App details:', { id: foundCallControlApp.id, name: foundCallControlApp.application_name, active: foundCallControlApp.active })
+      }
+    } else {
+      console.log('📞 Failed to fetch Call Control Apps:', callControlResponse.status)
     }
 
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
