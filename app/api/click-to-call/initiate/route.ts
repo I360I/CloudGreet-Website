@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
     // Use your real toll-free number
     const fromNumber = '+18333956731'
     
-    // Get connection ID from environment
-    const connectionId = process.env.TELNYX_CONNECTION_ID || '2786691125270807749'
+    // Use the hardcoded connection ID since environment variable isn't working
+    const connectionId = '2786691125270807749'
     
     console.log('📞 Environment TELNYX_CONNECTION_ID:', process.env.TELNYX_CONNECTION_ID)
     console.log('📞 Environment TELNYX_API_KEY exists:', !!process.env.TELNYX_API_KEY)
