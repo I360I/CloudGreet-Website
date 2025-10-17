@@ -82,6 +82,31 @@ export async function POST(request: NextRequest) {
     console.log('📞 Creating Telnyx outbound call:', callPayload)
     console.log('📞 API Key exists:', !!process.env.TELNYX_API_KEY)
     console.log('📞 API Key length:', process.env.TELNYX_API_KEY?.length || 0)
+    console.log('📞 Connection ID being used:', connectionId)
+    console.log('📞 From number being used:', fromNumber)
+    console.log('📞 To number being used:', formattedPhone)
+
+    // First, let's verify the connection exists
+    console.log('📞 Verifying connection exists...')
+    const connectionCheckResponse = await fetch('https://api.telnyx.com/v2/connections', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (connectionCheckResponse.ok) {
+      const connections = await connectionCheckResponse.json()
+      console.log('📞 Available connections:', connections.data?.map((c: any) => ({ id: c.id, name: c.connection_name })))
+      const foundConnection = connections.data?.find((c: any) => c.id === connectionId)
+      console.log('📞 Connection found:', !!foundConnection)
+      if (foundConnection) {
+        console.log('📞 Connection details:', { id: foundConnection.id, name: foundConnection.connection_name, active: foundConnection.active })
+      }
+    } else {
+      console.log('📞 Failed to fetch connections:', connectionCheckResponse.status)
+    }
 
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
       method: 'POST',
