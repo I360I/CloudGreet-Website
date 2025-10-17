@@ -140,10 +140,13 @@ const TrueRealtimeVoice: React.FC<TrueRealtimeVoiceProps> = ({
 
   // Convert text to speech and play
   const speakText = useCallback(async (text: string) => {
-    if (!text.trim()) return
+    if (!text.trim()) {
+      console.log('🔇 No text to speak')
+      return
+    }
 
     try {
-      console.log('🔊 Speaking:', text)
+      console.log('🔊 Starting to speak:', text)
       setIsSpeaking(true)
       
       // Use browser's built-in speech synthesis
@@ -292,8 +295,9 @@ const TrueRealtimeVoice: React.FC<TrueRealtimeVoiceProps> = ({
             console.log('📝 Realtime text response:', data.delta)
           } else if (data.type === 'response.done') {
             // Speak the complete message when done
-            const fullMessage = currentMessage + (data.delta || '')
-            if (fullMessage.trim()) {
+            const fullMessage = currentMessage.trim()
+            if (fullMessage) {
+              console.log('🔊 Speaking complete message:', fullMessage)
               speakText(fullMessage)
             }
             setCurrentMessage('')
@@ -356,10 +360,13 @@ const TrueRealtimeVoice: React.FC<TrueRealtimeVoiceProps> = ({
 
   // Initialize speech recognition
   const initializeSpeechRecognition = useCallback(() => {
+    console.log('🎤 Checking speech recognition support...')
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      console.warn('Speech recognition not supported in this browser')
+      console.warn('❌ Speech recognition not supported in this browser')
+      setError('Speech recognition not supported in this browser')
       return false
     }
+    console.log('✅ Speech recognition is supported')
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     const recognition = new SpeechRecognition()
@@ -369,7 +376,7 @@ const TrueRealtimeVoice: React.FC<TrueRealtimeVoiceProps> = ({
     recognition.lang = 'en-US'
     
     recognition.onstart = () => {
-      console.log('🎤 Speech recognition started')
+      console.log('🎤 Speech recognition started - listening for your voice...')
       setIsListening(true)
       setStatus('Listening...')
     }
@@ -647,6 +654,16 @@ const TrueRealtimeVoice: React.FC<TrueRealtimeVoiceProps> = ({
            isSpeaking ? 'AI is speaking...' : 
            'Click the orb to speak'}
         </p>
+        
+        {/* Test Speech Button */}
+        {isConnected && (
+          <button
+            onClick={() => speakText('Hello! This is a test of the speech system.')}
+            className="mt-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+          >
+            Test Speech
+          </button>
+        )}
         {error && (error.includes('permission') || error.includes('Microphone') || error.includes('Audio initialization failed')) && (
           <button
             onClick={() => {
