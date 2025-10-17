@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { storeSession, removeSession } from '../../../lib/voice-session-manager'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-// Store session data for SSE connections
-const sessionData = new Map<string, any>()
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +24,7 @@ export async function GET(request: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected', message: 'Connected to realtime stream' })}\n\n`))
         
         // Store the controller for this session
-        sessionData.set(sessionId, { controller, encoder })
+        storeSession(sessionId, controller, encoder)
         
         // Send a test response to show it's working
         setTimeout(() => {
@@ -43,7 +41,7 @@ export async function GET(request: NextRequest) {
       
       cancel() {
         console.log('🔌 SSE stream cancelled for session:', sessionId)
-        sessionData.delete(sessionId)
+        removeSession(sessionId)
       }
     })
 
@@ -60,17 +58,5 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Error creating realtime stream:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-}
-
-// Helper function to send messages to SSE clients
-export function sendToSession(sessionId: string, message: any) {
-  const session = sessionData.get(sessionId)
-  if (session) {
-    try {
-      session.controller.enqueue(session.encoder.encode(`data: ${JSON.stringify(message)}\n\n`))
-    } catch (error) {
-      console.error('❌ Error sending to session:', error)
-    }
   }
 }

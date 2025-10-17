@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sendToSession } from '../realtime-stream/route'
+import { sendToSession } from '../../../lib/voice-session-manager'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
