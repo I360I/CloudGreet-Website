@@ -320,7 +320,7 @@ export default function ClickToCallOrb({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.9 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-8 w-80 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl"
+            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-8 w-80 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl z-50"
           >
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -386,7 +386,7 @@ export default function ClickToCallOrb({
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-8 w-80 bg-green-600/20 backdrop-blur-xl border border-green-400/30 rounded-2xl p-6 shadow-2xl"
+            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-8 w-80 bg-green-600/20 backdrop-blur-xl border border-green-400/30 rounded-2xl p-6 shadow-2xl z-50"
           >
             <div className="text-center">
               <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
