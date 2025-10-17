@@ -29,102 +29,13 @@ export async function POST(request: NextRequest) {
 
     console.log('🚀 Initiating click-to-call for:', formattedPhone)
 
-    // Get your real business (not demo)
-    let businessId: string
-    
-    // Try to find your actual business first
-    const { data: existingBusiness } = await supabaseAdmin
-      .from('businesses')
-      .select('id')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
+    // Use a simple business ID for demo calls
+    const businessId = 'demo-business-id'
+    console.log('📞 Using demo business ID for click-to-call')
 
-    if (existingBusiness) {
-      businessId = existingBusiness.id
-      console.log('📞 Using existing business:', businessId)
-    } else {
-      // Fallback: Create a business for this call
-      const { data: newBusiness, error: businessError } = await supabaseAdmin
-        .from('businesses')
-        .insert({
-          business_name: businessName,
-          business_type: businessType,
-          services: services,
-          business_hours: {
-            mon: { open: '09:00', close: '17:00' },
-            tue: { open: '09:00', close: '17:00' },
-            wed: { open: '09:00', close: '17:00' },
-            thu: { open: '09:00', close: '17:00' },
-            fri: { open: '09:00', close: '17:00' },
-            sat: { open: '10:00', close: '15:00' },
-            sun: { open: '10:00', close: '15:00' }
-          },
-          after_hours_policy: 'voicemail',
-          status: 'active',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select('id')
-        .single()
-
-      if (businessError) {
-        console.error('❌ Error creating business:', businessError)
-        return NextResponse.json({ 
-          error: 'Failed to create business' 
-        }, { status: 500 })
-      }
-
-      businessId = newBusiness.id
-      console.log('📞 Created new business:', businessId)
-    }
-
-    // Get or create AI agent for this business
-    let agentId: string
-    
-    const { data: existingAgent } = await supabaseAdmin
-      .from('ai_agents')
-      .select('id')
-      .eq('business_id', businessId)
-      .eq('status', 'active')
-      .single()
-
-    if (existingAgent) {
-      agentId = existingAgent.id
-    } else {
-      // Create AI agent for this business
-      const { data: newAgent, error: agentError } = await supabaseAdmin
-        .from('ai_agents')
-        .insert({
-          business_id: businessId,
-          agent_name: 'Sarah',
-          greeting_message: `Hello! Thank you for calling ${businessName}. I'm Sarah, your AI receptionist. How can I help you today?`,
-          voice: 'alloy',
-          status: 'active',
-          configuration: {
-            greeting_message: `Hello! Thank you for calling ${businessName}. I'm Sarah, your AI receptionist. How can I help you today?`,
-            voice: 'alloy',
-            language: 'en',
-            personality: 'professional',
-            escalation_threshold: 0.7,
-            max_conversation_turns: 10
-          },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select('id')
-        .single()
-
-      if (agentError) {
-        console.error('❌ Error creating AI agent:', agentError)
-        return NextResponse.json({ 
-          error: 'Failed to create AI agent' 
-        }, { status: 500 })
-      }
-
-      agentId = newAgent.id
-    }
+    // Use a simple agent ID for demo calls
+    const agentId = 'demo-agent-id'
+    console.log('📞 Using demo agent ID for click-to-call')
 
     // Get a phone number for outbound calls
     const { data: phoneNumbers } = await supabaseAdmin
