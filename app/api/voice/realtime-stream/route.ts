@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { storeSession, removeSession } from '../../../lib/voice-session-manager'
+import { storeSession, removeSession } from '../../../../lib/voice-session-manager'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
