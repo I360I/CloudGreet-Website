@@ -65,10 +65,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Telnyx outbound call using Call Control API v2
+    // Try using call_control_application_id instead of connection_id
     const callPayload = {
       to: formattedPhone,
       from: fromNumber,
-      connection_id: connectionId,
+      call_control_application_id: connectionId,
       webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
       webhook_failover_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
       client_state: JSON.stringify({
@@ -132,6 +133,22 @@ export async function POST(request: NextRequest) {
       console.log('📞 Failed to fetch Call Control Apps:', callControlResponse.status)
     }
 
+    // Test webhook accessibility first
+    console.log('📞 Testing webhook accessibility...')
+    try {
+      const webhookTestResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Telnyx-Webhook-Test'
+        }
+      })
+      console.log('📞 Webhook test response:', webhookTestResponse.status, webhookTestResponse.statusText)
+    } catch (webhookError) {
+      console.log('📞 Webhook test failed:', webhookError)
+    }
+
+    console.log('📞 Making Telnyx API call with payload:', JSON.stringify(callPayload, null, 2))
+    
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
       method: 'POST',
       headers: {
