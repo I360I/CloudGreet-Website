@@ -39,7 +39,7 @@ const TrueRealtimeVoice: React.FC<TrueRealtimeVoiceProps> = ({
   const eventSourceRef = useRef<EventSource | null>(null)
   const audioQueueRef = useRef<Float32Array[]>([])
   const isPlayingAudioRef = useRef(false)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<any>(null)
 
   // Initialize audio context and microphone
   const initializeAudio = useCallback(async () => {
