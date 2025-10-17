@@ -74,17 +74,31 @@ export default function ClickToCallOrb({
         throw new Error(data.error || 'Failed to initiate call')
       }
 
-      setStatus('Call initiated! Check your phone...')
-      setCallSuccess(true)
-      
-      // Reset after 5 seconds
-      setTimeout(() => {
-        setCallSuccess(false)
-        setStatus('Ready to call')
-        setIsCalling(false)
-        setPhoneNumber('')
-        setShowForm(false)
-      }, 5000)
+      if (data.toll_free_number) {
+        setStatus('Call our toll-free number!')
+        setCallSuccess(true)
+        
+        // Reset after 8 seconds
+        setTimeout(() => {
+          setCallSuccess(false)
+          setStatus('Ready to call')
+          setIsCalling(false)
+          setPhoneNumber('')
+          setShowForm(false)
+        }, 8000)
+      } else {
+        setStatus('Call initiated! Check your phone...')
+        setCallSuccess(true)
+        
+        // Reset after 5 seconds
+        setTimeout(() => {
+          setCallSuccess(false)
+          setStatus('Ready to call')
+          setIsCalling(false)
+          setPhoneNumber('')
+          setShowForm(false)
+        }, 5000)
+      }
 
     } catch (error: any) {
       console.error('❌ Call initiation error:', error)
@@ -376,10 +390,16 @@ export default function ClickToCallOrb({
           >
             <div className="text-center">
               <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">Call Initiated!</h3>
-              <p className="text-green-300">
-                Check your phone - you should receive a call from our AI receptionist shortly.
+              <h3 className="text-xl font-bold text-white mb-2">Call Our AI Now!</h3>
+              <p className="text-green-300 mb-3">
+                Call our toll-free number to speak with our AI receptionist:
               </p>
+              <a 
+                href="tel:+18333956731"
+                className="text-2xl font-bold text-green-400 hover:text-green-300 transition-colors"
+              >
+                +1 (833) 395-6731
+              </a>
             </div>
           </motion.div>
         )}
