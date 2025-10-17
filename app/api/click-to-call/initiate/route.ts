@@ -52,8 +52,10 @@ export async function POST(request: NextRequest) {
     const connectionId = process.env.TELNYX_CONNECTION_ID || '2786691125270807749'
     
     console.log('📞 Environment TELNYX_CONNECTION_ID:', process.env.TELNYX_CONNECTION_ID)
+    console.log('📞 Environment TELNYX_API_KEY exists:', !!process.env.TELNYX_API_KEY)
     console.log('📞 Using connection ID:', connectionId)
     console.log('📞 Using toll-free number:', fromNumber)
+    console.log('📞 All environment variables:', Object.keys(process.env).filter(key => key.includes('TELNYX')))
     
     if (!connectionId) {
       console.error('❌ TELNYX_CONNECTION_ID not configured')
