@@ -49,7 +49,11 @@ export async function POST(request: NextRequest) {
     const fromNumber = '+18333956731'
     
     // Get connection ID from environment
-    const connectionId = process.env.TELNYX_CONNECTION_ID
+    const connectionId = process.env.TELNYX_CONNECTION_ID || '2786691125270807749'
+    
+    console.log('📞 Environment TELNYX_CONNECTION_ID:', process.env.TELNYX_CONNECTION_ID)
+    console.log('📞 Using connection ID:', connectionId)
+    console.log('📞 Using toll-free number:', fromNumber)
     
     if (!connectionId) {
       console.error('❌ TELNYX_CONNECTION_ID not configured')
@@ -57,9 +61,6 @@ export async function POST(request: NextRequest) {
         error: 'Telnyx connection not configured'
       }, { status: 503 })
     }
-    
-    console.log('📞 Using toll-free number:', fromNumber)
-    console.log('📞 Using connection ID:', connectionId)
 
     // Create Telnyx outbound call using Call Control API
     const callPayload = {
@@ -93,10 +94,23 @@ export async function POST(request: NextRequest) {
         status: telnyxResponse.status,
         statusText: telnyxResponse.statusText,
         error: errorData,
-        payload: callPayload
+        payload: callPayload,
+        headers: Object.fromEntries(telnyxResponse.headers.entries())
       })
+      
+      // Try to parse error data as JSON for better error messages
+      let errorMessage = `Telnyx API error: ${telnyxResponse.status} - ${errorData}`
+      try {
+        const errorJson = JSON.parse(errorData)
+        if (errorJson.errors && errorJson.errors.length > 0) {
+          errorMessage = `Telnyx Error: ${errorJson.errors[0].title} - ${errorJson.errors[0].detail}`
+        }
+      } catch (e) {
+        // Keep original error message if JSON parsing fails
+      }
+      
       return NextResponse.json({
-        error: `Telnyx API error: ${telnyxResponse.status} - ${errorData}`
+        error: errorMessage
       }, { status: 500 })
     }
 
