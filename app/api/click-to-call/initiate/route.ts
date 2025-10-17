@@ -45,16 +45,98 @@ export async function POST(request: NextRequest) {
     const agentId = 'demo-agent-id'
     console.log('📞 Using demo agent ID for click-to-call')
 
-    // For now, just return success and tell user to call the toll-free number
-    // This avoids the connection_id issue while still providing a working demo
-    console.log('📞 Click-to-call requested for:', formattedPhone)
+    // Use your real toll-free number
+    const fromNumber = '+18333956731'
     
+    // Get connection ID from environment
+    const connectionId = process.env.TELNYX_CONNECTION_ID
+    
+    if (!connectionId) {
+      console.error('❌ TELNYX_CONNECTION_ID not configured')
+      return NextResponse.json({
+        error: 'Telnyx connection not configured'
+      }, { status: 503 })
+    }
+    
+    console.log('📞 Using toll-free number:', fromNumber)
+    console.log('📞 Using connection ID:', connectionId)
+
+    // Create Telnyx outbound call using Call Control API
+    const callPayload = {
+      to: formattedPhone,
+      from: fromNumber,
+      connection_id: connectionId,
+      webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
+      webhook_failover_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
+      client_state: JSON.stringify({
+        business_id: businessId,
+        agent_id: agentId,
+        call_type: 'click_to_call',
+        source: 'click_to_call'
+      })
+    }
+
+    console.log('📞 Creating Telnyx outbound call:', callPayload)
+
+    const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(callPayload)
+    })
+
+    if (!telnyxResponse.ok) {
+      const errorData = await telnyxResponse.text()
+      console.error('❌ Telnyx API error:', {
+        status: telnyxResponse.status,
+        statusText: telnyxResponse.statusText,
+        error: errorData,
+        payload: callPayload
+      })
+      return NextResponse.json({
+        error: `Telnyx API error: ${telnyxResponse.status} - ${errorData}`
+      }, { status: 500 })
+    }
+
+    const callData = await telnyxResponse.json()
+    console.log('✅ Telnyx call created:', callData)
+
+    // Store the outbound call in database
+    const { error: callError } = await supabaseAdmin
+      .from('calls')
+      .insert({
+        business_id: businessId,
+        call_id: callData.data.call_control_id,
+        from_number: fromNumber,
+        to_number: formattedPhone,
+        status: 'initiated',
+        direction: 'outbound',
+        call_type: 'click_to_call',
+        source: 'click_to_call',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+
+    if (callError) {
+      console.error('❌ Error storing outbound call:', callError)
+      // Don't fail the request, just log the error
+    }
+
+    logger.info('Click-to-call initiated successfully', {
+      to: formattedPhone,
+      from: fromNumber,
+      business_id: businessId,
+      call_control_id: callData.data.call_control_id
+    })
+
     return NextResponse.json({
       success: true,
-      message: 'Please call our toll-free number to experience the AI receptionist',
-      toll_free_number: '+1 (833) 395-6731',
+      message: 'Call initiated successfully! Check your phone.',
+      call_id: callData.data.call_control_id,
       to: formattedPhone,
-      note: 'Call our toll-free number to speak with our AI receptionist right now!'
+      from: fromNumber
     })
 
   } catch (error: any) {
