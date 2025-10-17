@@ -45,33 +45,19 @@ export async function POST(request: NextRequest) {
     const agentId = 'demo-agent-id'
     console.log('📞 Using demo agent ID for click-to-call')
 
-    // Get a phone number for outbound calls
-    const { data: phoneNumbers } = await supabaseAdmin
-      .from('toll_free_numbers')
-      .select('number, connection_id')
-      .eq('status', 'assigned')
-      .limit(1)
-
-    let fromNumber: string
-    let connectionId: string
-
-    if (!phoneNumbers || phoneNumbers.length === 0) {
-      // Fallback to your real toll-free number
-      fromNumber = '+18333956731'
-      connectionId = process.env.TELNYX_CONNECTION_ID || ''
-      
-      if (!connectionId) {
-        return NextResponse.json({ 
-          error: 'No phone numbers available and no connection ID configured' 
-        }, { status: 503 })
-      }
-      
-      console.log('📞 Using fallback toll-free number:', fromNumber)
-    } else {
-      fromNumber = phoneNumbers[0].number
-      connectionId = phoneNumbers[0].connection_id
-      console.log('📞 Using database toll-free number:', fromNumber)
+    // Use your real toll-free number and connection ID from environment
+    const fromNumber = '+18333956731'
+    const connectionId = process.env.TELNYX_CONNECTION_ID
+    
+    if (!connectionId) {
+      console.error('❌ TELNYX_CONNECTION_ID not configured')
+      return NextResponse.json({ 
+        error: 'Telnyx connection ID not configured' 
+      }, { status: 503 })
     }
+    
+    console.log('📞 Using toll-free number:', fromNumber)
+    console.log('📞 Using connection ID:', connectionId)
 
     // Create Telnyx outbound call using Call Control API
     const callPayload = {
