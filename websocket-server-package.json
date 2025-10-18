@@ -1,0 +1,22 @@
+{
+  "name": "cloudgreet-websocket-server",
+  "version": "1.0.0",
+  "description": "WebSocket server for CloudGreet voice system",
+  "main": "websocket-server.js",
+  "scripts": {
+    "start": "node websocket-server.js",
+    "dev": "nodemon websocket-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "openai": "^4.20.1",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

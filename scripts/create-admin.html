@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Admin Account - CloudGreet</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #E5E7EB;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: none;
+            border-color: #3B82F6;
+        }
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .success {
+            background: #D1FAE5;
+            color: #065F46;
+            border: 1px solid #10B981;
+        }
+        .error {
+            background: #FEE2E2;
+            color: #991B1B;
+            border: 1px solid #EF4444;
+        }
+        .info {
+            background: #DBEAFE;
+            color: #1E40AF;
+            border: 1px solid #3B82F6;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Create Admin Account</h1>
+        
+        <div class="info">
+            <strong>One-time setup:</strong> Use this form to create your admin account. You only need to do this once!
+        </div>
+
+        <form id="adminForm">
+            <div class="form-group">
+                <label for="email">Admin Email:</label>
+                <input type="email" id="email" name="email" required 
+                       placeholder="admin@yourdomain.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Admin Password:</label>
+                <input type="password" id="password" name="password" required 
+                       placeholder="Create a strong password">
+            </div>
+
+            <div class="form-group">
+                <label for="name">Admin Name:</label>
+                <input type="text" id="name" name="name" required 
+                       placeholder="Your Name">
+            </div>
+
+            <button type="submit" id="createBtn">Create Admin Account</button>
+        </form>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        document.getElementById('adminForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const createBtn = document.getElementById('createBtn');
+            const messageDiv = document.getElementById('message');
+            
+            // Get form data
+            const formData = new FormData(this);
+            const data = {
+                email: formData.get('email'),
+                password: formData.get('password'),
+                name: formData.get('name')
+            };
+
+            // Disable button and show loading
+            createBtn.disabled = true;
+            createBtn.textContent = 'Creating Admin Account...';
+
+            try {
+                const response = await fetch('/api/admin/create-admin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    messageDiv.className = 'message success';
+                    messageDiv.innerHTML = `
+                        ✅ <strong>Admin Account Created Successfully!</strong><br>
+                        Email: ${result.user.email}<br>
+                        Name: ${result.user.name}<br>
+                        Admin Status: ${result.user.is_admin ? '✅ Active' : '❌ Inactive'}<br><br>
+                        🎉 <strong>You can now login to <a href="/admin">/admin</a> with these credentials!</strong>
+                    `;
+                    
+                    // Clear form
+                    this.reset();
+                } else {
+                    messageDiv.className = 'message error';
+                    messageDiv.innerHTML = `❌ <strong>Error:</strong> ${result.error}`;
+                }
+            } catch (error) {
+                messageDiv.className = 'message error';
+                messageDiv.innerHTML = `❌ <strong>Network Error:</strong> ${error.message}`;
+            } finally {
+                createBtn.disabled = false;
+                createBtn.textContent = 'Create Admin Account';
+            }
+        });
+    </script>
+</body>
+</html>
