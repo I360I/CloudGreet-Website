@@ -6,6 +6,15 @@ import { verifyTelynyxSignature } from '@/lib/webhook-verification'
 
 export const dynamic = 'force-dynamic'
 
+// Health check endpoint for Telnyx webhook verification
+export async function GET() {
+  return NextResponse.json({ 
+    status: 'ok',
+    message: 'Telnyx voice webhook endpoint is active',
+    timestamp: new Date().toISOString()
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Webhook signature verification for security
