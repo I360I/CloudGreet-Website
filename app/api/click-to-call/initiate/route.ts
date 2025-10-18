@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     console.log('🚀 Initiating click-to-call for:', formattedPhone)
 
     // Check if Telnyx is configured
-    if (!process.env.TELNYX_API_KEY) {
+    if (!process.env.TELYNX_API_KEY) {
       console.error('❌ Telnyx API key not configured')
       return NextResponse.json({ 
         error: 'Telnyx not configured' 
@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
     // Use your real toll-free number
     const fromNumber = '+18333956731'
     
-    // Use the hardcoded connection ID since environment variable isn't working
-    const connectionId = '2786691125270807749'
+    // Use the correct Call Control App ID (not regular connection ID)
+    const connectionId = '2786688063168841616'
     
     console.log('📞 Environment TELNYX_CONNECTION_ID:', process.env.TELNYX_CONNECTION_ID)
     console.log('📞 Environment TELNYX_API_KEY exists:', !!process.env.TELNYX_API_KEY)
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     const connectionCheckResponse = await fetch('https://api.telnyx.com/v2/connections', {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
         'Content-Type': 'application/json'
       }
     })
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     const callControlResponse = await fetch('https://api.telnyx.com/v2/call_control_applications', {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
         'Content-Type': 'application/json'
       }
     })
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(callPayload)
@@ -236,3 +236,4 @@ export async function POST(request: NextRequest) {
     }, { status: 500 })
   }
 }
+

@@ -2,11 +2,12 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from './contexts/ToastContext'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://cloudgreet.ai'),
+  metadataBase: new URL('https://cloudgreet.com'),
   title: 'CloudGreet - AI Voice Assistant for HVAC, Roofing & Painting Contractors',
   description: 'Professional AI receptionist for service contractors. Handle calls 24/7, schedule appointments, provide estimates, and never miss another opportunity. Built specifically for HVAC, roofing, and painting businesses.',
   keywords: 'AI receptionist, HVAC contractor, roofing contractor, painting contractor, voice assistant, appointment scheduling, call handling, business automation',
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'CloudGreet - Never Miss A Call Again',
     description: 'Professional AI receptionist for service contractors. Handle calls 24/7, schedule appointments, provide estimates.',
-    url: 'https://cloudgreet.ai',
+    url: 'https://cloudgreet.com',
     siteName: 'CloudGreet',
     images: [
       {
@@ -105,9 +106,11 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} overscroll-none bg-slate-900`}>
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+        <ErrorBoundary>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

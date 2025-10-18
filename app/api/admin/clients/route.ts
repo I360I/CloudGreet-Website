@@ -31,11 +31,7 @@ export async function GET(request: NextRequest) {
         phone_number,
         created_at,
         onboarding_completed,
-        users (
-          id,
-          email,
-          last_login
-        )
+        owner_id
       `)
       .order('created_at', { ascending: false })
 
@@ -79,7 +75,7 @@ export async function GET(request: NextRequest) {
           monthly_revenue: monthlyRevenue,
           calls_count: callsCount || 0,
           appointments_count: appointmentsCount || 0,
-          last_activity: business.users?.[0]?.last_login || business.created_at
+          last_activity: business.created_at
         }
       })
     )

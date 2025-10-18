@@ -234,7 +234,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="text-center mb-12"
           >
-            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white from-white via-blue-200 to-purple-300">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent">
               Stop Losing Revenue
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
@@ -278,7 +278,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="text-center mb-20"
           >
-            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white from-white via-blue-200 to-purple-300">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent">
               How CloudGreet Works
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
@@ -394,7 +394,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="text-center mb-20"
           >
-            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white from-white via-blue-200 to-purple-300">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent">
               Professional Dashboard
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
@@ -556,7 +556,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="mb-16"
           >
-            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white from-white via-blue-200 to-purple-300">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent">
               Simple, Transparent Pricing
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto">
@@ -682,7 +682,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="mb-8"
           >
-            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white from-white via-blue-200 to-purple-300">
+            <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent">
               Turn missed calls into revenue.
             </h2>
           </motion.div>
@@ -760,17 +760,17 @@ export default function LandingPage() {
             {/* Brand */}
             <div className="md:col-span-2">
               <div className="flex items-center mb-6">
-                <span className="text-3xl font-bold text-white from-white to-blue-200">CloudGreet</span>
+                <span className="text-3xl font-bold text-white bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">CloudGreet</span>
               </div>
               <p className="text-gray-400 text-lg leading-relaxed max-w-md mb-4">
                 Never miss a call again. Transform missed opportunities into booked appointments with AI-powered call handling.
               </p>
               <div className="space-y-2">
                 <p className="text-gray-400 text-sm">
-                  <span className="text-white font-medium">Business Phone:</span> +1 (833) 395-6731
+                  <span className="text-white font-medium">Business Phone:</span> {process.env.NEXT_PUBLIC_BUSINESS_PHONE || '+1 (833) 395-6731'}
                 </p>
                 <p className="text-gray-400 text-sm">
-                  <span className="text-white font-medium">Email:</span> support@cloudgreet.com
+                  <span className="text-white font-medium">Email:</span> {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@cloudgreet.com'}
                 </p>
               </div>
             </div>
@@ -791,8 +791,8 @@ export default function LandingPage() {
               <div className="space-y-3">
                 <a href="/contact" className="block text-gray-400 hover:text-white transition-colors duration-300">Contact Us</a>
                 <a href="/help" className="block text-gray-400 hover:text-white transition-colors duration-300">Help Center</a>
-                <a href="tel:+18333956731" className="block text-gray-400 hover:text-white transition-colors duration-300">Call: +1 (833) 395-6731</a>
-                <a href="mailto:support@cloudgreet.com" className="block text-gray-400 hover:text-white transition-colors duration-300">Email Support</a>
+                <a href={`tel:${process.env.NEXT_PUBLIC_BUSINESS_PHONE_RAW || '+18333956731'}`} className="block text-gray-400 hover:text-white transition-colors duration-300">Call: {process.env.NEXT_PUBLIC_BUSINESS_PHONE || '+1 (833) 395-6731'}</a>
+                <a href={`mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@cloudgreet.com'}`} className="block text-gray-400 hover:text-white transition-colors duration-300">Email Support</a>
               </div>
             </div>
           </div>

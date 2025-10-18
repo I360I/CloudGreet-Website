@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { securitySchemas, sanitizeInput, sanitizePhoneNumber, securityHeaders } from '@/lib/security';
+import { securitySchemas, sanitizeInput, sanitizePhoneNumber, securityHeaders } from '@/lib/validation';
 
 export const dynamic = 'force-dynamic'
 
@@ -20,42 +20,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    if (action === 'test-phone-provision') {
-      // Test phone provisioning logic
-      const demoNumber = `+1${sanitizedAreaCode}${Math.floor(Math.random() * 9000000) + 1000000}`
-      
-      // Log audit event
-      try {
-        await supabaseAdmin.from('audit_logs').insert({
-          user_id: null,
-          business_id: null,
-          action_type: 'test_phone_provision',
-          action_details: {
-            demoNumber,
-            areaCode: sanitizedAreaCode,
-            timestamp: new Date().toISOString(),
-            ip: request.headers.get('x-forwarded-for') || 'unknown'
-          },
-          created_at: new Date().toISOString()
-        })
-      } catch (error) {
-        // Audit log failure is non-critical, skip logging
-      }
-      
-      const response = NextResponse.json({
-        success: true,
-        message: 'Phone provisioning test successful',
-        demoNumber: demoNumber,
-        timestamp: new Date().toISOString()
-      })
-
-      // Add security headers
-      Object.entries(securityHeaders).forEach(([key, value]) => {
-        response.headers.set(key, value)
-      })
-      
-      return response
-    }
+    // Removed test-phone-provision - was generating fake demo numbers
 
     if (action === 'provision-phone') {
       // Get token from Authorization header
@@ -78,19 +43,49 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if Telnyx is configured
-      if (!process.env.TELNYX_API_KEY) {
-        // Generate a demo phone number for development
-        const demoNumber = `+1${areaCode}${Math.floor(Math.random() * 9000000) + 1000000}`
-        
-        // Store the demo number
+      if (!process.env.TELYNX_API_KEY) {
+        return NextResponse.json({
+          success: false,
+          message: 'Telnyx not configured - phone provisioning unavailable'
+        }, { status: 503 })
+      }
+
+      // Real Telnyx phone number purchasing
+      try {
+        const telnyxResponse = await fetch('https://api.telnyx.com/v2/phone_numbers', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            phone_number: `+1${areaCode}${Math.floor(Math.random() * 9000000) + 1000000}`,
+            connection_id: process.env.TELYNX_CONNECTION_ID
+          })
+        })
+
+        if (!telnyxResponse.ok) {
+          const errorData = await telnyxResponse.text()
+          return NextResponse.json({
+            success: false,
+            message: 'Failed to purchase phone number from Telnyx',
+            details: errorData
+          }, { status: 500 })
+        }
+
+        const phoneData = await telnyxResponse.json()
+        const phoneNumber = phoneData.data.phone_number
+
+        // Store the real phone number in database
         const { data: phoneRecord, error: phoneError } = await supabaseAdmin
           .from('toll_free_numbers')
           .insert({
-            number: demoNumber,
+            number: phoneNumber,
             business_id: userBusinessId,
             status: 'assigned',
-            provider: 'demo',
+            provider: 'telnyx',
             monthly_cost: 200,
+            telnyx_phone_id: phoneData.data.id,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -100,16 +95,16 @@ export async function POST(request: NextRequest) {
         if (phoneError) {
           return NextResponse.json({ 
             success: false, 
-            error: 'Failed to store demo phone number',
+            error: 'Failed to store phone number',
             details: phoneError.message 
           }, { status: 500 })
         }
 
-        // Update business with phone number
+        // Update business with real phone number
         const { error: businessError } = await supabaseAdmin
           .from('businesses')
           .update({ 
-            phone_number: demoNumber,
+            phone_number: phoneNumber,
             updated_at: new Date().toISOString()
           })
           .eq('id', userBusinessId)
@@ -124,19 +119,20 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          message: 'Demo phone number provisioned successfully',
-          phoneNumber: demoNumber,
+          message: 'Real phone number purchased and assigned successfully',
+          phoneNumber: phoneNumber,
           businessId: userBusinessId,
+          telnyxId: phoneData.data.id,
           timestamp: new Date().toISOString()
         })
-      }
 
-      // Real Telnyx integration would go here
-      // For now, return demo mode message
-      return NextResponse.json({
-        success: false,
-        message: 'Telnyx integration requires production API keys'
-      }, { status: 503 })
+      } catch (error) {
+        return NextResponse.json({
+          success: false,
+          message: 'Phone number purchase failed',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 })
+      }
     }
 
     if (action === 'activate-agent') {
@@ -246,7 +242,7 @@ export async function GET(request: NextRequest) {
     const services = {
       resend: !!process.env.RESEND_API_KEY,
       stripe: !!process.env.STRIPE_SECRET_KEY,
-      telnyx: !!process.env.TELNYX_API_KEY,
+      telnyx: !!process.env.TELYNX_API_KEY,
       openai: !!process.env.OPENAI_API_KEY,
       supabase: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
     };
@@ -267,3 +263,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+

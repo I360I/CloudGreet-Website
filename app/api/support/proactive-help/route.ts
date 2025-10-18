@@ -159,15 +159,62 @@ export async function POST(request: NextRequest) {
         })
 
       case 'schedule_demo_call':
-        // Schedule a demo call with the business
+        // Schedule a REAL demo call using Telnyx
         const { data: business2 } = await supabaseAdmin
           .from('businesses')
           .select('business_name, phone_number')
           .eq('id', targetBusinessId)
           .single()
 
-        if (business2?.phone_number && business2.phone_number !== 'Not configured') {
-          // Create a demo appointment
+        if (!business2?.phone_number || business2.phone_number === 'Not configured') {
+          return NextResponse.json({
+            success: false,
+            message: 'Please set up your phone number first before scheduling a demo call'
+          })
+        }
+
+        // Check if Telnyx is configured
+        if (!process.env.TELYNX_API_KEY) {
+          return NextResponse.json({
+            success: false,
+            message: 'Telnyx not configured - cannot schedule real demo calls'
+          }, { status: 503 })
+        }
+
+        try {
+          // Create a real outbound call via Telnyx
+          const callResponse = await fetch('https://api.telnyx.com/v2/calls', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              to: business2.phone_number,
+              from: process.env.NEXT_PUBLIC_BUSINESS_PHONE_RAW || '+18333956731',
+              call_control_application_id: process.env.TELNYX_CONNECTION_ID,
+              webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
+              webhook_failover_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
+              client_state: JSON.stringify({
+                business_id: targetBusinessId,
+                call_type: 'demo_call',
+                source: 'proactive_help'
+              })
+            })
+          })
+
+          if (!callResponse.ok) {
+            const errorData = await callResponse.text()
+            return NextResponse.json({
+              success: false,
+              message: 'Failed to initiate demo call',
+              details: errorData
+            }, { status: 500 })
+          }
+
+          const callData = await callResponse.json()
+
+          // Create a real appointment record
           const { data: demoAppointment } = await supabaseAdmin
             .from('appointments')
             .insert({
@@ -179,7 +226,8 @@ export async function POST(request: NextRequest) {
               scheduled_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
               estimated_value: 0,
               status: 'scheduled',
-              notes: 'Demo call to test AI receptionist functionality',
+              notes: 'Real demo call to test AI receptionist functionality',
+              call_control_id: callData.data.call_control_id,
               created_at: new Date().toISOString()
             })
             .select()
@@ -187,14 +235,17 @@ export async function POST(request: NextRequest) {
 
           return NextResponse.json({
             success: true,
-            message: 'Demo call scheduled! We\'ll call your AI receptionist tomorrow to test it.',
-            appointment: demoAppointment
+            message: 'Real demo call scheduled! We\'ll call your AI receptionist tomorrow to test it.',
+            appointment: demoAppointment,
+            callId: callData.data.call_control_id
           })
-        } else {
+
+        } catch (error) {
           return NextResponse.json({
             success: false,
-            message: 'Please set up your phone number first before scheduling a demo call'
-          })
+            message: 'Demo call scheduling failed',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }, { status: 500 })
         }
 
       default:
@@ -214,3 +265,4 @@ export async function POST(request: NextRequest) {
     }, { status: 500 })
   }
 }
+

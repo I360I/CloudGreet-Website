@@ -6,23 +6,28 @@ import {
   Phone, Mail, Building, MapPin, Calendar, 
   DollarSign, Users, Target, TrendingUp,
   Plus, Search, Filter, Download, Send,
-  CheckCircle, Clock, AlertCircle, Star
+  CheckCircle, Clock, AlertCircle, Star,
+  UserPlus, Zap, X
 } from 'lucide-react'
 
 interface Lead {
   id: string
   business_name: string
-  owner_name: string
-  email: string
+  owner_name?: string
+  owner_email?: string
   phone: string
   business_type: string
-  location: string
-  estimated_revenue: number
-  status: 'cold' | 'contacted' | 'interested' | 'demo_scheduled' | 'closed'
-  last_contact: string
-  notes: string
-  source: string
+  city?: string
+  state?: string
+  website?: string
+  total_score?: number
+  enrichment_status: 'pending' | 'in_progress' | 'enriched' | 'failed'
+  outreach_status: 'new' | 'contacted' | 'responded' | 'qualified' | 'converted' | 'closed'
+  last_contact_date?: string
+  notes?: string
   created_at: string
+  personalized_pitch?: string
+  pain_points?: string[]
 }
 
 export default function LeadsManagement() {
@@ -32,6 +37,7 @@ export default function LeadsManagement() {
   const [showAddLead, setShowAddLead] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [convertingLead, setConvertingLead] = useState<string | null>(null)
 
   // Load real leads from API
   useEffect(() => {
@@ -42,9 +48,9 @@ export default function LeadsManagement() {
     try {
       setLoading(true)
       
-      const response = await fetch('/api/admin/leads', {
+      const response = await fetch('/api/apollo-killer/leads', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
         }
       })
 
@@ -65,39 +71,76 @@ export default function LeadsManagement() {
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lead.owner_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lead.email.toLowerCase().includes(searchTerm.toLowerCase())
+                         (lead.owner_name && lead.owner_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (lead.owner_email && lead.owner_email.toLowerCase().includes(searchTerm.toLowerCase()))
     
-    const matchesFilter = filterStatus === 'all' || lead.status === filterStatus
+    const matchesFilter = filterStatus === 'all' || lead.outreach_status === filterStatus
     
     return matchesSearch && matchesFilter
   })
 
+  const convertLeadToClient = async (leadId: string) => {
+    try {
+      setConvertingLead(leadId)
+      
+      const response = await fetch('/api/admin/convert-lead-to-client', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+        },
+        body: JSON.stringify({ leadId })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        alert(`✅ Lead converted to client successfully!\n\nClient Email: ${data.data.client.email}\nPassword: ${data.data.client.password}\n\nPlease save these credentials!`)
+        
+        // Update the lead status
+        setLeads(leads.map(lead => 
+          lead.id === leadId 
+            ? { ...lead, outreach_status: 'converted' as const }
+            : lead
+        ))
+      } else {
+        const error = await response.json()
+        alert(`❌ Failed to convert lead: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error converting lead:', error)
+      alert('❌ Failed to convert lead. Please try again.')
+    } finally {
+      setConvertingLead(null)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'cold': return 'bg-gray-100 text-gray-800'
+      case 'new': return 'bg-gray-100 text-gray-800'
       case 'contacted': return 'bg-blue-100 text-blue-800'
-      case 'interested': return 'bg-yellow-100 text-yellow-800'
-      case 'demo_scheduled': return 'bg-purple-100 text-purple-800'
-      case 'closed': return 'bg-green-100 text-green-800'
+      case 'responded': return 'bg-yellow-100 text-yellow-800'
+      case 'qualified': return 'bg-purple-100 text-purple-800'
+      case 'converted': return 'bg-green-100 text-green-800'
+      case 'closed': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'cold': return <AlertCircle className="w-4 h-4" />
+      case 'new': return <AlertCircle className="w-4 h-4" />
       case 'contacted': return <Phone className="w-4 h-4" />
-      case 'interested': return <Star className="w-4 h-4" />
-      case 'demo_scheduled': return <Calendar className="w-4 h-4" />
-      case 'closed': return <CheckCircle className="w-4 h-4" />
+      case 'responded': return <Star className="w-4 h-4" />
+      case 'qualified': return <Calendar className="w-4 h-4" />
+      case 'converted': return <CheckCircle className="w-4 h-4" />
+      case 'closed': return <X className="w-4 h-4" />
       default: return <Clock className="w-4 h-4" />
     }
   }
 
-  const totalEstimatedRevenue = leads.reduce((sum, lead) => sum + lead.estimated_revenue, 0)
-  const closedLeads = leads.filter(lead => lead.status === 'closed').length
-  const conversionRate = leads.length > 0 ? (closedLeads / leads.length) * 100 : 0
+  const totalEstimatedRevenue = leads.reduce((sum, lead) => sum + (lead.total_score || 0), 0)
+  const convertedLeads = leads.filter(lead => lead.outreach_status === 'converted').length
+  const conversionRate = leads.length > 0 ? (convertedLeads / leads.length) * 100 : 0
 
   if (loading) {
     return (
@@ -162,7 +205,7 @@ export default function LeadsManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Closed Deals</p>
-                <p className="text-3xl font-bold text-green-600">{closedLeads}</p>
+                <p className="text-3xl font-bold text-green-600">{convertedLeads}</p>
               </div>
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
@@ -220,10 +263,11 @@ export default function LeadsManagement() {
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">All Status</option>
-              <option value="cold">Cold</option>
+              <option value="new">New</option>
               <option value="contacted">Contacted</option>
-              <option value="interested">Interested</option>
-              <option value="demo_scheduled">Demo Scheduled</option>
+              <option value="responded">Responded</option>
+              <option value="qualified">Qualified</option>
+              <option value="converted">Converted</option>
               <option value="closed">Closed</option>
             </select>
             <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2">
@@ -252,7 +296,7 @@ export default function LeadsManagement() {
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Est. Revenue
+                    Score
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Last Contact
@@ -270,14 +314,14 @@ export default function LeadsManagement() {
                         <div className="text-sm font-medium text-gray-900">{lead.business_name}</div>
                         <div className="text-sm text-gray-500 flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
-                          {lead.location}
+                          {lead.city && lead.state ? `${lead.city}, ${lead.state}` : 'Location not set'}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{lead.owner_name}</div>
-                        <div className="text-sm text-gray-500">{lead.email}</div>
+                        <div className="text-sm font-medium text-gray-900">{lead.owner_name || 'Unknown'}</div>
+                        <div className="text-sm text-gray-500">{lead.owner_email || 'No email'}</div>
                         <div className="text-sm text-gray-500">{lead.phone}</div>
                       </div>
                     </td>
@@ -287,16 +331,22 @@ export default function LeadsManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium gap-1 ${getStatusColor(lead.status)}`}>
-                        {getStatusIcon(lead.status)}
-                        {lead.status.replace('_', ' ')}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium gap-1 ${getStatusColor(lead.outreach_status)}`}>
+                        {getStatusIcon(lead.outreach_status)}
+                        {lead.outreach_status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                      ${lead.estimated_revenue.toLocaleString()}/year
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        (lead.total_score || 0) >= 80 ? 'bg-green-100 text-green-800' :
+                        (lead.total_score || 0) >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {lead.total_score || 0}/100
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {lead.last_contact}
+                      {lead.last_contact_date ? new Date(lead.last_contact_date).toLocaleDateString() : 'Never'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex gap-2">
@@ -306,12 +356,28 @@ export default function LeadsManagement() {
                         >
                           View
                         </button>
-                        <button className="text-green-600 hover:text-green-900">
-                          <Phone className="w-4 h-4" />
-                        </button>
-                        <button className="text-purple-600 hover:text-purple-900">
-                          <Mail className="w-4 h-4" />
-                        </button>
+                        {lead.outreach_status !== 'converted' && (
+                          <button
+                            onClick={() => convertLeadToClient(lead.id)}
+                            disabled={convertingLead === lead.id}
+                            className="text-green-600 hover:text-green-900 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {convertingLead === lead.id ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                                Converting...
+                              </>
+                            ) : (
+                              <>
+                                <UserPlus className="w-4 h-4" />
+                                Convert
+                              </>
+                            )}
+                          </button>
+                        )}
+                        {lead.outreach_status === 'converted' && (
+                          <span className="text-green-600 font-medium">✓ Converted</span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -345,7 +411,7 @@ export default function LeadsManagement() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm">{selectedLead.email}</span>
+                        <span className="text-sm">{selectedLead.owner_email}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Phone className="w-4 h-4 text-gray-400" />
@@ -353,7 +419,7 @@ export default function LeadsManagement() {
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm">{selectedLead.location}</span>
+                        <span className="text-sm">{selectedLead.city}, {selectedLead.state}</span>
                       </div>
                     </div>
                   </div>
@@ -367,11 +433,11 @@ export default function LeadsManagement() {
                       </div>
                       <div>
                         <span className="text-sm text-gray-600">Source: </span>
-                        <span className="text-sm font-medium">{selectedLead.source}</span>
+                        <span className="text-sm font-medium">Apollo Killer</span>
                       </div>
                       <div>
                         <span className="text-sm text-gray-600">Est. Revenue: </span>
-                        <span className="text-sm font-medium text-green-600">${selectedLead.estimated_revenue.toLocaleString()}/year</span>
+                        <span className="text-sm font-medium text-green-600">${selectedLead.total_score || 0}/year</span>
                       </div>
                     </div>
                   </div>
