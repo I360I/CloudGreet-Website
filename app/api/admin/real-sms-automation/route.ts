@@ -43,6 +43,16 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
+    // Debug: Return environment variable info
+    return NextResponse.json({
+      debug: {
+        telnyxApiKey: process.env.TELNYX_API_KEY ? 'SET' : 'MISSING',
+        phoneNumber: process.env.TELYNX_PHONE_NUMBER ? 'SET' : 'MISSING',
+        phoneNumberValue: process.env.TELYNX_PHONE_NUMBER,
+        availableTelnyxVars: Object.keys(process.env).filter(key => key.includes('TELNYX') || key.includes('TELYNX'))
+      }
+    })
+
     // For test leads, use your phone number directly
     let phoneNumber
     if (leadId === 'test-lead-id') {
