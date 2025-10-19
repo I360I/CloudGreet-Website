@@ -7,46 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify admin authentication
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.split(' ')[1]
-    
-    // Verify JWT token instead of raw password
-    const adminPayload = verifyAdminToken(token)
-    
-    if (!adminPayload) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-
-    const { leadId, message, campaignId } = await request.json()
-
-    if (!leadId || !message) {
-      return NextResponse.json({ 
-        error: 'Lead ID and message are required' 
-      }, { status: 400 })
-    }
-
-    // Check if Telnyx is configured
-    if (!process.env.TELNYX_API_KEY) {
-      return NextResponse.json({ 
-        error: 'SMS not configured',
-        message: 'Cannot send real SMS without Telnyx integration'
-      }, { status: 503 })
-    }
-
-    // Debug: Check if messaging profile ID is available
-    if (!process.env.TELNYX_MESSAGING_PROFILE_ID) {
-      return NextResponse.json({ 
-        error: 'Messaging profile not configured',
-        message: `TELNYX_MESSAGING_PROFILE_ID environment variable is missing. Available env vars: ${Object.keys(process.env).filter(key => key.includes('TELNYX')).join(', ')}`
-      }, { status: 503 })
-    }
-
-    // Debug: Return environment variable info
+    // Simple test - return debug info immediately
     return NextResponse.json({
       debug: {
         telnyxApiKey: process.env.TELNYX_API_KEY ? 'SET' : 'MISSING',
