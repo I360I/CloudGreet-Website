@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { verifyAdminToken } from '@/lib/admin-auth'
 
-export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic' // Fixed for deployment
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
