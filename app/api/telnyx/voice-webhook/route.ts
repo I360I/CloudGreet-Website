@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       const { data: demoBusiness, error: demoError } = await supabaseAdmin
         .from('businesses')
         .select('*')
-        .eq('id', 'demo-business-id')
+        .eq('id', '00000000-0000-0000-0000-000000000001') // Fixed UUID for demo business
         .single()
       
       if (demoBusiness) {
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
       const { data: demoAgent, error: demoAgentError } = await supabaseAdmin
         .from('ai_agents')
         .select('*')
-        .eq('id', 'demo-agent-id')
+        .eq('id', '00000000-0000-0000-0000-000000000002') // Fixed UUID for demo agent
         .single()
       
       if (demoAgent) {

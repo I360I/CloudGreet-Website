@@ -37,23 +37,23 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Create or get demo business and agent for click-to-call
-    let businessId = 'demo-business-id'
-    let agentId = 'demo-agent-id'
-    
-    // Check if demo business exists, if not create it
-    const { data: existingBusiness } = await supabaseAdmin
-      .from('businesses')
-      .select('id')
-      .eq('id', 'demo-business-id')
-      .single()
+      // Create or get demo business and agent for click-to-call
+      const businessId = '00000000-0000-0000-0000-000000000001' // Fixed UUID for demo business
+      const agentId = '00000000-0000-0000-0000-000000000002' // Fixed UUID for demo agent
+      
+      // Check if demo business exists, if not create it
+      const { data: existingBusiness } = await supabaseAdmin
+        .from('businesses')
+        .select('id')
+        .eq('id', businessId)
+        .single()
     
     if (!existingBusiness) {
       // Create demo business
       const { data: demoBusiness, error: businessError } = await supabaseAdmin
         .from('businesses')
         .insert({
-          id: 'demo-business-id',
+          id: businessId,
           business_name: 'CloudGreet Demo',
           business_type: 'HVAC',
           owner_name: 'Demo Owner',
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
           },
           updated_at: new Date().toISOString()
         })
-        .eq('id', 'demo-business-id')
+        .eq('id', businessId)
       
       if (updateError) {
         console.error('❌ Failed to update demo business hours:', updateError)
@@ -108,20 +108,20 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Check if demo agent exists, if not create it
-    const { data: existingAgent } = await supabaseAdmin
-      .from('ai_agents')
-      .select('id')
-      .eq('id', 'demo-agent-id')
-      .single()
+      // Check if demo agent exists, if not create it
+      const { data: existingAgent } = await supabaseAdmin
+        .from('ai_agents')
+        .select('id')
+        .eq('id', agentId)
+        .single()
     
     if (!existingAgent) {
       // Create demo AI agent
       const { data: demoAgent, error: agentError } = await supabaseAdmin
         .from('ai_agents')
         .insert({
-          id: 'demo-agent-id',
-          business_id: 'demo-business-id',
+          id: agentId,
+          business_id: businessId,
           agent_name: 'CloudGreet Demo Agent',
           is_active: true,
           configuration: {
