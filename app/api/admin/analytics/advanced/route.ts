@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { verifyAdminToken } from '@/lib/validation'
+import { verifyAdminToken } from '@/lib/admin-auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,9 +10,16 @@ const supabase = createClient(
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication
-    const authResult = await verifyAdminToken(request)
-    if (!authResult.success) {
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.split(' ')[1]
+    const adminPayload = verifyAdminToken(token)
+    
+    if (!adminPayload) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
