@@ -46,6 +46,16 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
+    // Debug: Return environment variable info
+    return NextResponse.json({
+      debug: {
+        telnyxApiKey: process.env.TELNYX_API_KEY ? 'SET' : 'MISSING',
+        messagingProfileId: process.env.TELNYX_MESSAGING_PROFILE_ID ? 'SET' : 'MISSING',
+        availableTelnyxVars: Object.keys(process.env).filter(key => key.includes('TELNYX')),
+        messagingProfileValue: process.env.TELNYX_MESSAGING_PROFILE_ID
+      }
+    })
+
     // For test leads, use your phone number directly
     let phoneNumber
     if (leadId === 'test-lead-id') {
