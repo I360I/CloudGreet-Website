@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     if (!process.env.TELNYX_MESSAGING_PROFILE_ID) {
       return NextResponse.json({ 
         error: 'Messaging profile not configured',
-        message: 'TELNYX_MESSAGING_PROFILE_ID environment variable is missing'
+        message: `TELNYX_MESSAGING_PROFILE_ID environment variable is missing. Available env vars: ${Object.keys(process.env).filter(key => key.includes('TELNYX')).join(', ')}`
       }, { status: 503 })
     }
 
