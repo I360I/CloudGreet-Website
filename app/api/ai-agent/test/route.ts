@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import OpenAI from 'openai'
-import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
@@ -38,6 +32,7 @@ export async function POST(request: NextRequest) {
     // Decode JWT token
     let decoded
     try {
+      const jwt = (await import('jsonwebtoken')).default
       decoded = jwt.verify(token, jwtSecret) as any
     } catch (error) {
       return NextResponse.json({
@@ -139,6 +134,11 @@ Remember: You're a real person having a real conversation. Be warm, helpful, and
     ]
 
     // Test the AI response with optimized human-like settings
+    const OpenAI = (await import('openai')).default
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    })
+    
     const completion = await openai.chat.completions.create({
       model: 'gpt-4-turbo-preview', // Latest and most capable model
       messages: messages as any,
