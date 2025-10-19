@@ -73,6 +73,32 @@ export async function POST(request: NextRequest) {
       phoneNumber = lead.phone
     }
 
+    // Format phone number to E.164 format for Telnyx
+    const formatPhoneNumber = (phone: string) => {
+      // Remove all non-digit characters
+      const digits = phone.replace(/\D/g, '')
+      
+      // If it starts with 1 and has 11 digits, add +
+      if (digits.length === 11 && digits.startsWith('1')) {
+        return '+' + digits
+      }
+      
+      // If it has 10 digits, add +1
+      if (digits.length === 10) {
+        return '+1' + digits
+      }
+      
+      // If it already starts with +, return as is
+      if (phone.startsWith('+')) {
+        return phone
+      }
+      
+      // Default: assume it needs +1 prefix
+      return '+1' + digits
+    }
+
+    phoneNumber = formatPhoneNumber(phoneNumber)
+
     // Send REAL SMS via Telnyx
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
