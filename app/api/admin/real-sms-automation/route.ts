@@ -36,10 +36,10 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    if (!process.env.TELNYX_MESSAGING_PROFILE_ID) {
+    if (!process.env.TELYNX_PHONE_NUMBER) {
       return NextResponse.json({ 
         error: 'Messaging profile not configured',
-        message: 'TELNYX_MESSAGING_PROFILE_ID is missing'
+        message: 'TELYNX_PHONE_NUMBER is missing'
       }, { status: 503 })
     }
 
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         to: phoneNumber,
         from: process.env.NEXT_PUBLIC_BUSINESS_PHONE_RAW || '+18333956731',
         text: message,
-        messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
+        messaging_profile_id: process.env.TELYNX_PHONE_NUMBER
       })
     })
 
