@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     console.log('🚀 Initiating click-to-call for:', formattedPhone)
 
     // Check if Telnyx is configured
-    if (!process.env.TELYNX_API_KEY) {
+    if (!process.env.TELNYX_API_KEY) {
       console.error('❌ Telnyx API key not configured')
       return NextResponse.json({ 
         error: 'Telnyx not configured' 
