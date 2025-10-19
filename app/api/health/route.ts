@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if Telnyx is configured
-      if (!process.env.TELYNX_API_KEY) {
+      if (!process.env.TELNYX_API_KEY) {
         return NextResponse.json({
           success: false,
           message: 'Telnyx not configured - phone provisioning unavailable'

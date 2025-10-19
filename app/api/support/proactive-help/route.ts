@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if Telnyx is configured
-        if (!process.env.TELYNX_API_KEY) {
+        if (!process.env.TELNYX_API_KEY) {
           return NextResponse.json({
             success: false,
             message: 'Telnyx not configured - cannot schedule real demo calls'
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
           const callResponse = await fetch('https://api.telnyx.com/v2/calls', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+              'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
