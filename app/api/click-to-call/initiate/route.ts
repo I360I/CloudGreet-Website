@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     const connectionCheckResponse = await fetch('https://api.telnyx.com/v2/connections', {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       }
     })
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     const callControlResponse = await fetch('https://api.telnyx.com/v2/call_control_applications', {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       }
     })
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(callPayload)
