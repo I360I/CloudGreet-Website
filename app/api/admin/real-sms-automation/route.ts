@@ -7,15 +7,41 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    // Simple test - return debug info immediately
-    return NextResponse.json({
-      debug: {
-        telnyxApiKey: process.env.TELNYX_API_KEY ? 'SET' : 'MISSING',
-        messagingProfileId: process.env.TELNYX_MESSAGING_PROFILE_ID ? 'SET' : 'MISSING',
-        availableTelnyxVars: Object.keys(process.env).filter(key => key.includes('TELNYX')),
-        messagingProfileValue: process.env.TELNYX_MESSAGING_PROFILE_ID
-      }
-    })
+    // Verify admin authentication
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.split(' ')[1]
+    const adminPayload = verifyAdminToken(token)
+    
+    if (!adminPayload) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const { leadId, message, campaignId } = await request.json()
+
+    if (!leadId || !message) {
+      return NextResponse.json({ 
+        error: 'Lead ID and message are required' 
+      }, { status: 400 })
+    }
+
+    // Check if Telnyx is configured
+    if (!process.env.TELNYX_API_KEY) {
+      return NextResponse.json({ 
+        error: 'SMS not configured',
+        message: 'TELNYX_API_KEY is missing'
+      }, { status: 503 })
+    }
+
+    if (!process.env.TELNYX_MESSAGING_PROFILE_ID) {
+      return NextResponse.json({ 
+        error: 'Messaging profile not configured',
+        message: 'TELNYX_MESSAGING_PROFILE_ID is missing'
+      }, { status: 503 })
+    }
 
     // For test leads, use your phone number directly
     let phoneNumber
@@ -57,7 +83,7 @@ export async function POST(request: NextRequest) {
       logger.error('Telnyx SMS error', { 
         error: errorData, 
         leadId, 
-        phone: lead.phone 
+        phone: phoneNumber
       })
       
       return NextResponse.json({ 
@@ -68,37 +94,39 @@ export async function POST(request: NextRequest) {
 
     const smsData = await telnyxResponse.json()
 
-    // Log the REAL SMS in database
-    const { error: logError } = await supabaseAdmin
-      .from('sms_messages')
-      .insert({
-        lead_id: leadId,
-        campaign_id: campaignId,
-        to_number: lead.phone,
-        from_number: process.env.NEXT_PUBLIC_BUSINESS_PHONE_RAW || '+18333956731',
-        message: message,
-        status: 'sent',
-        telnyx_message_id: smsData.data.id,
-        created_at: new Date().toISOString()
-      })
+    // Log the REAL SMS in database (only if not a test lead)
+    if (leadId !== 'test-lead-id') {
+      const { error: logError } = await supabaseAdmin
+        .from('sms_messages')
+        .insert({
+          lead_id: leadId,
+          campaign_id: campaignId,
+          to_number: phoneNumber,
+          from_number: process.env.NEXT_PUBLIC_BUSINESS_PHONE_RAW || '+18333956731',
+          message: message,
+          status: 'sent',
+          telnyx_message_id: smsData.data.id,
+          created_at: new Date().toISOString()
+        })
 
-    if (logError) {
-      logger.error('Error logging SMS', { error: logError })
+      if (logError) {
+        logger.error('Error logging SMS', { error: logError })
+      }
+
+      // Update lead status
+      await supabaseAdmin
+        .from('enriched_leads')
+        .update({ 
+          outreach_status: 'contacted',
+          last_contact_date: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', leadId)
     }
-
-    // Update lead status
-    await supabaseAdmin
-      .from('enriched_leads')
-      .update({ 
-        outreach_status: 'contacted',
-        last_contact_date: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', leadId)
 
     logger.info('Real SMS sent successfully', {
       leadId,
-      phone: lead.phone,
+      phone: phoneNumber,
       messageId: smsData.data.id
     })
 
@@ -108,7 +136,7 @@ export async function POST(request: NextRequest) {
       data: {
         messageId: smsData.data.id,
         status: 'sent',
-        to: lead.phone
+        to: phoneNumber
       }
     })
 
@@ -124,4 +152,3 @@ export async function POST(request: NextRequest) {
     }, { status: 500 })
   }
 }
-
