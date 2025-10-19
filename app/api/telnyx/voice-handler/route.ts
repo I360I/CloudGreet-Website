@@ -39,7 +39,29 @@ export async function POST(request: NextRequest) {
     // Get call record and business info
     const { data: call, error: callError } = await supabaseAdmin
       .from('calls')
-      .select('*, businesses(*), ai_agents(*)')
+      .select(`
+        *,
+        businesses (
+          id,
+          business_name,
+          business_type,
+          owner_name,
+          phone_number,
+          email,
+          address,
+          business_hours,
+          services,
+          service_areas,
+          greeting_message
+        ),
+        ai_agents (
+          id,
+          business_id,
+          agent_name,
+          is_active,
+          configuration
+        )
+      `)
       .or(`call_id.eq.${callId},call_leg_id.eq.${callId}`)
       .single()
 

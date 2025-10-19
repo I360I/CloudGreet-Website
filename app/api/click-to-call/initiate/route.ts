@@ -37,13 +37,93 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Use a simple business ID for demo calls
-    const businessId = 'demo-business-id'
-    console.log('📞 Using demo business ID for click-to-call')
-
-    // Use a simple agent ID for demo calls
-    const agentId = 'demo-agent-id'
-    console.log('📞 Using demo agent ID for click-to-call')
+    // Create or get demo business and agent for click-to-call
+    let businessId = 'demo-business-id'
+    let agentId = 'demo-agent-id'
+    
+    // Check if demo business exists, if not create it
+    const { data: existingBusiness } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('id', 'demo-business-id')
+      .single()
+    
+    if (!existingBusiness) {
+      // Create demo business
+      const { data: demoBusiness, error: businessError } = await supabaseAdmin
+        .from('businesses')
+        .insert({
+          id: 'demo-business-id',
+          business_name: 'CloudGreet Demo',
+          business_type: 'HVAC',
+          owner_name: 'Demo Owner',
+          phone_number: '+18333956731',
+          email: 'demo@cloudgreet.com',
+          address: '123 Demo Street, Demo City, DC 12345',
+          business_hours: {
+            mon: { open: '08:00', close: '17:00' },
+            tue: { open: '08:00', close: '17:00' },
+            wed: { open: '08:00', close: '17:00' },
+            thu: { open: '08:00', close: '17:00' },
+            fri: { open: '08:00', close: '17:00' },
+            sat: { open: '09:00', close: '15:00' },
+            sun: { open: 'closed', close: 'closed' }
+          },
+          services: ['HVAC Repair', 'Heating Installation', 'Cooling Installation', 'Maintenance'],
+          service_areas: ['Demo City', 'Demo County'],
+          greeting_message: 'Thank you for calling CloudGreet Demo! How can I help you today?',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+      
+      if (businessError) {
+        console.error('❌ Failed to create demo business:', businessError)
+      } else {
+        console.log('✅ Created demo business for click-to-call')
+      }
+    }
+    
+    // Check if demo agent exists, if not create it
+    const { data: existingAgent } = await supabaseAdmin
+      .from('ai_agents')
+      .select('id')
+      .eq('id', 'demo-agent-id')
+      .single()
+    
+    if (!existingAgent) {
+      // Create demo AI agent
+      const { data: demoAgent, error: agentError } = await supabaseAdmin
+        .from('ai_agents')
+        .insert({
+          id: 'demo-agent-id',
+          business_id: 'demo-business-id',
+          agent_name: 'CloudGreet Demo Agent',
+          is_active: true,
+          configuration: {
+            greeting_message: 'Thank you for calling CloudGreet Demo! How can I help you today?',
+            voice: 'alloy',
+            tone: 'professional',
+            business_type: 'HVAC',
+            services: ['HVAC Repair', 'Heating Installation', 'Cooling Installation', 'Maintenance'],
+            custom_instructions: 'You are a professional AI receptionist for CloudGreet Demo, an HVAC company. Help customers with their heating and cooling needs, schedule appointments, and provide excellent service.',
+            ai_model: 'gpt-4o-realtime-preview-2024-12-17'
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+      
+      if (agentError) {
+        console.error('❌ Failed to create demo agent:', agentError)
+      } else {
+        console.log('✅ Created demo AI agent for click-to-call')
+      }
+    }
+    
+    console.log('📞 Using demo business and agent for click-to-call')
 
     // Use your real toll-free number
     const fromNumber = '+18333956731'
