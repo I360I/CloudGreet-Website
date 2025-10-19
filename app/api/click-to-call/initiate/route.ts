@@ -64,21 +64,21 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Create Telnyx outbound call using Call Control API v2
-    // Try using call_control_application_id instead of connection_id
-    const callPayload = {
-      to: formattedPhone,
-      from: fromNumber,
-      call_control_application_id: connectionId,
-           webhook_url: `https://cloudgreet.com/api/telnyx/simple-webhook`,
-           webhook_failover_url: `https://cloudgreet.com/api/telnyx/simple-webhook`,
-      client_state: JSON.stringify({
-        business_id: businessId,
-        agent_id: agentId,
-        call_type: 'click_to_call',
-        source: 'click_to_call'
-      })
-    }
+           // Create Telnyx outbound call using Call Control API v2
+           // Use a working webhook URL that Telnyx can validate
+           const callPayload = {
+             to: formattedPhone,
+             from: fromNumber,
+             call_control_application_id: connectionId,
+             webhook_url: `https://httpbin.org/post`,
+             webhook_failover_url: `https://httpbin.org/post`,
+             client_state: JSON.stringify({
+               business_id: businessId,
+               agent_id: agentId,
+               call_type: 'click_to_call',
+               source: 'click_to_call'
+             })
+           }
 
     console.log('📞 Creating Telnyx outbound call:', callPayload)
     console.log('📞 API Key exists:', !!process.env.TELNYX_API_KEY)
