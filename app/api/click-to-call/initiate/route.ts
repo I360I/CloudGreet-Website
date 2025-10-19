@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
       to: formattedPhone,
       from: fromNumber,
       call_control_application_id: connectionId,
-      webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
-      webhook_failover_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
+           webhook_url: `http://localhost:3000/api/telnyx/webhook-test`,
+           webhook_failover_url: `http://localhost:3000/api/telnyx/webhook-test`,
       client_state: JSON.stringify({
         business_id: businessId,
         agent_id: agentId,
