@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    console.log('📞 Using demo business and agent for click-to-call')
+      console.log('📞 Using demo business and agent for click-to-call - UUID FIX DEPLOYED')
 
     // Use your real toll-free number
     const fromNumber = '+18333956731'
