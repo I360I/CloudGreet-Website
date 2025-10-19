@@ -61,13 +61,13 @@ export async function POST(request: NextRequest) {
           email: 'demo@cloudgreet.com',
           address: '123 Demo Street, Demo City, DC 12345',
           business_hours: {
-            mon: { open: '08:00', close: '17:00' },
-            tue: { open: '08:00', close: '17:00' },
-            wed: { open: '08:00', close: '17:00' },
-            thu: { open: '08:00', close: '17:00' },
-            fri: { open: '08:00', close: '17:00' },
-            sat: { open: '09:00', close: '15:00' },
-            sun: { open: 'closed', close: 'closed' }
+            mon: { open: '00:00', close: '23:59' },
+            tue: { open: '00:00', close: '23:59' },
+            wed: { open: '00:00', close: '23:59' },
+            thu: { open: '00:00', close: '23:59' },
+            fri: { open: '00:00', close: '23:59' },
+            sat: { open: '00:00', close: '23:59' },
+            sun: { open: '00:00', close: '23:59' }
           },
           services: ['HVAC Repair', 'Heating Installation', 'Cooling Installation', 'Maintenance'],
           service_areas: ['Demo City', 'Demo County'],
@@ -82,6 +82,29 @@ export async function POST(request: NextRequest) {
         console.error('❌ Failed to create demo business:', businessError)
       } else {
         console.log('✅ Created demo business for click-to-call')
+      }
+    } else {
+      // Update existing demo business to be 24/7 available
+      const { error: updateError } = await supabaseAdmin
+        .from('businesses')
+        .update({
+          business_hours: {
+            mon: { open: '00:00', close: '23:59' },
+            tue: { open: '00:00', close: '23:59' },
+            wed: { open: '00:00', close: '23:59' },
+            thu: { open: '00:00', close: '23:59' },
+            fri: { open: '00:00', close: '23:59' },
+            sat: { open: '00:00', close: '23:59' },
+            sun: { open: '00:00', close: '23:59' }
+          },
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', 'demo-business-id')
+      
+      if (updateError) {
+        console.error('❌ Failed to update demo business hours:', updateError)
+      } else {
+        console.log('✅ Updated demo business to be 24/7 available')
       }
     }
     
