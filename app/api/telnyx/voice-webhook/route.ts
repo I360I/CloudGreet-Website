@@ -98,6 +98,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Get business info for the phone number first
+    let business = null
+    let businessError = null
+    
+    // Try to find business by toll-free number first
     const { data: phoneRecord, error: phoneError } = await supabaseAdmin
       .from('toll_free_numbers')
       .select('*, businesses(*)')
@@ -105,11 +109,26 @@ export async function POST(request: NextRequest) {
       .eq('status', 'assigned')
       .single()
     
-    const business = phoneRecord?.businesses
-    const businessError = phoneError
+    if (phoneRecord?.businesses) {
+      business = phoneRecord.businesses
+    } else {
+      // Fallback: Look for demo business for test calls
+      const { data: demoBusiness, error: demoError } = await supabaseAdmin
+        .from('businesses')
+        .select('*')
+        .eq('id', 'demo-business-id')
+        .single()
+      
+      if (demoBusiness) {
+        business = demoBusiness
+        logger.info('Using demo business for test call', { to, businessId: business.id })
+      } else {
+        businessError = demoError
+      }
+    }
 
     if (businessError || !business) {
-      logger.error('Error finding business for webhook', { error: businessError,  to })
+      logger.error('Error finding business for webhook', { error: businessError, to })
       return NextResponse.json({
         call_id: call_control_id,
         status: 'answered',
@@ -152,15 +171,37 @@ export async function POST(request: NextRequest) {
     }
 
     // Get AI agent configuration
-    const { data: agent, error: agentError } = await supabaseAdmin
+    let agent = null
+    let agentError = null
+    
+    // Try to find active agent for this business
+    const { data: businessAgent, error: businessAgentError } = await supabaseAdmin
       .from('ai_agents')
       .select('*')
       .eq('business_id', business.id)
-      .eq('status', 'active')
+      .eq('is_active', true)
       .single()
+    
+    if (businessAgent) {
+      agent = businessAgent
+    } else {
+      // Fallback: Look for demo agent for test calls
+      const { data: demoAgent, error: demoAgentError } = await supabaseAdmin
+        .from('ai_agents')
+        .select('*')
+        .eq('id', 'demo-agent-id')
+        .single()
+      
+      if (demoAgent) {
+        agent = demoAgent
+        logger.info('Using demo agent for test call', { businessId: business.id, agentId: agent.id })
+      } else {
+        agentError = demoAgentError
+      }
+    }
 
     if (agentError || !agent) {
-      logger.error('Error finding active agent', { error: agentError,  businessId: business.id })
+      logger.error('Error finding active agent', { error: agentError, businessId: business.id })
       return NextResponse.json({
         call_id: call_control_id,
         status: 'answered',
