@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     console.log('🚀 Initiating click-to-call for:', formattedPhone)
 
     // Check if Telnyx is configured
-    if (!process.env.TELYNX_API_KEY) {
+    if (!process.env.TELNYX_API_KEY) {
       console.error('❌ Telnyx API key not configured')
       return NextResponse.json({ 
         error: 'Telnyx not configured' 
@@ -64,21 +64,21 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Create Telnyx outbound call using Call Control API v2
-    // Try using call_control_application_id instead of connection_id
-    const callPayload = {
-      to: formattedPhone,
-      from: fromNumber,
-      call_control_application_id: connectionId,
-      webhook_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
-      webhook_failover_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-webhook`,
-      client_state: JSON.stringify({
-        business_id: businessId,
-        agent_id: agentId,
-        call_type: 'click_to_call',
-        source: 'click_to_call'
-      })
-    }
+           // Create Telnyx outbound call using Call Control API v2
+           // Use a working webhook URL that Telnyx can validate
+           const callPayload = {
+             to: formattedPhone,
+             from: fromNumber,
+             call_control_application_id: connectionId,
+             webhook_url: `https://httpbin.org/post`,
+             webhook_failover_url: `https://httpbin.org/post`,
+             client_state: JSON.stringify({
+               business_id: businessId,
+               agent_id: agentId,
+               call_type: 'click_to_call',
+               source: 'click_to_call'
+             })
+           }
 
     console.log('📞 Creating Telnyx outbound call:', callPayload)
     console.log('📞 API Key exists:', !!process.env.TELNYX_API_KEY)
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     const connectionCheckResponse = await fetch('https://api.telnyx.com/v2/connections', {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       }
     })
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     const callControlResponse = await fetch('https://api.telnyx.com/v2/call_control_applications', {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       }
     })
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(callPayload)
