@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         const telnyxResponse = await fetch('https://api.telnyx.com/v2/phone_numbers', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
