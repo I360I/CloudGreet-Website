@@ -30,8 +30,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Check if Twilio is configured
-    if (!process.env.TELYNX_API_KEY) {
+    // Check if Telnyx is configured
+    if (!process.env.TELNYX_API_KEY) {
       return NextResponse.json({ 
         error: 'SMS not configured',
         message: 'Cannot send real SMS without Telnyx integration'
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
