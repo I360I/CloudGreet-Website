@@ -2,30 +2,24 @@ require('dotenv').config({ path: '.env.local' });
 
 const fetch = require('node-fetch');
 
-async function testTelnyxCall() {
-  console.log('🔍 Testing Telnyx Call Creation...');
-  console.log('TELNYX_API_KEY exists:', !!process.env.TELNYX_API_KEY);
+async function testDifferentEndpoint() {
+  console.log('🔍 Testing different Telnyx API approach...');
   
   if (!process.env.TELNYX_API_KEY) {
     console.error('❌ TELNYX_API_KEY not found in environment');
     return;
   }
 
+  // Try using the outbound voice profile directly instead of Call Control App
   const callPayload = {
     to: '+15551234567',
     from: '+18333956731',
-    call_control_application_id: '2786688063168841616',
+    outbound_voice_profile_id: '2785793184469353981', // This is from the original Call Control App
     webhook_url: 'https://cloudgreet.com/api/telnyx/voice-webhook',
-    webhook_failover_url: 'https://cloudgreet.com/api/telnyx/voice-webhook',
-    client_state: JSON.stringify({
-      business_id: 'demo-business-id',
-      agent_id: 'demo-agent-id',
-      call_type: 'click_to_call',
-      source: 'click_to_call'
-    })
+    webhook_failover_url: 'https://cloudgreet.com/api/telnyx/voice-webhook'
   };
 
-  console.log('📞 Call payload:', JSON.stringify(callPayload, null, 2));
+  console.log('📞 Call payload (using outbound_voice_profile_id):', JSON.stringify(callPayload, null, 2));
 
   try {
     const response = await fetch('https://api.telnyx.com/v2/calls', {
@@ -38,7 +32,6 @@ async function testTelnyxCall() {
     });
 
     console.log('📞 Response status:', response.status);
-    console.log('📞 Response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -55,4 +48,4 @@ async function testTelnyxCall() {
   }
 }
 
-testTelnyxCall();
+testDifferentEndpoint();

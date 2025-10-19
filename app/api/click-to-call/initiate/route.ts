@@ -48,37 +48,29 @@ export async function POST(request: NextRequest) {
     // Use your real toll-free number
     const fromNumber = '+18333956731'
     
-    // Use the correct Call Control App ID (not regular connection ID)
-    const connectionId = '2786688063168841616'
+    // Use the Connection ID from environment (this is the voice profile you mentioned)
+    const connectionId = process.env.TELNYX_CONNECTION_ID || '2786691125270807749'
     
     console.log('📞 Environment TELNYX_CONNECTION_ID:', process.env.TELNYX_CONNECTION_ID)
     console.log('📞 Environment TELNYX_API_KEY exists:', !!process.env.TELNYX_API_KEY)
-    console.log('📞 Using connection ID:', connectionId)
+    console.log('📞 Using Connection ID:', connectionId)
     console.log('📞 Using toll-free number:', fromNumber)
     console.log('📞 All environment variables:', Object.keys(process.env).filter(key => key.includes('TELNYX')))
     
-    if (!connectionId) {
-      console.error('❌ TELNYX_CONNECTION_ID not configured')
+    if (!process.env.TELNYX_API_KEY) {
+      console.error('❌ TELNYX_API_KEY not configured')
       return NextResponse.json({
-        error: 'Telnyx connection not configured'
+        error: 'Telnyx API key not configured'
       }, { status: 503 })
     }
 
-           // Create Telnyx outbound call using Call Control API v2
-           // Use a working webhook URL that Telnyx can validate
-           const callPayload = {
-             to: formattedPhone,
-             from: fromNumber,
-             call_control_application_id: connectionId,
-             webhook_url: `https://httpbin.org/post`,
-             webhook_failover_url: `https://httpbin.org/post`,
-             client_state: JSON.stringify({
-               business_id: businessId,
-               agent_id: agentId,
-               call_type: 'click_to_call',
-               source: 'click_to_call'
-             })
-           }
+    // Create the call payload for Telnyx API v2 (October 2025)
+    // Use connection_id parameter as required by current Telnyx API v2
+    const callPayload = {
+      to: formattedPhone,
+      from: fromNumber,
+      connection_id: '2786688063168841616'
+    }
 
     console.log('📞 Creating Telnyx outbound call:', callPayload)
     console.log('📞 API Key exists:', !!process.env.TELNYX_API_KEY)
@@ -86,52 +78,6 @@ export async function POST(request: NextRequest) {
     console.log('📞 Connection ID being used:', connectionId)
     console.log('📞 From number being used:', fromNumber)
     console.log('📞 To number being used:', formattedPhone)
-
-    // First, let's verify the connection exists and get Call Control Apps
-    console.log('📞 Verifying connection exists...')
-    
-    // Check regular connections
-    const connectionCheckResponse = await fetch('https://api.telnyx.com/v2/connections', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (connectionCheckResponse.ok) {
-      const connections = await connectionCheckResponse.json()
-      console.log('📞 Available connections:', connections.data?.map((c: any) => ({ id: c.id, name: c.connection_name, type: c.connection_type })))
-      const foundConnection = connections.data?.find((c: any) => c.id === connectionId)
-      console.log('📞 Connection found:', !!foundConnection)
-      if (foundConnection) {
-        console.log('📞 Connection details:', { id: foundConnection.id, name: foundConnection.connection_name, active: foundConnection.active, type: foundConnection.connection_type })
-      }
-    } else {
-      console.log('📞 Failed to fetch connections:', connectionCheckResponse.status)
-    }
-
-    // Check Call Control Apps specifically
-    console.log('📞 Checking Call Control Apps...')
-    const callControlResponse = await fetch('https://api.telnyx.com/v2/call_control_applications', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (callControlResponse.ok) {
-      const callControlApps = await callControlResponse.json()
-      console.log('📞 Available Call Control Apps:', callControlApps.data?.map((c: any) => ({ id: c.id, name: c.application_name, active: c.active })))
-      const foundCallControlApp = callControlApps.data?.find((c: any) => c.id === connectionId)
-      console.log('📞 Call Control App found:', !!foundCallControlApp)
-      if (foundCallControlApp) {
-        console.log('📞 Call Control App details:', { id: foundCallControlApp.id, name: foundCallControlApp.application_name, active: foundCallControlApp.active })
-      }
-    } else {
-      console.log('📞 Failed to fetch Call Control Apps:', callControlResponse.status)
-    }
 
     // Test webhook accessibility first
     console.log('📞 Testing webhook accessibility...')

@@ -9,12 +9,7 @@ import {
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
-import dynamic from 'next/dynamic'
-
-      const ClickToCallOrb = dynamic(() => import('../components/ClickToCallOrb'), {
-        ssr: false,
-        loading: () => <div className="w-80 h-80 bg-black border border-gray-700 rounded-full animate-pulse flex items-center justify-center"><div className="text-white">Loading Voice AI...</div></div>
-      })
+import ClickToCallOrb from '../components/ClickToCallOrb'
 import RoiCalculator from '../components/RoiCalculator'
 
 function VoiceOrbDemoWithSettings() {

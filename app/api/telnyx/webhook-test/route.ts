@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-// Simple webhook test endpoint that always returns 200 OK
+// Simple webhook endpoint for Telnyx validation
 export async function GET() {
-  return NextResponse.json({
+  return NextResponse.json({ 
     status: 'ok',
-    message: 'Telnyx webhook test endpoint is active',
+    message: 'Webhook test endpoint is active',
     timestamp: new Date().toISOString()
   })
 }
@@ -14,18 +14,19 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('📞 Webhook received:', body)
+    console.log('📞 Webhook test received:', JSON.stringify(body, null, 2))
     
-    return NextResponse.json({
-      status: 'ok',
-      message: 'Webhook processed successfully',
+    return NextResponse.json({ 
+      status: 'received',
+      message: 'Webhook test successful',
       timestamp: new Date().toISOString()
     })
   } catch (error) {
-    console.error('❌ Webhook error:', error)
-    return NextResponse.json({
+    console.error('❌ Webhook test error:', error)
+    return NextResponse.json({ 
       status: 'error',
-      message: 'Webhook processing failed'
+      message: 'Webhook test failed',
+      timestamp: new Date().toISOString()
     }, { status: 500 })
   }
 }

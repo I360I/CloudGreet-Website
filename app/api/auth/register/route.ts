@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (authError) {
-      if (authError.message.includes('already registered')) {
+      if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
         return NextResponse.json(
           { error: { code: 'EMAIL_EXISTS', message: 'An account with this email already exists' } },
           { status: 409 }

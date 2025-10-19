@@ -2,9 +2,8 @@ require('dotenv').config({ path: '.env.local' });
 
 const fetch = require('node-fetch');
 
-async function testTelnyxCall() {
-  console.log('🔍 Testing Telnyx Call Creation...');
-  console.log('TELNYX_API_KEY exists:', !!process.env.TELNYX_API_KEY);
+async function testNewCallControl() {
+  console.log('🔍 Testing new Call Control App...');
   
   if (!process.env.TELNYX_API_KEY) {
     console.error('❌ TELNYX_API_KEY not found in environment');
@@ -14,7 +13,7 @@ async function testTelnyxCall() {
   const callPayload = {
     to: '+15551234567',
     from: '+18333956731',
-    call_control_application_id: '2786688063168841616',
+    call_control_application_id: '2809320004305028164',
     webhook_url: 'https://cloudgreet.com/api/telnyx/voice-webhook',
     webhook_failover_url: 'https://cloudgreet.com/api/telnyx/voice-webhook',
     client_state: JSON.stringify({
@@ -38,7 +37,6 @@ async function testTelnyxCall() {
     });
 
     console.log('📞 Response status:', response.status);
-    console.log('📞 Response headers:', Object.fromEntries(response.headers.entries()));
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -55,4 +53,4 @@ async function testTelnyxCall() {
   }
 }
 
-testTelnyxCall();
+testNewCallControl();

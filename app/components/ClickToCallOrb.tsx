@@ -27,10 +27,10 @@ export default function ClickToCallOrb({
   
   const phoneInputRef = useRef<HTMLInputElement>(null)
 
-  // Phone number validation
+  // Phone number validation - more lenient
   const isValidPhoneNumber = (phone: string) => {
-    const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/
-    return phoneRegex.test(phone.replace(/\s/g, ''))
+    const cleaned = phone.replace(/\D/g, '')
+    return cleaned.length >= 10 && cleaned.length <= 15
   }
 
   // Format phone number for display
@@ -113,7 +113,7 @@ export default function ClickToCallOrb({
   }
 
   return (
-    <div className="relative w-full max-w-md mx-auto" style={{ zIndex: 1000 }}>
+    <div className="relative w-full max-w-md mx-auto">
       {/* Main Orb Container */}
       <motion.div
         className="relative w-80 h-80 mx-auto"
@@ -178,6 +178,7 @@ export default function ClickToCallOrb({
           `}
           whileHover={!isCalling ? { scale: 1.05 } : {}}
           whileTap={!isCalling ? { scale: 0.95 } : {}}
+          style={{ zIndex: 1000 }}
         >
           {/* Orb Content */}
           <div className="text-center">
@@ -301,13 +302,28 @@ export default function ClickToCallOrb({
       {/* Phone Number Form */}
       <AnimatePresence>
         {showForm && !isCalling && !callSuccess && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-8 w-80 bg-black/80 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl z-50"
-          >
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+              style={{ zIndex: 9998 }}
+              onClick={() => {
+                setShowForm(false)
+                setPhoneNumber('')
+                setError('')
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl"
+              style={{ zIndex: 9999 }}
+            >
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-white text-sm font-medium mb-2">
@@ -368,23 +384,49 @@ export default function ClickToCallOrb({
       {/* Success Message */}
       <AnimatePresence>
         {callSuccess && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="absolute top-full left-1/2 transform -translate-x-1/2 mt-8 w-80 bg-green-600/20 backdrop-blur-xl border border-green-400/30 rounded-2xl p-6 shadow-2xl z-50"
-          >
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+              style={{ zIndex: 9998 }}
+              onClick={() => {
+                setCallSuccess(false)
+                setPhoneNumber('')
+                setError('')
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 bg-green-600/20 backdrop-blur-xl border border-green-400/30 rounded-2xl p-6 shadow-2xl"
+              style={{ zIndex: 9999 }}
+            >
             <div className="text-center">
               <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-white mb-2">Call Initiated!</h3>
               <p className="text-green-300 mb-3">
                 Check your phone - you should receive a call from our AI receptionist shortly.
               </p>
-              <p className="text-sm text-green-400">
+              <p className="text-sm text-green-400 mb-4">
                 From: +1 (833) 395-6731
               </p>
+              <button
+                onClick={() => {
+                  setCallSuccess(false)
+                  setPhoneNumber('')
+                  setError('')
+                }}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+              >
+                Close
+              </button>
             </div>
           </motion.div>
+        </>
         )}
       </AnimatePresence>
     </div>
