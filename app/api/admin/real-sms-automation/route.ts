@@ -38,6 +38,14 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
+    // Debug: Check if messaging profile ID is available
+    if (!process.env.TELNYX_MESSAGING_PROFILE_ID) {
+      return NextResponse.json({ 
+        error: 'Messaging profile not configured',
+        message: 'TELNYX_MESSAGING_PROFILE_ID environment variable is missing'
+      }, { status: 503 })
+    }
+
     // For test leads, use your phone number directly
     let phoneNumber
     if (leadId === 'test-lead-id') {
