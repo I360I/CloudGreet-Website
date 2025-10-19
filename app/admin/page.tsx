@@ -170,43 +170,30 @@ export default function AdminDashboardPage() {
 
   const startRealSMSAutomation = async () => {
     try {
-      // Get a lead to send real SMS to
-      const leadsResponse = await fetch('/api/apollo-killer/leads', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
+      // Send test SMS to your phone number
+      const smsResponse = await fetch('/api/admin/real-sms-automation', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          leadId: 'test-lead-id',
+          message: 'Test SMS from CloudGreet! This is a real SMS sent via Telnyx.',
+          campaignId: 'test-campaign'
+        })
       })
 
-      if (leadsResponse.ok) {
-        const leadsData = await leadsResponse.json()
-        const firstLead = leadsData.leads?.[0]
-        
-        if (firstLead) {
-          // Send REAL SMS to the lead
-          const smsResponse = await fetch('/api/admin/real-sms-automation', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-              'Content-Type': 'application/json'
-            },
-                                        body: JSON.stringify({
-              leadId: firstLead.id,
-              message: `Hi ${firstLead.business_name}, I'm reaching out about your ${firstLead.business_type} business. Would you be interested in learning about our AI receptionist service that can handle your calls 24/7?`,
-              campaignId: 'real-automation'
-            })
-          })
-
-          if (smsResponse.ok) {
-            alert('✅ Real SMS sent successfully! Check your Telnyx dashboard.')
-            loadRealMoneyData() // Refresh data
-                                      } else {
-            alert('❌ Failed to send SMS. Check Telnyx configuration.')
-          }
-                                      } else {
-          alert('❌ No leads found to send SMS to.')
-        }
-                                      }
-                                    } catch (error) {
-      console.error('Failed to send real SMS:', error)
-      alert('❌ SMS automation failed. Check configuration.')
+      if (smsResponse.ok) {
+        const smsData = await smsResponse.json()
+        alert(`✅ SMS sent successfully! Message ID: ${smsData.data?.messageId}`)
+      } else {
+        const errorData = await smsResponse.json()
+        alert(`❌ SMS failed: ${errorData.error}`)
+      }
+    } catch (error) {
+      console.error('SMS automation error:', error)
+      alert('❌ Failed to send SMS. Check console for details.')
     }
   }
 

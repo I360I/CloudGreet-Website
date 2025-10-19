@@ -38,17 +38,24 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Get lead data from database
-    const { data: lead, error: leadError } = await supabaseAdmin
-      .from('enriched_leads')
-      .select('*')
-      .eq('id', leadId)
-      .single()
+    // For test leads, use your phone number directly
+    let phoneNumber
+    if (leadId === 'test-lead-id') {
+      phoneNumber = process.env.PERSONAL_PHONE || '+17372960092'
+    } else {
+      // Get lead data from database
+      const { data: lead, error: leadError } = await supabaseAdmin
+        .from('enriched_leads')
+        .select('*')
+        .eq('id', leadId)
+        .single()
 
-    if (leadError || !lead) {
-      return NextResponse.json({ 
-        error: 'Lead not found' 
-      }, { status: 404 })
+      if (leadError || !lead) {
+        return NextResponse.json({ 
+          error: 'Lead not found' 
+        }, { status: 404 })
+      }
+      phoneNumber = lead.phone
     }
 
     // Send REAL SMS via Telnyx
@@ -59,7 +66,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        to: lead.phone,
+        to: phoneNumber,
         from: process.env.NEXT_PUBLIC_BUSINESS_PHONE_RAW || '+18333956731',
         text: message,
         messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
