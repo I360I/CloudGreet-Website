@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { verifyAdminToken } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +16,6 @@ export async function POST(request: NextRequest) {
     const token = authHeader.split(' ')[1]
     
     // Verify JWT token instead of raw password
-    const { verifyAdminToken } = require('@/lib/admin-auth')
     const adminPayload = verifyAdminToken(token)
     
     if (!adminPayload) {
