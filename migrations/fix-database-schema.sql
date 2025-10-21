@@ -55,8 +55,13 @@ ALTER TABLE businesses ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME Z
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- 7. Create demo business and agent if they don't exist
--- First, ensure businesses table has proper primary key
-ALTER TABLE businesses ADD CONSTRAINT IF NOT EXISTS businesses_pkey PRIMARY KEY (id);
+-- First, ensure businesses table has proper primary key (only if it doesn't exist)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'businesses_pkey') THEN
+        ALTER TABLE businesses ADD CONSTRAINT businesses_pkey PRIMARY KEY (id);
+    END IF;
+END $$;
 
 -- Insert demo business (check if it exists first)
 INSERT INTO businesses (id, business_name, business_type, owner_name, phone_number, email, address, business_hours, services, service_areas, greeting_message, created_at, updated_at)
