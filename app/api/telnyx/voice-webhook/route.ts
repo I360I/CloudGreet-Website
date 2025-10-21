@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Extract basic call information
+    // Extract call information
     const {
       data: {
         event_type,
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     const callId = call_control_id || call_leg_id
 
-    logger.info('Voice webhook received', { 
+    logger.info('Premium voice webhook received', { 
       event_type, 
       callId, 
       from, 
@@ -42,26 +42,16 @@ export async function POST(request: NextRequest) {
       state 
     })
 
-    // Handle call.answered event - ULTRA SIMPLE
+    // Handle call.answered event - PREMIUM REALTIME AI
     if (event_type === 'call.answered') {
       return NextResponse.json({
         call_id: callId,
         status: 'answered',
         instructions: [
           {
-            instruction: 'say',
-            text: 'Thank you for calling CloudGreet Demo! How can I help you today?',
-            voice: 'alloy'
-          },
-          {
-            instruction: 'gather',
-            input: ['speech'],
-            timeout: 15,
-            speech_timeout: 'auto',
-            speech_model: 'default',
-            action_on_empty_result: true,
-            finish_on_key: '#',
-            action: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
+            instruction: 'stream_audio',
+            stream_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/realtime-stream`,
+            stream_url_method: 'POST'
           }
         ]
       })
@@ -69,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Handle call.hangup event
     if (event_type === 'call.hangup') {
-      logger.info('Call ended', { 
+      logger.info('Premium call ended', { 
         callId, 
         from, 
         to
@@ -88,18 +78,17 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Voice webhook error', { 
+    logger.error('Premium voice webhook error', { 
       error: error instanceof Error ? error.message : 'Unknown error'
     })
     
-    // Return simple error response
     return NextResponse.json({
       call_id: 'unknown',
       status: 'error',
       instructions: [
         {
           instruction: 'say',
-          text: 'Sorry, we\'re experiencing technical difficulties. Please try again later.',
+          text: 'Thank you for calling CloudGreet. Our AI system is currently being configured. Please try again later.',
           voice: 'alloy'
         },
         {
