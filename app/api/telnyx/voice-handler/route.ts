@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       logger.error('OpenAI API key not configured for voice handler');
       return NextResponse.json({
         call_id: 'unknown',
-        status: 'active',
+        call_status: 'active',
         instructions: [
           { instruction: 'say', text: 'Thank you for calling. Our AI system is currently being configured. Please try again later.', voice: 'alloy' },
           { instruction: 'hangup' }
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       logger.error('Call not found in voice handler', { callId, error: callError })
       return NextResponse.json({
         call_id: callId,
-        status: 'error',
+        call_status: 'error',
         instructions: [
           {
             instruction: 'say',
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       logger.error('Business or agent not found', { callId, businessId: call.business_id })
       return NextResponse.json({
         call_id: callId,
-        status: 'error',
+        call_status: 'error',
         instructions: [
           {
             instruction: 'say',
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     if (!userSpeech) {
       return NextResponse.json({
         call_id: callId,
-        status: 'active',
+        call_status: 'active',
         instructions: [
           {
             instruction: 'say',
@@ -426,7 +426,7 @@ NOW GO BE THE BEST RECEPTIONIST EVER! 🚀`
         call_id: callId,
         caller_phone: from,
         user_message: userSpeech,
-        ai_response: aiResponse,
+        transcript: aiResponse,
         conversation_context: 'phone_call',
         ai_model: config.ai_model || 'gpt-4-turbo-preview',
         created_at: new Date().toISOString()
@@ -613,7 +613,7 @@ RULES:
     if (needsEscalation && business.escalation_phone) {
       return NextResponse.json({
         call_id: callId,
-        status: 'escalating',
+        call_status: 'escalating',
         instructions: [
           {
             instruction: 'say',
@@ -637,7 +637,7 @@ RULES:
     if (isComplete) {
       return NextResponse.json({
         call_id: callId,
-        status: 'complete',
+        call_status: 'complete',
         instructions: [
           {
             instruction: 'say',
@@ -659,7 +659,7 @@ RULES:
     // Continue conversation
     return NextResponse.json({
       call_id: callId,
-      status: 'active',
+      call_status: 'active',
       booking_intent: hasBookingIntent,
       instructions: [
         {
@@ -690,7 +690,7 @@ RULES:
     
     return NextResponse.json({
       call_id: 'unknown',
-      status: 'error',
+      call_status: 'error',
       instructions: [
         {
           instruction: 'say',
@@ -701,6 +701,6 @@ RULES:
           instruction: 'hangup'
         }
       ]
-    }, { status: 500 })
+    }, { call_status: 500 })
   }
 }

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     if (!phoneNumber || !businessName) {
       return NextResponse.json({ 
         error: 'Phone number and business name are required' 
-      }, { status: 400 })
+      }, { call_status: 400 })
     }
 
     // Validate phone number format
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     if (cleanPhone.length < 10) {
       return NextResponse.json({ 
         error: 'Please enter a valid phone number' 
-      }, { status: 400 })
+      }, { call_status: 400 })
     }
 
     // Format phone number for Telnyx
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Telnyx API key not configured')
       return NextResponse.json({ 
         error: 'Telnyx not configured' 
-      }, { status: 503 })
+      }, { call_status: 503 })
     }
 
       // Create AI conversation session for demo call
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ TELYNX_API_KEY not configured')
       return NextResponse.json({
         error: 'Telnyx API key not configured'
-      }, { status: 503 })
+      }, { call_status: 503 })
     }
 
     // Create the call payload for Telnyx API v2 (October 2025)
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
     if (!telnyxResponse.ok) {
       const errorData = await telnyxResponse.text()
       console.error('❌ Telnyx API error:', {
-        status: telnyxResponse.status,
+        call_status: telnyxResponse.status,
         statusText: telnyxResponse.statusText,
         error: errorData,
         payload: callPayload,
@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json({
         error: errorMessage
-      }, { status: 500 })
+      }, { call_status: 500 })
     }
 
     const callData = await telnyxResponse.json()
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
         call_id: callData.data.call_control_id,
         customer_phone: formattedPhone,
         agent_id: aiSession.sessionId,
-        call_status: 'initiated',
+        call_call_status: 'initiated',
         transcript: aiSession.aiResponse,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -306,7 +306,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: false,
       error: error.message || 'Failed to initiate call'
-    }, { status: 500 })
+    }, { call_status: 500 })
   }
 }
 

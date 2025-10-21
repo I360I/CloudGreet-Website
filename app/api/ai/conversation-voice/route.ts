@@ -249,7 +249,7 @@ Remember: This is a PHONE CALL. Keep responses brief, natural, and conversationa
       await supabaseAdmin
         .from('calls')
         .update({
-          transcription_text: `User: ${message}\nAI: ${cleanResponse}`,
+          transcript: `User: ${message}\nAI: ${cleanResponse}`,
           updated_at: new Date().toISOString()
         })
         .eq('call_id', callId)

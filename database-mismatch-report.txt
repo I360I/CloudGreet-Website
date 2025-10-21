@@ -1,0 +1,852 @@
+DATABASE COLUMN MISMATCH REPORT
+Generated: 2025-10-21T07:31:44.653Z
+
+1. app\api\admin\analytics\route.ts:19
+   Table: calls
+   Column: data
+   Code: const { data: appointments } = await supabaseAdmin
+
+2. app\api\admin\analytics\route.ts:23
+   Table: calls
+   Column: data
+   Code: const { data: businesses } = await supabaseAdmin
+
+3. app\api\admin\analytics\route.ts:27
+   Table: businesses
+   Column: data
+   Code: const { data: smsLogs } = await supabaseAdmin
+
+4. app\api\admin\automation\stats\route.ts:45
+   Table: calls
+   Column: stats
+   Code: console.error('Error fetching automation stats:', { rulesError, activeRulesError, executionsError, leadsError, emailsError, callsError })
+
+5. app\api\admin\clients\route.ts:56
+   Table: calls
+   Column: count
+   Code: .select('*', { count: 'exact', head: true })
+
+6. app\api\admin\clients\route.ts:56
+   Table: calls
+   Column: head
+   Code: .select('*', { count: 'exact', head: true })
+
+7. app\api\admin\clients\route.ts:60
+   Table: calls
+   Column: count
+   Code: const { count: appointmentsCount } = await supabaseAdmin
+
+8. app\api\admin\clients\route.ts:62
+   Table: calls
+   Column: count
+   Code: .select('*', { count: 'exact', head: true })
+
+9. app\api\admin\clients\route.ts:62
+   Table: calls
+   Column: head
+   Code: .select('*', { count: 'exact', head: true })
+
+10. app\api\admin\leads\route.ts:34
+   Table: businesses
+   Column: count
+   Code: .select('*', { count: 'exact' })
+
+11. app\api\admin\leads\route.ts:35
+   Table: businesses
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+12. app\api\admin\message-client\route.ts:29
+   Table: businesses
+   Column: error
+   Code: return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+
+13. app\api\admin\message-client\route.ts:29
+   Table: businesses
+   Column: status
+   Code: return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+
+14. app\api\admin\onboard-client\route.ts:54
+   Table: toll_free_numbers
+   Column: data
+   Code: const { data: aiAgent, error: aiError } = await supabaseAdmin
+
+15. app\api\admin\onboard-client\route.ts:54
+   Table: toll_free_numbers
+   Column: error
+   Code: const { data: aiAgent, error: aiError } = await supabaseAdmin
+
+16. app\api\admin\stats\route.ts:25
+   Table: businesses
+   Column: data
+   Code: const { data: appointments } = await supabaseAdmin
+
+17. app\api\admin\stats\route.ts:29
+   Table: businesses
+   Column: data
+   Code: const { data: calls } = await supabaseAdmin
+
+18. app\api\admin\stats\route.ts:33
+   Table: calls
+   Column: data
+   Code: const { data: smsLogs } = await supabaseAdmin
+
+19. app\api\admin\system-health\route.ts:28
+   Table: businesses
+   Column: headers
+   Code: headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` }
+
+20. app\api\admin\test-features\route.ts:186
+   Table: businesses
+   Column: error
+   Code: throw new Error(`Database error: ${dbError.message}`)
+
+21. app\api\admin\toll-free-numbers\route.ts:20
+   Table: toll_free_numbers
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+22. app\api\admin\toll-free-numbers\route.ts:26
+   Table: toll_free_numbers
+   Column: error
+   Code: return NextResponse.json({ error: 'Failed to fetch numbers' }, { status: 500 })
+
+23. app\api\admin\toll-free-numbers\route.ts:78
+   Table: toll_free_numbers
+   Column: error
+   Code: return NextResponse.json({ error: 'Failed to add numbers' }, { status: 500 })
+
+24. app\api\agent\activate\route.ts:43
+   Table: businesses
+   Column: error
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+25. app\api\agent\activate\route.ts:43
+   Table: businesses
+   Column: status
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+26. app\api\agent\activate\route.ts:57
+   Table: ai_agents
+   Column: data
+   Code: const { data: updatedAgent, error: updateError } = await supabaseAdmin
+
+27. app\api\agent\activate\route.ts:57
+   Table: ai_agents
+   Column: error
+   Code: const { data: updatedAgent, error: updateError } = await supabaseAdmin
+
+28. app\api\agent\update-working\route.ts:70
+   Table: businesses
+   Column: status
+   Code: }, { status: 404 })
+
+29. app\api\agent\update-working\route.ts:126
+   Table: ai_agents
+   Column: failed
+   Code: throw new Error(`Database update failed: ${updateError.message}`)
+
+30. app\api\ai\conversation\route.ts:58
+   Table: businesses
+   Column: data
+   Code: const { data: agent, error: agentError } = await supabaseAdmin
+
+31. app\api\ai\conversation\route.ts:58
+   Table: businesses
+   Column: error
+   Code: const { data: agent, error: agentError } = await supabaseAdmin
+
+32. app\api\ai\conversation-voice\route.ts:45
+   Table: ai_agents
+   Column: error
+   Code: logger.error('Active AI agent not found for voice call', { businessId, error: agentError })
+
+33. app\api\ai\conversation-voice\route.ts:59
+   Table: businesses
+   Column: error
+   Code: logger.error('Business not found for voice call', { businessId, error: businessError })
+
+34. app\api\ai\conversation-voice\route.ts:191
+   Table: businesses
+   Column: https
+   Code: await fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'https://cloudgreet.com'}/api/billing/per-booking`, {
+
+35. app\api\ai\conversation-voice\route.ts:252
+   Table: calls
+   Column: transcription_text
+   Code: transcription_text: `User: ${message}\nAI: ${cleanResponse}`,
+
+36. app\api\ai\conversation-voice\route.ts:252
+   Table: calls
+   Column: User
+   Code: transcription_text: `User: ${message}\nAI: ${cleanResponse}`,
+
+37. app\api\ai\conversation-voice\route.ts:252
+   Table: calls
+   Column: nAI
+   Code: transcription_text: `User: ${message}\nAI: ${cleanResponse}`,
+
+38. app\api\ai-agent\analytics\route.ts:61
+   Table: calls
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+39. app\api\ai-agent\test\route.ts:68
+   Table: ai_agents
+   Column: status
+   Code: }, { status: 404 })
+
+40. app\api\ai-agent\test\route.ts:82
+   Table: businesses
+   Column: status
+   Code: }, { status: 404 })
+
+41. app\api\ai-agent\update\route.ts:67
+   Table: businesses
+   Column: status
+   Code: }, { status: 404 })
+
+42. app\api\ai-agent\update-settings\route.ts:115
+   Table: businesses
+   Column: status
+   Code: }, { status: 404 })
+
+43. app\api\ai-agent\update-settings\route.ts:174
+   Table: ai_agents
+   Column: failed
+   Code: throw new Error(`Database update failed: ${updateError.message}`)
+
+44. app\api\ai-intelligence\predictive\route.ts:52
+   Table: businesses
+   Column: status
+   Code: }, { status: 404 })
+
+45. app\api\ai-intelligence\predictive\route.ts:64
+   Table: businesses
+   Column: data
+   Code: const { data: calls } = await supabaseAdmin
+
+46. app\api\ai-intelligence\predictive\route.ts:69
+   Table: calls
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+47. app\api\ai-intelligence\predictive\route.ts:71
+   Table: calls
+   Column: data
+   Code: const { data: appointments } = await supabaseAdmin
+
+48. app\api\analytics\attribution\route.ts:127
+   Table: unknown
+   Column: source
+   Code: .from('lead_sources')
+
+49. app\api\analytics\attribution\route.ts:340
+   Table: unknown
+   Column: source
+   Code: .from('lead_sources')
+
+50. app\api\analytics\attribution\route.ts:362
+   Table: unknown
+   Column: source
+   Code: .from('lead_sources')
+
+51. app\api\analytics\attribution\route.ts:383
+   Table: unknown
+   Column: source
+   Code: .from('lead_sources')
+
+52. app\api\analytics\business\route.ts:57
+   Table: calls
+   Column: data
+   Code: const { data: appointments, error: appointmentsError } = await supabaseAdmin
+
+53. app\api\analytics\business\route.ts:57
+   Table: calls
+   Column: error
+   Code: const { data: appointments, error: appointmentsError } = await supabaseAdmin
+
+54. app\api\apollo-killer\campaigns\route.ts:160
+   Table: unknown
+   Column: status
+   Code: .update({ status, ...updates })
+
+55. app\api\appointments\ai-book\route.ts:54
+   Table: businesses
+   Column: error
+   Code: logger.error('Business not found for AI booking', { businessId, error: businessError })
+
+56. app\api\billing\per-booking\route.ts:232
+   Table: businesses
+   Column: data
+   Code: const { data: bookingFees } = await supabaseAdmin
+
+57. app\api\business\profile\route.ts:71
+   Table: businesses
+   Column: error
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+58. app\api\business\profile\route.ts:71
+   Table: businesses
+   Column: status
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+59. app\api\calls\history\route.ts:50
+   Table: calls
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+60. app\api\calls\history\route.ts:72
+   Table: calls
+   Column: count
+   Code: .select('*', { count: 'exact', head: true })
+
+61. app\api\calls\history\route.ts:72
+   Table: calls
+   Column: head
+   Code: .select('*', { count: 'exact', head: true })
+
+62. app\api\calls\history\route.ts:79
+   Table: calls
+   Column: error
+   Code: const { count, error: countError } = await countQuery
+
+63. app\api\calls\missed-recovery\route.ts:30
+   Table: businesses
+   Column: error
+   Code: logger.error('Business not found for missed call recovery', { businessId, error: businessError })
+
+64. app\api\calls\route.ts:67
+   Table: calls
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+65. app\api\calls\transcripts\route.ts:46
+   Table: calls
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+66. app\api\click-to-call\initiate\route.ts:77
+   Table: businesses
+   Column: data
+   Code: const { data: demoBusiness, error: businessError } = await supabaseAdmin
+
+67. app\api\click-to-call\initiate\route.ts:77
+   Table: businesses
+   Column: error
+   Code: const { data: demoBusiness, error: businessError } = await supabaseAdmin
+
+68. app\api\click-to-call\initiate\route.ts:116
+   Table: businesses
+   Column: mon
+   Code: mon: { open: '00:00', close: '23:59' },
+
+69. app\api\click-to-call\initiate\route.ts:116
+   Table: businesses
+   Column: open
+   Code: mon: { open: '00:00', close: '23:59' },
+
+70. app\api\click-to-call\initiate\route.ts:116
+   Table: businesses
+   Column: 00
+   Code: mon: { open: '00:00', close: '23:59' },
+
+71. app\api\click-to-call\initiate\route.ts:116
+   Table: businesses
+   Column: close
+   Code: mon: { open: '00:00', close: '23:59' },
+
+72. app\api\click-to-call\initiate\route.ts:116
+   Table: businesses
+   Column: 23
+   Code: mon: { open: '00:00', close: '23:59' },
+
+73. app\api\click-to-call\initiate\route.ts:117
+   Table: businesses
+   Column: tue
+   Code: tue: { open: '00:00', close: '23:59' },
+
+74. app\api\click-to-call\initiate\route.ts:117
+   Table: businesses
+   Column: open
+   Code: tue: { open: '00:00', close: '23:59' },
+
+75. app\api\click-to-call\initiate\route.ts:117
+   Table: businesses
+   Column: 00
+   Code: tue: { open: '00:00', close: '23:59' },
+
+76. app\api\click-to-call\initiate\route.ts:117
+   Table: businesses
+   Column: close
+   Code: tue: { open: '00:00', close: '23:59' },
+
+77. app\api\click-to-call\initiate\route.ts:117
+   Table: businesses
+   Column: 23
+   Code: tue: { open: '00:00', close: '23:59' },
+
+78. app\api\click-to-call\initiate\route.ts:118
+   Table: businesses
+   Column: wed
+   Code: wed: { open: '00:00', close: '23:59' },
+
+79. app\api\click-to-call\initiate\route.ts:118
+   Table: businesses
+   Column: open
+   Code: wed: { open: '00:00', close: '23:59' },
+
+80. app\api\click-to-call\initiate\route.ts:118
+   Table: businesses
+   Column: 00
+   Code: wed: { open: '00:00', close: '23:59' },
+
+81. app\api\click-to-call\initiate\route.ts:118
+   Table: businesses
+   Column: close
+   Code: wed: { open: '00:00', close: '23:59' },
+
+82. app\api\click-to-call\initiate\route.ts:118
+   Table: businesses
+   Column: 23
+   Code: wed: { open: '00:00', close: '23:59' },
+
+83. app\api\click-to-call\initiate\route.ts:119
+   Table: businesses
+   Column: thu
+   Code: thu: { open: '00:00', close: '23:59' },
+
+84. app\api\click-to-call\initiate\route.ts:119
+   Table: businesses
+   Column: open
+   Code: thu: { open: '00:00', close: '23:59' },
+
+85. app\api\click-to-call\initiate\route.ts:119
+   Table: businesses
+   Column: 00
+   Code: thu: { open: '00:00', close: '23:59' },
+
+86. app\api\click-to-call\initiate\route.ts:119
+   Table: businesses
+   Column: close
+   Code: thu: { open: '00:00', close: '23:59' },
+
+87. app\api\click-to-call\initiate\route.ts:119
+   Table: businesses
+   Column: 23
+   Code: thu: { open: '00:00', close: '23:59' },
+
+88. app\api\click-to-call\initiate\route.ts:120
+   Table: businesses
+   Column: fri
+   Code: fri: { open: '00:00', close: '23:59' },
+
+89. app\api\click-to-call\initiate\route.ts:120
+   Table: businesses
+   Column: open
+   Code: fri: { open: '00:00', close: '23:59' },
+
+90. app\api\click-to-call\initiate\route.ts:120
+   Table: businesses
+   Column: 00
+   Code: fri: { open: '00:00', close: '23:59' },
+
+91. app\api\click-to-call\initiate\route.ts:120
+   Table: businesses
+   Column: close
+   Code: fri: { open: '00:00', close: '23:59' },
+
+92. app\api\click-to-call\initiate\route.ts:120
+   Table: businesses
+   Column: 23
+   Code: fri: { open: '00:00', close: '23:59' },
+
+93. app\api\click-to-call\initiate\route.ts:121
+   Table: businesses
+   Column: sat
+   Code: sat: { open: '00:00', close: '23:59' },
+
+94. app\api\click-to-call\initiate\route.ts:121
+   Table: businesses
+   Column: open
+   Code: sat: { open: '00:00', close: '23:59' },
+
+95. app\api\click-to-call\initiate\route.ts:121
+   Table: businesses
+   Column: 00
+   Code: sat: { open: '00:00', close: '23:59' },
+
+96. app\api\click-to-call\initiate\route.ts:121
+   Table: businesses
+   Column: close
+   Code: sat: { open: '00:00', close: '23:59' },
+
+97. app\api\click-to-call\initiate\route.ts:121
+   Table: businesses
+   Column: 23
+   Code: sat: { open: '00:00', close: '23:59' },
+
+98. app\api\click-to-call\initiate\route.ts:122
+   Table: businesses
+   Column: sun
+   Code: sun: { open: '00:00', close: '23:59' }
+
+99. app\api\click-to-call\initiate\route.ts:122
+   Table: businesses
+   Column: open
+   Code: sun: { open: '00:00', close: '23:59' }
+
+100. app\api\click-to-call\initiate\route.ts:122
+   Table: businesses
+   Column: 00
+   Code: sun: { open: '00:00', close: '23:59' }
+
+101. app\api\click-to-call\initiate\route.ts:122
+   Table: businesses
+   Column: close
+   Code: sun: { open: '00:00', close: '23:59' }
+
+102. app\api\click-to-call\initiate\route.ts:122
+   Table: businesses
+   Column: 23
+   Code: sun: { open: '00:00', close: '23:59' }
+
+103. app\api\click-to-call\initiate\route.ts:144
+   Table: ai_agents
+   Column: data
+   Code: const { data: demoAgent, error: agentError } = await supabaseAdmin
+
+104. app\api\click-to-call\initiate\route.ts:144
+   Table: ai_agents
+   Column: error
+   Code: const { data: demoAgent, error: agentError } = await supabaseAdmin
+
+105. app\api\dashboard\analytics\route.ts:48
+   Table: businesses
+   Column: success
+   Code: { success: false, error: 'Business not found' },
+
+106. app\api\dashboard\analytics\route.ts:48
+   Table: businesses
+   Column: error
+   Code: { success: false, error: 'Business not found' },
+
+107. app\api\dashboard\analytics\route.ts:49
+   Table: businesses
+   Column: status
+   Code: { status: 404 }
+
+108. app\api\dashboard\analytics\route.ts:68
+   Table: calls
+   Column: ascending
+   Code: .order('created_at', { ascending: true })
+
+109. app\api\dashboard\analytics\route.ts:71
+   Table: calls
+   Column: data
+   Code: const { data: appointments, error: appointmentsError } = await supabase
+
+110. app\api\dashboard\analytics\route.ts:71
+   Table: calls
+   Column: error
+   Code: const { data: appointments, error: appointmentsError } = await supabase
+
+111. app\api\dashboard\data\route.ts:62
+   Table: businesses
+   Column: status
+   Code: }, { status: 404 })
+
+112. app\api\dashboard\data\route.ts:97
+   Table: calls
+   Column: ascending
+   Code: .order('created_at', { ascending: false }),
+
+113. app\api\dashboard\data\route.ts:189
+   Table: ai_agents
+   Column: duration
+   Code: duration: `${call.duration || 0}s`,
+
+114. app\api\dashboard\quick-start\route.ts:66
+   Table: businesses
+   Column: error
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+115. app\api\dashboard\quick-start\route.ts:66
+   Table: businesses
+   Column: status
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+116. app\api\dashboard\quick-start\route.ts:78
+   Table: ai_agents
+   Column: data
+   Code: const { data: phoneNumber } = await supabaseAdmin
+
+117. app\api\dashboard\quick-start\route.ts:118
+   Table: ai_agents
+   Column: status
+   Code: }, { status: 404 })
+
+118. app\api\dashboard\real-activity\route.ts:44
+   Table: calls
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+119. app\api\dashboard\real-metrics\route.ts:59
+   Table: businesses
+   Column: error
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+120. app\api\dashboard\real-metrics\route.ts:59
+   Table: businesses
+   Column: status
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+121. app\api\dashboard\real-metrics\route.ts:68
+   Table: calls
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+122. app\api\dashboard\real-metrics\route.ts:71
+   Table: calls
+   Column: data
+   Code: const { data: appointments, error: appointmentsError } = await supabaseAdmin
+
+123. app\api\dashboard\real-metrics\route.ts:71
+   Table: calls
+   Column: error
+   Code: const { data: appointments, error: appointmentsError } = await supabaseAdmin
+
+124. app\api\leads\scoring\route.ts:297
+   Table: businesses
+   Column: Customer
+   Code: Customer: ${customerData.name || 'Unknown'}
+
+125. app\api\leads\scoring\route.ts:298
+   Table: businesses
+   Column: Phone
+   Code: Phone: ${customerData.phone}
+
+126. app\api\market-intelligence\competitors\route.ts:40
+   Table: businesses
+   Column: data
+   Code: const { data: calls } = await supabaseAdmin
+
+127. app\api\market-intelligence\competitors\route.ts:46
+   Table: calls
+   Column: data
+   Code: const { data: appointments } = await supabaseAdmin
+
+128. app\api\notifications\list\route.ts:39
+   Table: businesses
+   Column: error
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+129. app\api\notifications\list\route.ts:39
+   Table: businesses
+   Column: status
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+130. app\api\notifications\list\route.ts:170
+   Table: calls
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+131. app\api\onboarding\complete\route.ts:128
+   Table: businesses
+   Column: status
+   Code: }, { status: 404 })
+
+132. app\api\onboarding\complete\route.ts:192
+   Table: ai_agents
+   Column: business_description
+   Code: business_description: rawData.business_description || `Professional ${business.business_type} services`,
+
+133. app\api\phone\provision\route.ts:45
+   Table: businesses
+   Column: status
+   Code: }, { status: 404 })
+
+134. app\api\phone\provision\route.ts:228
+   Table: businesses
+   Column: https
+   Code: const webhookResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'https://cloudgreet.com'}/api/telnyx/configure-webhook`, {
+
+135. app\api\promo\apply\route.ts:51
+   Table: businesses
+   Column: status
+   Code: }, { status: 400 })
+
+136. app\api\support\proactive-help\route.ts:39
+   Table: businesses
+   Column: error
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+137. app\api\support\proactive-help\route.ts:39
+   Table: businesses
+   Column: status
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+138. app\api\telnyx\configure-webhook\route.ts:45
+   Table: businesses
+   Column: error
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+139. app\api\telnyx\configure-webhook\route.ts:45
+   Table: businesses
+   Column: status
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+140. app\api\telnyx\realtime-voice\route.ts:55
+   Table: calls
+   Column: error
+   Code: logger.error('Call not found', { callId, error: callError })
+
+141. app\api\telnyx\realtime-voice\route.ts:58
+   Table: calls
+   Column: status
+   Code: }, { status: 404 })
+
+142. app\api\telnyx\voice-webhook\route.ts:131
+   Table: businesses
+   Column: businessId
+   Code: logger.info('Using demo business for Telnyx call', { to, businessId: business.id, telnyxPhoneNumber })
+
+143. app\api\telnyx\voice-webhook\route.ts:218
+   Table: ai_agents
+   Column: businessId
+   Code: logger.info('Using demo agent for test call', { businessId: business.id, agentId: agent.id })
+
+144. app\api\telnyx\voice-webhook\route.ts:218
+   Table: ai_agents
+   Column: agentId
+   Code: logger.info('Using demo agent for test call', { businessId: business.id, agentId: agent.id })
+
+145. app\api\telnyx\webrtc-voice\route.ts:57
+   Table: calls
+   Column: error
+   Code: logger.error('Call not found', { callId, error: callError })
+
+146. app\api\telnyx\webrtc-voice\route.ts:60
+   Table: calls
+   Column: status
+   Code: }, { status: 404 })
+
+147. app\api\test\call-flow\route.ts:37
+   Table: businesses
+   Column: error
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+148. app\api\test\call-flow\route.ts:37
+   Table: businesses
+   Column: status
+   Code: return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+
+149. app\api\test\call-flow\route.ts:82
+   Table: calls
+   Column: log
+   Code: throw new Error(`Failed to create test call log: ${callLogError.message}`)
+
+150. app\api\test\call-flow\route.ts:128
+   Table: calls
+   Column: Response
+   Code: transcript: `Webhook test completed. Response: ${JSON.stringify(webhookResult)}`,
+
+151. app\api\test\call-flow\route.ts:160
+   Table: calls
+   Column: failed
+   Code: transcript: `Webhook test failed: ${webhookError instanceof Error ? webhookError.message : 'Unknown error'}`,
+
+152. app\api\webrtc\create-session\route.ts:19
+   Table: businesses
+   Column: ascending
+   Code: .order('created_at', { ascending: false })
+
+153. lib\ab-testing.ts:155
+   Table: unknown
+   Column: status
+   Code: return Array.from(this.tests.values()).filter(test => test.status === 'active')
+
+154. lib\advanced-ai-features.ts:135
+   Table: calls
+   Column: data
+   Code: const { data: business } = await supabaseAdmin
+
+155. lib\advanced-ai-features.ts:205
+   Table: businesses
+   Column: data
+   Code: const { data: recentDemand } = await supabaseAdmin
+
+156. lib\follow-up-sequences.ts:225
+   Table: unknown
+   Column: status
+   Code: return Array.from(this.executions.values()).filter(exec => exec.status === 'active')
+
+157. lib\lead-status-system.ts:129
+   Table: unknown
+   Column: status
+   Code: const allLeads = Array.from(this.statusHistory.values())
+
+158. lib\retell-agent-manager.ts:302
+   Table: ai_agents
+   Column: https
+   Code: await fetch(`https://api.retellai.com/delete-agent/${agentData.retell_agent_id}`, {
+
+159. scripts\check-demo-setup.js:23
+   Table: businesses
+   Column: data
+   Code: const { data: newBusiness, error: createError } = await supabase
+
+160. scripts\check-demo-setup.js:23
+   Table: businesses
+   Column: error
+   Code: const { data: newBusiness, error: createError } = await supabase
+
+161. scripts\check-demo-setup.js:72
+   Table: ai_agents
+   Column: data
+   Code: const { data: newAgent, error: createAgentError } = await supabase
+
+162. scripts\check-demo-setup.js:72
+   Table: ai_agents
+   Column: error
+   Code: const { data: newAgent, error: createAgentError } = await supabase
+
+163. scripts\fix-demo-ai-setup.js:33
+   Table: businesses
+   Column: data
+   Code: const { data: newBusiness, error: createError } = await supabase
+
+164. scripts\fix-demo-ai-setup.js:33
+   Table: businesses
+   Column: error
+   Code: const { data: newBusiness, error: createError } = await supabase
+
+165. scripts\fix-demo-ai-setup.js:82
+   Table: ai_agents
+   Column: data
+   Code: const { data: newAgent, error: createAgentError } = await supabase
+
+166. scripts\fix-demo-ai-setup.js:82
+   Table: ai_agents
+   Column: error
+   Code: const { data: newAgent, error: createAgentError } = await supabase
+
+167. scripts\fix-demo-ai-setup.js:252
+   Table: businesses
+   Column: data
+   Code: const { data: newBusiness, error: createError } = await supabase
+
+168. scripts\fix-demo-ai-setup.js:252
+   Table: businesses
+   Column: error
+   Code: const { data: newBusiness, error: createError } = await supabase
+
+169. scripts\fix-demo-ai-setup.js:301
+   Table: ai_agents
+   Column: data
+   Code: const { data: newAgent, error: createAgentError } = await supabase
+
+170. scripts\fix-demo-ai-setup.js:301
+   Table: ai_agents
+   Column: error
+   Code: const { data: newAgent, error: createAgentError } = await supabase
