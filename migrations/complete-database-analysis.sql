@@ -20,7 +20,7 @@ WHERE table_schema = 'public'
 ORDER BY table_name, constraint_type;
 
 -- 4. ALL INDEXES
-SELECT 'INDEXES' as info_type, tablename, indexname, indexdef
+SELECT 'INDEXES' as info_type, tablename as table_name, indexname, indexdef
 FROM pg_indexes 
 WHERE schemaname = 'public'
 ORDER BY tablename, indexname;
