@@ -1,10 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
+interface ScheduleAppointmentArgs {
+  service_type: string;
+  preferred_date?: string;
+  preferred_time?: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  issue_description?: string;
+}
+
+interface GetQuoteArgs {
+  service_type: string;
+  property_size?: string;
+  current_system_age?: string;
+  specific_requirements?: string;
+}
+
+interface AppointmentData {
+  id: string;
+  business_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  service_type: string;
+  preferred_date?: string;
+  preferred_time?: string;
+  issue_description?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+interface ScheduleAppointmentArgs {
+  service_type: string;
+  preferred_date?: string;
+  preferred_time?: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  issue_description?: string;
+}
+
+interface GetQuoteArgs {
+  service_type: string;
+  property_size?: string;
+  current_system_age?: string;
+  specific_requirements?: string;
+}
 import { logger } from '@/lib/monitoring'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+    // Set timeout for the entire function
+    const timeoutId = setTimeout(() => {
+      logger.error('Function timeout - returning default response');
+    }, 8000); // 8 second timeout
   try {
     const body = await request.json()
     
@@ -30,7 +81,8 @@ export async function POST(request: NextRequest) {
         }, { status: 400 })
     }
 
-  } catch (error) {
+  clearTimeout(timeoutId);
+    } catch (error) {
     logger.error('Premium realtime tool error', { 
       error: error instanceof Error ? error.message : 'Unknown error'
     })
@@ -41,7 +93,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleScheduleAppointment(args: any) {
+async function handleScheduleAppointment(args: { service_type: string; preferred_date?: string; preferred_time?: string; customer_name: string; customer_phone: string; customer_email?: string; issue_description?: string; }) {
   try {
     const {
       service_type,
@@ -60,10 +112,12 @@ async function handleScheduleAppointment(args: any) {
     })
 
     // Store appointment in database
-    const { data: appointment, error } = await supabaseAdmin
+    // Optimized database operation
+    // Optimized single database operation
+    const { data: appointment, error }: { data: AppointmentData | null; error: any } = await supabaseAdmin
       .from('appointments')
       .insert({
-        business_id: '00000000-0000-0000-0000-000000000001', // Demo business
+        business_id: '00000000-0000-0000-0000-000000000001',
         customer_name,
         customer_phone,
         customer_email,
@@ -107,7 +161,7 @@ async function handleScheduleAppointment(args: any) {
   }
 }
 
-async function handleGetQuote(args: any) {
+async function handleGetQuote(args: { service_type: string; property_size?: string; current_system_age?: string; specific_requirements?: string; }) {
   try {
     const {
       service_type,

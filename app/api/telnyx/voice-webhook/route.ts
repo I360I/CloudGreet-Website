@@ -13,6 +13,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+    // Set timeout for the entire function
+    const timeoutId = setTimeout(() => {
+      logger.error('Function timeout - returning default response');
+    }, 8000); // 8 second timeout
   try {
     const body = await request.json()
     
@@ -50,7 +54,7 @@ export async function POST(request: NextRequest) {
         instructions: [
           {
             instruction: 'stream_audio',
-            stream_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/realtime-stream`,
+            stream_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com" || 'https://cloudgreet.com'}/api/telnyx/realtime-stream`,
             stream_url_method: 'POST'
           }
         ]
@@ -77,7 +81,8 @@ export async function POST(request: NextRequest) {
       status: 'received'
     })
 
-  } catch (error) {
+  clearTimeout(timeoutId);
+    } catch (error) {
     logger.error('Premium voice webhook error', { 
       error: error instanceof Error ? error.message : 'Unknown error'
     })

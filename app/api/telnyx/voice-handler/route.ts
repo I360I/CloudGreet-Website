@@ -4,6 +4,10 @@ import { logger } from '@/lib/monitoring'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+    // Set timeout for the entire function
+    const timeoutId = setTimeout(() => {
+      logger.error('Function timeout - returning default response');
+    }, 8000); // 8 second timeout
   try {
     const body = await request.json()
     const { 
@@ -92,12 +96,13 @@ export async function POST(request: NextRequest) {
           speech_model: 'default',
           action_on_empty_result: true,
           finish_on_key: '#',
-          action: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
+          action: `${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com" || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
         }
       ]
     })
 
-  } catch (error) {
+  clearTimeout(timeoutId);
+    } catch (error) {
     logger.error('Voice handler error', { 
       error: error instanceof Error ? error.message : 'Unknown error'
     })

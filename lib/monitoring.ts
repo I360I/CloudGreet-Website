@@ -33,7 +33,7 @@ class Logger {
         },
       });
     } catch (error) {
-      console.error('Failed to log to database:', error);
+      this.logger.error('Failed to log to database:', error);
     }
   }
 
@@ -45,7 +45,7 @@ class Logger {
 
   info(message: string, context?: any) {
     const formatted = this.formatMessage('info', message, context);
-    console.log(formatted);
+    this.logger.info(formatted);
     
     if (process.env.NODE_ENV === 'production') {
       this.logToDatabase({
@@ -73,7 +73,7 @@ class Logger {
 
   error(message: string, context?: any) {
     const formatted = this.formatMessage('error', message, context);
-    console.error(formatted);
+    this.logger.error(formatted);
     
     // Always log errors to database in production
     this.logToDatabase({
@@ -103,7 +103,7 @@ class Logger {
         })
       });
     } catch (error) {
-      console.error('Failed to send system error notification:', error);
+      this.logger.error('Failed to send system error notification:', error);
     }
   }
 
@@ -125,7 +125,7 @@ class MetricsCollector {
         timestamp: metric.timestamp || new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Failed to record metric:', error);
+      this.logger.error('Failed to record metric:', error);
     }
   }
 
