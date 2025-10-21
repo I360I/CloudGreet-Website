@@ -55,8 +55,12 @@ ALTER TABLE businesses ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME Z
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- 7. Create demo business and agent if they don't exist
+-- First, ensure businesses table has proper primary key
+ALTER TABLE businesses ADD CONSTRAINT IF NOT EXISTS businesses_pkey PRIMARY KEY (id);
+
+-- Insert demo business (check if it exists first)
 INSERT INTO businesses (id, business_name, business_type, owner_name, phone_number, email, address, business_hours, services, service_areas, greeting_message, created_at, updated_at)
-VALUES (
+SELECT 
   '00000000-0000-0000-0000-000000000001',
   'Demo Business',
   'Service Business',
@@ -70,10 +74,11 @@ VALUES (
   'Thank you for calling Demo Business. How can I help you today?',
   NOW(),
   NOW()
-) ON CONFLICT (id) DO NOTHING;
+WHERE NOT EXISTS (SELECT 1 FROM businesses WHERE id = '00000000-0000-0000-0000-000000000001');
 
+-- Insert demo AI agent (check if it exists first)
 INSERT INTO ai_agents (id, business_id, agent_name, is_active, configuration, created_at, updated_at)
-VALUES (
+SELECT 
   '00000000-0000-0000-0000-000000000002',
   '00000000-0000-0000-0000-000000000001',
   'Demo AI Agent',
@@ -81,14 +86,16 @@ VALUES (
   '{"greeting_message":"Thank you for calling Demo Business. How can I help you today?","voice":"alloy","services":["General Services","Consulting","Support"],"hours":"9 AM - 5 PM"}',
   NOW(),
   NOW()
-) ON CONFLICT (id) DO NOTHING;
+WHERE NOT EXISTS (SELECT 1 FROM ai_agents WHERE id = '00000000-0000-0000-0000-000000000002');
 
 -- 8. Create toll free number records for demo
 INSERT INTO toll_free_numbers (id, number, business_id, status, created_at, updated_at)
-VALUES 
-  (gen_random_uuid(), '+18333956731', '00000000-0000-0000-0000-000000000001', 'assigned', NOW(), NOW()),
-  (gen_random_uuid(), '+17372960092', '00000000-0000-0000-0000-000000000001', 'assigned', NOW(), NOW())
-ON CONFLICT (number) DO NOTHING;
+SELECT gen_random_uuid(), '+18333956731', '00000000-0000-0000-0000-000000000001', 'assigned', NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM toll_free_numbers WHERE number = '+18333956731');
+
+INSERT INTO toll_free_numbers (id, number, business_id, status, created_at, updated_at)
+SELECT gen_random_uuid(), '+17372960092', '00000000-0000-0000-0000-000000000001', 'assigned', NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM toll_free_numbers WHERE number = '+17372960092');
 
 -- 9. Add indexes for performance
 CREATE INDEX IF NOT EXISTS idx_calls_business_id ON calls(business_id);
