@@ -268,14 +268,10 @@ export async function POST(request: NextRequest) {
       .insert({
         business_id: businessId,
         call_id: callData.data.call_control_id,
-        from_number: fromNumber,
-        to_number: formattedPhone,
-        status: 'initiated',
-        direction: 'outbound',
-        call_type: 'click_to_call',
-        source: 'click_to_call',
-        ai_session_id: aiSession.sessionId,
-        ai_response: aiSession.aiResponse,
+        customer_phone: formattedPhone,
+        agent_id: aiSession.sessionId,
+        call_status: 'initiated',
+        transcript: aiSession.aiResponse,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
