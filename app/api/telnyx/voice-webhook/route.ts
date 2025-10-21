@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
           speech_model: 'default',
           action_on_empty_result: true,
           finish_on_key: '#',
-          action: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
+          action: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
         }
       ]
     } else {
@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
           {
             instruction: 'record',
             max_length_secs: 300,
-            action: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/api/telnyx/voicemail-handler`
+            action: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voicemail-handler`
           },
           {
             instruction: 'say',
