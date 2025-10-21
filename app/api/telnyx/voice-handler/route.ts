@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       logger.error('OpenAI API key not configured for voice handler');
       return NextResponse.json({
         call_id: 'unknown',
-        call_status: 'active',
+        status: 'active',
         instructions: [
           { instruction: 'say', text: 'Thank you for calling. Our AI system is currently being configured. Please try again later.', voice: 'alloy' },
           { instruction: 'hangup' }
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       logger.error('Call not found in voice handler', { callId, error: callError })
       return NextResponse.json({
         call_id: callId,
-        call_status: 'error',
+        status: 'error',
         instructions: [
           {
             instruction: 'say',
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       logger.error('Business or agent not found', { callId, businessId: call.business_id })
       return NextResponse.json({
         call_id: callId,
-        call_status: 'error',
+        status: 'error',
         instructions: [
           {
             instruction: 'say',
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     if (!userSpeech) {
       return NextResponse.json({
         call_id: callId,
-        call_status: 'active',
+        status: 'active',
         instructions: [
           {
             instruction: 'say',
@@ -613,7 +613,7 @@ RULES:
     if (needsEscalation && business.escalation_phone) {
       return NextResponse.json({
         call_id: callId,
-        call_status: 'escalating',
+        status: 'escalating',
         instructions: [
           {
             instruction: 'say',
@@ -637,7 +637,7 @@ RULES:
     if (isComplete) {
       return NextResponse.json({
         call_id: callId,
-        call_status: 'complete',
+        status: 'complete',
         instructions: [
           {
             instruction: 'say',
@@ -659,7 +659,7 @@ RULES:
     // Continue conversation
     return NextResponse.json({
       call_id: callId,
-      call_status: 'active',
+      status: 'active',
       booking_intent: hasBookingIntent,
       instructions: [
         {
@@ -690,7 +690,7 @@ RULES:
     
     return NextResponse.json({
       call_id: 'unknown',
-      call_status: 'error',
+      status: 'error',
       instructions: [
         {
           instruction: 'say',
@@ -701,6 +701,6 @@ RULES:
           instruction: 'hangup'
         }
       ]
-    }, { call_status: 500 })
+    }, { status: 500 })
   }
 }

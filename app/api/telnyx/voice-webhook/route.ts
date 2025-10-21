@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 // Health check endpoint for Telnyx webhook verification
 export async function GET() {
   return NextResponse.json({ 
-    call_status: 'ok',
+    status: 'ok',
     message: 'Telnyx voice webhook endpoint is active',
     timestamp: new Date().toISOString()
   })
@@ -31,14 +31,14 @@ export async function POST(request: NextRequest) {
       if (!isValid) {
         logger.error('Invalid Telnyx webhook signature')
         logger.warn('TEMPORARILY ALLOWING INVALID SIGNATURE FOR TESTING')
-        // return NextResponse.json({ error: 'Invalid signature' }, { call_status: 401 })
+        // return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
       }
     }
 
     // Check if Telnyx is configured
     if (!process.env.TELYNX_API_KEY) {
       logger.error('Telnyx webhook called but Telnyx not configured')
-      return NextResponse.json({ error: 'Telnyx not configured' }, { call_status: 503 })
+      return NextResponse.json({ error: 'Telnyx not configured' }, { status: 503 })
     }
 
     // Check if OpenAI is configured
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       logger.error('OpenAI API key not configured for voice webhook')
       return NextResponse.json({
         call_id: 'unknown',
-        call_status: 'answered',
+        status: 'answered',
         instructions: [
           { instruction: 'say', text: 'Thank you for calling. Our AI system is currently being configured. Please try again later.', voice: 'alloy' },
           { instruction: 'hangup' }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     // Validate webhook structure
     if (!body.data || !body.data.event_type || !body.data.payload) {
       logger.error('Invalid Telnyx webhook structure', { body })
-      return NextResponse.json({ error: 'Invalid webhook structure' }, { call_status: 400 })
+      return NextResponse.json({ error: 'Invalid webhook structure' }, { status: 400 })
     }
 
     const {
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ 
           error: 'Rate limit exceeded',
           resetTime: rateLimit.resetTime
-        }, { call_status: 429 })
+        }, { status: 429 })
       }
     }
 
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       // Duplicate webhook - return success without processing
       return NextResponse.json({ 
         call_id: call_control_id,
-        call_status: 'duplicate_ignored'
+        status: 'duplicate_ignored'
       })
     }
 
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       logger.error('Error finding business for webhook', { error: businessError, to })
       return NextResponse.json({
         call_id: call_control_id,
-        call_status: 'answered',
+        status: 'answered',
         instructions: [
           { instruction: 'say', text: 'Thank you for calling. We are currently unavailable. Please try again later.', voice: 'alloy' },
           { instruction: 'hangup' }
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
         call_leg_id: call_leg_id,
         customer_phone: from,
         customer_phone: to,
-        call_status: state,
+        status: state,
         direction: direction,
         duration: parseInt(duration?.toString()) || 0,
         recording_url: recording_urls?.[0]?.url,
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
       logger.error('Error finding active agent', { error: agentError, businessId: business.id })
       return NextResponse.json({
         call_id: call_control_id,
-        call_status: 'answered',
+        status: 'answered',
         instructions: [
           { instruction: 'say', text: `Thank you for calling ${business.business_name}. We are currently unavailable. Please try again later.`, voice: 'alloy' },
           { instruction: 'hangup' }
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
     // Generate proper Telnyx webhook response
     const webhookResponse = {
       call_id: call_control_id,
-      call_status: 'answered',
+      status: 'answered',
       instructions: [] as any[]
     }
 
@@ -343,7 +343,7 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json({
       call_id: 'unknown',
-      call_status: 'error',
+      status: 'error',
       instructions: [
         {
           instruction: 'say',
@@ -354,7 +354,7 @@ export async function POST(request: NextRequest) {
           instruction: 'hangup'
         }
       ]
-    }, { call_status: 500 })
+    }, { status: 500 })
   }
 }
 
