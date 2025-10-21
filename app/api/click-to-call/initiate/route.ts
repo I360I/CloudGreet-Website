@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     // Use demo business ID
     const businessId = '00000000-0000-0000-0000-000000000001'
     const fromNumber = '+18333956731'
-    const connectionId = process.env.TELYNX_CONNECTION_ID || '2786691125270807749'
+    const connectionId = process.env.TELYNX_CONNECTION_ID || '2786691125270801616'
 
     console.log('📞 Making Telnyx call...')
 
