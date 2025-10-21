@@ -5,7 +5,7 @@ export class TelnyxClient {
   private messagingProfileId: string
 
   constructor() {
-    this.apiKey = process.env.TELNYX_API_KEY || ''
+    this.apiKey = process.env.TELYNX_API_KEY || ''
     this.connectionId = process.env.TELNYX_CONNECTION_ID || ''
     this.messagingProfileId = process.env.TELNYX_MESSAGING_PROFILE_ID || ''
   }

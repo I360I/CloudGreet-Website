@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Test external APIs
     const apiTests = await Promise.allSettled([
       // Test OpenAI API
-      fetch('https://api.openai.com/v1/models', {
+      fetch('process.env.OPENAI_API_URL + "/v1/models"', {
         headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}` }
       }).then(r => r.ok),
       
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       }).then(r => r.ok),
       
       // Test Resend API
-      fetch('https://api.resend.com/domains', {
+      fetch('process.env.RESEND_API_URL + "/domains"', {
         headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` }
       }).then(r => r.ok)
     ])

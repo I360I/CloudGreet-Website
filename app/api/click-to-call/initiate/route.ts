@@ -30,23 +30,36 @@ export async function POST(request: NextRequest) {
     console.log('🚀 Initiating click-to-call for:', formattedPhone)
 
     // Check if Telnyx is configured
-    if (!process.env.TELNYX_API_KEY) {
+    if (!process.env.TELYNX_API_KEY) {
       console.error('❌ Telnyx API key not configured')
       return NextResponse.json({ 
         error: 'Telnyx not configured' 
       }, { status: 503 })
     }
 
-      // Create or get demo business and agent for click-to-call
-      const businessId = '00000000-0000-0000-0000-000000000001' // Fixed UUID for demo business
-      const agentId = '00000000-0000-0000-0000-000000000002' // Fixed UUID for demo agent
+      // Create AI conversation session for demo call
+      const aiSessionResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/ai/conversation-demo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          businessType: businessType || 'HVAC',
+          businessName: businessName,
+          services: services,
+          hours: hours
+        })
+      });
       
-      // Check if demo business exists, if not create it
-      const { data: existingBusiness } = await supabaseAdmin
-        .from('businesses')
-        .select('id')
-        .eq('id', businessId)
-        .single()
+      if (!aiSessionResponse.ok) {
+        throw new Error('Failed to create AI session');
+      }
+      
+      const aiSession = await aiSessionResponse.json();
+      
+      if (!aiSession.success) {
+        throw new Error(aiSession.error || 'Failed to create AI session');
+      }
     
     if (!existingBusiness) {
       // Create demo business
@@ -155,13 +168,13 @@ export async function POST(request: NextRequest) {
     const connectionId = process.env.TELNYX_CONNECTION_ID || '2786691125270807749'
     
     console.log('📞 Environment TELNYX_CONNECTION_ID:', process.env.TELNYX_CONNECTION_ID)
-    console.log('📞 Environment TELNYX_API_KEY exists:', !!process.env.TELNYX_API_KEY)
+    console.log('📞 Environment TELYNX_API_KEY exists:', !!process.env.TELYNX_API_KEY)
     console.log('📞 Using Connection ID:', connectionId)
     console.log('📞 Using toll-free number:', fromNumber)
     console.log('📞 All environment variables:', Object.keys(process.env).filter(key => key.includes('TELNYX')))
     
-    if (!process.env.TELNYX_API_KEY) {
-      console.error('❌ TELNYX_API_KEY not configured')
+    if (!process.env.TELYNX_API_KEY) {
+      console.error('❌ TELYNX_API_KEY not configured')
       return NextResponse.json({
         error: 'Telnyx API key not configured'
       }, { status: 503 })
@@ -176,8 +189,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('📞 Creating Telnyx outbound call:', callPayload)
-    console.log('📞 API Key exists:', !!process.env.TELNYX_API_KEY)
-    console.log('📞 API Key length:', process.env.TELNYX_API_KEY?.length || 0)
+    console.log('📞 API Key exists:', !!process.env.TELYNX_API_KEY)
+    console.log('📞 API Key length:', process.env.TELYNX_API_KEY?.length || 0)
     console.log('📞 Connection ID being used:', connectionId)
     console.log('📞 From number being used:', fromNumber)
     console.log('📞 To number being used:', formattedPhone)
@@ -201,7 +214,7 @@ export async function POST(request: NextRequest) {
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/calls', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELYNX_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(callPayload)

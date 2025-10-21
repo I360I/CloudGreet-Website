@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if Telnyx is configured
-    if (!process.env.TELNYX_API_KEY) {
+    if (!process.env.TELYNX_API_KEY) {
       logger.error('Telnyx webhook called but Telnyx not configured')
       return NextResponse.json({ error: 'Telnyx not configured' }, { status: 503 })
     }
@@ -129,6 +129,49 @@ export async function POST(request: NextRequest) {
 
     if (businessError || !business) {
       logger.error('Error finding business for webhook', { error: businessError, to })
+      return NextResponse.json({
+        call_id: call_control_id,
+        status: 'answered',
+        instructions: [
+          { instruction: 'say', text: 'Thank you for calling. We are currently unavailable. Please try again later.', voice: 'alloy' },
+          { instruction: 'hangup' }
+        ]
+      })
+    }
+    // Handle missing phone number gracefully
+    const telnyxPhoneNumber = process.env.TELYNX_PHONE_NUMBER || process.env.TELYNX_PHONE_NUMBER || '+18333956731';
+    if (!telnyxPhoneNumber) {
+      logger.error('No Telnyx phone number configured');
+      return NextResponse.json({
+        call_id: call_control_id,
+        status: 'answered',
+        instructions: [
+          { instruction: 'say', text: 'Thank you for calling. We are currently unavailable. Please try again later.', voice: 'alloy' },
+          { instruction: 'hangup' }
+        ]
+      });
+    }
+      return NextResponse.json({
+        call_id: call_control_id,
+        status: 'answered',
+        instructions: [
+          { instruction: 'say', text: 'Thank you for calling. We are currently unavailable. Please try again later.', voice: 'alloy' },
+          { instruction: 'hangup' }
+        ]
+      })
+    }
+    // Check if OpenAI is configured
+    if (!process.env.OPENAI_API_KEY) {
+      logger.error('OpenAI API key not configured for voice webhook');
+      return NextResponse.json({
+        call_id: call_control_id,
+        status: 'answered',
+        instructions: [
+          { instruction: 'say', text: 'Thank you for calling. Our AI system is currently being configured. Please try again later.', voice: 'alloy' },
+          { instruction: 'hangup' }
+        ]
+      });
+    }
       return NextResponse.json({
         call_id: call_control_id,
         status: 'answered',
