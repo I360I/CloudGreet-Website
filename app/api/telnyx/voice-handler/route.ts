@@ -11,23 +11,11 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    // Enhanced AI error handling
-    if (!process.env.OPENAI_API_KEY) {
-      logger.error('OpenAI API key not configured for voice handler');
-      return NextResponse.json({
-        call_id: callId,
-        status: 'active',
-        instructions: [
-          { instruction: 'say', text: 'Thank you for calling. Our AI system is currently being configured. Please try again later.', voice: 'alloy' },
-          { instruction: 'hangup' }
-        ]
-      });
-    }
     // Check if OpenAI is configured
     if (!process.env.OPENAI_API_KEY) {
       logger.error('OpenAI API key not configured for voice handler');
       return NextResponse.json({
-        call_id: callId,
+        call_id: 'unknown',
         status: 'active',
         instructions: [
           { instruction: 'say', text: 'Thank you for calling. Our AI system is currently being configured. Please try again later.', voice: 'alloy' },

@@ -61,6 +61,17 @@ export async function POST(request: NextRequest) {
         throw new Error(aiSession.error || 'Failed to create AI session');
       }
     
+    // Create or get demo business and agent for click-to-call
+    const businessId = '00000000-0000-0000-0000-000000000001'; // Fixed UUID for demo business
+    const agentId = '00000000-0000-0000-0000-000000000002'; // Fixed UUID for demo agent
+    
+    // Check if demo business exists
+    const { data: existingBusiness } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('id', businessId)
+      .single();
+    
     if (!existingBusiness) {
       // Create demo business
       const { data: demoBusiness, error: businessError } = await supabaseAdmin
