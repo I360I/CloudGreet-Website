@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
             speech_model: 'default',
             action_on_empty_result: true,
             finish_on_key: '#',
-            action: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
+            action: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
           }
         ]
       })
@@ -551,7 +551,7 @@ RULES:
         // Check if we have minimum required info
         if (bookingData && bookingData.customerName && bookingData.scheduledDate && bookingData.confirmed !== false) {
           // Create appointment
-          const bookingResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/api/appointments/ai-book`, {
+          const bookingResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/appointments/ai-book`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -676,7 +676,7 @@ RULES:
           speech_model: 'default',
           action_on_empty_result: true,
           finish_on_key: '#',
-          action: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
+          action: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
         }
       ]
     })
