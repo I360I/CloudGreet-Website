@@ -168,7 +168,6 @@ export async function POST(request: NextRequest) {
         call_id: call_control_id,
         call_leg_id: call_leg_id,
         customer_phone: from,
-        customer_phone: to,
         status: state,
         direction: direction,
         duration: parseInt(duration?.toString()) || 0,
