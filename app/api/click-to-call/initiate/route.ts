@@ -196,7 +196,9 @@ export async function POST(request: NextRequest) {
     const callPayload = {
       to: formattedPhone,
       from: fromNumber,
-      connection_id: connectionId
+      connection_id: connectionId,
+      webhook_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/telnyx/voice-webhook`,
+      webhook_url_method: 'POST'
     }
 
     console.log('📞 Creating Telnyx outbound call:', callPayload)
@@ -260,7 +262,7 @@ export async function POST(request: NextRequest) {
     const callData = await telnyxResponse.json()
     console.log('✅ Telnyx call created:', callData)
 
-    // Store the outbound call in database
+    // Store the outbound call in database with AI session information
     const { error: callError } = await supabaseAdmin
       .from('calls')
       .insert({
@@ -272,6 +274,8 @@ export async function POST(request: NextRequest) {
         direction: 'outbound',
         call_type: 'click_to_call',
         source: 'click_to_call',
+        ai_session_id: aiSession.sessionId,
+        ai_response: aiSession.aiResponse,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
