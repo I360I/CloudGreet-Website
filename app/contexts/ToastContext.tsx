@@ -1,7 +1,6 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react'
 
 interface Toast {
@@ -83,11 +82,9 @@ interface ToastContainerProps {
 function ToastContainer({ toasts, onHide }: ToastContainerProps) {
   return (
     <div className="fixed top-4 right-4 z-50 space-y-2">
-      <AnimatePresence>
-        {toasts.map((toast) => (
-          <ToastItem key={toast.id} toast={toast} onHide={onHide} />
-        ))}
-      </AnimatePresence>
+      {toasts.map((toast) => (
+        <ToastItem key={toast.id} toast={toast} onHide={onHide} />
+      ))}
     </div>
   )
 }
@@ -138,10 +135,7 @@ function ToastItem({ toast, onHide }: ToastItemProps) {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 300, scale: 0.8 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 300, scale: 0.8 }}
+    <div
       className={`max-w-sm w-full ${getBackgroundColor()} border rounded-xl backdrop-blur-xl shadow-lg`}
     >
       <div className="p-4">
@@ -169,6 +163,6 @@ function ToastItem({ toast, onHide }: ToastItemProps) {
           </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
