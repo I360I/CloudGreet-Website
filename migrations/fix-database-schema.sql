@@ -42,6 +42,18 @@ ALTER TABLE calls ADD COLUMN IF NOT EXISTS direction VARCHAR(20);
 ALTER TABLE calls ADD COLUMN IF NOT EXISTS call_type VARCHAR(50);
 ALTER TABLE calls ADD COLUMN IF NOT EXISTS source VARCHAR(50);
 
+-- 6b. Add missing columns to businesses table
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS owner_name VARCHAR(255);
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20);
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS business_hours JSONB;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS services JSONB;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS service_areas JSONB;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS greeting_message TEXT;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
 -- 7. Create demo business and agent if they don't exist
 INSERT INTO businesses (id, business_name, business_type, owner_name, phone_number, email, address, business_hours, services, service_areas, greeting_message, created_at, updated_at)
 VALUES (
