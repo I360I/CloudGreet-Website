@@ -255,23 +255,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (isBusinessHours) {
-      // Business hours - start AI conversation immediately
+      // Business hours - start AI conversation with REALTIME streaming
       webhookResponse.instructions = [
         {
-          instruction: 'say',
-          text: agent.greeting_message || agent.configuration?.greeting_message || `Thank you for calling ${business.business_name}. How can I help you today?`,
-          voice: agent.voice || agent.configuration?.voice || 'alloy',
-          language: agent.configuration?.voice?.language || 'en'
-        },
-        {
-          instruction: 'gather',
-          input: ['speech'],
-          timeout: 15,
-          speech_timeout: 'auto',
-          speech_model: 'default',
-          action_on_empty_result: true,
-          finish_on_key: '#',
-          action: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
+          instruction: 'stream_audio',
+          stream_url: `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`,
+          stream_track: 'both',
+          auth_token: 'ephemeral_key_placeholder', // Will be replaced by realtime handler
+          input_format: 'pcm16',
+          output_format: 'pcm16',
+          sample_rate: 24000,
+          channels: 1,
+          action: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/realtime-voice`
         }
       ]
     } else {
