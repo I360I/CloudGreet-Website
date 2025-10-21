@@ -26,7 +26,7 @@ WHERE schemaname = 'public'
 ORDER BY tablename, indexname;
 
 -- 5. ROW COUNTS
-SELECT 'ROW_COUNTS' as info_type, tablename, n_live_tup as row_count
+SELECT 'ROW_COUNTS' as info_type, relname as table_name, n_live_tup as row_count
 FROM pg_stat_user_tables
 WHERE schemaname = 'public'
-ORDER BY tablename;
+ORDER BY relname;
