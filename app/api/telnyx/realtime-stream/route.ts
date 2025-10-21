@@ -149,13 +149,13 @@ Remember: You're not just answering questions - you're building relationships an
     })
 
     logger.info('Premium realtime session created', { 
-      session_id: session.id,
+      session_id: (session as any).id || 'unknown',
       call_id: body.call_id
     })
 
     // Return the session details for Telnyx to connect
     return NextResponse.json({
-      session_id: session.id,
+      session_id: (session as any).id || 'unknown',
       status: 'connected',
       message: 'Premium realtime AI session established'
     })
