@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
 
-// Health check endpoint for Telnyx webhook verification
+// Health check endpoint
 export async function GET() {
   return NextResponse.json({ 
     status: 'ok',
@@ -13,15 +14,12 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now()
+  
   try {
-    // Set timeout for the entire function
-    const timeoutId = setTimeout(() => {
-      logger.error('Voice webhook timeout - returning default response')
-    }, 5000) // 5 second timeout
-
     const body = await request.json()
     
-    // Extract basic call information
+    // Extract call information
     const {
       data: {
         event_type,
@@ -31,14 +29,17 @@ export async function POST(request: NextRequest) {
           from,
           to,
           direction,
-          state
+          state,
+          duration
         } = {}
       } = {}
     } = body
 
-    logger.info('Voice webhook called', { 
+    const callId = call_control_id || call_leg_id
+
+    logger.info('Voice webhook received', { 
       event_type, 
-      call_control_id, 
+      callId, 
       from, 
       to, 
       direction,
@@ -47,16 +48,94 @@ export async function POST(request: NextRequest) {
 
     // Handle call.answered event
     if (event_type === 'call.answered') {
-      clearTimeout(timeoutId)
-      
-      // Return simple, fast response for demo
+      // Fast business lookup - use phone number to find business
+      const { data: business, error: businessError } = await supabaseAdmin
+        .from('businesses')
+        .select('id, business_name, greeting_message, phone_number')
+        .eq('phone_number', to)
+        .single()
+
+      if (businessError || !business) {
+        logger.warn('Business not found, using demo business', { to, error: businessError })
+        
+        // Use demo business as fallback
+        return NextResponse.json({
+          call_id: callId,
+          status: 'answered',
+          instructions: [
+            {
+              instruction: 'say',
+              text: 'Thank you for calling CloudGreet Demo! How can I help you today?',
+              voice: 'alloy'
+            },
+            {
+              instruction: 'gather',
+              input: ['speech'],
+              timeout: 15,
+              speech_timeout: 'auto',
+              speech_model: 'default',
+              action_on_empty_result: true,
+              finish_on_key: '#',
+              action: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
+            }
+          ]
+        })
+      }
+
+      // Get AI agent for this business
+      const { data: agent, error: agentError } = await supabaseAdmin
+        .from('ai_agents')
+        .select('id, agent_name, greeting_message, configuration')
+        .eq('business_id', business.id)
+        .eq('is_active', true)
+        .single()
+
+      if (agentError || !agent) {
+        logger.warn('AI agent not found, using basic response', { businessId: business.id, error: agentError })
+        
+        return NextResponse.json({
+          call_id: callId,
+          status: 'answered',
+          instructions: [
+            {
+              instruction: 'say',
+              text: business.greeting_message || `Thank you for calling ${business.business_name}! How can I help you today?`,
+              voice: 'alloy'
+            },
+            {
+              instruction: 'gather',
+              input: ['speech'],
+              timeout: 15,
+              speech_timeout: 'auto',
+              speech_model: 'default',
+              action_on_empty_result: true,
+              finish_on_key: '#',
+              action: `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
+            }
+          ]
+        })
+      }
+
+      // Store call in database
+      await supabaseAdmin
+        .from('calls')
+        .insert({
+          business_id: business.id,
+          call_id: callId,
+          customer_phone: from,
+          call_status: 'answered',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+
+      // Return response with AI agent
       return NextResponse.json({
-        call_id: call_control_id,
+        call_id: callId,
         status: 'answered',
         instructions: [
           {
             instruction: 'say',
-            text: 'Thank you for calling CloudGreet Demo! How can I help you today?',
+            text: agent.greeting_message || `Thank you for calling ${business.business_name}! How can I help you today?`,
             voice: 'alloy'
           },
           {
@@ -75,35 +154,43 @@ export async function POST(request: NextRequest) {
 
     // Handle call.hangup event
     if (event_type === 'call.hangup') {
-      clearTimeout(timeoutId)
-      
-      logger.info('Call ended', { 
-        call_control_id, 
+      // Update call status
+      await supabaseAdmin
+        .from('calls')
+        .update({
+          call_status: 'completed',
+          call_duration: duration || 0,
+          updated_at: new Date().toISOString()
+        })
+        .eq('call_id', callId)
+
+      logger.info('Call completed', { 
+        callId, 
         from, 
         to, 
-        duration: body.data?.payload?.duration 
+        duration 
       })
       
       return NextResponse.json({
-        call_id: call_control_id,
+        call_id: callId,
         status: 'completed'
       })
     }
 
     // Handle other events
-    clearTimeout(timeoutId)
     return NextResponse.json({
-      call_id: call_control_id,
+      call_id: callId,
       status: 'received'
     })
 
   } catch (error) {
+    const duration = Date.now() - startTime
     logger.error('Voice webhook error', { 
       error: error instanceof Error ? error.message : 'Unknown error',
+      duration,
       endpoint: 'voice_webhook'
     })
     
-    // Return simple error response
     return NextResponse.json({
       call_id: 'unknown',
       status: 'error',
