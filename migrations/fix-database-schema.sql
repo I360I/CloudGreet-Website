@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS toll_free_numbers (
 );
 
 -- 4. Add missing columns to toll_free_numbers if they don't exist
-ALTER TABLE toll_free_numbers ADD COLUMN IF NOT EXISTS number VARCHAR(20);
+-- Note: number column already exists as phone_number, so we don't need to add it
 ALTER TABLE toll_free_numbers ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id);
 ALTER TABLE toll_free_numbers ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'available';
 
@@ -94,17 +94,17 @@ SELECT
 WHERE NOT EXISTS (SELECT 1 FROM ai_agents WHERE id = '00000000-0000-0000-0000-000000000002');
 
 -- 8. Create toll free number records for demo
-INSERT INTO toll_free_numbers (id, number, business_id, status, created_at, updated_at)
+INSERT INTO toll_free_numbers (id, phone_number, business_id, status, created_at, updated_at)
 SELECT gen_random_uuid(), '+18333956731', '00000000-0000-0000-0000-000000000001', 'assigned', NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM toll_free_numbers WHERE number = '+18333956731');
+WHERE NOT EXISTS (SELECT 1 FROM toll_free_numbers WHERE phone_number = '+18333956731');
 
-INSERT INTO toll_free_numbers (id, number, business_id, status, created_at, updated_at)
+INSERT INTO toll_free_numbers (id, phone_number, business_id, status, created_at, updated_at)
 SELECT gen_random_uuid(), '+17372960092', '00000000-0000-0000-0000-000000000001', 'assigned', NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM toll_free_numbers WHERE number = '+17372960092');
+WHERE NOT EXISTS (SELECT 1 FROM toll_free_numbers WHERE phone_number = '+17372960092');
 
 -- 9. Add indexes for performance
 CREATE INDEX IF NOT EXISTS idx_calls_business_id ON calls(business_id);
 CREATE INDEX IF NOT EXISTS idx_calls_call_id ON calls(call_id);
-CREATE INDEX IF NOT EXISTS idx_toll_free_numbers_number ON toll_free_numbers(number);
+CREATE INDEX IF NOT EXISTS idx_toll_free_numbers_phone_number ON toll_free_numbers(phone_number);
 CREATE INDEX IF NOT EXISTS idx_ai_agents_business_id ON ai_agents(business_id);
 CREATE INDEX IF NOT EXISTS idx_ai_agents_active ON ai_agents(is_active);
