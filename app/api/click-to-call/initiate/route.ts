@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-
 export async function POST(request: NextRequest) {
   try {
     // Set a timeout for the entire function
-    const timeoutPromise = new Promise((resolve, reject) => {
+    const timeoutPromise = new Promise<NextResponse>((resolve, reject) => {
       setTimeout(() => {
         reject(new Error('Call initiation timed out after 10 seconds'));
       }, 10000); // 10 second timeout
     });
 
-    const operationPromise = (async () => {
+    const operationPromise = (async (): Promise<NextResponse> => {
       const { phoneNumber, businessName, businessType, services, hours } = await request.json()
 
       // Validate input

@@ -1,27 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/monitoring'
 import OpenAI from 'openai'
-interface RealtimeSession {
-  id: string;
-  created_at: number;
-  expires_at: number;
-}
-
-interface SessionCreateResponse {
-  id: string;
-  created_at: number;
-  expires_at: number;
-}
-interface RealtimeSession {
-  id: string;
-  created_at: number;
-  expires_at: number;
-}
-interface RealtimeSession {
-  id: string;
-  created_at: number;
-  expires_at: number;
-}
 
 export const dynamic = 'force-dynamic'
 
@@ -29,11 +8,13 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
+interface RealtimeSession {
+  id: string;
+  created_at: number;
+  expires_at: number;
+}
+
 export async function POST(request: NextRequest) {
-    // Set timeout for the entire function
-    const timeoutId = setTimeout(() => {
-      logger.error('Function timeout - returning default response');
-    }, 8000); // 8 second timeout
   try {
     const body = await request.json()
     
@@ -52,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create premium AI session with realtime capabilities
-    const session: SessionCreateResponse = await openai.beta.realtime.sessions.create({
+    const session: RealtimeSession = await openai.beta.realtime.sessions.create({
       model: 'gpt-4o-realtime-preview-2024-12-17',
       voice: 'alloy',
       instructions: `You are CloudGreet's premium AI receptionist - the most advanced, human-like AI assistant in the industry.
@@ -174,19 +155,18 @@ Remember: You're not just answering questions - you're building relationships an
     })
 
     logger.info('Premium realtime session created', { 
-      session_id: session.id || 'unknown',
+      session_id: session.id,
       call_id: body.call_id
     })
 
     // Return the session details for Telnyx to connect
     return NextResponse.json({
-      session_id: session.id || 'unknown',
+      session_id: session.id,
       status: 'connected',
       message: 'Premium realtime AI session established'
     })
 
-  clearTimeout(timeoutId);
-    } catch (error) {
+  } catch (error: unknown) {
     logger.error('Premium realtime stream error', { 
       error: error instanceof Error ? error.message : 'Unknown error'
     })

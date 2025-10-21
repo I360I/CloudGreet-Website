@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/monitoring'
+import { supabaseAdmin } from '@/lib/supabase'
+
+export const dynamic = 'force-dynamic'
+
 interface ScheduleAppointmentArgs {
   service_type: string;
   preferred_date?: string;
@@ -30,32 +35,8 @@ interface AppointmentData {
   created_at: string;
   updated_at: string;
 }
-interface ScheduleAppointmentArgs {
-  service_type: string;
-  preferred_date?: string;
-  preferred_time?: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_email?: string;
-  issue_description?: string;
-}
-
-interface GetQuoteArgs {
-  service_type: string;
-  property_size?: string;
-  current_system_age?: string;
-  specific_requirements?: string;
-}
-import { logger } from '@/lib/monitoring'
-import { supabaseAdmin } from '@/lib/supabase'
-
-export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
-    // Set timeout for the entire function
-    const timeoutId = setTimeout(() => {
-      logger.error('Function timeout - returning default response');
-    }, 8000); // 8 second timeout
   try {
     const body = await request.json()
     
@@ -67,10 +48,10 @@ export async function POST(request: NextRequest) {
     // Handle different tool calls
     switch (body.name) {
       case 'schedule_appointment':
-        return await handleScheduleAppointment(body.arguments)
+        return await handleScheduleAppointment(body.arguments as ScheduleAppointmentArgs)
         
       case 'get_quote':
-        return await handleGetQuote(body.arguments)
+        return await handleGetQuote(body.arguments as GetQuoteArgs)
         
       default:
         logger.warn('Unknown premium tool called', { 
@@ -81,8 +62,7 @@ export async function POST(request: NextRequest) {
         }, { status: 400 })
     }
 
-  clearTimeout(timeoutId);
-    } catch (error) {
+  } catch (error: unknown) {
     logger.error('Premium realtime tool error', { 
       error: error instanceof Error ? error.message : 'Unknown error'
     })
@@ -93,7 +73,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleScheduleAppointment(args: { service_type: string; preferred_date?: string; preferred_time?: string; customer_name: string; customer_phone: string; customer_email?: string; issue_description?: string; }) {
+async function handleScheduleAppointment(args: ScheduleAppointmentArgs) {
   try {
     const {
       service_type,
@@ -111,10 +91,8 @@ async function handleScheduleAppointment(args: { service_type: string; preferred
       customer_phone
     })
 
-    // Store appointment in database
-    // Optimized database operation
-    // Optimized single database operation
-    const { data: appointment, error }: { data: AppointmentData | null; error: any } = await supabaseAdmin
+    // Single optimized database operation
+    const { data: appointment, error }: { data: AppointmentData | null; error: unknown } = await supabaseAdmin
       .from('appointments')
       .insert({
         business_id: '00000000-0000-0000-0000-000000000001',
@@ -141,7 +119,7 @@ async function handleScheduleAppointment(args: { service_type: string; preferred
     }
 
     logger.info('Premium appointment scheduled successfully', { 
-      appointment_id: appointment.id,
+      appointment_id: appointment?.id,
       customer_name,
       service_type
     })
@@ -149,10 +127,10 @@ async function handleScheduleAppointment(args: { service_type: string; preferred
     return NextResponse.json({
       success: true,
       message: `Perfect! I've scheduled your ${service_type} appointment for ${preferred_date} at ${preferred_time}. You'll receive a confirmation call shortly. Is there anything else I can help you with today?`,
-      appointment_id: appointment.id
+      appointment_id: appointment?.id
     })
 
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Schedule appointment error', { error })
     return NextResponse.json({
       success: false,
@@ -161,7 +139,7 @@ async function handleScheduleAppointment(args: { service_type: string; preferred
   }
 }
 
-async function handleGetQuote(args: { service_type: string; property_size?: string; current_system_age?: string; specific_requirements?: string; }) {
+async function handleGetQuote(args: GetQuoteArgs) {
   try {
     const {
       service_type,
@@ -229,7 +207,7 @@ async function handleGetQuote(args: { service_type: string; property_size?: stri
       price_range: priceRange
     })
 
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Get quote error', { error })
     return NextResponse.json({
       success: false,
