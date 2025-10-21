@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
     const callPayload = {
       to: formattedPhone,
       from: fromNumber,
-      connection_id: '2786688063168841616'
+      connection_id: connectionId
     }
 
     console.log('📞 Creating Telnyx outbound call:', callPayload)

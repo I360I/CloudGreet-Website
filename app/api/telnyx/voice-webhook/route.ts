@@ -114,18 +114,11 @@ export async function POST(request: NextRequest) {
     let business = null
     let businessError = null
     
-    // Try to find business by toll-free number first
-    const { data: phoneRecord, error: phoneError } = await supabaseAdmin
-      .from('toll_free_numbers')
-      .select('*, businesses(*)')
-      .eq('number', to)
-      .eq('status', 'assigned')
-      .single()
+    // Check if this is a call to our Telnyx phone number
+    const telnyxPhoneNumber = process.env.TELYNX_PHONE_NUMBER || '+18333956731';
     
-    if (phoneRecord?.businesses) {
-      business = phoneRecord.businesses
-    } else {
-      // Fallback: Look for demo business for test calls
+    if (to === telnyxPhoneNumber) {
+      // This is a call to our Telnyx number - use demo business
       const { data: demoBusiness, error: demoError } = await supabaseAdmin
         .from('businesses')
         .select('*')
@@ -134,9 +127,23 @@ export async function POST(request: NextRequest) {
       
       if (demoBusiness) {
         business = demoBusiness
-        logger.info('Using demo business for test call', { to, businessId: business.id })
+        logger.info('Using demo business for Telnyx call', { to, businessId: business.id, telnyxPhoneNumber })
       } else {
         businessError = demoError
+      }
+    } else {
+      // Try to find business by toll-free number first
+      const { data: phoneRecord, error: phoneError } = await supabaseAdmin
+        .from('toll_free_numbers')
+        .select('*, businesses(*)')
+        .eq('number', to)
+        .eq('status', 'assigned')
+        .single()
+      
+      if (phoneRecord?.businesses) {
+        business = phoneRecord.businesses
+      } else {
+        businessError = phoneError
       }
     }
 
