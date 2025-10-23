@@ -7,7 +7,7 @@
     ],
     "allowJs": true,
     "skipLibCheck": true,
-    "strict": false,  // TODO: Enable strict mode after refactoring JWT verification in 27 files
+    "strict": false,
     "noEmit": true,
     "incremental": true,
     "module": "esnext",

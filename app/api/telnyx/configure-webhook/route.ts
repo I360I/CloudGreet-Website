@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
 
       logger.info('Telnyx webhooks configured for business', {
         businessId: targetBusinessId,
-        results: webhookResults
+        results: JSON.stringify(webhookResults)
       })
 
       return NextResponse.json({

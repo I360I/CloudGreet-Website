@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import jwt from 'jsonwebtoken'
+import { sanitizeString, sanitizeUrlParams } from '@/lib/security'
 
 // Rate limiting store (in production, use Redis)
 const rateLimitMap = new Map()
@@ -8,18 +9,28 @@ const rateLimitMap = new Map()
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Sanitize pathname to prevent path traversal attacks
+  const sanitizedPathname = sanitizeString(pathname)
+  if (sanitizedPathname !== pathname) {
+    return new NextResponse('Invalid path', { status: 400 })
+  }
+
+  // Sanitize URL parameters
+  const sanitizedParams = sanitizeUrlParams(request.nextUrl.searchParams)
+  
   // Rate limiting
   const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+  const sanitizedIp = sanitizeString(ip)
   const now = Date.now()
   const windowMs = 15 * 60 * 1000 // 15 minutes
   const maxRequests = 100 // Max requests per window
 
-  if (!rateLimitMap.has(ip)) {
-    rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs })
+  if (!rateLimitMap.has(sanitizedIp)) {
+    rateLimitMap.set(sanitizedIp, { count: 1, resetTime: now + windowMs })
   } else {
-    const userLimit = rateLimitMap.get(ip)
+    const userLimit = rateLimitMap.get(sanitizedIp)
     if (now > userLimit.resetTime) {
-      rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs })
+      rateLimitMap.set(sanitizedIp, { count: 1, resetTime: now + windowMs })
     } else if (userLimit.count >= maxRequests) {
       return new NextResponse('Too Many Requests', { status: 429 })
     } else {
@@ -33,7 +44,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/') ||  // Allow all API routes
     pathname === '/landing' ||
     pathname === '/login' ||
+    pathname === '/login-simple' ||
     pathname === '/register' ||
+    pathname === '/register-simple' ||
     pathname === '/admin' ||
     pathname.startsWith('/admin/') ||
     pathname === '/'
@@ -46,7 +59,7 @@ export async function middleware(request: NextRequest) {
   
   // If no token and trying to access protected route, redirect to login
   if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin'))) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(new URL('/login-simple', request.url))
   }
 
   // If token exists, set headers for API routes (let API routes handle JWT verification)

@@ -35,10 +35,10 @@ export async function POST(request: NextRequest) {
     // Step 1: Search Google Places
     const googleResults = await searchGooglePlaces(searchQuery, location, businessType)
 
-    if (!googleResults.success) {
+    if (!googleResults || !('success' in googleResults) || !googleResults.success) {
       return NextResponse.json({
         error: 'Google Places search failed',
-        details: googleResults.error
+        details: 'success' in googleResults ? googleResults.error : 'Unknown error'
       }, { status: 500 })
     }
 
@@ -141,6 +141,9 @@ export async function POST(request: NextRequest) {
 async function searchGooglePlaces(query: string, location: string, businessType: string) {
   try {
     const apiKey = process.env.GOOGLE_PLACES_API_KEY
+  if (!apiKey) {
+    return NextResponse.json({ error: 'Missing GOOGLE_PLACES_API_KEY environment variable' }, { status: 500 })
+  }
 
     if (!apiKey) {
       return {
@@ -187,7 +190,7 @@ async function searchGooglePlaces(query: string, location: string, businessType:
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     }
   }
 }

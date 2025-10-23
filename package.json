@@ -15,6 +15,7 @@
     "check-trials": "node scripts/check-trials.js"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.2.3",
     "@supabase/supabase-js": "^2.57.4",
     "@types/bcryptjs": "^2.4.6",
     "@types/js-cookie": "^3.0.6",
@@ -25,6 +26,8 @@
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.5.0",
     "cheerio": "^1.1.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "csv-parse": "^6.1.0",
     "csv-stringify": "^6.6.0",
     "date-fns": "^4.1.0",
@@ -42,6 +45,7 @@
     "react-dom": "^18",
     "resend": "^6.1.2",
     "stripe": "^14.7.0",
+    "tailwind-merge": "^3.3.1",
     "ws": "^8.18.3",
     "zod": "^3.22.4"
   },

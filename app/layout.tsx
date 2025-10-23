@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from './contexts/ToastContext'
+import { RealtimeProvider } from './contexts/RealtimeProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -108,9 +109,49 @@ export default function RootLayout({
       <body className={`${inter.className} overscroll-none bg-slate-900`}>
         <ErrorBoundary>
           <ToastProvider>
-            {children}
+            <RealtimeProvider>
+              {children}
+            </RealtimeProvider>
           </ToastProvider>
         </ErrorBoundary>
+      
+        <footer className="bg-gray-800 text-white py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">CloudGreet</h3>
+                <p className="text-gray-300">AI-powered receptionist for your business.</p>
+              </div>
+              <div>
+                <h4 className="text-md font-semibold mb-4">Product</h4>
+                <ul className="space-y-2">
+                  <li><a href="/features" className="text-gray-300 hover:text-white">Features</a></li>
+                  <li><a href="/pricing" className="text-gray-300 hover:text-white">Pricing</a></li>
+                  <li><a href="/demo" className="text-gray-300 hover:text-white">Demo</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-md font-semibold mb-4">Support</h4>
+                <ul className="space-y-2">
+                  <li><a href="/help" className="text-gray-300 hover:text-white">Help Center</a></li>
+                  <li><a href="/contact" className="text-gray-300 hover:text-white">Contact</a></li>
+                  <li><a href="/status" className="text-gray-300 hover:text-white">Status</a></li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="text-md font-semibold mb-4">Legal</h4>
+                <ul className="space-y-2">
+                  <li><a href="/terms" className="text-gray-300 hover:text-white">Terms</a></li>
+                  <li><a href="/privacy" className="text-gray-300 hover:text-white">Privacy</a></li>
+                  <li><a href="/cookies" className="text-gray-300 hover:text-white">Cookies</a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="border-t border-gray-700 mt-8 pt-8 text-center">
+              <p className="text-gray-300">&copy; 2024 CloudGreet. All rights reserved.</p>
+            </div>
+          </div>
+        </footer>
       </body>
     </html>
   )

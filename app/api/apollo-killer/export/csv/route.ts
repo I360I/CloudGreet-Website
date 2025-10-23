@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     logger.info('Lead export completed', {
       totalLeads: leads.length,
       format,
-      filters: { minScore, businessType, enrichmentStatus, outreachStatus },
+      filters: JSON.stringify({ minScore, businessType, enrichmentStatus, outreachStatus }),
       fields: fields.length
     })
 

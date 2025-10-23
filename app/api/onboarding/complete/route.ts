@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     const afterHoursPolicy = rawData.afterHoursPolicy || 'voicemail'
     const calendarProvider = rawData.calendarProvider || 'google'
     
-    // Update business with onboarding data
+    // Update business with onboarding data (only existing fields)
     const { error: businessUpdateError } = await supabaseAdmin
       .from('businesses')
       .update({
@@ -143,17 +143,16 @@ export async function POST(request: NextRequest) {
         business_hours: businessHours,
         greeting_message: greetingMessage || `Thank you for calling ${business.business_name}. How can I help you today?`,
         tone: tone,
-        specialties: specialties,
-        after_hours_policy: afterHoursPolicy,
-        calendar_provider: calendarProvider,
+        ai_tone: tone,
+        custom_instructions: rawData.custom_instructions || `You are a helpful AI assistant for ${business.business_name}, a ${business.business_type} business. Be ${tone} and professional.`,
         onboarding_completed: true,
         updated_at: new Date().toISOString()
       })
       .eq('id', businessId)
 
     if (businessUpdateError) {
-      logger.error("Error updating business", { 
-        error: businessUpdateError, 
+      logger.error("Error updating business", {
+        error: businessUpdateError.message,
         requestId,
         businessId
       })
@@ -312,8 +311,8 @@ Remember: You're representing ${business.business_name}. Every conversation is a
       .single()
 
     if (agentError) {
-      logger.error("Error creating AI agent", { 
-        error: agentError, 
+      logger.error("Error creating AI agent", {
+        error: agentError.message,
         requestId,
         businessId
       })

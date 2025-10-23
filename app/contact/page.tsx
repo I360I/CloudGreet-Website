@@ -12,10 +12,21 @@ export default function ContactPage() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setIsLoading(true)
+    setMessage('')
     
     try {
       const formData = new FormData(event.currentTarget)
       const data = Object.fromEntries(formData.entries())
+      
+      // Convert to the expected API format
+      const apiData = {
+        subject: data.topic || 'General Question',
+        message: data.message || '',
+        firstName: data.firstName || '',
+        lastName: data.lastName || '',
+        email: data.email || '',
+        businessName: data.businessName || ''
+      }
       
       // Submit contact form
       const response = await fetch('/api/contact/submit', {
@@ -23,7 +34,7 @@ export default function ContactPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(apiData),
       })
 
       if (!response.ok) {
@@ -95,14 +106,14 @@ export default function ContactPage() {
                     name="firstName"
                     placeholder="First Name"
                     required
-                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
                   />
                   <input
                     type="text"
                     name="lastName"
                     placeholder="Last Name"
                     required
-                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
                   />
                 </div>
                 
@@ -139,7 +150,7 @@ export default function ContactPage() {
                   placeholder="Your message..."
                   rows={5}
                   required
-                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 resize-none"
                 />
                 
                 {message && (
@@ -151,7 +162,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="w-full bg-white/10 backdrop-blur-xl border border-white/20 text-white py-4 rounded-lg font-semibold hover:bg-white/20 hover:border-white/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {isLoading ? (
                     <>

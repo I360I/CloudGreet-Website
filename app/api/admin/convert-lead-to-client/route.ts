@@ -21,9 +21,22 @@ export async function POST(request: NextRequest) {
 
     const { leadId, password, plan = 'pro' } = await request.json()
 
-    if (!leadId) {
+    // Input validation
+    if (!leadId || typeof leadId !== 'string') {
       return NextResponse.json({
-        error: 'leadId is required'
+        error: 'leadId is required and must be a string'
+      }, { status: 400 })
+    }
+
+    if (password && (typeof password !== 'string' || password.length < 8)) {
+      return NextResponse.json({
+        error: 'Password must be at least 8 characters long'
+      }, { status: 400 })
+    }
+
+    if (plan && !['basic', 'pro', 'enterprise'].includes(plan)) {
+      return NextResponse.json({
+        error: 'Plan must be basic, pro, or enterprise'
       }, { status: 400 })
     }
 

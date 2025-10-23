@@ -225,8 +225,19 @@ export class ConversionTracker {
    */
   private async getTotalLeadsForCampaign(campaignId: string): Promise<number> {
     // This would query the database for total leads in the campaign
-    // For now, return a placeholder
-    return 100
+    // Query database for real lead count
+    const { supabaseAdmin } = await import('@/lib/supabase');
+    const { data, error } = await supabaseAdmin
+      .from('leads')
+      .select('id', { count: 'exact' })
+      .eq('campaign_id', campaignId);
+    
+    if (error) {
+      console.error('Error fetching lead count:', error);
+      return 0;
+    }
+    
+    return data?.length || 0
   }
 
   /**

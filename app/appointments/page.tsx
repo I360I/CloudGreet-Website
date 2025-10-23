@@ -69,6 +69,11 @@ export default function AppointmentsPage() {
     return phone
   }
 
+  const handleEditAppointment = (appointmentId: string) => {
+    // TODO: Implement edit appointment functionality
+    console.log('Edit appointment:', appointmentId)
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'scheduled':

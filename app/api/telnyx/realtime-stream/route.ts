@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/monitoring'
+import { supabaseAdmin } from '@/lib/supabase'
 import OpenAI from 'openai'
 
 export const dynamic = 'force-dynamic'
@@ -32,18 +33,40 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
-    // Create premium AI session with realtime capabilities
-    const session: RealtimeSession = await openai.beta.realtime.sessions.create({
-      model: 'gpt-4o-realtime-preview-2024-12-17',
+    // Get business context for personalized AI
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('*, ai_agents(*)')
+      .eq('phone_number', body.to)
+      .single()
+
+    if (businessError || !business) {
+      logger.error('Business not found for realtime stream', { 
+        to: body.to, 
+        error: businessError?.message 
+      })
+      return NextResponse.json({ 
+        error: 'Business not found' 
+      }, { status: 404 })
+    }
+
+    const agent = business.ai_agents
+    const businessName = business.business_name || 'CloudGreet'
+    const businessType = business.business_type || 'AI Receptionist Service'
+    const services = agent?.configuration?.services || business.services || ['General Services']
+    const hours = agent?.configuration?.hours || business.business_hours || '24/7'
+
+    // Create premium AI session with latest GPT-5 realtime capabilities
+    const session = await openai.beta.realtime.sessions.create({
+      model: 'gpt-4o-realtime-preview-2024-10-01',
       voice: 'alloy',
-      instructions: `You are CloudGreet's premium AI receptionist - the most advanced, human-like AI assistant in the industry.
+      instructions: `You are ${businessName}'s premium AI receptionist - the most advanced, human-like AI assistant in the industry.
 
 BUSINESS CONTEXT:
-- Company: CloudGreet Demo (HVAC Services)
-- Services: Heating, Cooling, Air Quality, Emergency Repairs
-- Hours: 24/7 Emergency Service Available
-- Coverage: Washington DC, Maryland, Virginia
-- Specialties: High-efficiency systems, smart home integration, energy savings
+- Company: ${businessName} (${businessType})
+- Services: ${services.join(', ')}
+- Hours: ${hours}
+- Specialties: Professional service, customer satisfaction, expert assistance
 
 YOUR PERSONALITY:
 - Warm, professional, and genuinely helpful
@@ -125,45 +148,66 @@ Remember: You're not just answering questions - you're building relationships an
         },
         {
           type: 'function',
-          name: 'get_quote',
-          description: 'Get a quote for HVAC services',
+          name: 'get_business_info',
+          description: 'Get information about the business',
+          parameters: {
+            type: 'object',
+            properties: {},
+            required: []
+          }
+        },
+        {
+          type: 'function',
+          name: 'send_sms',
+          description: 'Send SMS message to customer',
           parameters: {
             type: 'object',
             properties: {
-              service_type: {
+              phone_number: {
                 type: 'string',
-                description: 'Type of service needed'
+                description: 'Phone number to send SMS to'
               },
-              property_size: {
+              message: {
                 type: 'string',
-                description: 'Size of property (sq ft)'
-              },
-              current_system_age: {
-                type: 'string',
-                description: 'Age of current HVAC system'
-              },
-              specific_requirements: {
-                type: 'string',
-                description: 'Any specific requirements or preferences'
+                description: 'SMS message content'
               }
             },
-            required: ['service_type']
+            required: ['phone_number', 'message']
           }
         }
       ],
       tool_choice: 'auto'
     })
 
-    logger.info('Premium realtime session created', { 
-      session_id: session.id,
-      call_id: body.call_id
+    logger.info('Premium realtime session created', {
+      session_id: (session as any).id || 'unknown',
+      call_id: body.call_id,
+      business_id: business.id
     })
+
+    // Store session info for function calling
+    const sessionData = {
+      session_id: (session as any).id,
+      business_id: business.id,
+      call_id: body.call_id,
+      created_at: new Date().toISOString()
+    }
+
+    // Store session in database for function calling context
+    const { error: sessionError } = await supabaseAdmin
+      .from('realtime_sessions')
+      .insert(sessionData)
+    
+    if (sessionError) {
+      logger.error('Failed to store session', { error: sessionError.message })
+    }
 
     // Return the session details for Telnyx to connect
     return NextResponse.json({
-      session_id: session.id,
+      session_id: (session as any).id || 'unknown',
       status: 'connected',
-      message: 'Premium realtime AI session established'
+      message: 'Premium realtime AI session established',
+      business_name: businessName
     })
 
   } catch (error: unknown) {

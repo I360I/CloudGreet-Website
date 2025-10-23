@@ -39,6 +39,9 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     
     if (!jwtSecret) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
@@ -92,11 +95,14 @@ export async function GET(request: NextRequest) {
       tone: agent?.tone || business.ai_tone || 'professional'
     }
 
-    return NextResponse.json(profileData)
+    return NextResponse.json({
+      success: true,
+      data: profileData
+    })
 
   } catch (error) {
     logger.error('Error fetching business profile', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       userId: request.headers.get('x-user-id'),
       businessId: request.headers.get('x-business-id')
     })
@@ -106,11 +112,32 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id')
-    const businessId = request.headers.get('x-business-id')
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret) {
+      return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+    }
+
+    // Decode JWT token
+    let decoded
+    try {
+      decoded = jwt.verify(token, jwtSecret) as any
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const userId = decoded.userId
+    const businessId = decoded.businessId
     
     if (!userId || !businessId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -139,10 +166,10 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (businessError) {
-      logger.error('Error updating business', { 
-        error: businessError,  
-        businessId, 
-        userId 
+      logger.error('Error updating business', {
+        error: businessError.message,
+        businessId,
+        userId
       })
       return NextResponse.json({ error: 'Failed to update business' }, { status: 500 })
     }
@@ -158,9 +185,9 @@ export async function PUT(request: NextRequest) {
       .eq('business_id', businessId)
 
     if (agentError) {
-      logger.error('Error updating AI agent', { 
-        error: agentError,  
-        businessId 
+      logger.error('Error updating AI agent', {
+        error: agentError.message,
+        businessId
       })
     }
 
@@ -178,7 +205,7 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     logger.error('Error updating business profile', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       userId: request.headers.get('x-user-id'),
       businessId: request.headers.get('x-business-id')
     })

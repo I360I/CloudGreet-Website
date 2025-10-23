@@ -1,0 +1,117 @@
+COMPLETE LIST OF ALL TABLES REFERENCED IN CODEBASE:
+
+CORE TABLES:
+- businesses
+- users
+- leads
+- calls
+- appointments
+- ai_agents
+- toll_free_numbers
+- sms_messages
+- conversation_history
+- conversations
+- realtime_sessions
+
+AUTH & SECURITY:
+- password_reset_tokens
+- audit_logs
+- contact_submissions
+
+BILLING & PAYMENTS:
+- billing_history
+- stripe_subscriptions
+- pricing_rules
+- quotes
+- promo_codes
+- finance
+
+APOLLO KILLER SYSTEM:
+- enriched_leads
+- enrichment_queue
+- bulk_enrichment_jobs
+- bulk_enrichment_logs
+
+AUTOMATION & CAMPAIGNS:
+- follow_up_tasks
+- campaigns
+- follow_up_sequences
+- follow_up_steps
+- nurture_campaigns
+- campaign_performance
+- contact_activities
+
+SEGMENTATION & TARGETING:
+- lead_segments
+- segmentation_rules
+- targeting_campaigns
+
+ANALYTICS & ATTRIBUTION:
+- attribution_models
+- lead_sources
+- lead_attribution
+
+CRM & PIPELINES:
+- crm_pipelines
+- pipeline_stages
+
+A/B TESTING:
+- ab_tests
+
+SYSTEM & ADMIN:
+- notifications
+- data_exports
+- system_events
+- scheduled_maintenance
+- system_health
+- performance_metrics
+
+APPOINTMENT SYSTEM:
+- appointment_reminders
+
+SMS SYSTEM:
+- sms_opt_outs
+- sms_templates
+
+CALL SYSTEM:
+- call_logs
+- call_conversations
+
+CALENDAR SYSTEM:
+- calendar_events
+
+PAYMENT SYSTEM:
+- stripe_customers
+- payment_methods
+- refunds
+- invoices
+- subscription_usage
+- coupon_usage
+
+ADVANCED REVENUE:
+- lead_scoring
+- upsell_opportunities
+- pricing_optimization_log
+- competitor_analysis
+- retention_analysis
+- revenue_forecasts
+- ai_conversation_analytics
+- revenue_optimization_settings
+
+ADMIN CUSTOMIZATION:
+- ai_agent_settings
+- business_templates
+- pricing_settings
+
+AUTOMATION:
+- follow_up_sequence
+- scheduled_calls
+- ml_training_data
+
+WEBHOOKS & TRACKING:
+- webhook_logs
+
+CUSTOM USERS:
+- custom_users
+
+TOTAL: 70+ UNIQUE TABLES REFERENCED IN CODEBASE

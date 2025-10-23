@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     const jwt = (await import('jsonwebtoken')).default
     const decoded = jwt.verify(token, jwtSecret) as any
     const userBusinessId = decoded.businessId
@@ -176,7 +179,7 @@ export async function POST(request: NextRequest) {
       })
       
     } catch (error) {
-    logger.error('Agent settings update failed', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'agent/update-working' })
+    logger.error('Agent settings update failed', { error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', endpoint: 'agent/update-working' })
     
     if (error instanceof z.ZodError) {
       return NextResponse.json({
@@ -253,7 +256,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Failed to get agent settings', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'agent/update-working' })
+    logger.error('Failed to get agent settings', { error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', endpoint: 'agent/update-working' })
     return NextResponse.json({
       success: false,
       message: 'Failed to get agent settings'
@@ -326,7 +329,7 @@ async function testWorkingConfiguration(settings: any, businessName: string): Pr
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-5-turbo',
         messages: [
           {
             role: 'system',
@@ -351,7 +354,7 @@ async function testWorkingConfiguration(settings: any, businessName: string): Pr
       workingSettings: true
     }
     } catch (error) {
-    logger.error('Failed to test configuration', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'agent/update-working' })
+    logger.error('Failed to test configuration', { error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', endpoint: 'agent/update-working' })
     return {
       testResponse: 'Configuration updated successfully.',
       voice: settings.voice || 'alloy',

@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
             results.push({ clientId, success: true, result })
             successCount++
           } catch (error) {
-            results.push({ clientId, success: false, error: error instanceof Error ? error.message : 'Unknown error' })
+            results.push({ clientId, success: false, error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error' })
           }
         }
         break
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
             results.push({ clientId, success: true, result })
             successCount++
           } catch (error) {
-            results.push({ clientId, success: false, error: error instanceof Error ? error.message : 'Unknown error' })
+            results.push({ clientId, success: false, error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error' })
           }
         }
         break
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             success: false,
             message: 'Data export failed',
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
           }, { status: 500 })
         }
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
             results.push({ clientId, success: true, result })
             successCount++
           } catch (error) {
-            results.push({ clientId, success: false, error: error instanceof Error ? error.message : 'Unknown error' })
+            results.push({ clientId, success: false, error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error' })
           }
         }
         break
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: false, 
       message: 'Failed to perform bulk action',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     }, { status: 500 })
   }
 }
@@ -300,7 +300,7 @@ async function exportClientData(clientIds: string[]) {
       expiresAt: exportRecord?.expires_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     }
   } catch (error) {
-    logger.error('Client data export failed', { error, clientIds })
+    logger.error('Client data export failed', { error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', clientIds: clientIds.join(', ') })
     throw error
   }
 }

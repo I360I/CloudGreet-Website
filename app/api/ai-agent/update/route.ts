@@ -40,6 +40,9 @@ export async function PUT(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     const jwt = (await import('jsonwebtoken')).default
     const decoded = jwt.verify(token, jwtSecret) as any
     
@@ -173,8 +176,8 @@ Always be professional, helpful, and try to convert calls into appointments.`
       .single()
 
     if (updateError) {
-      logger.error('Error updating AI agent', { 
-        error: updateError, 
+      logger.error('Error updating AI agent', {
+        error: updateError.message,
         requestId,
         businessId,
         userId,
@@ -220,7 +223,7 @@ Always be professional, helpful, and try to convert calls into appointments.`
       requestId,
       businessId,
       userId,
-      updatedFields: Object.keys(agentUpdates),
+      updatedFields: Object.keys(agentUpdates).join(', '),
       duration: Date.now() - startTime
     })
 
@@ -235,7 +238,7 @@ Always be professional, helpful, and try to convert calls into appointments.`
 
   } catch (error) {
     logger.error('AI agent update error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       requestId,
       userId: request.headers.get('x-user-id'),
       businessId: request.headers.get('x-business-id'),

@@ -26,6 +26,9 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     
     if (!jwtSecret || jwtSecret.includes('fallback') || jwtSecret.length < 32) {
       return NextResponse.json({ error: 'Server configuration error - JWT_SECRET not properly configured' }, { status: 500 })
@@ -116,24 +119,24 @@ export async function GET(request: NextRequest) {
             const { data: sms, error: smsError } = smsResult
     
     if (callsError) {
-      logger.error('Failed to fetch calls data', { 
-        error: callsError,  
-        businessId, 
-        userId 
+      logger.error('Failed to fetch calls data', {
+        error: callsError.message,
+        businessId,
+        userId
       })
     }
     if (appointmentsError) {
       logger.error('Failed to fetch appointments data', { 
-        error: appointmentsError,  
+        error: appointmentsError.message,  
         businessId, 
-        userId 
+        userId
       })
     }
     if (smsError) {
       logger.error('Failed to fetch SMS data', { 
-        error: smsError,  
+        error: smsError.message,  
         businessId, 
-        userId 
+        userId
       })
     }
     
@@ -248,7 +251,7 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     logger.error('Dashboard data error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',  
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',  
       userId: request.headers.get('x-user-id'),
       businessId: request.headers.get('x-business-id')
     })

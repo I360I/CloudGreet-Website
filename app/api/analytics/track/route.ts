@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     await logger.error('Analytics tracking failed', {
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
 
     return NextResponse.json(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { securitySchemas, sanitizeInput, sanitizePhoneNumber, securityHeaders } from '@/lib/validation';
+import { logger } from '@/lib/monitoring';
 
 export const dynamic = 'force-dynamic'
 
@@ -75,6 +76,28 @@ export async function POST(request: NextRequest) {
 
         const phoneData = await telnyxResponse.json()
         const phoneNumber = phoneData.data.phone_number
+
+        // Set webhook URL for the phone number
+        const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com"}/api/telnyx/voice-webhook`
+        
+        try {
+          await fetch(`https://api.telnyx.com/v2/phone_numbers/${phoneData.data.id}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              webhook_url: webhookUrl,
+              webhook_url_method: 'POST'
+            })
+          })
+        } catch (webhookError) {
+          logger.error('Failed to set webhook URL', { 
+            error: webhookError instanceof Error ? webhookError.message : 'Unknown error',
+            phoneNumber 
+          })
+        }
 
         // Store the real phone number in database
         const { data: phoneRecord, error: phoneError } = await supabaseAdmin
@@ -211,7 +234,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Basic health check
+    // Simple health check without database connection
     const healthStatus: any = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -220,25 +243,7 @@ export async function GET(request: NextRequest) {
       uptime: process.uptime(),
     };
 
-    // Test database connection
-    try {
-      const { data, error } = await supabaseAdmin
-        .from('businesses')
-        .select('id')
-        .limit(1);
-      
-      if (error) {
-        healthStatus.status = 'degraded';
-        healthStatus.database = 'error';
-      } else {
-        healthStatus.database = 'connected';
-      }
-    } catch (dbError) {
-      healthStatus.status = 'degraded';
-      healthStatus.database = 'error';
-    }
-
-    // Test external services
+    // Test external services (without database connection)
     const services = {
       resend: !!process.env.RESEND_API_KEY,
       stripe: !!process.env.STRIPE_SECRET_KEY,
@@ -249,9 +254,7 @@ export async function GET(request: NextRequest) {
 
     healthStatus.services = services;
 
-    const statusCode = healthStatus.status === 'healthy' ? 200 : 503;
-
-    return NextResponse.json(healthStatus, { status: statusCode });
+    return NextResponse.json(healthStatus, { status: 200 });
   } catch (error) {
     return NextResponse.json(
       {

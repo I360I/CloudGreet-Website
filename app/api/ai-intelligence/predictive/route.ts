@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     `
 
     const analysis = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-5-turbo',
       messages: [{ role: 'user', content: analysisPrompt }],
       max_tokens: 1000,
       temperature: 0.3
@@ -137,7 +137,9 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('AI intelligence analysis error', error as Error)
+    logger.error('AI intelligence analysis error', { 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error' 
+    })
     return NextResponse.json({
       success: false,
       message: 'Failed to generate insights'

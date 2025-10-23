@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +15,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('📞 Webhook test received:', JSON.stringify(body, null, 2))
+    logger.info('Webhook test received', { body })
     
     return NextResponse.json({ 
       status: 'received',

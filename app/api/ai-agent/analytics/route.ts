@@ -17,6 +17,9 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     const jwt = (await import('jsonwebtoken')).default
     const decoded = jwt.verify(token, jwtSecret) as any
     
@@ -61,8 +64,8 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (callsError) {
-      logger.error('Error fetching call analytics', { 
-        error: callsError, 
+      logger.error('Error fetching call analytics', {
+        error: callsError.message,
         requestId,
         businessId,
         userId
@@ -78,8 +81,8 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (appointmentsError) {
-      logger.error('Error fetching appointment analytics', { 
-        error: appointmentsError, 
+      logger.error('Error fetching appointment analytics', {
+        error: appointmentsError.message,
         requestId,
         businessId,
         userId
@@ -95,8 +98,8 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (smsError) {
-      logger.error('Error fetching SMS analytics', { 
-        error: smsError, 
+      logger.error('Error fetching SMS analytics', {
+        error: smsError.message,
         requestId,
         businessId,
         userId
@@ -201,7 +204,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('AI agent analytics error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       requestId,
       userId: request.headers.get('x-user-id'),
       businessId: request.headers.get('x-business-id'),

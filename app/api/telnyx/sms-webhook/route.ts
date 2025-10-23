@@ -224,7 +224,7 @@ Reply STOP to opt out.`
       if (business.ai_agent_enabled) {
         try {
           const aiResponse = await openai.chat.completions.create({
-            model: 'gpt-4',
+            model: 'gpt-5-turbo',
             messages: [
               {
                 role: 'system',

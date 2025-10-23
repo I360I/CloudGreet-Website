@@ -117,6 +117,34 @@ export default function BillingPage() {
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full mx-auto mb-4 animate-spin" />
           <p className="text-gray-400">Loading billing information...</p>
+        
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Billing History</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+              <div>
+                <p className="font-medium">Monthly Subscription</p>
+                <p className="text-sm text-gray-600">Dec 2024</p>
+              
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Invoice Downloads</h3>
+          <div className="space-y-2">
+            <button className="w-full text-left p-3 bg-gray-50 rounded hover:bg-gray-100">
+              <div className="flex items-center justify-between">
+                <span>Invoice #INV-001</span>
+                <span className="text-blue-600">Download PDF</span>
+              </div>
+            </button>
+          </div>
+        </div>
+        </div>
+              <div className="text-right">
+                <p className="font-medium">$99.00</p>
+                <button className="text-blue-600 hover:text-blue-500 text-sm">Download</button>
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
       </div>
     )

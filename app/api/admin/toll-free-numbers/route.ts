@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('Toll-free numbers API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
     return NextResponse.json({ error: 'API error' }, { status: 500 })
   }
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     logger.error('Add toll-free numbers API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
     return NextResponse.json({ error: 'API error' }, { status: 500 })
   }
@@ -144,7 +144,7 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     logger.error('Update toll-free number API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
     return NextResponse.json({ error: 'API error' }, { status: 500 })
   }

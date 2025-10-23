@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     logger.error('Admin test features error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       endpoint: 'admin/test-features',
       method: 'POST'
     })
@@ -80,7 +80,7 @@ async function testSMS(phoneNumber: string, message: string) {
     })
   } catch (error) {
     logger.error('SMS test failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       phoneNumber,
       message 
     })
@@ -132,7 +132,7 @@ async function testVoiceCall(phoneNumber: string, businessId: string) {
     })
   } catch (error) {
     logger.error('Voice test failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       phoneNumber,
       businessId 
     })
@@ -166,7 +166,7 @@ async function testEmail(email: string, subject: string) {
     })
   } catch (error) {
     logger.error('Email test failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       email,
       subject 
     })
@@ -231,7 +231,7 @@ async function testSystemHealth() {
     })
   } catch (error) {
     logger.error('Health check failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
     return NextResponse.json({ 
       error: 'Health check failed',

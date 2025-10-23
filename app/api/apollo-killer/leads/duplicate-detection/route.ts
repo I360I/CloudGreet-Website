@@ -293,7 +293,7 @@ async function mergeLeads(leadIds: string[], primaryLeadId?: string) {
 
     logger.info('Leads merged successfully', {
       primaryId: primary.id,
-      mergedIds: others.map(l => l.id),
+      mergedIds: others.map(l => l.id).join(', '),
       totalMerged: leadIds.length
     })
 
@@ -306,7 +306,7 @@ async function mergeLeads(leadIds: string[], primaryLeadId?: string) {
 
   } catch (error) {
     logger.error('Lead merge failed', {
-      leadIds,
+      leadIds: leadIds.join(', '),
       primaryLeadId,
       error: error instanceof Error ? error.message : 'Unknown'
     })

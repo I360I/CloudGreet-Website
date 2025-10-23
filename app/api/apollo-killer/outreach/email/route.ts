@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
         results.push({
           leadId: id,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
         })
       }
 

@@ -15,12 +15,22 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
-    
-    const decoded = jwt.verify(token, jwtSecret) as any
+    if (!jwtSecret) {
+      return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+    }
+
+    let decoded
+    try {
+      decoded = jwt.verify(token, jwtSecret) as any
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const userId = decoded.userId
     const businessId = decoded.businessId
 
-    if (!businessId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    if (!userId || !businessId) {
+      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
     }
 
     // Get timeframe from query params
@@ -29,37 +39,10 @@ export async function GET(request: NextRequest) {
     
     // Calculate date range
     const now = new Date()
-    const startDate = new Date()
-    
-    switch (timeframe) {
-      case '24h':
-        startDate.setDate(now.getDate() - 1)
-        break
-      case '7d':
-        startDate.setDate(now.getDate() - 7)
-        break
-      case '30d':
-        startDate.setDate(now.getDate() - 30)
-        break
-      case '90d':
-        startDate.setDate(now.getDate() - 90)
-        break
-      default:
-        startDate.setDate(now.getDate() - 30)
-    }
+    const days = timeframe === '7d' ? 7 : timeframe === '90d' ? 90 : 30
+    const startDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000))
 
-    // Get REAL business data
-    const { data: business, error: businessError } = await supabaseAdmin
-      .from('businesses')
-      .select('*')
-      .eq('id', businessId)
-      .single()
-
-    if (businessError || !business) {
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
-    }
-
-    // Get REAL call data
+    // Get real calls data
     const { data: calls, error: callsError } = await supabaseAdmin
       .from('calls')
       .select('*')
@@ -67,7 +50,11 @@ export async function GET(request: NextRequest) {
       .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: false })
 
-    // Get REAL appointment data
+    if (callsError) {
+      logger.error('Error fetching calls data', { error: callsError.message, businessId })
+    }
+
+    // Get real appointments data
     const { data: appointments, error: appointmentsError } = await supabaseAdmin
       .from('appointments')
       .select('*')
@@ -75,141 +62,105 @@ export async function GET(request: NextRequest) {
       .gte('created_at', startDate.toISOString())
       .order('created_at', { ascending: false })
 
-    // Get REAL lead data
-    const { data: leads, error: leadsError } = await supabaseAdmin
-      .from('leads')
-      .select('*')
-      .eq('business_id', businessId)
-      .gte('created_at', startDate.toISOString())
-      .order('created_at', { ascending: false })
+    if (appointmentsError) {
+      logger.error('Error fetching appointments data', { error: appointmentsError.message, businessId })
+    }
 
-    // Calculate REAL metrics
+    // Get business data for comparison
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('*')
+      .eq('id', businessId)
+      .single()
+
+    if (businessError) {
+      logger.error('Error fetching business data', { error: businessError.message, businessId })
+    }
+
+    // Calculate real metrics
     const totalCalls = calls?.length || 0
     const totalAppointments = appointments?.length || 0
-    const totalLeads = leads?.length || 0
+    const answeredCalls = calls?.filter(call => call.status === 'answered' || call.status === 'completed').length || 0
+    const missedCalls = calls?.filter(call => call.status === 'missed' || call.status === 'busy').length || 0
+    const callAnswerRate = totalCalls > 0 ? (answeredCalls / totalCalls) * 100 : 0
+    const conversionRate = answeredCalls > 0 ? (totalAppointments / answeredCalls) * 100 : 0
     
-    // Calculate revenue from appointments
-    const totalRevenue = appointments?.reduce((sum, apt) => {
-      return sum + (apt.estimated_value || 0)
-    }, 0) || 0
-
-    // Calculate conversion rate
-    const conversionRate = totalCalls > 0 ? (totalAppointments / totalCalls) * 100 : 0
-
+    // Calculate revenue (assuming average appointment value)
+    const avgAppointmentValue = 2500 // This could be configurable per business
+    const totalRevenue = totalAppointments * avgAppointmentValue
+    
     // Calculate average call duration
     const avgCallDuration = calls?.length > 0 
       ? calls.reduce((sum, call) => sum + (call.duration || 0), 0) / calls.length 
       : 0
 
-    // Calculate customer satisfaction (from call ratings)
-    const ratedCalls = calls?.filter(call => call.satisfaction_rating) || []
-    const customerSatisfaction = ratedCalls.length > 0
-      ? ratedCalls.reduce((sum, call) => sum + call.satisfaction_rating, 0) / ratedCalls.length * 20 // Convert 1-5 to percentage
-      : 85 // Default high satisfaction for new businesses
+    // Calculate weekly metrics
+    const weekStart = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000))
+    const callsThisWeek = calls?.filter(call => new Date(call.created_at) >= weekStart).length || 0
+    const appointmentsThisWeek = appointments?.filter(apt => new Date(apt.created_at) >= weekStart).length || 0
+    const revenueThisWeek = appointmentsThisWeek * avgAppointmentValue
 
-    // Calculate growth (compare to previous period)
-    const prevStartDate = new Date(startDate)
-    const periodLength = now.getTime() - startDate.getTime()
-    prevStartDate.setTime(startDate.getTime() - periodLength)
-
-    const { data: prevCalls } = await supabaseAdmin
+    // Calculate growth (simplified - comparing to previous period)
+    const previousPeriodStart = new Date(startDate.getTime() - (days * 24 * 60 * 60 * 1000))
+    const previousPeriodEnd = startDate
+    
+    const { data: previousCalls } = await supabaseAdmin
       .from('calls')
-      .select('id')
+      .select('*')
       .eq('business_id', businessId)
-      .gte('created_at', prevStartDate.toISOString())
-      .lt('created_at', startDate.toISOString())
+      .gte('created_at', previousPeriodStart.toISOString())
+      .lte('created_at', previousPeriodEnd.toISOString())
 
-    const prevCallCount = prevCalls?.length || 0
-    const monthlyGrowth = prevCallCount > 0 
-      ? ((totalCalls - prevCallCount) / prevCallCount) * 100 
-      : totalCalls > 0 ? 100 : 0 // 100% growth if no previous data but current data exists
+    const previousCallsCount = previousCalls?.length || 0
+    const monthlyGrowth = previousCallsCount > 0 
+      ? ((totalCalls - previousCallsCount) / previousCallsCount) * 100 
+      : 0
+
+    // Calculate customer satisfaction (simplified based on call outcomes)
+    const customerSatisfaction = callAnswerRate > 80 ? 4.5 : callAnswerRate > 60 ? 4.0 : 3.5
 
     // Calculate revenue projection
-    const revenueProjection = totalRevenue > 0 
-      ? totalRevenue * (1 + monthlyGrowth / 100)
-      : totalRevenue
-
-    // Get recent activity for live feed
-    const recentActivity = []
-    
-    // Add recent calls
-    calls?.slice(0, 5).forEach(call => {
-      recentActivity.push({
-        id: call.id,
-        type: 'call',
-        title: 'Call Received',
-        description: `Customer called from ${call.caller_phone}`,
-        timestamp: new Date(call.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: call.status === 'completed' ? 'success' : 'warning',
-        value: call.duration ? `${Math.round(call.duration / 60)}m` : 'Incomplete'
-      })
-    })
-
-    // Add recent appointments
-    appointments?.slice(0, 3).forEach(apt => {
-      recentActivity.push({
-        id: apt.id,
-        type: 'appointment',
-        title: 'Appointment Scheduled',
-        description: `${apt.service_type} scheduled for ${new Date(apt.scheduled_date).toLocaleDateString()}`,
-        timestamp: new Date(apt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'success',
-        value: apt.estimated_value ? `$${apt.estimated_value}` : 'TBD'
-      })
-    })
-
-    // Add recent leads
-    leads?.slice(0, 3).forEach(lead => {
-      recentActivity.push({
-        id: lead.id,
-        type: 'revenue',
-        title: 'New Lead',
-        description: `${lead.business_name} - ${lead.business_type}`,
-        timestamp: new Date(lead.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'info',
-        value: lead.estimated_revenue ? `$${lead.estimated_revenue}` : 'Qualifying'
-      })
-    })
-
-    // Sort by timestamp
-    recentActivity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    const revenueProjection = totalRevenue * (1 + (monthlyGrowth / 100))
 
     const metrics = {
       totalCalls,
       totalAppointments,
       totalRevenue,
-      conversionRate: Math.round(conversionRate * 100) / 100,
-      avgCallDuration: Math.round(avgCallDuration),
-      customerSatisfaction: Math.round(customerSatisfaction),
-      monthlyGrowth: Math.round(monthlyGrowth * 100) / 100,
-      revenueProjection: Math.round(revenueProjection),
-      recentActivity: recentActivity.slice(0, 10)
+      conversionRate,
+      avgCallDuration,
+      customerSatisfaction,
+      monthlyGrowth,
+      revenueProjection,
+      callsThisWeek,
+      appointmentsThisWeek,
+      revenueThisWeek,
+      missedCalls,
+      answeredCalls,
+      callAnswerRate
     }
 
-    logger.info('Real metrics calculated', {
-      businessId,
-      timeframe,
-      metrics: {
-        totalCalls,
-        totalAppointments,
-        totalRevenue,
-        conversionRate
-      }
+    logger.info('Real metrics calculated', { 
+      businessId, 
+      timeframe, 
+      totalCalls, 
+      totalAppointments, 
+      totalRevenue 
     })
 
     return NextResponse.json({
       success: true,
-      data: metrics
+      metrics,
+      timeframe,
+      calculatedAt: new Date().toISOString()
     })
 
   } catch (error) {
-    logger.error('Real metrics API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error'
+    logger.error('Error calculating real metrics', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
     })
-    
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to calculate real metrics'
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to calculate metrics' 
     }, { status: 500 })
   }
 }

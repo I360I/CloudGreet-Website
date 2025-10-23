@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (businessError) {
-      logger.error('Business fetch error', { 
-        error: businessError, 
+      logger.error('Business fetch error', {
+        error: businessError.message,
         requestId,
         action: 'get_admin_clients'
       })
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (error) {
-    logger.error('Admin clients error', { error: error instanceof Error ? error.message : 'Unknown error', 
+    logger.error('Admin clients error', { error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       requestId,
       endpoint: 'admin_clients',
       responseTime: Date.now() - startTime

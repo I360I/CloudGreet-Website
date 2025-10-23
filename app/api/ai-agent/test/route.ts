@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     
     if (!jwtSecret) {
       return NextResponse.json({
@@ -140,10 +143,10 @@ Remember: You're a real person having a real conversation. Be warm, helpful, and
     })
     
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview', // Latest and most capable model
+      model: 'gpt-5-turbo', // Fast model for real-time voice
       messages: messages as any,
-      max_tokens: 300, // Shorter responses for phone calls
-      temperature: 0.8, // Higher creativity for natural conversation
+      max_tokens: 200, // Shorter responses for phone calls
+      temperature: 0.7, // Balanced creativity
       presence_penalty: 0.3, // Reduce repetition
       frequency_penalty: 0.2, // Encourage varied responses
       top_p: 0.9, // Focus on most likely tokens
@@ -169,9 +172,9 @@ Rate the response on:
 Provide a brief explanation for each score and suggest improvements if needed.`
 
     const analysis = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o-mini', // Fast model for analysis
       messages: [{ role: 'user', content: analysisPrompt }],
-      max_tokens: 300,
+      max_tokens: 200,
       temperature: 0.3
     })
 
@@ -214,7 +217,7 @@ Provide a brief explanation for each score and suggest improvements if needed.`
 
   } catch (error) {
     logger.error('AI agent test error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       requestId,
       userId: request.headers.get('x-user-id'),
       businessId: request.headers.get('x-business-id'),

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/monitoring'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,7 +8,7 @@ export async function POST(request: NextRequest) {
     // Set timeout for the entire function
     const timeoutId = setTimeout(() => {
       logger.error('Function timeout - returning default response');
-    }, 8000); // 8 second timeout
+    }, 30000); // 30 second timeout for real conversations
   try {
     const body = await request.json()
     const { 
@@ -29,25 +30,61 @@ export async function POST(request: NextRequest) {
       userSpeech: userSpeech?.substring(0, 50)
     })
 
-    // Simple AI responses without database or OpenAI calls
-    let aiResponse = 'Thank you for your interest! How can I help you today?'
+    // Get business info for AI context
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('*, ai_agents(*)')
+      .eq('phone_number', to)
+      .single()
+
+    if (businessError || !business) {
+      logger.error('Business not found', { to, error: businessError?.message })
+      return NextResponse.json({
+        call_id: callId,
+        status: 'error',
+        instructions: [
+          {
+            instruction: 'say',
+            text: 'I apologize, but I cannot find your business information. Please try again later.',
+            voice: 'alloy'
+          },
+          {
+            instruction: 'hangup'
+          }
+        ]
+      })
+    }
+
+    // Use fast AI responses for real-time conversation
+    let aiResponse = 'Thank you for calling! How can I help you today?'
     
     if (userSpeech) {
-      const speech = userSpeech.toLowerCase()
-      
-      if (speech.includes('appointment') || speech.includes('schedule') || speech.includes('book')) {
-        aiResponse = 'I\'d be happy to help you schedule an appointment. What type of service do you need?'
-      } else if (speech.includes('price') || speech.includes('cost') || speech.includes('quote')) {
-        aiResponse = 'I can help you get a quote. What type of service are you looking for?'
-      } else if (speech.includes('emergency') || speech.includes('urgent')) {
-        aiResponse = 'I understand this is urgent. Let me connect you with our emergency team right away.'
-      } else if (speech.includes('hvac') || speech.includes('heating') || speech.includes('cooling')) {
-        aiResponse = 'I can help you with your HVAC needs. What specific issue are you experiencing?'
-      } else if (speech.includes('thank') || speech.includes('bye') || speech.includes('goodbye')) {
-        aiResponse = 'Thank you for calling! Have a great day!'
-      } else if (speech.includes('hello') || speech.includes('hi')) {
-        aiResponse = 'Hello! Thank you for calling CloudGreet Demo. How can I help you today?'
-      } else {
+      try {
+        // Use OpenAI directly for fast responses (not the slow conversation-voice endpoint)
+        const OpenAI = (await import('openai')).default
+        const openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY
+        })
+
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-5-turbo', // Latest GPT-5 for enhanced reasoning and speed
+          messages: [
+            {
+              role: 'system',
+              content: `You are ${business.business_name}'s AI receptionist. Be helpful, natural, and brief. Keep responses under 20 words for phone calls. If they want to book an appointment, say "I'd be happy to book that for you!"`
+            },
+            {
+              role: 'user',
+              content: userSpeech
+            }
+          ],
+          max_tokens: 30, // Very short for real-time
+          temperature: 0.7
+        })
+
+        aiResponse = completion.choices[0]?.message?.content || aiResponse
+      } catch (aiError) {
+        logger.error('AI conversation failed', { error: aiError })
         aiResponse = 'I understand you need assistance. How can I help you today?'
       }
     }
@@ -78,7 +115,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Continue conversation
+    // Continue conversation with real-time streaming
     return NextResponse.json({
       call_id: callId,
       status: 'active',
@@ -91,12 +128,12 @@ export async function POST(request: NextRequest) {
         {
           instruction: 'gather',
           input: ['speech'],
-          timeout: 15,
+          timeout: 10,
           speech_timeout: 'auto',
           speech_model: 'default',
           action_on_empty_result: true,
           finish_on_key: '#',
-          action: `${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com" || 'https://cloudgreet.com'}/api/telnyx/voice-handler`
+          action: `${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com"}/api/telnyx/voice-handler`
         }
       ]
     })

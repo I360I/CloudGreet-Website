@@ -62,10 +62,10 @@ export async function GET(request: NextRequest) {
     const { data: rules, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
-      logger.error('Error fetching pricing rules', { 
-        error: error,  
-        businessId, 
-        serviceType 
+      logger.error('Error fetching pricing rules', {
+        error: error.message,
+        businessId,
+        serviceType
       })
       return NextResponse.json({ error: 'Failed to fetch pricing rules' }, { status: 500 })
     }
@@ -104,10 +104,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      logger.error('Error creating pricing rule', { 
-        error: error,  
-        businessId, 
-        ruleData: validatedData 
+      logger.error('Error creating pricing rule', {
+        error: error.message,
+        businessId,
+        ruleData: JSON.stringify(validatedData)
       })
       return NextResponse.json({ error: 'Failed to create pricing rule' }, { status: 500 })
     }
@@ -171,10 +171,10 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (error) {
-      logger.error('Error updating pricing rule', { 
-        error: error,  
-        ruleId: id, 
-        updateData: validatedData 
+      logger.error('Error updating pricing rule', {
+        error: error.message,
+        ruleId: id,
+        updateData: JSON.stringify(validatedData)
       })
       return NextResponse.json({ error: 'Failed to update pricing rule' }, { status: 500 })
     }
@@ -218,9 +218,9 @@ export async function DELETE(request: NextRequest) {
       .eq('id', id)
 
     if (error) {
-      logger.error('Error deleting pricing rule', { 
-        error: error,  
-        ruleId: id 
+      logger.error('Error deleting pricing rule', {
+        error: error.message,
+        ruleId: id
       })
       return NextResponse.json({ error: 'Failed to delete pricing rule' }, { status: 500 })
     }

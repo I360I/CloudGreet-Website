@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
 
     if (rulesError) {
-      logger.error('Error fetching pricing rules', { 
-        error: rulesError,  
+      logger.error('Error fetching pricing rules', {
+        error: rulesError.message,
         businessId: validatedData.business_id,
         serviceType: validatedData.service_type
       })
@@ -98,8 +98,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (quoteError) {
-      logger.error('Error saving quote', { 
-        error: quoteError,  
+      logger.error('Error saving quote', {
+        error: quoteError.message,
         businessId: validatedData.business_id,
         customerPhone: validatedData.customer_phone
       })

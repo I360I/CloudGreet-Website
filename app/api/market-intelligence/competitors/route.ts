@@ -82,7 +82,9 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Market intelligence analysis error', error as Error)
+    logger.error('Market intelligence analysis error', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    })
     return NextResponse.json({
       success: false,
       message: 'Failed to generate market intelligence'
@@ -119,7 +121,7 @@ async function generateCompetitiveAnalysis(business: any, calls: any[], appointm
   `
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
+      model: 'gpt-5-turbo',
     messages: [{ role: 'user', content: prompt }],
     max_tokens: 800,
     temperature: 0.4
@@ -151,7 +153,7 @@ async function generateMarketOpportunities(business: any, analysis: string) {
   `
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
+      model: 'gpt-5-turbo',
     messages: [{ role: 'user', content: prompt }],
     max_tokens: 600,
     temperature: 0.5
@@ -183,7 +185,7 @@ async function generateCompetitiveAdvantages(business: any, analysis: string) {
   `
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
+      model: 'gpt-5-turbo',
     messages: [{ role: 'user', content: prompt }],
     max_tokens: 500,
     temperature: 0.4

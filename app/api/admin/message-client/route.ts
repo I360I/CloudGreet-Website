@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (logError) {
-      logger.warn('Failed to log message in database', { error: logError, clientId })
+      logger.warn('Failed to log message in database', { error: logError.message, clientId })
     }
 
     // Send SMS via Telnyx

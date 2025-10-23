@@ -24,6 +24,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     
     if (!jwtSecret) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
@@ -190,7 +193,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     logger.error('Per-booking billing error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       requestId,
       endpoint: 'per_booking_billing',
       responseTime: Date.now() - startTime
@@ -205,14 +208,32 @@ export async function POST(request: NextRequest) {
 // Get billing summary for business
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id')
-    const businessId = request.headers.get('x-business-id')
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret) {
+      return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+    }
+
+    // Decode JWT token
+    let decoded
+    try {
+      decoded = jwt.verify(token, jwtSecret) as any
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const userId = decoded.userId
+    const businessId = decoded.businessId
     
     if (!userId || !businessId) {
-      return NextResponse.json({
-        success: false,
-        message: 'Authentication required'
-      }, { status: 401 })
+      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
     }
 
     // Get current month's billing summary

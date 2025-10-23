@@ -43,10 +43,19 @@ export default function PricingPage() {
       // Get business ID from user data
       const user = localStorage.getItem('user')
       if (user) {
-        const userData = JSON.parse(user)
-        setBusinessId(userData.business_id || userData.id)
-        loadPricingRules()
+        try {
+          const userData = JSON.parse(user)
+          setBusinessId(userData.business_id || userData.id)
+          loadPricingRules()
+        } catch (error) {
+          console.error('Error parsing user data:', error)
+          setIsLoading(false)
+        }
+      } else {
+        setIsLoading(false)
       }
+    } else {
+      setIsLoading(false)
     }
   }, [])
 
@@ -154,6 +163,24 @@ export default function PricingPage() {
         <div className="text-center">
           <div className="w-12 h-12 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white text-lg">Loading Pricing Rules...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If no business ID, show login prompt
+  if (!businessId) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Please Log In</h1>
+          <p className="text-gray-400 mb-6">You need to be logged in to access pricing rules.</p>
+          <Link 
+            href="/login-simple" 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
+          >
+            Log In
+          </Link>
         </div>
       </div>
     )

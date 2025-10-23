@@ -78,9 +78,9 @@ async function handleVerificationCompleted(payload: any) {
     .single()
 
   if (updateError) {
-    logger.error('Failed to update toll-free verification status', { 
-      error: updateError,
-      phoneNumber 
+    logger.error('Failed to update toll-free verification status', {
+      error: updateError.message,
+      phoneNumber
     })
     return
   }

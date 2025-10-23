@@ -1,79 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { logger } from '@/lib/monitoring'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
-
-interface ScheduleAppointmentArgs {
-  service_type: string;
-  preferred_date?: string;
-  preferred_time?: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_email?: string;
-  issue_description?: string;
-}
-
-interface GetQuoteArgs {
-  service_type: string;
-  property_size?: string;
-  current_system_age?: string;
-  specific_requirements?: string;
-}
-
-interface AppointmentData {
-  id: string;
-  business_id: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_email?: string;
-  service_type: string;
-  preferred_date?: string;
-  preferred_time?: string;
-  issue_description?: string;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
-    logger.info('Premium realtime tool called', { 
-      tool_name: body.name,
-      arguments: body.arguments
+    const { 
+      session_id, 
+      function_name, 
+      function_arguments 
+    } = body
+
+    logger.info('Realtime function called', {
+      session_id,
+      function_name,
+      arguments: function_arguments
     })
 
-    // Handle different tool calls
-    switch (body.name) {
+    // Get session context
+    const { data: session, error: sessionError } = await supabaseAdmin
+      .from('realtime_sessions')
+      .select('business_id, call_id')
+      .eq('session_id', session_id)
+      .single()
+
+    if (sessionError || !session) {
+      logger.error('Session not found', { session_id, error: sessionError?.message })
+      return NextResponse.json({ 
+        error: 'Session not found' 
+      }, { status: 404 })
+    }
+
+    // Handle different function calls
+    switch (function_name) {
       case 'schedule_appointment':
-        return await handleScheduleAppointment(body.arguments as ScheduleAppointmentArgs)
-        
-      case 'get_quote':
-        return await handleGetQuote(body.arguments as GetQuoteArgs)
-        
+        return await handleScheduleAppointment(function_arguments, session.business_id, session.call_id)
+      
+      case 'get_business_info':
+        return await handleGetBusinessInfo(session.business_id)
+      
+      case 'send_sms':
+        return await handleSendSMS(function_arguments, session.business_id)
+      
       default:
-        logger.warn('Unknown premium tool called', { 
-          tool_name: body.name 
-        })
+        logger.warn('Unknown function called', { function_name })
         return NextResponse.json({ 
-          error: 'Unknown tool' 
+          error: 'Unknown function' 
         }, { status: 400 })
     }
 
   } catch (error: unknown) {
-    logger.error('Premium realtime tool error', { 
+    logger.error('Realtime tools error', { 
       error: error instanceof Error ? error.message : 'Unknown error'
     })
     
     return NextResponse.json({ 
-      error: 'Failed to process premium tool' 
+      error: 'Internal server error' 
     }, { status: 500 })
   }
 }
 
-async function handleScheduleAppointment(args: ScheduleAppointmentArgs) {
+async function handleScheduleAppointment(args: any, businessId: string, callId: string) {
   try {
     const {
       service_type,
@@ -85,133 +74,212 @@ async function handleScheduleAppointment(args: ScheduleAppointmentArgs) {
       issue_description
     } = args
 
-    logger.info('Scheduling premium appointment', { 
-      service_type,
-      customer_name,
-      customer_phone
-    })
+    // Parse appointment date/time
+    const appointmentDateTime = preferred_date && preferred_time 
+      ? new Date(`${preferred_date}T${preferred_time}`)
+      : new Date(Date.now() + 24 * 60 * 60 * 1000) // Default to tomorrow
 
-    // Single optimized database operation
-    const { data: appointment, error }: { data: AppointmentData | null; error: unknown } = await supabaseAdmin
+    // Create appointment in database
+    const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
       .insert({
-        business_id: '00000000-0000-0000-0000-000000000001',
-        customer_name,
-        customer_phone,
-        customer_email,
-        service_type,
-        preferred_date,
-        preferred_time,
-        issue_description,
+        business_id: businessId,
+        customer_name: customer_name || 'Unknown',
+        customer_phone: customer_phone || 'Unknown',
+        customer_email: customer_email || null,
+        service_type: service_type || 'General Service',
+        scheduled_date: appointmentDateTime.toISOString(),
+        appointment_date: appointmentDateTime.toISOString(),
+        duration_minutes: 60,
         status: 'scheduled',
+        notes: issue_description || '',
+        source: 'ai_realtime_call',
+        call_id: callId,
+        confirmation_sent: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
       .select()
       .single()
 
-    if (error) {
-      logger.error('Failed to schedule appointment', { error })
-      return NextResponse.json({
+    if (appointmentError) {
+      logger.error('Appointment creation failed', {
+        error: appointmentError.message,
+        businessId,
+        callId
+      })
+      return NextResponse.json({ 
         success: false,
-        message: 'I apologize, but I\'m having trouble scheduling your appointment right now. Let me have someone call you back to confirm the details.'
+        error: 'Failed to create appointment' 
+      }, { status: 500 })
+    }
+
+    // Create Google Calendar event if connected
+    try {
+      const { createCalendarEvent } = await import('@/lib/calendar')
+      await createCalendarEvent(businessId, {
+        title: `Appointment with ${customer_name || 'Customer'}`,
+        start: appointment.scheduled_date,
+        end: new Date(new Date(appointment.scheduled_date).getTime() + 60 * 60000).toISOString(),
+        description: `Phone: ${customer_phone}\nService: ${service_type}\nNotes: ${issue_description}`,
+        location: 'Phone Consultation',
+        attendees: [customer_phone]
+      })
+    } catch (calendarError) {
+      logger.error('Failed to create Google Calendar event', { 
+        error: calendarError instanceof Error ? calendarError.message : 'Unknown error',
+        businessId,
+        appointmentId: appointment.id
       })
     }
 
-    logger.info('Premium appointment scheduled successfully', { 
-      appointment_id: appointment?.id,
-      customer_name,
-      service_type
-    })
+    // Charge per-booking fee automatically
+    try {
+      const { data: business } = await supabaseAdmin
+        .from('businesses')
+        .select('stripe_customer_id, subscription_status')
+        .eq('id', businessId)
+        .single()
+
+      if (business?.stripe_customer_id && business.subscription_status === 'active') {
+        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com"}/api/billing/per-booking`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.JWT_SECRET}`
+          },
+          body: JSON.stringify({
+            appointmentId: appointment.id,
+            customerName: customer_name || 'Unknown',
+            serviceType: service_type || 'General Service',
+            estimatedValue: 0
+          })
+        }).catch(err => logger.error('Failed to charge booking fee', { error: err }))
+      }
+    } catch (billingError) {
+      logger.error('Booking fee automation failed', { error: billingError })
+    }
+
+    // Send notification to business owner
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com"}/api/notifications/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          type: 'appointment_booked',
+          title: 'New Appointment Booked!',
+          message: `Appointment scheduled with ${customer_name || 'Customer'} for ${appointment.scheduled_date}`,
+          data: {
+            appointmentId: appointment.id,
+            customerName: customer_name,
+            customerPhone: customer_phone,
+            scheduledDate: appointment.scheduled_date
+          }
+        })
+      })
+    } catch (notificationError) {
+      logger.error('Failed to send appointment notification', { error: notificationError })
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Perfect! I've scheduled your ${service_type} appointment for ${preferred_date} at ${preferred_time}. You'll receive a confirmation call shortly. Is there anything else I can help you with today?`,
-      appointment_id: appointment?.id
+      appointment_id: appointment.id,
+      scheduled_date: appointment.scheduled_date,
+      message: `Appointment scheduled for ${appointmentDateTime.toLocaleDateString()} at ${appointmentDateTime.toLocaleTimeString()}`
     })
 
-  } catch (error: unknown) {
-    logger.error('Schedule appointment error', { error })
-    return NextResponse.json({
-      success: false,
-      message: 'I apologize, but I\'m having trouble scheduling your appointment right now. Let me have someone call you back to confirm the details.'
+  } catch (error) {
+    logger.error('Schedule appointment error', { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      businessId,
+      callId
     })
+    
+    return NextResponse.json({ 
+      success: false,
+      error: 'Failed to schedule appointment' 
+    }, { status: 500 })
   }
 }
 
-async function handleGetQuote(args: GetQuoteArgs) {
+async function handleGetBusinessInfo(businessId: string) {
   try {
-    const {
-      service_type,
-      property_size,
-      current_system_age,
-      specific_requirements
-    } = args
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('business_name, business_type, services, business_hours, phone_number')
+      .eq('id', businessId)
+      .single()
 
-    logger.info('Getting premium quote', { 
-      service_type,
-      property_size,
-      current_system_age
-    })
-
-    // Generate intelligent quote based on inputs
-    let basePrice = 0
-    let priceRange = ''
-    
-    switch (service_type.toLowerCase()) {
-      case 'heating':
-      case 'furnace':
-        basePrice = 3000
-        priceRange = '$2,500 - $8,000'
-        break
-      case 'cooling':
-      case 'air conditioning':
-      case 'ac':
-        basePrice = 4000
-        priceRange = '$3,000 - $12,000'
-        break
-      case 'maintenance':
-      case 'tune-up':
-        basePrice = 150
-        priceRange = '$100 - $300'
-        break
-      case 'emergency':
-        basePrice = 200
-        priceRange = '$150 - $500'
-        break
-      default:
-        basePrice = 2500
-        priceRange = '$2,000 - $6,000'
+    if (businessError || !business) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Business not found' 
+      }, { status: 404 })
     }
-
-    // Adjust based on property size
-    if (property_size && parseInt(property_size) > 3000) {
-      basePrice = Math.round(basePrice * 1.3)
-    }
-
-    // Adjust based on system age
-    if (current_system_age && parseInt(current_system_age) > 15) {
-      basePrice = Math.round(basePrice * 1.2)
-    }
-
-    logger.info('Premium quote generated', { 
-      service_type,
-      base_price: basePrice,
-      price_range: priceRange
-    })
 
     return NextResponse.json({
       success: true,
-      message: `Based on your ${service_type} needs, I can give you a rough estimate of ${priceRange}. For a more accurate quote, I'd recommend scheduling a consultation with one of our certified technicians. They'll assess your specific situation and provide you with a detailed estimate. Would you like me to schedule that consultation for you?`,
-      estimated_price: basePrice,
-      price_range: priceRange
+      business_name: business.business_name,
+      business_type: business.business_type,
+      services: business.services,
+      hours: business.business_hours,
+      phone: business.phone_number
     })
 
-  } catch (error: unknown) {
-    logger.error('Get quote error', { error })
-    return NextResponse.json({
-      success: false,
-      message: 'I apologize, but I\'m having trouble generating a quote right now. Let me have one of our specialists call you back with a detailed estimate.'
+  } catch (error) {
+    logger.error('Get business info error', { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      businessId
     })
+    
+    return NextResponse.json({ 
+      success: false,
+      error: 'Failed to get business info' 
+    }, { status: 500 })
+  }
+}
+
+async function handleSendSMS(args: any, businessId: string) {
+  try {
+    const { phone_number, message } = args
+
+    if (!phone_number || !message) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Phone number and message required' 
+      }, { status: 400 })
+    }
+
+    // Send SMS via Telnyx
+    const smsResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com"}/api/sms/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        businessId,
+        to: phone_number,
+        message: message
+      })
+    })
+
+    if (!smsResponse.ok) {
+      throw new Error('SMS sending failed')
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'SMS sent successfully'
+    })
+
+  } catch (error) {
+    logger.error('Send SMS error', { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      businessId
+    })
+    
+    return NextResponse.json({ 
+      success: false,
+      error: 'Failed to send SMS' 
+    }, { status: 500 })
   }
 }

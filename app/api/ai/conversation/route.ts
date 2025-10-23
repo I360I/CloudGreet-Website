@@ -22,6 +22,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    
+    // Input validation
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
     const { message, context } = body
 
     if (!message) {
@@ -39,6 +44,9 @@ export async function POST(request: NextRequest) {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.replace('Bearer ', '')
       const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
       
       try {
         const decoded = jwt.verify(token, jwtSecret) as any
@@ -118,9 +126,9 @@ This is a demo conversation. You should:
 Keep responses natural and conversational.`
     }
 
-    // Generate AI response using OpenAI
+    // Generate AI response using OpenAI Realtime API
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o-realtime-preview-2024-12-17',
       messages: [
         {
           role: 'system',
@@ -168,7 +176,7 @@ Keep responses natural and conversational.`
 
   } catch (error) {
     logger.error('AI conversation error', { 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
     
     return NextResponse.json({

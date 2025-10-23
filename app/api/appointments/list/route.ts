@@ -7,11 +7,32 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id')
-    const businessId = request.headers.get('x-business-id')
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret) {
+      return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+    }
+
+    // Decode JWT token
+    let decoded
+    try {
+      decoded = jwt.verify(token, jwtSecret) as any
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const userId = decoded.userId
+    const businessId = decoded.businessId
     
     if (!userId || !businessId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
     }
 
     // Get query parameters for filtering
@@ -43,10 +64,10 @@ export async function GET(request: NextRequest) {
     const { data: appointments, error: appointmentsError } = await query
 
     if (appointmentsError) {
-      logger.error('Error fetching appointments', { 
-        error: appointmentsError,  
-        businessId, 
-        userId 
+      logger.error('Error fetching appointments', {
+        error: appointmentsError.message,
+        businessId,
+        userId
       })
       return NextResponse.json({ error: 'Failed to fetch appointments' }, { status: 500 })
     }
@@ -69,9 +90,9 @@ export async function GET(request: NextRequest) {
     const { count, error: countError } = await countQuery
 
     if (countError) {
-      logger.error('Error fetching appointment count', { 
-        error: countError,  
-        businessId 
+      logger.error('Error fetching appointment count', {
+        error: countError.message,
+        businessId
       })
     }
 
@@ -104,7 +125,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('Appointments list API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       userId: request.headers.get('x-user-id'),
       businessId: request.headers.get('x-business-id')
     })
@@ -123,6 +144,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     
     if (!jwtSecret) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
@@ -174,10 +198,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (appointmentError) {
-      logger.error('Error creating appointment', { 
-        error: appointmentError,  
-        businessId, 
-        userId 
+      logger.error('Error creating appointment', {
+        error: appointmentError.message,
+        businessId,
+        userId
       })
       return NextResponse.json({ error: 'Failed to create appointment' }, { status: 500 })
     }
@@ -215,7 +239,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     logger.error('Create appointment API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       userId: request.headers.get('x-user-id'),
       businessId: request.headers.get('x-business-id')
     })

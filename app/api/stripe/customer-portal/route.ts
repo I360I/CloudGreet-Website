@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (businessError || !business) {
-      logger.error('Business not found for customer portal', { 
-        error: businessError, 
+      logger.error('Business not found for customer portal', {
+        error: businessError?.message,
         businessId
       })
       return NextResponse.json({

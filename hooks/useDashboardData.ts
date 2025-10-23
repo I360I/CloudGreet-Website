@@ -66,8 +66,24 @@ export function useDashboardData<T>(
       const result = await response.json()
 
       if (result.success) {
-        setData(result.data)
-        dashboardCache.set(cacheKey, result.data, cacheTime)
+        // Validate signed data if present
+        if (result.signedData) {
+          const { validateSecureAnalyticsData } = await import('@/lib/data-signing')
+          const validation = validateSecureAnalyticsData(result.signedData)
+          
+          if (!validation.isValid) {
+            throw new Error(`Data integrity check failed: ${validation.errors.join(', ')}`)
+          }
+          
+          // Use validated data
+          setData(validation.data)
+          dashboardCache.set(cacheKey, validation.data, cacheTime)
+        } else {
+          // Fallback to regular data
+          setData(result.data)
+          dashboardCache.set(cacheKey, result.data, cacheTime)
+        }
+        
         setLastFetch(Date.now())
       } else {
         throw new Error(result.error || 'Unknown error')

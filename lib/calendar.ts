@@ -110,10 +110,10 @@ export async function createCalendarEvent(businessId: string, event: Omit<Calend
       .single()
 
     if (dbError) {
-      logger.error('Failed to create appointment in database', { 
-        error: dbError, 
-        businessId, 
-        event 
+      logger.error('Failed to create appointment in database', {
+        error: dbError.message,
+        businessId,
+        event: JSON.stringify(event)
       })
       return null
     }
@@ -192,9 +192,9 @@ export async function createCalendarEvent(businessId: string, event: Omit<Calend
     }
   } catch (error) {
     logger.error('Calendar event creation error', { 
-      error: error instanceof Error ? error.message : error, 
-      businessId, 
-      event 
+      error: error instanceof Error ? error.message : error,
+      businessId,
+      event: JSON.stringify(event)
     })
     return null
   }

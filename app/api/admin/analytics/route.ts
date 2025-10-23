@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { validateAnalyticsData, detectDataAnomalies, sanitizeAnalyticsData, logValidationResult } from '@/lib/data-validation'
+import { createSecureAnalyticsData, createDataAuditTrail } from '@/lib/data-signing'
 import { requireAdmin } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
@@ -46,6 +48,30 @@ export async function GET(request: NextRequest) {
     const totalRevenue = appointments?.reduce((sum, apt) => sum + (apt.estimated_value || 0), 0) || 0
     const avgClientValue = totalClients > 0 ? totalRevenue / totalClients : 0
 
+    // Calculate REAL churn rate with proper time-based formula
+    const now = new Date()
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    
+    // Get customers at start of period (30 days ago)
+    const { data: customersAtStart } = await supabaseAdmin
+      .from('businesses')
+      .select('id, created_at, subscription_status')
+      .lte('created_at', thirtyDaysAgo.toISOString())
+    
+    // Get customers who churned (cancelled subscriptions) in the last 30 days
+    const { data: churnedCustomers } = await supabaseAdmin
+      .from('subscription_events')
+      .select('business_id, event_type, created_at')
+      .eq('event_type', 'cancelled')
+      .gte('created_at', thirtyDaysAgo.toISOString())
+    
+    const customersAtStartCount = customersAtStart?.length || 0
+    const churnedCount = churnedCustomers?.length || 0
+    
+    // REAL churn rate calculation: (Customers Lost / Customers at Start) × 100
+    const churnRate = customersAtStartCount > 0 ? (churnedCount / customersAtStartCount) * 100 : 0
+    const retentionRate = 100 - churnRate
+
     const totalSMS = smsLogs?.length || 0
     const deliveredSMS = smsLogs?.filter(sms => sms.status === 'delivered').length || 0
     const repliedSMS = smsLogs?.filter(sms => sms.status === 'replied').length || 0
@@ -74,8 +100,9 @@ export async function GET(request: NextRequest) {
       clients: {
         total: totalClients,
         active: activeClients,
-        churned: totalClients - activeClients,
-        retentionRate: totalClients > 0 ? Math.round((activeClients / totalClients) * 100 * 10) / 10 : 0,
+        churned: churnedCount, // REAL churn count
+        churnRate: Math.round(churnRate * 10) / 10, // REAL churn rate
+        retentionRate: Math.round(retentionRate * 10) / 10, // REAL retention rate
         averageValue: Math.round(avgClientValue)
       },
       sms: {
@@ -92,14 +119,54 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Sanitize and validate analytics data
+    const sanitizedAnalytics = sanitizeAnalyticsData(analytics)
+    const validation = validateAnalyticsData(sanitizedAnalytics)
+    
+    // Log validation results for audit trail
+    logValidationResult(sanitizedAnalytics, validation, 'admin', 'system')
+    
+    if (!validation.isValid) {
+      logger.error('Analytics data validation failed', {
+        errorCount: validation.errors.length,
+        warningCount: validation.warnings.length,
+        errors: validation.errors.join(', '),
+        warnings: validation.warnings.join(', '),
+        totalCalls: sanitizedAnalytics.totalCalls,
+        totalAppointments: sanitizedAnalytics.totalAppointments,
+        totalRevenue: sanitizedAnalytics.totalRevenue
+      })
+      
+      return NextResponse.json({
+        success: false,
+        error: 'Data validation failed',
+        details: validation.errors
+      }, { status: 400 })
+    }
+    
+    // Create secure signed data
+    const secureData = createSecureAnalyticsData({
+      ...sanitizedAnalytics,
+      businessId: 'system',
+      userId: 'admin'
+    })
+    
+    // Create audit trail
+    createDataAuditTrail('analytics_access', 'admin', 'system', 'admin_analytics', secureData)
+    
     return NextResponse.json({
       success: true,
-      data: analytics
+      data: sanitizedAnalytics,
+      signedData: secureData,
+      validation: {
+        isValid: validation.isValid,
+        warnings: validation.warnings
+      }
     })
     
   } catch (error) {
     logger.error('Admin analytics API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       endpoint: 'admin/analytics',
       method: 'GET'
     })

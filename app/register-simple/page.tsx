@@ -36,10 +36,13 @@ export default function SimpleRegisterPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Store token
+        // Store token in both localStorage and cookies
         localStorage.setItem('token', result.token)
         localStorage.setItem('user', JSON.stringify(result.user))
         localStorage.setItem('business', JSON.stringify(result.business))
+        
+        // Set cookie for middleware
+        document.cookie = `token=${result.token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`
         
         setSuccess(true)
         setTimeout(() => {
@@ -80,7 +83,20 @@ export default function SimpleRegisterPage() {
               animate={{ width: "100%" }}
               transition={{ duration: 2 }}
             />
-          </div>
+          
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+            Confirm Password
+          </label>
+          <input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            required
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        </div>
         </motion.div>
       </div>
     )
@@ -116,7 +132,7 @@ export default function SimpleRegisterPage() {
               required
               value={formData.business_name}
               onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
+              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
               placeholder="Your Business Name"
             />
           </div>
@@ -128,7 +144,7 @@ export default function SimpleRegisterPage() {
             <select
               value={formData.business_type}
               onChange={(e) => setFormData({ ...formData, business_type: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl text-white focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
+              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
             >
               <option value="HVAC">HVAC</option>
               <option value="Paint">Painting</option>
@@ -147,7 +163,7 @@ export default function SimpleRegisterPage() {
               autoComplete="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
+              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
               placeholder="your@email.com"
             />
           </div>
@@ -185,7 +201,7 @@ export default function SimpleRegisterPage() {
               required
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
+              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
               placeholder="(833) 395-6731"
             />
           </div>
@@ -199,7 +215,7 @@ export default function SimpleRegisterPage() {
               required
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
+              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
               placeholder="123 Main St, City, State"
             />
           </div>
@@ -219,7 +235,7 @@ export default function SimpleRegisterPage() {
             disabled={isLoading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+            className="w-full py-4 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>
@@ -234,12 +250,25 @@ export default function SimpleRegisterPage() {
               'Create Account'
             )}
           </motion.button>
-        </form>
+        
+        <div className="flex items-center">
+          <input
+            id="terms"
+            name="terms"
+            type="checkbox"
+            required
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
+            I agree to the <a href="/terms" className="text-blue-600 hover:text-blue-500">Terms of Service</a> and <a href="/privacy" className="text-blue-600 hover:text-blue-500">Privacy Policy</a>
+          </label>
+        </div>
+      </form>
 
         <div className="text-center mt-6">
           <p className="text-gray-400">
             Already have an account?{' '}
-            <Link href="/login" className="text-purple-400 hover:text-purple-300 transition-colors">
+            <Link href="/login" className="text-blue-400 hover:text-blue-300 transition-colors">
               Sign in
             </Link>
           </p>

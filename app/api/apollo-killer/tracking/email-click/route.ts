@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('Email click tracking error', {
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       url: request.url
     })
 

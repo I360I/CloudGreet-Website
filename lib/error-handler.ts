@@ -128,21 +128,44 @@ export function handleError(error: unknown): AppError {
 }
 
 export function logError(error: unknown, context?: any) {
-  const appError = handleError(error);
-  
-  // Use proper logger instead of console
-  const { logger } = require('@/lib/monitoring')
-  logger.error('CloudGreet Error', {
-    code: appError.code,
-    message: appError.message,
-    statusCode: appError.statusCode,
-    context,
-    timestamp: new Date().toISOString(),
-    details: appError.details,
-  });
+  try {
+    const appError = handleError(error);
+    
+    // Use proper logger instead of console with error handling
+    try {
+      const { logger } = require('@/lib/monitoring')
+      logger.error('CloudGreet Error', {
+        code: appError.code,
+        message: appError.message,
+        statusCode: appError.statusCode,
+        context,
+        timestamp: new Date().toISOString(),
+        details: appError.details,
+      });
+    } catch (loggerError) {
+      // Fallback to console if logger fails
+      console.error('Logger failed in error handler:', loggerError);
+      console.error('Original error:', {
+        code: appError.code,
+        message: appError.message,
+        statusCode: appError.statusCode,
+        context,
+        timestamp: new Date().toISOString(),
+        details: appError.details,
+      });
+    }
 
-  // In production, you might want to send to error tracking service
-  if (process.env.NODE_ENV === 'production') {
-    // Example: Sentry.captureException(error, { extra: context });
+    // In production, you might want to send to error tracking service
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        // Example: Sentry.captureException(error, { extra: context });
+      } catch (trackingError) {
+        console.error('Error tracking failed:', trackingError);
+      }
+    }
+  } catch (handlerError) {
+    // Ultimate fallback if error handler itself fails
+    console.error('Error handler failed:', handlerError);
+    console.error('Original error that caused handler failure:', error);
   }
 }

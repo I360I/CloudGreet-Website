@@ -113,8 +113,8 @@ export async function POST(request: NextRequest) {
       .eq('id', businessId)
 
     if (updateError) {
-      logger.error('Failed to update business with Stripe customer ID', { 
-        error: updateError, 
+      logger.error('Failed to update business with Stripe customer ID', {
+        error: updateError.message,
         businessId,
         customerId: customer.id
       })

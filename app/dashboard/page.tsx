@@ -9,19 +9,21 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import NetworkErrorHandler from '../components/NetworkErrorHandler'
-import ConnectionStatusIndicator from '../components/ConnectionStatus'
-import DashboardMetrics from '../components/DashboardMetrics'
-import DashboardCharts from '../components/DashboardCharts'
 import DateRangePicker from '../components/DateRangePicker'
 import ExportButton from '../components/ExportButton'
 import SearchFilter from '../components/SearchFilter'
-import CallDetailModal from '../components/CallDetailModal'
 import MobileDashboardNav from '../components/MobileDashboardNav'
 import { DashboardSkeleton } from '../components/SkeletonLoader'
-import LiveActivityFeed from '../components/LiveActivityFeed'
-import AIConversationInsights from '../components/AIConversationInsights'
 import OnboardingWizard from '../components/OnboardingWizard'
-import RealTimeUpdates from '../components/RealTimeUpdates'
+import RealAnalytics from '../components/RealAnalytics'
+import RealActivityFeed from '../components/RealActivityFeed'
+import RealCharts from '../components/RealCharts'
+import TenantIsolationIndicator from '../components/TenantIsolationIndicator'
+// import ROICalculator from '../components/ROICalculator'
+import CallQualityMetrics from '../components/CallQualityMetrics'
+import LeadScoring from '../components/LeadScoring'
+import BusinessHoursSettings from '../components/BusinessHoursSettings'
+import SMSReplyModal from '../components/SMSReplyModal'
 import { useToast } from '../contexts/ToastContext'
 import { useDashboardAnalytics, useRealtimeMetrics } from '../../hooks/useDashboardData'
 
@@ -59,6 +61,12 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [smsModalOpen, setSmsModalOpen] = useState(false)
+  const [selectedContact, setSelectedContact] = useState<{
+    name: string
+    phone: string
+    lastMessage?: string
+  } | null>(null)
   const [realMetrics, setRealMetrics] = useState<any>(null)
   const [realActivity, setRealActivity] = useState<any[]>([])
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -228,7 +236,7 @@ export default function Dashboard() {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const response = await fetch('/api/dashboard/real-metrics?timeframe=7d', {
+      const response = await fetch('/api/dashboard/real-activity', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -237,8 +245,7 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
-          setRealActivity(data.data.recentActivity || [])
-          setRealMetrics(data.data)
+          setRealActivity(data.data || [])
         }
       }
     } catch (error) {
@@ -282,10 +289,43 @@ export default function Dashboard() {
             >
               Try Again
             </button>
+          
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Leads</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+              <div>
+                <p className="font-medium">John Smith</p>
+                <p className="text-sm text-gray-600">john@example.com</p>
+              </div>
+              <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">New</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+              <div>
+                <p className="font-medium">Jane Doe</p>
+                <p className="text-sm text-gray-600">jane@example.com</p>
+              </div>
+              <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">Qualified</span>
+            </div>
           </div>
         </div>
-    )
-  }
+      </div>
+
+      {/* SMS Reply Modal */}
+      {smsModalOpen && selectedContact && (
+        <SMSReplyModal
+          isOpen={smsModalOpen}
+          onClose={() => {
+            setSmsModalOpen(false)
+            setSelectedContact(null)
+          }}
+          contact={selectedContact}
+          businessId={dashboardData?.businessId || ''}
+        />
+      )}
+    </div>
+  )
+}
 
   return (
     <>
@@ -298,10 +338,7 @@ export default function Dashboard() {
           showSuccess('Onboarding completed! Your AI agent is ready to test.')
         }}
       />
-      {/* Real-time Updates */}
-      {dashboardData?.businessId && (
-        <RealTimeUpdates businessId={dashboardData.businessId} />
-      )}
+      {/* Real-time Updates - Removed for now */}
       
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 text-white">
         {/* Header */}
@@ -332,7 +369,7 @@ export default function Dashboard() {
                   />
                 </div>
                 
-                <ConnectionStatusIndicator />
+                {/* Connection Status - Removed for now */}
                 
                 <Link href="/settings" className="hidden md:inline-block">
                   <motion.button
@@ -531,18 +568,10 @@ export default function Dashboard() {
             transition={{ delay: 0.1 }}
             className="mb-8"
           >
-            <DashboardMetrics 
-              data={realMetrics || {
-                totalCalls: dashboardData?.totalCalls || 0,
-                totalAppointments: dashboardData?.totalAppointments || 0,
-                totalRevenue: dashboardData?.totalRevenue || 0,
-                conversionRate: 0,
-                avgCallDuration: 0,
-                customerSatisfaction: 85,
-                monthlyGrowth: 0,
-                revenueProjection: 0
-              }}
-            />
+            {/* Real Analytics */}
+            {dashboardData?.businessId && (
+              <RealAnalytics businessId={dashboardData.businessId} timeframe="30d" />
+            )}
           </motion.div>
 
           {/* Analytics Charts */}
@@ -557,11 +586,9 @@ export default function Dashboard() {
                 <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
               </div>
             ) : (
-              <DashboardCharts 
-                revenueData={analyticsData?.revenueData}
-                callData={analyticsData?.callData}
-                conversionData={analyticsData?.conversionData}
-              />
+              dashboardData?.businessId && (
+                <RealCharts businessId={dashboardData.businessId} timeframe="30d" />
+              )
             )}
           </motion.div>
 
@@ -595,28 +622,69 @@ export default function Dashboard() {
             </motion.div>
           )}
 
-          {/* Call Detail Modal */}
-          <CallDetailModal
-            isOpen={showCallDetail}
-            onClose={() => {
-              setShowCallDetail(false)
-              setSelectedCallId(null)
-            }}
-            call={selectedCallId ? realActivity.find(activity => activity.id === selectedCallId) || null : null}
-          />
+          {/* Call Detail Modal - Removed for now */}
 
           {/* Live Activity Grid */}
-          <div className="grid lg:grid-cols-1 gap-6 mb-8">
+          <div className="grid lg:grid-cols-2 gap-6 mb-8">
             {/* Live Activity Feed */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <LiveActivityFeed 
+              {/* Real Activity Feed */}
+              <RealActivityFeed 
+                businessId={dashboardData?.businessId || ''} 
                 businessName={dashboardData?.businessName || 'Your Business'} 
-                realActivity={realActivity}
               />
+            </motion.div>
+
+            {/* Tenant Isolation Status */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <TenantIsolationIndicator 
+                businessId={dashboardData?.businessId || ''} 
+                businessName={dashboardData?.businessName || 'Your Business'} 
+              />
+            </motion.div>
+
+            {/* ROI Calculator */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              {/* <ROICalculator businessId={dashboardData?.businessId || ''} /> */}
+            </motion.div>
+
+            {/* Call Quality Metrics */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <CallQualityMetrics businessId={dashboardData?.businessId || ''} />
+            </motion.div>
+
+            {/* AI Lead Scoring */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+            >
+              <LeadScoring businessId={dashboardData?.businessId || ''} />
+            </motion.div>
+
+            {/* Business Hours Settings */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+            >
+              <BusinessHoursSettings businessId={dashboardData?.businessId || ''} />
             </motion.div>
 
             {/* Quick Actions */}

@@ -16,6 +16,9 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     
     if (!jwtSecret) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
@@ -58,10 +61,10 @@ export async function GET(request: NextRequest) {
     const { data: calls, error: callsError } = await query
 
     if (callsError) {
-      logger.error('Error fetching call history', { 
-        error: callsError,  
-        businessId, 
-        userId 
+      logger.error('Error fetching call history', {
+        error: callsError.message,
+        businessId,
+        userId
       })
       return NextResponse.json({ error: 'Failed to fetch call history' }, { status: 500 })
     }
@@ -79,9 +82,9 @@ export async function GET(request: NextRequest) {
     const { count, error: countError } = await countQuery
 
     if (countError) {
-      logger.error('Error fetching call count', { 
-        error: countError,  
-        businessId 
+      logger.error('Error fetching call count', {
+        error: countError.message,
+        businessId
       })
     }
 
@@ -117,7 +120,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('Call history API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       userId: request.headers.get('x-user-id'),
       businessId: request.headers.get('x-business-id')
     })

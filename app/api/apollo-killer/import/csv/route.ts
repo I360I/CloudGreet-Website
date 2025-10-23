@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       totalRecords: records.length,
       businessType,
       skipDuplicates,
-      fieldMapping
+      fieldMapping: JSON.stringify(fieldMapping)
     })
 
     const importResults = {
@@ -155,7 +155,12 @@ export async function POST(request: NextRequest) {
 
     logger.info('CSV import completed', {
       fileName: csvFile.name,
-      ...importResults
+      total: importResults.total,
+      imported: importResults.imported,
+      skipped: importResults.skipped,
+      errors: importResults.errors,
+      duplicates: importResults.duplicates,
+      errorDetails: importResults.errorDetails.join(', ')
     })
 
     return NextResponse.json({

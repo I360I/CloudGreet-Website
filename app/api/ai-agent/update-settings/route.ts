@@ -85,6 +85,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     const jwt = (await import('jsonwebtoken')).default
     const decoded = jwt.verify(token, jwtSecret) as any
     const userBusinessId = decoded.businessId
@@ -221,7 +224,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('AI agent settings update failed', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'ai-agent/update-settings' })
+    logger.error('AI agent settings update failed', { error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', endpoint: 'ai-agent/update-settings' })
     
     if (error instanceof z.ZodError) {
       return NextResponse.json({
@@ -288,7 +291,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    logger.error('Failed to get AI agent settings', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'ai-agent/update-settings' })
+    logger.error('Failed to get AI agent settings', { error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', endpoint: 'ai-agent/update-settings' })
     return NextResponse.json({
       success: false,
       message: 'Failed to get AI agent settings'

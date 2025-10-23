@@ -102,8 +102,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (businessError) {
-      logger.error("Error", { 
-        error: businessError, 
+      logger.error("Error", {
+        error: businessError.message,
         requestId,
         businessId,
         action: 'apply_promo_code_business_update'

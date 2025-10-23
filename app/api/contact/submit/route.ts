@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { logger } from '@/lib/monitoring'
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
+import { sendContactFormNotification, sendContactFormAutoReply } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,8 +48,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (contactError) {
-      logger.error('Failed to store contact submission', { 
-        error: contactError, 
+      logger.error('Failed to store contact submission', {
+        error: contactError.message,
         email: validatedData.email,
         subject: validatedData.subject
       })
@@ -62,7 +63,37 @@ export async function POST(request: NextRequest) {
       contactId: contactRecord?.id
     })
 
-    // Note: Email sending and auto-reply features can be implemented as needed
+    // Send notification email to admin
+    try {
+      await sendContactFormNotification({
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
+        email: validatedData.email,
+        business: validatedData.business,
+        subject: validatedData.subject,
+        message: validatedData.message
+      })
+    } catch (error) {
+      logger.warn('Failed to send notification email', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
+
+    // Send auto-reply to customer
+    try {
+      await sendContactFormAutoReply({
+        firstName: validatedData.firstName,
+        lastName: validatedData.lastName,
+        email: validatedData.email,
+        business: validatedData.business,
+        subject: validatedData.subject,
+        message: validatedData.message
+      })
+    } catch (error) {
+      logger.warn('Failed to send auto-reply email', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      })
+    }
     
     return NextResponse.json({
       success: true,
@@ -71,7 +102,7 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     logger.error('Contact form submission error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       body: await request.json().catch(() => ({}))
     })
     

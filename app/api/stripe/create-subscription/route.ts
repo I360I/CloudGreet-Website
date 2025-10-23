@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (businessError || !business) {
-      logger.error('Business not found for subscription creation', { 
-        error: businessError, 
+      logger.error('Business not found for subscription creation', {
+        error: businessError?.message,
         businessId
       })
       return NextResponse.json({
@@ -108,8 +108,8 @@ export async function POST(request: NextRequest) {
       })
 
     if (subscriptionError) {
-      logger.error('Failed to store subscription in database', { 
-        error: subscriptionError, 
+      logger.error('Failed to store subscription in database', {
+        error: subscriptionError.message,
         businessId,
         subscriptionId: subscription.id
       })

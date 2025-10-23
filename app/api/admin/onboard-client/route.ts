@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     logger.error('Client onboarding failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
     return NextResponse.json({ 
       error: 'Client onboarding failed' 

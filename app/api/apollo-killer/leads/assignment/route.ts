@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Lead assignments updated', {
-      leadIds,
+      leadIds: leadIds.join(', '),
       assignToUserId: unassign ? null : assignToUserId,
       action: unassign ? 'unassign' : 'assign',
       count: leadIds.length

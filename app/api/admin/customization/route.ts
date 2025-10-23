@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     logger.error('Admin customization error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       endpoint: 'admin/customization',
       method: 'POST'
     })
@@ -108,7 +108,7 @@ async function updateAISettings(settings: any) {
           } catch (error) {
             logger.warn('Telnyx agent voice update error', {
               agentId: agent.id,
-              error: error instanceof Error ? error.message : 'Unknown error'
+              error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
             })
           }
         }
@@ -121,7 +121,7 @@ async function updateAISettings(settings: any) {
     })
   } catch (error) {
     logger.error('AI settings update failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       settings 
     })
     return NextResponse.json({ error: 'Failed to update AI settings' }, { status: 500 })
@@ -154,7 +154,7 @@ async function updateSMSTemplates(settings: any) {
     })
     } catch (error) {
     logger.error('SMS templates update failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       settings 
     })
     return NextResponse.json({ error: 'Failed to update SMS templates' }, { status: 500 })
@@ -188,7 +188,7 @@ async function updateBusinessProfile(settings: any) {
     })
   } catch (error) {
     logger.error('Business profile update failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       settings 
     })
     return NextResponse.json({ error: 'Failed to update business profile' }, { status: 500 })
@@ -221,7 +221,7 @@ async function updatePricingSettings(settings: any) {
     })
   } catch (error) {
     logger.error('Pricing settings update failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       settings 
     })
     return NextResponse.json({ error: 'Failed to update pricing settings' }, { status: 500 })
@@ -247,7 +247,7 @@ export async function GET(request: NextRequest) {
     }
     } catch (error) {
     logger.error('Admin customization fetch error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       endpoint: 'admin/customization',
       method: 'GET'
     })

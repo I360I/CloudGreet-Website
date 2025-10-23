@@ -95,7 +95,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription, reque
 
   if (!businessId || !userId) {
     logger.error("Error", { 
-      error: new Error('Missing metadata in subscription'), 
+      error: 'Missing metadata in subscription', 
       requestId,
       subscriptionId: subscription.id
     })
@@ -113,7 +113,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription, reque
 
   if (updateError) {
     logger.error('Failed to update business subscription status', {
-      error: updateError,
+      error: updateError.message,
       requestId,
       businessId,
       subscriptionId: subscription.id
@@ -143,7 +143,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, requ
 
   if (!businessId || !userId) {
     logger.error("Error", { 
-      error: new Error('Missing metadata in subscription'), 
+      error: 'Missing metadata in subscription', 
       requestId,
       subscriptionId: subscription.id
     })
@@ -160,7 +160,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, requ
 
   if (cancelError) {
     logger.error('Failed to cancel business subscription', {
-      error: cancelError,
+      error: cancelError.message,
       requestId,
       businessId,
       subscriptionId: subscription.id
@@ -191,7 +191,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice, requestId: string
 
   if (!businessId || !userId) {
     logger.error("Error", { 
-      error: new Error('Missing metadata in subscription'), 
+      error: 'Missing metadata in subscription', 
       requestId,
       subscriptionId: subscription.id
     })
@@ -224,7 +224,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice, requestId: string) {
 
   if (!businessId || !userId) {
     logger.error("Error", { 
-      error: new Error('Missing metadata in subscription'), 
+      error: 'Missing metadata in subscription', 
       requestId,
       subscriptionId: subscription.id
     })

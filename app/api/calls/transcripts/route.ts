@@ -14,6 +14,9 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     const jwt = (await import('jsonwebtoken')).default
     const decoded = jwt.verify(token, jwtSecret) as any
     const userBusinessId = decoded.businessId
@@ -47,8 +50,8 @@ export async function GET(request: NextRequest) {
       .limit(50)
 
     if (callsError) {
-      logger.error('Failed to fetch call transcripts', { 
-        error: callsError, 
+      logger.error('Failed to fetch call transcripts', {
+        error: callsError.message,
         businessId
       })
       return NextResponse.json({
@@ -84,7 +87,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('Call transcripts API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       endpoint: 'calls/transcripts'
     })
     return NextResponse.json({

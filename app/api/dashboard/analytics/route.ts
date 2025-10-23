@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const { data: business, error: businessError } = await supabase
       .from('businesses')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('owner_id', user.id)
       .single()
 
     if (businessError || !business) {

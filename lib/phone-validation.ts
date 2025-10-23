@@ -152,7 +152,21 @@ export function validatePhoneWithError(phone: string): { isValid: boolean; error
     return { isValid: false, error: 'Invalid phone number format' }
   }
   
-  // Check for obviously fake numbers
+  // Check for obviously fake numbers (555, 000, etc.)
+  const fakePatterns = [
+    /^\+?1?555\d{7}$/,  // 555 numbers
+    /^\+?1?000\d{7}$/,  // 000 numbers
+    /^\+?1?111\d{7}$/,  // 111 numbers
+    /^\+?1?222\d{7}$/,  // 222 numbers
+    /^\+?1?333\d{7}$/,  // 333 numbers
+    /^\+?1?444\d{7}$/   // 444 numbers
+  ];
+  
+  const isFake = fakePatterns.some(pattern => pattern.test(phone));
+  if (isFake) {
+    return { isValid: false, error: 'Please enter a valid phone number' }
+  }
+  
   if (digits === '0000000000' || digits === '1111111111' || digits === '1234567890') {
     return { isValid: false, error: 'Please enter a valid phone number' }
   }

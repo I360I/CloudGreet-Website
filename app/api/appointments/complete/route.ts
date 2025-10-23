@@ -16,6 +16,9 @@ export async function PUT(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     const decoded = jwt.verify(token, jwtSecret) as any
     const userBusinessId = decoded.businessId
     
@@ -48,10 +51,10 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (appointmentError) {
-      logger.error('Error updating appointment', { 
-        error: appointmentError,  
-        appointmentId, 
-        businessId 
+      logger.error('Error updating appointment', {
+        error: appointmentError.message,
+        appointmentId,
+        businessId
       })
       return NextResponse.json({ error: 'Failed to update appointment' }, { status: 500 })
     }
@@ -81,7 +84,7 @@ export async function PUT(request: NextRequest) {
           logger.error('Failed to send review SMS', { error: null,  appointmentId, businessId })
         }
       } catch (error) {
-        logger.error('Error sending review SMS', { error: error instanceof Error ? error.message : 'Unknown error',  appointmentId, businessId })
+        logger.error('Error sending review SMS', { error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',  appointmentId, businessId })
       }
     }
 
@@ -92,7 +95,7 @@ export async function PUT(request: NextRequest) {
         businessId
       )
     } catch (error) {
-      logger.error('Error sending appointment completion notification', { error: error instanceof Error ? error.message : 'Unknown error',  appointmentId, businessId })
+      logger.error('Error sending appointment completion notification', { error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',  appointmentId, businessId })
     }
 
     // Log the action
@@ -126,7 +129,7 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     logger.error('Complete appointment error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',  
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',  
       endpoint: 'appointments/complete',
       method: 'PUT'
     })

@@ -9,8 +9,8 @@ import {
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
-import ClickToCallOrb from '../components/ClickToCallOrb'
-import RoiCalculator from '../components/RoiCalculator'
+// ClickToCallOrb component removed
+// import ROICalculator from '../components/ROICalculator'
 
 function VoiceOrbDemoWithSettings() {
   const [businessInfo, setBusinessInfo] = React.useState({
@@ -83,12 +83,7 @@ function VoiceOrbDemoWithSettings() {
         </p>
       </motion.div>
 
-        <ClickToCallOrb 
-          businessName={businessInfo.name}
-          businessType={businessInfo.type}
-          services={businessInfo.services}
-          hours={businessInfo.hours}
-        />
+        {/* ClickToCallOrb component removed */}
     </div>
   )
 }
@@ -216,7 +211,7 @@ export default function LandingPage() {
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl" />
         
         <div className="max-w-6xl mx-auto px-4 relative z-10">
-          <RoiCalculator />
+          {/* <ROICalculator /> */}
         </div>
       </section>
 
@@ -249,7 +244,7 @@ export default function LandingPage() {
             </div>
             <div className="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 text-center">
               <div className="text-5xl font-bold text-yellow-400 mb-4">85%</div>
-              <p className="text-gray-300">Of callers won't leave a message</p>
+              <p className="text-gray-300">Of callers won&apos;t leave a message</p>
             </div>
             <div className="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 text-center">
               <div className="text-5xl font-bold text-green-400 mb-4">$500+</div>
@@ -642,7 +637,7 @@ export default function LandingPage() {
                   </Link>
                   <Link
                     href="/register-simple"
-                    className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-2xl text-lg font-semibold transition-all duration-300 shadow-2xl inline-block focus:ring-4 focus:ring-purple-500/50 focus:outline-none"
+                    className="flex-1 bg-white/10 backdrop-blur-xl text-white px-8 py-4 rounded-2xl text-lg font-semibold border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-2xl inline-block focus:ring-4 focus:ring-white/20 focus:outline-none"
                     aria-label="Create your CloudGreet account"
                   >
                     <div className="flex items-center justify-center gap-3">
@@ -700,7 +695,7 @@ export default function LandingPage() {
           >
             <Link
               href="/start"
-              className="bg-white/15 backdrop-blur-xl text-white px-12 py-6 rounded-2xl text-2xl font-semibold border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-2xl flex items-center justify-center gap-4 inline-block"
+              className="bg-white/10 backdrop-blur-xl text-white px-12 py-6 rounded-2xl text-2xl font-semibold border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-2xl flex items-center justify-center gap-4 inline-block"
             >
               <Zap className="w-8 h-8" />
               Test for Free

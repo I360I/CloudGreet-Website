@@ -264,14 +264,14 @@ export async function POST(request: NextRequest) {
           `
         })
 
-        logger.info('Email send result', { emailResult })
+        logger.info('Email send result', { 
+          success: emailResult
+        })
 
-        if (emailResult.success) {
+        if (emailResult) {
           emailSuccess = true
         } else {
-          logger.error('Email send returned failure', { 
-            error: emailResult.error 
-          })
+          logger.error('Email send returned failure')
         }
         
         // Log email notification

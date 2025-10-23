@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     logger.error('Admin stats API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',  
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',  
       endpoint: 'admin/stats',
       method: 'GET'
     })

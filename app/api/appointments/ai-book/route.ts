@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (businessError || !business) {
-      logger.error('Business not found for AI booking', { businessId, error: businessError })
+      logger.error('Business not found for AI booking', { businessId, error: businessError?.message })
       return NextResponse.json({ 
         success: false,
         error: 'Business not found' 
@@ -113,8 +113,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (appointmentError) {
-      logger.error('Appointment creation failed', { 
-        error: appointmentError, 
+      logger.error('Appointment creation failed', {
+        error: appointmentError.message,
         businessId,
         callId
       })
@@ -325,7 +325,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     logger.error('AI booking error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
     })
     

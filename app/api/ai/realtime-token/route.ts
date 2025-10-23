@@ -5,6 +5,12 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json()
+    
+    // Input validation
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
     if (!process.env.OPENAI_API_KEY) {
       console.error('❌ OPENAI_API_KEY not configured in environment')
       return NextResponse.json(

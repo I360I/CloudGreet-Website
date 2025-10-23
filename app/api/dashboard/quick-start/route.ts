@@ -47,6 +47,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     
     const decoded = jwt.verify(token, jwtSecret) as any
     const targetBusinessId = businessId || decoded.businessId
@@ -146,7 +149,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     logger.error('Quick start API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
     
     return NextResponse.json({

@@ -1,216 +1,185 @@
-// lib/email.ts
-// Email utility functions for CloudGreet using Resend
+/**
+ * Email Service
+ * Handles sending emails for contact forms, notifications, etc.
+ */
 
-import { Resend } from 'resend'
-import { logger } from '@/lib/monitoring'
-import { resendWithRetry } from '@/lib/retry-logic'
+import { logger } from './monitoring'
 
-interface EmailData {
+export interface EmailData {
   to: string
   subject: string
   html: string
   text?: string
 }
 
-// Initialize Resend with API key
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
+export interface ContactFormData {
+  firstName: string
+  lastName: string
+  email: string
+  business?: string
+  subject: string
+  message: string
+}
 
-export class EmailService {
-  private fromEmail: string
-
-  constructor() {
-    // Resend requires format: "Name <email@domain.com>" or "email@domain.com"
-    const email = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@cloudgreet.com'
-    // Clean any whitespace
-    const cleanEmail = email.trim()
-    // Format as "CloudGreet <email@domain.com>"
-    this.fromEmail = cleanEmail.includes('<') ? cleanEmail : `CloudGreet <${cleanEmail}>`
-  }
-
-  async sendEmail(emailData: EmailData): Promise<{ success: boolean; message?: string; error?: string }> {
-    try {
-      // Check if Resend is configured
-      if (!resend) {
-        logger.error('Email service not configured', { 
-          reason: 'RESEND_API_KEY not set',
-          to: emailData.to,
-          subject: emailData.subject 
-        })
-        return { 
-          success: false, 
-          error: 'Email service not configured. Please set RESEND_API_KEY environment variable.' 
-        }
-      }
-
-      // Clean the 'to' email address (remove any whitespace)
-      const cleanTo = emailData.to.trim()
-
-      // Send email via Resend with retry logic
-      const { data, error } = await resendWithRetry(
-        () => resend.emails.send({
-          from: this.fromEmail,
-          to: cleanTo,
-          subject: emailData.subject,
-          html: emailData.html,
-          text: emailData.text || emailData.subject
-        }),
-        { to: cleanTo, subject: emailData.subject }
-      )
-
-      if (error) {
-        logger.error('Failed to send email via Resend', { error, emailData })
-        return { 
-          success: false, 
-          error: error.message || 'Failed to send email' 
-        }
-      }
-
-      logger.info('Email sent successfully', { 
-        to: emailData.to, 
-        subject: emailData.subject,
-        messageId: data?.id 
+/**
+ * Send email using configured email service
+ */
+export async function sendEmail(emailData: EmailData): Promise<boolean> {
+  try {
+    // Check if email service is configured
+    if (!process.env.EMAIL_SERVICE_URL || !process.env.EMAIL_API_KEY) {
+      logger.warn('Email service not configured, skipping email send', {
+        to: emailData.to,
+        subject: emailData.subject
       })
-
-      return { success: true, message: 'Email sent successfully' }
-    } catch (error) {
-      logger.error('Email send error', { error, emailData })
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown email error' 
-      }
-    }
-  }
-
-  async sendWelcomeEmail(to: string, businessName: string): Promise<{ success: boolean; message?: string; error?: string }> {
-    const emailData: EmailData = {
-      to,
-      subject: `Welcome to CloudGreet, ${businessName}!`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .feature { margin: 15px 0; padding-left: 25px; position: relative; }
-            .feature:before { content: "✓"; position: absolute; left: 0; color: #667eea; font-weight: bold; }
-            .cta { background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Welcome to CloudGreet!</h1>
-            </div>
-            <div class="content">
-              <p>Hi ${businessName},</p>
-              <p>Your AI receptionist is now active and ready to handle calls and messages for your business.</p>
-              <p><strong>Key features now available:</strong></p>
-              <div class="feature">24/7 AI receptionist</div>
-              <div class="feature">Call handling and routing</div>
-              <div class="feature">SMS automation</div>
-              <div class="feature">Lead qualification</div>
-              <div class="feature">Appointment booking</div>
-              <div class="feature">Real-time analytics</div>
-              <a href="https://cloudgreet.com/dashboard" class="cta">Go to Dashboard</a>
-              <p style="margin-top: 30px;">Best regards,<br><strong>The CloudGreet Team</strong></p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
-      text: `Welcome to CloudGreet! Your AI receptionist is now active for ${businessName}. Visit https://cloudgreet.com/dashboard to get started.`
+      return false
     }
 
-    return this.sendEmail(emailData)
-  }
+    const response = await fetch(process.env.EMAIL_SERVICE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.EMAIL_API_KEY}`
+      },
+      body: JSON.stringify({
+        to: emailData.to,
+        subject: emailData.subject,
+        html: emailData.html,
+        text: emailData.text
+      })
+    })
 
-  async sendNotificationEmail(to: string, subject: string, message: string): Promise<{ success: boolean; message?: string; error?: string }> {
-    const emailData: EmailData = {
-      to,
-      subject,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="content">
-              <h2>CloudGreet Notification</h2>
-              <p>${message}</p>
-              <p style="margin-top: 30px;">Best regards,<br><strong>The CloudGreet Team</strong></p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
-      text: message
+    if (!response.ok) {
+      throw new Error(`Email service responded with ${response.status}`)
     }
 
-    return this.sendEmail(emailData)
+    logger.info('Email sent successfully', {
+      to: emailData.to,
+      subject: emailData.subject
+    })
+
+    return true
+  } catch (error) {
+    logger.error('Failed to send email', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      to: emailData.to,
+      subject: emailData.subject
+    })
+    return false
   }
 }
 
-// Export singleton instance
-export const emailService = new EmailService()
+/**
+ * Send contact form notification email
+ */
+export async function sendContactFormNotification(contactData: ContactFormData): Promise<boolean> {
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@cloudgreet.com'
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">New Contact Form Submission</h2>
+      
+      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin-top: 0; color: #666;">Contact Information</h3>
+        <p><strong>Name:</strong> ${contactData.firstName} ${contactData.lastName}</p>
+        <p><strong>Email:</strong> ${contactData.email}</p>
+        ${contactData.business ? `<p><strong>Business:</strong> ${contactData.business}</p>` : ''}
+        <p><strong>Subject:</strong> ${contactData.subject}</p>
+      </div>
+      
+      <div style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h3 style="margin-top: 0; color: #666;">Message</h3>
+        <p style="white-space: pre-wrap;">${contactData.message}</p>
+      </div>
+      
+      <div style="margin-top: 20px; padding: 15px; background: #e8f4fd; border-radius: 8px;">
+        <p style="margin: 0; color: #666; font-size: 14px;">
+          This message was sent from the CloudGreet contact form.
+        </p>
+      </div>
+    </div>
+  `
 
-// Export helper functions
-export const sendEmail = async (emailData: EmailData) => {
-  return emailService.sendEmail(emailData)
+  const text = `
+New Contact Form Submission
+
+Contact Information:
+Name: ${contactData.firstName} ${contactData.lastName}
+Email: ${contactData.email}
+${contactData.business ? `Business: ${contactData.business}` : ''}
+Subject: ${contactData.subject}
+
+Message:
+${contactData.message}
+
+This message was sent from the CloudGreet contact form.
+  `
+
+  return await sendEmail({
+    to: adminEmail,
+    subject: `New Contact Form: ${contactData.subject}`,
+    html,
+    text
+  })
 }
 
-export const sendWelcomeEmail = async (to: string, businessName: string) => {
-  return emailService.sendWelcomeEmail(to, businessName)
-}
+/**
+ * Send contact form auto-reply
+ */
+export async function sendContactFormAutoReply(contactData: ContactFormData): Promise<boolean> {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #333;">Thank You for Contacting CloudGreet!</h2>
+      
+      <p>Hi ${contactData.firstName},</p>
+      
+      <p>Thank you for reaching out to us. We've received your message about "${contactData.subject}" and will get back to you within 24 hours.</p>
+      
+      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin-top: 0; color: #666;">What's Next?</h3>
+        <ul>
+          <li>Our team will review your message</li>
+          <li>We'll respond within 24 hours</li>
+          <li>If urgent, call us at (833) 395-6731</li>
+        </ul>
+      </div>
+      
+      <p>In the meantime, feel free to explore our <a href="https://cloudgreet.com/features" style="color: #007bff;">features</a> or try our <a href="https://cloudgreet.com/demo" style="color: #007bff;">live demo</a>.</p>
+      
+      <p>Best regards,<br>The CloudGreet Team</p>
+      
+      <div style="margin-top: 30px; padding: 15px; background: #e8f4fd; border-radius: 8px;">
+        <p style="margin: 0; color: #666; font-size: 14px;">
+          This is an automated response. Please do not reply to this email.
+        </p>
+      </div>
+    </div>
+  `
 
-export const sendNotificationEmail = async (to: string, subject: string, message: string) => {
-  return emailService.sendNotificationEmail(to, subject, message)
-}
+  const text = `
+Thank You for Contacting CloudGreet!
 
-export const sendContactEmail = async (to: string, subject: string, message: string, fromEmail?: string) => {
-  const emailData: EmailData = {
-    to,
-    subject,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .content { background: #f9f9f9; padding: 30px; border-radius: 10px; }
-          .field { margin: 15px 0; }
-          .label { font-weight: bold; color: #667eea; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="content">
-            <h2>New Contact Form Submission</h2>
-            <div class="field">
-              <span class="label">From:</span> ${fromEmail || 'Contact Form'}
-            </div>
-            <div class="field">
-              <span class="label">Subject:</span> ${subject}
-            </div>
-            <div class="field">
-              <span class="label">Message:</span>
-              <p>${message}</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `,
-    text: `New contact form submission from ${fromEmail || 'Contact Form'}: ${subject} - ${message}`
-  }
-  return emailService.sendEmail(emailData)
+Hi ${contactData.firstName},
+
+Thank you for reaching out to us. We've received your message about "${contactData.subject}" and will get back to you within 24 hours.
+
+What's Next?
+- Our team will review your message
+- We'll respond within 24 hours  
+- If urgent, call us at (833) 395-6731
+
+In the meantime, feel free to explore our features or try our live demo.
+
+Best regards,
+The CloudGreet Team
+
+This is an automated response. Please do not reply to this email.
+  `
+
+  return await sendEmail({
+    to: contactData.email,
+    subject: 'Thank You for Contacting CloudGreet!',
+    html,
+    text
+  })
 }

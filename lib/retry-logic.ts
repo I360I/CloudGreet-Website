@@ -39,7 +39,10 @@ export async function withRetry<T>(
       const result = await fn()
       
       if (attempt > 0) {
-        logger.info('Retry succeeded', { attempt, context })
+        logger.info('Retry succeeded', { 
+          attempt, 
+          context: JSON.stringify(context) 
+        })
       }
       
       return result
@@ -49,9 +52,9 @@ export async function withRetry<T>(
       // Check if we should retry
       if (attempt >= opts.maxRetries) {
         logger.error('Max retries exceeded', { 
-          attempts: attempt + 1, 
+          attempts: attempt + 1,
           error: lastError.message,
-          context 
+          context: JSON.stringify(context)
         })
         throw lastError
       }
@@ -60,7 +63,10 @@ export async function withRetry<T>(
       if (error && typeof error === 'object' && 'status' in error) {
         const status = (error as any).status
         if (!opts.retryableStatuses.includes(status)) {
-          logger.warn('Non-retryable error', { status, context })
+          logger.warn('Non-retryable error', { 
+            status, 
+            context: JSON.stringify(context) 
+          })
           throw lastError
         }
       }
@@ -80,7 +86,7 @@ export async function withRetry<T>(
         maxRetries: opts.maxRetries,
         delay: Math.round(totalDelay),
         error: lastError.message,
-        context
+        context: JSON.stringify(context)
       })
       
       await new Promise(resolve => setTimeout(resolve, totalDelay))

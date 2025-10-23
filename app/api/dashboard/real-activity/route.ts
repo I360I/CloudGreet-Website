@@ -1,23 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-
-interface ActivityItem {
-  id: string
-  type: 'call' | 'appointment' | 'revenue' | 'message' | 'system'
-  title: string
-  description: string
-  timestamp: string
-  status: 'success' | 'warning' | 'info'
-  value?: string
-}
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from JWT token
+    // Get authentication token
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -25,8 +15,17 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
-    
-    const decoded = jwt.verify(token, jwtSecret) as any
+    if (!jwtSecret) {
+      return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+    }
+
+    let decoded
+    try {
+      decoded = jwt.verify(token, jwtSecret) as any
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
     const userId = decoded.userId
     const businessId = decoded.businessId
 
@@ -34,186 +33,108 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
     }
 
-    const activities: ActivityItem[] = []
-
-    // Get REAL recent calls
-    const { data: recentCalls, error: callsError } = await supabaseAdmin
+    // Get recent calls
+    const { data: calls, error: callsError } = await supabaseAdmin
       .from('calls')
       .select('*')
       .eq('business_id', businessId)
       .order('created_at', { ascending: false })
       .limit(10)
 
-    if (!callsError && recentCalls) {
-      recentCalls.forEach(call => {
-        const timestamp = new Date(call.created_at)
-        const timeAgo = getTimeAgo(timestamp)
-        
-        activities.push({
-          id: `call-${call.id}`,
-          type: 'call',
-          title: call.status === 'answered' ? 'Call Completed' : 'Missed Call',
-          description: call.status === 'answered' 
-            ? `Customer call handled successfully`
-            : `Customer called outside business hours`,
-          timestamp: timeAgo,
-          status: call.status === 'answered' ? 'success' : 'warning',
-          value: call.status === 'answered' ? `${call.duration || 0}s` : 'Voicemail'
-        })
-      })
+    if (callsError) {
+      logger.error('Error fetching calls for activity', { error: callsError.message, businessId })
     }
 
-    // Get REAL recent appointments
-    const { data: recentAppointments, error: appointmentsError } = await supabaseAdmin
+    // Get recent appointments
+    const { data: appointments, error: appointmentsError } = await supabaseAdmin
       .from('appointments')
       .select('*')
       .eq('business_id', businessId)
       .order('created_at', { ascending: false })
       .limit(10)
 
-    if (!appointmentsError && recentAppointments) {
-      recentAppointments.forEach(appointment => {
-        const timestamp = new Date(appointment.created_at)
-        const timeAgo = getTimeAgo(timestamp)
-        
-        activities.push({
-          id: `appointment-${appointment.id}`,
-          type: 'appointment',
-          title: 'Appointment Scheduled',
-          description: `${appointment.service_type || 'Service'} scheduled for ${new Date(appointment.scheduled_date).toLocaleDateString()}`,
-          timestamp: timeAgo,
-          status: 'success',
-          value: appointment.estimated_value ? `$${appointment.estimated_value}` : 'TBD'
-        })
-      })
+    if (appointmentsError) {
+      logger.error('Error fetching appointments for activity', { error: appointmentsError.message, businessId })
     }
 
-    // Get REAL recent SMS messages
-    const { data: recentSMS, error: smsError } = await supabaseAdmin
-      .from('sms_messages')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('created_at', { ascending: false })
-      .limit(5)
+    // Get business info for context
+    const { data: business } = await supabaseAdmin
+      .from('businesses')
+      .select('business_name')
+      .eq('id', businessId)
+      .single()
 
-    if (!smsError && recentSMS) {
-      recentSMS.forEach(sms => {
-        const timestamp = new Date(sms.created_at)
-        const timeAgo = getTimeAgo(timestamp)
-        
-        activities.push({
-          id: `sms-${sms.id}`,
-          type: 'message',
-          title: 'SMS Sent',
-          description: sms.direction === 'outbound' 
-            ? 'Appointment reminder sent to customer'
-            : 'Customer sent message',
-          timestamp: timeAgo,
-          status: 'success',
-          value: sms.direction === 'outbound' ? 'Sent' : 'Received'
-        })
-      })
-    }
+    const businessName = business?.business_name || 'Your Business'
 
-    // Get REAL system events (audit logs)
-    const { data: auditLogs, error: auditError } = await supabaseAdmin
-      .from('audit_logs')
-      .select('*')
-      .eq('business_id', businessId)
-      .order('created_at', { ascending: false })
-      .limit(5)
+    // Convert calls to activity items
+    const callActivities = (calls || []).map(call => {
+      const isAnswered = call.status === 'answered' || call.status === 'completed'
+      const isMissed = call.status === 'missed' || call.status === 'busy'
+      
+      return {
+        id: `call-${call.id}`,
+        type: 'call' as const,
+        title: isAnswered ? 'Call Answered' : isMissed ? 'Missed Call' : 'Call Received',
+        description: isAnswered 
+          ? `Answered call from ${call.from_number} (${call.duration || 0}s)`
+          : isMissed
+          ? `Missed call from ${call.from_number}`
+          : `Call from ${call.from_number}`,
+        timestamp: call.created_at,
+        status: isAnswered ? 'success' as const : isMissed ? 'warning' as const : 'info' as const,
+        value: isAnswered ? `${call.duration || 0}s` : undefined,
+        trend: isAnswered ? 'up' as const : isMissed ? 'down' as const : undefined
+      }
+    })
 
-    if (!auditError && auditLogs) {
-      auditLogs.forEach(log => {
-        const timestamp = new Date(log.created_at)
-        const timeAgo = getTimeAgo(timestamp)
-        
-        activities.push({
-          id: `audit-${log.id}`,
-          type: 'system',
-          title: getAuditTitle(log.action_type),
-          description: getAuditDescription(log.action_type, log.action_details),
-          timestamp: timeAgo,
-          status: 'success',
-          value: 'Active'
-        })
-      })
-    }
+    // Convert appointments to activity items
+    const appointmentActivities = (appointments || []).map(appointment => {
+      const isCompleted = appointment.status === 'completed'
+      const isConfirmed = appointment.status === 'confirmed'
+      const isScheduled = appointment.status === 'scheduled'
+      
+      return {
+        id: `appointment-${appointment.id}`,
+        type: 'appointment' as const,
+        title: isCompleted ? 'Appointment Completed' : isConfirmed ? 'Appointment Confirmed' : 'Appointment Scheduled',
+        description: isCompleted
+          ? `Completed appointment with ${appointment.customer_name}`
+          : isConfirmed
+          ? `Confirmed appointment with ${appointment.customer_name}`
+          : `Scheduled appointment with ${appointment.customer_name}`,
+        timestamp: appointment.created_at,
+        status: isCompleted ? 'success' as const : isConfirmed ? 'success' as const : 'info' as const,
+        value: appointment.estimated_value ? `$${appointment.estimated_value}` : undefined,
+        trend: isCompleted ? 'up' as const : isConfirmed ? 'up' as const : undefined
+      }
+    })
 
-    // Sort activities by timestamp (most recent first)
-    activities.sort((a, b) => {
-      const timeA = getTimestampFromTimeAgo(a.timestamp)
-      const timeB = getTimestampFromTimeAgo(b.timestamp)
-      return timeB - timeA
+    // Combine and sort activities by timestamp
+    const allActivities = [...callActivities, ...appointmentActivities]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 20) // Limit to 20 most recent activities
+
+    logger.info('Real activity data generated', { 
+      businessId, 
+      totalActivities: allActivities.length,
+      calls: callActivities.length,
+      appointments: appointmentActivities.length
     })
 
     return NextResponse.json({
       success: true,
-      data: activities.slice(0, 15) // Return last 15 activities
+      activities: allActivities,
+      businessName,
+      generatedAt: new Date().toISOString()
     })
 
   } catch (error) {
-    console.error('Error fetching real activity:', error)
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to fetch real activity'
+    logger.error('Error generating real activity data', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    })
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to generate activity data' 
     }, { status: 500 })
-  }
-}
-
-function getTimeAgo(date: Date): string {
-  const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-  
-  if (diffInSeconds < 60) {
-    return `${diffInSeconds}s ago`
-  } else if (diffInSeconds < 3600) {
-    const minutes = Math.floor(diffInSeconds / 60)
-    return `${minutes}m ago`
-  } else if (diffInSeconds < 86400) {
-    const hours = Math.floor(diffInSeconds / 3600)
-    return `${hours}h ago`
-  } else {
-    const days = Math.floor(diffInSeconds / 86400)
-    return `${days}d ago`
-  }
-}
-
-function getTimestampFromTimeAgo(timeAgo: string): number {
-  const now = new Date().getTime()
-  const match = timeAgo.match(/(\d+)([smhd])/)
-  if (!match) return now
-  
-  const value = parseInt(match[1])
-  const unit = match[2]
-  
-  switch (unit) {
-    case 's': return now - (value * 1000)
-    case 'm': return now - (value * 60 * 1000)
-    case 'h': return now - (value * 60 * 60 * 1000)
-    case 'd': return now - (value * 24 * 60 * 60 * 1000)
-    default: return now
-  }
-}
-
-function getAuditTitle(actionType: string): string {
-  switch (actionType) {
-    case 'agent_created': return 'AI Agent Created'
-    case 'agent_updated': return 'AI Agent Updated'
-    case 'phone_provisioned': return 'Phone Number Added'
-    case 'settings_updated': return 'Settings Updated'
-    case 'onboarding_completed': return 'Setup Completed'
-    default: return 'System Event'
-  }
-}
-
-function getAuditDescription(actionType: string, details: any): string {
-  switch (actionType) {
-    case 'agent_created': return 'AI receptionist activated and ready'
-    case 'agent_updated': return 'Agent configuration updated'
-    case 'phone_provisioned': return 'New phone number assigned to business'
-    case 'settings_updated': return 'Business settings modified'
-    case 'onboarding_completed': return 'Initial setup process completed'
-    default: return 'System configuration changed'
   }
 }

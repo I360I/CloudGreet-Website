@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.text()
-      logger.error('Failed to exchange Google OAuth code', { 
-        error: new Error(errorData), 
+      logger.error('Failed to exchange Google OAuth code', {
+        error: errorData,
         status: tokenResponse.status
       })
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/dashboard?calendar_error=token_exchange_failed`)
@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (businessError || !business) {
-      logger.error('Business not found for calendar integration', { 
-        error: businessError, 
+      logger.error('Business not found for calendar integration', {
+        error: businessError?.message,
         businessName: state
       })
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/dashboard?calendar_error=business_not_found`)
@@ -87,8 +87,8 @@ export async function GET(request: NextRequest) {
       .eq('id', business.id)
 
     if (updateError) {
-      logger.error('Failed to store Google Calendar credentials', { 
-        error: updateError, 
+      logger.error('Failed to store Google Calendar credentials', {
+        error: updateError.message,
         businessId: business.id
       })
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/dashboard?calendar_error=storage_failed`)
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('Calendar callback error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       endpoint: 'calendar/callback'
     })
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/dashboard?calendar_error=internal_error`)

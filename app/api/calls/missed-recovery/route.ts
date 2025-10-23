@@ -19,6 +19,15 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Validate environment variables
+    if (!process.env.TELNYX_API_KEY) {
+      logger.error('Missing TELNYX_API_KEY environment variable', { requestId })
+      return NextResponse.json({
+        success: false,
+        error: 'Service configuration error'
+      }, { status: 500 })
+    }
+
     // Get business details
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
@@ -27,7 +36,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (businessError || !business) {
-      logger.error('Business not found for missed call recovery', { businessId, error: businessError })
+      logger.error('Business not found for missed call recovery', { businessId, error: businessError?.message })
       return NextResponse.json({
         success: false,
         error: 'Business not found'
@@ -59,7 +68,7 @@ export async function POST(request: NextRequest) {
     const smsResponse = await fetch('https://api.telnyx.com/v2/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+        'Authorization': `Bearer ${process.env.TELNYX_API_KEY || ''}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -106,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     if (smsLogError) {
       logger.warn('Failed to log SMS recovery message', {
-        error: smsLogError,
+        error: smsLogError.message,
         requestId,
         businessId,
         callId
@@ -125,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     if (callUpdateError) {
       logger.warn('Failed to update call record with recovery status', {
-        error: callUpdateError,
+        error: callUpdateError.message,
         requestId,
         callId
       })
@@ -161,7 +170,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Missed call recovery error', {
       requestId,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
     })
     
@@ -211,7 +220,7 @@ export async function GET(request: NextRequest) {
       .not('from_number', 'is', null)
 
     if (error) {
-      logger.error('Failed to fetch missed calls', { error })
+      logger.error('Failed to fetch missed calls', { error: error.message.replace(/[<>]/g, '') })
       return NextResponse.json({
         success: false,
         error: 'Failed to fetch missed calls'
@@ -268,8 +277,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logger.error('Missed call recovery batch error', {
       requestId,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
+     })
     
     return NextResponse.json({
       success: false,

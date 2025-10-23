@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
+  }
     const decoded = jwt.verify(token, jwtSecret) as any
     
     if (!decoded.businessId) {
@@ -78,7 +81,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    logger.error('TTS generation failed', { error: error instanceof Error ? error.message : 'Unknown error', endpoint: 'ai/text-to-speech' })
+    logger.error('TTS generation failed', { error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', endpoint: 'ai/text-to-speech' })
     return NextResponse.json(
       { error: 'Text-to-speech conversion failed', details: error.message },
       { status: 500 }

@@ -32,11 +32,14 @@ export default function SimpleLoginPage() {
 
       if (result.success) {
         // Store token and user data
-        localStorage.setItem('token', result.token)
-        localStorage.setItem('user', JSON.stringify(result.user))
-        if (result.business) {
-          localStorage.setItem('business', JSON.stringify(result.business))
+        localStorage.setItem('token', result.data.token)
+        localStorage.setItem('user', JSON.stringify(result.data.user))
+        if (result.data.business) {
+          localStorage.setItem('business', JSON.stringify(result.data.business))
         }
+        
+        // Set cookie for middleware
+        document.cookie = `token=${result.data.token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`
         
         // Redirect to dashboard
         window.location.href = '/dashboard'
@@ -81,7 +84,7 @@ export default function SimpleLoginPage() {
               autoComplete="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
+              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
               placeholder="your@email.com"
             />
           </div>
@@ -97,7 +100,7 @@ export default function SimpleLoginPage() {
                 autoComplete="current-password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 pr-12 bg-gray-800/50 border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
+                className="w-full px-4 py-3 pr-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
                 placeholder="Enter your password"
               />
               <button
@@ -125,7 +128,7 @@ export default function SimpleLoginPage() {
             disabled={isLoading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+            className="w-full py-4 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>

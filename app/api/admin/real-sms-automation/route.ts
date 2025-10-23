@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
         })
 
       if (logError) {
-        logger.error('Error logging SMS', { error: logError })
+        logger.error('Error logging SMS', { error: logError.message })
       }
 
       // Update lead status
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     logger.error('Real SMS automation error', {
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',
       endpoint: 'real_sms_automation'
     })
 

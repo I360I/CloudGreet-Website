@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     console.log('🤖 Processing AI request:', message)
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-5-turbo',
       messages: [
         {
           role: 'system',

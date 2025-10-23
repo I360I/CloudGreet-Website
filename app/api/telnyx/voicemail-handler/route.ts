@@ -55,9 +55,9 @@ export async function POST(request: NextRequest) {
     const business = phoneRecord?.businesses
 
     if (phoneError || !business) {
-      logger.error('Business not found for voicemail', { 
+      logger.error('Business not found for voicemail', {
         businessPhone,
-        error: phoneError 
+        error: phoneError?.message
       })
       return NextResponse.json({
         call_id: callId,

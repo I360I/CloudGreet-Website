@@ -23,15 +23,12 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   const [newAppointments, setNewAppointments] = useState(0)
   const [newMessages, setNewMessages] = useState(0)
   
-  // Only use toast in browser (not during SSR/prerendering)
-  let showSuccess: any = () => {}
-  let showInfo: any = () => {}
+  // Always call hooks at the top level
+  const toast = useToast()
   
-  if (typeof window !== 'undefined') {
-    const toast = useToast()
-    showSuccess = toast.showSuccess
-    showInfo = toast.showInfo
-  }
+  // Only use toast in browser (not during SSR/prerendering)
+  const showSuccess = typeof window !== 'undefined' ? toast.showSuccess : () => {}
+  const showInfo = typeof window !== 'undefined' ? toast.showInfo : () => {}
 
   useEffect(() => {
     // Get business ID from localStorage

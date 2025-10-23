@@ -91,7 +91,7 @@ export async function GET(
   } catch (error) {
     logger.error('Email tracking error', {
       leadId: params.leadId,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
 
     // Always return pixel to avoid broken images in emails

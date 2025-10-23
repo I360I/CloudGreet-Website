@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (callError || !call) {
-      logger.error('Call not found', { callId, error: callError })
+      logger.error('Call not found', { callId, error: callError?.message })
       return NextResponse.json({
         error: 'Call not found'
       }, { status: 404 })
@@ -156,7 +156,7 @@ async function handleCallStart(callId: string, config: RealtimeConfig) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-realtime-2025-08-28',
+        model: 'gpt-4o-realtime-preview-2024-10-01',
         voice: config.voice || 'alloy', // Latest high-quality voice
         input_audio_format: 'pcm16',
         output_audio_format: 'pcm16',

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
@@ -199,102 +200,38 @@ async function generateBenchmarkData(businessId: string, startDate: Date, endDat
     }
   ]
 
-  // Generate competitor comparison data
-  const competitors = [
+  // Get business type first
+  const { data: business } = await supabaseAdmin
+    .from('businesses')
+    .select('business_type')
+    .eq('id', businessId)
+    .single()
+
+  const businessType = business?.business_type || 'general'
+
+  // Get real industry benchmarks from database
+  const { data: industryBenchmarks } = await supabaseAdmin
+    .from('industry_benchmarks')
+    .select('*')
+    .eq('business_type', businessType)
+    .single()
+
+  // Use real industry data or calculate from actual business performance
+  const competitors = industryBenchmarks ? [
     {
-      id: 'competitor_1',
-      name: 'Premier HVAC Solutions',
-      type: 'direct' as const,
+      id: 'industry_average',
+      name: 'Industry Average',
+      type: 'benchmark' as const,
       metrics: {
-        responseTime: 2.1,
-        conversionRate: 58,
-        satisfaction: 4.1,
-        marketShare: 15.2
+        responseTime: industryBenchmarks.avg_response_time || 2.5,
+        conversionRate: industryBenchmarks.avg_conversion_rate || 45,
+        satisfaction: industryBenchmarks.avg_satisfaction || 4.0,
+        marketShare: industryBenchmarks.avg_market_share || 10.0
       },
-      strengths: [
-        'Strong local brand recognition',
-        'Excellent customer service team',
-        'Fast response times',
-        'Comprehensive service offerings'
-      ],
-      weaknesses: [
-        'Higher pricing than competitors',
-        'Limited online presence',
-        'Seasonal capacity constraints',
-        'Older technology stack'
-      ]
-    },
-    {
-      id: 'competitor_2',
-      name: 'QuickFix Services',
-      type: 'direct' as const,
-      metrics: {
-        responseTime: 1.8,
-        conversionRate: 42,
-        satisfaction: 3.7,
-        marketShare: 8.5
-      },
-      strengths: [
-        'Very fast response times',
-        'Competitive pricing',
-        '24/7 emergency service',
-        'Modern booking system'
-      ],
-      weaknesses: [
-        'Lower customer satisfaction',
-        'Limited service area',
-        'High staff turnover',
-        'Quality control issues'
-      ]
-    },
-    {
-      id: 'competitor_3',
-      name: 'Elite Home Services',
-      type: 'indirect' as const,
-      metrics: {
-        responseTime: 3.2,
-        conversionRate: 35,
-        satisfaction: 4.3,
-        marketShare: 12.8
-      },
-      strengths: [
-        'Premium service quality',
-        'High customer satisfaction',
-        'Strong referral network',
-        'Experienced technicians'
-      ],
-      weaknesses: [
-        'Slower response times',
-        'Higher prices',
-        'Limited emergency availability',
-        'Smaller service area'
-      ]
-    },
-    {
-      id: 'competitor_4',
-      name: 'TechCorp Solutions',
-      type: 'aspirational' as const,
-      metrics: {
-        responseTime: 0.8,
-        conversionRate: 78,
-        satisfaction: 4.8,
-        marketShare: 25.3
-      },
-      strengths: [
-        'Industry-leading technology',
-        'Exceptional customer experience',
-        'High conversion rates',
-        'Strong online presence',
-        'AI-powered customer service'
-      ],
-      weaknesses: [
-        'Premium pricing',
-        'Limited local presence',
-        'Complex service offerings',
-        'High customer acquisition costs'
-      ]
+      strengths: industryBenchmarks.common_strengths || [],
+      weaknesses: industryBenchmarks.common_weaknesses || []
     }
-  ]
+  ] : []
 
   return {
     metrics,

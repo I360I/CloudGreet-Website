@@ -17,6 +17,10 @@ export interface LinkedInProfile {
   location?: string
   connectionDegree?: string
   verified: boolean
+  email?: string
+  phone?: string
+  website?: string
+  contactMethods?: string[]
 }
 
 export interface LinkedInCompany {
@@ -94,7 +98,8 @@ async function searchLinkedInViaGoogle(
   try {
     // Build search query for LinkedIn company pages
     const companyQuery = `site:linkedin.com/company/ "${companyName}" ${businessType}`
-    const peopleQuery = `site:linkedin.com/in/ "${companyName}" (CEO OR President OR Owner OR Manager) ${location}`
+    // Enhanced query to find business owners and decision makers
+    const peopleQuery = `site:linkedin.com/in/ "${companyName}" (CEO OR President OR Owner OR Founder OR Director OR Manager OR "Business Owner" OR "Company Owner" OR "Small Business Owner") ${location}`
     
     const results: LinkedInProfile[] = []
     
@@ -288,7 +293,7 @@ async function searchLinkedInViaBing(
 async function googleSearch(query: string): Promise<Array<{url: string, title: string, snippet: string}>> {
   try {
     // Note: This would need a Google Custom Search API key for production
-    // For now, we'll simulate what the results might look like
+    // For now, return empty results with proper error handling
     
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`
     
@@ -410,12 +415,19 @@ async function scrapeLinkedInProfile(
       const title = $('[data-test-id*="headline"], .headline, .sub-nav').first().text().trim()
       
       if (name && title) {
+        // Extract contact information from the page
+        const contactInfo = extractContactInfo($)
+        
         return {
           name: cleanName(name),
           title: cleanTitle(title),
           company: extractCompanyFromTitle(title),
           profileUrl: url,
-          verified: false
+          verified: false,
+          email: contactInfo.email,
+          phone: contactInfo.phone,
+          website: contactInfo.website,
+          contactMethods: contactInfo.contactMethods
         }
       }
     }
@@ -426,6 +438,59 @@ async function scrapeLinkedInProfile(
     // Many LinkedIn profiles are behind auth, so this is expected to fail often
     return extractProfileFromSearchResult(searchTitle, url, searchSnippet)
   }
+}
+
+/**
+ * Extract contact information from LinkedIn profile page
+ */
+function extractContactInfo($: cheerio.CheerioAPI): {
+  email?: string
+  phone?: string
+  website?: string
+  contactMethods: string[]
+} {
+  const contactMethods: string[] = []
+  let email: string | undefined
+  let phone: string | undefined
+  let website: string | undefined
+  
+  // Look for contact information in various sections
+  const text = $('body').text()
+  
+  // Extract email addresses
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
+  const emails = text.match(emailRegex)
+  if (emails && emails.length > 0) {
+    email = emails[0]
+    contactMethods.push('email')
+  }
+  
+  // Extract phone numbers
+  const phoneRegex = /(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/g
+  const phones = text.match(phoneRegex)
+  if (phones && phones.length > 0) {
+    phone = phones[0]
+    contactMethods.push('phone')
+  }
+  
+  // Extract website URLs
+  const websiteRegex = /https?:\/\/[^\s]+/g
+  const websites = text.match(websiteRegex)
+  if (websites && websites.length > 0) {
+    // Filter out LinkedIn URLs and common social media
+    const filteredWebsites = websites.filter(url => 
+      !url.includes('linkedin.com') && 
+      !url.includes('facebook.com') && 
+      !url.includes('twitter.com') &&
+      !url.includes('instagram.com')
+    )
+    if (filteredWebsites.length > 0) {
+      website = filteredWebsites[0]
+      contactMethods.push('website')
+    }
+  }
+  
+  return { email, phone, website, contactMethods }
 }
 
 /**
@@ -519,7 +584,10 @@ function isDecisionMaker(title: string): boolean {
   const decisionMakerTitles = [
     'ceo', 'president', 'owner', 'founder', 'principal', 'partner',
     'director', 'manager', 'vp', 'vice president', 'chief', 'head of',
-    'lead', 'supervisor', 'coordinator'
+    'lead', 'supervisor', 'coordinator', 'business owner', 'company owner',
+    'small business owner', 'co-founder', 'managing director', 'general manager',
+    'operations manager', 'sales manager', 'marketing manager', 'hr manager',
+    'finance manager', 'executive', 'administrator'
   ]
   
   const normalizedTitle = title.toLowerCase()

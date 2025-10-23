@@ -6,17 +6,15 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 
-const ClickToCallOrb = dynamic(() => import('../components/ClickToCallOrb'), {
-  ssr: false,
-  loading: () => <div className="w-96 h-96 rounded-full bg-black border-2 border-gray-800 animate-pulse flex items-center justify-center"><div className="text-white">Loading Voice AI...</div></div>
-})
+// ClickToCallOrb component removed - using phone number display instead
 
 export default function TestAgentSimplePage() {
   const [businessInfo, setBusinessInfo] = useState({
-    businessName: 'Your Business',
-    businessType: 'Service Business',
-    services: 'General services',
-    hours: '9 AM - 5 PM'
+    businessName: '',
+    businessType: '',
+    services: '',
+    hours: '',
+    phoneNumber: ''
   })
 
   // Load business info from API
@@ -30,10 +28,11 @@ export default function TestAgentSimplePage() {
         .then(data => {
           if (data.success) {
             setBusinessInfo({
-              businessName: data.data.businessName || 'Your Business',
-              businessType: data.data.businessType || 'Service Business',
-              services: data.data.services?.join(', ') || 'General services',
-              hours: formatBusinessHours(data.data.businessHours) || '9 AM - 5 PM'
+              businessName: data.data.businessName || 'Loading...',
+              businessType: data.data.businessType || 'Loading...',
+              services: data.data.services?.join(', ') || 'Loading...',
+              hours: formatBusinessHours(data.data.businessHours) || 'Loading...',
+              phoneNumber: data.data.phoneNumber || 'Loading...'
             })
           }
         })
@@ -42,10 +41,10 @@ export default function TestAgentSimplePage() {
   }, [])
 
   const formatBusinessHours = (hours: any) => {
-    if (!hours) return '9 AM - 5 PM'
+    if (!hours) return 'Loading...'
     // Format first available day
     const firstDay = Object.values(hours)[0] as any
-    return firstDay?.open && firstDay?.close ? `${firstDay.open} - ${firstDay.close}` : '9 AM - 5 PM'
+    return firstDay?.open && firstDay?.close ? `${firstDay.open} - ${firstDay.close}` : 'Loading...'
   }
 
   return (
@@ -75,7 +74,7 @@ export default function TestAgentSimplePage() {
             Test Your AI Receptionist
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Experience your AI in action. Click the orb to start a real-time voice conversation.
+            To test your AI receptionist, call your business phone number. The AI will answer and have a real conversation with you.
           </p>
         </motion.div>
 
@@ -110,18 +109,27 @@ export default function TestAgentSimplePage() {
           </p>
         </motion.div>
 
-        {/* Voice Demo */}
+        {/* Phone Number Display */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4 }}
+          className="flex justify-center"
         >
-          <ClickToCallOrb
-            businessName={businessInfo.businessName}
-            businessType={businessInfo.businessType}
-            services={businessInfo.services}
-            hours={businessInfo.hours}
-          />
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-8 text-center max-w-md">
+            <div className="text-4xl font-bold text-white mb-4">
+              📞 Call Your Number
+            </div>
+            <div className="text-xl text-blue-100 mb-6">
+              Your AI receptionist is ready to answer calls
+            </div>
+            <div className="text-2xl font-mono bg-black/20 rounded-lg p-4 text-white">
+              {businessInfo.phoneNumber || 'Your business phone number'}
+            </div>
+            <div className="text-sm text-blue-200 mt-4">
+              The AI will answer and have a real conversation with you
+            </div>
+          </div>
         </motion.div>
 
         {/* Testing Tips */}
@@ -133,6 +141,7 @@ export default function TestAgentSimplePage() {
         >
           <h3 className="text-lg font-semibold mb-4 text-blue-400">💡 Testing Tips</h3>
           <ul className="space-y-2 text-sm text-gray-300">
+            <li>✓ Call your business number to test the AI</li>
             <li>✓ Ask about your services and hours</li>
             <li>✓ Try booking an appointment</li>
             <li>✓ Ask pricing questions</li>

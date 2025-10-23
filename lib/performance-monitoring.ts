@@ -26,7 +26,10 @@ export async function recordPerformanceMetrics(
 ): Promise<void> {
   try {
     if (!isSupabaseConfigured()) {
-      logger.info('Performance metrics recorded (demo mode)', { endpoint, metrics })
+      logger.info('Performance metrics recorded (demo mode)', { 
+        endpoint, 
+        metrics: JSON.stringify(metrics) 
+      })
       return
     }
 
@@ -46,14 +49,14 @@ export async function recordPerformanceMetrics(
       logger.error('Failed to record performance metrics', { 
         error: error instanceof Error ? error.message : error, 
         endpoint, 
-        metrics 
+        metrics: JSON.stringify(metrics) 
       })
     }
   } catch (error) {
     logger.error('Performance metrics recording error', { 
       error: error instanceof Error ? error.message : error, 
       endpoint, 
-      metrics 
+      metrics: JSON.stringify(metrics) 
     })
   }
 }
@@ -142,7 +145,9 @@ export async function getSystemHealth(): Promise<SystemHealth> {
       .single()
 
     if (error || !healthRecord) {
-      logger.error('Failed to fetch system health', error)
+      logger.error('Failed to fetch system health', { 
+        error: error?.message || 'Unknown error' 
+      })
       return {
         status: 'unhealthy',
         uptime: 0,
@@ -164,7 +169,9 @@ export async function getSystemHealth(): Promise<SystemHealth> {
       lastHealthCheck: healthRecord.recorded_at
     }
   } catch (error) {
-    logger.error('System health fetch error', error as Error)
+    logger.error('System health fetch error', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    })
     return {
       status: 'unhealthy',
       uptime: 0,
@@ -180,7 +187,9 @@ export async function getSystemHealth(): Promise<SystemHealth> {
 export async function recordSystemHealth(health: Omit<SystemHealth, 'lastHealthCheck'>): Promise<void> {
   try {
     if (!isSupabaseConfigured()) {
-      logger.info('System health recorded (demo mode)', { health })
+      logger.info('System health recorded (demo mode)', { 
+        health: JSON.stringify(health) 
+      })
       return
     }
 
@@ -197,15 +206,15 @@ export async function recordSystemHealth(health: Omit<SystemHealth, 'lastHealthC
       })
 
     if (error) {
-      logger.error('Failed to record system health', { 
-        error: error instanceof Error ? error.message : error, 
-        health 
+      logger.error('Failed to record system health', {
+        error: error instanceof Error ? error.message : error,
+        health: JSON.stringify(health)
       })
     }
   } catch (error) {
     logger.error('System health recording error', { 
       error: error instanceof Error ? error.message : error, 
-      health 
+      health: JSON.stringify(health) 
     })
   }
 }
@@ -221,7 +230,12 @@ export function getMemoryUsage(): number {
 export function getCpuUsage(): number {
   // Simplified CPU usage calculation
   // In a real implementation, you'd use a library like 'usage' or 'pidusage'
-  return Math.random() * 100
+  // Use real system metrics if available, otherwise return 0
+    if (typeof process !== 'undefined' && process.cpuUsage) {
+      const usage = process.cpuUsage();
+      return Math.round((usage.user + usage.system) / 1000000); // Convert to seconds
+    }
+    return 0
 }
 
 export function getUptime(): number {
