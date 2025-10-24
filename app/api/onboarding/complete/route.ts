@@ -50,7 +50,7 @@ const completeOnboardingSchema = z.object({
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
-  const requestId = Math.random().toString(36).substring(7)
+  const requestId = crypto.randomUUID()
   
   try {
     // Check if Supabase is configured

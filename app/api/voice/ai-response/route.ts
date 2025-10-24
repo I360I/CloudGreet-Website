@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { logger } from '@/lib/monitoring'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
   try {
     const { message, businessName, businessType, services, hours } = await request.json()
     
-    console.log('🤖 Processing AI request:', message)
+    logger.info('Processing AI request', { message })
 
     const response = await openai.chat.completions.create({
       model: 'gpt-5-turbo',
@@ -47,7 +48,7 @@ Instructions:
 
     const aiResponse = response.choices[0]?.message?.content || 'I apologize, I didn\'t catch that. How can I help you today?'
 
-    console.log('🤖 AI response:', aiResponse)
+    logger.info('AI response generated', { response: aiResponse })
 
     return NextResponse.json({
       success: true,
@@ -55,7 +56,7 @@ Instructions:
     })
 
   } catch (error: any) {
-    console.error('❌ Error processing AI request:', error)
+    logger.error('Error processing AI request', { error: error.message })
     return NextResponse.json({
       success: false,
       error: error.message,

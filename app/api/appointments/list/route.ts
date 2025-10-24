@@ -125,9 +125,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('Appointments list API error', { 
-      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
-      userId: request.headers.get('x-user-id'),
-      businessId: request.headers.get('x-business-id')
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -240,8 +238,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error('Create appointment API error', { 
       error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
-      userId: request.headers.get('x-user-id'),
-      businessId: request.headers.get('x-business-id')
+      // Removed deprecated header-based auth logging
     })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

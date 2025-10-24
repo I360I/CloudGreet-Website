@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { withPerformanceMonitoring, optimizeQuery } from '@/lib/performance-utils'
 import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
@@ -147,6 +148,16 @@ export async function GET(request: NextRequest) {
     const completedCalls = calls?.filter(call => call.status === 'completed').length || 0
     const conversionRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0
     const emergencyCalls = calls?.filter(call => call.status === 'emergency').length || 0
+
+    // Calculate ROI metrics
+    const totalAppointments = appointments?.length || 0
+    const perBookingFees = totalAppointments * 50 // $50 per booking
+    const subscriptionCost = 200 // $200/month base subscription
+    const totalCosts = subscriptionCost + perBookingFees
+    const netProfit = totalRevenue - totalCosts
+    const roiPercentage = totalCosts > 0 ? Math.round((netProfit / totalCosts) * 100) : 0
+    const costPerAppointment = totalAppointments > 0 ? Math.round(totalCosts / totalAppointments) : 0
+    const revenuePerAppointment = totalAppointments > 0 ? Math.round(totalRevenue / totalAppointments) : 0
     
     // Calculate calls that led to appointments (conversion tracking)
     const callsWithAppointments = calls?.filter(call => 
@@ -243,7 +254,30 @@ export async function GET(request: NextRequest) {
         onboardingCompleted,
         hasPhoneNumber,
         hasAgent,
-        timeframe
+        timeframe,
+        // ROI Metrics
+        roi: {
+          totalRevenue,
+          totalCosts,
+          netProfit,
+          roiPercentage,
+          subscriptionCost,
+          perBookingFees,
+          costPerAppointment,
+          revenuePerAppointment,
+          totalAppointments
+        },
+        // Performance Metrics
+        performance: {
+          conversionRate,
+          bookingConversionRate,
+          avgCallDuration,
+          customerSatisfaction,
+          missedCalls,
+          emergencyCalls,
+          todayBookings,
+          monthlyRecurring
+        }
       }
     }
     
@@ -251,9 +285,7 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     logger.error('Dashboard data error', { 
-      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error',  
-      userId: request.headers.get('x-user-id'),
-      businessId: request.headers.get('x-business-id')
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
     return NextResponse.json({ error: 'Failed to load dashboard data' }, { status: 500 })
   }

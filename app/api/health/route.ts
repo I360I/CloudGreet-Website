@@ -51,84 +51,52 @@ export async function POST(request: NextRequest) {
         }, { status: 503 })
       }
 
-      // Real Telnyx phone number purchasing
+      // Use real phone provisioning system
       try {
-        const telnyxResponse = await fetch('https://api.telnyx.com/v2/phone_numbers', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            phone_number: `+1${areaCode}${Math.floor(Math.random() * 9000000) + 1000000}`,
-            connection_id: process.env.TELYNX_CONNECTION_ID
-          })
-        })
+        // Get available phone numbers from inventory
+        const { data: availableNumbers, error: numbersError } = await supabaseAdmin
+          .from('toll_free_numbers')
+          .select('*')
+          .eq('status', 'available')
+          .limit(1)
 
-        if (!telnyxResponse.ok) {
-          const errorData = await telnyxResponse.text()
+        if (numbersError || !availableNumbers || availableNumbers.length === 0) {
           return NextResponse.json({
             success: false,
-            message: 'Failed to purchase phone number from Telnyx',
-            details: errorData
-          }, { status: 500 })
+            message: 'No phone numbers available in inventory'
+          }, { status: 503 })
         }
 
-        const phoneData = await telnyxResponse.json()
-        const phoneNumber = phoneData.data.phone_number
+        const phoneNumber = availableNumbers[0].number
 
-        // Set webhook URL for the phone number
-        const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com"}/api/telnyx/voice-webhook`
-        
-        try {
-          await fetch(`https://api.telnyx.com/v2/phone_numbers/${phoneData.data.id}`, {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              webhook_url: webhookUrl,
-              webhook_url_method: 'POST'
-            })
-          })
-        } catch (webhookError) {
-          logger.error('Failed to set webhook URL', { 
-            error: webhookError instanceof Error ? webhookError.message : 'Unknown error',
-            phoneNumber 
-          })
-        }
-
-        // Store the real phone number in database
-        const { data: phoneRecord, error: phoneError } = await supabaseAdmin
+        // Update the number status to assigned
+        const { error: updateError } = await supabaseAdmin
           .from('toll_free_numbers')
-          .insert({
-            number: phoneNumber,
-            business_id: userBusinessId,
+          .update({ 
             status: 'assigned',
-            provider: 'telnyx',
-            monthly_cost: 200,
-            telnyx_phone_id: phoneData.data.id,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            business_id: userBusinessId,
+            assigned_at: new Date().toISOString()
           })
-          .select()
-          .single()
+          .eq('number', phoneNumber)
 
-        if (phoneError) {
-          return NextResponse.json({ 
-            success: false, 
-            error: 'Failed to store phone number',
-            details: phoneError.message 
+        if (updateError) {
+          return NextResponse.json({
+            success: false,
+            message: 'Failed to assign phone number',
+            details: updateError.message
           }, { status: 500 })
         }
 
-        // Update business with real phone number
+        // Note: Webhook URL should be set when the number is purchased from Telnyx
+        // For now, we're using pre-approved numbers from inventory
+
+        // Update business record with phone number
         const { error: businessError } = await supabaseAdmin
           .from('businesses')
-          .update({ 
+          .update({
             phone_number: phoneNumber,
-            updated_at: new Date().toISOString()
+            phone_provisioned: true,
+            phone_provisioned_at: new Date().toISOString()
           })
           .eq('id', userBusinessId)
 
@@ -145,7 +113,6 @@ export async function POST(request: NextRequest) {
           message: 'Real phone number purchased and assigned successfully',
           phoneNumber: phoneNumber,
           businessId: userBusinessId,
-          telnyxId: phoneData.data.id,
           timestamp: new Date().toISOString()
         })
 

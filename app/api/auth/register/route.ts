@@ -14,7 +14,7 @@ export const runtime = 'nodejs'
 // Apply rate limiting to the register endpoint
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
-  const requestId = Math.random().toString(36).substring(7)
+  const requestId = crypto.randomUUID()
   
   try {
     // Check if Supabase is configured
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
         city: 'Unknown',
         state: 'Unknown',
         zip_code: '00000',
-        website: website,
+        website: website || '',
         description: `Professional ${businessType} services`,
         services: ['General Services'],
         service_areas: ['Local Area'],

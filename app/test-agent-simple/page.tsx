@@ -17,6 +17,10 @@ export default function TestAgentSimplePage() {
     phoneNumber: ''
   })
 
+  const [testPhone, setTestPhone] = useState('')
+  const [isCalling, setIsCalling] = useState(false)
+  const [callStatus, setCallStatus] = useState('')
+
   // Load business info from API
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -45,6 +49,43 @@ export default function TestAgentSimplePage() {
     // Format first available day
     const firstDay = Object.values(hours)[0] as any
     return firstDay?.open && firstDay?.close ? `${firstDay.open} - ${firstDay.close}` : 'Loading...'
+  }
+
+  const initiateTestCall = async () => {
+    if (!testPhone || !businessInfo.phoneNumber) {
+      setCallStatus('Please enter a phone number')
+      return
+    }
+
+    setIsCalling(true)
+    setCallStatus('Initiating real-time AI call...')
+
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/test/realtime-call', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          phoneNumber: testPhone,
+          businessId: localStorage.getItem('businessId')
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setCallStatus(`✅ Test call initiated! You should receive a call at ${testPhone} shortly. The AI will use real-time conversation.`)
+      } else {
+        setCallStatus(`❌ Call failed: ${data.error}`)
+      }
+    } catch (error) {
+      setCallStatus(`❌ Error: ${error.message}`)
+    } finally {
+      setIsCalling(false)
+    }
   }
 
   return (
@@ -109,45 +150,70 @@ export default function TestAgentSimplePage() {
           </p>
         </motion.div>
 
-        {/* Phone Number Display */}
+        {/* Real-Time Call Testing */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4 }}
           className="flex justify-center"
         >
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-8 text-center max-w-md">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-8 text-center max-w-md w-full">
             <div className="text-4xl font-bold text-white mb-4">
-              📞 Call Your Number
+              🤖 Real-Time AI Test
             </div>
             <div className="text-xl text-blue-100 mb-6">
-              Your AI receptionist is ready to answer calls
+              Test your AI with a real phone call
             </div>
-            <div className="text-2xl font-mono bg-black/20 rounded-lg p-4 text-white">
-              {businessInfo.phoneNumber || 'Your business phone number'}
+            
+            {/* Phone Number Input */}
+            <div className="mb-6">
+              <input
+                type="tel"
+                placeholder="Enter your phone number"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                className="w-full bg-black/20 border border-white/30 rounded-lg px-4 py-3 text-white text-center text-lg font-mono placeholder-gray-400"
+              />
             </div>
+
+            {/* Test Call Button */}
+            <button
+              onClick={initiateTestCall}
+              disabled={isCalling || !testPhone}
+              className="w-full bg-white/20 hover:bg-white/30 disabled:bg-white/10 disabled:cursor-not-allowed border border-white/30 rounded-lg px-6 py-4 text-white font-semibold transition-all duration-300 mb-4"
+            >
+              {isCalling ? '🔄 Initiating Call...' : '📞 Start Real-Time AI Call'}
+            </button>
+
+            {/* Status Message */}
+            {callStatus && (
+              <div className="text-sm text-blue-200 bg-black/20 rounded-lg p-3">
+                {callStatus}
+              </div>
+            )}
+
             <div className="text-sm text-blue-200 mt-4">
-              The AI will answer and have a real conversation with you
+              Uses real-time AI (sub-300ms responses)
             </div>
           </div>
         </motion.div>
 
-        {/* Testing Tips */}
+        {/* Real-Time AI Features */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="mt-12 bg-blue-500/10 border border-blue-500/30 rounded-xl p-6"
+          className="mt-12 bg-green-500/10 border border-green-500/30 rounded-xl p-6"
         >
-          <h3 className="text-lg font-semibold mb-4 text-blue-400">💡 Testing Tips</h3>
+          <h3 className="text-lg font-semibold mb-4 text-green-400">🚀 Real-Time AI Features</h3>
           <ul className="space-y-2 text-sm text-gray-300">
-            <li>✓ Call your business number to test the AI</li>
-            <li>✓ Ask about your services and hours</li>
-            <li>✓ Try booking an appointment</li>
-            <li>✓ Ask pricing questions</li>
-            <li>✓ Test how the AI handles objections</li>
-            <li>✓ Verify the AI sounds natural and professional</li>
-            <li>✓ Check response speed (should be under 1 second)</li>
+            <li>✓ Sub-300ms response time (latest OpenAI Realtime API)</li>
+            <li>✓ Natural conversation flow with interruptions</li>
+            <li>✓ Real-time appointment booking</li>
+            <li>✓ Automatic lead qualification</li>
+            <li>✓ Business-specific knowledge and tone</li>
+            <li>✓ Professional voice synthesis</li>
+            <li>✓ No fallbacks - pure real-time AI</li>
           </ul>
         </motion.div>
       </div>

@@ -12,29 +12,19 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if Stripe is configured
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return NextResponse.json({
-        success: false,
-        message: 'Billing service not configured. Please contact support.'
-      }, { status: 503 })
-    }
-
-    // Get token from Authorization header
+    // Get authentication token
     const authHeader = request.headers.get('authorization')
-    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
-    
     if (!jwtSecret) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+      return NextResponse.json({ error: 'Missing JWT_SECRET' }, { status: 500 })
     }
 
-    // Decode JWT token
+    // Verify JWT token
     let decoded
     try {
       decoded = jwt.verify(token, jwtSecret) as any
@@ -44,33 +34,21 @@ export async function POST(request: NextRequest) {
 
     const userId = decoded.userId
     const businessId = decoded.businessId
-    
+
     if (!userId || !businessId) {
       return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
     }
 
-    // Get business info from database
+    // Get business info
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
-      .select('business_name, email, stripe_customer_id')
+      .select('*')
       .eq('id', businessId)
       .eq('owner_id', userId)
       .single()
 
     if (businessError || !business) {
-      return NextResponse.json({
-        success: false,
-        message: 'Business not found'
-      }, { status: 404 })
-    }
-
-    const { business_name, email } = business
-
-    if (!email || !business_name) {
-      return NextResponse.json({
-        success: false,
-        message: 'Business email and name are required'
-      }, { status: 400 })
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
     }
 
     // Check if customer already exists
@@ -78,30 +56,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         customerId: business.stripe_customer_id,
-        message: 'Customer already exists'
+        message: 'Stripe customer already exists'
       })
     }
 
     // Create Stripe customer
-    let customer
-    try {
-      customer = await stripe.customers.create({
-        email,
-        name: business_name,
-        metadata: {
-          business_id: businessId
-        }
-      })
-    } catch (stripeError) {
-      logger.error('Stripe customer creation failed', { 
-        error: stripeError, 
-        businessId, 
-        email, 
-        businessName: business_name 
-      })
-      
-      throw new Error(`Stripe customer creation failed: ${stripeError}`)
-    }
+    const customer = await stripe.customers.create({
+      email: business.email,
+      name: business.business_name,
+      phone: business.phone_number,
+      metadata: {
+        business_id: businessId,
+        user_id: userId,
+        business_type: business.business_type
+      }
+    })
 
     // Update business with Stripe customer ID
     const { error: updateError } = await supabaseAdmin
@@ -118,27 +87,31 @@ export async function POST(request: NextRequest) {
         businessId,
         customerId: customer.id
       })
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to save customer information'
+      }, { status: 500 })
     }
 
-    logger.info('Stripe customer created', {
+    logger.info('Stripe customer created successfully', {
       businessId,
-      customerId: customer.id,
-      email
+      userId,
+      customerId: customer.id
     })
 
     return NextResponse.json({
       success: true,
-      customerId: customer.id
+      customerId: customer.id,
+      message: 'Stripe customer created successfully'
     })
 
   } catch (error) {
-    logger.error('Create customer API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
-      endpoint: 'stripe/create-customer'
+    logger.error('Stripe customer creation failed', {
+      error: error instanceof Error ? error.message : 'Unknown error'
     })
     return NextResponse.json({
       success: false,
-      message: 'Failed to create Stripe customer'
+      error: 'Failed to create Stripe customer'
     }, { status: 500 })
   }
 }

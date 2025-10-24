@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 // Missed Call Recovery - Automatically SMS callers who didn't connect
 export async function POST(request: NextRequest) {
-  const requestId = Math.random().toString(36).substring(7)
+  const requestId = crypto.randomUUID()
   
   try {
     const body = await request.json()
@@ -43,15 +43,15 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Get business phone number
+    // Get business phone number from phone_numbers table
     const { data: phoneRecord } = await supabaseAdmin
-      .from('toll_free_numbers')
-      .select('number')
+      .from('phone_numbers')
+      .select('phone_number')
       .eq('business_id', businessId)
-      .eq('status', 'assigned')
+      .eq('status', 'active')
       .single()
 
-    const businessPhone = phoneRecord?.number || business.phone_number
+    const businessPhone = phoneRecord?.phone_number || business.phone_number
 
     // Generate personalized recovery message
     const recoveryMessage = generateRecoveryMessage(business, callerName, reason)
@@ -205,7 +205,7 @@ function generateRecoveryMessage(business: any, callerName: string | null, reaso
 
 // Cron job endpoint - Process all missed calls from last hour
 export async function GET(request: NextRequest) {
-  const requestId = Math.random().toString(36).substring(7)
+  const requestId = crypto.randomUUID()
   
   try {
     // Get all missed/unanswered calls from last hour that haven't had recovery SMS sent

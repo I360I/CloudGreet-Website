@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import Stripe from 'stripe'
 
@@ -9,249 +9,182 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16'
 })
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
 export async function POST(request: NextRequest) {
-  const startTime = Date.now()
-  const requestId = Math.random().toString(36).substring(7)
-  
   try {
-    // Check if Stripe is configured
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
-      logger.error('Stripe webhook called but Stripe not configured', { requestId })
-      return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 })
-    }
-
     const body = await request.text()
-    const sig = request.headers.get('stripe-signature')
-    
-    if (!sig) {
-      logger.error('Stripe webhook missing signature', { requestId })
-      return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
-    }
+    const signature = request.headers.get('stripe-signature')!
 
     let event: Stripe.Event
 
     try {
-      event = stripe.webhooks.constructEvent(body, sig, endpointSecret)
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
     } catch (err) {
-      logger.error("Error", { 
-        error: err instanceof Error ? err.message : 'Unknown error', 
-        requestId,
-        endpoint: 'stripe_webhook',
-        action: 'webhook_verification_failed'
-      })
-      return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 })
+      logger.error('Webhook signature verification failed', { error: err })
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
     // Handle the event
     switch (event.type) {
       case 'customer.subscription.created':
+        await handleSubscriptionCreated(event.data.object as Stripe.Subscription)
+        break
+      
       case 'customer.subscription.updated':
-        await handleSubscriptionUpdate(event.data.object as Stripe.Subscription, requestId)
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
         break
       
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription, requestId)
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
       
       case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice, requestId)
+        await handlePaymentSucceeded(event.data.object as Stripe.Invoice)
         break
       
       case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.Invoice, requestId)
+        await handlePaymentFailed(event.data.object as Stripe.Invoice)
         break
       
       default:
-        await logger.info('Unhandled Stripe webhook event', {
-          requestId,
-          eventType: event.type
-        })
+        logger.info(`Unhandled event type: ${event.type}`)
     }
-
-    await logger.info('Stripe webhook processed successfully', {
-      requestId,
-      eventType: event.type,
-      responseTime: Date.now() - startTime
-    })
 
     return NextResponse.json({ received: true })
 
   } catch (error) {
-    logger.error("Error", { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
-      requestId,
-      endpoint: 'stripe_webhook',
-      responseTime: Date.now() - startTime
+    logger.error('Stripe webhook error', {
+      error: error instanceof Error ? error.message : 'Unknown error'
     })
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
 }
 
-async function handleSubscriptionUpdate(subscription: Stripe.Subscription, requestId: string) {
-  const businessId = subscription.metadata.business_id
-  const userId = subscription.metadata.user_id
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  try {
+    const businessId = subscription.metadata.business_id
+    
+    if (!businessId) {
+      logger.error('No business_id in subscription metadata', { subscriptionId: subscription.id })
+      return
+    }
 
-  if (!businessId || !userId) {
-    logger.error("Error", { 
-      error: 'Missing metadata in subscription', 
-      requestId,
-      subscriptionId: subscription.id
-    })
-    return
-  }
-
-  const { error: updateError } = await supabase
-    .from('businesses')
-    .update({
-      stripe_subscription_id: subscription.id,
-      subscription_status: subscription.status,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', businessId)
-
-  if (updateError) {
-    logger.error('Failed to update business subscription status', {
-      error: updateError.message,
-      requestId,
-      businessId,
-      subscriptionId: subscription.id
-    })
-  }
-
-  await supabase
-    .from('audit_logs')
-    .insert({
-      action: 'subscription_updated',
-      details: {
-        business_id: businessId,
-        user_id: userId,
+    await supabaseAdmin
+      .from('businesses')
+      .update({
+        subscription_status: 'active',
         stripe_subscription_id: subscription.id,
-        status: subscription.status,
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
-      },
-      user_id: userId,
-      business_id: businessId,
-      created_at: new Date().toISOString()
-    })
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', businessId)
+
+    logger.info('Subscription activated', { businessId, subscriptionId: subscription.id })
+  } catch (error) {
+    logger.error('Failed to handle subscription created', { error })
+  }
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription, requestId: string) {
-  const businessId = subscription.metadata.business_id
-  const userId = subscription.metadata.user_id
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  try {
+    const businessId = subscription.metadata.business_id
+    
+    if (!businessId) {
+      logger.error('No business_id in subscription metadata', { subscriptionId: subscription.id })
+      return
+    }
 
-  if (!businessId || !userId) {
-    logger.error("Error", { 
-      error: 'Missing metadata in subscription', 
-      requestId,
-      subscriptionId: subscription.id
-    })
-    return
+    const status = subscription.status === 'active' ? 'active' : 'inactive'
+
+    await supabaseAdmin
+      .from('businesses')
+      .update({
+        subscription_status: status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', businessId)
+
+    logger.info('Subscription updated', { businessId, subscriptionId: subscription.id, status })
+  } catch (error) {
+    logger.error('Failed to handle subscription updated', { error })
   }
-
-  const { error: cancelError } = await supabase
-    .from('businesses')
-    .update({
-      subscription_status: 'cancelled',
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', businessId)
-
-  if (cancelError) {
-    logger.error('Failed to cancel business subscription', {
-      error: cancelError.message,
-      requestId,
-      businessId,
-      subscriptionId: subscription.id
-    })
-  }
-
-  await supabase
-    .from('audit_logs')
-    .insert({
-      action: 'subscription_cancelled',
-      details: {
-        business_id: businessId,
-        user_id: userId,
-        stripe_subscription_id: subscription.id
-      },
-      user_id: userId,
-      business_id: businessId,
-      created_at: new Date().toISOString()
-    })
 }
 
-async function handlePaymentSucceeded(invoice: Stripe.Invoice, requestId: string) {
-  const subscriptionId = invoice.subscription as string
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-  
-  const businessId = subscription.metadata.business_id
-  const userId = subscription.metadata.user_id
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  try {
+    const businessId = subscription.metadata.business_id
+    
+    if (!businessId) {
+      logger.error('No business_id in subscription metadata', { subscriptionId: subscription.id })
+      return
+    }
 
-  if (!businessId || !userId) {
-    logger.error("Error", { 
-      error: 'Missing metadata in subscription', 
-      requestId,
-      subscriptionId: subscription.id
-    })
-    return
+    await supabaseAdmin
+      .from('businesses')
+      .update({
+        subscription_status: 'cancelled',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', businessId)
+
+    logger.info('Subscription cancelled', { businessId, subscriptionId: subscription.id })
+  } catch (error) {
+    logger.error('Failed to handle subscription deleted', { error })
   }
-
-  await supabase
-    .from('audit_logs')
-    .insert({
-      action: 'payment_succeeded',
-      details: {
-        business_id: businessId,
-        user_id: userId,
-        stripe_subscription_id: subscription.id,
-        amount_paid: invoice.amount_paid,
-        currency: invoice.currency
-      },
-      user_id: userId,
-      business_id: businessId,
-      created_at: new Date().toISOString()
-    })
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice, requestId: string) {
-  const subscriptionId = invoice.subscription as string
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-  
-  const businessId = subscription.metadata.business_id
-  const userId = subscription.metadata.user_id
+async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
+  try {
+    const businessId = invoice.metadata.business_id
+    
+    if (!businessId) {
+      logger.error('No business_id in invoice metadata', { invoiceId: invoice.id })
+      return
+    }
 
-  if (!businessId || !userId) {
-    logger.error("Error", { 
-      error: 'Missing metadata in subscription', 
-      requestId,
-      subscriptionId: subscription.id
-    })
-    return
-  }
-
-  await supabase
-    .from('businesses')
-    .update({
-      subscription_status: 'past_due',
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', businessId)
-
-  await supabase
-    .from('audit_logs')
-    .insert({
-      action: 'payment_failed',
-      details: {
+    // Log successful payment
+    await supabaseAdmin
+      .from('billing_history')
+      .insert({
         business_id: businessId,
-        user_id: userId,
-        stripe_subscription_id: subscription.id,
-        amount_due: invoice.amount_due,
-        currency: invoice.currency
-      },
-      user_id: userId,
-      business_id: businessId,
-      created_at: new Date().toISOString()
-    })
+        stripe_invoice_id: invoice.id,
+        amount: invoice.amount_paid / 100, // Convert cents to dollars
+        currency: invoice.currency,
+        description: `Payment for ${invoice.description || 'Subscription'}`,
+        status: 'paid',
+        created_at: new Date().toISOString()
+      })
+
+    logger.info('Payment succeeded', { businessId, invoiceId: invoice.id, amount: invoice.amount_paid })
+  } catch (error) {
+    logger.error('Failed to handle payment succeeded', { error })
+  }
+}
+
+async function handlePaymentFailed(invoice: Stripe.Invoice) {
+  try {
+    const businessId = invoice.metadata.business_id
+    
+    if (!businessId) {
+      logger.error('No business_id in invoice metadata', { invoiceId: invoice.id })
+      return
+    }
+
+    // Log failed payment
+    await supabaseAdmin
+      .from('billing_history')
+      .insert({
+        business_id: businessId,
+        stripe_invoice_id: invoice.id,
+        amount: invoice.amount_due / 100, // Convert cents to dollars
+        currency: invoice.currency,
+        description: `Failed payment for ${invoice.description || 'Subscription'}`,
+        status: 'failed',
+        created_at: new Date().toISOString()
+      })
+
+    logger.info('Payment failed', { businessId, invoiceId: invoice.id, amount: invoice.amount_due })
+  } catch (error) {
+    logger.error('Failed to handle payment failed', { error })
+  }
 }

@@ -74,8 +74,11 @@ export async function POST(request: NextRequest) {
           }
         }
       } catch (error) {
-        // Token invalid, continue with demo mode
-        logger.info('Invalid token for AI conversation, using demo mode')
+        logger.error('Invalid token for AI conversation', { error })
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Authentication required for AI conversation' 
+        }, { status: 401 })
       }
     }
 
@@ -114,16 +117,10 @@ Important guidelines:
 - Keep responses conversational but informative
 - End calls politely and confirm next steps`
     } else {
-      systemPrompt += `
-
-This is a demo conversation. You should:
-1. Be professional and helpful
-2. Answer general questions about service businesses
-3. Ask clarifying questions
-4. Offer to schedule appointments
-5. Take messages professionally
-
-Keep responses natural and conversational.`
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Business information required for AI conversation' 
+      }, { status: 400 })
     }
 
     // Generate AI response using OpenAI Realtime API
@@ -154,7 +151,7 @@ Keep responses natural and conversational.`
         await supabaseAdmin
           .from('conversation_history')
           .insert({
-            conversation_id: `demo-${Date.now()}`,
+            conversation_id: `conv-${Date.now()}`,
             business_id: businessInfo.id,
             customer_message: message,
             ai_response: aiResponse,

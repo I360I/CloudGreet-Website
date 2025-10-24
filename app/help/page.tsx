@@ -1,6 +1,4 @@
 import React from 'react'
-import { SparklesCore } from '@/components/ui/sparkles'
-import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { HelpCircle, Phone, MessageSquare, Calendar, BarChart, Shield } from 'lucide-react'
 
@@ -88,17 +86,7 @@ const faqs = [
 const HelpPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white relative overflow-hidden">
-      <SparklesCore
-        id="tsparticlesfullpage"
-        background="transparent"
-        minSize={0.6}
-        maxSize={1.4}
-        particleDensity={100}
-        className="w-full h-full absolute inset-0"
-        particleColor="#FFFFFF"
-      />
-
-      <div className="relative z-10 container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-16">
         <div className="text-center mb-16">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
             Help Center
@@ -156,15 +144,11 @@ const HelpPage = () => {
               Our support team is here to help you get the most out of CloudGreet.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/contact" passHref>
-                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 shadow-lg transform hover:scale-105">
-                  Contact Support
-                </Button>
+              <Link href="/contact" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 shadow-lg transform hover:scale-105 text-center">
+                Contact Support
               </Link>
-              <Link href="/demo" passHref>
-                <Button variant="outline" className="bg-white bg-opacity-10 border-gray-600 text-gray-200 hover:bg-opacity-20 hover:border-purple-500 font-bold py-3 px-8 rounded-full text-lg transition-all duration-300">
-                  Try Demo
-                </Button>
+              <Link href="/demo" className="bg-white bg-opacity-10 border border-gray-600 text-gray-200 hover:bg-opacity-20 hover:border-purple-500 font-bold py-3 px-8 rounded-full text-lg transition-all duration-300 text-center">
+                Try Demo
               </Link>
             </div>
           </div>

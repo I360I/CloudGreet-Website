@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/monitoring'
 import { supabaseAdmin } from '@/lib/supabase'
+import { AI_CONFIG } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
-    // Set timeout for the entire function
-    const timeoutId = setTimeout(() => {
-      logger.error('Function timeout - returning default response');
-    }, 30000); // 30 second timeout for real conversations
+  // Set timeout for the entire function
+  const timeoutId = setTimeout(() => {
+    logger.error('Function timeout - returning default response');
+  }, AI_CONFIG.CONVERSATION_TIMEOUT_MS);
+  
   try {
     const body = await request.json()
     const { 
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
         })
 
         const completion = await openai.chat.completions.create({
-          model: 'gpt-5-turbo', // Latest GPT-5 for enhanced reasoning and speed
+          model: 'gpt-4-turbo', // Fast GPT-4 for real-time responses
           messages: [
             {
               role: 'system',
@@ -84,8 +86,24 @@ export async function POST(request: NextRequest) {
 
         aiResponse = completion.choices[0]?.message?.content || aiResponse
       } catch (aiError) {
-        logger.error('AI conversation failed', { error: aiError })
-        aiResponse = 'I understand you need assistance. How can I help you today?'
+        logger.error('AI conversation failed', { 
+          error: aiError instanceof Error ? aiError.message : 'Unknown error',
+          callId 
+        })
+        return NextResponse.json({
+          call_id: callId,
+          status: 'error',
+          instructions: [
+            {
+              instruction: 'say',
+              text: 'I apologize, but I\'m experiencing technical difficulties. Please try again later.',
+              voice: 'alloy'
+            },
+            {
+              instruction: 'hangup'
+            }
+          ]
+        }, { status: 500 })
       }
     }
 
@@ -138,8 +156,7 @@ export async function POST(request: NextRequest) {
       ]
     })
 
-  clearTimeout(timeoutId);
-    } catch (error) {
+  } catch (error) {
     logger.error('Voice handler error', { 
       error: error instanceof Error ? error.message : 'Unknown error'
     })
@@ -158,5 +175,7 @@ export async function POST(request: NextRequest) {
         }
       ]
     }, { status: 500 })
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

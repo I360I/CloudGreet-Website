@@ -78,10 +78,10 @@ export async function GET(request: NextRequest) {
     const { error: updateError } = await supabaseAdmin
       .from('businesses')
       .update({
-        google_calendar_access_token: tokenData.access_token,
-        google_calendar_refresh_token: tokenData.refresh_token,
-        google_calendar_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
-        calendar_integration_enabled: true,
+        google_access_token: tokenData.access_token,
+        google_refresh_token: tokenData.refresh_token,
+        google_token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
+        calendar_connected: true,
         updated_at: new Date().toISOString()
       })
       .eq('id', business.id)

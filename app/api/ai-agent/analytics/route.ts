@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
-  const requestId = Math.random().toString(36).substring(7)
+  const requestId = crypto.randomUUID()
   
   try {
     // AUTH CHECK: Use proper JWT authentication instead of weak header auth
@@ -206,8 +206,7 @@ export async function GET(request: NextRequest) {
     logger.error('AI agent analytics error', { 
       error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       requestId,
-      userId: request.headers.get('x-user-id'),
-      businessId: request.headers.get('x-business-id'),
+      // Removed deprecated header-based auth logging
       duration: Date.now() - startTime
     })
     return NextResponse.json({

@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     
     const userId = validatedData.userId || 'anonymous'
     const notification = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       ...validatedData,
       timestamp: new Date().toISOString(),
       read: false,

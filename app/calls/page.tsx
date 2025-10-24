@@ -311,8 +311,7 @@ export default function CallsPage() {
                 {(call.recording_url || call.transcription_text) && (
                   <div className="mb-4">
                     <CallPlayer
-                      recordingUrl={call.recording_url}
-                      transcript={call.transcription_text}
+                      recordingUrl={call.recording_url || ''}
                       callId={call.id}
                       className="bg-gray-800/50 border border-gray-700"
                     />

@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       total_rules: rules?.length || 0,
       active_rules: activeRules?.length || 0,
       executions_today: executions?.length || 0,
-      success_rate: 85, // Placeholder success rate
+      success_rate: executions?.length > 0 ? Math.round((executions.filter((e: any) => e.status === 'success').length / executions.length) * 100) : 0,
       leads_processed: leadsProcessed?.length || 0,
       emails_sent: emailsSent?.length || 0,
       calls_scheduled: callsScheduled?.length || 0

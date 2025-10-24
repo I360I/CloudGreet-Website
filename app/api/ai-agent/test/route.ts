@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
-  const requestId = Math.random().toString(36).substring(7)
+  const requestId = crypto.randomUUID()
   
   try {
     // Get token from Authorization header
@@ -93,8 +93,8 @@ CRITICAL: You are NOT a chatbot. You are a REAL PERSON having a REAL CONVERSATIO
 
 BUSINESS CONTEXT:
 - Company: ${business.business_name} (${config.business_type || business.business_type})
-- Services: ${(config.services || business.services || ['General Services']).join(', ')}
-- Service Areas: ${(config.service_areas || business.service_areas || ['Local Area']).join(', ')}
+- Services: ${(config.services || business.services || []).join(', ') || 'Not specified'}
+- Service Areas: ${(config.service_areas || business.service_areas || []).join(', ') || 'Not specified'}
 - Business Hours: ${JSON.stringify(config.business_hours || business.business_hours || {})}
 - Phone: ${business.phone_number}
 - Address: ${business.address}
@@ -219,8 +219,7 @@ Provide a brief explanation for each score and suggest improvements if needed.`
     logger.error('AI agent test error', { 
       error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
       requestId,
-      userId: request.headers.get('x-user-id'),
-      businessId: request.headers.get('x-business-id'),
+      // Removed deprecated header-based auth logging
       duration: Date.now() - startTime
     })
     return NextResponse.json({

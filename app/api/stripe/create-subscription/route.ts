@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import Stripe from 'stripe'
+import jwt from 'jsonwebtoken'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
-    // AUTH CHECK: Verify business access - CRITICAL for billing
+    // Get authentication token
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -19,134 +20,113 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '')
     const jwtSecret = process.env.JWT_SECRET
-    const jwt = (await import('jsonwebtoken')).default
-    const decoded = jwt.verify(token, jwtSecret) as any
-    const userBusinessId = decoded.businessId
-    
-    if (!userBusinessId) {
+    if (!jwtSecret) {
+      return NextResponse.json({ error: 'Missing JWT_SECRET' }, { status: 500 })
+    }
+
+    // Verify JWT token
+    let decoded
+    try {
+      decoded = jwt.verify(token, jwtSecret) as any
+    } catch (error) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
-    
-    const body = await request.json()
-    const { businessId, customerId, planId = 'pro' } = body
 
-    if (!businessId || !customerId) {
-      return NextResponse.json({
-        success: false,
-        message: 'Business ID and customer ID are required'
-      }, { status: 400 })
-    }
-    
-    // Verify user owns this business
-    if (userBusinessId !== businessId) {
-      return NextResponse.json({ error: 'Unauthorized - Access denied' }, { status: 403 })
+    const userId = decoded.userId
+    const businessId = decoded.businessId
+
+    if (!userId || !businessId) {
+      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
     }
 
     // Get business info
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
-      .select('stripe_customer_id, business_name, email')
+      .select('*')
       .eq('id', businessId)
+      .eq('owner_id', userId)
       .single()
 
     if (businessError || !business) {
-      logger.error('Business not found for subscription creation', {
-        error: businessError?.message,
-        businessId
-      })
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+    }
+
+    if (!business.stripe_customer_id) {
+      return NextResponse.json({ 
+        error: 'Stripe customer not created. Please create customer first.' 
+      }, { status: 400 })
+    }
+
+    // Check if subscription already exists
+    if (business.subscription_status === 'active') {
       return NextResponse.json({
-        success: false,
-        message: 'Business not found'
-      }, { status: 404 })
+        success: true,
+        subscriptionId: business.stripe_subscription_id,
+        message: 'Subscription already active'
+      })
     }
-
-    // Define pricing based on plan - amounts from environment variables
-    const pricing = {
-      starter: { 
-        priceId: process.env.STRIPE_STARTER_PRICE_ID || 'price_starter', 
-        amount: parseInt(process.env.STRIPE_STARTER_AMOUNT || '97') 
-      },
-      pro: { 
-        priceId: process.env.STRIPE_PRO_PRICE_ID || 'price_pro', 
-        amount: parseInt(process.env.STRIPE_PRO_AMOUNT || '200') 
-      },
-      premium: { 
-        priceId: process.env.STRIPE_PREMIUM_PRICE_ID || 'price_premium', 
-        amount: parseInt(process.env.STRIPE_PREMIUM_AMOUNT || '397') 
-      }
-    }
-
-    const selectedPlan = pricing[planId as keyof typeof pricing] || pricing.pro
 
     // Create Stripe subscription
     const subscription = await stripe.subscriptions.create({
-      customer: customerId,
-      items: [{
-        price: selectedPlan.priceId,
-      }],
+      customer: business.stripe_customer_id,
+      items: [
+        {
+          price: process.env.STRIPE_PRICE_ID || 'price_1234567890', // Monthly subscription price
+        },
+      ],
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
       expand: ['latest_invoice.payment_intent'],
       metadata: {
         business_id: businessId,
-        plan: planId
+        user_id: userId,
+        business_name: business.business_name
       }
     })
 
-    // Store subscription info in database
-    const { error: subscriptionError } = await supabaseAdmin
-      .from('stripe_subscriptions')
-      .insert({
-        business_id: businessId,
-        stripe_subscription_id: subscription.id,
-        stripe_customer_id: customerId,
-        plan: planId,
-        status: subscription.status,
-        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-        created_at: new Date().toISOString()
-      })
-
-    if (subscriptionError) {
-      logger.error('Failed to store subscription in database', {
-        error: subscriptionError.message,
-        businessId,
-        subscriptionId: subscription.id
-      })
-    }
-
-    // Update business subscription status
-    await supabaseAdmin
+    // Update business with subscription info
+    const { error: updateError } = await supabaseAdmin
       .from('businesses')
       .update({
-        subscription_status: subscription.status,
-        billing_plan: planId,
+        stripe_subscription_id: subscription.id,
+        subscription_status: 'pending',
+        billing_plan: 'monthly',
         updated_at: new Date().toISOString()
       })
       .eq('id', businessId)
 
-    logger.info('Stripe subscription created', {
+    if (updateError) {
+      logger.error('Failed to update business with subscription info', {
+        error: updateError.message,
+        businessId,
+        subscriptionId: subscription.id
+      })
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to save subscription information'
+      }, { status: 500 })
+    }
+
+    logger.info('Stripe subscription created successfully', {
       businessId,
-      subscriptionId: subscription.id,
-      plan: planId,
-      status: subscription.status
+      userId,
+      subscriptionId: subscription.id
     })
 
     return NextResponse.json({
       success: true,
       subscriptionId: subscription.id,
       clientSecret: (subscription.latest_invoice as any)?.payment_intent?.client_secret,
-      status: subscription.status
+      message: 'Subscription created successfully'
     })
 
   } catch (error) {
-    logger.error('Create subscription API error', { 
-      error: error instanceof Error ? error.message : 'Unknown error', 
-      endpoint: 'stripe/create-subscription'
+    logger.error('Stripe subscription creation failed', {
+      error: error instanceof Error ? error.message : 'Unknown error'
     })
     return NextResponse.json({
       success: false,
-      message: 'Failed to create subscription'
+      error: 'Failed to create subscription'
     }, { status: 500 })
   }
 }

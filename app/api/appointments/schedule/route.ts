@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
-import jwt from 'jsonwebtoken'
+import { supabaseAdmin } from '../../../lib/supabase'
+import * as jwt from 'jsonwebtoken'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
@@ -73,16 +73,12 @@ export async function POST(request: NextRequest) {
         business_id: businessId,
         customer_name: customerName.trim(),
         customer_phone: customerPhone.replace(/\D/g, ''),
-        customer_email: null,
+        customer_email: customerEmail || null,
         service_type: serviceType || 'General Service',
         scheduled_date: new Date(scheduledDate).toISOString(),
-        duration_minutes: 60, // Default 1 hour
+        duration: 60, // Default 1 hour
         status: 'scheduled',
-        notes: notes || '',
-        source,
-        created_by: userId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        notes: notes || ''
       })
       .select()
       .single()
@@ -90,7 +86,9 @@ export async function POST(request: NextRequest) {
     if (appointmentError) {
       console.error('Appointment creation error:', appointmentError)
       return NextResponse.json({ 
-        error: 'Failed to create appointment' 
+        error: 'Failed to create appointment',
+        details: appointmentError.message,
+        code: appointmentError.code
       }, { status: 500 })
     }
 

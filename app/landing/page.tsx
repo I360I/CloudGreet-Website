@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
+import RingOrb from '../components/RingOrb'
 // ClickToCallOrb component removed
 // import ROICalculator from '../components/ROICalculator'
 
@@ -89,6 +90,28 @@ function VoiceOrbDemoWithSettings() {
 }
 
 export default function LandingPage() {
+  const [isLoaded, setIsLoaded] = React.useState(false)
+
+  React.useEffect(() => {
+    // Ensure Hero component loads first
+    const timer = setTimeout(() => {
+      setIsLoaded(true)
+    }, 100)
+    
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading CloudGreet...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white" style={{color: 'white'}}>
       {/* Navigation */}
@@ -172,9 +195,69 @@ export default function LandingPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="max-w-4xl mx-auto"
+            className="max-w-4xl mx-auto flex flex-col items-center"
           >
-            <VoiceOrbDemoWithSettings />
+            {/* Ring-like Demo with Phone Input */}
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 text-center">
+              <h3 className="text-2xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+                Experience the Power of AI
+              </h3>
+              <p className="text-gray-300 mb-8 max-w-2xl mx-auto">
+                Enter your phone number and click the orb to call our AI receptionist
+              </p>
+              
+              {/* Phone Number Input */}
+              <div className="max-w-md mx-auto mb-8">
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Enter your phone number to test our AI
+                </label>
+                <input
+                  type="tel"
+                  id="phoneInput"
+                  placeholder="(555) 123-4567"
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white text-center text-lg placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20"
+                />
+              </div>
+              
+              {/* Ring-like Orb - THE CALL BUTTON */}
+              <div className="flex justify-center mb-8 relative z-10">
+                <RingOrb
+                  size={300}
+                  isClickable={true}
+                  onClick={() => {
+                    const phoneInput = document.getElementById('phoneInput') as HTMLInputElement;
+                    const phoneNumber = phoneInput?.value?.trim();
+                    if (phoneNumber) {
+                      // Format phone number for tel: protocol
+                      const formattedNumber = phoneNumber.replace(/\D/g, '');
+                      if (formattedNumber.length >= 10) {
+                        // Use window.location.href for better compatibility
+                        window.location.href = `tel:+1${formattedNumber}`;
+                      } else {
+                        alert('Please enter a valid 10-digit phone number.');
+                      }
+                    } else {
+                      alert('Please enter your phone number first.');
+                    }
+                  }}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
+                  <div className="text-purple-400 font-semibold mb-2">Real-time Processing</div>
+                  <div className="text-gray-400">AI analyzes speech instantly</div>
+                </div>
+                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
+                  <div className="text-purple-400 font-semibold mb-2">Neural Networks</div>
+                  <div className="text-gray-400">Advanced machine learning</div>
+                </div>
+                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
+                  <div className="text-purple-400 font-semibold mb-2">24/7 Active</div>
+                  <div className="text-gray-400">Always ready to help</div>
+                </div>
+              </div>
+            </div>
           </motion.div>
 
           {/* Benefits Below Demo */}
@@ -626,13 +709,13 @@ export default function LandingPage() {
                 {/* CTA Buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 w-full">
                   <Link
-                    href="/demo"
+                    href="/test-agent-simple"
                     className="flex-1 bg-white/15 backdrop-blur-xl text-white px-8 py-4 rounded-2xl text-lg font-semibold border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-2xl inline-block focus:ring-4 focus:ring-blue-500/50 focus:outline-none"
-                    aria-label="Try CloudGreet demo"
+                    aria-label="Test CloudGreet AI agent"
                   >
                     <div className="flex items-center justify-center gap-3">
                       <Play className="w-5 h-5" aria-hidden="true" />
-                      Try Demo
+                      Test AI Agent
                     </div>
                   </Link>
                   <Link

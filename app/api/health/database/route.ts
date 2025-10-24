@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     logger.info('Database connection successful', {
       duration: `${duration}ms`,
-      result: result
+      result: JSON.stringify(result)
     })
 
     return NextResponse.json({

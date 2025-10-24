@@ -19,13 +19,14 @@ import RealAnalytics from '../components/RealAnalytics'
 import RealActivityFeed from '../components/RealActivityFeed'
 import RealCharts from '../components/RealCharts'
 import TenantIsolationIndicator from '../components/TenantIsolationIndicator'
-// import ROICalculator from '../components/ROICalculator'
+import ROICalculator from '../components/ROICalculator'
 import CallQualityMetrics from '../components/CallQualityMetrics'
 import LeadScoring from '../components/LeadScoring'
 import BusinessHoursSettings from '../components/BusinessHoursSettings'
 import SMSReplyModal from '../components/SMSReplyModal'
 import { useToast } from '../contexts/ToastContext'
 import { useDashboardAnalytics, useRealtimeMetrics } from '../../hooks/useDashboardData'
+import { logger } from '../../lib/monitoring'
 
 interface DashboardData {
   businessId: string
@@ -55,6 +56,27 @@ interface DashboardData {
   hasPhoneNumber: boolean
   hasAgent: boolean
   timeframe: string
+  roi?: {
+    totalRevenue: number
+    totalCosts: number
+    netProfit: number
+    roiPercentage: number
+    subscriptionCost: number
+    perBookingFees: number
+    costPerAppointment: number
+    revenuePerAppointment: number
+    totalAppointments: number
+  }
+  performance?: {
+    conversionRate: number
+    bookingConversionRate: number
+    avgCallDuration: number
+    customerSatisfaction: number
+    missedCalls: number
+    emergencyCalls: number
+    todayBookings: number
+    monthlyRecurring: number
+  }
 }
 
 export default function Dashboard() {
@@ -82,7 +104,7 @@ export default function Dashboard() {
   
   // Cached data hooks
   const { data: analyticsData, isLoading: analyticsLoading } = useDashboardAnalytics('30d')
-  const { data: metricsData, isLoading: metricsLoading } = useRealtimeMetrics()
+  const { data: metricsData, isLoading: metricsLoading } = useRealtimeMetrics(dashboardData?.businessId || '')
 
   useEffect(() => {
     loadDashboardData()
@@ -97,25 +119,8 @@ export default function Dashboard() {
       
       const token = localStorage.getItem('token')
       if (!token) {
-        // Set default data instead of error for better UX
-        setDashboardData({
-          businessId: '',
-          businessName: 'Your Business',
-          phoneNumber: 'Not configured',
-          isActive: false,
-          totalCalls: 0,
-          totalAppointments: 0,
-          totalRevenue: 0,
-          recentCalls: [],
-          upcomingAppointments: [],
-          setupStatus: 'incomplete',
-          nextSteps: ['Log in to get started'],
-          onboardingCompleted: false,
-          hasPhoneNumber: false,
-          hasAgent: false,
-          timeframe: '30d'
-        })
-        setIsLoading(false)
+        // Redirect to login instead of showing fake data
+        window.location.href = '/login-simple'
         return
       }
 
@@ -166,44 +171,13 @@ export default function Dashboard() {
           })
         }
       } else {
-        // Set default data even on fetch error for better UX
-        setDashboardData({
-          businessId: '',
-          businessName: 'Your Business',
-          phoneNumber: 'Not configured',
-          isActive: false,
-          totalCalls: 0,
-          totalAppointments: 0,
-          totalRevenue: 0,
-          recentCalls: [],
-          upcomingAppointments: [],
-          setupStatus: 'incomplete',
-          nextSteps: ['Check your connection'],
-          onboardingCompleted: false,
-          hasPhoneNumber: false,
-          hasAgent: false,
-          timeframe: '30d'
-        })
+        // Show proper error instead of fake data
+        setError('Failed to load dashboard data. Please try again.')
       }
     } catch (error) {
-      // Set default data even on error for better UX
-      setDashboardData({
-        businessId: '',
-        businessName: 'Your Business',
-        phoneNumber: 'Not configured',
-        isActive: false,
-        totalCalls: 0,
-        totalAppointments: 0,
-        totalRevenue: 0,
-        recentCalls: [],
-        upcomingAppointments: [],
-        setupStatus: 'incomplete',
-        nextSteps: ['Network error - retry'],
-        onboardingCompleted: false,
-        hasPhoneNumber: false,
-        hasAgent: false,
-        timeframe: '30d'
-      })
+      // Show proper error instead of fake data
+      setError('Failed to load dashboard data. Please try again.')
+      logger.error('Dashboard load error', { error })
     } finally {
       setIsLoading(false)
     }
@@ -249,7 +223,7 @@ export default function Dashboard() {
         }
       }
     } catch (error) {
-      console.error('Failed to load real activity:', error)
+      logger.error('Failed to load real activity:', error)
     }
   }
 
@@ -293,20 +267,28 @@ export default function Dashboard() {
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Leads</h3>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-              <div>
-                <p className="font-medium">John Smith</p>
-                <p className="text-sm text-gray-600">john@example.com</p>
+            {dashboardData?.recentCalls && dashboardData.recentCalls.length > 0 ? (
+              dashboardData.recentCalls.slice(0, 5).map((call, index) => (
+                <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <div>
+                    <p className="font-medium">{call.caller}</p>
+                    <p className="text-sm text-gray-600">{call.date}</p>
+                  </div>
+                  <span className={`px-2 py-1 text-xs rounded ${
+                    call.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    call.status === 'missed' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {call.status}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>No recent leads yet</p>
+                <p className="text-sm">Leads will appear here after you receive calls</p>
               </div>
-              <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">New</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-              <div>
-                <p className="font-medium">Jane Doe</p>
-                <p className="text-sm text-gray-600">jane@example.com</p>
-              </div>
-              <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded">Qualified</span>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -364,7 +346,7 @@ export default function Dashboard() {
                   <ExportButton
                     onExport={async (format) => {
                       // Export functionality would go here
-                      console.log('Exporting dashboard data as', format)
+                      logger.info('Exporting dashboard data', { format })
                     }}
                   />
                 </div>
@@ -537,13 +519,13 @@ export default function Dashboard() {
                     </>
                   )}
                   
-                  <Link href="/demo">
+                  <Link href="/test-agent-simple">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       className="px-4 py-2 bg-purple-600/20 border border-purple-500/30 text-purple-400 rounded-lg font-medium hover:bg-purple-600/30 transition-all"
                     >
-                      Try Demo
+                      Test AI Agent
                     </motion.button>
                   </Link>
                   
@@ -657,7 +639,10 @@ export default function Dashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
             >
-              {/* <ROICalculator businessId={dashboardData?.businessId || ''} /> */}
+              <ROICalculator 
+                businessId={dashboardData?.businessId || ''} 
+                roiData={dashboardData?.roi}
+              />
             </motion.div>
 
             {/* Call Quality Metrics */}

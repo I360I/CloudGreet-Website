@@ -7,6 +7,7 @@ import {
   CheckCircle, AlertCircle, MessageSquare, Bell, Activity,
   TrendingUp, TrendingDown
 } from 'lucide-react'
+import { useRealtimeMetrics } from '../../hooks/useDashboardData'
 
 interface ActivityItem {
   id: string
@@ -26,47 +27,64 @@ interface RealActivityFeedProps {
 
 export default function RealActivityFeed({ businessId, businessName }: RealActivityFeedProps) {
   const [activities, setActivities] = useState<ActivityItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: realtimeData, isLoading, error } = useRealtimeMetrics(businessId)
 
   useEffect(() => {
-    loadRealActivity()
-    
-    // Refresh every 30 seconds
-    const interval = setInterval(loadRealActivity, 30000)
-    return () => clearInterval(interval)
-  }, [businessId])
-
-  const loadRealActivity = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setError('Please log in to view activity')
-        return
+    if (realtimeData) {
+      // Process real-time data into activity items
+      const newActivities: ActivityItem[] = []
+      
+      // Process calls
+      if (realtimeData.calls) {
+        realtimeData.calls.forEach((call: any) => {
+          newActivities.push({
+            id: `call-${call.id}`,
+            type: 'call',
+            title: `New call from ${call.from_number}`,
+            description: `Call ${call.status} - ${call.duration || 0}s`,
+            timestamp: call.created_at,
+            status: call.status === 'completed' ? 'success' : 'warning',
+            value: call.duration ? `${call.duration}s` : undefined
+          })
+        })
       }
-
-      // Fetch real activity data
-      const response = await fetch(`/api/dashboard/real-activity?businessId=${businessId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setActivities(data.activities || [])
-      } else {
-        setError('Failed to load activity')
+      
+      // Process appointments
+      if (realtimeData.appointments) {
+        realtimeData.appointments.forEach((apt: any) => {
+          newActivities.push({
+            id: `apt-${apt.id}`,
+            type: 'appointment',
+            title: `Appointment scheduled`,
+            description: `${apt.customer_name} - ${apt.service_type}`,
+            timestamp: apt.created_at,
+            status: 'success',
+            value: apt.estimated_value ? `$${apt.estimated_value}` : undefined
+          })
+        })
       }
-    } catch (err) {
-      setError('Error loading activity')
-    } finally {
-      setLoading(false)
+      
+      // Process SMS
+      if (realtimeData.sms) {
+        realtimeData.sms.forEach((sms: any) => {
+          newActivities.push({
+            id: `sms-${sms.id}`,
+            type: 'message',
+            title: `SMS ${sms.direction}`,
+            description: `To/From: ${sms.to_number || sms.from_number}`,
+            timestamp: sms.created_at,
+            status: sms.status === 'sent' ? 'success' : 'warning'
+          })
+        })
+      }
+      
+      setActivities(newActivities.slice(-20)) // Keep last 20 activities
     }
-  }
+  }, [realtimeData])
+
+  // Use real-time data from hook
+  const loading = isLoading
+  const errorMessage = error
 
   const getActivityIcon = (type: string, status: string) => {
     const iconClass = status === 'success' ? 'text-green-400' : 
@@ -132,7 +150,7 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
     )
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="bg-red-600/20 border border-red-500/30 rounded-xl p-6">
         <div className="flex items-center gap-3">
@@ -141,7 +159,7 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
           </div>
           <div>
             <h3 className="text-lg font-semibold text-red-400">Activity Unavailable</h3>
-            <p className="text-red-300 text-sm">{error}</p>
+            <p className="text-red-300 text-sm">{errorMessage}</p>
           </div>
         </div>
       </div>
@@ -155,12 +173,10 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
           <Activity className="w-5 h-5 text-blue-400" />
           Recent Activity
         </h3>
-        <button
-          onClick={loadRealActivity}
-          className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-        >
-          Refresh
-        </button>
+        <div className="flex items-center gap-2 text-sm text-green-400">
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          Live Updates
+        </div>
       </div>
 
       {activities.length === 0 ? (

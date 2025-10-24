@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if Google Calendar is configured
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       return NextResponse.json({ 
         error: 'Google Calendar integration not configured' 
       }, { status: 500 })
@@ -45,9 +45,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('Calendar connect API error', { 
-      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error', 
-      userId: request.headers.get('x-user-id'),
-      businessId: request.headers.get('x-business-id')
+      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
     })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

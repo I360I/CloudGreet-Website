@@ -144,15 +144,115 @@ export function useDashboardAnalytics(timeframe: string = '30d') {
 }
 
 /**
- * Specialized hook for real-time metrics
+ * Specialized hook for real-time metrics with Supabase Realtime
  */
-export function useRealtimeMetrics() {
-  return useDashboardData<any>(
-    '/api/dashboard/real-metrics',
-    {
-      cacheTime: 2, // 2 minutes cache for real-time data
-      refetchInterval: 2 * 60 * 1000 // Refetch every 2 minutes
+export function useRealtimeMetrics(businessId: string) {
+  const [data, setData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!businessId) return
+
+    let supabase: any = null
+    let subscription: any = null
+
+    const setupRealtime = async () => {
+      try {
+        setIsLoading(true)
+        
+        // Import Supabase client
+        const { createClient } = await import('@supabase/supabase-js')
+        supabase = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        )
+
+        // Subscribe to real-time updates for calls, appointments, and SMS
+        subscription = supabase
+          .channel('dashboard-updates')
+          .on('postgres_changes', 
+            { 
+              event: '*', 
+              schema: 'public', 
+              table: 'calls',
+              filter: `business_id=eq.${businessId}`
+            }, 
+            (payload: any) => {
+              console.log('Call update:', payload)
+              setData((prev: any) => ({
+                ...prev,
+                calls: [...(prev?.calls || []), payload.new].slice(-10) // Keep last 10 calls
+              }))
+            }
+          )
+          .on('postgres_changes', 
+            { 
+              event: '*', 
+              schema: 'public', 
+              table: 'appointments',
+              filter: `business_id=eq.${businessId}`
+            }, 
+            (payload: any) => {
+              console.log('Appointment update:', payload)
+              setData((prev: any) => ({
+                ...prev,
+                appointments: [...(prev?.appointments || []), payload.new].slice(-10)
+              }))
+            }
+          )
+          .on('postgres_changes', 
+            { 
+              event: '*', 
+              schema: 'public', 
+              table: 'sms_messages',
+              filter: `business_id=eq.${businessId}`
+            }, 
+            (payload: any) => {
+              console.log('SMS update:', payload)
+              setData((prev: any) => ({
+                ...prev,
+                sms: [...(prev?.sms || []), payload.new].slice(-10)
+              }))
+            }
+          )
+          .subscribe()
+
+        // Initial data fetch
+        const response = await fetch('/api/dashboard/data', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        })
+        
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success) {
+            setData(result.data)
+          }
+        }
+
+      } catch (err) {
+        console.error('Realtime setup error:', err)
+        setError(err instanceof Error ? err.message : 'Failed to setup real-time updates')
+      } finally {
+        setIsLoading(false)
+      }
     }
-  )
+
+    setupRealtime()
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe()
+      }
+    }
+  }, [businessId])
+
+  return {
+    data,
+    isLoading,
+    error
+  }
 }
 

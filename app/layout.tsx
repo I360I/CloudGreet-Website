@@ -127,7 +127,7 @@ export default function RootLayout({
                 <ul className="space-y-2">
                   <li><a href="/features" className="text-gray-300 hover:text-white">Features</a></li>
                   <li><a href="/pricing" className="text-gray-300 hover:text-white">Pricing</a></li>
-                  <li><a href="/demo" className="text-gray-300 hover:text-white">Demo</a></li>
+                  <li><a href="/test-agent-simple" className="text-gray-300 hover:text-white">Test AI</a></li>
                 </ul>
               </div>
               <div>

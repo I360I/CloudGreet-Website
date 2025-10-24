@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Fetch phone numbers from database
+    // Fetch toll-free numbers from database
     const { data: numbers, error } = await supabase
-      .from('phone_numbers')
+      .from('toll_free_numbers')
       .select('*')
       .order('created_at', { ascending: false })
 

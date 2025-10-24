@@ -1,53 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { logger } from '@/lib/monitoring'
 import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 import OpenAI from 'openai'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
-interface RealtimeSession {
-  id: string;
-  created_at: number;
-  expires_at: number;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
-    logger.info('Premium realtime stream started', { 
-      call_id: body.call_id,
-      from: body.from,
-      to: body.to
-    })
+    const { 
+      call_id,
+      audio_data,
+      business_id,
+      conversation_state = {}
+    } = body
 
-    // Check if OpenAI is configured
-    if (!process.env.OPENAI_API_KEY) {
-      logger.error('OpenAI API key not configured for premium realtime')
-      return NextResponse.json({ 
-        error: 'OpenAI not configured' 
-      }, { status: 503 })
-    }
+    logger.info('Realtime stream handler called', { call_id, hasAudio: !!audio_data })
 
-    // Get business context for personalized AI
+    // Get business and AI agent configuration
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
       .select('*, ai_agents(*)')
-      .eq('phone_number', body.to)
+      .eq('id', business_id)
       .single()
 
     if (businessError || !business) {
-      logger.error('Business not found for realtime stream', { 
-        to: body.to, 
-        error: businessError?.message 
-      })
-      return NextResponse.json({ 
-        error: 'Business not found' 
-      }, { status: 404 })
+      logger.error('Business not found for realtime stream', { business_id, error: businessError?.message })
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
     }
 
     const agent = business.ai_agents
@@ -55,77 +39,41 @@ export async function POST(request: NextRequest) {
     const businessType = business.business_type || 'AI Receptionist Service'
     const services = agent?.configuration?.services || business.services || ['General Services']
     const hours = agent?.configuration?.hours || business.business_hours || '24/7'
+    const voice = agent?.configuration?.voice || 'alloy'
 
-    // Create premium AI session with latest GPT-5 realtime capabilities
+    // Create OpenAI Realtime API session
     const session = await openai.beta.realtime.sessions.create({
-      model: 'gpt-4o-realtime-preview-2024-10-01',
-      voice: 'alloy',
-      instructions: `You are ${businessName}'s premium AI receptionist - the most advanced, human-like AI assistant in the industry.
+      model: 'gpt-4o-realtime-preview-2024-12-17',
+      voice: voice as any,
+      instructions: `You are ${businessName}'s AI receptionist - a professional, helpful assistant for a ${businessType} business.
 
-BUSINESS CONTEXT:
-- Company: ${businessName} (${businessType})
+BUSINESS DETAILS:
+- Company: ${businessName}
+- Type: ${businessType}
 - Services: ${services.join(', ')}
 - Hours: ${hours}
-- Specialties: Professional service, customer satisfaction, expert assistance
+- Phone: ${business.phone_number}
 
-YOUR PERSONALITY:
-- Warm, professional, and genuinely helpful
-- Sound like a real human receptionist, not a robot
-- Use natural speech patterns with appropriate pauses and emphasis
-- Show genuine interest in helping customers
-- Be conversational and engaging
-- Use "um", "let me see", "absolutely" naturally
-- Laugh appropriately and show personality
+INSTRUCTIONS:
+- Be warm, professional, and helpful
+- Keep responses brief for phone calls (under 20 words)
+- If they want to book an appointment, say "I'd be happy to book that for you!"
+- Ask for their name and phone number if booking
+- Be conversational and natural
+- If they ask about services, mention ${services.join(', ')}
+- If they ask about hours, say "${hours}"
 
-CONVERSATION FLOW:
-1. GREETING: "Hi there! Thank you for calling CloudGreet, this is Sarah. How can I help you today?"
-2. LISTEN: Pay full attention to what they're saying
-3. RESPOND: Give helpful, specific responses based on their needs
-4. QUALIFY: Ask smart follow-up questions to understand their situation
-5. SOLUTIONS: Offer specific solutions and next steps
-6. CLOSE: Schedule appointments, get contact info, provide value
-
-KEY BEHAVIORS:
-- Always sound human and natural
-- Use their name if they provide it
-- Show empathy for heating/cooling problems
-- Be proactive about scheduling
-- Offer emergency services when appropriate
-- Sound confident about your expertise
-- Use industry terms naturally
-- Be patient with questions
-
-EMERGENCY HANDLING:
-- If they mention "emergency", "no heat", "no AC", "broken" - immediately offer emergency service
-- Sound urgent but calm: "Oh no, I'm so sorry to hear that. Let me get you connected with our emergency team right away."
-
-APPOINTMENT BOOKING:
-- Be proactive about scheduling
-- Ask about their preferred times
-- Confirm contact information
-- Sound excited about helping them
-
-Remember: You're not just answering questions - you're building relationships and solving real problems. Sound like the best receptionist they've ever talked to.`,
+This is a real-time phone conversation. Respond naturally and helpfully.`,
+      input_audio_format: 'pcm16',
+      output_audio_format: 'pcm16',
       tools: [
         {
           type: 'function',
-          name: 'schedule_appointment',
-          description: 'Schedule an appointment for the customer',
+          name: 'book_appointment',
+          description: 'Book an appointment for the customer',
           parameters: {
             type: 'object',
             properties: {
-              service_type: {
-                type: 'string',
-                description: 'Type of service needed (heating, cooling, maintenance, emergency)'
-              },
-              preferred_date: {
-                type: 'string',
-                description: 'Customer preferred date'
-              },
-              preferred_time: {
-                type: 'string',
-                description: 'Customer preferred time'
-              },
               customer_name: {
                 type: 'string',
                 description: 'Customer name'
@@ -134,89 +82,163 @@ Remember: You're not just answering questions - you're building relationships an
                 type: 'string',
                 description: 'Customer phone number'
               },
-              customer_email: {
+              service_type: {
                 type: 'string',
-                description: 'Customer email address'
+                description: 'Type of service requested'
               },
-              issue_description: {
+              preferred_date: {
                 type: 'string',
-                description: 'Description of the HVAC issue'
+                description: 'Preferred appointment date'
+              },
+              notes: {
+                type: 'string',
+                description: 'Additional notes'
               }
             },
-            required: ['service_type', 'customer_name', 'customer_phone']
-          }
-        },
-        {
-          type: 'function',
-          name: 'get_business_info',
-          description: 'Get information about the business',
-          parameters: {
-            type: 'object',
-            properties: {},
-            required: []
-          }
-        },
-        {
-          type: 'function',
-          name: 'send_sms',
-          description: 'Send SMS message to customer',
-          parameters: {
-            type: 'object',
-            properties: {
-              phone_number: {
-                type: 'string',
-                description: 'Phone number to send SMS to'
-              },
-              message: {
-                type: 'string',
-                description: 'SMS message content'
-              }
-            },
-            required: ['phone_number', 'message']
+            required: ['customer_name', 'customer_phone']
           }
         }
-      ],
-      tool_choice: 'auto'
+      ]
     })
 
-    logger.info('Premium realtime session created', {
-      session_id: (session as any).id || 'unknown',
-      call_id: body.call_id,
-      business_id: business.id
+    // Handle audio input
+    if (audio_data) {
+      await session.audio.input.speak(audio_data)
+    }
+
+    // Set up event handlers
+    session.on('audio.output.speech.started', () => {
+      logger.info('AI started speaking', { call_id })
     })
 
-    // Store session info for function calling
-    const sessionData = {
-      session_id: (session as any).id,
-      business_id: business.id,
-      call_id: body.call_id,
-      created_at: new Date().toISOString()
-    }
+    session.on('audio.output.speech.delta', (event) => {
+      // Stream audio back to Telnyx
+      logger.info('AI speech delta', { call_id, delta: event.delta?.substring(0, 50) })
+    })
 
-    // Store session in database for function calling context
-    const { error: sessionError } = await supabaseAdmin
-      .from('realtime_sessions')
-      .insert(sessionData)
-    
-    if (sessionError) {
-      logger.error('Failed to store session', { error: sessionError.message })
-    }
+    session.on('conversation.item.input_audio_transcription.completed', (event) => {
+      logger.info('User speech transcribed', { 
+        call_id, 
+        transcription: event.transcript 
+      })
+    })
 
-    // Return the session details for Telnyx to connect
+    session.on('conversation.item.output_audio.delta', (event) => {
+      // Stream audio output back to caller
+      logger.info('AI audio output', { call_id, hasAudio: !!event.delta })
+    })
+
+    session.on('conversation.item.tool_call', (event) => {
+      if (event.tool_call?.name === 'book_appointment') {
+        handleAppointmentBooking(event.tool_call.parameters, business_id, call_id)
+      }
+    })
+
+    // Start the conversation
+    await session.connect()
+
     return NextResponse.json({
-      session_id: (session as any).id || 'unknown',
-      status: 'connected',
-      message: 'Premium realtime AI session established',
-      business_name: businessName
+      success: true,
+      session_id: session.id,
+      message: 'Realtime conversation started'
     })
 
-  } catch (error: unknown) {
-    logger.error('Premium realtime stream error', { 
-      error: error instanceof Error ? error.message : 'Unknown error'
+  } catch (error) {
+    logger.error('Realtime stream error', { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      call_id: body?.call_id 
     })
     
     return NextResponse.json({ 
-      error: 'Failed to create premium realtime session' 
+      error: 'Failed to start realtime conversation' 
     }, { status: 500 })
+  }
+}
+
+async function handleAppointmentBooking(parameters: any, businessId: string, callId: string) {
+  try {
+    const { customer_name, customer_phone, service_type, preferred_date, notes } = parameters
+
+    // Create appointment in database
+    const { data: appointment, error: appointmentError } = await supabaseAdmin
+      .from('appointments')
+      .insert({
+        business_id: businessId,
+        customer_name: customer_name,
+        customer_phone: customer_phone,
+        service_type: service_type || 'General Service',
+        scheduled_date: preferred_date || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        status: 'scheduled',
+        notes: notes || '',
+        source: 'ai_realtime_call',
+        call_id: callId
+      })
+      .select()
+      .single()
+
+    if (appointmentError) {
+      logger.error('Failed to create appointment', { 
+        error: appointmentError.message,
+        businessId,
+        callId 
+      })
+      return
+    }
+
+    // Charge per-booking fee
+    try {
+      const billingResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/billing/per-booking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessId,
+          amount: 50,
+          description: `Appointment booking for ${customer_name}`,
+          appointmentId: appointment.id
+        })
+      })
+
+      if (!billingResponse.ok) {
+        logger.error('Failed to charge booking fee', { businessId, appointmentId: appointment.id })
+      }
+    } catch (billingError) {
+      logger.error('Billing error', { 
+        error: billingError instanceof Error ? billingError.message : 'Unknown error',
+        businessId,
+        appointmentId: appointment.id 
+      })
+    }
+
+    // Send SMS confirmation
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/sms/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: customer_phone,
+          message: `Hi ${customer_name}! Your appointment has been booked for ${preferred_date || 'tomorrow'}. We'll call you to confirm the details. Thank you!`,
+          businessId
+        })
+      })
+    } catch (smsError) {
+      logger.error('SMS confirmation failed', { 
+        error: smsError instanceof Error ? smsError.message : 'Unknown error',
+        customer_phone 
+      })
+    }
+
+    logger.info('Appointment booked successfully', { 
+      appointmentId: appointment.id,
+      businessId,
+      customer_name,
+      customer_phone 
+    })
+
+  } catch (error) {
+    logger.error('Appointment booking error', { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      businessId,
+      callId 
+    })
   }
 }

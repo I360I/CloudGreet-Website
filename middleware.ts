@@ -79,12 +79,8 @@ export async function middleware(request: NextRequest) {
       }
       const decoded = jwt.verify(token, jwtSecret) as any
       
-      if (decoded.userId) {
-        response.headers.set('x-user-id', decoded.userId)
-      }
-      if (decoded.businessId) {
-        response.headers.set('x-business-id', decoded.businessId)
-      }
+      // JWT authentication is handled by individual API routes
+      // No need to set deprecated headers
     } catch (error) {
       // If JWT is invalid, let the API route handle it
       // Silent fail - API routes will handle auth validation

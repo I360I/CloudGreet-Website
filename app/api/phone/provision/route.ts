@@ -51,15 +51,67 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Generate a demo phone number (in production, this would call Telnyx API)
-    const demoPhoneNumber = `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`
+    // Get next available pre-approved toll-free number from admin inventory
+    const { data: availableNumber, error: numberError } = await supabaseAdmin
+      .from('toll_free_numbers')
+      .select('*')
+      .eq('assigned_to', null)
+      .eq('status', 'available')
+      .limit(1)
+      .single()
+
+    if (numberError || !availableNumber) {
+      return NextResponse.json({
+        success: false,
+        error: 'No toll-free numbers available. Please contact support to add numbers to the inventory.'
+      }, { status: 400 })
+    }
+
+    const phoneNumber = availableNumber.number
+    
+    // Get business name for assignment
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('business_name')
+      .eq('id', businessId)
+      .single()
+
+    if (businessError || !business) {
+      return NextResponse.json({
+        success: false,
+        error: 'Business not found'
+      }, { status: 404 })
+    }
+
+    // Mark toll-free number as assigned
+    const { error: assignError } = await supabaseAdmin
+      .from('toll_free_numbers')
+      .update({
+        assigned_to: businessId,
+        business_name: business.business_name,
+        assigned_at: new Date().toISOString(),
+        status: 'assigned'
+      })
+      .eq('id', availableNumber.id)
+
+    if (assignError) {
+      logger.error('Failed to assign toll-free number', {
+        error: assignError.message,
+        businessId,
+        phoneNumber
+      })
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to assign phone number'
+      }, { status: 500 })
+    }
     
     // Create phone number record
-    const { data: phoneNumber, error: phoneError } = await supabaseAdmin
+    const { data: phoneRecord, error: phoneError } = await supabaseAdmin
       .from('phone_numbers')
       .insert({
         business_id: businessId,
-        phone_number: demoPhoneNumber,
+        phone_number: phoneNumber,
         provider: 'telnyx',
         status: 'active',
         webhook_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/telnyx/voice-webhook`,
@@ -86,7 +138,7 @@ export async function POST(request: NextRequest) {
     const { error: businessUpdateError } = await supabaseAdmin
       .from('businesses')
       .update({
-        phone_number: demoPhoneNumber,
+        phone_number: phoneNumber,
         updated_at: new Date().toISOString()
       })
       .eq('id', businessId)
@@ -95,32 +147,35 @@ export async function POST(request: NextRequest) {
       logger.error('Failed to update business with phone number', {
         error: businessUpdateError.message,
         businessId,
-        phoneNumber: demoPhoneNumber
+        phoneNumber: phoneNumber
       })
     }
 
     logger.info('Phone number provisioned successfully', {
       businessId,
       userId,
-      phoneNumber: demoPhoneNumber,
-      phoneId: phoneNumber.id
+      phoneNumber: phoneNumber,
+      phoneId: phoneRecord.id
     })
 
     return NextResponse.json({
       success: true,
       message: 'Phone number provisioned successfully',
-      phoneNumber: demoPhoneNumber,
-      phoneId: phoneNumber.id,
+      phoneNumber: phoneNumber,
+      phoneId: phoneRecord.id,
       webhookUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/telnyx/voice-webhook`
     })
 
+
   } catch (error) {
     logger.error('Phone number provisioning failed', {
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     })
     return NextResponse.json({
       success: false,
-      error: 'Phone number provisioning failed'
+      error: 'Phone number provisioning failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/monitoring'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,14 +13,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
     if (!process.env.OPENAI_API_KEY) {
-      console.error('❌ OPENAI_API_KEY not configured in environment')
+      logger.error('OPENAI_API_KEY not configured in environment')
       return NextResponse.json(
         { error: 'OpenAI API key not configured' },
         { status: 500 }
       )
     }
 
-    console.log('🔐 Creating ephemeral session token...')
+    logger.info('Creating ephemeral session token...')
 
     // SECURE: Create ephemeral client secret using GA endpoint
     // This protects the main API key
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('❌ Failed to create ephemeral session:', response.status, errorText)
+      logger.error('Failed to create ephemeral session', { status: response.status, error: errorText })
       return NextResponse.json(
         { error: `Failed to create session: ${response.status}` },
         { status: response.status }
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const data = await response.json()
-    console.log('✅ Ephemeral session created successfully')
+    logger.info('Ephemeral session created successfully')
     
     // Return only the ephemeral client_secret, NOT the main API key
     return NextResponse.json({
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ Session creation error:', error)
+    logger.error('Session creation error', { error: error.message })
     return NextResponse.json(
       { error: 'Session creation failed: ' + error.message },
       { status: 500 }

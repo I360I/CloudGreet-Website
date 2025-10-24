@@ -31,20 +31,8 @@ export interface CalendarConfig {
 export async function getCalendarConfig(businessId: string): Promise<CalendarConfig | null> {
   try {
     if (!isSupabaseConfigured()) {
-      logger.info('Calendar config requested (demo mode)', { businessId })
-      return {
-        calendar_connected: false,
-        timezone: 'America/New_York',
-        business_hours: {
-          monday: { start: '09:00', end: '17:00', enabled: true },
-          tuesday: { start: '09:00', end: '17:00', enabled: true },
-          wednesday: { start: '09:00', end: '17:00', enabled: true },
-          thursday: { start: '09:00', end: '17:00', enabled: true },
-          friday: { start: '09:00', end: '17:00', enabled: true },
-          saturday: { start: '10:00', end: '14:00', enabled: false },
-          sunday: { start: '10:00', end: '14:00', enabled: false }
-        }
-      }
+      logger.error('Supabase not configured for calendar', { businessId })
+      return null
     }
 
     const { data: business, error } = await supabaseAdmin
@@ -203,10 +191,8 @@ export async function createCalendarEvent(businessId: string, event: Omit<Calend
 export async function getAvailableSlots(businessId: string, date: string, duration: number = 60): Promise<string[]> {
   try {
     if (!isSupabaseConfigured()) {
-      logger.info('Available slots requested (demo mode)', { businessId, date, duration })
-      return [
-        '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'
-      ]
+      logger.error('Supabase not configured for calendar slots', { businessId, date, duration })
+      return []
     }
 
     const config = await getCalendarConfig(businessId)
@@ -279,7 +265,7 @@ export function generateGoogleAuthUrl(businessId: string): string {
   const scope = 'https://www.googleapis.com/auth/calendar'
   
   const params = new URLSearchParams({
-    client_id: clientId || 'demo-client-id',
+    client_id: clientId || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: scope,

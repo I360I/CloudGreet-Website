@@ -4,11 +4,12 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react'
+import { PLACEHOLDERS, SUCCESS_MESSAGES, ERROR_MESSAGES } from '@/lib/constants'
 
 export default function SimpleRegisterPage() {
   const [formData, setFormData] = useState({
-    business_name: '',
-    business_type: 'HVAC',
+    businessName: '',
+    businessType: 'HVAC',
     email: '',
     password: '',
     phone: '',
@@ -25,7 +26,7 @@ export default function SimpleRegisterPage() {
     setError('')
 
     try {
-      const response = await fetch('/api/auth/register-simple-working', {
+      const response = await fetch('/api/auth/register-simple', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,12 +38,12 @@ export default function SimpleRegisterPage() {
 
       if (result.success) {
         // Store token in both localStorage and cookies
-        localStorage.setItem('token', result.token)
-        localStorage.setItem('user', JSON.stringify(result.user))
-        localStorage.setItem('business', JSON.stringify(result.business))
+        localStorage.setItem('token', result.data.token)
+        localStorage.setItem('user', JSON.stringify(result.data.user))
+        localStorage.setItem('business', JSON.stringify(result.data.business))
         
         // Set cookie for middleware
-        document.cookie = `token=${result.token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`
+        document.cookie = `token=${result.data.token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`
         
         setSuccess(true)
         setTimeout(() => {
@@ -75,7 +76,7 @@ export default function SimpleRegisterPage() {
             >
               <CheckCircle className="w-8 h-8 text-green-400" />
             </motion.div>
-            <h1 className="text-2xl font-bold text-white mb-4">Registration Successful!</h1>
+            <h1 className="text-2xl font-bold text-white mb-4">{SUCCESS_MESSAGES.REGISTRATION}</h1>
             <p className="text-gray-300 mb-6">Redirecting to your dashboard...</p>
             <motion.div
               className="w-full bg-gray-700 rounded-full h-2"
@@ -130,10 +131,10 @@ export default function SimpleRegisterPage() {
             <input
               type="text"
               required
-              value={formData.business_name}
-              onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+              value={formData.businessName}
+              onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
               className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-              placeholder="Your Business Name"
+              placeholder={PLACEHOLDERS.BUSINESS_NAME}
             />
           </div>
 
@@ -142,14 +143,14 @@ export default function SimpleRegisterPage() {
               Business Type
             </label>
             <select
-              value={formData.business_type}
-              onChange={(e) => setFormData({ ...formData, business_type: e.target.value })}
+              value={formData.businessType}
+              onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
               className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
             >
               <option value="HVAC">HVAC</option>
-              <option value="Paint">Painting</option>
+              <option value="Painting">Painting</option>
               <option value="Roofing">Roofing</option>
-              <option value="General">General Services</option>
+              <option value="General Services">General Services</option>
             </select>
           </div>
 
@@ -164,7 +165,7 @@ export default function SimpleRegisterPage() {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-              placeholder="your@email.com"
+              placeholder={PLACEHOLDERS.EMAIL}
             />
           </div>
 
@@ -180,7 +181,7 @@ export default function SimpleRegisterPage() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="w-full px-4 py-3 pr-12 bg-gray-800/50 border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
-                placeholder="Create a password"
+                placeholder={PLACEHOLDERS.PASSWORD}
               />
               <button
                 type="button"
@@ -202,7 +203,7 @@ export default function SimpleRegisterPage() {
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-              placeholder="(833) 395-6731"
+              placeholder={PLACEHOLDERS.PHONE}
             />
           </div>
 
@@ -216,7 +217,7 @@ export default function SimpleRegisterPage() {
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-              placeholder="123 Main St, City, State"
+              placeholder={PLACEHOLDERS.ADDRESS}
             />
           </div>
 

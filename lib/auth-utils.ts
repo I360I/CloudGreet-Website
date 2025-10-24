@@ -1,185 +1,107 @@
-// Authentication utilities for CloudGreet
+/**
+ * Standardized Authentication Utilities
+ * Centralized JWT authentication for all API routes
+ */
 
 import jwt from 'jsonwebtoken'
+import { NextRequest } from 'next/server'
 import { logger } from '@/lib/monitoring'
 
 export interface AuthUser {
-  id: string
+  userId: string
   email: string
-  businessId?: string
-  role?: string
+  businessId: string
+  role: string
 }
 
-export interface AuthToken {
-  userId: string
-  businessId?: string
-  role?: string
-  iat?: number
-  exp?: number
+export interface AuthResult {
+  success: boolean
+  user?: AuthUser
+  error?: string
 }
 
 /**
- * Generate JWT token for user authentication
+ * Extract and validate JWT token from request
+ * Supports both Authorization header and cookie
  */
-export function generateAuthToken(user: AuthUser): string {
-  try {
-    const jwtSecret = process.env.JWT_SECRET
-    if (!jwtSecret) {
-      throw new Error('JWT_SECRET not configured')
-    }
-
-    const payload: AuthToken = {
-      userId: user.id,
-      businessId: user.businessId,
-      role: user.role || 'user',
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
-    }
-
-    return jwt.sign(payload, jwtSecret)
-  } catch (error) {
-    logger.error('Failed to generate auth token', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      userId: user.id 
-    })
-    throw new Error('Token generation failed')
+export function extractAuthToken(request: NextRequest): string | null {
+  // Try Authorization header first
+  const authHeader = request.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.replace('Bearer ', '')
   }
+
+  // Fallback to cookie
+  const token = request.cookies.get('token')?.value
+  return token || null
 }
 
 /**
  * Verify JWT token and extract user information
  */
-export function verifyAuthToken(token: string): AuthToken | null {
+export function verifyAuthToken(token: string): AuthResult {
   try {
     const jwtSecret = process.env.JWT_SECRET
     if (!jwtSecret) {
       logger.error('JWT_SECRET not configured')
-      return null
+      return { success: false, error: 'Authentication not configured' }
     }
 
-    const decoded = jwt.verify(token, jwtSecret) as AuthToken
+    const decoded = jwt.verify(token, jwtSecret) as any
     
-    // Check if token is expired
-    if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
-      logger.warn('Auth token expired', { userId: decoded.userId })
-      return null
+    // Validate required fields
+    if (!decoded.userId || !decoded.email || !decoded.businessId) {
+      return { success: false, error: 'Invalid token structure' }
     }
 
-    return decoded
+    return {
+      success: true,
+      user: {
+        userId: decoded.userId,
+        email: decoded.email,
+        businessId: decoded.businessId,
+        role: decoded.role || 'owner'
+      }
+    }
   } catch (error) {
-    logger.error('Failed to verify auth token', { 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    })
-    return null
+    logger.error('JWT verification failed', { error })
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Invalid token' 
+    }
   }
 }
 
 /**
- * Extract user information from request headers
+ * Authenticate request and return user information
+ * This is the main function to use in API routes
  */
-export function getUserFromRequest(request: Request): AuthUser | null {
-  try {
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const decoded = verifyAuthToken(token)
-    
-    if (!decoded) {
-      return null
-    }
-
-    return {
-      id: decoded.userId,
-      email: '', // Email would need to be fetched from database
-      businessId: decoded.businessId,
-      role: decoded.role
-    }
-  } catch (error) {
-    logger.error('Failed to get user from request', { 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    })
-    return null
+export function authenticateRequest(request: NextRequest): AuthResult {
+  const token = extractAuthToken(request)
+  
+  if (!token) {
+    return { success: false, error: 'No authentication token provided' }
   }
+
+  return verifyAuthToken(token)
 }
+
+// Removed deprecated getLegacyAuth function - use authenticateRequest instead
 
 /**
  * Check if user has required role
  */
-export function hasRole(user: AuthUser | null, requiredRole: string): boolean {
-  if (!user || !user.role) {
-    return false
-  }
-
-  const roleHierarchy = {
-    'admin': 3,
-    'manager': 2,
-    'user': 1
-  }
-
-  const userLevel = roleHierarchy[user.role as keyof typeof roleHierarchy] || 0
-  const requiredLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0
-
-  return userLevel >= requiredLevel
+export function hasRole(user: AuthUser, requiredRole: string): boolean {
+  const roleHierarchy = ['owner', 'admin', 'user']
+  const userRoleIndex = roleHierarchy.indexOf(user.role)
+  const requiredRoleIndex = roleHierarchy.indexOf(requiredRole)
+  
+  return userRoleIndex <= requiredRoleIndex
 }
 
 /**
  * Check if user belongs to business
  */
-export function belongsToBusiness(user: AuthUser | null, businessId: string): boolean {
-  if (!user || !user.businessId) {
-    return false
-  }
-
+export function belongsToBusiness(user: AuthUser, businessId: string): boolean {
   return user.businessId === businessId
 }
-
-/**
- * Generate secure random token for password reset, etc.
- */
-export function generateSecureToken(length: number = 32): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let token = ''
-  
-  for (let i = 0; i < length; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  
-  return token
-}
-
-/**
- * Hash password (for user registration)
- */
-export async function hashPassword(password: string): Promise<string> {
-  try {
-    const bcrypt = await import('bcryptjs')
-    const saltRounds = 12
-    return await bcrypt.hash(password, saltRounds)
-  } catch (error) {
-    logger.error('Failed to hash password', { 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    })
-    throw new Error('Password hashing failed')
-  }
-}
-
-/**
- * Verify password (for user login)
- */
-export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  try {
-    const bcrypt = await import('bcryptjs')
-    return await bcrypt.compare(password, hashedPassword)
-  } catch (error) {
-    logger.error('Failed to verify password', { 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    })
-    return false
-  }
-}
-
-
-

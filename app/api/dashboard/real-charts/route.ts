@@ -93,11 +93,14 @@ export async function GET(request: NextRequest) {
       labels: dateLabels,
       datasets: [{
         label: 'Revenue',
-        data: dateLabels.map(() => {
-          // Generate realistic revenue data based on appointments
-          const avgAppointmentValue = 2500
-          const randomFactor = 0.8 + Math.random() * 0.4 // 80% to 120% of average
-          return Math.floor(avgAppointmentValue * randomFactor)
+        data: dateLabels.map(date => {
+          // Use real revenue data from appointments
+          const dayAppointments = appointments?.filter(apt => {
+            const aptDate = new Date(apt.scheduled_date).toDateString()
+            return aptDate === date && apt.status === 'completed'
+          }) || []
+          
+          return dayAppointments.reduce((sum, apt) => sum + (apt.estimated_value || 0), 0)
         }),
         borderColor: '#10B981',
         backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -106,20 +109,36 @@ export async function GET(request: NextRequest) {
       }]
     }
 
-    // Process call data
+    // Process real call data
+    const answeredCallsData = dateLabels.map(date => {
+      const dayCalls = calls?.filter(call => {
+        const callDate = new Date(call.created_at).toDateString()
+        return callDate === date && (call.status === 'answered' || call.status === 'completed')
+      }) || []
+      return dayCalls.length
+    })
+
+    const missedCallsData = dateLabels.map(date => {
+      const dayCalls = calls?.filter(call => {
+        const callDate = new Date(call.created_at).toDateString()
+        return callDate === date && (call.status === 'missed' || call.status === 'busy')
+      }) || []
+      return dayCalls.length
+    })
+
     const callData = {
       labels: dateLabels,
       datasets: [
         {
           label: 'Answered Calls',
-          data: dateLabels.map(() => Math.floor(Math.random() * 5) + 1),
+          data: answeredCallsData,
           backgroundColor: '#3B82F6',
           borderColor: '#3B82F6',
           borderWidth: 1
         },
         {
           label: 'Missed Calls',
-          data: dateLabels.map(() => Math.floor(Math.random() * 3)),
+          data: missedCallsData,
           backgroundColor: '#EF4444',
           borderColor: '#EF4444',
           borderWidth: 1
