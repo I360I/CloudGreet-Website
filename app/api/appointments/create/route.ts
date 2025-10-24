@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '../../../lib/supabase'
-import { logger } from '../../../lib/monitoring'
+import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 import * as jwt from 'jsonwebtoken'
-import { createCalendarEvent } from '../../../lib/calendar'
+import { createCalendarEvent } from '@/lib/calendar'
 
 export const dynamic = 'force-dynamic'
 

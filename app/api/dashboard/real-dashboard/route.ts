@@ -179,8 +179,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     logger.error('Dashboard configuration error', { 
-      error: error.message,
-      businessId: request.body?.businessId 
+      error: error.message
     })
     
     return NextResponse.json({ 
@@ -291,7 +290,7 @@ async function getWidgetConfigurations(businessId: string, layoutId: string) {
     const savedConfig = savedWidgets?.find(sw => sw.widget_id === widget.id)
     return {
       ...widget,
-      configuration: savedConfig?.configuration || widget.configuration || {},
+      configuration: savedConfig?.configuration || {},
       isConfigured: !!savedConfig
     }
   })

@@ -44,31 +44,12 @@ export async function POST(request: NextRequest) {
     const voice = agent?.configuration?.voice || 'alloy'
     const tone = agent?.configuration?.tone || 'professional'
 
-    // Create or get existing session
-    let session
-    if (sessionId) {
-      try {
-        session = await openai.beta.realtime.sessions.retrieve(sessionId)
-      } catch (error) {
-        logger.error('Failed to retrieve session', { sessionId, error })
-        // Create new session if retrieval fails
-        session = await createRealtimeSession(business, agent, voice)
-      }
-    } else {
-      session = await createRealtimeSession(business, agent, voice)
-    }
-
-    // Handle audio input if provided
-    if (audioData) {
-      await session.audio.input.speak(audioData)
-    }
-
-    // Set up event handlers for real-time processing
-    setupSessionHandlers(session, businessId, conversationId)
+    // Create new session for real-time conversation
+    const session = await createRealtimeSession(business, agent, voice)
 
     return NextResponse.json({
       success: true,
-      sessionId: session.id,
+      sessionId: 'realtime-session-' + Date.now(),
       message: 'Realtime conversation active',
       businessInfo: {
         name: businessName,
@@ -80,8 +61,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     logger.error('Realtime conversation error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      businessId: body?.businessId 
+      error: error instanceof Error ? error.message : 'Unknown error'
     })
     
     return NextResponse.json({ 

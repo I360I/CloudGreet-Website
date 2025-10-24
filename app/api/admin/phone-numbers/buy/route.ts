@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdminToken } from '@/lib/admin-auth'
+import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
 

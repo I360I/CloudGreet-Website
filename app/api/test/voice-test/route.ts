@@ -12,7 +12,7 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { businessId, testMessage } = await request.json()
+    const { businessId, testMessage: inputMessage } = await request.json()
 
     if (!businessId) {
       return NextResponse.json({ 
@@ -67,7 +67,7 @@ This is a real-time phone conversation. Respond naturally and helpfully.`
     })
 
     // Test the real-time AI with the provided message
-    const testMessage = testMessage || 'Hello, I need help with your services'
+    const testMessage = inputMessage || 'Hello, I need help with your services'
     
     // Simulate real-time conversation
     const response = await openai.chat.completions.create({
@@ -121,8 +121,7 @@ This is a real-time phone conversation. Respond naturally and helpfully.`
 
   } catch (error: any) {
     logger.error('Real-time AI test error', { 
-      error: error.message,
-      businessId: request.body?.businessId 
+      error: error.message
     })
     
     return NextResponse.json({ 

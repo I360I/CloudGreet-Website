@@ -120,8 +120,7 @@ This is a real-time phone conversation. Respond naturally and helpfully.`
 
   } catch (error: any) {
     logger.error('Real-time AI test error', { 
-      error: error.message,
-      businessId: request.body?.businessId 
+      error: error.message
     })
     
     return NextResponse.json({ 

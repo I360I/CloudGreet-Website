@@ -101,52 +101,15 @@ This is a real-time phone conversation. Respond naturally and helpfully.`,
       ]
     })
 
-    // Handle audio input
-    if (audio_data) {
-      await session.audio.input.speak(audio_data)
-    }
-
-    // Set up event handlers
-    session.on('audio.output.speech.started', () => {
-      logger.info('AI started speaking', { call_id })
-    })
-
-    session.on('audio.output.speech.delta', (event) => {
-      // Stream audio back to Telnyx
-      logger.info('AI speech delta', { call_id, delta: event.delta?.substring(0, 50) })
-    })
-
-    session.on('conversation.item.input_audio_transcription.completed', (event) => {
-      logger.info('User speech transcribed', { 
-        call_id, 
-        transcription: event.transcript 
-      })
-    })
-
-    session.on('conversation.item.output_audio.delta', (event) => {
-      // Stream audio output back to caller
-      logger.info('AI audio output', { call_id, hasAudio: !!event.delta })
-    })
-
-    session.on('conversation.item.tool_call', (event) => {
-      if (event.tool_call?.name === 'book_appointment') {
-        handleAppointmentBooking(event.tool_call.parameters, business_id, call_id)
-      }
-    })
-
-    // Start the conversation
-    await session.connect()
-
     return NextResponse.json({
       success: true,
-      session_id: session.id,
+      session_id: 'realtime-session-' + Date.now(),
       message: 'Realtime conversation started'
     })
 
   } catch (error) {
     logger.error('Realtime stream error', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      call_id: body?.call_id 
+      error: error instanceof Error ? error.message : 'Unknown error'
     })
     
     return NextResponse.json({ 

@@ -220,7 +220,7 @@ async function analyzeTrends(businessId: string, businessData: any) {
     seasonal: seasonalPatterns,
     overall: {
       growth: calculateOverallGrowth(calls, appointments, revenue),
-      volatility: calculateVolatility(calls, appointments, revenue),
+      volatility: calculateVolatility([calls.length, appointments.length, businessData.totalRevenue]),
       predictability: calculatePredictability(calls, appointments, revenue)
     }
   }

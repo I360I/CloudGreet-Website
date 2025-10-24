@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       // Get business info and check business hours
       const { data: business } = await supabaseAdmin
         .from('businesses')
-        .select('business_hours, timezone, business_name')
+        .select('id, business_hours, timezone, business_name')
         .eq('phone_number', to)
         .single()
 

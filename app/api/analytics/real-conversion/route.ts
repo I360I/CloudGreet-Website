@@ -140,8 +140,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     logger.error('Conversion tracking error', { 
-      error: error.message,
-      businessId: request.body?.businessId 
+      error: error.message
     })
     
     return NextResponse.json({ 
