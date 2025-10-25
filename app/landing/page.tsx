@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import Hero from '../components/Hero'
 import SilkRibbon from '../components/SilkRibbon'
-import SimpleRingOrb from '../components/SimpleRingOrb'
+import RingOrb from '../components/RingOrb'
 // ClickToCallOrb component removed
 // import ROICalculator from '../components/ROICalculator'
 
@@ -221,7 +221,7 @@ export default function LandingPage() {
               
               {/* Ring-like Orb - THE CALL BUTTON */}
               <div className="flex justify-center mb-8 relative z-10">
-                <SimpleRingOrb
+                <RingOrb
                   size={300}
                   isClickable={true}
                   onClick={async () => {

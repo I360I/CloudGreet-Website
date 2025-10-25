@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Simple AI response for any call
+    // Simple response for any call
     return NextResponse.json({
       call_id: body.call_control_id || 'test-call',
       status: 'answered',
