@@ -1,14 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🤖 Fixing specific AI call functionality issues...\n');
+
 
 // 1. Check if the demo call API exists and is properly connected
 function checkDemoCallAPI() {
   const apiPath = 'app/api/ai/conversation-demo/route.ts';
   
   if (!fs.existsSync(apiPath)) {
-    console.log('❌ Demo call API missing - creating it...');
+    
     
     // Create the directory
     const apiDir = 'app/api/ai/conversation-demo';
@@ -80,9 +80,9 @@ export async function POST(request: NextRequest) {
 }`;
     
     fs.writeFileSync(apiPath, apiContent);
-    console.log('✅ Created demo call API');
+    
   } else {
-    console.log('✅ Demo call API exists');
+    
   }
 }
 
@@ -95,20 +95,20 @@ function checkDemoPage() {
     
     // Check if the demo call button is properly connected
     if (content.includes('Start Demo Call') || content.includes('Call AI Receptionist')) {
-      console.log('✅ Demo call button found');
+      
       
       // Check if there's a proper onClick handler
       if (!content.includes('onClick') && content.includes('button')) {
-        console.log('❌ Demo call button not connected - needs manual fix');
-        console.log('   Add onClick handler to the demo call button');
+        
+        
       } else {
-        console.log('✅ Demo call button appears to be connected');
+        
       }
     } else {
-      console.log('❌ Demo call button not found');
+      
     }
   } else {
-    console.log('❌ Demo page not found');
+    
   }
 }
 
@@ -127,17 +127,17 @@ function checkEnvironmentVariables() {
     const missingVars = requiredVars.filter(varName => !content.includes(varName));
     
     if (missingVars.length > 0) {
-      console.log('❌ Missing environment variables:', missingVars.join(', '));
-      console.log('   Add these to your .env.local file:');
+      );
+      
       missingVars.forEach(varName => {
-        console.log(`   ${varName}=your_${varName.toLowerCase()}_here`);
+        }_here`);
       });
     } else {
-      console.log('✅ Environment variables configured');
+      
     }
   } else {
-    console.log('❌ .env.local file not found');
-    console.log('   Create .env.local with your API keys');
+    
+    
   }
 }
 
@@ -149,44 +149,44 @@ function checkMainConversationAPI() {
     const content = fs.readFileSync(apiPath, 'utf8');
     
     if (content.includes('OPENAI_API_KEY') && content.includes('fetch')) {
-      console.log('✅ Main conversation API appears to be connected');
+      
     } else {
-      console.log('❌ Main conversation API not properly connected to AI');
+      
     }
   } else {
-    console.log('❌ Main conversation API not found');
+    
   }
 }
 
 // Run all checks
-console.log('🔍 Checking AI call functionality...\n');
+
 
 checkDemoCallAPI();
 checkDemoPage();
 checkEnvironmentVariables();
 checkMainConversationAPI();
 
-console.log('\n📋 SUMMARY:');
-console.log('1. ✅ Demo call API created/verified');
-console.log('2. 🔍 Demo page needs manual review');
-console.log('3. 🔍 Environment variables need to be configured');
-console.log('4. 🔍 Main conversation API needs verification');
-console.log('\n🚀 NEXT STEPS:');
-console.log('1. Add your OpenAI API key to .env.local');
-console.log('2. Add your Telnyx API key to .env.local');
-console.log('3. Test the demo call functionality');
-console.log('4. Check that the demo call button is properly connected');
+
+
+
+
+
+
+
+
+
+
 
 const path = require('path');
 
-console.log('🤖 Fixing specific AI call functionality issues...\n');
+
 
 // 1. Check if the demo call API exists and is properly connected
 function checkDemoCallAPI() {
   const apiPath = 'app/api/ai/conversation-demo/route.ts';
   
   if (!fs.existsSync(apiPath)) {
-    console.log('❌ Demo call API missing - creating it...');
+    
     
     // Create the directory
     const apiDir = 'app/api/ai/conversation-demo';
@@ -258,9 +258,9 @@ export async function POST(request: NextRequest) {
 }`;
     
     fs.writeFileSync(apiPath, apiContent);
-    console.log('✅ Created demo call API');
+    
   } else {
-    console.log('✅ Demo call API exists');
+    
   }
 }
 
@@ -273,20 +273,20 @@ function checkDemoPage() {
     
     // Check if the demo call button is properly connected
     if (content.includes('Start Demo Call') || content.includes('Call AI Receptionist')) {
-      console.log('✅ Demo call button found');
+      
       
       // Check if there's a proper onClick handler
       if (!content.includes('onClick') && content.includes('button')) {
-        console.log('❌ Demo call button not connected - needs manual fix');
-        console.log('   Add onClick handler to the demo call button');
+        
+        
       } else {
-        console.log('✅ Demo call button appears to be connected');
+        
       }
     } else {
-      console.log('❌ Demo call button not found');
+      
     }
   } else {
-    console.log('❌ Demo page not found');
+    
   }
 }
 
@@ -305,17 +305,17 @@ function checkEnvironmentVariables() {
     const missingVars = requiredVars.filter(varName => !content.includes(varName));
     
     if (missingVars.length > 0) {
-      console.log('❌ Missing environment variables:', missingVars.join(', '));
-      console.log('   Add these to your .env.local file:');
+      );
+      
       missingVars.forEach(varName => {
-        console.log(`   ${varName}=your_${varName.toLowerCase()}_here`);
+        }_here`);
       });
     } else {
-      console.log('✅ Environment variables configured');
+      
     }
   } else {
-    console.log('❌ .env.local file not found');
-    console.log('   Create .env.local with your API keys');
+    
+    
   }
 }
 
@@ -327,30 +327,30 @@ function checkMainConversationAPI() {
     const content = fs.readFileSync(apiPath, 'utf8');
     
     if (content.includes('OPENAI_API_KEY') && content.includes('fetch')) {
-      console.log('✅ Main conversation API appears to be connected');
+      
     } else {
-      console.log('❌ Main conversation API not properly connected to AI');
+      
     }
   } else {
-    console.log('❌ Main conversation API not found');
+    
   }
 }
 
 // Run all checks
-console.log('🔍 Checking AI call functionality...\n');
+
 
 checkDemoCallAPI();
 checkDemoPage();
 checkEnvironmentVariables();
 checkMainConversationAPI();
 
-console.log('\n📋 SUMMARY:');
-console.log('1. ✅ Demo call API created/verified');
-console.log('2. 🔍 Demo page needs manual review');
-console.log('3. 🔍 Environment variables need to be configured');
-console.log('4. 🔍 Main conversation API needs verification');
-console.log('\n🚀 NEXT STEPS:');
-console.log('1. Add your OpenAI API key to .env.local');
-console.log('2. Add your Telnyx API key to .env.local');
-console.log('3. Test the demo call functionality');
-console.log('4. Check that the demo call button is properly connected');
+
+
+
+
+
+
+
+
+
+

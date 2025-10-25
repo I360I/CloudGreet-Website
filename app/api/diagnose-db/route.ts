@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 Diagnosing Supabase database...')
+    
     
     // Test basic connection first
     const { data: connectionTest, error: connectionError } = await supabaseAdmin

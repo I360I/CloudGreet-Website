@@ -308,12 +308,16 @@ export default function CallsPage() {
                 )}
 
                 {/* Call Player */}
-                {(call.recording_url || call.transcription_text) && (
+                {call.recording_url && (
                   <div className="mb-4">
                     <CallPlayer
-                      recordingUrl={call.recording_url || ''}
+                      recordingUrl={call.recording_url}
                       callId={call.id}
-                      className="bg-gray-800/50 border border-gray-700"
+                      callerName={call.caller_name}
+                      callerPhone={call.from_number}
+                      duration={call.duration}
+                      timestamp={new Date(call.created_at).toLocaleString()}
+                      transcript={call.transcription_text}
                     />
                   </div>
                 )}

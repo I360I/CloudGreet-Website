@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔧 Fixing CRITICAL broken functionality...\n');
+
 
 // 1. Fix broken fetch calls that don't handle responses
 function fixBrokenFetches(filePath) {
@@ -25,7 +25,7 @@ function fixBrokenFetches(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed broken fetches in ${filePath}`);
+    
   }
 }
 
@@ -63,7 +63,7 @@ function fixAlertStatements(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed alert statements in ${filePath}`);
+    
   }
 }
 
@@ -93,7 +93,7 @@ function fixHardcodedValues(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed hardcoded values in ${filePath}`);
+    
   }
 }
 
@@ -122,7 +122,7 @@ function fixConsoleLogs(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed console statements in ${filePath}`);
+    
   }
 }
 
@@ -147,7 +147,7 @@ function fixUnconnectedAPIs(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed unconnected APIs in ${filePath}`);
+    
   }
 }
 
@@ -163,11 +163,11 @@ const filesToFix = [
   'app/test-agent-simple/page.tsx'
 ];
 
-console.log('🔧 Fixing critical broken functionality...\n');
+
 
 filesToFix.forEach(file => {
   if (fs.existsSync(file)) {
-    console.log(`📁 Processing ${file}...`);
+    
     
     try {
       fixBrokenFetches(file);
@@ -176,21 +176,21 @@ filesToFix.forEach(file => {
       fixConsoleLogs(file);
       fixUnconnectedAPIs(file);
     } catch (error) {
-      console.log(`❌ Error fixing ${file}: ${error.message}`);
+      
     }
   }
 });
 
-console.log('\n🎉 Critical broken functionality fixes completed!');
-console.log('\n📋 NEXT STEPS:');
-console.log('1. Test the AI call functionality');
-console.log('2. Check that toast notifications work');
-console.log('3. Verify API connections are working');
-console.log('4. Test the demo call feature');
+
+
+
+
+
+
 
 const path = require('path');
 
-console.log('🔧 Fixing CRITICAL broken functionality...\n');
+
 
 // 1. Fix broken fetch calls that don't handle responses
 function fixBrokenFetches(filePath) {
@@ -214,7 +214,7 @@ function fixBrokenFetches(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed broken fetches in ${filePath}`);
+    
   }
 }
 
@@ -252,7 +252,7 @@ function fixAlertStatements(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed alert statements in ${filePath}`);
+    
   }
 }
 
@@ -282,7 +282,7 @@ function fixHardcodedValues(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed hardcoded values in ${filePath}`);
+    
   }
 }
 
@@ -311,7 +311,7 @@ function fixConsoleLogs(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed console statements in ${filePath}`);
+    
   }
 }
 
@@ -336,7 +336,7 @@ function fixUnconnectedAPIs(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed unconnected APIs in ${filePath}`);
+    
   }
 }
 
@@ -352,11 +352,11 @@ const filesToFix = [
   'app/test-agent-simple/page.tsx'
 ];
 
-console.log('🔧 Fixing critical broken functionality...\n');
+
 
 filesToFix.forEach(file => {
   if (fs.existsSync(file)) {
-    console.log(`📁 Processing ${file}...`);
+    
     
     try {
       fixBrokenFetches(file);
@@ -365,14 +365,14 @@ filesToFix.forEach(file => {
       fixConsoleLogs(file);
       fixUnconnectedAPIs(file);
     } catch (error) {
-      console.log(`❌ Error fixing ${file}: ${error.message}`);
+      
     }
   }
 });
 
-console.log('\n🎉 Critical broken functionality fixes completed!');
-console.log('\n📋 NEXT STEPS:');
-console.log('1. Test the AI call functionality');
-console.log('2. Check that toast notifications work');
-console.log('3. Verify API connections are working');
-console.log('4. Test the demo call feature');
+
+
+
+
+
+

@@ -101,7 +101,7 @@ export class AutomationEngine {
    */
   async start(): Promise<void> {
     this.isRunning = true
-    console.log('Automation engine started')
+    
     
     // Process execution queue every 30 seconds
     setInterval(() => {
@@ -123,7 +123,7 @@ export class AutomationEngine {
    */
   async stop(): Promise<void> {
     this.isRunning = false
-    console.log('Automation engine stopped')
+    
   }
 
   /**
@@ -298,7 +298,7 @@ export class AutomationEngine {
    * Send email action
    */
   private async sendEmail(leadId: string, parameters: any): Promise<void> {
-    console.log(`Sending email to lead ${leadId}:`, parameters)
+    
     // Implementation would integrate with email service
   }
 
@@ -306,7 +306,7 @@ export class AutomationEngine {
    * Send SMS action
    */
   private async sendSMS(leadId: string, parameters: any): Promise<void> {
-    console.log(`Sending SMS to lead ${leadId}:`, parameters)
+    
     // Implementation would integrate with SMS service
   }
 
@@ -340,7 +340,7 @@ export class AutomationEngine {
    * Schedule call action
    */
   private async scheduleCall(leadId: string, parameters: any): Promise<void> {
-    console.log(`Scheduling call for lead ${leadId}:`, parameters)
+    
     // Implementation would integrate with calendar service
   }
 
@@ -348,7 +348,7 @@ export class AutomationEngine {
    * Add tag action
    */
   private async addTag(leadId: string, parameters: any): Promise<void> {
-    console.log(`Adding tag to lead ${leadId}:`, parameters)
+    
     // Implementation would add tags to lead
   }
 
@@ -356,7 +356,7 @@ export class AutomationEngine {
    * Remove tag action
    */
   private async removeTag(leadId: string, parameters: any): Promise<void> {
-    console.log(`Removing tag from lead ${leadId}:`, parameters)
+    
     // Implementation would remove tags from lead
   }
 
@@ -364,7 +364,7 @@ export class AutomationEngine {
    * Create task action
    */
   private async createTask(leadId: string, parameters: any): Promise<void> {
-    console.log(`Creating task for lead ${leadId}:`, parameters)
+    
     // Implementation would create task in CRM
   }
 
@@ -372,7 +372,7 @@ export class AutomationEngine {
    * Send notification action
    */
   private async sendNotification(leadId: string, parameters: any): Promise<void> {
-    console.log(`Sending notification for lead ${leadId}:`, parameters)
+    
     // Implementation would send notification
   }
 

@@ -276,7 +276,7 @@ export class FollowUpSequenceManager {
       const template = getTemplateById(step.templateId)
       if (template) {
         // Send email (implementation would integrate with email service)
-        console.log(`Sending email to lead ${leadId} with template ${step.templateId}`)
+        
         
         // Track the send event
         await responseTracker.trackEvent({
@@ -291,7 +291,7 @@ export class FollowUpSequenceManager {
       const template = getSMSTemplateById(step.templateId)
       if (template) {
         // Send SMS (implementation would integrate with SMS service)
-        console.log(`Sending SMS to lead ${leadId} with template ${step.templateId}`)
+        
         
         // Track the send event
         await responseTracker.trackEvent({

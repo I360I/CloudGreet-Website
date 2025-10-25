@@ -213,43 +213,43 @@ function scanDirectory(dirPath) {
  * Print results
  */
 function printResults() {
-  console.log(`\n${colors.bold}${colors.cyan}🔍 NON-REAL IMPLEMENTATION DETECTOR RESULTS${colors.reset}\n`);
   
-  console.log(`${colors.bold}📊 SUMMARY:${colors.reset}`);
-  console.log(`Total files scanned: ${colors.green}${results.totalFiles}${colors.reset}`);
-  console.log(`Files with issues: ${colors.red}${results.issues.length}${colors.reset}\n`);
+  
+  
+  
+  
   
   if (results.issues.length === 0) {
-    console.log(`${colors.green}✅ NO NON-REAL IMPLEMENTATIONS FOUND!${colors.reset}`);
-    console.log(`${colors.green}Your codebase is 100% real and production-ready!${colors.reset}\n`);
+    
+    
     return;
   }
   
   // Print summary by category
-  console.log(`${colors.bold}📈 ISSUES BY CATEGORY:${colors.reset}`);
+  
   Object.entries(results.summary).forEach(([category, count]) => {
     if (count > 0) {
       const color = count > 0 ? colors.red : colors.green;
-      console.log(`${color}${category}: ${count}${colors.reset}`);
+      
     }
   });
-  console.log('');
+  
   
   // Print detailed issues
-  console.log(`${colors.bold}🚨 DETAILED ISSUES:${colors.reset}\n`);
+  
   
   results.issues.forEach((fileResult, index) => {
-    console.log(`${colors.bold}${index + 1}. ${colors.blue}${fileResult.file}${colors.reset}`);
+    
     
     fileResult.issues.forEach((issue, issueIndex) => {
       const categoryColor = getCategoryColor(issue.category);
-      console.log(`   ${colors.yellow}Line ${issue.line}:${colors.reset} ${categoryColor}${issue.category}${colors.reset}`);
-      console.log(`   ${colors.white}Pattern: ${colors.magenta}${issue.pattern}${colors.reset}`);
-      console.log(`   ${colors.white}Content: ${colors.cyan}${issue.content}${colors.reset}`);
-      console.log('');
+      
+      
+      
+      
     });
     
-    console.log('');
+    
   });
   
   // Print recommendations
@@ -276,46 +276,46 @@ function getCategoryColor(category) {
  * Print recommendations
  */
 function printRecommendations() {
-  console.log(`${colors.bold}💡 RECOMMENDATIONS:${colors.reset}\n`);
+  
   
   if (results.summary.mock > 0) {
-    console.log(`${colors.red}• Remove all mock/fake/placeholder data${colors.reset}`);
-    console.log(`${colors.red}• Replace with real database queries${colors.reset}`);
+    
+    
   }
   
   if (results.summary.console > 0) {
-    console.log(`${colors.yellow}• Replace console.log with proper logger${colors.reset}`);
-    console.log(`${colors.yellow}• Import logger from @/lib/monitoring${colors.reset}`);
+    
+    
   }
   
   if (results.summary.random > 0) {
-    console.log(`${colors.magenta}• Check if Math.random() is for legitimate purposes${colors.reset}`);
-    console.log(`${colors.magenta}• Replace random data generation with real data${colors.reset}`);
+     is for legitimate purposes${colors.reset}`);
+    
   }
   
   if (results.summary.hardcoded > 0) {
-    console.log(`${colors.red}• Remove hardcoded secrets and API keys${colors.reset}`);
-    console.log(`${colors.red}• Use environment variables instead${colors.reset}`);
+    
+    
   }
   
   if (results.summary.testNames > 0 || results.summary.testPhones > 0) {
-    console.log(`${colors.yellow}• Replace test names/phones with real data${colors.reset}`);
-    console.log(`${colors.yellow}• Use database queries for real customer data${colors.reset}`);
+    
+    
   }
   
   if (results.summary.testData > 0) {
-    console.log(`${colors.yellow}• Address TODO/FIXME comments${colors.reset}`);
-    console.log(`${colors.yellow}• Remove temporary code${colors.reset}`);
+    
+    
   }
   
-  console.log('');
+  
 }
 
 /**
  * Main execution
  */
 function main() {
-  console.log(`${colors.bold}${colors.cyan}🔍 SCANNING FOR NON-REAL IMPLEMENTATIONS...${colors.reset}\n`);
+  
   
   const startTime = Date.now();
   
@@ -324,7 +324,7 @@ function main() {
   
   directories.forEach(dir => {
     if (fs.existsSync(dir)) {
-      console.log(`${colors.blue}Scanning ${dir}/...${colors.reset}`);
+      
       scanDirectory(dir);
     }
   });
@@ -334,7 +334,7 @@ function main() {
   
   printResults();
   
-  console.log(`${colors.green}Scan completed in ${duration}ms${colors.reset}\n`);
+  
   
   // Exit with error code if issues found
   if (results.issues.length > 0) {

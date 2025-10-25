@@ -49,7 +49,7 @@ class RetellAgentManager {
    */
   async createBusinessAgent(config: BusinessAgentConfig): Promise<string> {
     try {
-      console.log(`🤖 Creating AI agent for business: ${config.businessName}`);
+      
 
       // Generate revenue-optimized system prompt
       const systemPrompt = SmartAIPrompts.generateIndustrySpecificPrompt(config.businessType, config);
@@ -94,7 +94,7 @@ class RetellAgentManager {
       // Store agent info in database
       await this.storeAgentInfo(config.businessId, agentId, agentData);
 
-      console.log(`✅ Created AI agent ${agentId} for ${config.businessName}`);
+      
       return agentId;
 
     } catch (error) {
@@ -157,7 +157,7 @@ class RetellAgentManager {
         })
         .eq('business_id', businessId);
 
-      console.log(`✅ Updated AI agent for business ${businessId}`);
+      
 
     } catch (error) {
       console.error('Error updating business agent:', error);
@@ -312,7 +312,7 @@ Remember: You represent ${config.businessName} and should always maintain the hi
           .update({ is_active: false })
           .eq('business_id', businessId);
 
-        console.log(`✅ Deleted AI agent for business ${businessId}`);
+        
       }
     } catch (error) {
       console.error('Error deleting business agent:', error);

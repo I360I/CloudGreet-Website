@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('🎧 Processing WebRTC answer for session:', sessionId)
+    
 
     // Send answer to Telnyx
     const telnyxResponse = await fetch('https://api.telnyx.com/v2/texml/sessions/answer', {
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const telnyxData = await telnyxResponse.json()
-    console.log('✅ WebRTC answer processed:', telnyxData)
+    
 
     return NextResponse.json({
       success: true,

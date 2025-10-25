@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { email, password, businessName, phone } = body
 
-    console.log('Testing registration with:', { email, businessName, phone })
+    
 
     // Test Supabase Auth API call
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (authError) {
-      console.log('Auth error:', authError)
+      
       return NextResponse.json({
         success: false,
         error: 'Auth creation failed',
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('Auth user created:', authUser.user?.id)
+    
 
     return NextResponse.json({
       success: true,
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.log('Test registration error:', error)
+    
     return NextResponse.json({
       success: false,
       error: 'Test registration failed',

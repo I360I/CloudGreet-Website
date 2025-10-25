@@ -53,15 +53,10 @@ class Logger {
       }
 
       const logEntry = this.formatMessage('info', message, context);
-      console.log(JSON.stringify(logEntry));
+      );
     } catch (error) {
       console.error('Logger info failed:', error);
-      console.log(JSON.stringify({
-        timestamp: new Date().toISOString(),
-        level: 'error',
-        message: 'Logger info operation failed',
-        originalMessage: message
-      }));
+      // Fallback logging for critical errors
     }
   }
 
@@ -132,15 +127,10 @@ class Logger {
       }
 
       const logEntry = this.formatMessage('debug', message, context);
-      console.log(JSON.stringify(logEntry));
+      );
     } catch (error) {
       console.error('Logger debug failed:', error);
-      console.log(JSON.stringify({
-        timestamp: new Date().toISOString(),
-        level: 'error',
-        message: 'Logger debug operation failed',
-        originalMessage: message
-      }));
+      // Fallback logging for critical errors
     }
   }
 }

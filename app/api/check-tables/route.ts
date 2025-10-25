@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Checking Supabase tables...')
+    
     
     const tables = [
       'businesses',

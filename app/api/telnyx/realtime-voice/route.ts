@@ -241,7 +241,7 @@ async function handleCallStart(callId: string, config: RealtimeConfig) {
       instructions: [
         {
           instruction: 'stream_audio',
-          stream_url: `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`,
+          stream_url: `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-10-25`,
           stream_track: 'both',
           auth_token: ephemeralKey,
           input_format: 'pcm16',

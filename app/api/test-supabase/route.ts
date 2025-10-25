@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('Testing Supabase connection...')
+    
     
     // Test basic Supabase connection with timeout
     const timeoutPromise = new Promise((_, reject) => 

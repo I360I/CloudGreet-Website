@@ -3,24 +3,24 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔍 REAL BROKEN FUNCTIONALITY TEST');
-console.log('==================================\n');
+
+
 
 const issues = [];
 
 function checkIssue(description, test, severity = 'high') {
   if (!test) {
     issues.push({ description, severity });
-    console.log(`❌ ${description}`);
+    
   } else {
-    console.log(`✅ ${description}`);
+    
   }
 }
 
-console.log('🔍 TESTING ACTUAL BROKEN FUNCTIONALITY...\n');
+
 
 // 1. Test Call Functionality
-console.log('📞 TESTING CALL FUNCTIONALITY:');
+
 const voiceWebhook = 'app/api/telnyx/voice-webhook/route.ts';
 if (fs.existsSync(voiceWebhook)) {
   const content = fs.readFileSync(voiceWebhook, 'utf8');
@@ -43,7 +43,7 @@ if (fs.existsSync(clickToCall)) {
 }
 
 // 2. Dashboard Functionality
-console.log('\n📊 TESTING DASHBOARD FUNCTIONALITY:');
+
 const dashboard = 'app/dashboard/page.tsx';
 if (fs.existsSync(dashboard)) {
   const content = fs.readFileSync(dashboard, 'utf8');
@@ -56,7 +56,7 @@ if (fs.existsSync(dashboard)) {
 }
 
 // 3. Admin Dashboard Functionality
-console.log('\n🔧 TESTING ADMIN DASHBOARD FUNCTIONALITY:');
+
 const adminDashboard = 'app/admin/page.tsx';
 if (fs.existsSync(adminDashboard)) {
   const content = fs.readFileSync(adminDashboard, 'utf8');
@@ -69,7 +69,7 @@ if (fs.existsSync(adminDashboard)) {
 }
 
 // 4. Login/Registration Functionality
-console.log('\n🔐 TESTING AUTHENTICATION FUNCTIONALITY:');
+
 const login = 'app/login/page.tsx';
 if (fs.existsSync(login)) {
   const content = fs.readFileSync(login, 'utf8');
@@ -93,7 +93,7 @@ if (fs.existsSync(register)) {
 }
 
 // 5. API Endpoints Functionality
-console.log('\n🔌 TESTING API ENDPOINTS FUNCTIONALITY:');
+
 const apiEndpoints = [
   'app/api/ai/conversation/route.ts',
   'app/api/admin/convert-lead-to-client/route.ts',
@@ -116,7 +116,7 @@ apiEndpoints.forEach(endpoint => {
 });
 
 // 6. Database Schema Functionality
-console.log('\n🗄️ TESTING DATABASE SCHEMA FUNCTIONALITY:');
+
 const migrationFiles = fs.readdirSync('migrations').filter(file => file.endsWith('.sql'));
 if (migrationFiles.length > 0) {
   checkIssue('Database migrations exist', migrationFiles.length > 0);
@@ -133,7 +133,7 @@ if (migrationFiles.length > 0) {
 }
 
 // 7. Environment Variables Functionality
-console.log('\n🔧 TESTING ENVIRONMENT VARIABLES FUNCTIONALITY:');
+
 const envExample = 'env.example';
 if (fs.existsSync(envExample)) {
   const content = fs.readFileSync(envExample, 'utf8');
@@ -155,7 +155,7 @@ if (fs.existsSync(envExample)) {
 }
 
 // 8. UI Components Functionality
-console.log('\n🎨 TESTING UI COMPONENTS FUNCTIONALITY:');
+
 const uiPages = [
   'app/calls/page.tsx',
   'app/appointments/page.tsx',
@@ -178,7 +178,7 @@ uiPages.forEach(page => {
 });
 
 // 9. Library Utilities Functionality
-console.log('\n📚 TESTING LIBRARY UTILITIES FUNCTIONALITY:');
+
 const libFiles = [
   'lib/supabase.ts',
   'lib/monitoring.ts',
@@ -201,7 +201,7 @@ libFiles.forEach(lib => {
 });
 
 // 10. Security Functionality
-console.log('\n🔒 TESTING SECURITY FUNCTIONALITY:');
+
 const securityFiles = [
   'middleware.ts',
   'app/api/click-to-call/initiate/route.ts',
@@ -220,51 +220,51 @@ securityFiles.forEach(file => {
   }
 });
 
-console.log('\n📊 REAL BROKEN FUNCTIONALITY TEST RESULTS:');
-console.log('==========================================\n');
+
+
 
 const criticalIssues = issues.filter(issue => issue.severity === 'critical');
 const highIssues = issues.filter(issue => issue.severity === 'high');
 const mediumIssues = issues.filter(issue => issue.severity === 'medium');
 
-console.log(`🔴 Critical Issues: ${criticalIssues.length}`);
-console.log(`🟠 High Priority Issues: ${highIssues.length}`);
-console.log(`🟡 Medium Priority Issues: ${mediumIssues.length}`);
-console.log(`📊 Total Issues: ${issues.length}`);
+
+
+
+
 
 if (issues.length === 0) {
-  console.log('\n🎉 NO REAL BROKEN FUNCTIONALITY FOUND!');
-  console.log('✅ Your app should work properly');
-  console.log('✅ Test calls should work');
-  console.log('✅ Dashboard should show real data');
-  console.log('✅ Admin features should work');
-  console.log('✅ Login/registration should work');
-  console.log('✅ API endpoints should work');
-  console.log('✅ Database should be properly set up');
-  console.log('✅ Environment variables should be configured');
-  console.log('✅ UI components should work');
-  console.log('✅ Library utilities should work');
-  console.log('✅ Security should be properly implemented');
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 } else {
-  console.log('\n⚠️  REAL BROKEN FUNCTIONALITY FOUND:');
-  console.log('\n🔧 CRITICAL ISSUES TO FIX:');
-  criticalIssues.forEach(issue => console.log(`  - ${issue.description}`));
   
-  console.log('\n🔧 HIGH PRIORITY ISSUES TO FIX:');
-  highIssues.forEach(issue => console.log(`  - ${issue.description}`));
   
-  console.log('\n🔧 MEDIUM PRIORITY ISSUES TO FIX:');
-  mediumIssues.forEach(issue => console.log(`  - ${issue.description}`));
+  criticalIssues.forEach(issue => );
   
-  console.log('\n📋 RECOMMENDED ACTIONS:');
-  console.log('1. Fix all critical issues first');
-  console.log('2. Fix all high priority issues');
-  console.log('3. Fix all medium priority issues');
-  console.log('4. Test the app manually');
-  console.log('5. Deploy and test in production');
+  
+  highIssues.forEach(issue => );
+  
+  
+  mediumIssues.forEach(issue => );
+  
+  
+  
+  
+  
+  
+  
 }
 
-console.log('\n✅ REAL BROKEN FUNCTIONALITY TEST COMPLETE!');
-console.log('\n🎯 THIS TEST FOCUSES ON ACTUAL BROKEN FUNCTIONALITY - NOT MINOR CODE QUALITY ISSUES!');
+
+
 
 

@@ -7,7 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔍 COMPREHENSIVE CHECK: CLIENT ACQUISITION & ADMIN DASHBOARD\n');
+
 
 // Files to check for client acquisition and admin features
 const filesToCheck = [
@@ -120,34 +120,34 @@ function scanDirectory(dirPath) {
 
 // Scan all relevant directories
 filesToCheck.forEach(dir => {
-  console.log(`📁 Scanning ${dir}/...`);
+  
   scanDirectory(dir);
 });
 
-console.log('\n📊 ANALYSIS RESULTS:\n');
+
 
 // Report issues
 if (issues.length > 0) {
-  console.log('🚨 POTENTIAL ISSUES FOUND:');
+  
   issues.forEach((issue, index) => {
     const severity = issue.severity === 'high' ? '🔴' : '🟡';
-    console.log(`${severity} ${index + 1}. ${issue.file}`);
-    console.log(`   Type: ${issue.type}`);
-    console.log(`   Count: ${issue.count}`);
-    console.log(`   Severity: ${issue.severity}\n`);
+    
+    
+    
+    
   });
 } else {
-  console.log('✅ NO MOCK DATA ISSUES FOUND!\n');
+  
 }
 
 // Report real implementations
-console.log('✅ REAL IMPLEMENTATIONS FOUND:');
+
 realImplementations.forEach((impl, index) => {
   const confidence = impl.confidence === 'high' ? '🟢' : '🟡';
-  console.log(`${confidence} ${index + 1}. ${impl.file}`);
-  console.log(`   Type: ${impl.type}`);
-  console.log(`   Count: ${impl.count}`);
-  console.log(`   Confidence: ${impl.confidence}\n`);
+  
+  
+  
+  
 });
 
 // Summary
@@ -155,18 +155,18 @@ const totalIssues = issues.length;
 const totalReal = realImplementations.length;
 const highConfidenceReal = realImplementations.filter(r => r.confidence === 'high').length;
 
-console.log('📈 SUMMARY:');
-console.log(`Total files checked: ${filesToCheck.length} directories`);
-console.log(`Mock data issues: ${totalIssues}`);
-console.log(`Real implementations: ${totalReal}`);
-console.log(`High confidence real: ${highConfidenceReal}`);
+
+
+
+
+
 
 if (totalIssues === 0 && totalReal > 0) {
-  console.log('\n🎉 EXCELLENT! Client Acquisition & Admin Dashboard are fully real!');
+  
 } else if (totalIssues > 0) {
-  console.log('\n⚠️ Some mock data found - needs attention');
+  
 } else {
-  console.log('\n❓ No real implementations found - may need investigation');
+  
 }
 
 

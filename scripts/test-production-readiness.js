@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🧪 PRODUCTION READINESS TEST SUITE');
-console.log('===================================\n');
+
+
 
 // Test configuration
 const tests = {
@@ -18,19 +18,19 @@ function runTest(name, testFn) {
   try {
     const result = testFn();
     if (result) {
-      console.log(`✅ ${name}`);
+      
       tests.passed++;
     } else {
-      console.log(`❌ ${name}`);
+      
       tests.failed++;
     }
   } catch (error) {
-    console.log(`❌ ${name} - ERROR: ${error.message}`);
+    
     tests.failed++;
   }
 }
 
-console.log('📁 TESTING CORE FILES...\n');
+
 
 // Test 1: All required files exist
 runTest('Voice webhook exists', () => fs.existsSync('app/api/telnyx/voice-webhook/route.ts'));
@@ -42,7 +42,7 @@ runTest('Click to call exists', () => fs.existsSync('app/api/click-to-call/initi
 runTest('Monitoring lib exists', () => fs.existsSync('lib/monitoring.ts'));
 runTest('Supabase lib exists', () => fs.existsSync('lib/supabase.ts'));
 
-console.log('\n🔍 TESTING CODE QUALITY...\n');
+
 
 // Test 2: No TypeScript issues
 runTest('No any types in realtime-stream', () => {
@@ -91,7 +91,7 @@ runTest('No console.log in production code', () => {
   });
 });
 
-console.log('\n🚀 TESTING PERFORMANCE...\n');
+
 
 // Test 5: Performance optimization
 runTest('Realtime tools has reasonable await count', () => {
@@ -122,7 +122,7 @@ runTest('All API routes have try-catch blocks', () => {
   });
 });
 
-console.log('\n🗄️ TESTING DATABASE...\n');
+
 
 // Test 7: Database migrations
 runTest('Perfect database setup exists', () => fs.existsSync('migrations/perfect-database-setup.sql'));
@@ -136,7 +136,7 @@ runTest('Database setup has demo data', () => {
   return content.includes('CloudGreet Premium HVAC') && content.includes('Sarah - Premium AI Receptionist');
 });
 
-console.log('\n🔒 TESTING SECURITY...\n');
+
 
 // Test 8: Security checks
 runTest('No hardcoded secrets', () => {
@@ -168,29 +168,29 @@ runTest('Proper error responses', () => {
   });
 });
 
-console.log('\n📊 TEST RESULTS:');
-console.log('================\n');
 
-console.log(`✅ Passed: ${tests.passed}`);
-console.log(`❌ Failed: ${tests.failed}`);
-console.log(`📊 Total: ${tests.total}`);
-console.log(`🎯 Success Rate: ${Math.round((tests.passed / tests.total) * 100)}%`);
+
+
+
+
+
+ * 100)}%`);
 
 if (tests.failed === 0) {
-  console.log('\n🎉 ALL TESTS PASSED! PRODUCTION READY! 🎉');
-  console.log('\n📋 DEPLOYMENT CHECKLIST:');
-  console.log('1. ✅ Code quality verified');
-  console.log('2. ✅ Performance optimized');
-  console.log('3. ✅ Security validated');
-  console.log('4. ✅ Database schema ready');
-  console.log('5. ✅ Error handling complete');
-  console.log('\n🚀 Ready for deployment when limits reset!');
+  
+  
+  
+  
+  
+  
+  
+  
 } else {
-  console.log('\n⚠️  SOME TESTS FAILED - NEEDS ATTENTION');
-  console.log('\n🔧 RECOMMENDED ACTIONS:');
-  console.log('1. Fix failing tests before deployment');
-  console.log('2. Run tests again to verify');
-  console.log('3. Only deploy when all tests pass');
+  
+  
+  
+  
+  
 }
 
-console.log('\n✅ PRODUCTION READINESS TEST COMPLETE!');
+

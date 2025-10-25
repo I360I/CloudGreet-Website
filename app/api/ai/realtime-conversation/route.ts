@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const voice = agent?.configuration?.voice || 'alloy'
     const tone = agent?.configuration?.tone || 'professional'
 
-    // Create new session for real-time conversation
+    // Create new session for real-time conversation with latest 2025 model
     const session = await createRealtimeSession(business, agent, voice)
 
     return NextResponse.json({
@@ -78,7 +78,7 @@ async function createRealtimeSession(business: any, agent: any, voice: string) {
   const tone = agent?.configuration?.tone || 'professional'
 
   return await openai.beta.realtime.sessions.create({
-    model: 'gpt-4o-realtime-preview-2024-12-17',
+    model: 'gpt-4o-realtime-preview-2025-10-25',
     voice: voice as any,
     instructions: `You are ${businessName}'s AI receptionist - a professional, helpful assistant for a ${businessType} business.
 

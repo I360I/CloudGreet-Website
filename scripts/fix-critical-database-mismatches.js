@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔧 FIXING CRITICAL DATABASE COLUMN MISMATCHES...\n');
+
 
 // Known actual database columns from your schema
 const actualColumns = {
@@ -72,7 +72,7 @@ function fixFile(filePath, fixes) {
         if (content.match(oldPattern)) {
           content = content.replace(oldPattern, 'transcript:');
           modified = true;
-          console.log(`✅ Fixed ${filePath}: transcription_text → transcript`);
+          
         }
       }
     });
@@ -88,7 +88,7 @@ function fixFile(filePath, fixes) {
 }
 
 // Apply critical fixes
-console.log('🔧 Applying critical database column fixes...\n');
+
 
 let fixedCount = 0;
 
@@ -129,18 +129,18 @@ criticalFiles.forEach(file => {
     
     if (fileModified) {
       fs.writeFileSync(file, newContent);
-      console.log(`✅ Fixed column names in ${file}`);
+      
       fixedCount++;
     }
   }
 });
 
-console.log(`\n🎯 SUMMARY:`);
-console.log(`✅ Fixed ${fixedCount} files with database column mismatches`);
-console.log(`\n📋 CRITICAL FIXES APPLIED:`);
-console.log(`1. Fixed transcription_text → transcript in conversation-voice route`);
-console.log(`2. Fixed column names in voice handler, webhook, and click-to-call routes`);
-console.log(`\n🚀 Next steps:`);
-console.log(`1. Commit and push these changes`);
-console.log(`2. Test the AI call functionality`);
-console.log(`3. Verify database operations work correctly`);
+
+
+
+
+
+
+
+
+

@@ -167,7 +167,7 @@ async function sendCriticalErrorEmail(errorData: z.infer<typeof errorLogSchema>)
       }
 
       // await sgMail.send(msg)
-      console.log('Critical error email would be sent:', msg)
+      
     } catch (emailError) {
       console.error('Failed to send critical error email:', emailError)
     }

@@ -96,7 +96,7 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
           const data = JSON.parse(event.data)
           
           if (data.type === 'connected') {
-            console.log('Connected to notifications stream')
+            
           } else if (data.type === 'heartbeat') {
             // Keep connection alive
             return

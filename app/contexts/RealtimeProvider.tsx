@@ -77,7 +77,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           filter: `business_id=eq.${businessId}`
         },
         (payload) => {
-          console.log('New call received:', payload)
+          
           setNewCalls(prev => prev + 1)
           setLastActivity(new Date())
           
@@ -90,7 +90,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Subscribed to calls channel')
+          
           setIsConnected(true)
           setConnectionStatus('connected')
         } else if (status === 'CHANNEL_ERROR') {
@@ -111,7 +111,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           filter: `business_id=eq.${businessId}`
         },
         (payload) => {
-          console.log('New appointment booked:', payload)
+          
           setNewAppointments(prev => prev + 1)
           setLastActivity(new Date())
           
@@ -131,7 +131,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           filter: `business_id=eq.${businessId}`
         },
         (payload) => {
-          console.log('Appointment updated:', payload)
+          
           setLastActivity(new Date())
           
           const appointment = payload.new as any
@@ -150,7 +150,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Subscribed to appointments channel')
+          
         }
       })
 
@@ -166,14 +166,14 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
           filter: `business_id=eq.${businessId}`
         },
         (payload) => {
-          console.log('New message:', payload)
+          
           setNewMessages(prev => prev + 1)
           setLastActivity(new Date())
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Subscribed to messages channel')
+          
         }
       })
 

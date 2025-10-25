@@ -10,10 +10,10 @@ const http = require('http');
 
 const BASE_URL = process.env.VERCEL_URL || 'https://cloud-greet-website-qsng3mdn3-i360is-projects.vercel.app';
 
-console.log('🔍 CLOUDGREET SYSTEM VERIFICATION');
-console.log('=====================================');
-console.log(`Testing: ${BASE_URL}`);
-console.log('');
+
+
+
+
 
 const tests = [
   {
@@ -126,7 +126,7 @@ async function runTests() {
       const result = await makeRequest(test);
       
       if (result.error) {
-        console.log(`❌ ERROR: ${result.error}`);
+        
         failed++;
         if (test.name.includes('API') || test.name.includes('Webhook')) {
           critical++;
@@ -136,10 +136,10 @@ async function runTests() {
         const isExpected = expected.includes(result.status)
         
         if (isExpected) {
-          console.log(`✅ PASS (${result.status})`);
+          `);
           passed++;
         } else {
-          console.log(`❌ FAIL (${result.status}, expected ${test.expected})`);
+          `);
           failed++;
           if (test.name.includes('API') || test.name.includes('Webhook')) {
             critical++;
@@ -147,7 +147,7 @@ async function runTests() {
         }
       }
     } catch (err) {
-      console.log(`❌ EXCEPTION: ${err.message}`);
+      
       failed++;
       if (test.name.includes('API') || test.name.includes('Webhook')) {
         critical++;
@@ -155,40 +155,40 @@ async function runTests() {
     }
   }
 
-  console.log('');
-  console.log('📊 VERIFICATION RESULTS');
-  console.log('======================');
-  console.log(`✅ Passed: ${passed}`);
-  console.log(`❌ Failed: ${failed}`);
-  console.log(`🚨 Critical: ${critical}`);
-  console.log('');
+  
+  
+  
+  
+  
+  
+  
 
   if (critical > 0) {
-    console.log('🚨 CRITICAL ISSUES FOUND:');
-    console.log('- API endpoints are not working properly');
-    console.log('- Database connection likely failed');
-    console.log('- Environment variables not configured');
-    console.log('- System is NOT production-ready');
-    console.log('');
-    console.log('🔧 NEXT STEPS:');
-    console.log('1. Follow COMPLETE_SETUP_SCRIPT.md');
-    console.log('2. Configure Supabase database');
-    console.log('3. Set all environment variables');
-    console.log('4. Test each API endpoint individually');
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
   } else if (failed > 0) {
-    console.log('⚠️  SOME ISSUES FOUND:');
-    console.log('- Some features may not work properly');
-    console.log('- Review failed tests and fix issues');
+    
+    
+    
   } else {
-    console.log('🎉 ALL SYSTEMS OPERATIONAL!');
-    console.log('- CloudGreet is production-ready');
-    console.log('- All APIs are working');
-    console.log('- System is ready for real users');
+    
+    
+    
+    
   }
 
-  console.log('');
-  console.log('🔗 For detailed setup instructions:');
-  console.log('   See COMPLETE_SETUP_SCRIPT.md');
+  
+  
+  
 }
 
 // Run the verification

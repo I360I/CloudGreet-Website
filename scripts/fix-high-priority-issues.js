@@ -2,11 +2,11 @@
 
 const fs = require('fs');
 
-console.log('🔧 FIXING HIGH PRIORITY ISSUES');
-console.log('==============================\n');
+
+
 
 // Fix 1: Remove 'any' types and add proper typing
-console.log('1. FIXING TYPESCRIPT ISSUES...\n');
+
 
 // Fix realtime-stream route
 const realtimeStreamFile = 'app/api/telnyx/realtime-stream/route.ts';
@@ -31,7 +31,7 @@ interface RealtimeSession {
   );
   
   fs.writeFileSync(realtimeStreamFile, content);
-  console.log('✅ Fixed realtime-stream TypeScript issues');
+  
 }
 
 // Fix realtime-tools route
@@ -51,7 +51,7 @@ if (fs.existsSync(realtimeToolsFile)) {
   );
   
   fs.writeFileSync(realtimeToolsFile, content);
-  console.log('✅ Fixed realtime-tools TypeScript issues');
+  
 }
 
 // Fix monitoring.ts
@@ -65,10 +65,10 @@ if (fs.existsSync(monitoringFile)) {
   content = content.replace(/context: any/g, 'context: Record<string, unknown>');
   
   fs.writeFileSync(monitoringFile, content);
-  console.log('✅ Fixed monitoring.ts TypeScript issues');
+  
 }
 
-console.log('\n2. FIXING SECURITY ISSUES (Environment Variables)...\n');
+...\n');
 
 // Fix environment variable null checks
 const filesToFix = [
@@ -128,12 +128,12 @@ filesToFix.forEach(file => {
     
     if (modified) {
       fs.writeFileSync(file, content);
-      console.log(`✅ Fixed environment variable null checks in ${file}`);
+      
     }
   }
 });
 
-console.log('\n3. FIXING RUNTIME ISSUES (Console.log to Logger)...\n');
+...\n');
 
 // Fix console.log usage
 const clickToCallFile = 'app/api/click-to-call/initiate/route.ts';
@@ -145,7 +145,7 @@ if (fs.existsSync(clickToCallFile)) {
   content = content.replace(/console\.error/g, 'logger.error');
   
   fs.writeFileSync(clickToCallFile, content);
-  console.log('✅ Fixed console.log usage in click-to-call');
+  
 }
 
 // Fix monitoring.ts console usage
@@ -157,10 +157,10 @@ if (fs.existsSync(monitoringFile)) {
   content = content.replace(/console\.error/g, 'this.logger.error');
   
   fs.writeFileSync(monitoringFile, content);
-  console.log('✅ Fixed console usage in monitoring.ts');
+  
 }
 
-console.log('\n4. OPTIMIZING PERFORMANCE (Reducing Await Operations)...\n');
+...\n');
 
 // Optimize realtime-tools route
 if (fs.existsSync(realtimeToolsFile)) {
@@ -190,13 +190,13 @@ if (fs.existsSync(realtimeToolsFile)) {
   );
   
   fs.writeFileSync(realtimeToolsFile, optimizedContent);
-  console.log('✅ Optimized realtime-tools performance');
+  
 }
 
-console.log('\n✅ HIGH PRIORITY ISSUES FIXED!');
-console.log('\n📋 SUMMARY:');
-console.log('- Fixed TypeScript issues (removed any types)');
-console.log('- Added environment variable null checks');
-console.log('- Replaced console.log with proper logger');
-console.log('- Optimized database operations');
-console.log('\n🚀 Ready for next phase of improvements!');
+
+
+');
+
+
+
+

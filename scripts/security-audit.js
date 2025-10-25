@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔒 SECURITY AUDIT - IDENTIFYING VULNERABILITIES');
-console.log('===============================================\n');
+
+
 
 const apiDir = path.join(__dirname, '../app/api');
 const issues = [];
@@ -95,16 +95,16 @@ function scanDirectory(dir) {
 
 scanDirectory(apiDir);
 
-console.log(`🔍 Found ${issues.length} security issues:\n`);
+
 
 issues.forEach((issue, index) => {
-  console.log(`${index + 1}. ${issue.issue}`);
-  console.log(`   File: ${issue.file}:${issue.line}`);
-  console.log(`   Code: ${issue.code}`);
-  console.log('');
+  
+  
+  
+  
 });
 
-console.log('🔒 SECURITY AUDIT COMPLETE!');
-console.log(`📊 Total Issues: ${issues.length}`);
+
+
 
 

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🤖 Fixing AI call functionality - connecting unconnected strings...\n');
+
 
 // 1. Fix the demo call functionality
 function fixDemoCallFunctionality() {
@@ -11,7 +11,7 @@ function fixDemoCallFunctionality() {
     
     // Check if the demo call button is properly connected
     if (content.includes('Start Demo Call') || content.includes('Call AI Receptionist')) {
-      console.log('✅ Demo call button found');
+      
       
       // Ensure the button has proper onClick handler
       if (!content.includes('onClick') && content.includes('button')) {
@@ -37,7 +37,7 @@ function fixDemoCallFunctionality() {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Demo call initiated:', data);
+        
         // Show success message
         alert('Demo call started! Check your phone.');
       } else {
@@ -52,7 +52,7 @@ function fixDemoCallFunctionality() {
         }
         
         fs.writeFileSync(demoPagePath, content);
-        console.log('✅ Fixed demo call functionality');
+        
       }
     }
   }
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
 }`;
       
       fs.writeFileSync(apiPath, content);
-      console.log('✅ Fixed AI conversation API');
+      
     }
   } else {
     // Create the API if it doesn't exist
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
     }
     
     fs.writeFileSync(apiPath, apiContent);
-    console.log('✅ Created AI conversation API');
+    
   }
 }
 
@@ -227,7 +227,7 @@ function fixEnvironmentVariables() {
   
   if (modified) {
     fs.writeFileSync(envPath, content);
-    console.log('✅ Added missing environment variables');
+    
   }
 }
 
@@ -239,7 +239,7 @@ function fixMainConversationAPI() {
     
     // Check if it's properly connected to AI services
     if (!content.includes('OPENAI_API_KEY') || !content.includes('fetch')) {
-      console.log('✅ Main conversation API needs fixing');
+      
       
       // Add proper AI integration
       const aiIntegration = `
@@ -285,34 +285,34 @@ function fixMainConversationAPI() {
       }
       
       fs.writeFileSync(apiPath, content);
-      console.log('✅ Fixed main conversation API');
+      
     }
   }
 }
 
 // Run all fixes
-console.log('🔧 Fixing AI call functionality...\n');
+
 
 fixDemoCallFunctionality();
 fixAIConversationAPI();
 fixMainConversationAPI();
 fixEnvironmentVariables();
 
-console.log('\n🎉 AI call functionality fixes completed!');
-console.log('\n📋 WHAT WAS FIXED:');
-console.log('1. ✅ Demo call button now properly connected to AI');
-console.log('2. ✅ AI conversation API created/updated');
-console.log('3. ✅ Environment variables added');
-console.log('4. ✅ Main conversation API connected to OpenAI');
-console.log('\n🚀 NEXT STEPS:');
-console.log('1. Add your OpenAI API key to .env.local');
-console.log('2. Add your Telnyx API key to .env.local');
-console.log('3. Test the demo call functionality');
-console.log('4. Verify AI responses are working');
+
+
+
+
+
+
+
+
+
+
+
 
 const path = require('path');
 
-console.log('🤖 Fixing AI call functionality - connecting unconnected strings...\n');
+
 
 // 1. Fix the demo call functionality
 function fixDemoCallFunctionality() {
@@ -322,7 +322,7 @@ function fixDemoCallFunctionality() {
     
     // Check if the demo call button is properly connected
     if (content.includes('Start Demo Call') || content.includes('Call AI Receptionist')) {
-      console.log('✅ Demo call button found');
+      
       
       // Ensure the button has proper onClick handler
       if (!content.includes('onClick') && content.includes('button')) {
@@ -348,7 +348,7 @@ function fixDemoCallFunctionality() {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Demo call initiated:', data);
+        
         // Show success message
         alert('Demo call started! Check your phone.');
       } else {
@@ -363,7 +363,7 @@ function fixDemoCallFunctionality() {
         }
         
         fs.writeFileSync(demoPagePath, content);
-        console.log('✅ Fixed demo call functionality');
+        
       }
     }
   }
@@ -438,7 +438,7 @@ export async function POST(request: NextRequest) {
 }`;
       
       fs.writeFileSync(apiPath, content);
-      console.log('✅ Fixed AI conversation API');
+      
     }
   } else {
     // Create the API if it doesn't exist
@@ -505,7 +505,7 @@ export async function POST(request: NextRequest) {
     }
     
     fs.writeFileSync(apiPath, apiContent);
-    console.log('✅ Created AI conversation API');
+    
   }
 }
 
@@ -538,7 +538,7 @@ function fixEnvironmentVariables() {
   
   if (modified) {
     fs.writeFileSync(envPath, content);
-    console.log('✅ Added missing environment variables');
+    
   }
 }
 
@@ -550,7 +550,7 @@ function fixMainConversationAPI() {
     
     // Check if it's properly connected to AI services
     if (!content.includes('OPENAI_API_KEY') || !content.includes('fetch')) {
-      console.log('✅ Main conversation API needs fixing');
+      
       
       // Add proper AI integration
       const aiIntegration = `
@@ -596,27 +596,27 @@ function fixMainConversationAPI() {
       }
       
       fs.writeFileSync(apiPath, content);
-      console.log('✅ Fixed main conversation API');
+      
     }
   }
 }
 
 // Run all fixes
-console.log('🔧 Fixing AI call functionality...\n');
+
 
 fixDemoCallFunctionality();
 fixAIConversationAPI();
 fixMainConversationAPI();
 fixEnvironmentVariables();
 
-console.log('\n🎉 AI call functionality fixes completed!');
-console.log('\n📋 WHAT WAS FIXED:');
-console.log('1. ✅ Demo call button now properly connected to AI');
-console.log('2. ✅ AI conversation API created/updated');
-console.log('3. ✅ Environment variables added');
-console.log('4. ✅ Main conversation API connected to OpenAI');
-console.log('\n🚀 NEXT STEPS:');
-console.log('1. Add your OpenAI API key to .env.local');
-console.log('2. Add your Telnyx API key to .env.local');
-console.log('3. Test the demo call functionality');
-console.log('4. Verify AI responses are working');
+
+
+
+
+
+
+
+
+
+
+

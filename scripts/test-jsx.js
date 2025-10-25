@@ -8,7 +8,7 @@ const files = [
   'app/contexts/ToastContext.tsx'
 ];
 
-console.log('🔍 Checking JSX syntax in problematic files...');
+
 
 files.forEach(file => {
   try {
@@ -32,15 +32,15 @@ files.forEach(file => {
       issues.push('Missing use client directive');
     }
     
-    console.log(`\n📁 ${file}:`);
+    
     if (issues.length === 0) {
-      console.log('  ✅ No obvious issues found');
+      
     } else {
-      issues.forEach(issue => console.log(`  ❌ ${issue}`));
+      issues.forEach(issue => );
     }
     
   } catch (error) {
-    console.log(`\n📁 ${file}:`);
-    console.log(`  ❌ Error reading file: ${error.message}`);
+    
+    
   }
 });

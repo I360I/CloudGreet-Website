@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { businessName, businessType, email, password, phone, address } = body
 
-    console.log('Testing full registration flow...')
+    
 
     // Step 1: Create user
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const user = authUser.user
-    console.log('User created:', user.id)
+    
 
     // Step 2: Create business
     const { data: business, error: businessError } = await supabaseAdmin
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('Business created:', business.id)
+    
 
     // Step 3: Update user metadata
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (updateError) {
-      console.log('Update error (non-critical):', updateError.message)
+      :', updateError.message)
     }
 
     // Step 4: Create JWT token
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    console.log('Full registration successful')
+    
 
     return NextResponse.json({
       success: true,
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.log('Full registration test error:', error)
+    
     return NextResponse.json({
       success: false,
       error: 'Full registration test failed',

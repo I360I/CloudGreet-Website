@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔒 FIXING CRITICAL SECURITY ISSUES');
-console.log('==================================\n');
+
+
 
 const apiDir = path.join(__dirname, '../app/api');
 
@@ -33,7 +33,7 @@ function fixEnvironmentVariableValidation(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed environment variable validation in ${filePath.replace(__dirname + '/../', '')}`);
+    }`);
   }
 }
 
@@ -52,7 +52,7 @@ function fixErrorMessageSanitization(filePath) {
   
   if (modified) {
     fs.writeFileSync(filePath, content);
-    console.log(`✅ Fixed error message sanitization in ${filePath.replace(__dirname + '/../', '')}`);
+    }`);
   }
 }
 
@@ -74,6 +74,6 @@ function scanDirectory(dir) {
 
 scanDirectory(apiDir);
 
-console.log('\n🔒 CRITICAL SECURITY FIXES COMPLETE!');
+
 
 

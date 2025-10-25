@@ -7,7 +7,7 @@ const supabase = createClient(
 );
 
 async function checkDemoBusiness() {
-  console.log('🔍 Checking demo business setup...');
+  
   
   // Check if demo business exists
   const { data: business, error: businessError } = await supabase
@@ -17,7 +17,7 @@ async function checkDemoBusiness() {
     .single();
   
   if (businessError || !business) {
-    console.log('❌ Demo business not found - creating it...');
+    
     
     // Create demo business
     const { data: newBusiness, error: createError } = await supabase
@@ -52,10 +52,10 @@ async function checkDemoBusiness() {
     if (createError) {
       console.error('❌ Error creating demo business:', createError);
     } else {
-      console.log('✅ Demo business created successfully');
+      
     }
   } else {
-    console.log('✅ Demo business exists');
+    
   }
   
   // Check if demo agent exists
@@ -66,7 +66,7 @@ async function checkDemoBusiness() {
     .single();
   
   if (agentError || !agent) {
-    console.log('❌ Demo agent not found - creating it...');
+    
     
     // Create demo agent
     const { data: newAgent, error: createAgentError } = await supabase
@@ -99,10 +99,10 @@ async function checkDemoBusiness() {
     if (createAgentError) {
       console.error('❌ Error creating demo agent:', createAgentError);
     } else {
-      console.log('✅ Demo agent created successfully');
+      
     }
   } else {
-    console.log('✅ Demo agent exists');
+    
   }
 }
 

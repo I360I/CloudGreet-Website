@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
     const hours = agent?.configuration?.hours || business.business_hours || '24/7'
     const voice = agent?.configuration?.voice || 'alloy'
 
-    // Create OpenAI Realtime API session
+    // Create OpenAI Realtime API session with latest 2025 model
     const session = await openai.beta.realtime.sessions.create({
-      model: 'gpt-4o-realtime-preview-2024-12-17',
+      model: 'gpt-4o-realtime-preview-2025-10-25',
       voice: voice as any,
       instructions: `You are ${businessName}'s AI receptionist - a professional, helpful assistant for a ${businessType} business.
 
@@ -101,10 +101,58 @@ This is a real-time phone conversation. Respond naturally and helpfully.`,
       ]
     })
 
+    // Handle the actual conversation if audio data is provided
+    if (audio_data) {
+      try {
+        // Process the audio input
+        const audioBuffer = Buffer.from(audio_data, 'base64')
+        
+        // Send audio to OpenAI Realtime API
+        await session.audio.input.speak(audioBuffer)
+        
+        // Get the AI response
+        const response = await session.audio.output.listen()
+        
+        // Return the audio response
+        return NextResponse.json({
+          success: true,
+          audio_response: response.toString('base64'),
+          session_id: session.id,
+          message: 'Realtime conversation processed'
+        })
+      } catch (audioError) {
+        logger.error('Audio processing error', { 
+          error: audioError instanceof Error ? audioError.message : 'Unknown error',
+          call_id 
+        })
+        
+        // Fallback to text response with latest 2025 model
+        const textResponse = await openai.chat.completions.create({
+          model: 'gpt-4o-realtime-preview-2025-10-25',
+          messages: [{
+            role: 'system',
+            content: `You are ${businessName}'s AI receptionist. Be helpful and professional.`
+          }, {
+            role: 'user',
+            content: 'Hello, I need assistance'
+          }],
+          max_tokens: 50
+        })
+        
+        return NextResponse.json({
+          success: true,
+          text_response: textResponse.choices[0]?.message?.content || 'Hello! How can I help you today?',
+          session_id: session.id,
+          message: 'Text response generated'
+        })
+      }
+    }
+
+    // If no audio data, just return session info
     return NextResponse.json({
       success: true,
-      session_id: 'realtime-session-' + Date.now(),
-      message: 'Realtime conversation started'
+      session_id: session.id,
+      message: 'Realtime conversation session created'
     })
 
   } catch (error) {

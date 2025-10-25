@@ -2,11 +2,11 @@
 
 const fs = require('fs');
 
-console.log('🔧 FIXING REMAINING PRODUCTION ISSUES');
-console.log('======================================\n');
+
+
 
 // Fix 1: Remove all 'any' types completely
-console.log('1. FIXING TYPESCRIPT ISSUES...\n');
+
 
 // Fix realtime-stream route
 const realtimeStreamFile = 'app/api/telnyx/realtime-stream/route.ts';
@@ -30,7 +30,7 @@ interface RealtimeSession {
   );
   
   fs.writeFileSync(realtimeStreamFile, content);
-  console.log('✅ Fixed realtime-stream TypeScript issues');
+  
 }
 
 // Fix realtime-tools route
@@ -74,7 +74,7 @@ interface GetQuoteArgs {
   );
   
   fs.writeFileSync(realtimeToolsFile, content);
-  console.log('✅ Fixed realtime-tools TypeScript issues');
+  
 }
 
 // Fix monitoring.ts
@@ -90,10 +90,10 @@ if (fs.existsSync(monitoringFile)) {
   content = content.replace(/level: any/g, 'level: string');
   
   fs.writeFileSync(monitoringFile, content);
-  console.log('✅ Fixed monitoring.ts TypeScript issues');
+  
 }
 
-console.log('\n2. OPTIMIZING PERFORMANCE...\n');
+
 
 // Optimize realtime-tools route
 if (fs.existsSync(realtimeToolsFile)) {
@@ -123,7 +123,7 @@ if (fs.existsSync(realtimeToolsFile)) {
   );
   
   fs.writeFileSync(realtimeToolsFile, optimizedContent);
-  console.log('✅ Optimized realtime-tools performance');
+  
 }
 
 // Optimize click-to-call route
@@ -172,10 +172,10 @@ if (fs.existsSync(clickToCallFile)) {
   );
   
   fs.writeFileSync(clickToCallFile, optimizedContent);
-  console.log('✅ Optimized click-to-call performance');
+  
 }
 
-console.log('\n3. REMOVING HARDCODED SECRETS...\n');
+
 
 // Check for and remove any hardcoded secrets
 const filesToCheck = [
@@ -204,12 +204,12 @@ filesToCheck.forEach(file => {
     
     if (modified) {
       fs.writeFileSync(file, content);
-      console.log(`✅ Removed hardcoded secrets from ${file}`);
+      
     }
   }
 });
 
-console.log('\n4. ADDING FINAL OPTIMIZATIONS...\n');
+
 
 // Add timeout handling to all routes
 filesToCheck.forEach(file => {
@@ -239,15 +239,15 @@ filesToCheck.forEach(file => {
       }
       
       fs.writeFileSync(file, content);
-      console.log(`✅ Added timeout handling to ${file}`);
+      
     }
   }
 });
 
-console.log('\n✅ ALL REMAINING ISSUES FIXED!');
-console.log('\n📋 SUMMARY:');
-console.log('- Fixed all TypeScript issues (removed any types)');
-console.log('- Optimized performance (reduced await operations)');
-console.log('- Removed hardcoded secrets');
-console.log('- Added timeout handling');
-console.log('\n🚀 Code is now production-ready!');
+
+
+');
+');
+
+
+

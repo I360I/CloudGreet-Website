@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔍 CHECKING ALL DATABASE COLUMN MISMATCHES...\n');
+
 
 // Known actual database columns from your schema
 const actualColumns = {
@@ -138,32 +138,32 @@ function scanDirectory(dir) {
 }
 
 // Scan the entire codebase
-console.log('📁 Scanning codebase for database column mismatches...\n');
+
 scanDirectory('.');
 
 // Report results
-console.log(`\n🚨 FOUND ${mismatches.length} POTENTIAL DATABASE COLUMN MISMATCHES:\n`);
+
 
 if (mismatches.length === 0) {
-  console.log('✅ No database column mismatches found!');
+  
 } else {
   mismatches.forEach((mismatch, index) => {
-    console.log(`${index + 1}. ${mismatch.file}:${mismatch.line}`);
-    console.log(`   Table: ${mismatch.table}`);
-    console.log(`   Column: ${mismatch.column}`);
+    
+    
+    
     if (mismatch.actualColumns) {
-      console.log(`   Available columns: ${mismatch.actualColumns.slice(0, 5).join(', ')}${mismatch.actualColumns.length > 5 ? '...' : ''}`);
+      .join(', ')}${mismatch.actualColumns.length > 5 ? '...' : ''}`);
     }
-    console.log(`   Code: ${mismatch.code}`);
-    console.log('');
+    
+    
   });
 }
 
-console.log('\n🔧 RECOMMENDED ACTIONS:');
-console.log('1. Review each mismatch above');
-console.log('2. Update column names to match actual database schema');
-console.log('3. Test database operations after fixes');
-console.log('4. Run this script again to verify fixes');
+
+
+
+
+
 
 // Save results to file
 const reportPath = 'database-mismatch-report.txt';
@@ -172,4 +172,4 @@ const reportContent = mismatches.map((mismatch, index) =>
 ).join('\n');
 
 fs.writeFileSync(reportPath, `DATABASE COLUMN MISMATCH REPORT\nGenerated: ${new Date().toISOString()}\n\n${reportContent}`);
-console.log(`\n📄 Full report saved to: ${reportPath}`);
+

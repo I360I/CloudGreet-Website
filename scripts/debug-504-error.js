@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 
-console.log('🔍 DEBUGGING 504 ERROR AND JSON PARSING ISSUE...\n');
+
 
 // Check for potential issues in the click-to-call route
 const clickToCallFile = 'app/api/click-to-call/initiate/route.ts';
@@ -10,7 +10,7 @@ const clickToCallFile = 'app/api/click-to-call/initiate/route.ts';
 if (fs.existsSync(clickToCallFile)) {
   const content = fs.readFileSync(clickToCallFile, 'utf8');
   
-  console.log('📋 CHECKING CLICK-TO-CALL ROUTE FOR ISSUES:\n');
+  
   
   // Check for potential JSON parsing issues
   const jsonIssues = [
@@ -22,7 +22,7 @@ if (fs.existsSync(clickToCallFile)) {
   jsonIssues.forEach(({ pattern, issue }) => {
     const matches = content.match(pattern);
     if (matches) {
-      console.log(`⚠️  ${issue}: ${matches.length} occurrences`);
+      
     }
   });
   
@@ -36,7 +36,7 @@ if (fs.existsSync(clickToCallFile)) {
   timeoutIssues.forEach(({ pattern, issue }) => {
     const matches = content.match(pattern);
     if (matches) {
-      console.log(`⏱️  ${issue}: ${matches.length} occurrences`);
+      
     }
   });
   
@@ -50,23 +50,23 @@ if (fs.existsSync(clickToCallFile)) {
   errorHandling.forEach(({ pattern, issue }) => {
     const matches = content.match(pattern);
     if (matches) {
-      console.log(`🛡️  ${issue}: ${matches.length} occurrences`);
+      
     }
   });
   
   // Look for specific problematic patterns
-  console.log('\n🔍 SPECIFIC ISSUES TO CHECK:\n');
+  
   
   // Check for the specific error pattern
   if (content.includes('An error o')) {
-    console.log('❌ FOUND: "An error o" pattern - this is likely causing the JSON parsing error');
+    
   }
   
   // Check for incomplete error messages
   const incompleteErrors = content.match(/"[^"]*An error[^"]*"/g);
   if (incompleteErrors) {
-    console.log('❌ INCOMPLETE ERROR MESSAGES:');
-    incompleteErrors.forEach(error => console.log(`   ${error}`));
+    
+    incompleteErrors.forEach(error => );
   }
   
   // Check for potential infinite loops or heavy operations
@@ -79,23 +79,23 @@ if (fs.existsSync(clickToCallFile)) {
   heavyOperations.forEach(({ pattern, issue }) => {
     const matches = content.match(pattern);
     if (matches) {
-      console.log(`🔄 ${issue}: ${matches.length} occurrences`);
+      
     }
   });
   
-  console.log('\n📋 RECOMMENDED FIXES:\n');
-  console.log('1. Add proper error handling for all fetch calls');
-  console.log('2. Add timeout handling for external API calls');
-  console.log('3. Validate JSON responses before parsing');
-  console.log('4. Add try-catch around all database operations');
-  console.log('5. Check for incomplete error messages');
+  
+  
+  
+  
+  
+  
   
 } else {
-  console.log('❌ Click-to-call route file not found');
+  
 }
 
-console.log('\n🔧 NEXT STEPS:');
-console.log('1. Check Vercel logs for the actual error');
-console.log('2. Add proper error handling to prevent 504s');
-console.log('3. Test with a simpler version of the route');
-console.log('4. Check for memory leaks or infinite loops');
+
+
+
+
+

@@ -10,7 +10,7 @@ const files = [
   'app/admin/leads/page.tsx'
 ];
 
-console.log('🔧 Fixing JSX parsing issues...');
+
 
 files.forEach(file => {
   try {
@@ -37,11 +37,11 @@ files.forEach(file => {
     
     // Write back the cleaned content
     fs.writeFileSync(file, content, 'utf8');
-    console.log(`✅ Fixed ${file}`);
+    
     
   } catch (error) {
-    console.log(`❌ Error fixing ${file}: ${error.message}`);
+    
   }
 });
 
-console.log('🎉 JSX fixes completed!');
+

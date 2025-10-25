@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Create real-time AI session for testing
     const session = await openai.beta.realtime.sessions.create({
-      model: 'gpt-4o-realtime-preview-2024-12-17',
+      model: 'gpt-4o-realtime-preview-2025-10-25',
       voice: voice as any,
       instructions: `You are ${businessName}'s AI receptionist - a professional, helpful assistant for a ${businessType} business.
 
@@ -71,7 +71,7 @@ This is a real-time phone conversation. Respond naturally and helpfully.`
     
     // Simulate real-time conversation
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-realtime-preview-2024-12-17',
+      model: 'gpt-4o-realtime-preview-2025-10-25',
       messages: [
         {
           role: 'system',
@@ -115,7 +115,7 @@ This is a real-time phone conversation. Respond naturally and helpfully.`
       testMessage,
       aiResponse,
       audioData: audioBuffer.toString('base64'),
-      realtimeModel: 'gpt-4o-realtime-preview-2024-12-17',
+      realtimeModel: 'gpt-4o-realtime-preview-2025-10-25',
       responseTime: '< 300ms'
     })
 

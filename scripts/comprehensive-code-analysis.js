@@ -3,8 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔍 COMPREHENSIVE CODEBASE ANALYSIS');
-console.log('=====================================\n');
+
+
 
 // Track all issues found
 const issues = {
@@ -29,11 +29,11 @@ const filesToCheck = [
   'lib/supabase.ts'
 ];
 
-console.log('📁 ANALYZING CORE FILES...\n');
+
 
 filesToCheck.forEach(file => {
   if (fs.existsSync(file)) {
-    console.log(`✅ ${file} - EXISTS`);
+    
     
     const content = fs.readFileSync(file, 'utf8');
     
@@ -75,16 +75,16 @@ filesToCheck.forEach(file => {
     }
     
   } else {
-    console.log(`❌ ${file} - MISSING`);
+    
     issues.build.push(`${file}: File missing`);
   }
 });
 
-console.log('\n🔍 CHECKING DATABASE SCHEMA...\n');
+
 
 // Check database migrations
 const migrationFiles = fs.readdirSync('migrations').filter(f => f.endsWith('.sql'));
-console.log(`Found ${migrationFiles.length} migration files`);
+
 
 migrationFiles.forEach(file => {
   const content = fs.readFileSync(`migrations/${file}`, 'utf8');
@@ -98,19 +98,19 @@ migrationFiles.forEach(file => {
   }
 });
 
-console.log('\n📊 ISSUES SUMMARY:');
-console.log('==================\n');
+
+
 
 Object.entries(issues).forEach(([category, issueList]) => {
   if (issueList.length > 0) {
-    console.log(`🚨 ${category.toUpperCase()}: ${issueList.length} issues`);
-    issueList.forEach(issue => console.log(`   - ${issue}`));
-    console.log('');
+    }: ${issueList.length} issues`);
+    issueList.forEach(issue => );
+    
   }
 });
 
-console.log('\n🎯 PRIORITY FIXES NEEDED:');
-console.log('========================\n');
+
+
 
 // High priority issues
 const highPriority = [
@@ -120,9 +120,9 @@ const highPriority = [
 ];
 
 if (highPriority.length > 0) {
-  console.log('🔥 HIGH PRIORITY (Must fix before deployment):');
-  highPriority.forEach(issue => console.log(`   - ${issue}`));
-  console.log('');
+  :');
+  highPriority.forEach(issue => );
+  
 }
 
 // Medium priority issues  
@@ -132,9 +132,9 @@ const mediumPriority = [
 ];
 
 if (mediumPriority.length > 0) {
-  console.log('⚠️  MEDIUM PRIORITY (Should fix for production):');
-  mediumPriority.forEach(issue => console.log(`   - ${issue}`));
-  console.log('');
+  :');
+  mediumPriority.forEach(issue => );
+  
 }
 
 // Low priority issues
@@ -144,18 +144,18 @@ const lowPriority = [
 ];
 
 if (lowPriority.length > 0) {
-  console.log('📝 LOW PRIORITY (Nice to have):');
-  lowPriority.forEach(issue => console.log(`   - ${issue}`));
-  console.log('');
+  :');
+  lowPriority.forEach(issue => );
+  
 }
 
-console.log('\n📋 NEXT STEPS:');
-console.log('==============\n');
-console.log('1. Fix all HIGH PRIORITY issues first');
-console.log('2. Address MEDIUM PRIORITY issues for production quality');
-console.log('3. Consider LOW PRIORITY issues for best practices');
-console.log('4. Test everything locally before deployment');
-console.log('5. Create comprehensive test suite');
-console.log('6. Document deployment process');
 
-console.log('\n✅ ANALYSIS COMPLETE!');
+
+
+
+
+
+
+
+
+

@@ -4,7 +4,7 @@ const path = require('path');
 // Fix motion components in automation page
 const filePath = 'app/admin/automation/page.tsx';
 
-console.log('🔧 Fixing motion components in automation page...');
+
 
 try {
   let content = fs.readFileSync(filePath, 'utf8');
@@ -23,7 +23,7 @@ try {
   content = content.replace(/import { motion } from 'framer-motion'\n/, '');
   
   fs.writeFileSync(filePath, content);
-  console.log('✅ Fixed motion components in automation page');
+  
   
 } catch (error) {
   console.error('❌ Error fixing motion components:', error.message);

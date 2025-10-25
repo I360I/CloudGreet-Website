@@ -71,7 +71,7 @@ export default function AppointmentsPage() {
 
   const handleEditAppointment = (appointmentId: string) => {
     // TODO: Implement edit appointment functionality
-    console.log('Edit appointment:', appointmentId)
+    
   }
 
   const getStatusIcon = (status: string) => {

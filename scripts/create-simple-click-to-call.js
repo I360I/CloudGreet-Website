@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 
-console.log('🔧 CREATING SIMPLIFIED CLICK-TO-CALL ROUTE...\n');
+
 
 // Create a minimal version of the click-to-call route for testing
 const simpleRoute = `import { NextRequest, NextResponse } from 'next/server'
@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 Simple click-to-call initiated')
+    
     
     const { phoneNumber, businessName } = await request.json()
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const cleanPhone = phoneNumber.replace(/\\D/g, '')
     const formattedPhone = cleanPhone.length === 10 ? \`+1\${cleanPhone}\` : \`+\${cleanPhone}\`
 
-    console.log('📞 Formatted phone:', formattedPhone)
+    
 
     // Check if Telnyx is configured
     if (!process.env.TELYNX_API_KEY) {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const fromNumber = '+18333956731'
     const connectionId = process.env.TELYNX_CONNECTION_ID || '2786691125270807749'
 
-    console.log('📞 Making Telnyx call...')
+    
 
     // Create the call payload
     const callPayload = {
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       webhook_url_method: 'POST'
     }
 
-    console.log('📞 Call payload:', JSON.stringify(callPayload, null, 2))
+    )
 
     // Make Telnyx API call with timeout
     const controller = new AbortController()
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     const callData = await telnyxResponse.json()
-    console.log('✅ Telnyx call created:', callData)
+    
 
     // Store the call in database (simplified)
     const { error: callError } = await supabaseAdmin
@@ -128,17 +128,17 @@ export async function POST(request: NextRequest) {
 // Write the simplified route
 fs.writeFileSync('app/api/click-to-call/initiate/route.ts', simpleRoute);
 
-console.log('✅ Created simplified click-to-call route');
-console.log('\n🔧 SIMPLIFICATIONS MADE:');
-console.log('1. Removed complex AI session creation');
-console.log('2. Removed business/agent creation logic');
-console.log('3. Added 10-second timeout for Telnyx API');
-console.log('4. Simplified database operations');
-console.log('5. Better error handling and JSON responses');
-console.log('6. Removed webhook testing');
 
-console.log('\n📋 NEXT STEPS:');
-console.log('1. Commit and push this simplified version');
-console.log('2. Test the call functionality');
-console.log('3. If it works, gradually add back features');
-console.log('4. Monitor for 504 errors');
+
+
+
+
+
+
+
+
+
+
+
+
+

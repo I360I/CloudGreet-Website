@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-console.log('🔧 FIXING DATABASE SCHEMA ISSUES...\n');
+
 
 // Create SQL migration to fix the database schema
 const migrationSQL = `
@@ -98,23 +98,23 @@ CREATE INDEX IF NOT EXISTS idx_ai_agents_active ON ai_agents(is_active);
 // Write the migration file
 fs.writeFileSync('migrations/fix-database-schema.sql', migrationSQL);
 
-console.log('✅ Created database schema fix migration');
-console.log('📝 Migration file: migrations/fix-database-schema.sql');
-console.log('\n🔧 NEXT STEPS:');
-console.log('1. Run this migration in your Supabase database');
-console.log('2. Test the call flow again');
-console.log('3. Check if the database errors are resolved');
 
-console.log('\n📋 WHAT THIS FIXES:');
-console.log('✅ Adds missing ai_response column to calls table');
-console.log('✅ Adds missing ai_session_id column to calls table');
-console.log('✅ Creates toll_free_numbers table with proper columns');
-console.log('✅ Creates ai_agents table with proper relationships');
-console.log('✅ Creates demo business and agent records');
-console.log('✅ Creates toll free number record for demo');
-console.log('✅ Adds proper indexes for performance');
 
-console.log('\n🚨 CRITICAL:');
-console.log('You need to run this SQL migration in your Supabase database');
-console.log('Go to Supabase → SQL Editor → Run this migration');
-console.log('Then test the call flow again');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -179,7 +179,7 @@ export function useRealtimeMetrics(businessId: string) {
               filter: `business_id=eq.${businessId}`
             }, 
             (payload: any) => {
-              console.log('Call update:', payload)
+              
               setData((prev: any) => ({
                 ...prev,
                 calls: [...(prev?.calls || []), payload.new].slice(-10) // Keep last 10 calls
@@ -194,7 +194,7 @@ export function useRealtimeMetrics(businessId: string) {
               filter: `business_id=eq.${businessId}`
             }, 
             (payload: any) => {
-              console.log('Appointment update:', payload)
+              
               setData((prev: any) => ({
                 ...prev,
                 appointments: [...(prev?.appointments || []), payload.new].slice(-10)
@@ -209,7 +209,7 @@ export function useRealtimeMetrics(businessId: string) {
               filter: `business_id=eq.${businessId}`
             }, 
             (payload: any) => {
-              console.log('SMS update:', payload)
+              
               setData((prev: any) => ({
                 ...prev,
                 sms: [...(prev?.sms || []), payload.new].slice(-10)

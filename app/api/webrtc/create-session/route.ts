@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const { businessName, businessType, services, hours } = await request.json()
 
-    console.log('🎧 Creating WebRTC session for:', businessName)
+    
 
     // Get your real business
     const { data: business } = await supabaseAdmin
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     const telnyxData = await telnyxResponse.json()
-    console.log('✅ Telnyx WebRTC session created:', telnyxData)
+    
 
     return NextResponse.json({
       success: true,

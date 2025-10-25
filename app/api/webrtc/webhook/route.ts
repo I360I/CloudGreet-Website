@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    console.log('🎧 WebRTC webhook received:', body)
+    
 
     const { 
       session_id,
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     // Handle different event types
     switch (event_type) {
       case 'call.initiated':
-        console.log('📞 WebRTC call initiated')
+        
         return NextResponse.json({
           call_id: call_control_id,
           status: 'answered',
@@ -64,21 +64,21 @@ export async function POST(request: NextRequest) {
         })
 
       case 'call.answered':
-        console.log('📞 WebRTC call answered')
+        
         return NextResponse.json({
           call_id: call_control_id,
           status: 'answered'
         })
 
       case 'call.hangup':
-        console.log('📞 WebRTC call ended')
+        
         return NextResponse.json({
           call_id: call_control_id,
           status: 'hangup'
         })
 
       default:
-        console.log('📞 WebRTC event:', event_type)
+        
         return NextResponse.json({
           call_id: call_control_id,
           status: 'processed'

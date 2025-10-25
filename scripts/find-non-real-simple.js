@@ -116,49 +116,49 @@ function scanDirectory(dirPath) {
  * Print results
  */
 function printResults() {
-  console.log(`\n🔍 NON-REAL IMPLEMENTATION DETECTOR RESULTS\n`);
   
-  console.log(`📊 SUMMARY:`);
-  console.log(`Total files scanned: ${results.totalFiles}`);
-  console.log(`Files with issues: ${results.issues.length}\n`);
+  
+  
+  
+  
   
   if (results.issues.length === 0) {
-    console.log(`✅ NO NON-REAL IMPLEMENTATIONS FOUND!`);
-    console.log(`Your codebase is 100% real and production-ready!\n`);
+    
+    
     return;
   }
   
   // Print detailed issues
-  console.log(`🚨 DETAILED ISSUES:\n`);
+  
   
   results.issues.forEach((fileResult, index) => {
-    console.log(`${index + 1}. ${fileResult.file}`);
+    
     
     fileResult.issues.forEach((issue, issueIndex) => {
-      console.log(`   Line ${issue.line}: ${issue.category}`);
-      console.log(`   Pattern: ${issue.pattern}`);
-      console.log(`   Content: ${issue.content}`);
-      console.log('');
+      
+      
+      
+      
     });
     
-    console.log('');
+    
   });
   
   // Print recommendations
-  console.log(`💡 RECOMMENDATIONS:\n`);
-  console.log(`• Remove all mock/fake/placeholder data`);
-  console.log(`• Replace console.log with proper logger`);
-  console.log(`• Check if Math.random() is for legitimate purposes`);
-  console.log(`• Remove hardcoded secrets and API keys`);
-  console.log(`• Use environment variables instead`);
-  console.log('');
+  
+  
+  
+   is for legitimate purposes`);
+  
+  
+  
 }
 
 /**
  * Main execution
  */
 function main() {
-  console.log(`🔍 SCANNING FOR NON-REAL IMPLEMENTATIONS...\n`);
+  
   
   const startTime = Date.now();
   
@@ -167,7 +167,7 @@ function main() {
   
   directories.forEach(dir => {
     if (fs.existsSync(dir)) {
-      console.log(`Scanning ${dir}/...`);
+      
       scanDirectory(dir);
     }
   });
@@ -177,7 +177,7 @@ function main() {
   
   printResults();
   
-  console.log(`Scan completed in ${duration}ms\n`);
+  
   
   // Exit with error code if issues found
   if (results.issues.length > 0) {

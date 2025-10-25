@@ -7,10 +7,10 @@
 
 const BASE_URL = 'https://cloud-greet-website-qsng3mdn3-i360is-projects.vercel.app'
 
-console.log('🚀 CLOUDGREET END-TO-END JOURNEY TEST')
-console.log('=====================================')
-console.log(`Testing: ${BASE_URL}`)
-console.log('')
+
+
+
+
 
 let testResults = []
 let authToken = null
@@ -18,17 +18,17 @@ let businessId = null
 let phoneNumber = null
 
 async function testStep(stepName, testFunction) {
-  console.log(`\n📋 ${stepName}`)
-  console.log('─'.repeat(50))
+  
+  )
   
   try {
     const result = await testFunction()
     testResults.push({ step: stepName, status: 'PASS', result })
-    console.log(`✅ ${stepName}: PASS`)
+    
     return result
   } catch (error) {
     testResults.push({ step: stepName, status: 'FAIL', error: error.message })
-    console.log(`❌ ${stepName}: FAIL - ${error.message}`)
+    
     throw error
   }
 }
@@ -60,7 +60,7 @@ async function testUserRegistration() {
 
   if (!response.ok) {
     const errorData = await response.json()
-    console.log(`   Registration Error: ${JSON.stringify(errorData, null, 2)}`)
+    }`)
     throw new Error(`Registration failed: ${errorData.error || response.statusText}`)
   }
 
@@ -71,8 +71,8 @@ async function testUserRegistration() {
 
   authToken = result.data.token
   businessId = result.data.business.id
-  console.log(`   Business ID: ${businessId}`)
-  console.log(`   Token: ${authToken.substring(0, 20)}...`)
+  
+  }...`)
   
   return result
 }
@@ -97,7 +97,7 @@ async function testPhoneNumberProvisioning() {
   }
 
   phoneNumber = result.phoneNumber
-  console.log(`   Phone Number: ${phoneNumber}`)
+  
   
   return result
 }
@@ -118,9 +118,9 @@ async function testDashboardAccess() {
     throw new Error(`Dashboard data failed: ${result.error}`)
   }
 
-  console.log(`   Business: ${result.data.businessName}`)
-  console.log(`   Phone: ${result.data.phoneNumber}`)
-  console.log(`   Status: ${result.data.setupStatus}`)
+  
+  
+  
   
   return result
 }
@@ -150,10 +150,10 @@ async function testROICalculation() {
     totalAppointments: 0
   }
 
-  console.log(`   Total Revenue: $${roi.totalRevenue}`)
-  console.log(`   Total Costs: $${roi.totalCosts}`)
-  console.log(`   Net Profit: $${roi.netProfit}`)
-  console.log(`   ROI: ${roi.roiPercentage}%`)
+  
+  
+  
+  
   
   return result
 }
@@ -174,7 +174,7 @@ async function testCallLogs() {
     throw new Error(`Call logs failed: ${result.error}`)
   }
 
-  console.log(`   Total Calls: ${result.calls.length}`)
+  
   
   return result
 }
@@ -198,12 +198,12 @@ async function testAppointmentBooking() {
 
   if (!response.ok) {
     const errorData = await response.json()
-    console.log('   Error details:', errorData)
+    
     throw new Error(`Appointment booking failed: ${errorData.error || response.statusText}`)
   }
 
   const result = await response.json()
-  console.log(`   Appointment created: ${result.appointment?.id || 'Success'}`)
+  
   
   return result
 }
@@ -226,12 +226,12 @@ async function testBillingIntegration() {
 
   // We expect this to fail without a real appointment, but the API should be accessible
   if (response.status === 401 || response.status === 403) {
-    console.log(`   Billing API accessible (auth required)`)
+    `)
     return { status: 'accessible' }
   }
 
   if (response.status === 400) {
-    console.log(`   Billing API accessible (validation working)`)
+    `)
     return { status: 'accessible' }
   }
 
@@ -259,7 +259,7 @@ async function testSMSRecovery() {
   }
 
   const result = await response.json()
-  console.log(`   SMS Recovery: ${result.success ? 'Available' : 'Failed'}`)
+  
   
   return result
 }
@@ -273,7 +273,7 @@ async function testRealTimeUpdates() {
   })
 
   if (response.status === 200 || response.status === 401) {
-    console.log(`   Real-time system accessible`)
+    
     return { status: 'accessible' }
   }
 
@@ -282,7 +282,7 @@ async function testRealTimeUpdates() {
 
 async function runCompleteJourney() {
   try {
-    console.log('🎯 Starting Complete User Journey Test...\n')
+    
 
     // Step 1: Landing Page
     await testStep('Landing Page Access', testLandingPage)
@@ -314,30 +314,30 @@ async function runCompleteJourney() {
     // Step 10: Real-time Updates
     await testStep('Real-time Updates', testRealTimeUpdates)
 
-    console.log('\n🎉 COMPLETE JOURNEY TEST RESULTS')
-    console.log('================================')
-    console.log(`✅ Passed: ${testResults.filter(r => r.status === 'PASS').length}`)
-    console.log(`❌ Failed: ${testResults.filter(r => r.status === 'FAIL').length}`)
-    console.log('')
+    
+    
+    .length}`)
+    .length}`)
+    
 
     if (testResults.every(r => r.status === 'PASS')) {
-      console.log('🚀 CLOUDGREET IS PRODUCTION READY!')
-      console.log('   - Complete user journey works end-to-end')
-      console.log('   - All critical systems operational')
-      console.log('   - Revenue generation pipeline active')
-      console.log('   - Ready for real customers')
+      
+      
+      
+      
+      
     } else {
-      console.log('⚠️  SOME ISSUES DETECTED')
+      
       testResults.filter(r => r.status === 'FAIL').forEach(result => {
-        console.log(`   - ${result.step}: ${result.error}`)
+        
       })
     }
 
   } catch (error) {
-    console.log(`\n💥 JOURNEY TEST FAILED: ${error.message}`)
-    console.log('\n📋 FAILED STEPS:')
+    
+    
     testResults.filter(r => r.status === 'FAIL').forEach(result => {
-      console.log(`   - ${result.step}: ${result.error}`)
+      
     })
     process.exit(1)
   }
