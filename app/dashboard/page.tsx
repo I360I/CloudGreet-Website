@@ -19,7 +19,7 @@ import RealAnalytics from '../components/RealAnalytics'
 import RealActivityFeed from '../components/RealActivityFeed'
 import RealCharts from '../components/RealCharts'
 import TenantIsolationIndicator from '../components/TenantIsolationIndicator'
-import ROICalculator from '../components/ROICalculator'
+// import ROICalculator from '../components/ROICalculator'
 import CallQualityMetrics from '../components/CallQualityMetrics'
 import LeadScoring from '../components/LeadScoring'
 import BusinessHoursSettings from '../components/BusinessHoursSettings'
@@ -633,8 +633,8 @@ export default function Dashboard() {
               />
             </motion.div>
 
-            {/* ROI Calculator */}
-            <motion.div
+            {/* ROI Calculator - Temporarily disabled */}
+            {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
@@ -643,7 +643,7 @@ export default function Dashboard() {
                 businessId={dashboardData?.businessId || ''} 
                 roiData={dashboardData?.roi}
               />
-            </motion.div>
+            </motion.div> */}
 
             {/* Call Quality Metrics */}
             <motion.div

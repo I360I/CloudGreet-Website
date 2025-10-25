@@ -2,7 +2,11 @@
 
 import React from 'react'
 
-export default function CallQualityMetrics() {
+interface CallQualityMetricsProps {
+  businessId: string
+}
+
+export default function CallQualityMetrics({ businessId }: CallQualityMetricsProps) {
   return (
     <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6">
       <h3 className="text-lg font-semibold text-white mb-4">Call Quality Metrics</h3>
