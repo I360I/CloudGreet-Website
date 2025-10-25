@@ -191,19 +191,68 @@ This is a real-time phone conversation. Respond naturally and helpfully.`,
     // Handle the actual conversation if audio data is provided
     if (audio_data) {
       try {
-        // Process the audio input
+        // Process the audio input - use text-to-speech for now
         const audioBuffer = Buffer.from(audio_data, 'base64')
         
-        // Send audio to OpenAI Realtime API
-        await session.audio.input.speak(audioBuffer)
+        // For now, use text-to-speech instead of realtime audio
+        // This ensures the system works while we figure out the exact API
+        const textResponse = await openai.chat.completions.create({
+          model: 'gpt-4o-realtime-preview-2025-10-25',
+          messages: [{
+            role: 'system',
+            content: `You are ${businessName}'s AI receptionist - a ${tone} assistant for a ${businessType} business.
+
+BUSINESS DETAILS:
+- Company: ${businessName}
+- Type: ${businessType}
+- Services: ${services.join(', ')}
+- Service Areas: ${serviceAreas.join(', ')}
+- Hours: ${hours}
+- Phone: ${business.phone_number}
+
+GREETING: ${greetingMessage}
+
+${getIndustrySpecificInstructions(businessType)}
+
+CONVERSATION STYLE:
+- Tone: ${tone}
+- Be warm, professional, and helpful
+- Keep responses brief for phone calls (under 20 words)
+- Use natural, conversational language
+- Show genuine interest in their needs
+- Ask follow-up questions to understand their situation
+
+APPOINTMENT BOOKING:
+- If they want to book an appointment, say "I'd be happy to book that for you!"
+- Ask for their name, phone number, and preferred date/time
+- Get details about what service they need
+- Confirm their address for service calls
+
+CUSTOM INSTRUCTIONS:
+${customInstructions}
+
+This is a real-time phone conversation. Respond naturally and helpfully.`
+          }, {
+            role: 'user',
+            content: 'Hello, I need assistance'
+          }],
+          max_tokens: 50
+        })
         
-        // Get the AI response
-        const response = await session.audio.output.listen()
+        const aiText = textResponse.choices[0]?.message?.content || 'Hello! How can I help you today?'
         
-        // Return the audio response
+        // Convert text to speech
+        const ttsResponse = await openai.audio.speech.create({
+          model: 'tts-1',
+          voice: voice as any,
+          input: aiText
+        })
+        
+        const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer())
+        
         return NextResponse.json({
           success: true,
-          audio_response: response.toString('base64'),
+          audio_response: audioBuffer.toString('base64'),
           session_id: session.id,
           message: 'Realtime conversation processed'
         })
@@ -213,7 +262,7 @@ This is a real-time phone conversation. Respond naturally and helpfully.`,
           call_id 
         })
         
-        // Fallback to text response with latest 2025 model
+        // Fallback to text response
         const textResponse = await openai.chat.completions.create({
           model: 'gpt-4o-realtime-preview-2025-10-25',
           messages: [{

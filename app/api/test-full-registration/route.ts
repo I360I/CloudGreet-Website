@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (updateError) {
-      :', updateError.message)
+      logger.error('Failed to update user metadata', { error: updateError.message })
     }
 
     // Step 4: Create JWT token

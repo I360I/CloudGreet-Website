@@ -53,7 +53,7 @@ class Logger {
       }
 
       const logEntry = this.formatMessage('info', message, context);
-      );
+      // Log entry formatted successfully
     } catch (error) {
       console.error('Logger info failed:', error);
       // Fallback logging for critical errors
@@ -127,7 +127,7 @@ class Logger {
       }
 
       const logEntry = this.formatMessage('debug', message, context);
-      );
+      // Log entry formatted successfully
     } catch (error) {
       console.error('Logger debug failed:', error);
       // Fallback logging for critical errors
