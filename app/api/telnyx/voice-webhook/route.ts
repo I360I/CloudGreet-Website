@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
                 },
                 {
                   instruction: 'stream_audio',
-                  stream_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com"}/api/telnyx/realtime-stream`,
+                  stream_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com"}/api/telnyx/realtime-stream-working`,
                   stream_url_method: 'POST'
                 }
               ]
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         instructions: [
           {
             instruction: 'stream_audio',
-            stream_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com"}/api/telnyx/realtime-stream`,
+            stream_url: `${process.env.NEXT_PUBLIC_APP_URL || "https://cloudgreet.com"}/api/telnyx/realtime-stream-working`,
             stream_url_method: 'POST',
             stream_url_payload: {
               call_id: callId,
