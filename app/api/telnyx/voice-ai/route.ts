@@ -1,29 +1,80 @@
 import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
 
 export const dynamic = 'force-dynamic'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+})
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { call_id, business_id, audio_data } = body
-    
-    // Simple AI response
-    const aiResponse = "Hello! Thank you for calling. How can I help you today?"
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Voice AI working',
-      call_id,
-      business_id,
-      ai_response: aiResponse,
-      has_audio: !!audio_data,
-      timestamp: new Date().toISOString()
+    const { call_id, speech_result } = body
+
+    console.log('Voice AI request:', { call_id, speech_result })
+
+    // Get AI response based on what the caller said
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: `You are CloudGreet's AI receptionist. You are professional, helpful, and focused on qualifying leads and booking appointments. 
+
+          Your goals:
+          1. Greet the caller warmly
+          2. Ask about their service needs  
+          3. Qualify them as a lead
+          4. Offer to book an appointment
+          5. Collect their contact information
+          
+          Keep responses conversational and under 30 seconds. Be direct and professional.`
+        },
+        {
+          role: 'user',
+          content: speech_result || 'Hello, I need help with my business phone calls.'
+        }
+      ],
+      max_tokens: 150,
+      temperature: 0.7
     })
-  } catch (error) {
+
+    const aiResponse = completion.choices[0]?.message?.content || "Thank you for calling! How can I help you today?"
+
+    // Return the AI response as a say instruction
     return NextResponse.json({
-      success: false,
-      error: 'Voice AI error',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+      call_id,
+      instructions: [
+        {
+          instruction: 'say',
+          text: aiResponse,
+          voice: 'alloy'
+        },
+        {
+          instruction: 'gather',
+          input: ['speech'],
+          speech: {
+            timeout: 10,
+            language: 'en-US'
+          },
+          action_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/telnyx/voice-ai`,
+          action_url_method: 'POST'
+        }
+      ]
+    })
+
+  } catch (error) {
+    console.error('Voice AI error:', error)
+    return NextResponse.json({
+      call_id: body.call_id,
+      instructions: [
+        {
+          instruction: 'say',
+          text: 'I apologize, but I am having trouble understanding. Please try again.',
+          voice: 'alloy'
+        }
+      ]
+    })
   }
 }
