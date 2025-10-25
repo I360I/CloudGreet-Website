@@ -243,8 +243,8 @@ export default function LandingPage() {
                             successMsg.remove();
                           }, 3000);
                           
-                          // Make real API call to initiate test call
-                          const response = await fetch('/api/test/realtime-call', {
+                          // Make REAL API call to initiate test call
+                          const response = await fetch('/api/telnyx/initiate-call', {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
