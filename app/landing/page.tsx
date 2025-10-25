@@ -232,6 +232,17 @@ export default function LandingPage() {
                       const formattedNumber = phoneNumber.replace(/\D/g, '');
                       if (formattedNumber.length >= 10) {
                         try {
+                          // Show success message immediately (no system notification)
+                          const successMsg = document.createElement('div');
+                          successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                          successMsg.textContent = 'Call initiated! You should receive a call shortly.';
+                          document.body.appendChild(successMsg);
+                          
+                          // Remove message after 3 seconds
+                          setTimeout(() => {
+                            successMsg.remove();
+                          }, 3000);
+                          
                           // Make real API call to initiate test call
                           const response = await fetch('/api/test/realtime-call', {
                             method: 'POST',
@@ -246,20 +257,50 @@ export default function LandingPage() {
                           
                           const result = await response.json();
                           
-                          if (result.success) {
-                            alert('Call initiated! You should receive a call shortly.');
-                          } else {
-                            alert('Failed to initiate call. Please try again.');
+                          if (!result.success) {
+                            // Show error message if call fails
+                            const errorMsg = document.createElement('div');
+                            errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                            errorMsg.textContent = 'Failed to initiate call. Please try again.';
+                            document.body.appendChild(errorMsg);
+                            
+                            setTimeout(() => {
+                              errorMsg.remove();
+                            }, 3000);
                           }
                         } catch (error) {
                           console.error('Call initiation error:', error);
-                          alert('Failed to initiate call. Please try again.');
+                          // Show error message
+                          const errorMsg = document.createElement('div');
+                          errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                          errorMsg.textContent = 'Failed to initiate call. Please try again.';
+                          document.body.appendChild(errorMsg);
+                          
+                          setTimeout(() => {
+                            errorMsg.remove();
+                          }, 3000);
                         }
                       } else {
-                        alert('Please enter a valid 10-digit phone number.');
+                        // Show validation error
+                        const errorMsg = document.createElement('div');
+                        errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                        errorMsg.textContent = 'Please enter a valid 10-digit phone number.';
+                        document.body.appendChild(errorMsg);
+                        
+                        setTimeout(() => {
+                          errorMsg.remove();
+                        }, 3000);
                       }
                     } else {
-                      alert('Please enter your phone number first.');
+                      // Show validation error
+                      const errorMsg = document.createElement('div');
+                      errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                      errorMsg.textContent = 'Please enter your phone number first.';
+                      document.body.appendChild(errorMsg);
+                      
+                      setTimeout(() => {
+                        errorMsg.remove();
+                      }, 3000);
                     }
                   }}
                 />
