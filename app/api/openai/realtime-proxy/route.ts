@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     // Return the API key for client-side use
     return NextResponse.json({ 
       apiKey: apiKey,
-      wsUrl: 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-10-25'
+      wsUrl: 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17'
     })
   } catch (error: any) {
     console.error('❌ OpenAI proxy error:', error)

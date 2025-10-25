@@ -125,7 +125,7 @@ Important guidelines:
 
     // Generate AI response using OpenAI Realtime API
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-realtime-preview-2025-10-25',
+      model: 'gpt-4o-realtime-preview-2024-12-17',
       messages: [
         {
           role: 'system',

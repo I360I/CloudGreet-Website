@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Use real-time AI model for testing
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o-realtime-preview-2025-10-25',
+      model: 'gpt-4o-realtime-preview-2024-12-17',
       messages: [
         {
           role: 'system',
@@ -114,7 +114,7 @@ This is a real-time phone conversation. Respond naturally and helpfully.`
         hours,
         voice
       },
-      realtimeModel: 'gpt-4o-realtime-preview-2025-10-25',
+      realtimeModel: 'gpt-4o-realtime-preview-2024-12-17',
       audioData: audioBuffer.toString('base64')
     })
 

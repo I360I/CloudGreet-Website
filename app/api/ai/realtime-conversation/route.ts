@@ -78,7 +78,7 @@ async function createRealtimeSession(business: any, agent: any, voice: string) {
   const tone = agent?.configuration?.tone || 'professional'
 
   return await openai.beta.realtime.sessions.create({
-    model: 'gpt-4o-realtime-preview-2025-10-25',
+    model: 'gpt-4o-realtime-preview-2024-12-17',
     voice: voice as any,
     instructions: `You are ${businessName}'s AI receptionist - a professional, helpful assistant for a ${businessType} business.
 
