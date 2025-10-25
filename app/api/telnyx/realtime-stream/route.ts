@@ -105,26 +105,36 @@ export async function POST(request: NextRequest) {
     const agent = business.ai_agents
     const businessName = business.business_name || 'CloudGreet'
     const businessType = business.business_type || 'AI Receptionist Service'
-    const services = agent?.configuration?.services || business.services || ['General Services']
-    const hours = agent?.configuration?.hours || business.business_hours || '24/7'
-    const voice = agent?.configuration?.voice || 'alloy'
+    
+    // Use AI agent settings if available, fallback to business settings
+    const services = agent?.services || agent?.configuration?.services || business.services || ['General Services']
+    const hours = agent?.business_hours || agent?.configuration?.hours || business.business_hours || '24/7'
+    const voice = agent?.voice || agent?.configuration?.voice || 'alloy'
+    const greetingMessage = agent?.greeting_message || `Hello! Thank you for calling ${businessName}. How can I help you today?`
+    const tone = agent?.tone || 'professional'
+    const customInstructions = agent?.custom_instructions || ''
+    const serviceAreas = agent?.service_areas || business.service_areas || ['Local Area']
 
     // Create OpenAI Realtime API session with latest 2025 model
     const session = await openai.beta.realtime.sessions.create({
       model: 'gpt-4o-realtime-preview-2025-10-25',
       voice: voice as any,
-      instructions: `You are ${businessName}'s AI receptionist - a professional, helpful assistant for a ${businessType} business.
+      instructions: `You are ${businessName}'s AI receptionist - a ${tone} assistant for a ${businessType} business.
 
 BUSINESS DETAILS:
 - Company: ${businessName}
 - Type: ${businessType}
 - Services: ${services.join(', ')}
+- Service Areas: ${serviceAreas.join(', ')}
 - Hours: ${hours}
 - Phone: ${business.phone_number}
+
+GREETING: ${greetingMessage}
 
 ${getIndustrySpecificInstructions(businessType)}
 
 CONVERSATION STYLE:
+- Tone: ${tone}
 - Be warm, professional, and helpful
 - Keep responses brief for phone calls (under 20 words)
 - Use natural, conversational language
@@ -136,6 +146,9 @@ APPOINTMENT BOOKING:
 - Ask for their name, phone number, and preferred date/time
 - Get details about what service they need
 - Confirm their address for service calls
+
+CUSTOM INSTRUCTIONS:
+${customInstructions}
 
 This is a real-time phone conversation. Respond naturally and helpfully.`,
       input_audio_format: 'pcm16',
