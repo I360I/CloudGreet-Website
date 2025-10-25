@@ -224,15 +224,37 @@ export default function LandingPage() {
                 <RingOrb
                   size={300}
                   isClickable={true}
-                  onClick={() => {
+                  onClick={async () => {
                     const phoneInput = document.getElementById('phoneInput') as HTMLInputElement;
                     const phoneNumber = phoneInput?.value?.trim();
                     if (phoneNumber) {
-                      // Format phone number for tel: protocol
+                      // Format phone number
                       const formattedNumber = phoneNumber.replace(/\D/g, '');
                       if (formattedNumber.length >= 10) {
-                        // Use window.location.href for better compatibility
-                        window.location.href = `tel:+1${formattedNumber}`;
+                        try {
+                          // Make real API call to initiate test call
+                          const response = await fetch('/api/test/realtime-call', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              phoneNumber: `+1${formattedNumber}`,
+                              businessId: 'demo-business'
+                            })
+                          });
+                          
+                          const result = await response.json();
+                          
+                          if (result.success) {
+                            alert('Call initiated! You should receive a call shortly.');
+                          } else {
+                            alert('Failed to initiate call. Please try again.');
+                          }
+                        } catch (error) {
+                          console.error('Call initiation error:', error);
+                          alert('Failed to initiate call. Please try again.');
+                        }
                       } else {
                         alert('Please enter a valid 10-digit phone number.');
                       }

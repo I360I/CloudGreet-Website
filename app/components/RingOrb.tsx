@@ -19,7 +19,7 @@ const RingOrb: React.FC<RingOrbProps> = ({
   const animationRef = useRef<number>()
   const timeRef = useRef(0)
 
-  // Ring Wave class - circular version of the hero wave animation
+  // Ring Wave class - EXACT match to hero section waves but in ring formation
   class RingWave {
     canvas: HTMLCanvasElement
     index: number
@@ -39,6 +39,7 @@ const RingOrb: React.FC<RingOrbProps> = ({
     waveLength: number
     currentAmplitude: number
     currentOpacity: number
+    complexity: number
 
     constructor(canvas: HTMLCanvasElement, index: number, centerX: number, centerY: number, radius: number) {
       this.canvas = canvas
@@ -47,24 +48,25 @@ const RingOrb: React.FC<RingOrbProps> = ({
       this.centerY = centerY
       this.radius = radius
       
-      // Wave properties matching hero section exactly
-      this.amplitude = Math.random() * 15 + 10
-      this.frequency = Math.random() * 0.02 + 0.01
-      this.speed = Math.random() * 0.008 + 0.004
+      // EXACT wave properties from hero section
+      this.amplitude = Math.random() * 25 + 15  // Same as hero: 15-40
+      this.frequency = Math.random() * 0.008 + 0.004  // Same as hero: 0.004-0.012
+      this.speed = Math.random() * 0.4 + 0.2  // Same as hero: 0.2-0.6
       this.phase = Math.random() * Math.PI * 2
       
-      // Visual properties - exact match to hero section
-      this.opacity = Math.random() * 0.6 + 0.4
-      this.width = Math.random() * 2 + 1.5
+      // EXACT visual properties from hero section
+      this.opacity = Math.random() * 0.5 + 0.3  // Same as hero: 0.3-0.8
+      this.width = Math.random() * 1.5 + 1  // Same as hero: 1-2.5
       this.color = this.getElectricPurple()
       
-      // Animation properties
+      // EXACT animation properties from hero section
       this.pulsePhase = Math.random() * Math.PI * 2
-      this.pulseSpeed = Math.random() * 0.015 + 0.005
+      this.pulseSpeed = Math.random() * 0.015 + 0.005  // Same as hero
       
-      // Ring-specific properties
-      this.angleOffset = (index / 4) * Math.PI * 2 // Spread 4 waves around circle
-      this.waveLength = Math.random() * 50 + 30
+      // Ring-specific properties - spread waves around circle
+      this.angleOffset = (index / 4) * Math.PI * 2 // 4 waves around circle
+      this.waveLength = Math.random() * 100 + 50  // Same as hero: 50-150
+      this.complexity = Math.random() * 0.5 + 0.5  // Same as hero: 0.5-1.0
     }
 
     getElectricPurple() {
@@ -79,40 +81,56 @@ const RingOrb: React.FC<RingOrbProps> = ({
     }
 
     update(time: number) {
-      this.phase += this.speed
+      // EXACT update logic from hero section
+      this.phase += 0.008  // Same as hero: no horizontal movement, just phase
       this.pulsePhase += this.pulseSpeed
       
-      // Pulsing amplitude like hero section
-      const pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7
-      this.currentAmplitude = this.amplitude * pulse
-      
-      // Pulsing opacity like hero section
-      this.currentOpacity = this.opacity * (Math.sin(this.pulsePhase * 0.7) * 0.2 + 0.8)
+      // EXACT pulsing from hero section
+      const pulse = Math.sin(this.pulsePhase) * 0.2 + 0.8  // Same as hero
+      this.currentAmplitude = this.amplitude * (0.9 + pulse * 0.2)  // Same as hero
+      this.currentOpacity = this.opacity * pulse  // Same as hero
     }
 
     draw(ctx: CanvasRenderingContext2D) {
       ctx.save()
       
-      // Set up drawing properties
-      ctx.strokeStyle = this.color
+      // EXACT drawing setup from hero section
+      ctx.globalCompositeOperation = 'screen'  // Same as hero
+      
+      // EXACT gradient setup from hero section
+      const gradient = ctx.createRadialGradient(
+        this.centerX, this.centerY, this.radius - this.currentAmplitude,
+        this.centerX, this.centerY, this.radius + this.currentAmplitude
+      )
+      gradient.addColorStop(0, `${this.color}${Math.floor(this.currentOpacity * 255).toString(16).padStart(2, '0')}`)
+      gradient.addColorStop(0.5, `${this.color}${Math.floor(this.currentOpacity * 0.6 * 255).toString(16).padStart(2, '0')}`)
+      gradient.addColorStop(1, `${this.color}00`)
+      
+      ctx.strokeStyle = gradient
       ctx.lineWidth = this.width
       ctx.globalAlpha = this.currentOpacity
       
-      // Create shadow/glow effect like hero section
+      // EXACT glow effect from hero section
       ctx.shadowColor = this.color
-      ctx.shadowBlur = 15
+      ctx.shadowBlur = 20
       
       ctx.beginPath()
       
-      // Draw circular wave with wavy distortion
+      // Draw circular wave with EXACT same complexity as hero section
       const points = 200
       for (let i = 0; i <= points; i++) {
         const angle = (i / points) * Math.PI * 2 + this.angleOffset
-        const baseRadius = this.radius + Math.sin(angle * this.frequency + this.phase) * this.currentAmplitude
         
-        // Add secondary wave for complexity like hero section
+        // EXACT wave calculation from hero section
+        const baseWave = Math.sin(angle * this.frequency + this.phase) * this.currentAmplitude
+        
+        // EXACT secondary wave from hero section
         const secondaryWave = Math.sin(angle * this.frequency * 2 + this.phase * 1.5) * this.currentAmplitude * 0.3
-        const finalRadius = baseRadius + secondaryWave
+        
+        // EXACT complexity calculation from hero section
+        const complexityWave = Math.sin(angle * this.frequency * 3 + this.phase * 0.7) * this.currentAmplitude * 0.15 * this.complexity
+        
+        const finalRadius = this.radius + baseWave + secondaryWave + complexityWave
         
         const x = this.centerX + Math.cos(angle) * finalRadius
         const y = this.centerY + Math.sin(angle) * finalRadius
@@ -143,10 +161,13 @@ const RingOrb: React.FC<RingOrbProps> = ({
     const centerY = canvas.height / 2
     const baseRadius = size * 0.3
     
-    // Create 4 ring waves (like the Ring movie)
+    // Create 4 ring waves (like the Ring movie) - UNSYMMETRICAL
     const waves = []
     for (let i = 0; i < 4; i++) {
-      waves.push(new RingWave(canvas, i, centerX, centerY, baseRadius))
+      const wave = new RingWave(canvas, i, centerX, centerY, baseRadius)
+      // Make waves unsymmetrical by varying their starting positions
+      wave.angleOffset += (Math.random() - 0.5) * Math.PI * 0.5  // Random offset for unsymmetrical look
+      waves.push(wave)
     }
     
     // Update and draw all waves
