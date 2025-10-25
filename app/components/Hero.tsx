@@ -6,9 +6,14 @@ import {
   Phone, ArrowRight, Shield, Calendar, Zap
 } from 'lucide-react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 
 // WAVE BACKGROUND - Original canvas-based purple waves with magnetic field effects
-import WaveBackground from './WaveBackground.jsx'
+// Use dynamic import to prevent hydration issues
+const WaveBackground = dynamic(() => import('./WaveBackground.jsx'), { 
+  ssr: false,
+  loading: () => <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-black to-slate-900" />
+})
 
 export default function Hero() {
 

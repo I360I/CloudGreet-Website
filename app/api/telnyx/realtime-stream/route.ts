@@ -192,7 +192,7 @@ This is a real-time phone conversation. Respond naturally and helpfully.`,
     if (audio_data) {
       try {
         // Process the audio input - use text-to-speech for now
-        const audioBuffer = Buffer.from(audio_data, 'base64')
+        const inputAudioBuffer = Buffer.from(audio_data, 'base64')
         
         // For now, use text-to-speech instead of realtime audio
         // This ensures the system works while we figure out the exact API
