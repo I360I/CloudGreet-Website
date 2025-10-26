@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
 
 export const dynamic = 'force-dynamic'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,24 +21,59 @@ export async function POST(request: NextRequest) {
 
     // Handle different event types
     if (eventType === 'call.answered') {
+      // Create a new Realtime API session
+      const session = await openai.beta.realtime.sessions.create({
+        model: 'gpt-4o-realtime-preview-2024-12-17',
+        voice: 'alloy',
+        instructions: `You are CloudGreet's AI receptionist. You are professional, helpful, and focused on qualifying leads and booking appointments. 
+
+        Your goals:
+        1. Greet the caller warmly
+        2. Ask about their service needs  
+        3. Qualify them as a lead
+        4. Offer to book an appointment
+        5. Collect their contact information
+        
+        Keep responses conversational and under 30 seconds. Be direct and professional.`,
+        tools: [
+          {
+            type: 'function',
+            name: 'book_appointment',
+            description: 'Book an appointment for the caller',
+            parameters: {
+              type: 'object',
+              properties: {
+                name: { type: 'string', description: 'Caller name' },
+                phone: { type: 'string', description: 'Caller phone number' },
+                email: { type: 'string', description: 'Caller email' },
+                service: { type: 'string', description: 'Service needed' },
+                preferred_date: { type: 'string', description: 'Preferred appointment date' },
+                preferred_time: { type: 'string', description: 'Preferred appointment time' }
+              },
+              required: ['name', 'phone', 'service']
+            }
+          }
+        ]
+      })
+
       return NextResponse.json({
         call_id: callId,
         status: 'answered',
         instructions: [
           {
-            instruction: 'say',
-            text: 'Hello! Thank you for calling CloudGreet. I am your AI receptionist. How can I help you today?',
-            voice: 'alloy'
+            instruction: 'stream_audio',
+            stream_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/telnyx/realtime-audio`,
+            stream_url_method: 'POST',
+            stream_url_payload: {
+              call_id: callId,
+              session_id: session.id,
+              from_number: fromNumber,
+              to_number: toNumber
+            }
           },
           {
-            instruction: 'gather',
-            input: ['speech'],
-            speech: {
-              timeout: 10,
-              language: 'en-US'
-            },
-            action_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/telnyx/voice-ai`,
-            action_url_method: 'POST'
+            instruction: 'record',
+            recording_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/calls/recording/${callId}`
           }
         ]
       })

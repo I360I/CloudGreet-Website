@@ -14,48 +14,54 @@ export async function POST(request: NextRequest) {
 
     console.log('Realtime stream request:', { call_id, session_id, from_number, to_number })
 
-    // For now, return a simple AI response
-    // In production, this would handle real-time audio streaming
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `You are CloudGreet's AI receptionist. You are professional, helpful, and focused on qualifying leads and booking appointments. 
+    // Create a new Realtime API session with the latest model
+    const session = await openai.beta.realtime.sessions.create({
+      model: 'gpt-4o-realtime-preview-2024-12-17',
+      voice: 'alloy',
+      instructions: `You are CloudGreet's AI receptionist. You are professional, helpful, and focused on qualifying leads and booking appointments. 
 
-          Your goals:
-          1. Greet the caller warmly
-          2. Ask about their service needs  
-          3. Qualify them as a lead
-          4. Offer to book an appointment
-          5. Collect their contact information
-          
-          Keep responses conversational and under 30 seconds. Be direct and professional.`
-        },
+      Your goals:
+      1. Greet the caller warmly
+      2. Ask about their service needs  
+      3. Qualify them as a lead
+      4. Offer to book an appointment
+      5. Collect their contact information
+      
+      Keep responses conversational and under 30 seconds. Be direct and professional.`,
+      tools: [
         {
-          role: 'user',
-          content: 'Hello, I need help with my business phone calls.'
+          type: 'function',
+          name: 'book_appointment',
+          description: 'Book an appointment for the caller',
+          parameters: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Caller name' },
+              phone: { type: 'string', description: 'Caller phone number' },
+              email: { type: 'string', description: 'Caller email' },
+              service: { type: 'string', description: 'Service needed' },
+              preferred_date: { type: 'string', description: 'Preferred appointment date' },
+              preferred_time: { type: 'string', description: 'Preferred appointment time' }
+            },
+            required: ['name', 'phone', 'service']
+          }
         }
-      ],
-      max_tokens: 150,
-      temperature: 0.7
+      ]
     })
 
-    const aiResponse = completion.choices[0]?.message?.content || "Hello! Thank you for calling CloudGreet. How can I help you today?"
-
-    // Return a simple response for now
+    // Return the session information for the webhook to use
     return NextResponse.json({
       success: true,
       call_id,
-      ai_response: aiResponse,
-      message: 'AI response generated successfully'
+      session_id: session.id,
+      message: 'Realtime session created successfully'
     })
 
   } catch (error) {
     console.error('Realtime stream error:', error)
     return NextResponse.json({
       success: false,
-      error: 'Failed to handle real-time stream'
+      error: 'Failed to create realtime session'
     }, { status: 500 })
   }
 }
