@@ -66,8 +66,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Voice AI error:', error)
+    // Try to get call_id from request body, fallback to 'unknown'
+    let callId = 'unknown'
+    try {
+      const errorBody = await request.json().catch(() => ({}))
+      callId = errorBody.call_id || 'unknown'
+    } catch {}
     return NextResponse.json({
-      call_id: body.call_id,
+      call_id: callId,
       instructions: [
         {
           instruction: 'say',

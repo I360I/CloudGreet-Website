@@ -97,7 +97,7 @@ async function handleCallInitiated(
     }
 
     // Create call record
-    await supabaseAdmin.from('calls').insert({
+    const { error: callError } = await supabaseAdmin.from('calls').insert({
       call_id: callId,
       business_id: business.id,
       from_number: fromNumber,
@@ -106,12 +106,12 @@ async function handleCallInitiated(
       direction: 'inbound',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
-    }).catch(error => {
-      // Handle duplicate key errors gracefully
-      if (error.code !== '23505') { // Not a duplicate
-        logger.error('Failed to create call record', { requestId, error: error.message })
-      }
     })
+    
+    // Handle duplicate key errors gracefully
+    if (callError && callError.code !== '23505') {
+      logger.error('Failed to create call record', { requestId, error: callError.message })
+    }
 
     logger.info('Call initiated', { requestId, callId, businessId: business.id })
     
@@ -163,26 +163,31 @@ async function handleCallAnswered(
       .single()
 
     // Update call record
-    await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from('calls')
       .update({
         status: 'answered',
         updated_at: new Date().toISOString()
       })
       .eq('call_id', callId)
-      .catch(error => {
-        // If call record doesn't exist, create it
-        supabaseAdmin.from('calls').insert({
-          call_id: callId,
-          business_id: business.id,
-          from_number: fromNumber,
-          to_number: toNumber,
-          status: 'answered',
-          direction: 'inbound',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+    
+    if (updateError) {
+      // If call record doesn't exist, create it
+      const { error: insertError } = await supabaseAdmin.from('calls').insert({
+        call_id: callId,
+        business_id: business.id,
+        from_number: fromNumber,
+        to_number: toNumber,
+        status: 'answered',
+        direction: 'inbound',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
+      
+      if (insertError) {
+        logger.warn('Failed to create call record on update', { requestId, callId, error: insertError.message })
+      }
+    }
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
     
@@ -279,7 +284,7 @@ async function handleCallMissed(
     // Schedule recovery for 30 seconds from now to avoid spam if they call back
     const scheduledAt = new Date(Date.now() + 30 * 1000).toISOString()
     
-    await supabaseAdmin
+    const { error: recoveryError } = await supabaseAdmin
       .from('missed_call_recoveries')
       .insert({
         business_id: business.id,
@@ -290,12 +295,11 @@ async function handleCallMissed(
         scheduled_at: scheduledAt,
         created_at: new Date().toISOString()
       })
-      .catch(error => {
-        // Handle duplicate key errors gracefully
-        if (error.code !== '23505') {
-          logger.error('Failed to schedule missed call recovery', { requestId, callId, error: error.message })
-        }
-      })
+    
+    // Handle duplicate key errors gracefully
+    if (recoveryError && recoveryError.code !== '23505') {
+      logger.error('Failed to schedule missed call recovery', { requestId, callId, error: recoveryError.message })
+    }
 
     // Trigger immediate processing (endpoint will check if it's time to send)
     // Also works with cron jobs that call /api/calls/process-recoveries

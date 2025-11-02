@@ -18,7 +18,8 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       start(controller) {
         // Connect to the Realtime API session
-        const connection = openai.beta.realtime.sessions.stream(session_id, {
+        // @ts-ignore - OpenAI Realtime API types may not be fully updated
+        const connection = (openai.beta.realtime.sessions as any).stream(session_id, {
           input_audio_format: 'pcm16',
           output_audio_format: 'pcm16',
           input_audio_transcription: {

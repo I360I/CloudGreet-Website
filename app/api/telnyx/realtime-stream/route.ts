@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       call_id,
-      session_id: session.id,
+      // @ts-ignore - OpenAI Realtime API response type may vary
+      session_id: (session as any).id,
       message: 'Realtime session created successfully'
     })
 

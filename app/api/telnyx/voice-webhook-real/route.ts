@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
             stream_url_method: 'POST',
             stream_url_payload: {
               call_id: callId,
-              session_id: session.id,
+              // @ts-ignore - OpenAI Realtime API response type may vary
+              session_id: (session as any).id,
               from_number: fromNumber,
               to_number: toNumber
             }

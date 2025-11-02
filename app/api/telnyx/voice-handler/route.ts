@@ -71,12 +71,18 @@ export async function POST(request: NextRequest) {
     const businessId = business.id
 
     // Load conversation history for context
-    const { data: history } = await supabaseAdmin
-      .from('conversation_history')
-      .select('user_message, ai_response')
-      .eq('call_id', callId)
-      .order('created_at', { ascending: true })
-      .catch(() => ({ data: [] })) // If table doesn't exist or error, use empty array
+    let history: { user_message: string; ai_response: string }[] = []
+    try {
+      const { data } = await supabaseAdmin
+        .from('conversation_history')
+        .select('user_message, ai_response')
+        .eq('call_id', callId)
+        .order('created_at', { ascending: true })
+      history = data || []
+    } catch (error) {
+      // If table doesn't exist or error, use empty array
+      logger.warn('Failed to load conversation history', { callId, error })
+    }
 
     // Build system prompt with business context
     const services = business.services || agent?.configuration?.services || ['General Services']
@@ -126,17 +132,18 @@ Important: Be natural, conversational, and helpful. Never mention you're an AI.`
       messages.push({ role: 'user', content: userSpeech })
       
       // Store user message in conversation history
-      await supabaseAdmin
-        .from('conversation_history')
-        .insert({
-          business_id: businessId,
-          call_id: callId,
-          user_message: userSpeech,
-          created_at: new Date().toISOString()
-        })
-        .catch(error => {
-          logger.warn('Failed to store user message', { callId, error: error.message })
-        })
+      try {
+        await supabaseAdmin
+          .from('conversation_history')
+          .insert({
+            business_id: businessId,
+            call_id: callId,
+            user_message: userSpeech,
+            created_at: new Date().toISOString()
+          })
+      } catch (error) {
+        logger.warn('Failed to store user message', { callId, error: error instanceof Error ? error.message : error })
+      }
     }
 
     // Use OpenAI with function calling for booking detection
@@ -303,7 +310,7 @@ Important: Be natural, conversational, and helpful. Never mention you're an AI.`
           instructions: [
             {
               instruction: 'say',
-              text: 'I apologize, but I\\'m experiencing technical difficulties. Please try again later.',
+              text: "I apologize, but I'm experiencing technical difficulties. Please try again later.",
               voice: 'alloy'
             },
             {
@@ -316,22 +323,23 @@ Important: Be natural, conversational, and helpful. Never mention you're an AI.`
 
     // Store AI response in conversation history
     if (aiResponse) {
-      await supabaseAdmin
-        .from('conversation_history')
-        .insert({
-          business_id: businessId,
-          call_id: callId,
-          ai_response: aiResponse,
-          intent: bookingDetected ? 'booking' : 'general',
-          created_at: new Date().toISOString()
-        })
-        .catch(error => {
-          logger.warn('Failed to store AI response', { callId, error: error.message })
-        })
+      try {
+        await supabaseAdmin
+          .from('conversation_history')
+          .insert({
+            business_id: businessId,
+            call_id: callId,
+            ai_response: aiResponse,
+            intent: bookingDetected ? 'booking' : 'general',
+            created_at: new Date().toISOString()
+          })
+      } catch (error) {
+        logger.warn('Failed to store AI response', { callId, error: error instanceof Error ? error.message : error })
+      }
     }
 
     // Check for conversation end keywords
-    const endKeywords = ['goodbye', 'bye', 'thank you', 'that\\'s all', 'nothing else', 'done']
+    const endKeywords = ['goodbye', 'bye', 'thank you', "that's all", 'nothing else', 'done']
     const isComplete = endKeywords.some(keyword => userSpeech?.toLowerCase().includes(keyword))
 
     if (isComplete) {
@@ -390,7 +398,7 @@ Important: Be natural, conversational, and helpful. Never mention you're an AI.`
       instructions: [
         {
           instruction: 'say',
-          text: 'I apologize, but I\\'m having trouble processing your request. Let me have someone call you back shortly.',
+          text: "I apologize, but I'm having trouble processing your request. Let me have someone call you back shortly.",
           voice: 'alloy'
         },
         {

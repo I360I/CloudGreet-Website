@@ -228,32 +228,33 @@ export async function createCalendarEvent(businessId: string, event: Omit<Calend
             body: JSON.stringify(googleEvent)
           })
 
-        if (calendarResponse.ok) {
-          const googleEventData = await calendarResponse.json()
-          
-          // Update appointment with Google Calendar event ID
-          await supabaseAdmin
-            .from('appointments')
-            .update({
-              google_event_id: googleEventData.id,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', appointment.id)
+          if (calendarResponse.ok) {
+            const googleEventData = await calendarResponse.json()
+            
+            // Update appointment with Google Calendar event ID
+            await supabaseAdmin
+              .from('appointments')
+              .update({
+                google_event_id: googleEventData.id,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', appointment.id)
 
-          logger.info('Appointment created in Google Calendar', {
-            appointmentId: appointment.id,
-            googleEventId: googleEventData.id,
-            businessId
-          })
-        } else {
-          logger.error('Failed to create Google Calendar event', {
-            status: calendarResponse.status,
-            statusText: calendarResponse.statusText
-          })
+            logger.info('Appointment created in Google Calendar', {
+              appointmentId: appointment.id,
+              googleEventId: googleEventData.id,
+              businessId
+            })
+          } else {
+            logger.error('Failed to create Google Calendar event', {
+              status: calendarResponse.status,
+              statusText: calendarResponse.statusText
+            })
+          }
+        } catch (googleError) {
+          logger.error('Google Calendar API error', { error: googleError })
+          // Continue anyway - appointment is in our database
         }
-      } catch (googleError) {
-        logger.error('Google Calendar API error', { error: googleError })
-        // Continue anyway - appointment is in our database
       }
     }
 
