@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+export const dynamic = 'force-dynamic'
+
+// Lazy initialize Supabase client inside route handler
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    throw new Error('Supabase configuration missing')
+  }
+  return createClient(url, key)
+}
 
 interface FollowUpSequence {
   id: string
@@ -77,6 +84,7 @@ interface NurtureCampaign {
 // GET /api/automation/follow-up - Get all follow-up sequences and campaigns
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const { searchParams } = new URL(request.url)
     const businessId = searchParams.get('businessId') || 'default'
 
@@ -167,13 +175,14 @@ export async function GET(request: NextRequest) {
 // POST /api/automation/follow-up - Create new follow-up sequence or campaign
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const body = await request.json()
     const { type, data } = body
 
     if (type === 'sequence') {
-      return await createFollowUpSequence(data)
+      return await createFollowUpSequence(data, supabase)
     } else if (type === 'campaign') {
-      return await createNurtureCampaign(data)
+      return await createNurtureCampaign(data, supabase)
     } else {
       return NextResponse.json({
         success: false,
@@ -192,13 +201,14 @@ export async function POST(request: NextRequest) {
 // PUT /api/automation/follow-up - Update follow-up sequence or campaign
 export async function PUT(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const body = await request.json()
     const { type, id, data } = body
 
     if (type === 'sequence') {
-      return await updateFollowUpSequence(id, data)
+      return await updateFollowUpSequence(id, data, supabase)
     } else if (type === 'campaign') {
-      return await updateNurtureCampaign(id, data)
+      return await updateNurtureCampaign(id, data, supabase)
     } else {
     return NextResponse.json({
         success: false,
@@ -217,6 +227,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/automation/follow-up - Delete follow-up sequence or campaign
 export async function DELETE(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     const id = searchParams.get('id')
@@ -229,9 +240,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (type === 'sequence') {
-      return await deleteFollowUpSequence(id)
+      return await deleteFollowUpSequence(id, supabase)
     } else if (type === 'campaign') {
-      return await deleteNurtureCampaign(id)
+      return await deleteNurtureCampaign(id, supabase)
     } else {
       return NextResponse.json({
         success: false,
@@ -248,7 +259,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Helper functions
-async function createFollowUpSequence(data: any) {
+async function createFollowUpSequence(data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { businessId = 'default', ...sequenceData } = data
 
   // Create sequence
@@ -291,7 +302,7 @@ async function createFollowUpSequence(data: any) {
   })
 }
 
-async function updateFollowUpSequence(id: string, data: any) {
+async function updateFollowUpSequence(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: sequence, error: sequenceError } = await supabase
     .from('follow_up_sequences')
     .update({
@@ -339,7 +350,7 @@ async function updateFollowUpSequence(id: string, data: any) {
   })
 }
 
-async function deleteFollowUpSequence(id: string) {
+async function deleteFollowUpSequence(id: string, supabase: ReturnType<typeof getSupabaseClient>) {
   // Delete steps first
   await supabase
     .from('follow_up_steps')
@@ -361,7 +372,7 @@ async function deleteFollowUpSequence(id: string) {
   })
 }
 
-async function createNurtureCampaign(data: any) {
+async function createNurtureCampaign(data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { businessId = 'default', ...campaignData } = data
 
   const { data: campaign, error: campaignError } = await supabase
@@ -401,7 +412,7 @@ async function createNurtureCampaign(data: any) {
   })
 }
 
-async function updateNurtureCampaign(id: string, data: any) {
+async function updateNurtureCampaign(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: campaign, error: campaignError } = await supabase
     .from('nurture_campaigns')
     .update({
@@ -422,7 +433,7 @@ async function updateNurtureCampaign(id: string, data: any) {
   })
 }
 
-async function deleteNurtureCampaign(id: string) {
+async function deleteNurtureCampaign(id: string, supabase: ReturnType<typeof getSupabaseClient>) {
   // Delete performance tracking
   await supabase
     .from('campaign_performance')

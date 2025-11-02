@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+export const dynamic = 'force-dynamic'
+
+// Lazy initialize Supabase client inside route handler
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    throw new Error('Supabase configuration missing')
+  }
+  return createClient(url, key)
+}
 
 interface SegmentationRule {
   id: string
@@ -140,6 +147,8 @@ interface SegmentationAnalytics {
 // GET /api/leads/segmentation - Get segmentation data
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClient()
     const { searchParams } = new URL(request.url)
     const businessId = searchParams.get('businessId') || 'default'
     const includeAnalytics = searchParams.get('includeAnalytics') === 'true'
@@ -226,6 +235,8 @@ export async function GET(request: NextRequest) {
 // POST /api/leads/segmentation - Create new segment or campaign
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClient()
     const body = await request.json()
     const { type, data } = body
 
@@ -253,6 +264,8 @@ export async function POST(request: NextRequest) {
 // PUT /api/leads/segmentation - Update segment or campaign
 export async function PUT(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClient()
     const body = await request.json()
     const { type, id, data } = body
 
@@ -280,6 +293,8 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/leads/segmentation - Delete segment or campaign
 export async function DELETE(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClient()
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     const id = searchParams.get('id')
