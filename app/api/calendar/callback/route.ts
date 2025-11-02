@@ -61,16 +61,18 @@ export async function GET(request: NextRequest) {
     
     // Store calendar credentials in database
     // Note: In production, you'd want to encrypt these tokens
+    // State parameter contains business_id (not business_name)
+    const businessId = state
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
       .select('id')
-      .eq('business_name', state)
+      .eq('id', businessId)
       .single()
 
     if (businessError || !business) {
       logger.error('Business not found for calendar integration', {
         error: businessError?.message,
-        businessName: state
+        businessId: state
       })
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/dashboard?calendar_error=business_not_found`)
     }
@@ -95,8 +97,7 @@ export async function GET(request: NextRequest) {
     }
 
     logger.info('Google Calendar integration completed successfully', {
-      businessId: business.id,
-      businessName: state
+      businessId: business.id
     })
 
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/dashboard?calendar_success=true`)

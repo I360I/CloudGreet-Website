@@ -74,6 +74,90 @@ export async function getCalendarConfig(businessId: string): Promise<CalendarCon
   }
 }
 
+/**
+ * Get valid Google Calendar access token, refreshing if needed
+ */
+async function getValidAccessToken(businessId: string): Promise<string | null> {
+  const config = await getCalendarConfig(businessId)
+  if (!config?.google_refresh_token) return null
+
+  // Check if token is expired or expiring within 5 minutes
+  const expiresAt = config.google_token_expires_at 
+    ? new Date(config.google_token_expires_at)
+    : null
+  
+  if (!expiresAt || expiresAt < new Date(Date.now() + 5 * 60 * 1000)) {
+    // Token expired or expiring soon, refresh it
+    return await refreshGoogleToken(businessId, config.google_refresh_token)
+  }
+
+  return config.google_access_token || null
+}
+
+/**
+ * Refresh Google Calendar OAuth token
+ */
+async function refreshGoogleToken(businessId: string, refreshToken: string): Promise<string | null> {
+  try {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      logger.error('Google OAuth credentials not configured')
+      return null
+    }
+
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token'
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.text()
+      logger.error('Failed to refresh Google token', {
+        status: response.status,
+        error: errorData,
+        businessId
+      })
+      
+      // Mark calendar as disconnected if refresh fails
+      await supabaseAdmin
+        .from('businesses')
+        .update({ calendar_connected: false })
+        .eq('id', businessId)
+      
+      return null
+    }
+
+    const tokenData = await response.json()
+    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000)
+
+    // Update token in database
+    await supabaseAdmin
+      .from('businesses')
+      .update({
+        google_access_token: tokenData.access_token,
+        google_token_expires_at: expiresAt.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', businessId)
+
+    logger.info('Google token refreshed successfully', { businessId })
+    
+    return tokenData.access_token
+
+  } catch (error) {
+    logger.error('Token refresh error', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      businessId
+    })
+    return null
+  }
+}
+
 export async function createCalendarEvent(businessId: string, event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent | null> {
   try {
     // Get calendar configuration
@@ -107,38 +191,42 @@ export async function createCalendarEvent(businessId: string, event: Omit<Calend
     }
 
     // If Google Calendar is connected, create event there too
-    if (config?.calendar_connected && config.google_access_token) {
-      try {
-        const googleEvent = {
-          summary: event.title,
-          description: event.description || '',
-          location: event.location || '',
-          start: {
-            dateTime: event.start,
-            timeZone: config.timezone || 'America/New_York'
-          },
-          end: {
-            dateTime: event.end,
-            timeZone: config.timezone || 'America/New_York'
-          },
-          attendees: event.attendees?.map(email => ({ email })) || [],
-          reminders: {
-            useDefault: false,
-            overrides: [
-              { method: 'email', minutes: 24 * 60 }, // 1 day before
-              { method: 'popup', minutes: 60 } // 1 hour before
-            ]
+    if (config?.calendar_connected) {
+      // Get valid access token (refreshes if needed)
+      const accessToken = await getValidAccessToken(businessId)
+      
+      if (accessToken) {
+        try {
+          const googleEvent = {
+            summary: event.title,
+            description: event.description || '',
+            location: event.location || '',
+            start: {
+              dateTime: event.start,
+              timeZone: config.timezone || 'America/New_York'
+            },
+            end: {
+              dateTime: event.end,
+              timeZone: config.timezone || 'America/New_York'
+            },
+            attendees: event.attendees?.map(email => ({ email })) || [],
+            reminders: {
+              useDefault: false,
+              overrides: [
+                { method: 'email', minutes: 24 * 60 }, // 1 day before
+                { method: 'popup', minutes: 60 } // 1 hour before
+              ]
+            }
           }
-        }
 
-        const calendarResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${config.google_access_token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(googleEvent)
-        })
+          const calendarResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(googleEvent)
+          })
 
         if (calendarResponse.ok) {
           const googleEventData = await calendarResponse.json()
@@ -269,7 +357,7 @@ export function generateGoogleAuthUrl(businessId: string): string {
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: scope,
-    state: businessId,
+    state: businessId, // Pass business_id (not business_name) for proper lookup
     access_type: 'offline',
     prompt: 'consent'
   })
