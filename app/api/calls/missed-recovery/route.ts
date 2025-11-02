@@ -88,7 +88,8 @@ export async function POST(request: NextRequest) {
 
     // Send SMS via Telnyx
     try {
-      const smsResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/notifications/send`, {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
+      const smsResponse = await fetch(`${baseUrl}/api/notifications/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -97,7 +98,8 @@ export async function POST(request: NextRequest) {
           businessId: businessId,
           type: 'missed_call_recovery',
           callId: callId
-        })
+        }),
+        signal: AbortSignal.timeout(10000) // 10 second timeout
       })
 
       if (!smsResponse.ok) {
@@ -106,19 +108,41 @@ export async function POST(request: NextRequest) {
 
       const smsResult = await smsResponse.json()
       
-      // Log the recovery attempt
-      await supabaseAdmin
+      // Log the recovery attempt (update if record exists, otherwise insert)
+      const existingRecovery = await supabaseAdmin
         .from('missed_call_recoveries')
-        .insert({
-          business_id: businessId,
-          call_id: callId,
-          caller_phone: callerPhone,
-          caller_name: callerName,
-          reason: reason,
-          message_sent: recoveryMessage,
-          sms_api_response: smsResult,
-          created_at: new Date().toISOString()
-        })
+        .select('id')
+        .eq('business_id', businessId)
+        .eq('call_id', callId)
+        .single()
+      
+      if (existingRecovery.data) {
+        await supabaseAdmin
+          .from('missed_call_recoveries')
+          .update({
+            caller_name: callerName,
+            message_sent: recoveryMessage,
+            sms_api_response: smsResult,
+            status: 'sent',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingRecovery.data.id)
+      } else {
+        await supabaseAdmin
+          .from('missed_call_recoveries')
+          .insert({
+            business_id: businessId,
+            call_id: callId,
+            caller_phone: callerPhone,
+            caller_name: callerName,
+            reason: reason,
+            message_sent: recoveryMessage,
+            sms_api_response: smsResult,
+            status: 'sent',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+      }
 
       logger.info('Missed call recovery SMS sent successfully', { 
         callId, 
@@ -142,18 +166,38 @@ export async function POST(request: NextRequest) {
       })
 
       // Still log the attempt even if SMS fails
-      await supabaseAdmin
+      const existingRecovery = await supabaseAdmin
         .from('missed_call_recoveries')
-        .insert({
-          business_id: businessId,
-          call_id: callId,
-          caller_phone: callerPhone,
-          caller_name: callerName,
-          reason: reason,
-          message_sent: recoveryMessage,
-          sms_api_response: { error: 'SMS sending failed' },
-          created_at: new Date().toISOString()
-        })
+        .select('id')
+        .eq('business_id', businessId)
+        .eq('call_id', callId)
+        .single()
+      
+      const failureData = {
+        caller_name: callerName,
+        message_sent: recoveryMessage,
+        sms_api_response: { error: 'SMS sending failed', details: smsError instanceof Error ? smsError.message : 'Unknown error' },
+        status: 'failed',
+        updated_at: new Date().toISOString()
+      }
+      
+      if (existingRecovery.data) {
+        await supabaseAdmin
+          .from('missed_call_recoveries')
+          .update(failureData)
+          .eq('id', existingRecovery.data.id)
+      } else {
+        await supabaseAdmin
+          .from('missed_call_recoveries')
+          .insert({
+            business_id: businessId,
+            call_id: callId,
+            caller_phone: callerPhone,
+            reason: reason,
+            ...failureData,
+            created_at: new Date().toISOString()
+          })
+      }
 
       return NextResponse.json({ 
         success: false, 

@@ -275,25 +275,40 @@ async function handleCallMissed(
         onConflict: 'call_id'
       })
 
-    // Queue recovery SMS (wait 30 seconds to avoid spam if they call back)
+    // Store recovery job in database (serverless-safe approach)
+    // Schedule recovery for 30 seconds from now to avoid spam if they call back
+    const scheduledAt = new Date(Date.now() + 30 * 1000).toISOString()
+    
+    await supabaseAdmin
+      .from('missed_call_recoveries')
+      .insert({
+        business_id: business.id,
+        call_id: callId,
+        caller_phone: fromNumber,
+        reason: 'missed_call',
+        status: 'pending',
+        scheduled_at: scheduledAt,
+        created_at: new Date().toISOString()
+      })
+      .catch(error => {
+        // Handle duplicate key errors gracefully
+        if (error.code !== '23505') {
+          logger.error('Failed to schedule missed call recovery', { requestId, callId, error: error.message })
+        }
+      })
+
+    // Trigger immediate processing (endpoint will check if it's time to send)
+    // Also works with cron jobs that call /api/calls/process-recoveries
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
     
-    setTimeout(async () => {
-      try {
-        await fetch(`${baseUrl}/api/calls/missed-recovery`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            callId,
-            businessId: business.id,
-            callerPhone: fromNumber,
-            reason: 'missed_call'
-          })
-        })
-      } catch (error) {
-        logger.error('Failed to trigger missed call recovery', { requestId, callId, error })
-      }
-    }, 30000) // 30 second delay
+    // Fire and forget - don't wait for response
+    fetch(`${baseUrl}/api/calls/process-recoveries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }).catch(error => {
+      // Silently fail - cron job will pick it up
+      logger.warn('Immediate recovery processing failed, will be handled by cron', { requestId, callId })
+    })
 
     logger.info('Missed call processed', { requestId, callId, businessId: business.id })
     

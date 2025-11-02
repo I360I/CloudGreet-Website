@@ -242,20 +242,47 @@ Important: Be natural, conversational, and helpful. Never mention you're an AI.`
                         scheduledTime: bookingData.preferredTime || '10:00',
                         notes: bookingData.notes,
                         conversationTranscript: messages.map(m => `${m.role}: ${m.content}`).join('\n')
-                      })
+                      }),
+                      signal: AbortSignal.timeout(10000) // 10 second timeout
                     })
 
                     if (bookingResult.ok) {
                       const booking = await bookingResult.json()
+                      logger.info('Appointment booked successfully via voice handler', {
+                        callId,
+                        appointmentId: booking.appointment?.id,
+                        businessId
+                      })
                       aiResponse = `Perfect! I've scheduled your ${bookingData.serviceType} appointment${bookingData.preferredDate ? ` for ${bookingData.preferredDate}` : ''}. You'll receive a confirmation text shortly. Is there anything else I can help you with?`
                     } else {
-                      const error = await bookingResult.json()
-                      logger.error('Booking creation failed', { callId, error })
+                      const errorText = await bookingResult.text()
+                      let errorData
+                      try {
+                        errorData = JSON.parse(errorText)
+                      } catch {
+                        errorData = { message: errorText }
+                      }
+                      logger.error('Booking creation failed', { 
+                        callId, 
+                        status: bookingResult.status,
+                        error: errorData 
+                      })
                       aiResponse = `I'd be happy to book that for you! Let me get you in touch with our scheduling team. They'll call you back shortly.`
                     }
                   } catch (fetchError) {
-                    logger.error('Failed to call booking API', { callId, error: fetchError })
-                    aiResponse = `I'd be happy to book that appointment for you. Our team will call you back to finalize the details.`
+                    // Handle timeout and network errors
+                    const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error'
+                    const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('aborted')
+                    
+                    logger.error('Failed to call booking API', { 
+                      callId, 
+                      error: errorMessage,
+                      isTimeout 
+                    })
+                    
+                    aiResponse = isTimeout
+                      ? `I'd be happy to book that appointment for you. Our system is a bit slow right now, but our team will call you back shortly to finalize the details.`
+                      : `I'd be happy to book that appointment for you. Our team will call you back to finalize the details.`
                   }
                 }
               } catch (parseError) {
