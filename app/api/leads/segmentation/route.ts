@@ -148,7 +148,6 @@ interface SegmentationAnalytics {
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseClient()
-    const supabase = getSupabaseClient()
     const { searchParams } = new URL(request.url)
     const businessId = searchParams.get('businessId') || 'default'
     const includeAnalytics = searchParams.get('includeAnalytics') === 'true'
@@ -236,7 +235,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseClient()
-    const supabase = getSupabaseClient()
     const body = await request.json()
     const { type, data } = body
 
@@ -265,7 +263,6 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const supabase = getSupabaseClient()
-    const supabase = getSupabaseClient()
     const body = await request.json()
     const { type, id, data } = body
 
@@ -293,7 +290,6 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/leads/segmentation - Delete segment or campaign
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = getSupabaseClient()
     const supabase = getSupabaseClient()
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
