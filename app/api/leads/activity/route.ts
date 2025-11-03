@@ -305,7 +305,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Helper functions
-async function createLead(data: any, supabase: ReturnType<typeof getSupabaseClient>) {Activity(data: any, supabase: ReturnType<typeof getSupabaseClient>) {
+async function createLeadActivity(data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { businessId = 'default', ...activityData } = data
 
   const { data: activity, error } = await supabase
@@ -329,7 +329,7 @@ async function createLead(data: any, supabase: ReturnType<typeof getSupabaseClie
   })
 }
 
-async function updateLead(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {Activity(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {
+async function updateLeadActivity(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: activity, error } = await supabase
     .from('lead_activity_log')
     .update({
