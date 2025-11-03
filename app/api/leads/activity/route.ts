@@ -97,6 +97,7 @@ interface ActivityAnalytics {
 // GET /api/leads/activity - Get lead activity data
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const { searchParams } = new URL(request.url)
     const businessId = searchParams.get('businessId') || 'default'
     const leadId = searchParams.get('leadId')
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get('dateFrom')
     const dateTo = searchParams.get('dateTo')
 
-    let query = getSupabaseClient()
+    let query = supabase
       .from('lead_activity_log')
       .select(`
         *,
