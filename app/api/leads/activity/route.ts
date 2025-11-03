@@ -215,6 +215,7 @@ export async function GET(request: NextRequest) {
 // POST /api/leads/activity - Create new activity
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const body = await request.json()
     const { type, data } = body
 
@@ -242,6 +243,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/leads/activity - Update activity
 export async function PUT(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const body = await request.json()
     const { type, id, data } = body
 
@@ -269,6 +271,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/leads/activity - Delete activity
 export async function DELETE(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     const id = searchParams.get('id')
