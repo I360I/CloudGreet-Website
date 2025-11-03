@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
     const dateFrom = searchParams.get('dateFrom')
     const dateTo = searchParams.get('dateTo')
 
-    let query = supabase
+    let query = getSupabaseClient()
       .from('lead_activity_log')
       .select(`
         *,
