@@ -3,6 +3,8 @@
 
 import { supabaseAdmin } from './supabase';
 import { SmartAIPrompts } from './smart-ai-prompts';
+import { logger } from '@/lib/monitoring'
+import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, ValidationResult, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, RateLimitConfig, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
 
 export interface BusinessAgentConfig {
   businessId: string;
@@ -11,7 +13,7 @@ export interface BusinessAgentConfig {
   ownerName?: string;
   services: string[];
   serviceAreas: string[];
-  businessHours: Record<string, any>;
+  businessHours: Record<string, unknown>;
   greetingMessage: string;
   tone: 'professional' | 'friendly' | 'casual';
   phoneNumber: string;
@@ -38,9 +40,10 @@ class RetellAgentManager {
   private apiKey: string;
 
   constructor() {
-    this.apiKey = process.env.NEXT_PUBLIC_RETELL_API_KEY || '';
+    // Try both env var names for compatibility
+    this.apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY || '';
     if (!this.apiKey) {
-      throw new Error('Retell API key not configured');
+      throw new Error('Retell API key not configured. Set RETELL_API_KEY in environment variables.');
     }
   }
 
@@ -75,7 +78,8 @@ class RetellAgentManager {
         }
       };
 
-      const response = await fetch('https://api.retellai.com/create-agent', {
+      // Retell AI API v2 endpoint
+      const response = await fetch('https://api.retellai.com/v2/create-agent', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -83,6 +87,42 @@ class RetellAgentManager {
         },
         body: JSON.stringify(agentData)
       });
+
+      /**
+
+
+       * if - Add description here
+
+
+       * 
+
+
+       * @param {...any} args - Method parameters
+
+
+       * @returns {Promise<any>} Method return value
+
+
+       * @throws {Error} When operation fails
+
+
+       * 
+
+
+       * @example
+
+
+       * ```typescript
+
+
+       * await this.if(param1, param2)
+
+
+       * ```
+
+
+       */
+
 
       if (!response.ok) {
         throw new Error(`Failed to create agent: ${response.statusText}`);
@@ -92,13 +132,18 @@ class RetellAgentManager {
       const agentId = agent.agent_id;
 
       // Store agent info in database
-      await this.storeAgentInfo(config.businessId, agentId, agentData);
+      await this.storeAgentInfo(config.businessId, agentId, {
+        ...agentData,
+        agent_id: agentId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
 
       
       return agentId;
 
     } catch (error) {
-      console.error('Error creating business agent:', error);
+      logger.error('Error creating business agent:', { error: error instanceof Error ? error.message : 'Unknown error' });
       throw error;
     }
   }
@@ -114,6 +159,42 @@ class RetellAgentManager {
         .select('retell_agent_id')
         .eq('business_id', businessId)
         .single();
+
+      /**
+
+
+       * if - Add description here
+
+
+       * 
+
+
+       * @param {...any} args - Method parameters
+
+
+       * @returns {Promise<any>} Method return value
+
+
+       * @throws {Error} When operation fails
+
+
+       * 
+
+
+       * @example
+
+
+       * ```typescript
+
+
+       * await this.if(param1, param2)
+
+
+       * ```
+
+
+       */
+
 
       if (!agentData?.retell_agent_id) {
         throw new Error('No existing agent found for business');
@@ -135,7 +216,8 @@ class RetellAgentManager {
         Object.entries(updateData).filter(([_, value]) => value !== undefined)
       );
 
-      const response = await fetch(`https://api.retellai.com/update-agent/${agentData.retell_agent_id}`, {
+      // Retell AI API v2 endpoint
+      const response = await fetch(`https://api.retellai.com/v2/update-agent/${agentData.retell_agent_id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -143,6 +225,42 @@ class RetellAgentManager {
         },
         body: JSON.stringify(cleanUpdateData)
       });
+
+      /**
+
+
+       * if - Add description here
+
+
+       * 
+
+
+       * @param {...any} args - Method parameters
+
+
+       * @returns {Promise<any>} Method return value
+
+
+       * @throws {Error} When operation fails
+
+
+       * 
+
+
+       * @example
+
+
+       * ```typescript
+
+
+       * await this.if(param1, param2)
+
+
+       * ```
+
+
+       */
+
 
       if (!response.ok) {
         throw new Error(`Failed to update agent: ${response.statusText}`);
@@ -160,7 +278,7 @@ class RetellAgentManager {
       
 
     } catch (error) {
-      console.error('Error updating business agent:', error);
+      logger.error('Error updating business agent:', { error: error instanceof Error ? error.message : 'Unknown error' });
       throw error;
     }
   }
@@ -235,12 +353,36 @@ Remember: You represent ${config.businessName} and should always maintain the hi
   /**
    * Format business hours for the system prompt
    */
-  private formatBusinessHours(hours: Record<string, any>): string {
+  private formatBusinessHours(hours: Record<string, unknown>): string {
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     let formattedHours = '';
 
     dayNames.forEach(day => {
       const dayKey = day.toLowerCase();
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (hours[dayKey]?.enabled) {
         formattedHours += `${day}: ${hours[dayKey].start} - ${hours[dayKey].end}\n`;
       } else {
@@ -254,7 +396,7 @@ Remember: You represent ${config.businessName} and should always maintain the hi
   /**
    * Store agent information in database
    */
-  private async storeAgentInfo(businessId: string, agentId: string, agentData: any): Promise<void> {
+  private async storeAgentInfo(businessId: string, agentId: string, agentData: AgentData): Promise<void> {
     await supabaseAdmin
       .from('ai_agents')
       .upsert({
@@ -297,9 +439,45 @@ Remember: You represent ${config.businessName} and should always maintain the hi
         .eq('business_id', businessId)
         .single();
 
+      /**
+
+
+       * if - Add description here
+
+
+       * 
+
+
+       * @param {...any} args - Method parameters
+
+
+       * @returns {Promise<any>} Method return value
+
+
+       * @throws {Error} When operation fails
+
+
+       * 
+
+
+       * @example
+
+
+       * ```typescript
+
+
+       * await this.if(param1, param2)
+
+
+       * ```
+
+
+       */
+
+
       if (agentData?.retell_agent_id) {
         // Delete from Retell
-        await fetch(`https://api.retellai.com/delete-agent/${agentData.retell_agent_id}`, {
+        await fetch(`https://api.retellai.com/v2/delete-agent/${agentData.retell_agent_id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${this.apiKey}`
@@ -315,7 +493,7 @@ Remember: You represent ${config.businessName} and should always maintain the hi
         
       }
     } catch (error) {
-      console.error('Error deleting business agent:', error);
+      logger.error('Error deleting business agent:', { error: error instanceof Error ? error.message : 'Unknown error' });
       throw error;
     }
   }
@@ -324,6 +502,30 @@ Remember: You represent ${config.businessName} and should always maintain the hi
 let _retellAgentManager: RetellAgentManager | null = null;
 
 export const retellAgentManager = (): RetellAgentManager => {
+  /**
+
+   * if - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.if(param1, param2)
+
+   * ```
+
+   */
+
   if (!_retellAgentManager) {
     _retellAgentManager = new RetellAgentManager();
   }
