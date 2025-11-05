@@ -3,7 +3,7 @@
  * Provides utilities for optimizing React components with memo, useMemo, useCallback
  */
 
-import { ComponentType, memo, useMemo, useCallback, ReactNode } from 'react';
+import React, { ComponentType, memo, useMemo, useCallback, ReactNode } from 'react';
 import { logger } from '../monitoring';
 
 export interface OptimizationConfig {
