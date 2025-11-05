@@ -382,7 +382,10 @@ export class TestFramework {
       .like('id', 'test_%');
 
     if (error) {
-      logger.warn('Failed to clear test data', { table, error });
+      logger.warn('Failed to clear test data', { 
+        table, 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 
