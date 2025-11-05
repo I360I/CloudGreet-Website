@@ -5,7 +5,7 @@ export class TelnyxClient {
   private messagingProfileId: string
 
   constructor() {
-    this.apiKey = process.env.TELYNX_API_KEY || ''
+    this.apiKey = process.env.TELNYX_API_KEY || process.env.TELYNX_API_KEY || '' // Support both for backward compatibility
     this.connectionId = process.env.TELNYX_CONNECTION_ID || ''
     this.messagingProfileId = process.env.TELNYX_MESSAGING_PROFILE_ID || ''
   }
@@ -26,6 +26,42 @@ export class TelnyxClient {
           messaging_profile_id: this.messagingProfileId
         })
       })
+
+      /**
+
+
+       * if - Add description here
+
+
+       * 
+
+
+       * @param {...any} args - Method parameters
+
+
+       * @returns {Promise<any>} Method return value
+
+
+       * @throws {Error} When operation fails
+
+
+       * 
+
+
+       * @example
+
+
+       * ```typescript
+
+
+       * await this.if(param1, param2)
+
+
+       * ```
+
+
+       */
+
 
       if (!response.ok) {
         throw new Error(`Telnyx API error: ${response.statusText}`)
@@ -52,6 +88,42 @@ export class TelnyxClient {
         })
       })
 
+      /**
+
+
+       * if - Add description here
+
+
+       * 
+
+
+       * @param {...any} args - Method parameters
+
+
+       * @returns {Promise<any>} Method return value
+
+
+       * @throws {Error} When operation fails
+
+
+       * 
+
+
+       * @example
+
+
+       * ```typescript
+
+
+       * await this.if(param1, param2)
+
+
+       * ```
+
+
+       */
+
+
       if (!response.ok) {
         throw new Error(`Telnyx API error: ${response.statusText}`)
       }
@@ -71,6 +143,42 @@ export class TelnyxClient {
         }
       })
 
+      /**
+
+
+       * if - Add description here
+
+
+       * 
+
+
+       * @param {...any} args - Method parameters
+
+
+       * @returns {Promise<any>} Method return value
+
+
+       * @throws {Error} When operation fails
+
+
+       * 
+
+
+       * @example
+
+
+       * ```typescript
+
+
+       * await this.if(param1, param2)
+
+
+       * ```
+
+
+       */
+
+
       if (!response.ok) {
         throw new Error(`Telnyx API error: ${response.statusText}`)
       }
@@ -82,7 +190,7 @@ export class TelnyxClient {
   }
 
   // Update AI agent
-  async updateAgent(agentId: string, updates: any) {
+  async updateAgent(agentId: string, updates: unknown) {
     try {
       const response = await fetch(`https://api.telnyx.com/v1/ai_agents/${agentId}`, {
         method: 'PUT',
@@ -92,6 +200,42 @@ export class TelnyxClient {
         },
         body: JSON.stringify(updates)
       })
+
+      /**
+
+
+       * if - Add description here
+
+
+       * 
+
+
+       * @param {...any} args - Method parameters
+
+
+       * @returns {Promise<any>} Method return value
+
+
+       * @throws {Error} When operation fails
+
+
+       * 
+
+
+       * @example
+
+
+       * ```typescript
+
+
+       * await this.if(param1, param2)
+
+
+       * ```
+
+
+       */
+
 
       if (!response.ok) {
         throw new Error(`Telnyx API error: ${response.statusText}`)
@@ -121,8 +265,9 @@ export class TelnyxClient {
   }
 
   // Create AI agent
-  async createAIAgent(businessData: any) {
+  async createAIAgent(businessData: unknown) {
     try {
+      const data = businessData as { business_name?: string; greeting_message?: string }
       const response = await fetch('https://api.telnyx.com/v1/ai_agents', {
         method: 'POST',
         headers: {
@@ -130,11 +275,47 @@ export class TelnyxClient {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          name: businessData.business_name || 'AI Agent',
-          instructions: businessData.greeting_message || 'Hello, how can I help you today?',
+          name: data.business_name || 'AI Agent',
+          instructions: data.greeting_message || 'Hello, how can I help you today?',
           voice: 'alloy'
         })
       })
+
+      /**
+
+
+       * if - Add description here
+
+
+       * 
+
+
+       * @param {...any} args - Method parameters
+
+
+       * @returns {Promise<any>} Method return value
+
+
+       * @throws {Error} When operation fails
+
+
+       * 
+
+
+       * @example
+
+
+       * ```typescript
+
+
+       * await this.if(param1, param2)
+
+
+       * ```
+
+
+       */
+
 
       if (!response.ok) {
         throw new Error(`Telnyx API error: ${response.statusText}`)
@@ -148,6 +329,18 @@ export class TelnyxClient {
 }
 
 // Verify Telnyx webhook signature
+/**
+ * verifyTelnyxSignature - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await verifyTelnyxSignature(param1, param2)
+ * ```
+ */
 export function verifyTelnyxSignature(payload: string, signature: string, secret: string): boolean {
   try {
     const crypto = require('crypto')
