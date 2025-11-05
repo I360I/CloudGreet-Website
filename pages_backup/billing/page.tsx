@@ -34,14 +34,6 @@ export default function BillingPage() {
         return
       }
 
-    catch (error) {
-
-      console.error('Error:', error);
-
-      throw error;
-
-    }
-
       // Load business info to get phone number status
       const response = await fetch('/api/business/profile', {
         headers: {
@@ -57,7 +49,9 @@ export default function BillingPage() {
           setSubscriptionStatus(data.data.subscriptionStatus || 'trial')
         }
       }
-    } )
+    } catch (error) {
+      console.error('Error:', error);
+      showError('Failed to load billing information')
     } finally {
       setPageLoading(false)
     }
@@ -71,21 +65,12 @@ export default function BillingPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}
-
-    catch (error) {
-
-      console.error('Error:', error);
-
-      throw error;
-
-    }`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({,
-  businessId: businessId,
+        body: JSON.stringify({
+          businessId: businessId,
           plan: 'professional'
-        
-})
+        })
       })
 
       if (response.ok) {
@@ -120,13 +105,10 @@ export default function BillingPage() {
         setPhoneNumber('+1 (833) 395-6731')
         setSubscriptionStatus('active')
         showSuccess('Phone number assigned! Your AI agent is now live.')
-      }
-
-    catch (error) {
-
+      }, 2000)
+    } catch (error) {
       console.error('Error:', error);
-
-      throw error;
+      showError('Failed to get phone number')
 
     }, 2000)
     } finally {
