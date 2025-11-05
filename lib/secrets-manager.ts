@@ -232,7 +232,7 @@ export class SecretsManager {
   /**
    * Perform scheduled rotation
    */
-  private async performScheduledRotation(name: string): void {
+  private async performScheduledRotation(name: string): Promise<void> {
     try {
       logger.info('Performing scheduled rotation', { name });
       
