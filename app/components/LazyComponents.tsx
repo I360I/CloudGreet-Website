@@ -96,7 +96,7 @@ export function ExportButtonWrapper({
 // Preload components for better UX
 export function preloadComponents() {
   // Preload components that are likely to be used
-  import('../components/ROICalculator')
+  import('./RoiCalculator')
   import('../components/CallQualityMetrics')
   // import('../components/LeadScoring') // disabled - type errors need resolution
   import('../components/BusinessHoursSettings')
