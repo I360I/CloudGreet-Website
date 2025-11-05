@@ -1,10 +1,23 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, PostgrestError } from '@supabase/supabase-js'
+import { logger } from '@/lib/monitoring'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
 // Check if Supabase is properly configured
+/**
+ * isSupabaseConfigured - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await isSupabaseConfigured(param1, param2)
+ * ```
+ */
 export function isSupabaseConfigured(): boolean {
   return !!(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -20,11 +33,11 @@ export function isSupabaseConfigured(): boolean {
 function getSupabase() {
   try {
     if (!isSupabaseConfigured()) {
-      console.warn('Supabase not configured, using placeholder client')
+      logger.warn('Supabase not configured, using placeholder client')
     }
     return createClient(supabaseUrl, supabaseAnonKey)
   } catch (error) {
-    console.error('Failed to create Supabase client:', error)
+    logger.error('Failed to create Supabase client:', { error: error instanceof Error ? error.message : 'Unknown error' })
     throw new Error('Supabase client initialization failed')
   }
 }
@@ -32,7 +45,7 @@ function getSupabase() {
 function getSupabaseAdmin() {
   try {
     if (!isSupabaseConfigured()) {
-      console.warn('Supabase not configured, using placeholder admin client')
+      logger.warn('Supabase not configured, using placeholder admin client')
     }
     return createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -41,7 +54,7 @@ function getSupabaseAdmin() {
       }
     })
   } catch (error) {
-    console.error('Failed to create Supabase admin client:', error)
+    logger.error('Failed to create Supabase admin client:', { error: error instanceof Error ? error.message : 'Unknown error' })
     throw new Error('Supabase admin client initialization failed')
   }
 }
@@ -59,7 +72,7 @@ export async function safeDbOperation<T>(
     const result = await operation()
     return { data: result, error: null }
   } catch (error) {
-    console.error(`Database operation failed: ${operationName}`, error)
+    logger.error(`Database operation failed: ${operationName}`, { error: error instanceof Error ? error.message : 'Unknown error' })
     return { 
       data: null, 
       error: error instanceof Error ? error.message : 'Unknown database error' 
@@ -69,9 +82,9 @@ export async function safeDbOperation<T>(
 
 // Wrapper for Supabase queries with error handling and input validation
 export async function safeQuery<T>(
-  query: () => Promise<{ data: T | null; error: any }>,
+  query: () => Promise<{ data: T | null; error: PostgrestError | null }>,
   operationName: string,
-  inputValidation?: (input: any) => boolean
+  inputValidation?: (input: unknown) => boolean
 ): Promise<{ data: T | null; error: string | null }> {
   try {
     // Input validation if provided
@@ -84,12 +97,17 @@ export async function safeQuery<T>(
 
     const result = await query()
     if (result.error) {
-      console.error(`Supabase query error in ${operationName}:`, result.error)
+      logger.error(`Supabase query error in ${operationName}:`, { 
+        error: result.error.message || 'Database query failed',
+        code: result.error.code,
+        details: result.error.details,
+        hint: result.error.hint
+      })
       return { data: null, error: result.error.message || 'Database query failed' }
     }
     return { data: result.data, error: null }
   } catch (error) {
-    console.error(`Database query failed: ${operationName}`, error)
+    logger.error(`Database query failed: ${operationName}`, { error: error instanceof Error ? error.message : 'Unknown error' })
     return { 
       data: null, 
       error: error instanceof Error ? error.message : 'Unknown database error' 
@@ -98,18 +116,66 @@ export async function safeQuery<T>(
 }
 
 // Input validation helpers for common database operations
-export function validateBusinessId(businessId: any): boolean {
+/**
+ * validateBusinessId - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await validateBusinessId(param1, param2)
+ * ```
+ */
+export function validateBusinessId(businessId: unknown): boolean {
   return typeof businessId === 'string' && businessId.length > 0 && businessId.length < 100
 }
 
-export function validateUserId(userId: any): boolean {
+/**
+ * validateUserId - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await validateUserId(param1, param2)
+ * ```
+ */
+export function validateUserId(userId: unknown): boolean {
   return typeof userId === 'string' && userId.length > 0 && userId.length < 100
 }
 
-export function validateEmail(email: any): boolean {
+/**
+ * validateEmail - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await validateEmail(param1, param2)
+ * ```
+ */
+export function validateEmail(email: unknown): boolean {
   return typeof email === 'string' && email.includes('@') && email.length < 254
 }
 
-export function validatePhoneNumber(phone: any): boolean {
+/**
+ * validatePhoneNumber - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await validatePhoneNumber(param1, param2)
+ * ```
+ */
+export function validatePhoneNumber(phone: unknown): boolean {
   return typeof phone === 'string' && phone.length > 0 && phone.length < 20
 }
