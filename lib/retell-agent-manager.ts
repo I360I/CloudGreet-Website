@@ -398,21 +398,21 @@ Remember: You represent ${config.businessName} and should always maintain the hi
    * Store agent information in database
    */
   private async storeAgentInfo(businessId: string, agentId: string, agentData: AgentData): Promise<void> {
-    await supabaseAdmin
-      .from('ai_agents')
-      .upsert({
-        business_id: businessId,
-        retell_agent_id: agentId,
-        name: agentData.name,
-        voice: agentData.voice,
-        language: agentData.language,
-        greeting: agentData.greeting,
-        system_prompt: agentData.system_prompt,
-        configuration: agentData.metadata,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+      await supabaseAdmin
+        .from('ai_agents')
+        .upsert({
+          business_id: businessId,
+          retell_agent_id: agentId,
+          name: agentData.name,
+          voice: agentData.voice_id,
+          language: agentData.language,
+          greeting: (agentData as any).greeting,
+          system_prompt: (agentData as any).system_prompt,
+          configuration: (agentData as any).metadata,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
   }
 
   /**
