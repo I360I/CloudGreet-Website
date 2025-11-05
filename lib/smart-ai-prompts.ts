@@ -1,12 +1,47 @@
 // Smart AI Prompts for Maximum Revenue Generation
 // These prompts will make the AI receptionist incredibly smart and profitable
 
+export interface RevenueOptimizedConfig {
+  businessName: string
+  businessType: string
+  ownerName?: string
+  services: string[]
+  serviceAreas: string[]
+  address: string
+  website?: string
+  phoneNumber?: string
+  businessHours: Record<string, { enabled: boolean; start: string; end: string }>
+}
+
+export interface PricingScripts {
+  emergency: { opening: string; value_proposition: string }
+  high_budget: { opening: string; upsell: string }
+  price_sensitive: { opening: string; value_focus: string }
+  repeat_customer: { opening: string; appreciation: string }
+}
+
+export interface ObjectionHandling {
+  too_expensive: string
+  need_to_think: string
+  get_other_quotes: string
+  not_urgent: string
+  husband_wife_decision: string
+}
+
+export interface ClosingTechniques {
+  assumptive: string
+  urgency: string
+  choice: string
+  social_proof: string
+  value_summary: string
+}
+
 export class SmartAIPrompts {
   
   /**
    * Generate revenue-optimized system prompt for any business
    */
-  static generateRevenueOptimizedPrompt(config: any): string {
+  static generateRevenueOptimizedPrompt(config: RevenueOptimizedConfig): string {
     const businessHours = this.formatBusinessHours(config.businessHours);
     const services = config.services.join(', ');
     const serviceAreas = config.serviceAreas.join(', ');
@@ -88,7 +123,7 @@ Remember: You represent ${config.businessName} and should always maintain profes
   /**
    * Generate industry-specific revenue optimization prompts
    */
-  static generateIndustrySpecificPrompt(businessType: string, config: any): string {
+  static generateIndustrySpecificPrompt(businessType: string, config: RevenueOptimizedConfig): string {
     const basePrompt = this.generateRevenueOptimizedPrompt(config);
     
     const industrySpecific = {
@@ -165,13 +200,13 @@ CLEANING SPECIFIC REVENUE OPTIMIZATION:
 `
     };
 
-    return basePrompt + (industrySpecific[businessType] || '');
+    return basePrompt + (industrySpecific[businessType as keyof typeof industrySpecific] || '');
   }
 
   /**
    * Generate dynamic pricing scripts for different scenarios
    */
-  static generatePricingScripts(): any {
+  static generatePricingScripts(): PricingScripts {
     return {
       emergency: {
         opening: "I understand this is an emergency situation. For emergency calls outside business hours, our rates are $150/hour with a 2-hour minimum, plus parts and materials. This ensures you get immediate professional service when you need it most.",
@@ -198,7 +233,7 @@ CLEANING SPECIFIC REVENUE OPTIMIZATION:
   /**
    * Generate objection handling scripts
    */
-  static generateObjectionHandling(): any {
+  static generateObjectionHandling(): ObjectionHandling {
     return {
       "too_expensive": "I understand price is important. Let me show you our financing options, or we can break this into phases to fit your budget better.",
       
@@ -215,7 +250,7 @@ CLEANING SPECIFIC REVENUE OPTIMIZATION:
   /**
    * Generate closing techniques
    */
-  static generateClosingTechniques(): any {
+  static generateClosingTechniques(): ClosingTechniques {
     return {
       assumptive: "Great! I have you down for [date] at [time]. What's the best number to confirm the appointment?",
       
@@ -232,7 +267,7 @@ CLEANING SPECIFIC REVENUE OPTIMIZATION:
   /**
    * Format business hours for prompts
    */
-  private static formatBusinessHours(hours: Record<string, any>): string {
+  private static formatBusinessHours(hours: Record<string, { enabled: boolean; start: string; end: string }>): string {
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     let formattedHours = '';
 
