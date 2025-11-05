@@ -109,8 +109,6 @@ export default function BillingPage() {
     } catch (error) {
       console.error('Error:', error);
       showError('Failed to get phone number')
-
-    }, 2000)
     } finally {
       setIsLoading(false)
     }
