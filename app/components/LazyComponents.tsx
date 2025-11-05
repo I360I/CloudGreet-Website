@@ -4,7 +4,7 @@ import React, { Suspense } from 'react'
 import { CardSkeleton, ChartSkeleton, HeatmapSkeleton, CallPlayerSkeleton, InsightsSkeleton, TableSkeleton } from './ui/Skeleton'
 
 // Lazy load components with proper fallbacks
-export const LazyROICalculator = React.lazy(() => import('../components/ROICalculator'))
+export const LazyROICalculator = React.lazy(() => import('./RoiCalculator'))
 export const LazyCallQualityMetrics = React.lazy(() => import('../components/CallQualityMetrics'))
 // LeadScoring component disabled - component has type errors that need to be resolved
 export const LazyLeadScoring = React.lazy(async () => ({ default: () => null }))
