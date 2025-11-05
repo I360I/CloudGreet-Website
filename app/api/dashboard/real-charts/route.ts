@@ -1,199 +1,260 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import jwt from 'jsonwebtoken'
+import { verifyJWT } from '@/lib/auth-middleware'
+import { CONFIG } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get authentication token
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Verify authentication
+    const authResult = await verifyJWT(request)
+    if (!authResult.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET
-    if (!jwtSecret) {
-      return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
-    }
-
-    let decoded
-    try {
-      decoded = jwt.verify(token, jwtSecret) as any
-    } catch (error) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-
-    const userId = decoded.userId
-    const businessId = decoded.businessId
-
-    if (!userId || !businessId) {
-      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
-    }
-
-    // Get timeframe from query params
     const { searchParams } = new URL(request.url)
     const timeframe = searchParams.get('timeframe') || '30d'
-    
+    let businessId = searchParams.get('businessId')
+
+    // If businessId not provided, default to user's business
+    if (!businessId) {
+      const { data: userBusiness, error: businessError } = await supabaseAdmin
+        .from('businesses')
+        .select('id')
+        .eq('owner_id', authResult.user.id)
+        .single()
+
+      if (businessError || !userBusiness) {
+        return NextResponse.json(
+          { error: 'No business found' },
+          { status: 404 }
+        )
+      }
+      businessId = userBusiness.id
+    }
+
     // Calculate date range
     const now = new Date()
-    const days = timeframe === '7d' ? 7 : timeframe === '90d' ? 90 : 30
-    const startDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000))
+    let startDate = new Date()
+    let days = 30
+    
+    switch (timeframe) {
+      case '7d':
+        startDate.setDate(now.getDate() - 7)
+        days = 7
+        break
+      case '30d':
+        startDate.setDate(now.getDate() - 30)
+        days = 30
+        break
+      case '90d':
+        startDate.setDate(now.getDate() - 90)
+        days = 90
+        break
+      default:
+        startDate.setDate(now.getDate() - 30)
+        days = 30
+    }
 
-    // Get calls data for the period
+    // Verify business ownership
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id, owner_id')
+      .eq('id', businessId)
+      .single()
+
+    if (businessError || !business) {
+      return NextResponse.json(
+        { error: 'Business not found' },
+        { status: 404 }
+      )
+    }
+
+    if (business.owner_id !== authResult.user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 403 }
+      )
+    }
+
+    // Fetch calls for timeframe - only select needed fields
     const { data: calls, error: callsError } = await supabaseAdmin
       .from('calls')
-      .select('*')
+      .select('created_at, status')
       .eq('business_id', businessId)
       .gte('created_at', startDate.toISOString())
-      .order('created_at', { ascending: true })
 
-    if (callsError) {
-      logger.error('Error fetching calls for charts', { error: callsError.message, businessId })
-    }
-
-    // Get appointments data for the period
+    // Fetch appointments for timeframe - only select created_at
     const { data: appointments, error: appointmentsError } = await supabaseAdmin
       .from('appointments')
-      .select('*')
+      .select('created_at')
       .eq('business_id', businessId)
       .gte('created_at', startDate.toISOString())
-      .order('created_at', { ascending: true })
 
-    if (appointmentsError) {
-      logger.error('Error fetching appointments for charts', { error: appointmentsError.message, businessId })
+    if (callsError || appointmentsError) {
+      logger.error('Error fetching chart data', { 
+        callsError: callsError?.message, 
+        appointmentsError: appointmentsError?.message 
+      })
+      return NextResponse.json(
+        { error: 'Failed to fetch chart data' },
+        { status: 500 }
+      )
     }
 
-    // Generate date labels for the period
-    const generateDateLabels = () => {
-      const labels = []
-      const current = new Date(startDate)
+    // Generate daily data for revenue trend
+    const revenueLabels: string[] = []
+    const revenueData: number[] = []
+    const avgTicket = CONFIG.BUSINESS.AVERAGE_TICKET
+    const closeRate = CONFIG.BUSINESS.CLOSE_RATE
+
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(now)
+      date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
       
-      while (current <= now) {
-        if (timeframe === '7d') {
-          labels.push(current.toLocaleDateString('en-US', { weekday: 'short' }))
-          current.setDate(current.getDate() + 1)
-        } else if (timeframe === '30d') {
-          labels.push(current.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))
-          current.setDate(current.getDate() + 3)
-        } else {
-          labels.push(current.toLocaleDateString('en-US', { month: 'short' }))
-          current.setMonth(current.getMonth() + 1)
-        }
-      }
-      return labels
+      revenueLabels.push(dateStr)
+      
+      const dayAppointments = appointments?.filter(a => {
+        if (!a?.created_at) return false
+        const aptDate = new Date(a.created_at).toISOString().split('T')[0]
+        return aptDate === dateStr
+      }).length || 0
+      
+      revenueData.push(dayAppointments * closeRate * avgTicket)
     }
 
-    const dateLabels = generateDateLabels()
+    // Generate call volume data (weekly for 7d, daily for 30d, weekly for 90d)
+    const callLabels: string[] = []
+    const callData: number[] = []
+    
+    if (timeframe === '7d') {
+      // Daily for 7 days
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now)
+        date.setDate(date.getDate() - i)
+        const dateStr = date.toLocaleDateString('en-US', { weekday: 'short' })
+        
+        callLabels.push(dateStr)
+        
+        const dayCalls = calls?.filter(c => {
+          if (!c?.created_at) return false
+          const callDate = new Date(c.created_at).toISOString().split('T')[0]
+          const dateStrFull = date.toISOString().split('T')[0]
+          return callDate === dateStrFull
+        }).length || 0
+        
+        callData.push(dayCalls)
+      }
+    } else if (timeframe === '30d') {
+      // Weekly for 30 days
+      for (let i = 3; i >= 0; i--) {
+        const weekStart = new Date(now)
+        weekStart.setDate(weekStart.getDate() - (i * 7 + 7))
+        const weekEnd = new Date(now)
+        weekEnd.setDate(weekEnd.getDate() - (i * 7))
+        
+        callLabels.push(`Week ${4 - i}`)
+        
+        const weekCalls = calls?.filter(c => {
+          if (!c?.created_at) return false
+          const callDate = new Date(c.created_at)
+          return callDate >= weekStart && callDate < weekEnd
+        }).length || 0
+        
+        callData.push(weekCalls)
+      }
+    } else {
+      // Monthly for 90 days
+      for (let i = 2; i >= 0; i--) {
+        const monthStart = new Date(now)
+        monthStart.setMonth(monthStart.getMonth() - (i + 1))
+        const monthEnd = new Date(now)
+        monthEnd.setMonth(monthEnd.getMonth() - i)
+        
+        callLabels.push(monthStart.toLocaleDateString('en-US', { month: 'short' }))
+        
+        const monthCalls = calls?.filter(c => {
+          if (!c?.created_at) return false
+          const callDate = new Date(c.created_at)
+          return callDate >= monthStart && callDate < monthEnd
+        }).length || 0
+        
+        callData.push(monthCalls)
+      }
+    }
 
-    // Process revenue data
-    const revenueData = {
-      labels: dateLabels,
+    // Calculate conversion data (outcomes) with null safety
+    const completedCalls = calls?.filter(c => c?.status === 'completed').length || 0
+    const missedCalls = calls?.filter(c => c?.status === 'missed' || c?.status === 'no_answer').length || 0
+    const totalCalls = calls?.length || 0
+    const appointmentsCount = appointments?.length || 0
+
+    const revenueChartData = {
+      labels: revenueLabels,
       datasets: [{
-        label: 'Revenue',
-        data: dateLabels.map(date => {
-          // Use real revenue data from appointments
-          const dayAppointments = appointments?.filter(apt => {
-            const aptDate = new Date(apt.scheduled_date).toDateString()
-            return aptDate === date && apt.status === 'completed'
-          }) || []
-          
-          return dayAppointments.reduce((sum, apt) => sum + (apt.estimated_value || 0), 0)
-        }),
-        borderColor: '#10B981',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        label: 'Revenue ($)',
+        data: revenueData,
+        borderColor: 'rgb(34, 197, 94)',
+        backgroundColor: 'rgba(34, 197, 94, 0.1)',
         fill: true,
         tension: 0.4
       }]
     }
 
-    // Process real call data
-    const answeredCallsData = dateLabels.map(date => {
-      const dayCalls = calls?.filter(call => {
-        const callDate = new Date(call.created_at).toDateString()
-        return callDate === date && (call.status === 'answered' || call.status === 'completed')
-      }) || []
-      return dayCalls.length
-    })
-
-    const missedCallsData = dateLabels.map(date => {
-      const dayCalls = calls?.filter(call => {
-        const callDate = new Date(call.created_at).toDateString()
-        return callDate === date && (call.status === 'missed' || call.status === 'busy')
-      }) || []
-      return dayCalls.length
-    })
-
-    const callData = {
-      labels: dateLabels,
-      datasets: [
-        {
-          label: 'Answered Calls',
-          data: answeredCallsData,
-          backgroundColor: '#3B82F6',
-          borderColor: '#3B82F6',
-          borderWidth: 1
-        },
-        {
-          label: 'Missed Calls',
-          data: missedCallsData,
-          backgroundColor: '#EF4444',
-          borderColor: '#EF4444',
-          borderWidth: 1
-        }
-      ]
+    const callChartData = {
+      labels: callLabels,
+      datasets: [{
+        label: 'Calls',
+        data: callData,
+        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+        borderColor: 'rgb(59, 130, 246)',
+        borderWidth: 1
+      }]
     }
 
-    // Process conversion data
-    const answeredCalls = calls?.filter(call => call.status === 'answered' || call.status === 'completed').length || 0
-    const missedCalls = calls?.filter(call => call.status === 'missed' || call.status === 'busy').length || 0
-    const totalAppointments = appointments?.length || 0
-
-    const conversionData = {
-      labels: ['Appointments Booked', 'Missed Opportunities'],
+    const conversionChartData = {
+      labels: ['Appointments', 'Completed Calls', 'Missed Calls'],
       datasets: [{
-        data: [totalAppointments, Math.max(0, answeredCalls - totalAppointments)],
+        data: [appointmentsCount, completedCalls, missedCalls],
         backgroundColor: [
-          '#10B981',
-          '#EF4444'
+          'rgba(147, 51, 234, 0.8)',
+          'rgba(34, 197, 94, 0.8)',
+          'rgba(239, 68, 68, 0.8)'
         ],
         borderColor: [
-          '#059669',
-          '#DC2626'
+          'rgb(147, 51, 234)',
+          'rgb(34, 197, 94)',
+          'rgb(239, 68, 68)'
         ],
         borderWidth: 2
       }]
     }
 
-    const charts = {
-      revenueData,
-      callData,
-      conversionData
-    }
-
-    logger.info('Real chart data generated', { 
-      businessId, 
-      timeframe,
-      totalCalls: calls?.length || 0,
-      totalAppointments: appointments?.length || 0
-    })
-
     return NextResponse.json({
       success: true,
-      charts,
-      timeframe,
-      generatedAt: new Date().toISOString()
+      charts: {
+        revenueData: revenueChartData,
+        callData: callChartData,
+        conversionData: conversionChartData
+      },
+      timeframe
     })
 
   } catch (error) {
-    logger.error('Error generating real chart data', { 
+    logger.error('Real charts error', { 
       error: error instanceof Error ? error.message : 'Unknown error' 
     })
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to generate chart data' 
-    }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch chart data' },
+      { status: 500 }
+    )
   }
 }
+

@@ -1,292 +1,142 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { withPerformanceMonitoring, optimizeQuery } from '@/lib/performance-utils'
-import jwt from 'jsonwebtoken'
+import { verifyJWT } from '@/lib/auth-middleware'
+import { CONFIG } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-// Force redeploy - dashboard API v2
 
 export async function GET(request: NextRequest) {
   try {
-    // Ensure Supabase is configured
-    if (!isSupabaseConfigured()) {
-      return NextResponse.json({
-        success: false,
-        error: 'Database not configured'
-      }, { status: 500 })
+    // Verify authentication
+    const authResult = await verifyJWT(request)
+    if (!authResult.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-    // Get token from Authorization header
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
-    const jwtSecret = process.env.JWT_SECRET
-  if (!jwtSecret) {
-    return NextResponse.json({ error: 'Missing JWT_SECRET environment variable' }, { status: 500 })
-  }
-    
-    if (!jwtSecret || jwtSecret.includes('fallback') || jwtSecret.length < 32) {
-      return NextResponse.json({ error: 'Server configuration error - JWT_SECRET not properly configured' }, { status: 500 })
-    }
-
-    // Decode JWT token
-    let decoded
-    try {
-      decoded = jwt.verify(token, jwtSecret) as any
-    } catch (error) {
-      return NextResponse.json({ 
-        error: 'Invalid token', 
-        details: 'Token verification failed'
-      }, { status: 401 })
-    }
-
-    const userId = decoded.userId
-    const businessId = decoded.businessId
-    
-    if (!userId || !businessId) {
-      return NextResponse.json({ error: 'Invalid token data' }, { status: 401 })
-    }
-    
-    // Check if onboarding is completed and get business status
+    // Find user's business
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
-      .select('onboarding_completed, phone_number, business_name, tone')
-      .eq('id', businessId)
+      .select('id, business_name, phone_number, subscription_status, onboarding_completed')
+      .eq('owner_id', authResult.user.id)
       .single()
-    
+
     if (businessError || !business) {
-      return NextResponse.json({ 
-        error: 'Business not found'
-      }, { status: 404 })
-    }
-    
-    // Get timeframe from query params
-    const { searchParams } = new URL(request.url)
-    const timeframe = searchParams.get('timeframe') || '7d'
-    
-    // Calculate date range
-    const now = new Date()
-    const startDate = new Date()
-    
-    switch (timeframe) {
-      case '24h':
-        startDate.setDate(now.getDate() - 1)
-        break
-      case '7d':
-        startDate.setDate(now.getDate() - 7)
-        break
-      case '30d':
-        startDate.setDate(now.getDate() - 30)
-        break
-      case '90d':
-        startDate.setDate(now.getDate() - 90)
-        break
-      default:
-        startDate.setDate(now.getDate() - 7)
-    }
-    
-            // Fetch real data from Supabase using business_id (PARALLEL for performance)
-            const [callsResult, appointmentsResult, smsResult] = await Promise.all([
-              supabaseAdmin
-                .from('calls')
-                .select('*')
-                .eq('business_id', businessId)
-                .gte('created_at', startDate.toISOString())
-                .order('created_at', { ascending: false }),
-              
-              supabaseAdmin
-                .from('appointments')
-                .select('*')
-                .eq('business_id', businessId)
-                .gte('created_at', startDate.toISOString())
-                .order('scheduled_date', { ascending: true }),
-              
-              supabaseAdmin
-                .from('sms_messages')
-                .select('*')
-                .eq('business_id', businessId)
-                .gte('created_at', startDate.toISOString())
-                .order('created_at', { ascending: false })
-            ])
-            
-            const { data: calls, error: callsError } = callsResult
-            const { data: appointments, error: appointmentsError } = appointmentsResult
-            const { data: sms, error: smsError } = smsResult
-    
-    if (callsError) {
-      logger.error('Failed to fetch calls data', {
-        error: callsError.message,
-        businessId,
-        userId
+      return NextResponse.json({
+        businessId: null,
+        businessName: '',
+        phoneNumber: '',
+        isActive: false,
+        totalCalls: 0,
+        totalAppointments: 0,
+        totalRevenue: 0,
+        recentCalls: [],
+        upcomingAppointments: [],
+        setupStatus: 'not_started',
+        nextSteps: ['Complete onboarding', 'Set up phone number'],
+        onboardingCompleted: false,
+        hasPhoneNumber: false
       })
     }
-    if (appointmentsError) {
-      logger.error('Failed to fetch appointments data', { 
-        error: appointmentsError.message,  
-        businessId, 
-        userId
-      })
-    }
-    if (smsError) {
-      logger.error('Failed to fetch SMS data', { 
-        error: smsError.message,  
-        businessId, 
-        userId
-      })
-    }
-    
-    // Calculate comprehensive metrics
-    const totalCalls = calls?.length || 0
-    const totalRevenue = appointments?.reduce((sum, apt) => sum + (apt.estimated_value || 0), 0) || 0
-    const activeCalls = calls?.filter(call => call.status === 'in-progress').length || 0
-    const completedCalls = calls?.filter(call => call.status === 'completed').length || 0
-    const conversionRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0
-    const emergencyCalls = calls?.filter(call => call.status === 'emergency').length || 0
 
-    // Calculate ROI metrics
-    const totalAppointments = appointments?.length || 0
-    const perBookingFees = totalAppointments * 50 // $50 per booking
-    const subscriptionCost = 200 // $200/month base subscription
-    const totalCosts = subscriptionCost + perBookingFees
-    const netProfit = totalRevenue - totalCosts
-    const roiPercentage = totalCosts > 0 ? Math.round((netProfit / totalCosts) * 100) : 0
-    const costPerAppointment = totalAppointments > 0 ? Math.round(totalCosts / totalAppointments) : 0
-    const revenuePerAppointment = totalAppointments > 0 ? Math.round(totalRevenue / totalAppointments) : 0
-    
-    // Calculate calls that led to appointments (conversion tracking)
-    const callsWithAppointments = calls?.filter(call => 
-      appointments?.some(apt => apt.customer_phone === call.from_number)
-    ).length || 0
-    const bookingConversionRate = totalCalls > 0 ? Math.round((callsWithAppointments / totalCalls) * 100) : 0
-    
-    // Today's bookings
-    const today = new Date().toDateString()
-    const todayBookings = appointments?.filter(apt => {
-      return new Date(apt.scheduled_date).toDateString() === today
-    }).length || 0
-    
-    const missedCalls = calls?.filter(call => call.status === 'no-answer').length || 0
-    const avgCallDuration = calls?.length > 0 
-      ? Math.round(calls.reduce((sum, call) => sum + (call.duration || 0), 0) / calls.length * 10) / 10
-      : 0
-    
-    // Calculate customer satisfaction from call ratings
-    const ratedCalls = calls?.filter(call => call.satisfaction_rating) || []
-    const customerSatisfaction = ratedCalls.length > 0
-      ? Math.round(ratedCalls.reduce((sum, call) => sum + call.satisfaction_rating, 0) / ratedCalls.length * 10) / 10
-      : 5
-    
-    // Monthly recurring revenue (last 30 days)
-    const lastMonth = new Date()
-    lastMonth.setDate(lastMonth.getDate() - 30)
-    const monthlyRecurring = appointments?.filter(apt => {
-      return new Date(apt.created_at) >= lastMonth
-    }).reduce((sum, apt) => sum + (apt.estimated_value || 0), 0) || 0
-    
-    // Check if AI agent is active
-    const { data: agent } = await supabaseAdmin
-      .from('ai_agents')
-      .select('is_active')
+    const businessId = business.id
+
+    // Fetch totals - optimized queries
+    const { count: totalCalls } = await supabaseAdmin
+      .from('calls')
+      .select('id', { count: 'exact', head: true })
       .eq('business_id', businessId)
-      .single()
 
-    // Format recent calls for dashboard
-    const formattedRecentCalls = calls?.slice(0, 5).map(call => ({
+    const { count: totalAppointments } = await supabaseAdmin
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', businessId)
+
+    // Calculate revenue using CONFIG
+    const avgTicket = CONFIG.BUSINESS.AVERAGE_TICKET
+    const closeRate = CONFIG.BUSINESS.CLOSE_RATE
+    const totalRevenue = (totalAppointments || 0) * closeRate * avgTicket
+
+    // Fetch recent calls
+    const { data: recentCallsData } = await supabaseAdmin
+      .from('calls')
+      .select('id, from_number, duration, status, created_at')
+      .eq('business_id', businessId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    const recentCalls = (recentCallsData || []).map(call => ({
       id: call.id,
       caller: call.from_number || 'Unknown',
-      duration: `${call.duration || 0}s`,
+      duration: call.duration ? `${call.duration}s` : '0s',
       status: call.status || 'unknown',
       date: new Date(call.created_at).toLocaleDateString()
-    })) || []
+    }))
 
-    // Format upcoming appointments
-    const formattedUpcomingAppointments = appointments?.slice(0, 5).map(apt => ({
+    // Fetch upcoming appointments
+    const { data: upcomingApptsData } = await supabaseAdmin
+      .from('appointments')
+      .select('id, customer_name, service_type, scheduled_date, start_time')
+      .eq('business_id', businessId)
+      .gte('scheduled_date', new Date().toISOString())
+      .order('scheduled_date', { ascending: true })
+      .limit(10)
+
+    const upcomingAppointments = (upcomingApptsData || []).map(apt => ({
       id: apt.id,
       customer: apt.customer_name || 'Unknown',
-      service: apt.service_type || 'General Service',
+      service: apt.service_type || 'General',
       date: new Date(apt.scheduled_date).toLocaleDateString(),
-      time: new Date(apt.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    })) || []
-
-    // Get onboarding status and next steps
-    const onboardingCompleted = business.onboarding_completed || false
-    const hasPhoneNumber = business.phone_number && business.phone_number !== '8333956731'
-    const hasAgent = agent?.is_active || false
+      time: apt.start_time ? new Date(apt.start_time).toLocaleTimeString() : ''
+    }))
 
     // Determine setup status
-    let setupStatus = 'incomplete'
-    let nextSteps = []
-    
-    if (!onboardingCompleted) {
-      setupStatus = 'setup_needed'
-      nextSteps = ['Complete business profile', 'Configure AI settings', 'Get phone number']
-    } else if (!hasPhoneNumber) {
-      setupStatus = 'phone_needed'
-      nextSteps = ['Get a phone number', 'Test your AI agent', 'Go live']
-    } else if (!hasAgent) {
-      setupStatus = 'agent_needed'
-      nextSteps = ['Activate AI agent', 'Test call handling', 'Monitor performance']
-    } else {
-      setupStatus = 'active'
-      nextSteps = ['Monitor calls', 'Review appointments', 'Optimize settings']
+    let setupStatus = 'complete'
+    const nextSteps: string[] = []
+
+    if (!business.onboarding_completed) {
+      setupStatus = 'onboarding'
+      nextSteps.push('Complete business profile')
     }
 
-    const dashboardData = {
-      success: true,
-      data: {
-        businessId: businessId,
-        businessName: business.business_name,
-        phoneNumber: business.phone_number || 'Not assigned',
-        isActive: hasAgent,
-        totalCalls,
-        totalAppointments: appointments?.length || 0,
-        totalRevenue,
-        recentCalls: formattedRecentCalls,
-        upcomingAppointments: formattedUpcomingAppointments,
-        setupStatus,
-        nextSteps,
-        onboardingCompleted,
-        hasPhoneNumber,
-        hasAgent,
-        timeframe,
-        // ROI Metrics
-        roi: {
-          totalRevenue,
-          totalCosts,
-          netProfit,
-          roiPercentage,
-          subscriptionCost,
-          perBookingFees,
-          costPerAppointment,
-          revenuePerAppointment,
-          totalAppointments
-        },
-        // Performance Metrics
-        performance: {
-          conversionRate,
-          bookingConversionRate,
-          avgCallDuration,
-          customerSatisfaction,
-          missedCalls,
-          emergencyCalls,
-          todayBookings,
-          monthlyRecurring
-        }
-      }
+    if (!business.phone_number) {
+      setupStatus = 'phone_setup'
+      nextSteps.push('Provision phone number')
     }
-    
-    return NextResponse.json(dashboardData)
-    
+
+    if (business.subscription_status !== 'active') {
+      setupStatus = 'subscription'
+      nextSteps.push('Activate subscription')
+    }
+
+    return NextResponse.json({
+      businessId: business.id,
+      businessName: business.business_name,
+      phoneNumber: business.phone_number || '',
+      isActive: business.subscription_status === 'active',
+      totalCalls: totalCalls || 0,
+      totalAppointments: totalAppointments || 0,
+      totalRevenue: Math.round(totalRevenue),
+      recentCalls,
+      upcomingAppointments,
+      setupStatus,
+      nextSteps: nextSteps.length > 0 ? nextSteps : ['All set!'],
+      onboardingCompleted: business.onboarding_completed || false,
+      hasPhoneNumber: !!business.phone_number
+    })
+
   } catch (error) {
     logger.error('Dashboard data error', { 
-      error: error instanceof Error ? error.message.replace(/[<>]/g, '') : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error' 
     })
-    return NextResponse.json({ error: 'Failed to load dashboard data' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch dashboard data' },
+      { status: 500 }
+    )
   }
 }
+

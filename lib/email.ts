@@ -27,6 +27,30 @@ export interface ContactFormData {
 export async function sendEmail(emailData: EmailData): Promise<boolean> {
   try {
     // Check if email service is configured
+    /**
+
+     * if - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.if(param1, param2)
+
+     * ```
+
+     */
+
     if (!process.env.EMAIL_SERVICE_URL || !process.env.EMAIL_API_KEY) {
       logger.warn('Email service not configured, skipping email send', {
         to: emailData.to,
@@ -48,6 +72,42 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
         text: emailData.text
       })
     })
+
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
 
     if (!response.ok) {
       throw new Error(`Email service responded with ${response.status}`)

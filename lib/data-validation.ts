@@ -4,6 +4,7 @@
  */
 
 import { logger } from './monitoring'
+import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, RateLimitConfig, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
 
 export interface ValidationResult {
   isValid: boolean
@@ -18,7 +19,7 @@ export interface AnalyticsData {
   conversionRate: number
   churnRate: number
   retentionRate: number
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /**
@@ -33,21 +34,201 @@ export function validateAnalyticsData(data: AnalyticsData): ValidationResult {
     errors.push(`Invalid conversion rate: ${data.conversionRate}% (must be 0-100)`)
   }
 
+  /**
+
+
+   * if - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.if(param1, param2)
+
+
+   * ```
+
+
+   */
+
+
   if (data.churnRate < 0 || data.churnRate > 100) {
     errors.push(`Invalid churn rate: ${data.churnRate}% (must be 0-100)`)
   }
+
+  /**
+
+
+   * if - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.if(param1, param2)
+
+
+   * ```
+
+
+   */
+
 
   if (data.retentionRate < 0 || data.retentionRate > 100) {
     errors.push(`Invalid retention rate: ${data.retentionRate}% (must be 0-100)`)
   }
 
+  /**
+
+
+   * if - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.if(param1, param2)
+
+
+   * ```
+
+
+   */
+
+
   if (data.totalRevenue < 0) {
     errors.push(`Invalid revenue: $${data.totalRevenue} (cannot be negative)`)
   }
 
+  /**
+
+
+   * if - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.if(param1, param2)
+
+
+   * ```
+
+
+   */
+
+
   if (data.totalCalls < 0) {
     errors.push(`Invalid call count: ${data.totalCalls} (cannot be negative)`)
   }
+
+  /**
+
+
+   * if - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.if(param1, param2)
+
+
+   * ```
+
+
+   */
+
 
   if (data.totalAppointments < 0) {
     errors.push(`Invalid appointment count: ${data.totalAppointments} (cannot be negative)`)
@@ -62,6 +243,42 @@ export function validateAnalyticsData(data: AnalyticsData): ValidationResult {
   if (data.conversionRate > 80) {
     warnings.push(`Unusually high conversion rate: ${data.conversionRate}% (verify data accuracy)`)
   }
+
+  /**
+
+
+   * if - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.if(param1, param2)
+
+
+   * ```
+
+
+   */
+
 
   if (data.churnRate > 50) {
     warnings.push(`Very high churn rate: ${data.churnRate}% (investigate customer satisfaction)`)
@@ -85,6 +302,42 @@ export function validateAnalyticsData(data: AnalyticsData): ValidationResult {
 export function detectDataAnomalies(currentData: AnalyticsData, historicalData: AnalyticsData[]): ValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
+
+  /**
+
+
+   * if - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.if(param1, param2)
+
+
+   * ```
+
+
+   */
+
 
   if (historicalData.length < 3) {
     warnings.push('Insufficient historical data for anomaly detection')
@@ -122,7 +375,7 @@ export function detectDataAnomalies(currentData: AnalyticsData, historicalData: 
 /**
  * Validate data integrity with cryptographic checks
  */
-export function validateDataIntegrity(data: any, signature: string, timestamp: number): ValidationResult {
+export function validateDataIntegrity(data: unknown, signature: string, timestamp: number): ValidationResult {
   const errors: string[] = []
   const warnings: string[] = []
 
@@ -131,12 +384,48 @@ export function validateDataIntegrity(data: any, signature: string, timestamp: n
   const dataAge = now - timestamp
   const maxAge = 5 * 60 * 1000 // 5 minutes
 
+  /**
+
+
+   * if - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.if(param1, param2)
+
+
+   * ```
+
+
+   */
+
+
   if (dataAge > maxAge) {
     errors.push(`Data is too old: ${Math.round(dataAge / 1000)}s (max: ${maxAge / 1000}s)`)
   }
 
-  // Check signature validity (would need crypto implementation)
-  // This is a placeholder for actual cryptographic validation
+  // Check signature validity - basic length validation
+  // Note: Full cryptographic validation should be implemented based on specific signing algorithm
   if (!signature || signature.length < 10) {
     errors.push('Invalid data signature')
   }
@@ -172,6 +461,42 @@ export function logValidationResult(
     warningCount: validation.warnings.length
   }
 
+  /**
+
+
+   * if - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.if(param1, param2)
+
+
+   * ```
+
+
+   */
+
+
   if (validation.errors.length > 0) {
     logger.error('Data validation failed', logData)
   } else if (validation.warnings.length > 0) {
@@ -184,13 +509,14 @@ export function logValidationResult(
 /**
  * Sanitize and normalize data before processing
  */
-export function sanitizeAnalyticsData(data: any): AnalyticsData {
+export function sanitizeAnalyticsData(data: unknown): AnalyticsData {
+  const dataAny = data as any
   return {
-    totalCalls: Math.max(0, Math.round(data.totalCalls || 0)),
-    totalAppointments: Math.max(0, Math.round(data.totalAppointments || 0)),
-    totalRevenue: Math.max(0, Math.round((data.totalRevenue || 0) * 100) / 100), // Round to 2 decimal places
-    conversionRate: Math.max(0, Math.min(100, Math.round((data.conversionRate || 0) * 10) / 10)),
-    churnRate: Math.max(0, Math.min(100, Math.round((data.churnRate || 0) * 10) / 10)),
-    retentionRate: Math.max(0, Math.min(100, Math.round((data.retentionRate || 0) * 10) / 10))
+    totalCalls: Math.max(0, Math.round(dataAny.totalCalls || 0)),
+    totalAppointments: Math.max(0, Math.round(dataAny.totalAppointments || 0)),
+    totalRevenue: Math.max(0, Math.round((dataAny.totalRevenue || 0) * 100) / 100), // Round to 2 decimal places
+    conversionRate: Math.max(0, Math.min(100, Math.round((dataAny.conversionRate || 0) * 10) / 10)),
+    churnRate: Math.max(0, Math.min(100, Math.round((dataAny.churnRate || 0) * 10) / 10)),
+    retentionRate: Math.max(0, Math.min(100, Math.round((dataAny.retentionRate || 0) * 10) / 10))
   }
 }

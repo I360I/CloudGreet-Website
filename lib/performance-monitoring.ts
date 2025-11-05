@@ -20,6 +20,18 @@ export interface SystemHealth {
   lastHealthCheck: string
 }
 
+/**
+ * recordPerformanceMetrics - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await recordPerformanceMetrics(param1, param2)
+ * ```
+ */
 export async function recordPerformanceMetrics(
   endpoint: string,
   metrics: Omit<PerformanceMetrics, 'timestamp'>
@@ -45,22 +57,70 @@ export async function recordPerformanceMetrics(
         recorded_at: new Date().toISOString()
       })
 
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
+
     if (error) {
       logger.error('Failed to record performance metrics', { 
-        error: error instanceof Error ? error.message : error, 
+        error: error instanceof Error ? error.message : 'Unknown error', 
         endpoint, 
         metrics: JSON.stringify(metrics) 
       })
     }
   } catch (error) {
     logger.error('Performance metrics recording error', { 
-      error: error instanceof Error ? error.message : error, 
+      error: error instanceof Error ? error.message : 'Unknown error', 
       endpoint, 
       metrics: JSON.stringify(metrics) 
     })
   }
 }
 
+/**
+ * getPerformanceMetrics - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getPerformanceMetrics(param1, param2)
+ * ```
+ */
 export async function getPerformanceMetrics(
   endpoint?: string,
   hours: number = 24
@@ -84,9 +144,45 @@ export async function getPerformanceMetrics(
     
     let query = supabaseAdmin
       .from('performance_metrics')
-      .select('*')
+      .select('endpoint, response_time, memory_usage, cpu_usage, error_rate, request_count, recorded_at')
       .gte('recorded_at', since)
       .order('recorded_at', { ascending: false })
+
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
 
     if (endpoint) {
       query = query.eq('endpoint', endpoint)
@@ -94,14 +190,86 @@ export async function getPerformanceMetrics(
 
     const { data, error } = await query
 
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
+
     if (error) {
       logger.error('Failed to fetch performance metrics', { 
-        error: error instanceof Error ? error.message : error, 
+        error: error instanceof Error ? error.message : 'Unknown error', 
         endpoint, 
         hours 
       })
       return []
     }
+
+    /**
+
+
+     * return - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.return(param1, param2)
+
+
+     * ```
+
+
+     */
+
 
     return (data || []).map(record => ({
       responseTime: record.response_time,
@@ -113,7 +281,7 @@ export async function getPerformanceMetrics(
     }))
   } catch (error) {
     logger.error('Performance metrics fetch error', { 
-      error: error instanceof Error ? error.message : error, 
+      error: error instanceof Error ? error.message : 'Unknown error', 
       endpoint, 
       hours 
     })
@@ -121,6 +289,18 @@ export async function getPerformanceMetrics(
   }
 }
 
+/**
+ * getSystemHealth - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getSystemHealth(param1, param2)
+ * ```
+ */
 export async function getSystemHealth(): Promise<SystemHealth> {
   try {
     if (!isSupabaseConfigured()) {
@@ -139,10 +319,46 @@ export async function getSystemHealth(): Promise<SystemHealth> {
     // Get latest system health record
     const { data: healthRecord, error } = await supabaseAdmin
       .from('system_health')
-      .select('*')
+      .select('status, uptime, memory_usage, cpu_usage, disk_usage, active_connections, recorded_at')
       .order('recorded_at', { ascending: false })
       .limit(1)
       .single()
+
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
 
     if (error || !healthRecord) {
       logger.error('Failed to fetch system health', { 
@@ -184,6 +400,18 @@ export async function getSystemHealth(): Promise<SystemHealth> {
   }
 }
 
+/**
+ * recordSystemHealth - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await recordSystemHealth(param1, param2)
+ * ```
+ */
 export async function recordSystemHealth(health: Omit<SystemHealth, 'lastHealthCheck'>): Promise<void> {
   try {
     if (!isSupabaseConfigured()) {
@@ -205,20 +433,68 @@ export async function recordSystemHealth(health: Omit<SystemHealth, 'lastHealthC
         recorded_at: new Date().toISOString()
       })
 
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
+
     if (error) {
       logger.error('Failed to record system health', {
-        error: error instanceof Error ? error.message : error,
+        error: error instanceof Error ? error.message : 'Unknown error',
         health: JSON.stringify(health)
       })
     }
   } catch (error) {
     logger.error('System health recording error', { 
-      error: error instanceof Error ? error.message : error, 
+      error: error instanceof Error ? error.message : 'Unknown error', 
       health: JSON.stringify(health) 
     })
   }
 }
 
+/**
+ * getMemoryUsage - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getMemoryUsage(param1, param2)
+ * ```
+ */
 export function getMemoryUsage(): number {
   if (typeof process !== 'undefined' && process.memoryUsage) {
     const usage = process.memoryUsage()
@@ -227,6 +503,18 @@ export function getMemoryUsage(): number {
   return 0
 }
 
+/**
+ * getCpuUsage - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getCpuUsage(param1, param2)
+ * ```
+ */
 export function getCpuUsage(): number {
   // Simplified CPU usage calculation
   // In a real implementation, you'd use a library like 'usage' or 'pidusage'
@@ -238,6 +526,18 @@ export function getCpuUsage(): number {
     return 0
 }
 
+/**
+ * getUptime - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getUptime(param1, param2)
+ * ```
+ */
 export function getUptime(): number {
   if (typeof process !== 'undefined' && process.uptime) {
     return process.uptime()
