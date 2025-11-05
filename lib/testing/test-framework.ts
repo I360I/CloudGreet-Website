@@ -367,7 +367,11 @@ export class TestFramework {
       .eq('id', id);
 
     if (error) {
-      logger.warn('Failed to cleanup test data', { table, id, error });
+      logger.warn('Failed to cleanup test data', { 
+        table, 
+        id, 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 
