@@ -188,9 +188,9 @@ export class TestFramework {
       logger.error('Test failed', { test: test.name, error, duration: Date.now() - startTime });
     } finally {
       // Cleanup
-      if (config.afterEach) {
+      if (suite.afterEach) {
         try {
-          await this.runWithTimeout(config.afterEach(), config.timeout, 'afterEach');
+          await this.runWithTimeout(suite.afterEach(), config.timeout, 'afterEach');
         } catch (error) {
           logger.warn('afterEach failed', { test: test.name, error });
         }
