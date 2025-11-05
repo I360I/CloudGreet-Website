@@ -324,7 +324,8 @@ async function testAuth(): Promise<TestResult[]> {
       const { verifyJWT } = await import('@/lib/auth-middleware')
       
       // Create a mock request to test JWT verification
-      const mockRequest = new Request('http://localhost', {
+      const mockRequest = new NextRequest('http://localhost', {
+        method: 'GET',
         headers: {
           'Authorization': 'Bearer invalid-token'
         }
