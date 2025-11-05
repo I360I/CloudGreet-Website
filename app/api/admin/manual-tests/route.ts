@@ -443,8 +443,9 @@ async function testSecurity(): Promise<TestResult[]> {
 export async function POST(request: NextRequest) {
   try {
     // Verify admin access
-    const authResult = await requireAdmin(request)
-    if (!authResult.user) {
+    try {
+      await requireAdmin(request)
+    } catch (error) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
