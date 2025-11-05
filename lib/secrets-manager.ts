@@ -179,7 +179,7 @@ export class SecretsManager {
         name, 
         oldVersion, 
         newVersion, 
-        rotatedAt: secret.lastRotated 
+        rotatedAt: secret.lastRotated instanceof Date ? secret.lastRotated.toISOString() : secret.lastRotated 
       });
 
       return {
