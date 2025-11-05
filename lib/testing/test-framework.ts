@@ -124,24 +124,24 @@ export class TestFramework {
   /**
    * Run tests in parallel
    */
-  private static async runTestsInParallel(tests: TestCase[], config: TestConfig): Promise<void> {
-    const testPromises = tests.map(test => this.runSingleTest(test, config));
+  private static async runTestsInParallel(tests: TestCase[], suite: TestSuite, config: TestConfig): Promise<void> {
+    const testPromises = tests.map(test => this.runSingleTest(test, suite, config));
     await Promise.all(testPromises);
   }
 
   /**
    * Run tests sequentially
    */
-  private static async runTestsSequentially(tests: TestCase[], config: TestConfig): Promise<void> {
+  private static async runTestsSequentially(tests: TestCase[], suite: TestSuite, config: TestConfig): Promise<void> {
     for (const test of tests) {
-      await this.runSingleTest(test, config);
+      await this.runSingleTest(test, suite, config);
     }
   }
 
   /**
    * Run a single test
    */
-  private static async runSingleTest(test: TestCase, config: TestConfig): Promise<void> {
+  private static async runSingleTest(test: TestCase, suite: TestSuite, config: TestConfig): Promise<void> {
     if (test.skip) {
       this.testResults.push({
         name: test.name,
@@ -158,8 +158,8 @@ export class TestFramework {
 
     try {
       // Setup
-      if (config.beforeEach) {
-        await this.runWithTimeout(config.beforeEach(), config.timeout, 'beforeEach');
+      if (suite.beforeEach) {
+        await this.runWithTimeout(suite.beforeEach(), config.timeout, 'beforeEach');
       }
 
       // Run test
