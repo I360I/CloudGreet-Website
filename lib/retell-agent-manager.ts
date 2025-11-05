@@ -383,8 +383,9 @@ Remember: You represent ${config.businessName} and should always maintain the hi
 
        */
 
-      if (hours[dayKey]?.enabled) {
-        formattedHours += `${day}: ${hours[dayKey].start} - ${hours[dayKey].end}\n`;
+      const dayHours = hours[dayKey] as { enabled?: boolean; start?: string; end?: string } | undefined;
+      if (dayHours?.enabled) {
+        formattedHours += `${day}: ${dayHours.start} - ${dayHours.end}\n`;
       } else {
         formattedHours += `${day}: Closed\n`;
       }
