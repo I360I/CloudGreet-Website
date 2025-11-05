@@ -75,7 +75,7 @@ export function useWebSocket({ businessId, enabled = true }: UseWebSocketOptions
     }
   }, [businessId, enabled])
 
-  const sendMessage = (data: unknown) => {
+  const sendMessage = (data: WebSocketMessage) => {
     if (isConnected) {
       dashboardWebSocket.send(data)
     }
