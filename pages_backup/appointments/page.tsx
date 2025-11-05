@@ -87,8 +87,8 @@ export default function AppointmentsPage() {
       case 'cancelled':
         return <XCircle className="w-5 h-5 text-red-400" />
       case 'no_show':
-        return <AlertCircle className="w-5 h-5 text-yellow-400" />,
-  default:
+        return <AlertCircle className="w-5 h-5 text-yellow-400" />
+      default:
         return <AlertCircle className="w-5 h-5 text-gray-400" />
     }
   }
@@ -104,8 +104,8 @@ export default function AppointmentsPage() {
       case 'cancelled':
         return 'bg-red-500/20 text-red-400 border-red-500/30'
       case 'no_show':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  default:
+        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+      default:
         return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
     }
   }
