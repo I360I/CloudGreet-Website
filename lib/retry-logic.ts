@@ -29,10 +29,46 @@ const defaultOptions: Required<RetryOptions> = {
 export async function withRetry<T>(
   fn: () => Promise<T>,
   options: RetryOptions = {},
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<T> {
   const opts = { ...defaultOptions, ...options }
   let lastError: Error | null = null
+  
+  /**
+
+  
+   * for - Add description here
+
+  
+   * 
+
+  
+   * @param {...any} args - Method parameters
+
+  
+   * @returns {Promise<any>} Method return value
+
+  
+   * @throws {Error} When operation fails
+
+  
+   * 
+
+  
+   * @example
+
+  
+   * ```typescript
+
+  
+   * await this.for(param1, param2)
+
+  
+   * ```
+
+  
+   */
+
   
   for (let attempt = 0; attempt <= opts.maxRetries; attempt++) {
     try {
@@ -62,6 +98,30 @@ export async function withRetry<T>(
       // Check if error is retryable
       if (error && typeof error === 'object' && 'status' in error) {
         const status = (error as any).status
+        /**
+
+         * if - Add description here
+
+         * 
+
+         * @param {...any} args - Method parameters
+
+         * @returns {Promise<any>} Method return value
+
+         * @throws {Error} When operation fails
+
+         * 
+
+         * @example
+
+         * ```typescript
+
+         * await this.if(param1, param2)
+
+         * ```
+
+         */
+
         if (!opts.retryableStatuses.includes(status)) {
           logger.warn('Non-retryable error', { 
             status, 
@@ -109,12 +169,36 @@ export async function fetchWithRetry(
   retryOptions: RetryOptions = {}
 ): Promise<Response> {
   return withRetry(
+    /**
+
+     * async - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.async(param1, param2)
+
+     * ```
+
+     */
+
     async () => {
       const response = await fetch(url, options)
       
       // Check if response status is retryable
       if (!response.ok) {
-        const error: any = new Error(`HTTP ${response.status}: ${response.statusText}`)
+        const error = new Error(`HTTP ${response.status}: ${response.statusText}`) as Error & { status?: number; response?: Response }
         error.status = response.status
         error.response = response
         throw error
@@ -132,7 +216,7 @@ export async function fetchWithRetry(
  */
 export async function telnyxWithRetry<T>(
   fn: () => Promise<T>,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<T> {
   return withRetry(
     fn,
@@ -151,7 +235,7 @@ export async function telnyxWithRetry<T>(
  */
 export async function stripeWithRetry<T>(
   fn: () => Promise<T>,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<T> {
   return withRetry(
     fn,
@@ -170,7 +254,7 @@ export async function stripeWithRetry<T>(
  */
 export async function openaiWithRetry<T>(
   fn: () => Promise<T>,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<T> {
   return withRetry(
     fn,
@@ -189,7 +273,7 @@ export async function openaiWithRetry<T>(
  */
 export async function resendWithRetry<T>(
   fn: () => Promise<T>,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<T> {
   return withRetry(
     fn,
