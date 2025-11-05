@@ -97,9 +97,9 @@ export class TestFramework {
 
       // Run tests
       if (fullConfig.parallel) {
-        await this.runTestsInParallel(suite.tests, fullConfig);
+        await this.runTestsInParallel(suite.tests, suite, fullConfig);
       } else {
-        await this.runTestsSequentially(suite.tests, fullConfig);
+        await this.runTestsSequentially(suite.tests, suite, fullConfig);
       }
 
       // Cleanup
