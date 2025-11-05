@@ -2,6 +2,7 @@
 // Rate limiting for webhook endpoints
 
 import { logger } from '@/lib/monitoring'
+import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, ValidationResult, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
 
 interface RateLimitConfig {
   windowMs: number
@@ -15,6 +16,30 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
 setInterval(() => {
   const now = Date.now()
   const entries = Array.from(rateLimitStore.entries())
+  /**
+
+   * for - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.for(param1, param2)
+
+   * ```
+
+   */
+
   for (const [key, value] of entries) {
     if (now > value.resetTime) {
       rateLimitStore.delete(key)
@@ -37,6 +62,42 @@ export function checkRateLimit(
   
   const existing = rateLimitStore.get(key)
   
+  /**
+
+  
+   * if - Add description here
+
+  
+   * 
+
+  
+   * @param {...any} args - Method parameters
+
+  
+   * @returns {Promise<any>} Method return value
+
+  
+   * @throws {Error} When operation fails
+
+  
+   * 
+
+  
+   * @example
+
+  
+   * ```typescript
+
+  
+   * await this.if(param1, param2)
+
+  
+   * ```
+
+  
+   */
+
+  
   if (!existing || now > existing.resetTime) {
     // New window
     rateLimitStore.set(key, {
@@ -50,6 +111,42 @@ export function checkRateLimit(
       resetTime: now + config.windowMs
     }
   }
+  
+  /**
+
+  
+   * if - Add description here
+
+  
+   * 
+
+  
+   * @param {...any} args - Method parameters
+
+  
+   * @returns {Promise<any>} Method return value
+
+  
+   * @throws {Error} When operation fails
+
+  
+   * 
+
+  
+   * @example
+
+  
+   * ```typescript
+
+  
+   * await this.if(param1, param2)
+
+  
+   * ```
+
+  
+   */
+
   
   if (existing.count >= config.maxRequests) {
     // Rate limit exceeded

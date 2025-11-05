@@ -1,6 +1,12 @@
 import { logger } from '@/lib/monitoring'
+
+interface SessionData {
+  controller: ReadableStreamDefaultController
+  encoder: TextEncoder
+}
+
 // Store session data for SSE connections
-const sessionData = new Map<string, unknown>()
+const sessionData = new Map<string, SessionData>()
 
 // Helper function to send messages to SSE clients
 /**
