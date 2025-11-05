@@ -331,7 +331,7 @@ export class ComponentOptimizer {
     
     // Apply memo optimization
     if (optimizations.memo) {
-      Component = memo(Component) as T;
+      Component = memo(Component) as unknown as T;
     }
 
     // Mark as optimized
