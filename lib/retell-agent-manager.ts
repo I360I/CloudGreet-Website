@@ -13,7 +13,7 @@ export interface BusinessAgentConfig {
   ownerName?: string;
   services: string[];
   serviceAreas: string[];
-  businessHours: Record<string, unknown>;
+  businessHours: Record<string, { enabled: boolean; start: string; end: string }>;
   greetingMessage: string;
   tone: 'professional' | 'friendly' | 'casual';
   phoneNumber: string;
