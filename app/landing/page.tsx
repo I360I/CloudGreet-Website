@@ -7,11 +7,12 @@ import {
   Phone, Play, CheckCircle, Calendar, Zap, 
   TrendingUp, Users, DollarSign, Settings
 } from 'lucide-react'
-import Hero from '../components/Hero'
-import SilkRibbon from '../components/SilkRibbon'
-import RingOrb from '../components/RingOrb'
-// ClickToCallOrb component removed
-// import ROICalculator from '../components/ROICalculator'
+import Hero from '@/app/components/Hero'
+import { logger } from '@/lib/monitoring'
+import SilkRibbon from '@/app/components/SilkRibbon'
+import RingOrb from '@/app/components/RingOrb'
+import CallOrb from '@/app/components/CallOrb'
+// import ROICalculator from '@/app/components/ROICalculator'
 
 function VoiceOrbDemoWithSettings() {
   const [businessInfo, setBusinessInfo] = React.useState({
@@ -84,7 +85,16 @@ function VoiceOrbDemoWithSettings() {
         </p>
       </motion.div>
 
-        {/* ClickToCallOrb component removed */}
+        <CallOrb 
+          onCall={async (phoneNumber) => {
+            const response = await fetch('/api/telnyx/initiate-call', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phoneNumber, businessId: 'demo', businessInfo })
+            })
+            if (!response.ok) throw new Error('Call failed')
+          }}
+        />
     </div>
   )
 }
@@ -269,7 +279,8 @@ export default function LandingPage() {
                             }, 3000);
                           }
                         } catch (error) {
-                          console.error('Call initiation error:', error);
+                          console.error('Error:', error);
+                          
                           // Show error message
                           const errorMsg = document.createElement('div');
                           errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
@@ -957,3 +968,5 @@ export default function LandingPage() {
     </div>
   )
 }
+
+
