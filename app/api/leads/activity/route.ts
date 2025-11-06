@@ -215,11 +215,12 @@ export async function GET(request: NextRequest) {
 // POST /api/leads/activity - Create new activity
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const body = await request.json()
     const { type, data } = body
 
     if (type === 'activity') {
-      return await createLeadActivity(data)
+      return await createLeadActivity(data, supabase)
     } else if (type === 'note') {
       return await createLeadNote(data, supabase)
     } else if (type === 'interaction') {
@@ -242,15 +243,16 @@ export async function POST(request: NextRequest) {
 // PUT /api/leads/activity - Update activity
 export async function PUT(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const body = await request.json()
     const { type, id, data } = body
 
     if (type === 'activity') {
-      return await updateLeadActivity(id, data)
+      return await updateLeadActivity(id, data, supabase)
     } else if (type === 'note') {
-      return await updateLeadNote(id, data)
+      return await updateLeadNote(id, data, supabase)
     } else if (type === 'interaction') {
-      return await updateLeadInteraction(id, data)
+      return await updateLeadInteraction(id, data, supabase)
     } else {
       return NextResponse.json({
         success: false,
@@ -269,6 +271,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/leads/activity - Delete activity
 export async function DELETE(request: NextRequest) {
   try {
+    const supabase = getSupabaseClient()
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     const id = searchParams.get('id')
@@ -281,11 +284,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (type === 'activity') {
-      return await deleteLeadActivity(id)
+      return await deleteLeadActivity(id, supabase)
     } else if (type === 'note') {
-      return await deleteLeadNote(id)
+      return await deleteLeadNote(id, supabase)
     } else if (type === 'interaction') {
-      return await deleteLeadInteraction(id)
+      return await deleteLeadInteraction(id, supabase)
     } else {
       return NextResponse.json({
         success: false,
@@ -302,7 +305,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Helper functions
-async function createLeadActivity(data: any) {
+async function createLeadActivity(data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { businessId = 'default', ...activityData } = data
 
   const { data: activity, error } = await supabase
@@ -326,7 +329,7 @@ async function createLeadActivity(data: any) {
   })
 }
 
-async function updateLeadActivity(id: string, data: any) {
+async function updateLeadActivity(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: activity, error } = await supabase
     .from('lead_activity_log')
     .update({
@@ -347,7 +350,7 @@ async function updateLeadActivity(id: string, data: any) {
   })
 }
 
-async function deleteLeadActivity(id: string) {
+async function deleteLeadActivity(id: string, supabase: ReturnType<typeof getSupabaseClient>) {
   const { error } = await supabase
     .from('lead_activity_log')
     .delete()
@@ -362,7 +365,7 @@ async function deleteLeadActivity(id: string) {
   })
 }
 
-async function createLeadNote(data: any) {
+async function createLeadNote(data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: note, error } = await supabase
     .from('lead_notes')
     .insert({
@@ -383,7 +386,7 @@ async function createLeadNote(data: any) {
   })
 }
 
-async function updateLeadNote(id: string, data: any) {
+async function updateLeadNote(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: note, error } = await supabase
     .from('lead_notes')
     .update({
@@ -404,7 +407,7 @@ async function updateLeadNote(id: string, data: any) {
   })
 }
 
-async function deleteLeadNote(id: string) {
+async function deleteLeadNote(id: string, supabase: ReturnType<typeof getSupabaseClient>) {
   const { error } = await supabase
     .from('lead_notes')
     .delete()
@@ -419,7 +422,7 @@ async function deleteLeadNote(id: string) {
   })
 }
 
-async function createLeadInteraction(data: any) {
+async function createLeadInteraction(data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: interaction, error } = await supabase
     .from('lead_interactions')
     .insert({
@@ -440,7 +443,7 @@ async function createLeadInteraction(data: any) {
   })
 }
 
-async function updateLeadInteraction(id: string, data: any) {
+async function updateLeadInteraction(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: interaction, error } = await supabase
     .from('lead_interactions')
     .update({
@@ -461,7 +464,7 @@ async function updateLeadInteraction(id: string, data: any) {
   })
 }
 
-async function deleteLeadInteraction(id: string) {
+async function deleteLeadInteraction(id: string, supabase: ReturnType<typeof getSupabaseClient>) {
   const { error } = await supabase
     .from('lead_interactions')
     .delete()

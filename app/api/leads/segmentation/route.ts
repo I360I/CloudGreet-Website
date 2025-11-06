@@ -239,11 +239,11 @@ export async function POST(request: NextRequest) {
     const { type, data } = body
 
     if (type === 'segment') {
-      return await createLeadSegment(data)
+      return await createLeadSegment(data, supabase)
     } else if (type === 'campaign') {
-      return await createTargetingCampaign(data)
+      return await createTargetingCampaign(data, supabase)
     } else if (type === 'rule') {
-      return await createSegmentationRule(data)
+      return await createSegmentationRule(data, supabase)
     } else {
       return NextResponse.json({
         success: false,
@@ -267,11 +267,11 @@ export async function PUT(request: NextRequest) {
     const { type, id, data } = body
 
     if (type === 'segment') {
-      return await updateLeadSegment(id, data)
+      return await updateLeadSegment(id, data, supabase)
     } else if (type === 'campaign') {
-      return await updateTargetingCampaign(id, data)
+      return await updateTargetingCampaign(id, data, supabase)
     } else if (type === 'rule') {
-      return await updateSegmentationRule(id, data)
+      return await updateSegmentationRule(id, data, supabase)
     } else {
       return NextResponse.json({
         success: false,
@@ -303,11 +303,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (type === 'segment') {
-      return await deleteLeadSegment(id)
+      return await deleteLeadSegment(id, supabase)
     } else if (type === 'campaign') {
-      return await deleteTargetingCampaign(id)
+      return await deleteTargetingCampaign(id, supabase)
     } else if (type === 'rule') {
-      return await deleteSegmentationRule(id)
+      return await deleteSegmentationRule(id, supabase)
     } else {
       return NextResponse.json({
         success: false,
@@ -324,7 +324,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 // Helper functions
-async function createLeadSegment(data: any) {
+async function createLeadSegment(data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { businessId = 'default', ...segmentData } = data
 
   const { data: segment, error } = await supabase
@@ -348,7 +348,7 @@ async function createLeadSegment(data: any) {
   })
 }
 
-async function updateLeadSegment(id: string, data: any) {
+async function updateLeadSegment(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: segment, error } = await supabase
     .from('lead_segments')
     .update({
@@ -369,7 +369,7 @@ async function updateLeadSegment(id: string, data: any) {
   })
 }
 
-async function deleteLeadSegment(id: string) {
+async function deleteLeadSegment(id: string, supabase: ReturnType<typeof getSupabaseClient>) {
   // Delete associated rules first
   await supabase
     .from('segmentation_rules')
@@ -391,7 +391,7 @@ async function deleteLeadSegment(id: string) {
   })
 }
 
-async function createSegmentationRule(data: any) {
+async function createSegmentationRule(data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: rule, error } = await supabase
     .from('segmentation_rules')
     .insert({
@@ -412,7 +412,7 @@ async function createSegmentationRule(data: any) {
   })
 }
 
-async function updateSegmentationRule(id: string, data: any) {
+async function updateSegmentationRule(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: rule, error } = await supabase
     .from('segmentation_rules')
     .update({
@@ -433,7 +433,7 @@ async function updateSegmentationRule(id: string, data: any) {
   })
 }
 
-async function deleteSegmentationRule(id: string) {
+async function deleteSegmentationRule(id: string, supabase: ReturnType<typeof getSupabaseClient>) {
   const { error } = await supabase
     .from('segmentation_rules')
     .delete()
@@ -448,7 +448,7 @@ async function deleteSegmentationRule(id: string) {
   })
 }
 
-async function createTargetingCampaign(data: any) {
+async function createTargetingCampaign(data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { businessId = 'default', ...campaignData } = data
 
   const { data: campaign, error } = await supabase
@@ -463,7 +463,7 @@ async function createTargetingCampaign(data: any) {
     .single()
 
   if (error) {
-    throw new Error(`Failed to create campaign: ${campaignData.message}`)
+    throw new Error(`Failed to create campaign: ${error.message}`)
   }
 
   return NextResponse.json({
@@ -472,7 +472,7 @@ async function createTargetingCampaign(data: any) {
   })
 }
 
-async function updateTargetingCampaign(id: string, data: any) {
+async function updateTargetingCampaign(id: string, data: any, supabase: ReturnType<typeof getSupabaseClient>) {
   const { data: campaign, error } = await supabase
     .from('targeting_campaigns')
     .update({
@@ -493,7 +493,7 @@ async function updateTargetingCampaign(id: string, data: any) {
   })
 }
 
-async function deleteTargetingCampaign(id: string) {
+async function deleteTargetingCampaign(id: string, supabase: ReturnType<typeof getSupabaseClient>) {
   const { error } = await supabase
     .from('targeting_campaigns')
     .delete()

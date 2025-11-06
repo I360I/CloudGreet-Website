@@ -4,10 +4,15 @@ import { verifyAdminToken } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    // Return placeholder client for build time
+    return createClient('https://placeholder.supabase.co', 'placeholder-key')
+  }
+  return createClient(url, key)
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,6 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch automation rules from database
+    const supabase = getSupabaseClient()
     const { data: rules, error } = await supabase
       .from('automation_rules')
       .select('*')
@@ -61,6 +67,7 @@ export async function POST(request: NextRequest) {
     const { name, trigger, action, conditions, is_active } = body
 
     // Create new automation rule
+    const supabase = getSupabaseClient()
     const { data: rule, error } = await supabase
       .from('automation_rules')
       .insert({
