@@ -31,21 +31,25 @@ export async function GET(request: NextRequest) {
       .select('*')
 
     // Calculate real analytics
-    const totalCalls = calls?.length || 0
-    const answeredCalls = calls?.filter(call => call.status === 'completed').length || 0
-    const missedCalls = calls?.filter(call => call.status === 'no_answer').length || 0
+    const callsArray = Array.isArray(calls) ? calls : []
+    const appointmentsArray = Array.isArray(appointments) ? appointments : []
+    const businessesArray = Array.isArray(businesses) ? businesses : []
+    
+    const totalCalls = callsArray.length || 0
+    const answeredCalls = callsArray.filter((call: any) => call.status === 'completed').length || 0
+    const missedCalls = callsArray.filter((call: any) => call.status === 'no_answer').length || 0
     const conversionRate = totalCalls > 0 ? (answeredCalls / totalCalls) * 100 : 0
-    const avgDuration = calls?.reduce((sum, call) => sum + (call.duration || 0), 0) / totalCalls || 0
+    const avgDuration = callsArray.reduce((sum: number, call: any) => sum + (call.duration || 0), 0) / totalCalls || 0
 
-    const totalAppointments = appointments?.length || 0
-    const completedAppointments = appointments?.filter(apt => apt.status === 'completed').length || 0
-    const cancelledAppointments = appointments?.filter(apt => apt.status === 'cancelled').length || 0
-    const noShowAppointments = appointments?.filter(apt => apt.status === 'no_show').length || 0
+    const totalAppointments = appointmentsArray.length || 0
+    const completedAppointments = appointmentsArray.filter((apt: any) => apt.status === 'completed').length || 0
+    const cancelledAppointments = appointmentsArray.filter((apt: any) => apt.status === 'cancelled').length || 0
+    const noShowAppointments = appointmentsArray.filter((apt: any) => apt.status === 'no_show').length || 0
     const completionRate = totalAppointments > 0 ? (completedAppointments / totalAppointments) * 100 : 0
 
-    const totalClients = businesses?.length || 0
-    const activeClients = businesses?.filter(biz => biz.onboarding_completed).length || 0
-    const totalRevenue = appointments?.reduce((sum, apt) => sum + (apt.estimated_value || 0), 0) || 0
+    const totalClients = businessesArray.length || 0
+    const activeClients = businessesArray.filter((biz: any) => biz.onboarding_completed).length || 0
+    const totalRevenue = appointmentsArray.reduce((sum: number, apt: any) => sum + (apt.estimated_value || 0), 0) || 0
     const avgClientValue = totalClients > 0 ? totalRevenue / totalClients : 0
 
     // Calculate REAL churn rate with proper time-based formula
@@ -72,9 +76,10 @@ export async function GET(request: NextRequest) {
     const churnRate = customersAtStartCount > 0 ? (churnedCount / customersAtStartCount) * 100 : 0
     const retentionRate = 100 - churnRate
 
-    const totalSMS = smsLogs?.length || 0
-    const deliveredSMS = smsLogs?.filter(sms => sms.status === 'delivered').length || 0
-    const repliedSMS = smsLogs?.filter(sms => sms.status === 'replied').length || 0
+    const smsLogsArray = Array.isArray(smsLogs) ? smsLogs : []
+    const totalSMS = smsLogsArray.length || 0
+    const deliveredSMS = smsLogsArray.filter((sms: any) => sms.status === 'delivered').length || 0
+    const repliedSMS = smsLogsArray.filter((sms: any) => sms.status === 'replied').length || 0
     const responseRate = totalSMS > 0 ? (repliedSMS / totalSMS) * 100 : 0
 
     const analytics = {

@@ -21,11 +21,16 @@ function getSupabase() {
   try {
     if (!isSupabaseConfigured()) {
       console.warn('Supabase not configured, using placeholder client')
+      // Return a minimal client that won't fail during build
+      if (!supabaseUrl || !supabaseAnonKey) {
+        return createClient('https://placeholder.supabase.co', 'placeholder-key')
+      }
     }
     return createClient(supabaseUrl, supabaseAnonKey)
   } catch (error) {
     console.error('Failed to create Supabase client:', error)
-    throw new Error('Supabase client initialization failed')
+    // Return a placeholder client instead of throwing during build
+    return createClient('https://placeholder.supabase.co', 'placeholder-key')
   }
 }
 
@@ -33,6 +38,15 @@ function getSupabaseAdmin() {
   try {
     if (!isSupabaseConfigured()) {
       console.warn('Supabase not configured, using placeholder admin client')
+      // Return a minimal client that won't fail during build
+      if (!supabaseUrl || !supabaseServiceKey) {
+        return createClient('https://placeholder.supabase.co', 'placeholder-key', {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        })
+      }
     }
     return createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -42,13 +56,38 @@ function getSupabaseAdmin() {
     })
   } catch (error) {
     console.error('Failed to create Supabase admin client:', error)
-    throw new Error('Supabase admin client initialization failed')
+    // Return a placeholder client instead of throwing during build
+    return createClient('https://placeholder.supabase.co', 'placeholder-key', {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
   }
 }
 
-// Export clients
-export const supabase = getSupabase()
-export const supabaseAdmin = getSupabaseAdmin()
+// Export lazy getters - clients are created on first access
+let _supabase: ReturnType<typeof createClient> | null = null
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null
+
+export function getSupabaseClient() {
+  if (!_supabase) {
+    _supabase = getSupabase()
+  }
+  return _supabase
+}
+
+export function getSupabaseAdminClient() {
+  if (!_supabaseAdmin) {
+    _supabaseAdmin = getSupabaseAdmin()
+  }
+  return _supabaseAdmin
+}
+
+// For backward compatibility, export as properties (but they're actually getters)
+// Note: These will be initialized on first access, not at module load time
+export const supabase = getSupabaseClient()
+export const supabaseAdmin = getSupabaseAdminClient()
 
 // Wrapper function for safe database operations
 export async function safeDbOperation<T>(

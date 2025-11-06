@@ -120,6 +120,8 @@ async function sendBulkSMS(clientId: string, message: string) {
       throw new Error('Client not found')
     }
 
+    const clientData = client as { phone_number: string; business_name: string }
+
     // Check if Telnyx is configured
     if (!process.env.TELNYX_API_KEY || !process.env.TELNYX_PHONE_NUMBER) {
       throw new Error('SMS service not configured')
@@ -134,7 +136,7 @@ async function sendBulkSMS(clientId: string, message: string) {
       },
       body: JSON.stringify({
         from: process.env.TELNYX_PHONE_NUMBER,
-        to: client.phone_number,
+        to: clientData.phone_number,
         text: message,
         messaging_profile_id: process.env.TELNYX_MESSAGING_PROFILE_ID
       })
@@ -152,19 +154,19 @@ async function sendBulkSMS(clientId: string, message: string) {
       .from('sms_messages')
       .insert({
         business_id: clientId,
-        from_number: process.env.TELNYX_PHONE_NUMBER,
-        to_number: client.phone_number,
+        from_number: process.env.TELNYX_PHONE_NUMBER || '',
+        to_number: clientData.phone_number,
         message: message,
         direction: 'outbound',
         status: 'sent',
         created_at: new Date().toISOString()
-      })
+      } as any)
 
     return { 
       messageId: result.data.id, 
       status: 'sent',
-      recipient: client.phone_number,
-      businessName: client.business_name
+      recipient: clientData.phone_number,
+      businessName: clientData.business_name
     }
   } catch (error) {
     logger.error('Bulk SMS send failed', { error, clientId })
@@ -181,7 +183,8 @@ async function updateSubscription(clientId: string, newStatus: string) {
       .eq('id', clientId)
       .single()
 
-    if (clientError || !client || !client.stripe_customer_id) {
+    const clientData = client as { stripe_customer_id?: string; business_name: string } | null
+    if (clientError || !clientData || !clientData.stripe_customer_id) {
       throw new Error('Client or Stripe customer not found')
     }
 
@@ -197,7 +200,7 @@ async function updateSubscription(clientId: string, newStatus: string) {
 
     // Get active subscription
     const subscriptions = await stripe.subscriptions.list({
-      customer: client.stripe_customer_id,
+      customer: clientData.stripe_customer_id,
       status: 'active',
       limit: 1
     })
@@ -225,7 +228,7 @@ async function updateSubscription(clientId: string, newStatus: string) {
     }
 
     // Update in database
-    await supabaseAdmin
+    await (supabaseAdmin as any)
       .from('businesses')
       .update({
         subscription_status: newStatus,
@@ -237,7 +240,7 @@ async function updateSubscription(clientId: string, newStatus: string) {
       subscriptionId: subscription.id,
       subscriptionStatus: newStatus, 
       updatedAt: new Date().toISOString(),
-      businessName: client.business_name
+      businessName: clientData.business_name
     }
   } catch (error) {
     logger.error('Subscription update failed', { error, clientId, newStatus })
@@ -257,9 +260,11 @@ async function exportClientData(clientIds: string[]) {
       throw new Error('Failed to fetch client data')
     }
 
+    const clientsArray = Array.isArray(clients) ? clients : []
+
     // Fetch related data for each client
     const exportData = await Promise.all(
-      clients.map(async (client) => {
+      clientsArray.map(async (client: any) => {
         const [calls, appointments, sms] = await Promise.all([
           supabaseAdmin.from('calls').select('*').eq('business_id', client.id),
           supabaseAdmin.from('appointments').select('*').eq('business_id', client.id),
@@ -277,7 +282,7 @@ async function exportClientData(clientIds: string[]) {
     )
 
     // Store export record
-    const { data: exportRecord, error: exportError } = await supabaseAdmin
+    const { data: exportRecord, error: exportError } = await (supabaseAdmin as any)
       .from('data_exports')
       .insert({
         client_ids: clientIds,
@@ -314,7 +319,8 @@ async function scheduleMaintenance(clientId: string, maintenanceDate: string) {
       .eq('id', clientId)
       .single()
 
-    if (clientError || !client) {
+    const clientData = client as { phone_number?: string; business_name: string; email?: string } | null
+    if (clientError || !clientData) {
       throw new Error('Client not found')
     }
 
@@ -328,16 +334,16 @@ async function scheduleMaintenance(clientId: string, maintenanceDate: string) {
         maintenance_type: 'routine',
         notes: 'Scheduled via bulk action',
         created_at: new Date().toISOString()
-      })
+      } as any)
       .select()
       .single()
 
-    if (maintenanceError) {
-      throw new Error(`Database error: ${maintenanceError.message}`)
+    if (maintenanceError || !maintenance) {
+      throw new Error(`Database error: ${maintenanceError?.message || 'Failed to create maintenance record'}`)
     }
 
     // Send notification SMS
-    if (process.env.TELNYX_API_KEY && client.phone_number) {
+    if (process.env.TELNYX_API_KEY && clientData.phone_number) {
       try {
         await fetch('https://api.telnyx.com/v2/messages', {
           method: 'POST',
@@ -347,8 +353,8 @@ async function scheduleMaintenance(clientId: string, maintenanceDate: string) {
           },
           body: JSON.stringify({
             from: process.env.TELNYX_PHONE_NUMBER,
-            to: client.phone_number,
-            text: `Hi ${client.business_name}, your CloudGreet system maintenance is scheduled for ${new Date(maintenanceDate).toLocaleDateString()}. No action needed. Reply STOP to opt out.`,
+            to: clientData.phone_number,
+            text: `Hi ${clientData.business_name}, your CloudGreet system maintenance is scheduled for ${new Date(maintenanceDate).toLocaleDateString()}. No action needed. Reply STOP to opt out.`,
             type: 'SMS'
           })
         })
@@ -358,9 +364,9 @@ async function scheduleMaintenance(clientId: string, maintenanceDate: string) {
     }
 
     return { 
-      maintenanceId: maintenance.id, 
+      maintenanceId: (maintenance as any).id, 
       scheduledDate: maintenanceDate,
-      businessName: client.business_name,
+      businessName: clientData.business_name,
       notificationSent: !!process.env.TELNYX_API_KEY
     }
   } catch (error) {

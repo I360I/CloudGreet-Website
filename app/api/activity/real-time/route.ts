@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { getSupabaseAdminClient } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
 
 async function getRealActivities(businessId: string, limit: number) {
   try {
+    const supabaseAdmin = getSupabaseAdminClient()
     const activities = []
 
     // Get recent calls
@@ -57,8 +58,8 @@ async function getRealActivities(businessId: string, limit: number) {
       .order('created_at', { ascending: false })
       .limit(limit)
 
-    if (!callsError && calls) {
-      calls.forEach(call => {
+    if (!callsError && calls && Array.isArray(calls)) {
+      calls.forEach((call: any) => {
         activities.push({
           id: `call-${call.id}`,
           type: 'call',
@@ -79,8 +80,8 @@ async function getRealActivities(businessId: string, limit: number) {
       .order('created_at', { ascending: false })
       .limit(limit)
 
-    if (!appointmentsError && appointments) {
-      appointments.forEach(apt => {
+    if (!appointmentsError && appointments && Array.isArray(appointments)) {
+      appointments.forEach((apt: any) => {
         activities.push({
           id: `appointment-${apt.id}`,
           type: 'appointment',
@@ -101,8 +102,8 @@ async function getRealActivities(businessId: string, limit: number) {
       .order('created_at', { ascending: false })
       .limit(limit)
 
-    if (!leadsError && leads) {
-      leads.forEach(lead => {
+    if (!leadsError && leads && Array.isArray(leads)) {
+      leads.forEach((lead: any) => {
         activities.push({
           id: `lead-${lead.id}`,
           type: 'message',
