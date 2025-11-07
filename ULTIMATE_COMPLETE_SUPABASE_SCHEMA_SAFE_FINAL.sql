@@ -1,0 +1,2849 @@
+-- ===========================================
+-- CLOUDGREET ULTIMATE COMPLETE DATABASE SCHEMA
+-- EVERY SINGLE TABLE, COLUMN, AND REFERENCE FROM THE CODEBASE
+-- ===========================================
+
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ===========================================
+-- CORE BUSINESS TABLES
+-- ===========================================
+
+-- 1. Businesses table (main business information) - COMPLETE
+CREATE TABLE IF NOT EXISTS businesses (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    owner_id UUID REFERENCES auth.users(id) NOT NULL,
+    business_name TEXT NOT NULL,
+    business_type TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    phone_number TEXT,
+    address TEXT,
+    city TEXT,
+    state TEXT,
+    zip_code TEXT,
+    website TEXT,
+    description TEXT,
+    services TEXT[],
+    service_areas TEXT[],
+    business_hours JSONB,
+    greeting_message TEXT,
+    tone TEXT DEFAULT 'professional',
+    ai_tone TEXT DEFAULT 'professional',
+    voice TEXT DEFAULT 'alloy',
+    custom_instructions TEXT,
+    max_call_duration INTEGER DEFAULT 10,
+    escalation_threshold INTEGER DEFAULT 5,
+    escalation_phone TEXT,
+    retell_agent_id TEXT,
+    enable_call_recording BOOLEAN DEFAULT FALSE,
+    enable_transcription BOOLEAN DEFAULT FALSE,
+    enable_sms_forwarding BOOLEAN DEFAULT FALSE,
+    notification_phone TEXT,
+    notification_email TEXT,
+    onboarding_completed BOOLEAN DEFAULT FALSE,
+    onboarding_step INTEGER DEFAULT 0,
+    onboarding_data JSONB,
+    enable_appointment_booking BOOLEAN DEFAULT FALSE,
+    calendar_connected BOOLEAN DEFAULT FALSE,
+    job_types TEXT[],
+    average_appointment_duration INTEGER DEFAULT 60,
+    account_status TEXT DEFAULT 'new_account',
+    stripe_customer_id TEXT,
+    subscription_status TEXT DEFAULT 'inactive',
+    billing_plan TEXT DEFAULT 'pro',
+    promo_code_used TEXT,
+    trial_end_date TIMESTAMP WITH TIME ZONE,
+    is_trial_active BOOLEAN DEFAULT TRUE,
+    google_calendar_access_token TEXT,
+    google_calendar_refresh_token TEXT,
+    google_calendar_expiry_date TIMESTAMP WITH TIME ZONE,
+    after_hours_policy TEXT DEFAULT 'voicemail',
+    timezone TEXT DEFAULT 'America/New_York',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 1.5. Consents table (SMS opt-in/opt-out tracking for TCPA/A2P compliance) - COMPLETE
+CREATE TABLE IF NOT EXISTS consents (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    phone TEXT NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('STOP', 'UNSTOP', 'HELP')),
+    channel TEXT DEFAULT 'sms',
+    business_id UUID REFERENCES businesses(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for consents table
+CREATE INDEX IF NOT EXISTS idx_consents_phone ON consents(phone);
+CREATE INDEX IF NOT EXISTS idx_consents_business_id ON consents(business_id);
+CREATE INDEX IF NOT EXISTS idx_consents_action ON consents(action);
+
+-- 2. Users table (extends Supabase auth.users) - COMPLETE
+CREATE TABLE IF NOT EXISTS users (
+    id UUID REFERENCES auth.users(id) PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    first_name TEXT,
+    last_name TEXT,
+    phone TEXT,
+    business_id UUID REFERENCES businesses(id),
+    role TEXT DEFAULT 'owner',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 3. Custom users table - COMPLETE
+CREATE TABLE IF NOT EXISTS custom_users (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    phone TEXT,
+    business_id UUID REFERENCES businesses(id),
+    role TEXT DEFAULT 'owner',
+    is_admin BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    status TEXT DEFAULT 'active',
+    login_count INTEGER DEFAULT 0,
+    last_login TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- LEAD MANAGEMENT TABLES
+-- ===========================================
+
+-- 4. Leads table (customer leads) - COMPLETE
+CREATE TABLE IF NOT EXISTS leads (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    source TEXT DEFAULT 'phone',
+    status TEXT DEFAULT 'new',
+    notes TEXT,
+    score INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 5. Enriched leads table (Apollo Killer feature) - COMPLETE
+CREATE TABLE IF NOT EXISTS enriched_leads (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    business_name TEXT NOT NULL,
+    address TEXT,
+    city TEXT,
+    state TEXT,
+    phone TEXT,
+    website TEXT,
+    google_place_id TEXT UNIQUE,
+    business_type TEXT,
+    google_rating DECIMAL(3,2),
+    google_review_count INTEGER DEFAULT 0,
+    owner_name TEXT,
+    owner_title TEXT,
+    owner_email TEXT,
+    owner_email_verified BOOLEAN DEFAULT FALSE,
+    owner_email_confidence DECIMAL(3,2),
+    owner_phone TEXT,
+    owner_linkedin_url TEXT,
+    enrichment_status TEXT DEFAULT 'pending',
+    enrichment_sources TEXT[] DEFAULT '{}',
+    enrichment_attempts INTEGER DEFAULT 0,
+    last_enriched_at TIMESTAMP WITH TIME ZONE,
+    total_score INTEGER DEFAULT 0,
+    fit_score INTEGER DEFAULT 0,
+    engagement_score INTEGER DEFAULT 0,
+    contact_quality_score INTEGER DEFAULT 0,
+    opportunity_score INTEGER DEFAULT 0,
+    urgency_score INTEGER DEFAULT 0,
+    personalized_pitch TEXT,
+    pain_points TEXT[] DEFAULT '{}',
+    recommended_approach TEXT,
+    best_contact_time TEXT,
+    objections_anticipated TEXT[] DEFAULT '{}',
+    employee_count_min INTEGER,
+    employee_count_max INTEGER,
+    annual_revenue_min DECIMAL(15,2),
+    annual_revenue_max DECIMAL(15,2),
+    technology_stack TEXT[],
+    social_media TEXT[],
+    business_status TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 6. Enrichment queue table - COMPLETE
+CREATE TABLE IF NOT EXISTS enrichment_queue (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES enriched_leads(id),
+    status TEXT DEFAULT 'pending',
+    priority INTEGER DEFAULT 0,
+    attempts INTEGER DEFAULT 0,
+    last_attempt TIMESTAMP WITH TIME ZONE,
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 7. Bulk enrichment jobs table - COMPLETE
+CREATE TABLE IF NOT EXISTS bulk_enrichment_jobs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    job_name TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    total_leads INTEGER DEFAULT 0,
+    processed_leads INTEGER DEFAULT 0,
+    failed_leads INTEGER DEFAULT 0,
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 8. Bulk enrichment logs table - COMPLETE
+CREATE TABLE IF NOT EXISTS bulk_enrichment_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    job_id UUID REFERENCES bulk_enrichment_jobs(id) NOT NULL,
+    lead_id UUID REFERENCES enriched_leads(id),
+    status TEXT NOT NULL,
+    error_message TEXT,
+    processing_time INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- APPOINTMENT & SCHEDULING TABLES
+-- ===========================================
+
+-- 9. Appointments table (scheduled appointments) - COMPLETE
+CREATE TABLE IF NOT EXISTS appointments (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id),
+    customer_name TEXT NOT NULL,
+    customer_phone TEXT,
+    customer_email TEXT,
+    service_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    scheduled_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    duration INTEGER DEFAULT 60,
+    status TEXT DEFAULT 'scheduled',
+    estimated_value DECIMAL(10,2),
+    actual_value DECIMAL(10,2),
+    notes TEXT,
+    address TEXT,
+    google_calendar_event_id TEXT,
+    reminder_sent BOOLEAN DEFAULT FALSE,
+    confirmation_sent BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 10. Appointment reminders table - COMPLETE
+CREATE TABLE IF NOT EXISTS appointment_reminders (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    appointment_id UUID REFERENCES appointments(id) NOT NULL,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    reminder_type TEXT NOT NULL,
+    scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    sent_time TIMESTAMP WITH TIME ZONE,
+    status TEXT DEFAULT 'pending',
+    message_content TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 11. Calendar events table - COMPLETE
+CREATE TABLE IF NOT EXISTS calendar_events (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    appointment_id UUID REFERENCES appointments(id),
+    google_event_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    status TEXT DEFAULT 'confirmed',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- CALL MANAGEMENT TABLES
+-- ===========================================
+
+-- 12. Calls table (call logs and recordings) - COMPLETE
+CREATE TABLE IF NOT EXISTS calls (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id),
+    call_id TEXT UNIQUE NOT NULL,
+    from_number TEXT NOT NULL,
+    to_number TEXT NOT NULL,
+    status TEXT NOT NULL,
+    direction TEXT DEFAULT 'inbound',
+    duration INTEGER DEFAULT 0,
+    recording_url TEXT,
+    transcript TEXT,
+    transcription_text TEXT,
+    ai_confidence DECIMAL(3,2),
+    quality_score INTEGER,
+    caller_name TEXT,
+    caller_city TEXT,
+    caller_state TEXT,
+    caller_country TEXT,
+    service_requested TEXT,
+    urgency TEXT,
+    budget_mentioned DECIMAL(10,2),
+    timeline TEXT,
+    notes TEXT,
+    follow_up_required BOOLEAN DEFAULT FALSE,
+    follow_up_scheduled TIMESTAMP WITH TIME ZONE,
+    cost DECIMAL(10,4) DEFAULT 0,
+    outcome TEXT,
+    satisfaction_score INTEGER,
+    call_analysis JSONB,
+    ai_response TEXT,
+    ai_session_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 13. Call logs table - COMPLETE
+CREATE TABLE IF NOT EXISTS call_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    call_id TEXT NOT NULL,
+    from_number TEXT NOT NULL,
+    to_number TEXT NOT NULL,
+    duration INTEGER DEFAULT 0,
+    status TEXT NOT NULL,
+    direction TEXT DEFAULT 'inbound',
+    recording_url TEXT,
+    transcription_text TEXT,
+    transcript TEXT,
+    ai_confidence DECIMAL(3,2),
+    caller_name TEXT,
+    caller_city TEXT,
+    caller_state TEXT,
+    caller_country TEXT,
+    service_requested TEXT,
+    urgency TEXT,
+    budget_mentioned DECIMAL(10,2),
+    timeline TEXT,
+    notes TEXT,
+    follow_up_required BOOLEAN DEFAULT FALSE,
+    follow_up_scheduled TIMESTAMP WITH TIME ZONE,
+    cost DECIMAL(10,4) DEFAULT 0,
+    outcome TEXT,
+    satisfaction_score INTEGER,
+    call_analysis JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 14. Call conversations table - COMPLETE
+CREATE TABLE IF NOT EXISTS call_conversations (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    call_id TEXT NOT NULL,
+    conversation_data JSONB NOT NULL,
+    summary TEXT,
+    sentiment TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 15. Toll free numbers table (phone numbers) - COMPLETE
+CREATE TABLE IF NOT EXISTS toll_free_numbers (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    phone_number TEXT UNIQUE NOT NULL,
+    number TEXT UNIQUE NOT NULL,
+    status TEXT DEFAULT 'active',
+    assigned_to UUID REFERENCES businesses(id),
+    business_name TEXT,
+    assigned_at TIMESTAMP WITH TIME ZONE,
+    webhook_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- AI & AUTOMATION TABLES
+-- ===========================================
+
+-- 16. AI agents table (AI configuration) - COMPLETE
+CREATE TABLE IF NOT EXISTS ai_agents (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    agent_name TEXT NOT NULL,
+    business_name TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    status TEXT DEFAULT 'active',
+    telynyx_agent_id TEXT,
+    retell_agent_id TEXT,
+    phone_number TEXT,
+    greeting_message TEXT,
+    tone TEXT DEFAULT 'professional',
+    prompt_template TEXT,
+    configuration JSONB NOT NULL,
+    performance_metrics JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 17. AI agent settings table - COMPLETE
+CREATE TABLE IF NOT EXISTS ai_agent_settings (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    agent_type TEXT NOT NULL,
+    settings JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 18. Realtime sessions table (for AI conversations) - COMPLETE
+CREATE TABLE IF NOT EXISTS realtime_sessions (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    session_id TEXT UNIQUE NOT NULL,
+    call_id TEXT,
+    status TEXT DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 19. Conversation history table - COMPLETE
+CREATE TABLE IF NOT EXISTS conversation_history (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    session_id TEXT,
+    call_id TEXT,
+    user_message TEXT,
+    ai_response TEXT,
+    intent TEXT,
+    entities JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 20. Conversations table - COMPLETE
+CREATE TABLE IF NOT EXISTS conversations (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id),
+    call_id TEXT,
+    messages JSONB NOT NULL,
+    summary TEXT,
+    sentiment TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 21. AI conversation analytics table - COMPLETE
+CREATE TABLE IF NOT EXISTS ai_conversation_analytics (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    conversation_id UUID REFERENCES conversations(id),
+    metrics JSONB NOT NULL,
+    insights TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- SMS & MESSAGING TABLES
+-- ===========================================
+
+-- 22. SMS messages table - COMPLETE
+CREATE TABLE IF NOT EXISTS sms_messages (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id),
+    from_number TEXT NOT NULL,
+    to_number TEXT NOT NULL,
+    message TEXT NOT NULL,
+    message_text TEXT NOT NULL,
+    direction TEXT NOT NULL,
+    status TEXT DEFAULT 'sent',
+    message_id TEXT,
+    type TEXT,
+    cost DECIMAL(10,4),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 23. SMS logs table - COMPLETE
+CREATE TABLE IF NOT EXISTS sms_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    message_id TEXT,
+    to_number TEXT NOT NULL,
+    from_number TEXT NOT NULL,
+    message_text TEXT NOT NULL,
+    direction TEXT NOT NULL,
+    status TEXT NOT NULL,
+    type TEXT,
+    cost DECIMAL(10,4),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 24. SMS templates table - COMPLETE
+CREATE TABLE IF NOT EXISTS sms_templates (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    template_name TEXT NOT NULL,
+    template TEXT NOT NULL,
+    template_content TEXT NOT NULL,
+    type TEXT NOT NULL,
+    template_type TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 25. SMS opt-outs table - COMPLETE
+CREATE TABLE IF NOT EXISTS sms_opt_outs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    phone_number TEXT NOT NULL,
+    opt_out_type TEXT DEFAULT 'STOP',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- AUTHENTICATION & SECURITY TABLES
+-- ===========================================
+
+-- 26. Password reset tokens table - COMPLETE
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 27. Audit logs table - COMPLETE
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id),
+    user_id UUID REFERENCES auth.users(id),
+    action TEXT NOT NULL,
+    resource_type TEXT NOT NULL,
+    resource_id TEXT,
+    resource_id_uuid UUID,
+    old_values JSONB,
+    new_values JSONB,
+    details JSONB,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- BILLING & PAYMENT TABLES
+-- ===========================================
+
+-- 28. Billing history table - COMPLETE
+CREATE TABLE IF NOT EXISTS billing_history (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    currency TEXT DEFAULT 'USD',
+    description TEXT,
+    billing_type TEXT NOT NULL,
+    stripe_payment_intent_id TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 29. Stripe customers table - COMPLETE
+CREATE TABLE IF NOT EXISTS stripe_customers (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    stripe_customer_id TEXT UNIQUE NOT NULL,
+    email TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 30. Stripe subscriptions table - COMPLETE
+CREATE TABLE IF NOT EXISTS stripe_subscriptions (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    stripe_subscription_id TEXT UNIQUE NOT NULL,
+    stripe_customer_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    current_period_start TIMESTAMP WITH TIME ZONE,
+    current_period_end TIMESTAMP WITH TIME ZONE,
+    cancel_at_period_end BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 31. Payment methods table - COMPLETE
+CREATE TABLE IF NOT EXISTS payment_methods (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    stripe_payment_method_id TEXT UNIQUE NOT NULL,
+    type TEXT NOT NULL,
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 32. Refunds table - COMPLETE
+CREATE TABLE IF NOT EXISTS refunds (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    stripe_refund_id TEXT UNIQUE NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    reason TEXT,
+    status TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 33. Invoices table - COMPLETE
+CREATE TABLE IF NOT EXISTS invoices (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    invoice_number TEXT UNIQUE NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    status TEXT NOT NULL,
+    due_date TIMESTAMP WITH TIME ZONE,
+    paid_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 34. Subscription usage table - COMPLETE
+CREATE TABLE IF NOT EXISTS subscription_usage (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    subscription_id UUID REFERENCES stripe_subscriptions(id),
+    usage_type TEXT NOT NULL,
+    usage_count INTEGER DEFAULT 0,
+    usage_limit INTEGER,
+    period_start TIMESTAMP WITH TIME ZONE,
+    period_end TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 35. Coupon usage table - COMPLETE
+CREATE TABLE IF NOT EXISTS coupon_usage (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    coupon_code TEXT NOT NULL,
+    discount_amount DECIMAL(10,2) NOT NULL,
+    used_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 36. Pricing plans table - COMPLETE
+CREATE TABLE IF NOT EXISTS pricing_plans (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    monthly_price DECIMAL(10,2) NOT NULL,
+    per_booking_price DECIMAL(10,2) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    features TEXT[],
+    is_active BOOLEAN DEFAULT TRUE,
+    stripe_price_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 37. Promo codes table - COMPLETE
+CREATE TABLE IF NOT EXISTS promo_codes (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    description TEXT,
+    discount_type TEXT NOT NULL,
+    discount_value DECIMAL(10,2) NOT NULL,
+    max_uses INTEGER,
+    used_count INTEGER DEFAULT 0,
+    current_uses INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- CONTACT & SUPPORT TABLES
+-- ===========================================
+
+-- 38. Contact submissions table - COMPLETE
+CREATE TABLE IF NOT EXISTS contact_submissions (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    business TEXT,
+    subject TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT DEFAULT 'new',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 39. Contact activities table - COMPLETE
+CREATE TABLE IF NOT EXISTS contact_activities (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id),
+    activity_type TEXT NOT NULL,
+    description TEXT,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- AUTOMATION & CAMPAIGN TABLES
+-- ===========================================
+
+-- 40. Follow-up tasks table - COMPLETE
+CREATE TABLE IF NOT EXISTS follow_up_tasks (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id),
+    task_type TEXT NOT NULL,
+    scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    status TEXT DEFAULT 'pending',
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 41. Follow-up sequence table - COMPLETE
+CREATE TABLE IF NOT EXISTS follow_up_sequence (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    trigger_event TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 42. Campaigns table - COMPLETE
+CREATE TABLE IF NOT EXISTS campaigns (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'draft',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 43. Follow-up sequences table - COMPLETE
+CREATE TABLE IF NOT EXISTS follow_up_sequences (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    trigger_event TEXT NOT NULL,
+    trigger_delay INTEGER DEFAULT 0,
+    conditions JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 44. Follow-up steps table - COMPLETE
+CREATE TABLE IF NOT EXISTS follow_up_steps (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    sequence_id UUID REFERENCES follow_up_sequences(id) NOT NULL,
+    step_number INTEGER NOT NULL,
+    step_type TEXT NOT NULL,
+    content TEXT,
+    delay_hours INTEGER DEFAULT 0,
+    conditions JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 45. Nurture campaigns table - COMPLETE
+CREATE TABLE IF NOT EXISTS nurture_campaigns (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'draft',
+    target_segment TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 46. Campaign performance table - COMPLETE
+CREATE TABLE IF NOT EXISTS campaign_performance (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    campaign_id UUID REFERENCES nurture_campaigns(id) NOT NULL,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    metrics JSONB NOT NULL,
+    date DATE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 47. Scheduled calls table - COMPLETE
+CREATE TABLE IF NOT EXISTS scheduled_calls (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id),
+    scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    status TEXT DEFAULT 'scheduled',
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- LEAD SEGMENTATION & TARGETING TABLES
+-- ===========================================
+
+-- 48. Lead segments table - COMPLETE
+CREATE TABLE IF NOT EXISTS lead_segments (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    criteria JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 49. Segmentation rules table - COMPLETE
+CREATE TABLE IF NOT EXISTS segmentation_rules (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    segment_id UUID REFERENCES lead_segments(id) NOT NULL,
+    field_name TEXT NOT NULL,
+    operator TEXT NOT NULL,
+    value TEXT NOT NULL,
+    priority INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 50. Targeting campaigns table - COMPLETE
+CREATE TABLE IF NOT EXISTS targeting_campaigns (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    segment_id UUID REFERENCES lead_segments(id) NOT NULL,
+    name TEXT NOT NULL,
+    status TEXT DEFAULT 'draft',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- ANALYTICS & ATTRIBUTION TABLES
+-- ===========================================
+
+-- 51. Attribution models table - COMPLETE
+CREATE TABLE IF NOT EXISTS attribution_models (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    model_type TEXT NOT NULL,
+    configuration JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 52. Lead sources table - COMPLETE
+CREATE TABLE IF NOT EXISTS lead_sources (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    configuration JSONB,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 53. Lead attribution table - COMPLETE
+CREATE TABLE IF NOT EXISTS lead_attribution (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id) NOT NULL,
+    source_id UUID REFERENCES lead_sources(id),
+    touchpoints JSONB NOT NULL,
+    attribution_data JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 54. Lead scoring table - COMPLETE
+CREATE TABLE IF NOT EXISTS lead_scoring (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id) NOT NULL,
+    score INTEGER NOT NULL,
+    scoring_factors JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- CRM & PIPELINE TABLES
+-- ===========================================
+
+-- 55. CRM pipelines table - COMPLETE
+CREATE TABLE IF NOT EXISTS crm_pipelines (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 56. Pipeline stages table - COMPLETE
+CREATE TABLE IF NOT EXISTS pipeline_stages (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    pipeline_id UUID REFERENCES crm_pipelines(id) NOT NULL,
+    name TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    stage_type TEXT NOT NULL,
+    configuration JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- A/B TESTING TABLES
+-- ===========================================
+
+-- 57. AB tests table - COMPLETE
+CREATE TABLE IF NOT EXISTS ab_tests (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'draft',
+    test_type TEXT NOT NULL,
+    configuration JSONB NOT NULL,
+    results JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- SYSTEM & ADMIN TABLES
+-- ===========================================
+
+-- 58. Notifications table - COMPLETE
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    user_id UUID REFERENCES auth.users(id),
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 59. Data exports table - COMPLETE
+CREATE TABLE IF NOT EXISTS data_exports (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    export_type TEXT NOT NULL,
+    file_url TEXT,
+    status TEXT DEFAULT 'processing',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 60. System events table - COMPLETE
+CREATE TABLE IF NOT EXISTS system_events (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    description TEXT,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 61. System health table - COMPLETE
+CREATE TABLE IF NOT EXISTS system_health (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    service_name TEXT NOT NULL,
+    status TEXT NOT NULL,
+    response_time INTEGER,
+    error_count INTEGER DEFAULT 0,
+    last_check TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 61.5. Health checks table - COMPLETE
+CREATE TABLE IF NOT EXISTS health_checks (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    service_name TEXT,
+    response_time INTEGER,
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 62. Performance metrics table - COMPLETE
+CREATE TABLE IF NOT EXISTS performance_metrics (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id),
+    metric_name TEXT NOT NULL,
+    metric_value DECIMAL(10,2) NOT NULL,
+    metric_type TEXT NOT NULL,
+    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 63. Scheduled maintenance table - COMPLETE
+CREATE TABLE IF NOT EXISTS scheduled_maintenance (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    status TEXT DEFAULT 'scheduled',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 64. Webhook logs table - COMPLETE
+CREATE TABLE IF NOT EXISTS webhook_logs (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    webhook_type TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    response_status INTEGER,
+    response_body TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 64.5. Webhook events table (for idempotency) - COMPLETE
+CREATE TABLE IF NOT EXISTS webhook_events (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    event_id TEXT NOT NULL UNIQUE,
+    provider TEXT NOT NULL CHECK (provider IN ('stripe', 'telnyx', 'retell')),
+    event_type TEXT NOT NULL,
+    processed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for webhook events idempotency checks
+CREATE INDEX IF NOT EXISTS idx_webhook_events_event_id ON webhook_events(event_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_events_provider ON webhook_events(provider);
+
+-- ===========================================
+-- PRICING & QUOTES TABLES
+-- ===========================================
+
+-- 65. Pricing rules table - COMPLETE
+CREATE TABLE IF NOT EXISTS pricing_rules (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    service_type TEXT NOT NULL,
+    base_price DECIMAL(10,2) NOT NULL,
+    pricing_model TEXT NOT NULL,
+    rules JSONB,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 66. Quotes table - COMPLETE
+CREATE TABLE IF NOT EXISTS quotes (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id),
+    quote_number TEXT UNIQUE NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    line_items JSONB NOT NULL,
+    status TEXT DEFAULT 'draft',
+    valid_until TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 67. Finance table - COMPLETE
+CREATE TABLE IF NOT EXISTS finance (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    transaction_type TEXT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    description TEXT,
+    reference_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- ADVANCED REVENUE TABLES
+-- ===========================================
+
+-- 68. Upsell opportunities table - COMPLETE
+CREATE TABLE IF NOT EXISTS upsell_opportunities (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    lead_id UUID REFERENCES leads(id),
+    opportunity_type TEXT NOT NULL,
+    potential_value DECIMAL(10,2) NOT NULL,
+    probability DECIMAL(3,2),
+    status TEXT DEFAULT 'identified',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 69. Pricing optimization log table - COMPLETE
+CREATE TABLE IF NOT EXISTS pricing_optimization_log (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    optimization_type TEXT NOT NULL,
+    old_price DECIMAL(10,2),
+    new_price DECIMAL(10,2),
+    impact_metrics JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 70. Competitor analysis table - COMPLETE
+CREATE TABLE IF NOT EXISTS competitor_analysis (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    competitor_name TEXT NOT NULL,
+    analysis_data JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 71. Retention analysis table - COMPLETE
+CREATE TABLE IF NOT EXISTS retention_analysis (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    analysis_period TEXT NOT NULL,
+    retention_rate DECIMAL(5,2),
+    churn_rate DECIMAL(5,2),
+    analysis_data JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 72. Revenue forecasts table - COMPLETE
+CREATE TABLE IF NOT EXISTS revenue_forecasts (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    forecast_period TEXT NOT NULL,
+    predicted_revenue DECIMAL(15,2),
+    confidence_level DECIMAL(3,2),
+    forecast_data JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 73. Revenue optimization settings table - COMPLETE
+CREATE TABLE IF NOT EXISTS revenue_optimization_settings (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    optimization_type TEXT NOT NULL,
+    settings JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- ADMIN CUSTOMIZATION TABLES
+-- ===========================================
+
+-- 74. Business templates table - COMPLETE
+CREATE TABLE IF NOT EXISTS business_templates (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    template_type TEXT NOT NULL,
+    template_data JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 75. Pricing settings table - COMPLETE
+CREATE TABLE IF NOT EXISTS pricing_settings (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    pricing_model TEXT NOT NULL,
+    settings JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- MACHINE LEARNING TABLES
+-- ===========================================
+
+-- 76. ML training data table - COMPLETE
+CREATE TABLE IF NOT EXISTS ml_training_data (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    business_id UUID REFERENCES businesses(id) NOT NULL,
+    data_type TEXT NOT NULL,
+    training_data JSONB NOT NULL,
+    model_version TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ===========================================
+-- INDEXES FOR PERFORMANCE
+-- ===========================================
+
+-- Business indexes
+CREATE INDEX IF NOT EXISTS idx_businesses_owner_id ON businesses(owner_id);
+CREATE INDEX IF NOT EXISTS idx_businesses_phone_number ON businesses(phone_number);
+CREATE INDEX IF NOT EXISTS idx_businesses_stripe_customer_id ON businesses(stripe_customer_id);
+CREATE INDEX IF NOT EXISTS idx_businesses_subscription_status ON businesses(subscription_status);
+
+-- User indexes
+CREATE INDEX IF NOT EXISTS idx_users_business_id ON users(business_id);
+CREATE INDEX IF NOT EXISTS idx_custom_users_business_id ON custom_users(business_id);
+
+-- Lead indexes
+CREATE INDEX IF NOT EXISTS idx_leads_business_id ON leads(business_id);
+CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
+CREATE INDEX IF NOT EXISTS idx_leads_phone ON leads(phone);
+CREATE INDEX IF NOT EXISTS idx_enriched_leads_business_id ON enriched_leads(business_id);
+CREATE INDEX IF NOT EXISTS idx_enrichment_queue_business_id ON enrichment_queue(business_id);
+CREATE INDEX IF NOT EXISTS idx_bulk_enrichment_jobs_business_id ON bulk_enrichment_jobs(business_id);
+
+-- Appointment indexes
+CREATE INDEX IF NOT EXISTS idx_appointments_business_id ON appointments(business_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_start_time ON appointments(start_time);
+CREATE INDEX IF NOT EXISTS idx_appointment_reminders_appointment_id ON appointment_reminders(appointment_id);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_business_id ON calendar_events(business_id);
+
+-- Call indexes
+CREATE INDEX IF NOT EXISTS idx_calls_business_id ON calls(business_id);
+CREATE INDEX IF NOT EXISTS idx_calls_call_id ON calls(call_id);
+CREATE INDEX IF NOT EXISTS idx_calls_from_number ON calls(from_number);
+CREATE INDEX IF NOT EXISTS idx_call_logs_business_id ON call_logs(business_id);
+CREATE INDEX IF NOT EXISTS idx_call_conversations_business_id ON call_conversations(business_id);
+CREATE INDEX IF NOT EXISTS idx_toll_free_numbers_business_id ON toll_free_numbers(business_id);
+CREATE INDEX IF NOT EXISTS idx_toll_free_numbers_phone_number ON toll_free_numbers(phone_number);
+
+-- AI indexes
+CREATE INDEX IF NOT EXISTS idx_ai_agents_business_id ON ai_agents(business_id);
+CREATE INDEX IF NOT EXISTS idx_ai_agent_settings_business_id ON ai_agent_settings(business_id);
+CREATE INDEX IF NOT EXISTS idx_realtime_sessions_business_id ON realtime_sessions(business_id);
+CREATE INDEX IF NOT EXISTS idx_realtime_sessions_session_id ON realtime_sessions(session_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_history_business_id ON conversation_history(business_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_business_id ON conversations(business_id);
+CREATE INDEX IF NOT EXISTS idx_ai_conversation_analytics_business_id ON ai_conversation_analytics(business_id);
+
+-- SMS indexes
+CREATE INDEX IF NOT EXISTS idx_sms_messages_business_id ON sms_messages(business_id);
+CREATE INDEX IF NOT EXISTS idx_sms_messages_to_number ON sms_messages(to_number);
+CREATE INDEX IF NOT EXISTS idx_sms_logs_business_id ON sms_logs(business_id);
+CREATE INDEX IF NOT EXISTS idx_sms_templates_business_id ON sms_templates(business_id);
+CREATE INDEX IF NOT EXISTS idx_sms_opt_outs_phone_number ON sms_opt_outs(phone_number);
+
+-- Auth indexes
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_business_id ON audit_logs(business_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+
+-- Billing indexes
+CREATE INDEX IF NOT EXISTS idx_billing_history_business_id ON billing_history(business_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_customers_business_id ON stripe_customers(business_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_subscriptions_business_id ON stripe_subscriptions(business_id);
+CREATE INDEX IF NOT EXISTS idx_payment_methods_business_id ON payment_methods(business_id);
+CREATE INDEX IF NOT EXISTS idx_refunds_business_id ON refunds(business_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_business_id ON invoices(business_id);
+CREATE INDEX IF NOT EXISTS idx_subscription_usage_business_id ON subscription_usage(business_id);
+CREATE INDEX IF NOT EXISTS idx_coupon_usage_business_id ON coupon_usage(business_id);
+
+-- Activity indexes
+CREATE INDEX IF NOT EXISTS idx_contact_activities_business_id ON contact_activities(business_id);
+CREATE INDEX IF NOT EXISTS idx_follow_up_tasks_business_id ON follow_up_tasks(business_id);
+CREATE INDEX IF NOT EXISTS idx_follow_up_sequence_business_id ON follow_up_sequence(business_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_business_id ON campaigns(business_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_calls_business_id ON scheduled_calls(business_id);
+
+-- Automation indexes
+CREATE INDEX IF NOT EXISTS idx_follow_up_sequences_business_id ON follow_up_sequences(business_id);
+CREATE INDEX IF NOT EXISTS idx_follow_up_steps_sequence_id ON follow_up_steps(sequence_id);
+CREATE INDEX IF NOT EXISTS idx_nurture_campaigns_business_id ON nurture_campaigns(business_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_performance_campaign_id ON campaign_performance(campaign_id);
+
+-- Segmentation indexes
+CREATE INDEX IF NOT EXISTS idx_lead_segments_business_id ON lead_segments(business_id);
+CREATE INDEX IF NOT EXISTS idx_segmentation_rules_segment_id ON segmentation_rules(segment_id);
+CREATE INDEX IF NOT EXISTS idx_targeting_campaigns_business_id ON targeting_campaigns(business_id);
+
+-- Analytics indexes
+CREATE INDEX IF NOT EXISTS idx_attribution_models_business_id ON attribution_models(business_id);
+CREATE INDEX IF NOT EXISTS idx_lead_sources_business_id ON lead_sources(business_id);
+CREATE INDEX IF NOT EXISTS idx_lead_attribution_business_id ON lead_attribution(business_id);
+CREATE INDEX IF NOT EXISTS idx_lead_scoring_business_id ON lead_scoring(business_id);
+
+-- CRM indexes
+CREATE INDEX IF NOT EXISTS idx_crm_pipelines_business_id ON crm_pipelines(business_id);
+CREATE INDEX IF NOT EXISTS idx_pipeline_stages_pipeline_id ON pipeline_stages(pipeline_id);
+
+-- A/B Testing indexes
+CREATE INDEX IF NOT EXISTS idx_ab_tests_business_id ON ab_tests(business_id);
+
+-- System indexes
+CREATE INDEX IF NOT EXISTS idx_notifications_business_id ON notifications(business_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_data_exports_business_id ON data_exports(business_id);
+CREATE INDEX IF NOT EXISTS idx_system_health_service_name ON system_health(service_name);
+CREATE INDEX IF NOT EXISTS idx_performance_metrics_business_id ON performance_metrics(business_id);
+
+-- Pricing indexes
+CREATE INDEX IF NOT EXISTS idx_pricing_rules_business_id ON pricing_rules(business_id);
+CREATE INDEX IF NOT EXISTS idx_pricing_plans_name ON pricing_plans(name);
+CREATE INDEX IF NOT EXISTS idx_quotes_business_id ON quotes(business_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_lead_id ON quotes(lead_id);
+CREATE INDEX IF NOT EXISTS idx_promo_codes_code ON promo_codes(code);
+CREATE INDEX IF NOT EXISTS idx_finance_business_id ON finance(business_id);
+
+-- Advanced Revenue indexes
+CREATE INDEX IF NOT EXISTS idx_upsell_opportunities_business_id ON upsell_opportunities(business_id);
+CREATE INDEX IF NOT EXISTS idx_pricing_optimization_log_business_id ON pricing_optimization_log(business_id);
+CREATE INDEX IF NOT EXISTS idx_competitor_analysis_business_id ON competitor_analysis(business_id);
+CREATE INDEX IF NOT EXISTS idx_retention_analysis_business_id ON retention_analysis(business_id);
+CREATE INDEX IF NOT EXISTS idx_revenue_forecasts_business_id ON revenue_forecasts(business_id);
+CREATE INDEX IF NOT EXISTS idx_revenue_optimization_settings_business_id ON revenue_optimization_settings(business_id);
+
+-- Admin indexes
+CREATE INDEX IF NOT EXISTS idx_business_templates_business_id ON business_templates(business_id);
+CREATE INDEX IF NOT EXISTS idx_pricing_settings_business_id ON pricing_settings(business_id);
+CREATE INDEX IF NOT EXISTS idx_ml_training_data_business_id ON ml_training_data(business_id);
+
+-- ===========================================
+-- ROW LEVEL SECURITY (RLS)
+-- ===========================================
+
+-- Enable RLS on all tables
+DO $$
+BEGIN
+    ALTER TABLE businesses ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE custom_users ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE enriched_leads ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE enrichment_queue ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE bulk_enrichment_jobs ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE bulk_enrichment_logs ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE appointment_reminders ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE calls ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE call_logs ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE call_conversations ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE toll_free_numbers ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE ai_agents ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE ai_agent_settings ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE realtime_sessions ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE conversation_history ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE ai_conversation_analytics ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE sms_messages ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE sms_logs ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE sms_templates ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE sms_opt_outs ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE password_reset_tokens ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE billing_history ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE stripe_customers ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE stripe_subscriptions ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE refunds ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE subscription_usage ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE coupon_usage ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE contact_submissions ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE contact_activities ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE follow_up_tasks ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE follow_up_sequence ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE follow_up_sequences ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE follow_up_steps ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE nurture_campaigns ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE campaign_performance ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE scheduled_calls ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE lead_segments ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE segmentation_rules ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE targeting_campaigns ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE attribution_models ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE lead_sources ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE lead_attribution ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE lead_scoring ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE crm_pipelines ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE pipeline_stages ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE ab_tests ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE data_exports ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE system_events ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE health_checks ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE system_health ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE performance_metrics ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE webhook_events ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE scheduled_maintenance ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE webhook_logs ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE pricing_rules ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE pricing_plans ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE finance ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE upsell_opportunities ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE pricing_optimization_log ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE competitor_analysis ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE retention_analysis ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE revenue_forecasts ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE revenue_optimization_settings ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE business_templates ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE pricing_settings ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+DO $$
+BEGIN
+    ALTER TABLE ml_training_data ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+    WHEN OTHERS THEN NULL; -- Ignore if already enabled
+END $$;
+
+-- ===========================================
+-- RLS POLICIES FOR MULTI-TENANT SECURITY
+-- ===========================================
+
+-- Business policies
+-- Safe policy creation for: Users can view their own business
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'businesses' 
+        AND policyname = 'Users can view their own business'
+    ) THEN
+        CREATE POLICY "Users can view their own business" ON businesses FOR ALL USING (auth.uid() = owner_id);
+    END IF;
+END $$;
+
+-- User policies
+-- Safe policy creation for: Users can view their own profile
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'users' 
+        AND policyname = 'Users can view their own profile'
+    ) THEN
+        CREATE POLICY "Users can view their own profile" ON users FOR ALL USING (auth.uid() = id);
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own custom profile
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'custom_users' 
+        AND policyname = 'Users can view their own custom profile'
+    ) THEN
+        CREATE POLICY "Users can view their own custom profile" ON custom_users FOR ALL USING (auth.uid() = id OR business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Lead policies
+-- Safe policy creation for: Users can view their own leads
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'leads' 
+        AND policyname = 'Users can view their own leads'
+    ) THEN
+        CREATE POLICY "Users can view their own leads" ON leads FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own enriched leads
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'enriched_leads' 
+        AND policyname = 'Users can view their own enriched leads'
+    ) THEN
+        CREATE POLICY "Users can view their own enriched leads" ON enriched_leads FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own enrichment queue
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'enrichment_queue' 
+        AND policyname = 'Users can view their own enrichment queue'
+    ) THEN
+        CREATE POLICY "Users can view their own enrichment queue" ON enrichment_queue FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own bulk enrichment jobs
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'bulk_enrichment_jobs' 
+        AND policyname = 'Users can view their own bulk enrichment jobs'
+    ) THEN
+        CREATE POLICY "Users can view their own bulk enrichment jobs" ON bulk_enrichment_jobs FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own bulk enrichment logs
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'bulk_enrichment_logs' 
+        AND policyname = 'Users can view their own bulk enrichment logs'
+    ) THEN
+        CREATE POLICY "Users can view their own bulk enrichment logs" ON bulk_enrichment_logs FOR ALL USING (job_id IN (
+        SELECT id FROM bulk_enrichment_jobs WHERE business_id IN (
+            SELECT id FROM businesses WHERE owner_id = auth.uid()
+        )
+    ));
+    END IF;
+END $$;
+
+-- Appointment policies
+-- Safe policy creation for: Users can view their own appointments
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'appointments' 
+        AND policyname = 'Users can view their own appointments'
+    ) THEN
+        CREATE POLICY "Users can view their own appointments" ON appointments FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own appointment reminders
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'appointment_reminders' 
+        AND policyname = 'Users can view their own appointment reminders'
+    ) THEN
+        CREATE POLICY "Users can view their own appointment reminders" ON appointment_reminders FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own calendar events
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'calendar_events' 
+        AND policyname = 'Users can view their own calendar events'
+    ) THEN
+        CREATE POLICY "Users can view their own calendar events" ON calendar_events FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Call policies
+-- Safe policy creation for: Users can view their own calls
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'calls' 
+        AND policyname = 'Users can view their own calls'
+    ) THEN
+        CREATE POLICY "Users can view their own calls" ON calls FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own call logs
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'call_logs' 
+        AND policyname = 'Users can view their own call logs'
+    ) THEN
+        CREATE POLICY "Users can view their own call logs" ON call_logs FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own call conversations
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'call_conversations' 
+        AND policyname = 'Users can view their own call conversations'
+    ) THEN
+        CREATE POLICY "Users can view their own call conversations" ON call_conversations FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own phone numbers
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'toll_free_numbers' 
+        AND policyname = 'Users can view their own phone numbers'
+    ) THEN
+        CREATE POLICY "Users can view their own phone numbers" ON toll_free_numbers FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- AI policies
+-- Safe policy creation for: Users can view their own AI agents
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'ai_agents' 
+        AND policyname = 'Users can view their own AI agents'
+    ) THEN
+        CREATE POLICY "Users can view their own AI agents" ON ai_agents FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own AI agent settings
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'ai_agent_settings' 
+        AND policyname = 'Users can view their own AI agent settings'
+    ) THEN
+        CREATE POLICY "Users can view their own AI agent settings" ON ai_agent_settings FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own realtime sessions
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'realtime_sessions' 
+        AND policyname = 'Users can view their own realtime sessions'
+    ) THEN
+        CREATE POLICY "Users can view their own realtime sessions" ON realtime_sessions FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own conversation history
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'conversation_history' 
+        AND policyname = 'Users can view their own conversation history'
+    ) THEN
+        CREATE POLICY "Users can view their own conversation history" ON conversation_history FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own conversations
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'conversations' 
+        AND policyname = 'Users can view their own conversations'
+    ) THEN
+        CREATE POLICY "Users can view their own conversations" ON conversations FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own AI conversation analytics
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'ai_conversation_analytics' 
+        AND policyname = 'Users can view their own AI conversation analytics'
+    ) THEN
+        CREATE POLICY "Users can view their own AI conversation analytics" ON ai_conversation_analytics FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- SMS policies
+-- Safe policy creation for: Users can view their own SMS messages
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'sms_messages' 
+        AND policyname = 'Users can view their own SMS messages'
+    ) THEN
+        CREATE POLICY "Users can view their own SMS messages" ON sms_messages FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own SMS logs
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'sms_logs' 
+        AND policyname = 'Users can view their own SMS logs'
+    ) THEN
+        CREATE POLICY "Users can view their own SMS logs" ON sms_logs FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own SMS templates
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'sms_templates' 
+        AND policyname = 'Users can view their own SMS templates'
+    ) THEN
+        CREATE POLICY "Users can view their own SMS templates" ON sms_templates FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own SMS opt-outs
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'sms_opt_outs' 
+        AND policyname = 'Users can view their own SMS opt-outs'
+    ) THEN
+        CREATE POLICY "Users can view their own SMS opt-outs" ON sms_opt_outs FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Auth policies
+-- Safe policy creation for: Users can view their own password reset tokens
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'password_reset_tokens' 
+        AND policyname = 'Users can view their own password reset tokens'
+    ) THEN
+        CREATE POLICY "Users can view their own password reset tokens" ON password_reset_tokens FOR ALL USING (auth.uid() = user_id);
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own audit logs
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'audit_logs' 
+        AND policyname = 'Users can view their own audit logs'
+    ) THEN
+        CREATE POLICY "Users can view their own audit logs" ON audit_logs FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ) OR user_id = auth.uid());
+    END IF;
+END $$;
+
+-- Billing policies
+-- Safe policy creation for: Users can view their own billing history
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'billing_history' 
+        AND policyname = 'Users can view their own billing history'
+    ) THEN
+        CREATE POLICY "Users can view their own billing history" ON billing_history FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own stripe customers
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'stripe_customers' 
+        AND policyname = 'Users can view their own stripe customers'
+    ) THEN
+        CREATE POLICY "Users can view their own stripe customers" ON stripe_customers FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own subscriptions
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'stripe_subscriptions' 
+        AND policyname = 'Users can view their own subscriptions'
+    ) THEN
+        CREATE POLICY "Users can view their own subscriptions" ON stripe_subscriptions FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own payment methods
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'payment_methods' 
+        AND policyname = 'Users can view their own payment methods'
+    ) THEN
+        CREATE POLICY "Users can view their own payment methods" ON payment_methods FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own refunds
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'refunds' 
+        AND policyname = 'Users can view their own refunds'
+    ) THEN
+        CREATE POLICY "Users can view their own refunds" ON refunds FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own invoices
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'invoices' 
+        AND policyname = 'Users can view their own invoices'
+    ) THEN
+        CREATE POLICY "Users can view their own invoices" ON invoices FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own subscription usage
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'subscription_usage' 
+        AND policyname = 'Users can view their own subscription usage'
+    ) THEN
+        CREATE POLICY "Users can view their own subscription usage" ON subscription_usage FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own coupon usage
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'coupon_usage' 
+        AND policyname = 'Users can view their own coupon usage'
+    ) THEN
+        CREATE POLICY "Users can view their own coupon usage" ON coupon_usage FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Activity policies
+-- Safe policy creation for: Users can view their own contact activities
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'contact_activities' 
+        AND policyname = 'Users can view their own contact activities'
+    ) THEN
+        CREATE POLICY "Users can view their own contact activities" ON contact_activities FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own follow-up tasks
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'follow_up_tasks' 
+        AND policyname = 'Users can view their own follow-up tasks'
+    ) THEN
+        CREATE POLICY "Users can view their own follow-up tasks" ON follow_up_tasks FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own follow-up sequence
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'follow_up_sequence' 
+        AND policyname = 'Users can view their own follow-up sequence'
+    ) THEN
+        CREATE POLICY "Users can view their own follow-up sequence" ON follow_up_sequence FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own campaigns
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'campaigns' 
+        AND policyname = 'Users can view their own campaigns'
+    ) THEN
+        CREATE POLICY "Users can view their own campaigns" ON campaigns FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own scheduled calls
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'scheduled_calls' 
+        AND policyname = 'Users can view their own scheduled calls'
+    ) THEN
+        CREATE POLICY "Users can view their own scheduled calls" ON scheduled_calls FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Automation policies
+-- Safe policy creation for: Users can view their own follow-up sequences
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'follow_up_sequences' 
+        AND policyname = 'Users can view their own follow-up sequences'
+    ) THEN
+        CREATE POLICY "Users can view their own follow-up sequences" ON follow_up_sequences FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own follow-up steps
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'follow_up_steps' 
+        AND policyname = 'Users can view their own follow-up steps'
+    ) THEN
+        CREATE POLICY "Users can view their own follow-up steps" ON follow_up_steps FOR ALL USING (sequence_id IN (
+        SELECT id FROM follow_up_sequences WHERE business_id IN (
+            SELECT id FROM businesses WHERE owner_id = auth.uid()
+        )
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own nurture campaigns
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'nurture_campaigns' 
+        AND policyname = 'Users can view their own nurture campaigns'
+    ) THEN
+        CREATE POLICY "Users can view their own nurture campaigns" ON nurture_campaigns FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own campaign performance
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'campaign_performance' 
+        AND policyname = 'Users can view their own campaign performance'
+    ) THEN
+        CREATE POLICY "Users can view their own campaign performance" ON campaign_performance FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Segmentation policies
+-- Safe policy creation for: Users can view their own lead segments
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'lead_segments' 
+        AND policyname = 'Users can view their own lead segments'
+    ) THEN
+        CREATE POLICY "Users can view their own lead segments" ON lead_segments FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own segmentation rules
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'segmentation_rules' 
+        AND policyname = 'Users can view their own segmentation rules'
+    ) THEN
+        CREATE POLICY "Users can view their own segmentation rules" ON segmentation_rules FOR ALL USING (segment_id IN (
+        SELECT id FROM lead_segments WHERE business_id IN (
+            SELECT id FROM businesses WHERE owner_id = auth.uid()
+        )
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own targeting campaigns
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'targeting_campaigns' 
+        AND policyname = 'Users can view their own targeting campaigns'
+    ) THEN
+        CREATE POLICY "Users can view their own targeting campaigns" ON targeting_campaigns FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Analytics policies
+-- Safe policy creation for: Users can view their own attribution models
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'attribution_models' 
+        AND policyname = 'Users can view their own attribution models'
+    ) THEN
+        CREATE POLICY "Users can view their own attribution models" ON attribution_models FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own lead sources
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'lead_sources' 
+        AND policyname = 'Users can view their own lead sources'
+    ) THEN
+        CREATE POLICY "Users can view their own lead sources" ON lead_sources FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own lead attribution
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'lead_attribution' 
+        AND policyname = 'Users can view their own lead attribution'
+    ) THEN
+        CREATE POLICY "Users can view their own lead attribution" ON lead_attribution FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own lead scoring
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'lead_scoring' 
+        AND policyname = 'Users can view their own lead scoring'
+    ) THEN
+        CREATE POLICY "Users can view their own lead scoring" ON lead_scoring FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- CRM policies
+-- Safe policy creation for: Users can view their own CRM pipelines
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'crm_pipelines' 
+        AND policyname = 'Users can view their own CRM pipelines'
+    ) THEN
+        CREATE POLICY "Users can view their own CRM pipelines" ON crm_pipelines FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own pipeline stages
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'pipeline_stages' 
+        AND policyname = 'Users can view their own pipeline stages'
+    ) THEN
+        CREATE POLICY "Users can view their own pipeline stages" ON pipeline_stages FOR ALL USING (pipeline_id IN (
+        SELECT id FROM crm_pipelines WHERE business_id IN (
+            SELECT id FROM businesses WHERE owner_id = auth.uid()
+        )
+    ));
+    END IF;
+END $$;
+
+-- A/B Testing policies
+-- Safe policy creation for: Users can view their own AB tests
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'ab_tests' 
+        AND policyname = 'Users can view their own AB tests'
+    ) THEN
+        CREATE POLICY "Users can view their own AB tests" ON ab_tests FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- System policies
+-- Safe policy creation for: Users can view their own notifications
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'notifications' 
+        AND policyname = 'Users can view their own notifications'
+    ) THEN
+        CREATE POLICY "Users can view their own notifications" ON notifications FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ) OR user_id = auth.uid());
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own data exports
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'data_exports' 
+        AND policyname = 'Users can view their own data exports'
+    ) THEN
+        CREATE POLICY "Users can view their own data exports" ON data_exports FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own performance metrics
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'performance_metrics' 
+        AND policyname = 'Users can view their own performance metrics'
+    ) THEN
+        CREATE POLICY "Users can view their own performance metrics" ON performance_metrics FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Pricing policies
+-- Safe policy creation for: Users can view their own pricing rules
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'pricing_rules' 
+        AND policyname = 'Users can view their own pricing rules'
+    ) THEN
+        CREATE POLICY "Users can view their own pricing rules" ON pricing_rules FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own quotes
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'quotes' 
+        AND policyname = 'Users can view their own quotes'
+    ) THEN
+        CREATE POLICY "Users can view their own quotes" ON quotes FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own finance records
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'finance' 
+        AND policyname = 'Users can view their own finance records'
+    ) THEN
+        CREATE POLICY "Users can view their own finance records" ON finance FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Advanced Revenue policies
+-- Safe policy creation for: Users can view their own upsell opportunities
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'upsell_opportunities' 
+        AND policyname = 'Users can view their own upsell opportunities'
+    ) THEN
+        CREATE POLICY "Users can view their own upsell opportunities" ON upsell_opportunities FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own pricing optimization log
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'pricing_optimization_log' 
+        AND policyname = 'Users can view their own pricing optimization log'
+    ) THEN
+        CREATE POLICY "Users can view their own pricing optimization log" ON pricing_optimization_log FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own competitor analysis
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'competitor_analysis' 
+        AND policyname = 'Users can view their own competitor analysis'
+    ) THEN
+        CREATE POLICY "Users can view their own competitor analysis" ON competitor_analysis FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own retention analysis
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'retention_analysis' 
+        AND policyname = 'Users can view their own retention analysis'
+    ) THEN
+        CREATE POLICY "Users can view their own retention analysis" ON retention_analysis FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own revenue forecasts
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'revenue_forecasts' 
+        AND policyname = 'Users can view their own revenue forecasts'
+    ) THEN
+        CREATE POLICY "Users can view their own revenue forecasts" ON revenue_forecasts FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own revenue optimization settings
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'revenue_optimization_settings' 
+        AND policyname = 'Users can view their own revenue optimization settings'
+    ) THEN
+        CREATE POLICY "Users can view their own revenue optimization settings" ON revenue_optimization_settings FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Admin policies
+-- Safe policy creation for: Users can view their own business templates
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'business_templates' 
+        AND policyname = 'Users can view their own business templates'
+    ) THEN
+        CREATE POLICY "Users can view their own business templates" ON business_templates FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own pricing settings
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'pricing_settings' 
+        AND policyname = 'Users can view their own pricing settings'
+    ) THEN
+        CREATE POLICY "Users can view their own pricing settings" ON pricing_settings FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Safe policy creation for: Users can view their own ML training data
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies 
+        WHERE schemaname = 'public' 
+        AND tablename = 'ml_training_data' 
+        AND policyname = 'Users can view their own ML training data'
+    ) THEN
+        CREATE POLICY "Users can view their own ML training data" ON ml_training_data FOR ALL USING (business_id IN (
+        SELECT id FROM businesses WHERE owner_id = auth.uid()
+    ));
+    END IF;
+END $$;
+
+-- Public tables (no RLS needed)
+-- contact_submissions, system_events, scheduled_maintenance, promo_codes, pricing_plans, webhook_logs, system_health

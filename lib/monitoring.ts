@@ -47,18 +47,65 @@ class Logger {
         return;
       }
       
+      /**
+      
+       * if - Add description here
+      
+       * 
+      
+       * @param {...any} args - Method parameters
+      
+       * @returns {Promise<any>} Method return value
+      
+       * @throws {Error} When operation fails
+      
+       * 
+      
+       * @example
+      
+       * ```typescript
+      
+       * await this.if(param1, param2)
+      
+       * ```
+      
+       */
+      
       if (context && typeof context !== 'object') {
         console.warn('Invalid context for logger.info:', context);
         return;
       }
 
       const logEntry = this.formatMessage('info', message, context);
-      // Log entry formatted successfully
+      console.log(JSON.stringify(logEntry));
     } catch (error) {
       console.error('Logger info failed:', error);
-      // Fallback logging for critical errors
     }
   }
+
+  /**
+
+   * error - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.error(param1, param2)
+
+   * ```
+
+   */
 
   error(message: string, context?: LogContext, error?: Error): void {
     try {
@@ -67,6 +114,30 @@ class Logger {
         console.warn('Invalid message for logger.error:', message);
         return;
       }
+      
+      /**
+      
+       * if - Add description here
+      
+       * 
+      
+       * @param {...any} args - Method parameters
+      
+       * @returns {Promise<any>} Method return value
+      
+       * @throws {Error} When operation fails
+      
+       * 
+      
+       * @example
+      
+       * ```typescript
+      
+       * await this.if(param1, param2)
+      
+       * ```
+      
+       */
       
       if (context && typeof context !== 'object') {
         console.warn('Invalid context for logger.error:', context);
@@ -87,6 +158,30 @@ class Logger {
     }
   }
 
+  /**
+
+   * warn - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.warn(param1, param2)
+
+   * ```
+
+   */
+
   warn(message: string, context?: LogContext): void {
     try {
       // Input validation
@@ -94,6 +189,30 @@ class Logger {
         console.warn('Invalid message for logger.warn:', message);
         return;
       }
+      
+      /**
+      
+       * if - Add description here
+      
+       * 
+      
+       * @param {...any} args - Method parameters
+      
+       * @returns {Promise<any>} Method return value
+      
+       * @throws {Error} When operation fails
+      
+       * 
+      
+       * @example
+      
+       * ```typescript
+      
+       * await this.if(param1, param2)
+      
+       * ```
+      
+       */
       
       if (context && typeof context !== 'object') {
         console.warn('Invalid context for logger.warn:', context);
@@ -121,16 +240,39 @@ class Logger {
         return;
       }
       
+      /**
+      
+       * if - Add description here
+      
+       * 
+      
+       * @param {...any} args - Method parameters
+      
+       * @returns {Promise<any>} Method return value
+      
+       * @throws {Error} When operation fails
+      
+       * 
+      
+       * @example
+      
+       * ```typescript
+      
+       * await this.if(param1, param2)
+      
+       * ```
+      
+       */
+      
       if (context && typeof context !== 'object') {
         console.warn('Invalid context for logger.debug:', context);
         return;
       }
 
       const logEntry = this.formatMessage('debug', message, context);
-      // Log entry formatted successfully
+      console.log(JSON.stringify(logEntry));
     } catch (error) {
       console.error('Logger debug failed:', error);
-      // Fallback logging for critical errors
     }
   }
 }

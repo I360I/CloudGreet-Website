@@ -65,6 +65,21 @@ CREATE TABLE businesses (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 1.5. Consents table (SMS opt-in/opt-out tracking for TCPA/A2P compliance) - COMPLETE
+CREATE TABLE consents (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    phone TEXT NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('STOP', 'UNSTOP', 'HELP')),
+    channel TEXT DEFAULT 'sms',
+    business_id UUID REFERENCES businesses(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for consents table
+CREATE INDEX idx_consents_phone ON consents(phone);
+CREATE INDEX idx_consents_business_id ON consents(business_id);
+CREATE INDEX idx_consents_action ON consents(action);
+
 -- 2. Users table (extends Supabase auth.users) - COMPLETE
 CREATE TABLE users (
     id UUID REFERENCES auth.users(id) PRIMARY KEY,
@@ -962,6 +977,16 @@ CREATE TABLE system_health (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 61.5. Health checks table - COMPLETE
+CREATE TABLE health_checks (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    service_name TEXT,
+    response_time INTEGER,
+    error_message TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- 62. Performance metrics table - COMPLETE
 CREATE TABLE performance_metrics (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -992,6 +1017,20 @@ CREATE TABLE webhook_logs (
     response_body TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- 64.5. Webhook events table (for idempotency) - COMPLETE
+CREATE TABLE webhook_events (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    event_id TEXT NOT NULL UNIQUE,
+    provider TEXT NOT NULL CHECK (provider IN ('stripe', 'telnyx', 'retell')),
+    event_type TEXT NOT NULL,
+    processed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create index for webhook events idempotency checks
+CREATE INDEX idx_webhook_events_event_id ON webhook_events(event_id);
+CREATE INDEX idx_webhook_events_provider ON webhook_events(provider);
 
 -- ===========================================
 -- PRICING & QUOTES TABLES
@@ -1335,8 +1374,10 @@ ALTER TABLE ab_tests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE data_exports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE system_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE health_checks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE system_health ENABLE ROW LEVEL SECURITY;
 ALTER TABLE performance_metrics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE webhook_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scheduled_maintenance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE webhook_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pricing_rules ENABLE ROW LEVEL SECURITY;

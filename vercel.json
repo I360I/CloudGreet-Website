@@ -21,6 +21,10 @@
     "app/api/admin/**/*.ts": {
       "maxDuration": 45,
       "memory": 1024
+    },
+    "app/api/retell/**/*.ts": {
+      "maxDuration": 60,
+      "memory": 1024
     }
   },
   

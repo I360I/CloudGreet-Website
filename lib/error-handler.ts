@@ -1,17 +1,18 @@
+import { logger } from '@/lib/monitoring'
 // Centralized error handling for production
 export interface AppError {
   code: string;
   message: string;
   statusCode: number;
-  details?: any;
+  details?: unknown;
 }
 
 export class CloudGreetError extends Error implements AppError {
   public code: string;
   public statusCode: number;
-  public details?: any;
+  public details?: unknown;
 
-  constructor(code: string, message: string, statusCode: number = 500, details?: any) {
+  constructor(code: string, message: string, statusCode: number = 500, details?: unknown) {
     super(message);
     this.name = 'CloudGreetError';
     this.code = code;
@@ -55,15 +56,39 @@ export const ERROR_CODES = {
   SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
 } as const;
 
+/**
+ * createError - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await createError(param1, param2)
+ * ```
+ */
 export function createError(
   code: keyof typeof ERROR_CODES,
   message: string,
   statusCode: number = 500,
-  details?: any
+  details?: unknown
 ): CloudGreetError {
   return new CloudGreetError(ERROR_CODES[code], message, statusCode, details);
 }
 
+/**
+ * handleError - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await handleError(param1, param2)
+ * ```
+ */
 export function handleError(error: unknown): AppError {
   // Handle known CloudGreet errors
   if (error instanceof CloudGreetError) {
@@ -88,6 +113,30 @@ export function handleError(error: unknown): AppError {
   // Handle database errors
   if (error && typeof error === 'object' && 'code' in error) {
     const dbError = error as any;
+    /**
+
+     * if - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.if(param1, param2)
+
+     * ```
+
+     */
+
     if (dbError.code === '23505') {
       return {
         code: ERROR_CODES.CONSTRAINT_VIOLATION,
@@ -95,6 +144,30 @@ export function handleError(error: unknown): AppError {
         statusCode: 409,
       };
     }
+    /**
+
+     * if - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.if(param1, param2)
+
+     * ```
+
+     */
+
     if (dbError.code === '23503') {
       return {
         code: ERROR_CODES.CONSTRAINT_VIOLATION,
@@ -127,7 +200,19 @@ export function handleError(error: unknown): AppError {
   };
 }
 
-export function logError(error: unknown, context?: any) {
+/**
+ * logError - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await logError(param1, param2)
+ * ```
+ */
+export function logError(error: unknown, context?: unknown) {
   try {
     const appError = handleError(error);
     
@@ -144,28 +229,52 @@ export function logError(error: unknown, context?: any) {
       });
     } catch (loggerError) {
       // Fallback to console if logger fails
-      console.error('Logger failed in error handler:', loggerError);
-      console.error('Original error:', {
+      logger.error('Logger failed in error handler:', { error: loggerError instanceof Error ? loggerError.message : 'Unknown error' });
+      logger.error('Original error:', {
         code: appError.code,
         message: appError.message,
         statusCode: appError.statusCode,
-        context,
+        context: context ? JSON.stringify(context) : undefined,
         timestamp: new Date().toISOString(),
-        details: appError.details,
+        details: appError.details ? JSON.stringify(appError.details) : undefined,
       });
     }
 
     // In production, you might want to send to error tracking service
+    /**
+
+     * if - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.if(param1, param2)
+
+     * ```
+
+     */
+
     if (process.env.NODE_ENV === 'production') {
       try {
         // Example: Sentry.captureException(error, { extra: context });
       } catch (trackingError) {
-        console.error('Error tracking failed:', trackingError);
+        logger.error('Error tracking failed:', { error: trackingError instanceof Error ? trackingError.message : 'Unknown error' });
       }
     }
   } catch (handlerError) {
     // Ultimate fallback if error handler itself fails
-    console.error('Error handler failed:', handlerError);
-    console.error('Original error that caused handler failure:', error);
+    logger.error('Error handler failed:', { error: handlerError instanceof Error ? handlerError.message : 'Unknown error' });
+    logger.error('Original error that caused handler failure:', { error: error instanceof Error ? error.message : 'Unknown error' });
   }
 }

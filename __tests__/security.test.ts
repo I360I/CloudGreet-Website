@@ -87,37 +87,37 @@ describe('Security Utilities', () => {
   describe('sanitizeJson', () => {
     it('should sanitize string values', () => {
       const input = { name: '<script>alert("xss")</script>John' }
-      const result = sanitizeJson(input)
+      const result = sanitizeJson(input) as { name: string }
       expect(result.name).toBe('scriptalert("xss")/scriptJohn')
     })
 
     it('should handle number values', () => {
       const input = { count: 42 }
-      const result = sanitizeJson(input)
+      const result = sanitizeJson(input) as { count: number }
       expect(result.count).toBe(42)
     })
 
     it('should handle boolean values', () => {
       const input = { active: true }
-      const result = sanitizeJson(input)
+      const result = sanitizeJson(input) as { active: boolean }
       expect(result.active).toBe(true)
     })
 
     it('should handle array values', () => {
       const input = { items: ['<script>test</script>', 'normal'] }
-      const result = sanitizeJson(input)
+      const result = sanitizeJson(input) as { items: string[] }
       expect(result.items).toEqual(['scripttest/script', 'normal'])
     })
 
     it('should limit array size', () => {
       const input = { items: Array(200).fill('test') }
-      const result = sanitizeJson(input)
+      const result = sanitizeJson(input) as { items: string[] }
       expect(result.items.length).toBeLessThanOrEqual(100)
     })
 
     it('should handle nested objects', () => {
       const input = { user: { name: '<script>alert("xss")</script>John' } }
-      const result = sanitizeJson(input)
+      const result = sanitizeJson(input) as { user: { name: string } }
       expect(result.user.name).toBe('scriptalert("xss")/scriptJohn')
     })
 

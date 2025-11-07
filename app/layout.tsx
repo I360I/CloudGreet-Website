@@ -4,6 +4,15 @@ import './globals.css'
 import { ToastProvider } from './contexts/ToastContext'
 import { RealtimeProvider } from './contexts/RealtimeProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import * as Sentry from '@sentry/nextjs'
+
+if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    environment: process.env.NODE_ENV,
+    tracesSampleRate: 0.1
+  })
+}
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -16,18 +25,18 @@ export const metadata: Metadata = {
   creator: 'CloudGreet',
   publisher: 'CloudGreet',
   icons: {
-    icon: '/favicon.ico',
+  icon: '/favicon.ico',
     shortcut: '/favicon.ico',
     apple: '/icon-192.png',
   },
   openGraph: {
-    title: 'CloudGreet - Never Miss A Call Again',
+  title: 'CloudGreet - Never Miss A Call Again',
     description: 'Professional AI receptionist for service contractors. Handle calls 24/7, schedule appointments, provide estimates.',
     url: 'https://cloudgreet.com',
     siteName: 'CloudGreet',
     images: [
       {
-        url: '/icon-192.png',
+  url: '/icon-192.png',
         width: 192,
         height: 192,
         alt: 'CloudGreet AI',
@@ -37,24 +46,24 @@ export const metadata: Metadata = {
     type: 'website',
   },
   twitter: {
-    card: 'summary_large_image',
+  card: 'summary_large_image',
     title: 'CloudGreet - Never Miss A Call Again',
     description: 'Professional AI receptionist for service contractors.',
     images: ['/icon-192.png'],
   },
   formatDetection: {
-    email: false,
+  email: false,
     address: false,
     telephone: false,
   },
   alternates: {
-    canonical: '/',
+  canonical: '/',
   },
   robots: {
-    index: true,
+  index: true,
     follow: true,
     googleBot: {
-      index: true,
+  index: true,
       follow: true,
       'max-video-preview': -1,
       'max-image-preview': 'large',
@@ -62,7 +71,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION_CODE || '',
+  google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION_CODE || '',
   },
 }
 
@@ -97,9 +106,7 @@ export default function RootLayout({
                     .then(function(registration) {
                       // Service worker registered successfully
                     })
-                    .catch(function(registrationError) {
-                      // Service worker registration failed
-                    });
+                    .);
                 });
               }
             `,

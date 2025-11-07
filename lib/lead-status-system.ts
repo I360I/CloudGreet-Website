@@ -27,7 +27,7 @@ export interface LeadStatusUpdate {
   reason?: string
   notes?: string
   updatedBy: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface LeadStatusHistory {
@@ -67,7 +67,7 @@ export class LeadStatusManager {
     updatedBy: string, 
     reason?: string, 
     notes?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<LeadStatusUpdate> {
     const currentHistory = this.statusHistory.get(leadId)
     const currentStatus = currentHistory?.currentStatus || 'new'
@@ -158,6 +158,30 @@ export class LeadStatusManager {
     const statusTimes: Record<LeadStatus, number[]> = {} as any
     allLeads.forEach(lead => {
       lead.statusHistory.forEach(update => {
+        /**
+
+         * if - Add description here
+
+         * 
+
+         * @param {...any} args - Method parameters
+
+         * @returns {Promise<any>} Method return value
+
+         * @throws {Error} When operation fails
+
+         * 
+
+         * @example
+
+         * ```typescript
+
+         * await this.if(param1, param2)
+
+         * ```
+
+         */
+
         if (!statusTimes[update.fromStatus]) {
           statusTimes[update.fromStatus] = []
         }
@@ -190,18 +214,90 @@ export class LeadStatusManager {
         return 'Send initial outreach email'
       
       case 'contacted':
+        /**
+
+         * if - Add description here
+
+         * 
+
+         * @param {...any} args - Method parameters
+
+         * @returns {Promise<any>} Method return value
+
+         * @throws {Error} When operation fails
+
+         * 
+
+         * @example
+
+         * ```typescript
+
+         * await this.if(param1, param2)
+
+         * ```
+
+         */
+
         if (hoursSinceActivity > 24) {
           return 'Send follow-up email or SMS'
         }
         return 'Wait for response'
       
       case 'opened':
+        /**
+
+         * if - Add description here
+
+         * 
+
+         * @param {...any} args - Method parameters
+
+         * @returns {Promise<any>} Method return value
+
+         * @throws {Error} When operation fails
+
+         * 
+
+         * @example
+
+         * ```typescript
+
+         * await this.if(param1, param2)
+
+         * ```
+
+         */
+
         if (hoursSinceActivity > 48) {
           return 'Send follow-up with different angle'
         }
         return 'Wait for click or reply'
       
       case 'clicked':
+        /**
+
+         * if - Add description here
+
+         * 
+
+         * @param {...any} args - Method parameters
+
+         * @returns {Promise<any>} Method return value
+
+         * @throws {Error} When operation fails
+
+         * 
+
+         * @example
+
+         * ```typescript
+
+         * await this.if(param1, param2)
+
+         * ```
+
+         */
+
         if (hoursSinceActivity > 24) {
           return 'Send demo invitation'
         }
@@ -220,6 +316,30 @@ export class LeadStatusManager {
         return 'Send proposal and pricing'
       
       case 'proposal_sent':
+        /**
+
+         * if - Add description here
+
+         * 
+
+         * @param {...any} args - Method parameters
+
+         * @returns {Promise<any>} Method return value
+
+         * @throws {Error} When operation fails
+
+         * 
+
+         * @example
+
+         * ```typescript
+
+         * await this.if(param1, param2)
+
+         * ```
+
+         */
+
         if (hoursSinceActivity > 72) {
           return 'Follow up on proposal'
         }
@@ -318,7 +438,7 @@ export class LeadStatusManager {
       timeInStatus: 0, // Will be calculated
       totalTime: existing?.totalTime || 0,
       conversionProbability: this.calculateConversionProbability(leadId),
-      nextAction: this.getNextAction(leadId),
+      nextAction: this.getNextAction(leadId) || undefined,
       lastActivity: new Date().toISOString()
     }
 

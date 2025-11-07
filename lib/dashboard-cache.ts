@@ -11,7 +11,7 @@ interface CacheEntry<T> {
 }
 
 class DashboardCache {
-  private cache: Map<string, CacheEntry<any>> = new Map()
+  private cache: Map<string, CacheEntry<unknown>> = new Map()
   
   /**
    * Store data in cache with TTL
@@ -36,6 +36,42 @@ class DashboardCache {
 
     const now = Date.now()
     const isExpired = (now - entry.timestamp) > entry.ttl
+
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
 
     if (isExpired) {
       this.cache.delete(key)
@@ -128,6 +164,30 @@ class DashboardCache {
 export const dashboardCache = new DashboardCache()
 
 // Run cleanup every 5 minutes
+/**
+
+ * if - Add description here
+
+ * 
+
+ * @param {...any} args - Method parameters
+
+ * @returns {Promise<any>} Method return value
+
+ * @throws {Error} When operation fails
+
+ * 
+
+ * @example
+
+ * ```typescript
+
+ * await this.if(param1, param2)
+
+ * ```
+
+ */
+
 if (typeof window !== 'undefined') {
   setInterval(() => {
     dashboardCache.cleanup()

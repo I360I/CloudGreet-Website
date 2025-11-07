@@ -2,8 +2,16 @@
 
 import React, { useState } from 'react'
 
+type Severity = 'low' | 'medium' | 'high'
+interface AnalysisResult {
+  name: string
+  passed: boolean
+  details: string
+  severity: Severity
+}
+
 export default function CodeQualityPage() {
-  const [analysisResults, setAnalysisResults] = useState<any[]>([])
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   const runCodeAnalysis = async () => {
@@ -16,22 +24,24 @@ export default function CodeQualityPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysisType: 'quality' })
       })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setAnalysisResults(data.analysis.map((item: any) => ({
-          ...item,
-          severity: item.passed ? 'low' : 'high'
-        })))
-      } else {
+
+      if (!response.ok) {
         setAnalysisResults([{
           name: 'Code Analysis Error',
           passed: false,
           details: `HTTP ${response.status}`,
           severity: 'high'
         }])
+        return
       }
+
+      const data = await response.json()
+      setAnalysisResults((data.analysis as any[]).map((item: any) => ({
+        ...item,
+        severity: item.passed ? 'low' : 'high'
+      })))
     } catch (error) {
+      console.error('Error:', error)
       setAnalysisResults([{
         name: 'Code Analysis Error',
         passed: false,
@@ -53,22 +63,24 @@ export default function CodeQualityPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysisType: 'security' })
       })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setAnalysisResults(data.analysis.map((item: any) => ({
-          ...item,
-          severity: item.passed ? 'low' : 'high'
-        })))
-      } else {
+
+      if (!response.ok) {
         setAnalysisResults([{
           name: 'Security Scan Error',
           passed: false,
           details: `HTTP ${response.status}`,
           severity: 'high'
         }])
+        return
       }
+
+      const data = await response.json()
+      setAnalysisResults((data.analysis as any[]).map((item: any) => ({
+        ...item,
+        severity: item.passed ? 'low' : 'high'
+      })))
     } catch (error) {
+      console.error('Error:', error)
       setAnalysisResults([{
         name: 'Security Scan Error',
         passed: false,
@@ -90,22 +102,24 @@ export default function CodeQualityPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysisType: 'performance' })
       })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setAnalysisResults(data.analysis.map((item: any) => ({
-          ...item,
-          severity: item.passed ? 'low' : 'medium'
-        })))
-      } else {
+
+      if (!response.ok) {
         setAnalysisResults([{
           name: 'Performance Analysis Error',
           passed: false,
           details: `HTTP ${response.status}`,
           severity: 'high'
         }])
+        return
       }
+
+      const data = await response.json()
+      setAnalysisResults((data.analysis as any[]).map((item: any) => ({
+        ...item,
+        severity: item.passed ? 'low' : 'medium'
+      })))
     } catch (error) {
+      console.error('Error:', error)
       setAnalysisResults([{
         name: 'Performance Analysis Error',
         passed: false,

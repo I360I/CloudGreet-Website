@@ -42,6 +42,18 @@ export function extractAuthToken(request: NextRequest): string | null {
 export function verifyAuthToken(token: string): AuthResult {
   try {
     const jwtSecret = process.env.JWT_SECRET
+    /**
+     * if - Add description here
+     * 
+     * @param {...any} args - Method parameters
+     * @returns {Promise<any>} Method return value
+     * @throws {Error} When operation fails
+     * 
+     * @example
+     * ```typescript
+     * await this.if(param1, param2)
+     * ```
+     */
     if (!jwtSecret) {
       logger.error('JWT_SECRET not configured')
       return { success: false, error: 'Authentication not configured' }
@@ -50,6 +62,18 @@ export function verifyAuthToken(token: string): AuthResult {
     const decoded = jwt.verify(token, jwtSecret) as any
     
     // Validate required fields
+    /**
+     * if - Add description here
+     * 
+     * @param {...any} args - Method parameters
+     * @returns {Promise<any>} Method return value
+     * @throws {Error} When operation fails
+     * 
+     * @example
+     * ```typescript
+     * await this.if(param1, param2)
+     * ```
+     */
     if (!decoded.userId || !decoded.email || !decoded.businessId) {
       return { success: false, error: 'Invalid token structure' }
     }
@@ -64,7 +88,7 @@ export function verifyAuthToken(token: string): AuthResult {
       }
     }
   } catch (error) {
-    logger.error('JWT verification failed', { error })
+    logger.error('JWT verification failed', { error: error instanceof Error ? error.message : 'Unknown error' })
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Invalid token' 
@@ -104,4 +128,33 @@ export function hasRole(user: AuthUser, requiredRole: string): boolean {
  */
 export function belongsToBusiness(user: AuthUser, businessId: string): boolean {
   return user.businessId === businessId
+}
+
+/**
+ * Generate JWT auth token (for backward compatibility with tests)
+ */
+export function generateAuthToken(user: { id: string; email: string; businessId: string; role?: string }): string {
+  const jwt = require('jsonwebtoken')
+  const jwtSecret = process.env.JWT_SECRET
+  if (!jwtSecret) {
+    throw new Error('JWT_SECRET not configured')
+  }
+  return jwt.sign(
+    {
+      userId: user.id,
+      email: user.email,
+      businessId: user.businessId,
+      role: user.role || 'user'
+    },
+    jwtSecret,
+    { expiresIn: '24h' }
+  )
+}
+
+/**
+ * Generate secure random token
+ */
+export function generateSecureToken(length: number = 32): string {
+  const crypto = require('crypto')
+  return crypto.randomBytes(length).toString('hex')
 }

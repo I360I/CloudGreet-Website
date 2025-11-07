@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Download, FileText, FileSpreadsheet, Calendar, Loader } from 'lucide-react'
+import { logger } from '@/lib/monitoring'
 
 interface ExportButtonProps {
   onExport: (format: 'csv' | 'pdf' | 'excel') => Promise<void>
@@ -47,7 +48,7 @@ export default function ExportButton({ onExport, disabled = false, className = '
     try {
       await onExport(format)
     } catch (error) {
-      console.error('Export failed:', error)
+      logger.error('Export failed:', { format, error: error instanceof Error ? error.message : 'Unknown' })
     } finally {
       setIsExporting(false)
       setExportingFormat(null)

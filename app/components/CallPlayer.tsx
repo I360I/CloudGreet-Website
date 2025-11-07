@@ -1,93 +1,125 @@
-"use client"
+'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
-import { Play, Pause, Volume2, Download, Clock, Phone, User } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
+import { Play, Pause, SkipBack, SkipForward, Download, Volume2, Clock, MessageSquare, Star, Bookmark } from 'lucide-react'
+import { Card } from './ui/Card'
+import { logger } from '@/lib/monitoring'
 
-interface CallPlayerProps {
-  recordingUrl: string
+interface CallRecording {
+  id: string
   callId: string
-  callerName?: string
-  callerPhone?: string
-  duration?: number
-  timestamp?: string
-  transcript?: string
+  recordingUrl: string
+  transcript: string
+  duration: number,
+  sentiment: 'positive' | 'neutral' | 'negative',
+  summary: string,
+  createdAt: string
+  callerName?: string,
+  callerPhone: string
 }
 
-export default function CallPlayer({ 
-  recordingUrl, 
-  callId, 
-  callerName, 
-  callerPhone, 
-  duration, 
-  timestamp,
-  transcript 
-}: CallPlayerProps) {
+interface CallPlayerProps {
+  callId: string
+  businessId: string
+  className?: string
+}
+
+export default function CallPlayer({ callId, businessId, className = '' }: CallPlayerProps) {
+  const [recording, setRecording] = useState<CallRecording | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
-  const [totalDuration, setTotalDuration] = useState(duration || 0)
+  const [playbackSpeed, setPlaybackSpeed] = useState(1)
   const [volume, setVolume] = useState(1)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [bookmarks, setBookmarks] = useState<number[]>([])
+  const [showTranscript, setShowTranscript] = useState(true)
   
   const audioRef = useRef<HTMLAudioElement>(null)
-  const progressRef = useRef<HTMLDivElement>(null)
+  const waveformRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
+    loadCallRecording()
+  }, [callId])
 
-    const updateTime = () => setCurrentTime(audio.currentTime)
-    const updateDuration = () => setTotalDuration(audio.duration || 0)
-    const handleEnd = () => setIsPlaying(false)
-    const handleError = () => setError('Failed to load audio recording')
-
-    audio.addEventListener('timeupdate', updateTime)
-    audio.addEventListener('loadedmetadata', updateDuration)
-    audio.addEventListener('ended', handleEnd)
-    audio.addEventListener('error', handleError)
-
-    return () => {
-      audio.removeEventListener('timeupdate', updateTime)
-      audio.removeEventListener('loadedmetadata', updateDuration)
-      audio.removeEventListener('ended', handleEnd)
-      audio.removeEventListener('error', handleError)
-    }
-  }, [])
-
-  const togglePlayPause = async () => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      if (isPlaying) {
-        audio.pause()
-        setIsPlaying(false)
-      } else {
-        await audio.play()
-        setIsPlaying(true)
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.addEventListener('timeupdate', handleTimeUpdate)
+      audioRef.current.addEventListener('ended', handleEnded)
+      audioRef.current.addEventListener('loadedmetadata', handleLoadedMetadata)
+      
+      return () => {
+        if (audioRef.current) {
+          audioRef.current.removeEventListener('timeupdate', handleTimeUpdate)
+          audioRef.current.removeEventListener('ended', handleEnded)
+          audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata)
+        }
       }
-    } catch (err) {
-      setError('Failed to play audio')
-      setIsPlaying(false)
+    }
+  }, [recording])
+
+  const loadCallRecording = async () => {
+    try {
+      setIsLoading(true)
+      const token = localStorage.getItem('token')
+      
+      const response = await fetch(`/api/calls/recording?callId=${callId}&businessId=${businessId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setRecording(data.recording)
+      }
+    } catch (error) {
+      console.error('Error loading recording:', error)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const audio = audioRef.current
-    if (!audio || !progressRef.current) return
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime)
+    }
+  }
 
-    const rect = progressRef.current.getBoundingClientRect()
-    const clickX = e.clientX - rect.left
-    const percentage = clickX / rect.width
-    const newTime = percentage * totalDuration
-    
-    audio.currentTime = newTime
+  const handleEnded = () => {
+    setIsPlaying(false)
+    setCurrentTime(0)
+  }
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackSpeed
+      audioRef.current.volume = volume
+    }
+  }
+
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause()
+      } else {
+        audioRef.current.play()
+      }
+      setIsPlaying(!isPlaying)
+    }
+  }
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = parseFloat(e.target.value)
     setCurrentTime(newTime)
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime
+    }
+  }
+
+  const handleSpeedChange = (speed: number) => {
+    setPlaybackSpeed(speed)
+    if (audioRef.current) {
+      audioRef.current.playbackRate = speed
+    }
   }
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,133 +130,259 @@ export default function CallPlayer({
     }
   }
 
+  const addBookmark = () => {
+    if (!bookmarks.includes(Math.floor(currentTime))) {
+      setBookmarks([...bookmarks, Math.floor(currentTime)].sort((a, b) => a - b))
+    }
+  }
+
+  const jumpToBookmark = (time: number) => {
+    setCurrentTime(time)
+    if (audioRef.current) {
+      audioRef.current.currentTime = time
+    }
+  }
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const downloadRecording = () => {
-    const link = document.createElement('a')
-    link.href = recordingUrl
-    link.download = `call-${callId}-recording.mp3`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const getSentimentColor = (sentiment: string) => {
+    switch (sentiment) {
+      case 'positive': return 'text-green-400 bg-green-500/20'
+      case 'negative': return 'text-red-400 bg-red-500/20'
+  default: return 'text-yellow-400 bg-yellow-500/20'
+    }
   }
 
-  const progressPercentage = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0
+  const downloadTranscript = () => {
+    if (recording?.transcript) {
+      const blob = new Blob([recording.transcript], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `call-transcript-${callId}.txt`
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+  }
 
-  return (
-    <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-700/50 rounded-xl p-6">
-      {/* Call Info Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-            <Phone className="w-5 h-5 text-blue-400" />
-          </div>
-          <div>
-            <h3 className="text-white font-medium">
-              {callerName || 'Unknown Caller'}
-            </h3>
-            <p className="text-gray-400 text-sm">
-              {callerPhone || 'Unknown Number'} • {timestamp || 'Unknown Time'}
-            </p>
+  if (isLoading) {
+    return (
+      <Card className={`p-6 ${className}`}>
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-700/50 rounded w-48 mb-4"></div>
+          <div className="h-32 bg-gray-700/50 rounded mb-4"></div>
+          <div className="flex gap-2">
+            <div className="h-10 bg-gray-700/50 rounded w-20"></div>
+            <div className="h-10 bg-gray-700/50 rounded w-20"></div>
+            <div className="h-10 bg-gray-700/50 rounded w-20"></div>
           </div>
         </div>
-        <button
-          onClick={downloadRecording}
-          className="flex items-center gap-2 px-3 py-2 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg text-gray-300 hover:text-white transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          Download
-        </button>
+      </Card>
+    )
+  }
+
+  if (!recording) {
+    return (
+      <Card className={`p-8 text-center ${className}`}>
+        <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-500" />
+        <h3 className="text-lg font-semibold text-white mb-2">No Recording Available</h3>
+        <p className="text-gray-400">This call doesn't have a recording or transcript</p>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className={`p-6 ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-blue-400" />
+            Call Recording
+          </h3>
+          <p className="text-sm text-gray-400">
+            {recording.callerName || 'Unknown'} • {recording.callerPhone}
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-1 rounded text-xs font-semibold uppercase ${getSentimentColor(recording.sentiment)}`}>
+            {recording.sentiment}
+          </span>
+          <button
+            onClick={downloadTranscript}
+            className="p-2 text-gray-400 hover:text-white transition-colors"
+            title="Download Transcript"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Audio Player */}
       <div className="space-y-4">
         {/* Progress Bar */}
-        <div className="space-y-2">
-          <div
-            ref={progressRef}
-            onClick={handleSeek}
-            className="w-full h-2 bg-gray-700/50 rounded-full cursor-pointer hover:bg-gray-600/50 transition-colors"
-          >
+        <div className="relative">
+          <input
+            type="range"
+            min="0"
+            max={recording.duration}
+            value={currentTime}
+            onChange={handleSeek}
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+          />
+          
+          {/* Bookmarks */}
+          {bookmarks.map((bookmark) => (
             <div
-              className="h-full bg-blue-500 rounded-full transition-all duration-100"
-              style={{ width: `${progressPercentage}%` }}
+              key={bookmark}
+              className="absolute top-0 w-1 h-2 bg-yellow-400 rounded-full cursor-pointer"
+              style={{ left: `${(bookmark / recording.duration) * 100}%` }}
+              onClick={() => jumpToBookmark(bookmark)}
+              title={`Bookmark at ${formatTime(bookmark)}`}
             />
-          </div>
-          <div className="flex justify-between text-sm text-gray-400">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(totalDuration)}</span>
-          </div>
+          ))}
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={togglePlayPause}
-            disabled={isLoading || !!error}
-            className="flex items-center justify-center w-12 h-12 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-full text-white transition-colors"
-          >
-            {isLoading ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : isPlaying ? (
-              <Pause className="w-5 h-5" />
-            ) : (
-              <Play className="w-5 h-5 ml-0.5" />
-            )}
-          </button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => jumpToBookmark(Math.max(0, currentTime - 10))}
+              className="p-2 text-gray-400 hover:text-white transition-colors"
+              title="Skip back 10s"
+            >
+              <SkipBack className="w-5 h-5" />
+            </button>
+            
+            <button
+              onClick={togglePlayPause}
+              className="p-3 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors"
+            >
+              {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+            </button>
+            
+            <button
+              onClick={() => jumpToBookmark(Math.min(recording.duration, currentTime + 10))}
+              className="p-2 text-gray-400 hover:text-white transition-colors"
+              title="Skip forward 10s"
+            >
+              <SkipForward className="w-5 h-5" />
+            </button>
+            
+            <button
+              onClick={addBookmark}
+              className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
+              title="Add bookmark"
+            >
+              <Bookmark className="w-5 h-5" />
+            </button>
+          </div>
 
-          <div className="flex items-center gap-2 flex-1">
-            <Volume2 className="w-4 h-4 text-gray-400" />
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={volume}
-              onChange={handleVolumeChange}
-              className="flex-1 h-2 bg-gray-700/50 rounded-lg appearance-none cursor-pointer"
-            />
-            <span className="text-sm text-gray-400 w-8">
-              {Math.round(volume * 100)}%
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-400">
+              {formatTime(currentTime)} / {formatTime(recording.duration)}
             </span>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">Speed:</span>
+              {[0.5, 1, 1.5, 2].map((speed) => (
+                <button
+                  key={speed}
+                  onClick={() => handleSpeedChange(speed)}
+                  className={`px-2 py-1 rounded text-xs ${
+                    playbackSpeed === speed
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {speed}x
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-gray-400" />
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={volume}
+                onChange={handleVolumeChange}
+                className="w-20 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-            <p className="text-red-400 text-sm">{error}</p>
-          </div>
-        )}
-
-        {/* Transcript */}
-        {transcript && (
-          <div className="mt-6">
-            <h4 className="text-white font-medium mb-3 flex items-center gap-2">
-              <User className="w-4 h-4" />
-              Call Transcript
-            </h4>
-            <div className="bg-gray-800/50 rounded-lg p-4 max-h-40 overflow-y-auto">
-              <p className="text-gray-300 text-sm leading-relaxed">
-                {transcript}
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Audio Element */}
+        <audio
+          ref={audioRef}
+          src={recording.recordingUrl}
+          preload="metadata"
+        />
       </div>
 
-      {/* Hidden Audio Element */}
-      <audio
-        ref={audioRef}
-        src={recordingUrl}
-        preload="metadata"
-        onLoadStart={() => setIsLoading(true)}
-        onCanPlay={() => setIsLoading(false)}
-      />
-    </div>
+      {/* Transcript */}
+      {showTranscript && recording.transcript && (
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-md font-semibold text-white">Transcript</h4>
+            <button
+              onClick={() => setShowTranscript(!showTranscript)}
+              className="text-sm text-gray-400 hover:text-white"
+            >
+              Hide
+            </button>
+          </div>
+          
+          <div className="bg-gray-800/50 rounded-lg p-4 max-h-64 overflow-y-auto">
+            <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
+              {recording.transcript}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Summary */}
+      {recording.summary && (
+        <div className="mt-4">
+          <h4 className="text-md font-semibold text-white mb-2">Call Summary</h4>
+          <p className="text-sm text-gray-300 bg-gray-800/30 rounded-lg p-3">
+            {recording.summary}
+          </p>
+        </div>
+      )}
+
+      {/* Bookmarks List */}
+      {bookmarks.length > 0 && (
+        <div className="mt-4">
+          <h4 className="text-md font-semibold text-white mb-2">Bookmarks</h4>
+          <div className="space-y-2">
+            {bookmarks.map((bookmark, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between bg-gray-800/30 rounded-lg p-2"
+              >
+                <span className="text-sm text-gray-300">
+                  Bookmark {index + 1} at {formatTime(bookmark)}
+                </span>
+                <button
+                  onClick={() => jumpToBookmark(bookmark)}
+                  className="text-xs text-purple-400 hover:text-purple-300"
+                >
+                  Jump to
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
   )
 }

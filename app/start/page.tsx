@@ -45,7 +45,6 @@ export default function StartPage() {
       }
       
       // Create account using reliable API
-
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -193,7 +192,6 @@ export default function StartPage() {
                   </select>
                 </div>
 
-
                 <div>
                   <label className="block text-gray-300 font-medium mb-3">
                     Website
@@ -293,7 +291,7 @@ export default function StartPage() {
               </div>
             </div>
 
-            {/* What&apos;s Next */}
+            {/* What's Next */}
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-blue-400 mb-3">What&apos;s Next?</h3>
               <div className="space-y-2 text-gray-300">
@@ -379,3 +377,4 @@ export default function StartPage() {
     </div>
   )
 }
+

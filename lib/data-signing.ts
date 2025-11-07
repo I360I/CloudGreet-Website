@@ -7,7 +7,7 @@ import crypto from 'crypto'
 import { logger } from './monitoring'
 
 export interface SignedData {
-  data: any
+  data: unknown
   signature: string
   timestamp: number
   nonce: string
@@ -16,7 +16,7 @@ export interface SignedData {
 /**
  * Sign data with HMAC to prevent tampering
  */
-export function signData(data: any, secret: string = process.env.DATA_SIGNING_SECRET || 'default-secret'): SignedData {
+export function signData(data: unknown, secret: string = process.env.DATA_SIGNING_SECRET || 'default-secret'): SignedData {
   const timestamp = Date.now()
   const nonce = crypto.randomBytes(16).toString('hex')
   
@@ -69,6 +69,42 @@ export function verifyDataSignature(signedData: SignedData, secret: string = pro
     
     const isValid = signature === expectedSignature
     
+    /**
+
+    
+     * if - Add description here
+
+    
+     * 
+
+    
+     * @param {...any} args - Method parameters
+
+    
+     * @returns {Promise<any>} Method return value
+
+    
+     * @throws {Error} When operation fails
+
+    
+     * 
+
+    
+     * @example
+
+    
+     * ```typescript
+
+    
+     * await this.if(param1, param2)
+
+    
+     * ```
+
+    
+     */
+
+    
     if (!isValid) {
       logger.error('Data signature verification failed', {
         expected: expectedSignature.substring(0, 8) + '...',
@@ -109,18 +145,19 @@ export function isDataFresh(signedData: SignedData, maxAgeMinutes: number = 5): 
 /**
  * Create secure analytics data with signing
  */
-export function createSecureAnalyticsData(analyticsData: any): SignedData {
+export function createSecureAnalyticsData(analyticsData: unknown): SignedData {
   // Sanitize the data first
+  const data = analyticsData as any
   const sanitizedData = {
-    totalCalls: Math.max(0, Math.round(analyticsData.totalCalls || 0)),
-    totalAppointments: Math.max(0, Math.round(analyticsData.totalAppointments || 0)),
-    totalRevenue: Math.max(0, Math.round((analyticsData.totalRevenue || 0) * 100) / 100),
-    conversionRate: Math.max(0, Math.min(100, Math.round((analyticsData.conversionRate || 0) * 10) / 10)),
-    churnRate: Math.max(0, Math.min(100, Math.round((analyticsData.churnRate || 0) * 10) / 10)),
-    retentionRate: Math.max(0, Math.min(100, Math.round((analyticsData.retentionRate || 0) * 10) / 10)),
+    totalCalls: Math.max(0, Math.round(data.totalCalls || 0)),
+    totalAppointments: Math.max(0, Math.round(data.totalAppointments || 0)),
+    totalRevenue: Math.max(0, Math.round((data.totalRevenue || 0) * 100) / 100),
+    conversionRate: Math.max(0, Math.min(100, Math.round((data.conversionRate || 0) * 10) / 10)),
+    churnRate: Math.max(0, Math.min(100, Math.round((data.churnRate || 0) * 10) / 10)),
+    retentionRate: Math.max(0, Math.min(100, Math.round((data.retentionRate || 0) * 10) / 10)),
     timestamp: Date.now(),
-    businessId: analyticsData.businessId,
-    userId: analyticsData.userId
+    businessId: data.businessId,
+    userId: data.userId
   }
   
   return signData(sanitizedData)
@@ -131,7 +168,7 @@ export function createSecureAnalyticsData(analyticsData: any): SignedData {
  */
 export function validateSecureAnalyticsData(signedData: SignedData): {
   isValid: boolean
-  data: any
+  data: unknown
   errors: string[]
 } {
   const errors: string[] = []
@@ -158,6 +195,30 @@ export function validateSecureAnalyticsData(signedData: SignedData): {
   // Check required fields
   const requiredFields = ['totalCalls', 'totalAppointments', 'totalRevenue', 'conversionRate', 'churnRate', 'retentionRate']
   for (const field of requiredFields) {
+    /**
+
+     * if - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.if(param1, param2)
+
+     * ```
+
+     */
+
     if (typeof data[field] !== 'number') {
       errors.push(`Missing or invalid field: ${field}`)
     }
@@ -180,14 +241,14 @@ export function createDataAuditTrail(
   dataType: string,
   signedData?: SignedData
 ): void {
-  const auditEntry = {
+  const auditEntry: Record<string, string | number | boolean | undefined> = {
     action,
     userId,
     businessId,
     dataType,
     timestamp: new Date().toISOString(),
     signature: signedData?.signature?.substring(0, 8) + '...' || 'none',
-    dataAge: signedData ? Date.now() - signedData.timestamp : null
+    dataAge: signedData ? Date.now() - signedData.timestamp : undefined
   }
   
   logger.info('Data access audit', auditEntry)
@@ -222,7 +283,8 @@ export function generateIntegrityReport(signedData: SignedData): {
   
   // Check data consistency
   const { data } = signedData
-  if (data.churnRate + data.retentionRate > 100.1) {
+  const dataAny = data as any
+  if (dataAny.churnRate + dataAny.retentionRate > 100.1) {
     issues.push('Churn and retention rates inconsistent')
     integrityScore -= 20
     recommendations.push('Recalculate rates from source data')

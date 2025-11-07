@@ -45,8 +45,9 @@ export default function TenantIsolationIndicator({ businessId, businessName }: T
       } else {
         setError('Failed to test tenant isolation')
       }
-    } catch (err) {
-      setError('Error testing tenant isolation')
+    } catch (error) {
+      console.error('Error:', error)
+      setError('An error occurred while testing tenant isolation')
     } finally {
       setLoading(false)
     }

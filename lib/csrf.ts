@@ -44,6 +44,30 @@ export function generateCSRFToken(sessionId?: string): string {
  * Verify a CSRF token
  */
 export function verifyCSRFToken(token: string, sessionId?: string): boolean {
+  /**
+
+   * if - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.if(param1, param2)
+
+   * ```
+
+   */
+
   if (!token) return false
 
   // Find token in store
@@ -53,6 +77,30 @@ export function verifyCSRFToken(token: string, sessionId?: string): boolean {
   csrfTokens.forEach((storedToken, storedKey) => {
     if (storedToken.token === token) {
       // If we have a session ID, make sure it matches
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (sessionId && !storedKey.includes(sessionId)) {
         return
       }
@@ -60,9 +108,69 @@ export function verifyCSRFToken(token: string, sessionId?: string): boolean {
     }
   })
 
+  /**
+
+
+   * if - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.if(param1, param2)
+
+
+   * ```
+
+
+   */
+
+
   if (!foundToken) return false
 
   // Check if token is expired
+  /**
+
+   * if - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.if(param1, param2)
+
+   * ```
+
+   */
+
   if (foundToken.expires < Date.now()) {
     return false
   }
@@ -76,10 +184,58 @@ export function verifyCSRFToken(token: string, sessionId?: string): boolean {
 export function getCSRFTokenFromRequest(request: Request): string | null {
   // Try header first
   const headerToken = request.headers.get('x-csrf-token')
+  /**
+
+   * if - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.if(param1, param2)
+
+   * ```
+
+   */
+
   if (headerToken) return headerToken
 
   // Try form data
   const contentType = request.headers.get('content-type')
+  /**
+
+   * if - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.if(param1, param2)
+
+   * ```
+
+   */
+
   if (contentType?.includes('application/x-www-form-urlencoded')) {
     return null // Will be handled by form data parsing
   }
@@ -113,6 +269,42 @@ export function csrfMiddleware() {
 
     // Get CSRF token
     const token = getCSRFTokenFromRequest(request)
+    
+    /**
+
+    
+     * if - Add description here
+
+    
+     * 
+
+    
+     * @param {...any} args - Method parameters
+
+    
+     * @returns {Promise<any>} Method return value
+
+    
+     * @throws {Error} When operation fails
+
+    
+     * 
+
+    
+     * @example
+
+    
+     * ```typescript
+
+    
+     * await this.if(param1, param2)
+
+    
+     * ```
+
+    
+     */
+
     
     if (!token || !verifyCSRFToken(token, sessionId)) {
       return {

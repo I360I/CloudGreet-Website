@@ -34,12 +34,12 @@ ChartJS.register(
 )
 
 interface RealChartsProps {
-  businessId: string
+  businessId?: string
   timeframe?: '7d' | '30d' | '90d'
 }
 
 export default function RealCharts({ businessId, timeframe = '30d' }: RealChartsProps) {
-  const [chartData, setChartData] = useState<any>(null)
+  const [chartData, setChartData] = useState<unknown>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -71,14 +71,15 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
       } else {
         setError('Failed to load chart data')
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error loading chart data:', error)
       setError('Error loading chart data')
     } finally {
       setLoading(false)
     }
   }
 
-  const chartOptions: any = {
+  const chartOptions: unknown = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -157,7 +158,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
           <h3 className="text-lg font-semibold">Revenue Trend</h3>
         </div>
         <div className="h-64">
-          <Line data={chartData.revenueData} options={chartOptions} />
+          <Line data={(chartData as any)?.revenueData} options={chartOptions} />
         </div>
       </motion.div>
 
@@ -173,7 +174,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
           <h3 className="text-lg font-semibold">Call Volume</h3>
         </div>
         <div className="h-64">
-          <Bar data={chartData.callData} options={chartOptions} />
+          <Bar data={(chartData as any)?.callData} options={chartOptions} />
         </div>
       </motion.div>
 
@@ -189,7 +190,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
           <h3 className="text-lg font-semibold">Call Outcomes</h3>
         </div>
         <div className="h-64">
-          <Doughnut data={chartData.conversionData} options={chartOptions} />
+          <Doughnut data={(chartData as any)?.conversionData} options={chartOptions} />
         </div>
       </motion.div>
     </div>

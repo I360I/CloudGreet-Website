@@ -1,0 +1,71 @@
+Contact: security@cloudgreet.com
+Expires: 2025-12-31T23:59:59.000Z
+Encryption: https://cloudgreet.com/pgp-key.txt
+Acknowledgments: https://cloudgreet.com/security/acknowledgments
+Preferred-Languages: en
+Canonical: https://cloudgreet.com/.well-known/security.txt
+Policy: https://cloudgreet.com/security/policy
+
+# CloudGreet Security Policy
+
+## Reporting Security Vulnerabilities
+
+If you discover a security vulnerability in CloudGreet, please report it responsibly:
+
+1. **DO NOT** create a public GitHub issue
+2. **DO NOT** disclose the vulnerability publicly until we've had a chance to fix it
+3. **DO** email us at security@cloudgreet.com with:
+   - A detailed description of the vulnerability
+   - Steps to reproduce the issue
+   - Any proof-of-concept code (if applicable)
+   - Your contact information
+
+## What We're Looking For
+
+- SQL injection vulnerabilities
+- Cross-site scripting (XSS)
+- Cross-site request forgery (CSRF)
+- Authentication bypasses
+- Authorization flaws
+- Information disclosure
+- Remote code execution
+- Business logic flaws
+
+## What We're NOT Looking For
+
+- Social engineering attacks
+- Physical attacks
+- Denial of service attacks
+- Issues in third-party services we use
+- Issues that require physical access to the server
+
+## Response Timeline
+
+- **Acknowledgment**: Within 24 hours
+- **Initial Assessment**: Within 72 hours
+- **Resolution**: Within 30 days (for critical issues)
+- **Public Disclosure**: After the issue is fixed and we've verified the fix
+
+## Recognition
+
+We maintain a security acknowledgments page to recognize responsible disclosure. If you'd like to be included, please let us know in your report.
+
+## Legal
+
+This security policy is provided for informational purposes only. By reporting a vulnerability, you agree to:
+- Not access or modify data that doesn't belong to you
+- Not disrupt our services
+- Not publicly disclose the vulnerability until we've had a chance to fix it
+- Comply with all applicable laws
+
+Thank you for helping keep CloudGreet secure!
+
+
+
+
+
+
+
+
+
+

@@ -20,7 +20,7 @@ export default function ContactPage() {
       
       // Convert to the expected API format
       const apiData = {
-        subject: data.topic || 'General Question',
+        subject: data.subject || 'General Question',
         message: data.message || '',
         firstName: data.firstName || '',
         lastName: data.lastName || '',
@@ -44,6 +44,7 @@ export default function ContactPage() {
       setMessage('Thank you for your message! We\'ll get back to you within 24 hours.')
       event.currentTarget.reset()
     } catch (error) {
+      console.error('Error:', error)
       setMessage('Sorry, there was an error sending your message. Please try again.')
     } finally {
       setIsLoading(false)
@@ -127,7 +128,7 @@ export default function ContactPage() {
                 
                 <input
                   type="text"
-                  name="business"
+                  name="businessName"
                   placeholder="Business Name"
                   className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -256,3 +257,4 @@ export default function ContactPage() {
     </div>
   )
 }
+

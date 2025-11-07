@@ -182,6 +182,18 @@ export const VOICE_CONFIG = {
   }
 }
 
+/**
+ * getVoiceConfig - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getVoiceConfig(param1, param2)
+ * ```
+ */
 export const getVoiceConfig = (mode: 'demo' | 'production' = 'production') => {
   const baseConfig = {
     model: VOICE_CONFIG.api.model,
@@ -198,6 +210,18 @@ export const getVoiceConfig = (mode: 'demo' | 'production' = 'production') => {
   return baseConfig
 }
 
+/**
+ * getOptimalVoice - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getOptimalVoice(param1, param2)
+ * ```
+ */
 export const getOptimalVoice = (businessType: string, tone: string = 'professional') => {
   const voiceMap: Record<string, string> = {
     'HVAC Services': tone === 'professional' ? 'echo' : 'nova',

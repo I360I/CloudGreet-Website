@@ -114,9 +114,105 @@ async function searchLinkedInViaGoogle(
     // Search for people associated with the company
     const peopleResults = await googleSearch(peopleQuery)
     
+    /**
+
+    
+     * for - Add description here
+
+    
+     * 
+
+    
+     * @param {...any} args - Method parameters
+
+    
+     * @returns {Promise<any>} Method return value
+
+    
+     * @throws {Error} When operation fails
+
+    
+     * 
+
+    
+     * @example
+
+    
+     * ```typescript
+
+    
+     * await this.for(param1, param2)
+
+    
+     * ```
+
+    
+     */
+
+    
     for (const result of peopleResults.slice(0, 10)) { // Limit to first 10 results
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (result.url.includes('linkedin.com/in/')) {
         const profile = await scrapeLinkedInProfile(result.url, result.title, result.snippet)
+        
+        /**
+
+        
+         * if - Add description here
+
+        
+         * 
+
+        
+         * @param {...any} args - Method parameters
+
+        
+         * @returns {Promise<any>} Method return value
+
+        
+         * @throws {Error} When operation fails
+
+        
+         * 
+
+        
+         * @example
+
+        
+         * ```typescript
+
+        
+         * await this.if(param1, param2)
+
+        
+         * ```
+
+        
+         */
+
         
         if (profile && isDecisionMaker(profile.title)) {
           results.push(profile)
@@ -184,6 +280,42 @@ async function searchLinkedInDirect(companyName: string): Promise<LinkedInScrapi
         const name = $(element).find('[data-test-id*="name"], .name').text().trim()
         const title = $(element).find('[data-test-id*="headline"], .headline').text().trim()
         const profileUrl = $(element).find('a[href*="/in/"]').attr('href')
+        
+        /**
+
+        
+         * if - Add description here
+
+        
+         * 
+
+        
+         * @param {...any} args - Method parameters
+
+        
+         * @returns {Promise<any>} Method return value
+
+        
+         * @throws {Error} When operation fails
+
+        
+         * 
+
+        
+         * @example
+
+        
+         * ```typescript
+
+        
+         * await this.if(param1, param2)
+
+        
+         * ```
+
+        
+         */
+
         
         if (name && title && profileUrl && isDecisionMaker(title)) {
           results.push({
@@ -254,8 +386,80 @@ async function searchLinkedInViaBing(
         const url = titleElement.attr('href')
         const snippet = $(element).find('.b_caption p').text().trim()
         
+        /**
+
+        
+         * if - Add description here
+
+        
+         * 
+
+        
+         * @param {...any} args - Method parameters
+
+        
+         * @returns {Promise<any>} Method return value
+
+        
+         * @throws {Error} When operation fails
+
+        
+         * 
+
+        
+         * @example
+
+        
+         * ```typescript
+
+        
+         * await this.if(param1, param2)
+
+        
+         * ```
+
+        
+         */
+
+        
         if (url && url.includes('linkedin.com/in/')) {
           const profile = extractProfileFromBingResult(title, url, snippet, companyName)
+          
+          /**
+
+          
+           * if - Add description here
+
+          
+           * 
+
+          
+           * @param {...any} args - Method parameters
+
+          
+           * @returns {Promise<any>} Method return value
+
+          
+           * @throws {Error} When operation fails
+
+          
+           * 
+
+          
+           * @example
+
+          
+           * ```typescript
+
+          
+           * await this.if(param1, param2)
+
+          
+           * ```
+
+          
+           */
+
           
           if (profile && isDecisionMaker(profile.title)) {
             results.push(profile)
@@ -320,6 +524,42 @@ async function googleSearch(query: string): Promise<Array<{url: string, title: s
         const title = titleElement.text().trim()
         const url = $(element).attr('href') || ''
         const snippet = $(element).parent().find('[data-ved]').next().text().trim()
+        
+        /**
+
+        
+         * if - Add description here
+
+        
+         * 
+
+        
+         * @param {...any} args - Method parameters
+
+        
+         * @returns {Promise<any>} Method return value
+
+        
+         * @throws {Error} When operation fails
+
+        
+         * 
+
+        
+         * @example
+
+        
+         * ```typescript
+
+        
+         * await this.if(param1, param2)
+
+        
+         * ```
+
+        
+         */
+
         
         if (title && url && url.includes('linkedin.com')) {
           results.push({ url, title, snippet })
@@ -413,6 +653,42 @@ async function scrapeLinkedInProfile(
       // Try to extract public information
       const name = $('[data-test-id*="name"], .name, h1').first().text().trim()
       const title = $('[data-test-id*="headline"], .headline, .sub-nav').first().text().trim()
+      
+      /**
+
+      
+       * if - Add description here
+
+      
+       * 
+
+      
+       * @param {...any} args - Method parameters
+
+      
+       * @returns {Promise<any>} Method return value
+
+      
+       * @throws {Error} When operation fails
+
+      
+       * 
+
+      
+       * @example
+
+      
+       * ```typescript
+
+      
+       * await this.if(param1, param2)
+
+      
+       * ```
+
+      
+       */
+
       
       if (name && title) {
         // Extract contact information from the page
@@ -514,6 +790,42 @@ function extractProfileFromSearchResult(
       let title = ''
       let company = ''
       
+      /**
+
+      
+       * if - Add description here
+
+      
+       * 
+
+      
+       * @param {...any} args - Method parameters
+
+      
+       * @returns {Promise<any>} Method return value
+
+      
+       * @throws {Error} When operation fails
+
+      
+       * 
+
+      
+       * @example
+
+      
+       * ```typescript
+
+      
+       * await this.if(param1, param2)
+
+      
+       * ```
+
+      
+       */
+
+      
       if (titlePart.includes(' at ')) {
         const parts = titlePart.split(' at ')
         title = parts[0].trim()
@@ -526,6 +838,42 @@ function extractProfileFromSearchResult(
         title = titlePart
         company = extractCompanyFromSnippet(snippet)
       }
+      
+      /**
+
+      
+       * if - Add description here
+
+      
+       * 
+
+      
+       * @param {...any} args - Method parameters
+
+      
+       * @returns {Promise<any>} Method return value
+
+      
+       * @throws {Error} When operation fails
+
+      
+       * 
+
+      
+       * @example
+
+      
+       * ```typescript
+
+      
+       * await this.if(param1, param2)
+
+      
+       * ```
+
+      
+       */
+
       
       if (name && (title || company)) {
         return {

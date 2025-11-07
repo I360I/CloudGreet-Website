@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import jwt from 'jsonwebtoken'
+import { logger } from '@/lib/monitoring'
 
 const ADMIN_SECRET = process.env.ADMIN_SECRET || 'CHANGE_THIS_IN_PRODUCTION'
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
@@ -21,8 +22,32 @@ export function verifyAdminPassword(password: string): boolean {
   // NEVER hardcode passwords in the codebase
   const correctPassword = process.env.ADMIN_PASSWORD
   
+  /**
+  
+   * if - Add description here
+  
+   * 
+  
+   * @param {...any} args - Method parameters
+  
+   * @returns {Promise<any>} Method return value
+  
+   * @throws {Error} When operation fails
+  
+   * 
+  
+   * @example
+  
+   * ```typescript
+  
+   * await this.if(param1, param2)
+  
+   * ```
+  
+   */
+  
   if (!correctPassword) {
-    console.error('❌ ADMIN_PASSWORD not set in environment variables!')
+    logger.error('❌ ADMIN_PASSWORD not set in environment variables!')
     return false
   }
   
@@ -56,13 +81,25 @@ export function verifyAdminToken(token: string): AdminTokenPayload | null {
     }) as AdminTokenPayload
     
     // Ensure the token claims admin access
+    /**
+     * if - Add description here
+     * 
+     * @param {...any} args - Method parameters
+     * @returns {Promise<any>} Method return value
+     * @throws {Error} When operation fails
+     * 
+     * @example
+     * ```typescript
+     * await this.if(param1, param2)
+     * ```
+     */
     if (!decoded.isAdmin) {
       return null
     }
     
     return decoded
   } catch (error) {
-    console.error('Admin token verification failed:', error)
+    logger.error('Admin token verification failed:', { error: error instanceof Error ? error.message : 'Unknown error' })
     return null
   }
 }
@@ -73,6 +110,30 @@ export function verifyAdminToken(token: string): AdminTokenPayload | null {
  */
 export function verifyAdminRequest(request: NextRequest): AdminTokenPayload | null {
   const authHeader = request.headers.get('authorization')
+  
+  /**
+  
+   * if - Add description here
+  
+   * 
+  
+   * @param {...any} args - Method parameters
+  
+   * @returns {Promise<any>} Method return value
+  
+   * @throws {Error} When operation fails
+  
+   * 
+  
+   * @example
+  
+   * ```typescript
+  
+   * await this.if(param1, param2)
+  
+   * ```
+  
+   */
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null
@@ -88,6 +149,30 @@ export function verifyAdminRequest(request: NextRequest): AdminTokenPayload | nu
  */
 export function requireAdmin(request: NextRequest) {
   const admin = verifyAdminRequest(request)
+  
+  /**
+  
+   * if - Add description here
+  
+   * 
+  
+   * @param {...any} args - Method parameters
+  
+   * @returns {Promise<any>} Method return value
+  
+   * @throws {Error} When operation fails
+  
+   * 
+  
+   * @example
+  
+   * ```typescript
+  
+   * await this.if(param1, param2)
+  
+   * ```
+  
+   */
   
   if (!admin) {
     return {

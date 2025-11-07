@@ -28,6 +28,18 @@ export interface CalendarConfig {
   }
 }
 
+/**
+ * getCalendarConfig - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getCalendarConfig(param1, param2)
+ * ```
+ */
 export async function getCalendarConfig(businessId: string): Promise<CalendarConfig | null> {
   try {
     if (!isSupabaseConfigured()) {
@@ -67,13 +79,25 @@ export async function getCalendarConfig(businessId: string): Promise<CalendarCon
     }
   } catch (error) {
     logger.error('Calendar config fetch error', { 
-      error: error instanceof Error ? error.message : error, 
+      error: error instanceof Error ? error.message : 'Unknown error',
       businessId 
     })
     return null
   }
 }
 
+/**
+ * createCalendarEvent - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await createCalendarEvent(param1, param2)
+ * ```
+ */
 export async function createCalendarEvent(businessId: string, event: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent | null> {
   try {
     // Get calendar configuration
@@ -140,6 +164,30 @@ export async function createCalendarEvent(businessId: string, event: Omit<Calend
           body: JSON.stringify(googleEvent)
         })
 
+        /**
+
+         * if - Add description here
+
+         * 
+
+         * @param {...any} args - Method parameters
+
+         * @returns {Promise<any>} Method return value
+
+         * @throws {Error} When operation fails
+
+         * 
+
+         * @example
+
+         * ```typescript
+
+         * await this.if(param1, param2)
+
+         * ```
+
+         */
+
         if (calendarResponse.ok) {
           const googleEventData = await calendarResponse.json()
           
@@ -164,7 +212,7 @@ export async function createCalendarEvent(businessId: string, event: Omit<Calend
           })
         }
       } catch (googleError) {
-        logger.error('Google Calendar API error', { error: googleError })
+        logger.error('Google Calendar API error', { error: googleError instanceof Error ? googleError.message : 'Unknown error' })
         // Continue anyway - appointment is in our database
       }
     }
@@ -180,7 +228,7 @@ export async function createCalendarEvent(businessId: string, event: Omit<Calend
     }
   } catch (error) {
     logger.error('Calendar event creation error', { 
-      error: error instanceof Error ? error.message : error,
+      error: error instanceof Error ? error.message : 'Unknown error',
       businessId,
       event: JSON.stringify(event)
     })
@@ -188,6 +236,18 @@ export async function createCalendarEvent(businessId: string, event: Omit<Calend
   }
 }
 
+/**
+ * getAvailableSlots - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getAvailableSlots(param1, param2)
+ * ```
+ */
 export async function getAvailableSlots(businessId: string, date: string, duration: number = 60): Promise<string[]> {
   try {
     if (!isSupabaseConfigured()) {
@@ -201,21 +261,40 @@ export async function getAvailableSlots(businessId: string, date: string, durati
     }
 
     // Get existing appointments for the date
-    const { data: appointments, error } = await supabaseAdmin
+    // Handle schema variations: try scheduled_date first, fallback to start_time
+    let appointments: any[] = []
+    let error: any = null
+
+    // Try scheduled_date first (matches voice-webhook insert)
+    const { data: appointmentsWithScheduledDate, error: error1 } = await supabaseAdmin
       .from('appointments')
-      .select('appointment_date, duration_minutes')
+      .select('scheduled_date, start_time, duration_minutes, duration')
       .eq('business_id', businessId)
-      .gte('appointment_date', `${date}T00:00:00`)
-      .lt('appointment_date', `${date}T23:59:59`)
+      .gte('scheduled_date', `${date}T00:00:00`)
+      .lt('scheduled_date', `${date}T23:59:59`)
       .in('status', ['scheduled', 'confirmed'])
 
-    if (error) {
-      logger.error('Failed to fetch appointments for slot calculation', { 
-        error: error instanceof Error ? error.message : error, 
-        businessId, 
-        date 
-      })
-      return []
+    if (!error1 && appointmentsWithScheduledDate) {
+      appointments = appointmentsWithScheduledDate
+    } else {
+      // Fallback: try start_time if scheduled_date doesn't exist
+      const { data: appointmentsWithStartTime, error: error2 } = await supabaseAdmin
+        .from('appointments')
+        .select('start_time, duration_minutes, duration')
+        .eq('business_id', businessId)
+        .gte('start_time', `${date}T00:00:00`)
+        .lt('start_time', `${date}T23:59:59`)
+        .in('status', ['scheduled', 'confirmed'])
+
+      if (error2) {
+        logger.error('Failed to fetch appointments for slot calculation', { 
+          error: error2 instanceof Error ? error2.message : error2, 
+          businessId, 
+          date 
+        })
+        return []
+      }
+      appointments = appointmentsWithStartTime || []
     }
 
     // Calculate available slots based on business hours and existing appointments
@@ -227,19 +306,72 @@ export async function getAvailableSlots(businessId: string, date: string, durati
       const startHour = parseInt(dayConfig.start.split(':')[0])
       const endHour = parseInt(dayConfig.end.split(':')[0])
       
+      /**
+      
+       * for - Add description here
+      
+       * 
+      
+       * @param {...any} args - Method parameters
+      
+       * @returns {Promise<any>} Method return value
+      
+       * @throws {Error} When operation fails
+      
+       * 
+      
+       * @example
+      
+       * ```typescript
+      
+       * await this.for(param1, param2)
+      
+       * ```
+      
+       */
+      
       for (let hour = startHour; hour < endHour; hour++) {
         const slotTime = `${hour.toString().padStart(2, '0')}:00`
         const slotDateTime = `${date}T${slotTime}:00`
         
         // Check if this slot conflicts with existing appointments
+        // Handle both scheduled_date and start_time columns
         const hasConflict = appointments?.some(apt => {
-          const aptStart = new Date(apt.appointment_date)
-          const aptEnd = new Date(aptStart.getTime() + apt.duration_minutes * 60000)
+          const aptDateTime = apt.scheduled_date || apt.start_time
+          if (!aptDateTime) return false
+          
+          const aptStart = new Date(aptDateTime)
+          const aptDuration = apt.duration_minutes || apt.duration || 60
+          const aptEnd = new Date(aptStart.getTime() + aptDuration * 60000)
           const slotStart = new Date(slotDateTime)
           const slotEnd = new Date(slotStart.getTime() + duration * 60000)
           
           return (slotStart < aptEnd && slotEnd > aptStart)
         })
+
+        /**
+
+         * if - Add description here
+
+         * 
+
+         * @param {...any} args - Method parameters
+
+         * @returns {Promise<any>} Method return value
+
+         * @throws {Error} When operation fails
+
+         * 
+
+         * @example
+
+         * ```typescript
+
+         * await this.if(param1, param2)
+
+         * ```
+
+         */
 
         if (!hasConflict) {
           availableSlots.push(slotTime)
@@ -250,7 +382,7 @@ export async function getAvailableSlots(businessId: string, date: string, durati
     return availableSlots
   } catch (error) {
     logger.error('Available slots calculation error', { 
-      error: error instanceof Error ? error.message : error, 
+      error: error instanceof Error ? error.message : 'Unknown error',
       businessId, 
       date, 
       duration 
@@ -259,13 +391,25 @@ export async function getAvailableSlots(businessId: string, date: string, durati
   }
 }
 
+/**
+ * generateGoogleAuthUrl - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await generateGoogleAuthUrl(param1, param2)
+ * ```
+ */
 export function generateGoogleAuthUrl(businessId: string): string {
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
   const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}/api/calendar/callback`
   const scope = 'https://www.googleapis.com/auth/calendar'
   
   const params = new URLSearchParams({
-    client_id: clientId || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+    client_id: clientId || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: scope,

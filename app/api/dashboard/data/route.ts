@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { verifyJWT } from '@/lib/auth-middleware'
+import { requireAuth } from '@/lib/auth-middleware'
 import { CONFIG } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
@@ -10,19 +10,20 @@ export const runtime = 'nodejs'
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
-    const authResult = await verifyJWT(request)
-    if (!authResult.user) {
+    const authResult = await requireAuth(request)
+    if (!authResult.success || !authResult.userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    // Find user's business
+    // Find user's business - verify tenant isolation
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
       .select('id, business_name, phone_number, subscription_status, onboarding_completed')
-      .eq('owner_id', authResult.user.id)
+      .eq('id', authResult.businessId)
+      .eq('owner_id', authResult.userId)
       .single()
 
     if (businessError || !business) {

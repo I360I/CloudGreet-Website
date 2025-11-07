@@ -21,8 +21,8 @@ interface ActivityItem {
 }
 
 interface RealActivityFeedProps {
-  businessId: string
-  businessName: string
+  businessId?: string
+  businessName?: string
 }
 
 export default function RealActivityFeed({ businessId, businessName }: RealActivityFeedProps) {
@@ -35,8 +35,8 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
       const newActivities: ActivityItem[] = []
       
       // Process calls
-      if (realtimeData.calls) {
-        realtimeData.calls.forEach((call: any) => {
+      if ((realtimeData as any).calls) {
+        (realtimeData as any).calls.forEach((call: any) => {
           newActivities.push({
             id: `call-${call.id}`,
             type: 'call',
@@ -50,8 +50,8 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
       }
       
       // Process appointments
-      if (realtimeData.appointments) {
-        realtimeData.appointments.forEach((apt: any) => {
+      if ((realtimeData as any).appointments) {
+        (realtimeData as any).appointments.forEach((apt: any) => {
           newActivities.push({
             id: `apt-${apt.id}`,
             type: 'appointment',
@@ -65,8 +65,8 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
       }
       
       // Process SMS
-      if (realtimeData.sms) {
-        realtimeData.sms.forEach((sms: any) => {
+      if ((realtimeData as any).sms) {
+        (realtimeData as any).sms.forEach((sms: any) => {
           newActivities.push({
             id: `sms-${sms.id}`,
             type: 'message',

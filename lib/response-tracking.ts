@@ -10,7 +10,7 @@ export interface ResponseEvent {
   messageId: string
   eventType: 'sent' | 'delivered' | 'opened' | 'clicked' | 'replied' | 'converted'
   timestamp: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
   source: 'email' | 'sms'
   ipAddress?: string
   userAgent?: string

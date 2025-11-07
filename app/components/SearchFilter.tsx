@@ -14,8 +14,8 @@ interface FilterOption {
 interface SearchFilterProps {
   searchQuery: string
   onSearchChange: (query: string) => void
-  filters: Record<string, any>
-  onFilterChange: (filters: Record<string, any>) => void
+  filters: Record<string, unknown>
+  onFilterChange: (filters: Record<string, unknown>) => void
   filterOptions: FilterOption[]
   className?: string
 }
@@ -31,7 +31,7 @@ export default function SearchFilter({
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   const [localFilters, setLocalFilters] = useState(filters)
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: unknown) => {
     const newFilters = { ...localFilters, [key]: value }
     setLocalFilters(newFilters)
     onFilterChange(newFilters)
@@ -117,7 +117,7 @@ export default function SearchFilter({
                   
                   {option.type === 'select' && option.options ? (
                     <select
-                      value={localFilters[option.id] || ''}
+                      value={String(localFilters[option.id] || '')}
                       onChange={(e) => handleFilterChange(option.id, e.target.value)}
                       className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
                     >
@@ -131,7 +131,7 @@ export default function SearchFilter({
                   ) : option.type === 'date' ? (
                     <input
                       type="date"
-                      value={localFilters[option.id] || ''}
+                      value={String(localFilters[option.id] || '')}
                       onChange={(e) => handleFilterChange(option.id, e.target.value)}
                       className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
                     />
@@ -139,7 +139,7 @@ export default function SearchFilter({
                     <input
                       type="text"
                       placeholder={`Filter by ${option.label.toLowerCase()}`}
-                      value={localFilters[option.id] || ''}
+                      value={String(localFilters[option.id] || '')}
                       onChange={(e) => handleFilterChange(option.id, e.target.value)}
                       className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
                     />
@@ -160,7 +160,7 @@ export default function SearchFilter({
                     }
 
                     const option = filterOptions.find(opt => opt.id === key)
-                    const displayValue = Array.isArray(value) ? value.join(', ') : value
+                    const displayValue = Array.isArray(value) ? value.join(', ') : String(value)
                     const displayLabel = option?.options?.find(opt => opt.value === value)?.label || displayValue
 
                     return (
@@ -168,7 +168,7 @@ export default function SearchFilter({
                         key={key}
                         className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-500/30 text-blue-400 text-sm rounded-lg"
                       >
-                        <span>{option?.label}: {displayLabel}</span>
+                        <span>{option?.label}: {String(displayLabel)}</span>
                         <button
                           onClick={() => handleFilterChange(key, option?.type === 'select' ? '' : '')}
                           className="w-4 h-4 text-blue-400 hover:text-blue-300 transition-colors"

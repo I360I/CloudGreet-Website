@@ -144,10 +144,34 @@ export const smsTemplates: SMSTemplate[] = [
   }
 ]
 
+/**
+ * getSMSTemplateById - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getSMSTemplateById(param1, param2)
+ * ```
+ */
 export function getSMSTemplateById(id: string): SMSTemplate | undefined {
   return smsTemplates.find(template => template.id === id)
 }
 
+/**
+ * getSMSTemplatesByBusinessType - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getSMSTemplatesByBusinessType(param1, param2)
+ * ```
+ */
 export function getSMSTemplatesByBusinessType(businessType: string): SMSTemplate[] {
   return smsTemplates.filter(template => 
     template.businessType.includes(businessType) || 
@@ -155,6 +179,18 @@ export function getSMSTemplatesByBusinessType(businessType: string): SMSTemplate
   )
 }
 
+/**
+ * personalizeSMSTemplate - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await personalizeSMSTemplate(param1, param2)
+ * ```
+ */
 export function personalizeSMSTemplate(template: SMSTemplate, variables: Record<string, string>): string {
   let message = template.message
 
@@ -167,6 +203,18 @@ export function personalizeSMSTemplate(template: SMSTemplate, variables: Record<
   return message
 }
 
+/**
+ * getNextSMSTemplateInSequence - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getNextSMSTemplateInSequence(param1, param2)
+ * ```
+ */
 export function getNextSMSTemplateInSequence(currentTemplateId: string, businessType: string): SMSTemplate | null {
   const templates = getSMSTemplatesByBusinessType(businessType)
   const currentIndex = templates.findIndex(t => t.id === currentTemplateId)
@@ -178,6 +226,18 @@ export function getNextSMSTemplateInSequence(currentTemplateId: string, business
   return templates[currentIndex + 1]
 }
 
+/**
+ * validateSMSLength - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await validateSMSLength(param1, param2)
+ * ```
+ */
 export function validateSMSLength(message: string, maxLength: number = 160): { isValid: boolean; length: number; overBy: number } {
   const length = message.length
   const overBy = Math.max(0, length - maxLength)

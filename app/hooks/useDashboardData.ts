@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { logger } from '@/lib/monitoring'
 
 interface DashboardData {
   businessId: string
@@ -70,7 +71,7 @@ export function useDashboardData() {
   return { data, loading, error, refetch: fetchDashboardData }
 }
 
-export function useRealtimeMetrics() {
+export function useRealtimeMetrics(businessId?: string) {
   const [metrics, setMetrics] = useState<MetricsData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -81,7 +82,7 @@ export function useRealtimeMetrics() {
     const interval = setInterval(fetchMetrics, 30000)
     
     return () => clearInterval(interval)
-  }, [])
+  }, [businessId])
 
   const fetchMetrics = async () => {
     try {
@@ -94,7 +95,7 @@ export function useRealtimeMetrics() {
       const metricsData = await response.json()
       setMetrics(metricsData)
     } catch (err) {
-      console.error('Failed to fetch metrics:', err)
+      logger.error('Failed to fetch metrics:', { error: err instanceof Error ? err.message : 'Unknown error' })
     } finally {
       setLoading(false)
     }

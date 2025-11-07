@@ -7,6 +7,7 @@ import { leadStatusManager, LeadStatus } from './lead-status-system'
 import { responseTracker } from './response-tracking'
 import { followUpSequenceManager } from './follow-up-sequences'
 import { conversionTracker } from './conversion-tracking'
+import { logger } from '@/lib/monitoring'
 
 export interface AutomationTrigger {
   id: string
@@ -23,7 +24,7 @@ export interface AutomationTrigger {
 export interface TriggerCondition {
   field: string
   operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than' | 'in' | 'not_in'
-  value: any
+  value: unknown
   logic: 'AND' | 'OR'
 }
 
@@ -31,7 +32,7 @@ export interface AutomationAction {
   id: string
   name: string
   actionType: 'send_email' | 'send_sms' | 'update_status' | 'start_sequence' | 'pause_sequence' | 'schedule_call' | 'add_tag' | 'remove_tag' | 'create_task' | 'send_notification'
-  parameters: Record<string, any>
+  parameters: Record<string, unknown>
   delayMinutes?: number
   isActive: boolean
 }
@@ -55,7 +56,7 @@ export interface AutomationExecution {
   id: string
   ruleId: string
   leadId: string
-  triggerData: any
+  triggerData: unknown
   actions: AutomationAction[]
   status: 'pending' | 'executing' | 'completed' | 'failed'
   startedAt: string
@@ -70,7 +71,7 @@ export interface AutomationActionResult {
   status: 'success' | 'failed'
   message?: string
   executedAt: string
-  data?: any
+  data?: unknown
 }
 
 export class AutomationEngine {
@@ -139,7 +140,7 @@ export class AutomationEngine {
           await this.executeRule(rule)
         }
       } catch (error) {
-        console.error(`Error checking trigger for rule ${rule.id}:`, error)
+        logger.error(`Error checking trigger for rule ${rule.id}:`, { error: error instanceof Error ? error.message : 'Unknown error' })
       }
     }
   }
@@ -208,6 +209,18 @@ export class AutomationEngine {
           execution.results.push(result)
 
           // Add delay if specified
+          /**
+           * if - Add description here
+           * 
+           * @param {...any} args - Method parameters
+           * @returns {Promise<any>} Method return value
+           * @throws {Error} When operation fails
+           * 
+           * @example
+           * ```typescript
+           * await this.if(param1, param2)
+           * ```
+           */
           if (action.delayMinutes && action.delayMinutes > 0) {
             await this.delay(action.delayMinutes * 60 * 1000)
           }
@@ -297,7 +310,7 @@ export class AutomationEngine {
   /**
    * Send email action
    */
-  private async sendEmail(leadId: string, parameters: any): Promise<void> {
+  private async sendEmail(leadId: string, parameters: unknown): Promise<void> {
     
     // Implementation would integrate with email service
   }
@@ -305,7 +318,7 @@ export class AutomationEngine {
   /**
    * Send SMS action
    */
-  private async sendSMS(leadId: string, parameters: any): Promise<void> {
+  private async sendSMS(leadId: string, parameters: unknown): Promise<void> {
     
     // Implementation would integrate with SMS service
   }
@@ -313,23 +326,25 @@ export class AutomationEngine {
   /**
    * Update lead status action
    */
-  private async updateLeadStatus(leadId: string, parameters: any): Promise<void> {
-    const newStatus = parameters.status as LeadStatus
-    await leadStatusManager.updateLeadStatus(leadId, newStatus, 'automation', parameters.reason)
+  private async updateLeadStatus(leadId: string, parameters: unknown): Promise<void> {
+    const params = parameters as any
+    const newStatus = params.status as LeadStatus
+    await leadStatusManager.updateLeadStatus(leadId, newStatus, 'automation', params.reason)
   }
 
   /**
    * Start sequence action
    */
-  private async startSequence(leadId: string, parameters: any): Promise<void> {
-    const sequenceId = parameters.sequenceId
-    await followUpSequenceManager.startSequence(leadId, sequenceId, parameters.metadata)
+  private async startSequence(leadId: string, parameters: unknown): Promise<void> {
+    const params = parameters as any
+    const sequenceId = params.sequenceId
+    await followUpSequenceManager.startSequence(leadId, sequenceId, params.metadata)
   }
 
   /**
    * Pause sequence action
    */
-  private async pauseSequence(leadId: string, parameters: any): Promise<void> {
+  private async pauseSequence(leadId: string, parameters: unknown): Promise<void> {
     const execution = followUpSequenceManager.getLeadExecution(leadId)
     if (execution) {
       await followUpSequenceManager.pauseSequence(execution.id)
@@ -339,7 +354,7 @@ export class AutomationEngine {
   /**
    * Schedule call action
    */
-  private async scheduleCall(leadId: string, parameters: any): Promise<void> {
+  private async scheduleCall(leadId: string, parameters: unknown): Promise<void> {
     
     // Implementation would integrate with calendar service
   }
@@ -347,7 +362,7 @@ export class AutomationEngine {
   /**
    * Add tag action
    */
-  private async addTag(leadId: string, parameters: any): Promise<void> {
+  private async addTag(leadId: string, parameters: unknown): Promise<void> {
     
     // Implementation would add tags to lead
   }
@@ -355,7 +370,7 @@ export class AutomationEngine {
   /**
    * Remove tag action
    */
-  private async removeTag(leadId: string, parameters: any): Promise<void> {
+  private async removeTag(leadId: string, parameters: unknown): Promise<void> {
     
     // Implementation would remove tags from lead
   }
@@ -363,7 +378,7 @@ export class AutomationEngine {
   /**
    * Create task action
    */
-  private async createTask(leadId: string, parameters: any): Promise<void> {
+  private async createTask(leadId: string, parameters: unknown): Promise<void> {
     
     // Implementation would create task in CRM
   }
@@ -371,7 +386,7 @@ export class AutomationEngine {
   /**
    * Send notification action
    */
-  private async sendNotification(leadId: string, parameters: any): Promise<void> {
+  private async sendNotification(leadId: string, parameters: unknown): Promise<void> {
     
     // Implementation would send notification
   }

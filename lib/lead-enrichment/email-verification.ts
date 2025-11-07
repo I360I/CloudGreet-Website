@@ -25,6 +25,42 @@ export async function discoverAndVerifyEmail(
   domain: string
 ): Promise<EmailCandidate[]> {
   
+  /**
+
+  
+   * if - Add description here
+
+  
+   * 
+
+  
+   * @param {...any} args - Method parameters
+
+  
+   * @returns {Promise<any>} Method return value
+
+  
+   * @throws {Error} When operation fails
+
+  
+   * 
+
+  
+   * @example
+
+  
+   * ```typescript
+
+  
+   * await this.if(param1, param2)
+
+  
+   * ```
+
+  
+   */
+
+  
   if (!domain) {
     return []
   }
@@ -91,8 +127,68 @@ function generateEmailPatterns(ownerName: string | undefined, domain: string): A
   })
   
   // If we have owner name, try personalized patterns
+  /**
+
+   * if - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.if(param1, param2)
+
+   * ```
+
+   */
+
   if (ownerName) {
     const nameParts = parseOwnerName(ownerName)
+    
+    /**
+
+    
+     * if - Add description here
+
+    
+     * 
+
+    
+     * @param {...any} args - Method parameters
+
+    
+     * @returns {Promise<any>} Method return value
+
+    
+     * @throws {Error} When operation fails
+
+    
+     * 
+
+    
+     * @example
+
+    
+     * ```typescript
+
+    
+     * await this.if(param1, param2)
+
+    
+     * ```
+
+    
+     */
+
     
     if (nameParts.first && nameParts.last) {
       patterns.push({
@@ -141,6 +237,30 @@ async function verifyEmail(email: string): Promise<{
   
   // Step 1: Syntax validation
   const syntaxValid = validateEmailSyntax(email)
+  /**
+
+   * if - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.if(param1, param2)
+
+   * ```
+
+   */
+
   if (!syntaxValid) {
     return {
       isValid: false,
@@ -152,6 +272,30 @@ async function verifyEmail(email: string): Promise<{
   // Step 2: Try Hunter.io API (free tier: 50 requests/month)
   try {
     const hunterResult = await retryAPICall(() => verifyWithHunter(email), 'hunter-io')
+    /**
+
+     * if - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.if(param1, param2)
+
+     * ```
+
+     */
+
     if (hunterResult !== null) {
       return hunterResult
     }
@@ -165,6 +309,30 @@ async function verifyEmail(email: string): Promise<{
   // Step 3: Try EmailListVerify API (free tier: 100/day)
   try {
     const elvResult = await retryAPICall(() => verifyWithEmailListVerify(email), 'emaillistverify')
+    /**
+
+     * if - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.if(param1, param2)
+
+     * ```
+
+     */
+
     if (elvResult !== null) {
       return elvResult
     }
@@ -198,6 +366,30 @@ async function verifyWithHunter(email: string): Promise<{
 } | null> {
   
   const apiKey = process.env.HUNTER_IO_API_KEY
+  /**
+
+   * if - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.if(param1, param2)
+
+   * ```
+
+   */
+
   if (!apiKey) {
     return null
   }
@@ -208,6 +400,42 @@ async function verifyWithHunter(email: string): Promise<{
     )
     
     const data = await response.json()
+    
+    /**
+
+    
+     * if - Add description here
+
+    
+     * 
+
+    
+     * @param {...any} args - Method parameters
+
+    
+     * @returns {Promise<any>} Method return value
+
+    
+     * @throws {Error} When operation fails
+
+    
+     * 
+
+    
+     * @example
+
+    
+     * ```typescript
+
+    
+     * await this.if(param1, param2)
+
+    
+     * ```
+
+    
+     */
+
     
     if (data.data) {
       const result = data.data.result // 'deliverable', 'undeliverable', 'risky', 'unknown'
@@ -241,6 +469,30 @@ async function verifyWithEmailListVerify(email: string): Promise<{
 } | null> {
   
   const apiKey = process.env.EMAILLISTVERIFY_API_KEY
+  /**
+
+   * if - Add description here
+
+   * 
+
+   * @param {...any} args - Method parameters
+
+   * @returns {Promise<any>} Method return value
+
+   * @throws {Error} When operation fails
+
+   * 
+
+   * @example
+
+   * ```typescript
+
+   * await this.if(param1, param2)
+
+   * ```
+
+   */
+
   if (!apiKey) {
     return null
   }
@@ -251,6 +503,42 @@ async function verifyWithEmailListVerify(email: string): Promise<{
     )
     
     const data = await response.json()
+    
+    /**
+
+    
+     * if - Add description here
+
+    
+     * 
+
+    
+     * @param {...any} args - Method parameters
+
+    
+     * @returns {Promise<any>} Method return value
+
+    
+     * @throws {Error} When operation fails
+
+    
+     * 
+
+    
+     * @example
+
+    
+     * ```typescript
+
+    
+     * await this.if(param1, param2)
+
+    
+     * ```
+
+    
+     */
+
     
     if (data.status) {
       // 'valid', 'invalid', 'unknown', 'disposable', 'catch-all'

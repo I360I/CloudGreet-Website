@@ -118,7 +118,7 @@ function calculateFitScore(data: EnrichedLeadData): number {
   }
   
   // Company size (ideal: 1-20 employees) (30 points)
-  const avgEmployees = (data.employee_count_min || 0 + data.employee_count_max || 10) / 2
+  const avgEmployees = ((data.employee_count_min || 0) + (data.employee_count_max || 10)) / 2
   if (avgEmployees >= 1 && avgEmployees <= 20) {
     score += 30
   } else if (avgEmployees <= 50) {
@@ -128,7 +128,7 @@ function calculateFitScore(data: EnrichedLeadData): number {
   }
   
   // Revenue range (ideal: $100K-$2M) (20 points)
-  const avgRevenue = (data.estimated_revenue_min || 0 + data.estimated_revenue_max || 500000) / 2
+  const avgRevenue = ((data.estimated_revenue_min || 0) + (data.estimated_revenue_max || 500000)) / 2
   if (avgRevenue >= 100000 && avgRevenue <= 2000000) {
     score += 20
   } else if (avgRevenue >= 50000 && avgRevenue <= 5000000) {
@@ -153,6 +153,30 @@ function calculateEngagementScore(data: EnrichedLeadData): number {
   
   // Google rating (30 points)
   if (data.google_rating) {
+    /**
+
+     * if - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.if(param1, param2)
+
+     * ```
+
+     */
+
     if (data.google_rating >= 4.5) score += 30
     else if (data.google_rating >= 4.0) score += 25
     else if (data.google_rating >= 3.5) score += 15
@@ -161,6 +185,30 @@ function calculateEngagementScore(data: EnrichedLeadData): number {
   
   // Review count (20 points)
   if (data.google_review_count) {
+    /**
+
+     * if - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.if(param1, param2)
+
+     * ```
+
+     */
+
     if (data.google_review_count >= 100) score += 20
     else if (data.google_review_count >= 50) score += 15
     else if (data.google_review_count >= 20) score += 10
@@ -210,6 +258,30 @@ function calculateContactQualityScore(data: EnrichedLeadData): number {
   
   // Email found (30 points)
   if (data.owner_email) {
+    /**
+
+     * if - Add description here
+
+     * 
+
+     * @param {...any} args - Method parameters
+
+     * @returns {Promise<any>} Method return value
+
+     * @throws {Error} When operation fails
+
+     * 
+
+     * @example
+
+     * ```typescript
+
+     * await this.if(param1, param2)
+
+     * ```
+
+     */
+
     if (data.owner_email_verified) {
       score += 30
     } else {
@@ -283,7 +355,7 @@ Respond in JSON:
   "objections": ["Already have a receptionist", "Cost concerns"]
 }`
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('process.env.OPENAI_API_BASE_URL || "https://api.openai.com/v1"/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiKey}`,
@@ -308,6 +380,42 @@ Respond in JSON:
     
     const responseData = await response.json()
     const content = responseData.choices?.[0]?.message?.content
+    
+    /**
+
+    
+     * if - Add description here
+
+    
+     * 
+
+    
+     * @param {...any} args - Method parameters
+
+    
+     * @returns {Promise<any>} Method return value
+
+    
+     * @throws {Error} When operation fails
+
+    
+     * 
+
+    
+     * @example
+
+    
+     * ```typescript
+
+    
+     * await this.if(param1, param2)
+
+    
+     * ```
+
+    
+     */
+
     
     if (content) {
       const parsed = JSON.parse(content)

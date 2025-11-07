@@ -52,13 +52,13 @@ export async function withPerformanceMonitoring<T>(
 /**
  * Database query optimization helper
  */
-export function optimizeQuery(query: any, options: {
+export function optimizeQuery(query: unknown, options: {
   select?: string[]
   limit?: number
   offset?: number
   orderBy?: { column: string; ascending?: boolean }
 }) {
-  let optimizedQuery = query
+  let optimizedQuery: any = query
   
   // Apply select optimization
   if (options.select && options.select.length > 0) {
@@ -69,6 +69,42 @@ export function optimizeQuery(query: any, options: {
   if (options.limit) {
     optimizedQuery = optimizedQuery.limit(options.limit)
   }
+  
+  /**
+
+  
+   * if - Add description here
+
+  
+   * 
+
+  
+   * @param {...any} args - Method parameters
+
+  
+   * @returns {Promise<any>} Method return value
+
+  
+   * @throws {Error} When operation fails
+
+  
+   * 
+
+  
+   * @example
+
+  
+   * ```typescript
+
+  
+   * await this.if(param1, param2)
+
+  
+   * ```
+
+  
+   */
+
   
   if (options.offset) {
     optimizedQuery = optimizedQuery.range(options.offset, options.offset + (options.limit || 50) - 1)

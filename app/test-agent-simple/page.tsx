@@ -4,9 +4,6 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
-
-// ClickToCallOrb component removed - using phone number display instead
 
 export default function TestAgentSimplePage() {
   const [businessInfo, setBusinessInfo] = useState({
@@ -82,7 +79,8 @@ export default function TestAgentSimplePage() {
         setCallStatus(`❌ Call failed: ${data.error}`)
       }
     } catch (error) {
-      setCallStatus(`❌ Error: ${error.message}`)
+      console.error('Error:', error)
+      setCallStatus('❌ Failed to initiate call. Please try again.')
     } finally {
       setIsCalling(false)
     }
@@ -220,3 +218,4 @@ export default function TestAgentSimplePage() {
     </div>
   )
 }
+

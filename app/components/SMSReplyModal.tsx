@@ -3,15 +3,16 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, MessageSquare, Phone, User } from 'lucide-react'
+import { logger } from '@/lib/monitoring'
 
 interface SMSReplyModalProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean,
+  onClose: () => void,
   contact: {
-    name: string
-    phone: string
+  name: string,
+  phone: string
     email?: string
-  }
+  },
   businessId: string
 }
 
@@ -21,8 +22,7 @@ export default function SMSReplyModal({ isOpen, onClose, contact, businessId }: 
   const [sent, setSent] = useState(false)
 
   const handleSend = async () => {
-    if (!message.trim()) return
-
+    if (!message.trim()) return;
     setSending(true)
     try {
       const response = await fetch('/api/sms/send', {
@@ -48,7 +48,7 @@ export default function SMSReplyModal({ isOpen, onClose, contact, businessId }: 
         }, 2000)
       }
     } catch (error) {
-      console.error('Failed to send SMS:', error)
+      logger.error('Failed to send SMS:', { contact: contact.phone, message, error: error instanceof Error ? error.message : 'Unknown' })
     } finally {
       setSending(false)
     }

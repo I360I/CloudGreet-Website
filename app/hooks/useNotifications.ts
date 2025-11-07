@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { logger } from '@/lib/monitoring'
 
 export interface Notification {
   id: string
   type: 'info' | 'success' | 'warning' | 'error' | 'system'
   title: string
   message: string
-  data?: any
+  data?: unknown
   priority: 'low' | 'medium' | 'high' | 'urgent'
   timestamp: string
   read: boolean
@@ -80,7 +81,6 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
     }
-
     try {
       const eventSource = new EventSource(`/api/notifications/stream?userId=${userId}`)
       eventSourceRef.current = eventSource
@@ -96,7 +96,7 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
           const data = JSON.parse(event.data)
           
           if (data.type === 'connected') {
-            
+            // Connection established
           } else if (data.type === 'heartbeat') {
             // Keep connection alive
             return
@@ -127,12 +127,12 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
             }
           }
         } catch (parseError) {
-          console.error('Failed to parse SSE message:', parseError)
+          logger.error('Failed to parse SSE message:', { error: parseError instanceof Error ? parseError.message : 'Unknown error' })
         }
       }
 
       eventSource.onerror = (event) => {
-        console.error('SSE connection error:', event)
+        logger.error('SSE connection error:', { error: event instanceof Error ? event.message : 'Unknown error' })
         setIsConnected(false)
         
         // Attempt to reconnect

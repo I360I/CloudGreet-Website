@@ -127,6 +127,9 @@ export function sanitizePhone(input: string): string {
     .substring(0, 20); // Phone length limit
 }
 
+// Export alias for backward compatibility
+export const sanitizePhoneNumber = sanitizePhone
+
 /**
  * Sanitize JSON input
  */

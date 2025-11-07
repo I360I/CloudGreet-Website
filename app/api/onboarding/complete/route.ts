@@ -281,7 +281,103 @@ export async function POST(request: NextRequest) {
       // Continue - agent can be created manually later
     }
 
-    // 5. Update business with onboarding completion
+    // 5. Provision toll-free phone number automatically
+    let provisionedPhoneNumber: string | null = null
+    
+    try {
+      // Check if business already has a toll-free number assigned
+      const { data: existingAssignment } = await supabaseAdmin
+        .from('toll_free_numbers')
+        .select('number, status')
+        .eq('assigned_to', businessId)
+        .eq('status', 'assigned')
+        .single()
+
+      if (existingAssignment) {
+        provisionedPhoneNumber = existingAssignment.number
+        logger.info('Business already has phone number assigned', {
+          businessId,
+          phoneNumber: provisionedPhoneNumber
+        })
+      } else {
+        // Find next available toll-free number
+        const { data: availableNumber, error: numberError } = await supabaseAdmin
+          .from('toll_free_numbers')
+          .select('id, number')
+          .eq('status', 'available')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single()
+
+        if (!numberError && availableNumber) {
+          // Assign the number to the business
+          const { error: assignError } = await supabaseAdmin
+            .from('toll_free_numbers')
+            .update({
+              status: 'assigned',
+              assigned_to: businessId,
+              business_name: businessName,
+              assigned_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', availableNumber.id)
+
+          if (!assignError) {
+            // Update business record with the toll-free number
+            const { error: updateError } = await supabaseAdmin
+              .from('businesses')
+              .update({
+                phone_number: availableNumber.number,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', businessId)
+
+            if (!updateError) {
+              provisionedPhoneNumber = availableNumber.number
+              logger.info('Phone number provisioned during onboarding', {
+                businessId,
+                phoneNumber: provisionedPhoneNumber
+              })
+            } else {
+              // Rollback assignment if business update fails
+              await supabaseAdmin
+                .from('toll_free_numbers')
+                .update({
+                  status: 'available',
+                  assigned_to: null,
+                  business_name: null,
+                  assigned_at: null
+                })
+                .eq('id', availableNumber.id)
+              logger.warn('Failed to update business with phone number (rolled back)', {
+                businessId,
+                error: updateError.message
+              })
+            }
+          } else {
+            logger.warn('Failed to assign phone number during onboarding', {
+              businessId,
+              error: assignError.message
+            })
+          }
+        } else {
+          // No available numbers - log but don't fail onboarding
+          logger.warn('No available phone numbers in inventory during onboarding', {
+            businessId,
+            error: numberError?.message || 'No numbers available'
+          })
+        }
+      }
+    } catch (phoneError) {
+      // Log but don't fail onboarding if phone provisioning fails
+      logger.warn('Phone provisioning error during onboarding (non-blocking)', {
+        businessId,
+        error: phoneError instanceof Error ? phoneError.message : 'Unknown error'
+      })
+      // Continue - phone can be provisioned manually later
+    }
+
+    // 6. Update business with onboarding completion
     await supabaseAdmin
       .from('businesses')
       .update({
@@ -330,8 +426,11 @@ export async function POST(request: NextRequest) {
       businessId: businessId,
       retellAgentId: retellAgentId,
       stripeCustomerId: stripeCustomerId,
+      phoneNumber: provisionedPhoneNumber,
       checkoutUrl: checkoutUrl,
-      message: 'Onboarding completed successfully. Agent created, Stripe customer created.'
+      message: provisionedPhoneNumber 
+        ? 'Onboarding completed successfully. Agent created, Stripe customer created, phone number assigned.'
+        : 'Onboarding completed successfully. Agent created, Stripe customer created. Phone number will be assigned separately.'
     })
 
   } catch (error) {

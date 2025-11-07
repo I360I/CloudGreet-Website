@@ -5,6 +5,7 @@
 
 import { responseTracker, ResponseEvent } from './response-tracking'
 import { leadStatusManager, LeadStatus } from './lead-status-system'
+import { logger } from '@/lib/monitoring'
 
 export interface ConversionEvent {
   id: string
@@ -15,7 +16,7 @@ export interface ConversionEvent {
   timestamp: string
   value: number // Revenue value
   attribution: AttributionData
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface AttributionData {
@@ -72,7 +73,7 @@ export class ConversionTracker {
     messageId: string,
     conversionType: ConversionEvent['conversionType'],
     value: number,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<ConversionEvent> {
     // Get attribution data
     const attribution = await this.calculateAttribution(leadId, campaignId, messageId)
@@ -233,7 +234,7 @@ export class ConversionTracker {
       .eq('campaign_id', campaignId);
     
     if (error) {
-      console.error('Error fetching lead count:', error);
+      logger.error('Error fetching lead count:', { error: error.message });
       return 0;
     }
     

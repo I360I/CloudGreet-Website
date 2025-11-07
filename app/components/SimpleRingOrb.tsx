@@ -52,6 +52,11 @@ const SimpleRingOrb: React.FC<SimpleRingOrbProps> = ({
       this.amplitude = Math.random() * 25 + 15  // Same as hero: 15-40
       this.frequency = Math.random() * 0.008 + 0.004  // Same as hero: 0.004-0.012
       this.speed = Math.random() * 0.4 + 0.2  // Same as hero: 0.2-0.6
+      
+      // Initialize missing properties
+      this.currentAmplitude = this.amplitude
+      this.currentOpacity = 0.3
+      this.complexity = Math.random() * 0.5 + 0.5
       this.phase = Math.random() * Math.PI * 2
       
       // EXACT visual properties from hero section

@@ -3,8 +3,8 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { Eye, EyeOff, ArrowLeft, CheckCircle } from 'lucide-react'
-import { PLACEHOLDERS, SUCCESS_MESSAGES, ERROR_MESSAGES } from '@/lib/constants'
+import { Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { PLACEHOLDERS, SUCCESS_MESSAGES } from '@/lib/constants'
 
 export default function SimpleRegisterPage() {
   const [formData, setFormData] = useState({
@@ -84,20 +84,7 @@ export default function SimpleRegisterPage() {
               animate={{ width: "100%" }}
               transition={{ duration: 2 }}
             />
-          
-        <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-            Confirm Password
-          </label>
-          <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type="password"
-            required
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        </div>
+          </div>
         </motion.div>
       </div>
     )
@@ -252,19 +239,19 @@ export default function SimpleRegisterPage() {
             )}
           </motion.button>
         
-        <div className="flex items-center">
-          <input
-            id="terms"
-            name="terms"
-            type="checkbox"
-            required
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-          />
-          <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
-            I agree to the <a href="/terms" className="text-blue-600 hover:text-blue-500">Terms of Service</a> and <a href="/privacy" className="text-blue-600 hover:text-blue-500">Privacy Policy</a>
-          </label>
-        </div>
-      </form>
+          <div className="flex items-center">
+            <input
+              id="terms"
+              name="terms"
+              type="checkbox"
+              required
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="terms" className="ml-2 block text-sm text-gray-300">
+              I agree to the <a href="/terms" className="text-blue-400 hover:text-blue-300">Terms of Service</a> and <a href="/privacy" className="text-blue-400 hover:text-blue-300">Privacy Policy</a>
+            </label>
+          </div>
+        </form>
 
         <div className="text-center mt-6">
           <p className="text-gray-400">
@@ -278,3 +265,4 @@ export default function SimpleRegisterPage() {
     </div>
   )
 }
+

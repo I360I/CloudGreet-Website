@@ -1,18 +1,303 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Clock, Save, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
+import { Card } from './ui/Card'
+import { logger } from '@/lib/monitoring'
+import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, ValidationResult, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, RateLimitConfig, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
+
+interface DayHours {
+  open: string,
+  close: string,
+  closed: boolean
+}
+
+interface BusinessHours {
+  monday: DayHours
+  tuesday: DayHours
+  wednesday: DayHours
+  thursday: DayHours,
+  friday: DayHours,
+  saturday: DayHours,
+  sunday: DayHours,
+  timezone: string
+}
 
 interface BusinessHoursSettingsProps {
   businessId: string
+  className?: string
 }
 
-export default function BusinessHoursSettings({ businessId }: BusinessHoursSettingsProps) {
+export default function BusinessHoursSettings({ businessId, className = '' }: BusinessHoursSettingsProps) {
+  const [hours, setHours] = useState<BusinessHours | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  useEffect(() => {
+    loadBusinessHours()
+  }, [businessId])
+
+  const loadBusinessHours = async () => {
+    try {
+      setLoading(true)
+      const token = localStorage.getItem('token')
+      
+      const response = await fetch(`/api/business/hours?businessId=${businessId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setHours(data.hours)
+      } else {
+        logger.error('Failed to load business hours', { businessId, status: response.status })
+        // Set default hours if API fails
+        setHours({
+          monday: { open: '09:00', close: '17:00', closed: false },
+          tuesday: { open: '09:00', close: '17:00', closed: false },
+          wednesday: { open: '09:00', close: '17:00', closed: false },
+          thursday: { open: '09:00', close: '17:00', closed: false },
+          friday: { open: '09:00', close: '17:00', closed: false },
+          saturday: { open: '10:00', close: '14:00', closed: false },
+          sunday: { open: '00:00', close: '00:00', closed: true },
+          timezone: 'America/New_York'
+        })
+      }
+    } catch (error) {
+      console.error('Error loading business hours:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const saveBusinessHours = async () => {
+    if (!hours) return;
+    try {
+      setSaving(true)
+      const token = localStorage.getItem('token')
+      
+      const response = await fetch(`/api/business/hours?businessId=${businessId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ hours })
+      })
+      
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Business hours saved successfully!' })
+        setTimeout(() => setMessage(null), 3000)
+      } else {
+        setMessage({ type: 'error', text: 'Failed to save business hours' })
+        setTimeout(() => setMessage(null), 3000)
+      }
+    } catch (error) {
+      console.error('Error saving business hours:', error)
+      setMessage({ type: 'error', text: 'Failed to save business hours' })
+      setTimeout(() => setMessage(null), 3000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const updateDayHours = (day: keyof Omit<BusinessHours, 'timezone'>, field: 'open' | 'close' | 'closed', value: string | boolean) => {
+    if (!hours) return;
+  const currentDayHours = hours[day] || { open: '09:00', close: '17:00', closed: false }
+    
+    setHours({
+      ...hours,
+      [day]: {
+        ...currentDayHours,
+        [field]: value
+      }
+    })
+  }
+
+  const days = [
+    { key: 'monday', label: 'Monday' },
+    { key: 'tuesday', label: 'Tuesday' },
+    { key: 'wednesday', label: 'Wednesday' },
+    { key: 'thursday', label: 'Thursday' },
+    { key: 'friday', label: 'Friday' },
+    { key: 'saturday', label: 'Saturday' },
+    { key: 'sunday', label: 'Sunday' }
+  ] as const
+
+  if (loading) {
+    return (
+      <Card className={`p-6 ${className}`}>
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-700/50 rounded w-48 mb-4"></div>
+          <div className="space-y-4">
+            {[...Array(7)].map((_, i) => (
+              <div key={i} className="h-12 bg-gray-700/50 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  if (!hours) {
+    return (
+      <Card className={`p-8 text-center ${className}`}>
+        <Clock className="w-12 h-12 mx-auto mb-4 text-gray-500" />
+        <h3 className="text-lg font-semibold text-white mb-2">No Hours Set</h3>
+        <p className="text-gray-400 mb-4">Unable to load business hours</p>
+        <button 
+          onClick={loadBusinessHours}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </Card>
+    )
+  }
+
   return (
-    <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6">
-      <h3 className="text-lg font-semibold text-white mb-4">Business Hours Settings</h3>
-      <div className="text-sm text-gray-300">
-        Business Hours Settings component - Coming soon
+    <Card className={`p-6 ${className}`}>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Clock className="w-5 h-5 text-blue-400" />
+          Business Hours Settings
+        </h3>
+        
+        <div className="flex gap-2">
+          <button 
+            onClick={loadBusinessHours}
+            className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm flex items-center gap-1"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
+          <button 
+            onClick={saveBusinessHours}
+            disabled={saving}
+            className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center gap-1 disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </div>
       </div>
-    </div>
+
+      {/* Message */}
+      {message && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
+            message.type === 'success' 
+              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+              : 'bg-red-500/20 text-red-400 border border-red-500/30'
+          }`}
+        >
+          {message.type === 'success' ? (
+            <CheckCircle className="w-4 h-4" />
+          ) : (
+            <AlertCircle className="w-4 h-4" />
+          )}
+          <span className="text-sm">{message.text}</span>
+        </motion.div>
+      )}
+
+      {/* Timezone */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-300 mb-2">Timezone</label>
+        <select
+          value={hours.timezone}
+          onChange={(e) => setHours({ ...hours, timezone: e.target.value })}
+          className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+        >
+          <option value="America/New_York">Eastern Time (ET)</option>
+          <option value="America/Chicago">Central Time (CT)</option>
+          <option value="America/Denver">Mountain Time (MT)</option>
+          <option value="America/Los_Angeles">Pacific Time (PT)</option>
+        </select>
+      </div>
+
+      {/* Days */}
+      <div className="space-y-4">
+        {days.map((day, index) => (
+          <motion.div
+            key={day.key}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="bg-gray-800/50 rounded-lg p-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={!hours[day.key].closed}
+                  onChange={(e) => updateDayHours(day.key, 'closed', !e.target.checked)}
+                  className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
+                />
+                <span className="font-medium text-white w-20">{day.label}</span>
+              </div>
+              
+              {!hours[day.key].closed ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={hours[day.key].open}
+                    onChange={(e) => updateDayHours(day.key, 'open', e.target.value)}
+                    className="px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+                  />
+                  <span className="text-gray-400">to</span>
+                  <input
+                    type="time"
+                    value={hours[day.key].close}
+                    onChange={(e) => updateDayHours(day.key, 'close', e.target.value)}
+                    className="px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+                  />
+                </div>
+              ) : (
+                <span className="text-gray-500 text-sm">Closed</span>
+              )}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mt-6 pt-4 border-t border-gray-700/50">
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              const standardHours = {
+                monday: { open: '09:00', close: '17:00', closed: false },
+                tuesday: { open: '09:00', close: '17:00', closed: false },
+                wednesday: { open: '09:00', close: '17:00', closed: false },
+                thursday: { open: '09:00', close: '17:00', closed: false },
+                friday: { open: '09:00', close: '17:00', closed: false },
+                saturday: { open: '10:00', close: '14:00', closed: false },
+                sunday: { open: '00:00', close: '00:00', closed: true }
+              }
+              setHours({ ...hours, ...standardHours })
+            }}
+            className="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+          >
+            Set Standard Hours
+          </button>
+          <button
+            onClick={() => {
+              const allClosed = Object.keys(hours).reduce((acc, key) => {
+                if (key === 'timezone') return acc
+                return { ...acc, [key]: { open: '00:00', close: '00:00', closed: true } }
+              }, {} as any)
+              setHours({ ...hours, ...allClosed })
+            }}
+            className="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+          >
+            Close All Days
+          </button>
+        </div>
+      </div>
+    </Card>
   )
 }

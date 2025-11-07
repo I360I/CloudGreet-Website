@@ -1,0 +1,21 @@
+# Exclude reins directory if it exists
+reins/
+**/reins/
+
+# Development files
+.env.local
+.env*.local
+node_modules/
+.next/
+.vercel/
+
+# Build artifacts
+dist/
+build/
+*.log
+
+
+
+
+
+

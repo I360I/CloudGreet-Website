@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { useToast } from './ToastContext'
+import { logger } from '@/lib/monitoring'
 
 interface RealtimeContextType {
   isConnected: boolean
@@ -41,7 +42,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       businessId = userData.business_id
       if (!businessId) return
     } catch (error) {
-      console.error('Failed to parse user data:', error)
+      logger.error('Failed to parse user data:', { error: error instanceof Error ? error.message : 'Unknown error' })
       return
     }
 
@@ -50,7 +51,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
     if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder')) {
-      console.warn('Supabase not configured, real-time updates disabled')
+      logger.warn('Supabase not configured, real-time updates disabled')
       setConnectionStatus('disconnected')
       return
     }

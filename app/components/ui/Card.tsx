@@ -13,10 +13,10 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     const baseClasses = 'rounded-xl border transition-all duration-200'
     
     const variants = {
-      default: 'bg-white border-gray-200 shadow-md',
-      elevated: 'bg-white border-gray-200 shadow-xl',
-      outlined: 'bg-white border-2 border-gray-300 shadow-none',
-      gradient: 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 shadow-md'
+      default: 'bg-gray-900/50 border-gray-700/50 backdrop-blur-xl shadow-md',
+      elevated: 'bg-gray-900/70 border-gray-700/50 backdrop-blur-xl shadow-xl',
+      outlined: 'bg-gray-900/30 border-2 border-gray-700/50 backdrop-blur-xl shadow-none',
+      gradient: 'bg-gradient-to-br from-gray-900/50 to-gray-800/50 border-gray-700/50 backdrop-blur-xl shadow-md'
     }
     
     const hoverClasses = hover 

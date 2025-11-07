@@ -7,6 +7,7 @@ import { EmailTemplate, getTemplateById } from './email-templates'
 import { SMSTemplate, getSMSTemplateById } from './sms-templates'
 import { LeadStatus, leadStatusManager } from './lead-status-system'
 import { responseTracker } from './response-tracking'
+import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, ValidationResult, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, RateLimitConfig, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
 
 export interface FollowUpStep {
   id: string
@@ -22,7 +23,7 @@ export interface FollowUpStep {
 export interface FollowUpCondition {
   field: string
   operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than'
-  value: any
+  value: unknown
 }
 
 export interface FollowUpSequence {
@@ -49,7 +50,7 @@ export interface SequenceExecution {
   lastStepAt: string
   nextStepAt: string
   completedAt?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export class FollowUpSequenceManager {
@@ -77,7 +78,7 @@ export class FollowUpSequenceManager {
   /**
    * Start a follow-up sequence for a lead
    */
-  async startSequence(leadId: string, sequenceId: string, metadata?: Record<string, any>): Promise<SequenceExecution> {
+  async startSequence(leadId: string, sequenceId: string, metadata?: Record<string, unknown>): Promise<SequenceExecution> {
     const sequence = this.sequences.get(sequenceId)
     if (!sequence) {
       throw new Error('Sequence not found')
@@ -87,6 +88,30 @@ export class FollowUpSequenceManager {
     const existingExecutionId = this.leadExecutions.get(leadId)
     if (existingExecutionId) {
       const existingExecution = this.executions.get(existingExecutionId)
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (existingExecution && existingExecution.status === 'active') {
         throw new Error('Lead already has an active sequence')
       }
@@ -274,6 +299,30 @@ export class FollowUpSequenceManager {
   private async sendMessage(leadId: string, step: FollowUpStep): Promise<void> {
     if (step.messageType === 'email') {
       const template = getTemplateById(step.templateId)
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (template) {
         // Send email (implementation would integrate with email service)
         
@@ -289,6 +338,30 @@ export class FollowUpSequenceManager {
       }
     } else if (step.messageType === 'sms') {
       const template = getSMSTemplateById(step.templateId)
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (template) {
         // Send SMS (implementation would integrate with SMS service)
         

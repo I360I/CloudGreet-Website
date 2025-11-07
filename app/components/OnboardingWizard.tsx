@@ -11,7 +11,9 @@ import {
 
 interface OnboardingWizardProps {
   isOpen: boolean
+,
   onClose: () => void
+,
   onComplete: () => void
 }
 
@@ -56,7 +58,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
     
     // Hours & Availability
     businessHours: {
-      monday: { open: '09:00', close: '17:00', closed: false },
+  monday: { open: '09:00', close: '17:00', closed: false },
       tuesday: { open: '09:00', close: '17:00', closed: false },
       wednesday: { open: '09:00', close: '17:00', closed: false },
       thursday: { open: '09:00', close: '17:00', closed: false },
@@ -127,7 +129,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
   ]
 
   const serviceOptions = {
-    HVAC: ['AC Repair', 'Heating Repair', 'Maintenance', 'Installation', 'Emergency Service'],
+  HVAC: ['AC Repair', 'Heating Repair', 'Maintenance', 'Installation', 'Emergency Service'],
     Paint: ['Interior Painting', 'Exterior Painting', 'Commercial Painting', 'Pressure Washing', 'Color Consultation'],
     Roofing: ['Roof Repair', 'Roof Replacement', 'Gutter Services', 'Siding', 'Emergency Repair']
   }
@@ -169,7 +171,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
         address: formData.address || 'Address not provided',
         website: formData.website || '',
         businessHours: formData.businessHours || {
-          monday: '9:00 AM - 5:00 PM',
+  monday: '9:00 AM - 5:00 PM',
           tuesday: '9:00 AM - 5:00 PM', 
           wednesday: '9:00 AM - 5:00 PM',
           thursday: '9:00 AM - 5:00 PM',
@@ -219,7 +221,8 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
         setError(errorData.error || errorData.message || 'Failed to complete setup. Please try again.')
       }
     } catch (error) {
-      setError('Network error. Please check your connection and try again.')
+      console.error('Error completing onboarding:', error)
+      setError('Failed to complete setup. Please try again.')
     } finally {
       setIsLoading(false)
     }

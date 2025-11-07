@@ -183,6 +183,42 @@ export class CircuitBreaker {
     return this.state
   }
 
+  /**
+
+
+   * reset - Add description here
+
+
+   * 
+
+
+   * @param {...any} args - Method parameters
+
+
+   * @returns {Promise<any>} Method return value
+
+
+   * @throws {Error} When operation fails
+
+
+   * 
+
+
+   * @example
+
+
+   * ```typescript
+
+
+   * await this.reset(param1, param2)
+
+
+   * ```
+
+
+   */
+
+
   reset(): void {
     this.failures = 0
     this.state = 'closed'

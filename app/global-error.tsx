@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { logger } from '@/lib/monitoring'
 
 export default function GlobalError({
   error,
@@ -12,7 +13,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     // Log the error to an error reporting service
-    console.error('Global application error:', error)
+    logger.error('Global application error:', { error: error instanceof Error ? error.message : 'Unknown error' })
   }, [error])
 
   return (

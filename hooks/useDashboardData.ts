@@ -76,7 +76,7 @@ export function useDashboardData<T>(
           }
           
           // Use validated data
-          setData(validation.data)
+          setData(validation.data as T)
           dashboardCache.set(cacheKey, validation.data, cacheTime)
         } else {
           // Fallback to regular data
@@ -134,7 +134,7 @@ export function useDashboardData<T>(
  * Specialized hook for dashboard analytics
  */
 export function useDashboardAnalytics(timeframe: string = '30d') {
-  return useDashboardData<any>(
+  return useDashboardData<unknown>(
     `/api/dashboard/analytics?timeframe=${timeframe}`,
     {
       cacheTime: 10, // 10 minutes cache for analytics
@@ -147,7 +147,7 @@ export function useDashboardAnalytics(timeframe: string = '30d') {
  * Specialized hook for real-time metrics with Supabase Realtime
  */
 export function useRealtimeMetrics(businessId: string) {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<unknown>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -181,8 +181,8 @@ export function useRealtimeMetrics(businessId: string) {
             (payload: any) => {
               
               setData((prev: any) => ({
-                ...prev,
-                calls: [...(prev?.calls || []), payload.new].slice(-10) // Keep last 10 calls
+                ...(prev || {}),
+                calls: [...((prev?.calls as any[]) || []), payload.new].slice(-10) // Keep last 10 calls
               }))
             }
           )
@@ -196,8 +196,8 @@ export function useRealtimeMetrics(businessId: string) {
             (payload: any) => {
               
               setData((prev: any) => ({
-                ...prev,
-                appointments: [...(prev?.appointments || []), payload.new].slice(-10)
+                ...(prev || {}),
+                appointments: [...((prev?.appointments as any[]) || []), payload.new].slice(-10)
               }))
             }
           )
@@ -211,8 +211,8 @@ export function useRealtimeMetrics(businessId: string) {
             (payload: any) => {
               
               setData((prev: any) => ({
-                ...prev,
-                sms: [...(prev?.sms || []), payload.new].slice(-10)
+                ...(prev || {}),
+                sms: [...((prev?.sms as any[]) || []), payload.new].slice(-10)
               }))
             }
           )

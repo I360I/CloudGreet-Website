@@ -25,7 +25,7 @@ interface RealMetricsData {
 }
 
 interface RealAnalyticsProps {
-  businessId: string
+  businessId?: string
   timeframe?: '7d' | '30d' | '90d'
 }
 
@@ -62,7 +62,8 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
       } else {
         setError('Failed to load analytics')
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('Error loading analytics:', error)
       setError('Error loading analytics')
     } finally {
       setLoading(false)

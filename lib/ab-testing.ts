@@ -102,6 +102,42 @@ export class ABTestingManager {
       throw new Error('Test not found')
     }
 
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
+
     if (test.status !== 'draft') {
       throw new Error('Test must be in draft status to start')
     }
@@ -184,6 +220,42 @@ export class ABTestingManager {
       variant.results.conversionRate = (variant.results.totalConverted / variant.results.totalSent) * 100
     }
 
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
+
     if (variant.results.totalConverted > 0) {
       variant.results.averageValue = variant.results.revenue / variant.results.totalConverted
     }
@@ -205,6 +277,42 @@ export class ABTestingManager {
     const controlVariant = variants.find(v => v.isControl)
     const testVariants = variants.filter(v => !v.isControl)
 
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
+
     if (!controlVariant) return null
 
     let winner: ABTestVariant | null = null
@@ -218,11 +326,71 @@ export class ABTestingManager {
 
     testVariants.forEach(variant => {
       const metricValue = this.getMetricValue(variant, test.successMetric)
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (metricValue > bestMetric) {
         bestVariant = variant
         bestMetric = metricValue
       }
     })
+
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
 
     if (bestVariant !== controlVariant) {
       winner = bestVariant
@@ -234,6 +402,42 @@ export class ABTestingManager {
     const totalParticipants = variants.reduce((sum, v) => sum + v.results.totalSent, 0)
     const duration = test.endDate ? 
       (new Date(test.endDate).getTime() - new Date(test.startDate).getTime()) / (1000 * 60 * 60 * 24) : 0
+
+    /**
+
+
+     * if - Add description here
+
+
+     * 
+
+
+     * @param {...any} args - Method parameters
+
+
+     * @returns {Promise<any>} Method return value
+
+
+     * @throws {Error} When operation fails
+
+
+     * 
+
+
+     * @example
+
+
+     * ```typescript
+
+
+     * await this.if(param1, param2)
+
+
+     * ```
+
+
+     */
+
 
     if (totalParticipants < test.minimumSampleSize) {
       recommendation = 'extend'

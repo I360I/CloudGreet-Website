@@ -1,329 +1,379 @@
-"use client"
+'use client'
 
-import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { 
-  Phone, Plus, CheckCircle, XCircle, Clock, 
-  DollarSign, Search, Filter, Download
-} from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Card } from '@/app/components/ui/Card'
+import { Button } from '@/app/components/ui/Button'
+import { logger } from '@/lib/monitoring'
 
-interface TollFreeNumber {
+interface PhoneNumber {
   id: string
   number: string
-  status: 'available' | 'assigned' | 'pending'
-  verification_status: 'pending' | 'verified' | 'failed'
+  status: 'available' | 'assigned' | 'suspended'
   assigned_to: string | null
   business_name: string | null
   assigned_at: string | null
   created_at: string
-  telnyx_phone_id: string
+  updated_at: string
 }
 
-export default function PhoneInventoryPage() {
-  const [numbers, setNumbers] = useState<TollFreeNumber[]>([])
+interface PhoneNumbersResponse {
+  success: boolean
+  numbers: PhoneNumber[]
+  statistics: {
+    total: number
+    available: number
+    assigned: number
+    suspended: number
+  }
+}
+
+export default function AdminPhoneInventoryPage() {
+  const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
+  const [statistics, setStatistics] = useState<PhoneNumbersResponse['statistics']>({
+    total: 0,
+    available: 0,
+    assigned: 0,
+    suspended: 0
+  })
   const [loading, setLoading] = useState(true)
-  const [purchasing, setPurchasing] = useState(false)
-  const [purchaseCount, setPurchaseCount] = useState(5)
-  const [filter, setFilter] = useState<'all' | 'available' | 'assigned'>('all')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [showBuyForm, setShowBuyForm] = useState(false)
+  const [buying, setBuying] = useState(false)
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [searchQuery, setSearchQuery] = useState<string>('')
+  
+  // Buy form state
+  const [buyCount, setBuyCount] = useState<string>('1')
+  const [areaCode, setAreaCode] = useState<string>('')
 
-  useEffect(() => {
-    fetchNumbers()
-  }, [])
-
-  const fetchNumbers = async () => {
+  // Fetch phone numbers
+  const fetchPhoneNumbers = async () => {
+    setLoading(true)
+    setError(null)
+    
     try {
-      const response = await fetch('/api/admin/phone-numbers', {
+      const params = new URLSearchParams()
+      if (statusFilter) params.append('status', statusFilter)
+      if (searchQuery) params.append('search', searchQuery)
+
+      const response = await fetch(`/api/admin/phone-numbers?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         }
       })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setNumbers(data.numbers || [])
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch phone numbers')
       }
-    } catch (error) {
-      console.error('Failed to fetch numbers:', error)
+
+      const data: PhoneNumbersResponse = await response.json()
+      
+      if (data.success) {
+        // Filter by search query if provided
+        let filtered = data.numbers
+        if (searchQuery) {
+          filtered = data.numbers.filter(num => 
+            num.number.includes(searchQuery) ||
+            num.business_name?.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        }
+        setPhoneNumbers(filtered)
+        setStatistics(data.statistics)
+      } else {
+        throw new Error('Failed to fetch phone numbers')
+      }
+    } catch (err) {
+      logger.error('Error fetching phone numbers', { error: err instanceof Error ? err.message : 'Unknown error' })
+      setError(err instanceof Error ? err.message : 'Failed to fetch phone numbers')
     } finally {
       setLoading(false)
     }
   }
 
-  const purchaseNumbers = async () => {
-    setPurchasing(true)
+  // Buy phone numbers
+  const handleBuyNumbers = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setBuying(true)
+    
     try {
       const response = await fetch('/api/admin/phone-numbers/buy', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         },
-        body: JSON.stringify({ count: purchaseCount })
+        body: JSON.stringify({
+          count: parseInt(buyCount) || 1,
+          areaCode: areaCode || undefined
+        })
       })
-      
-      if (response.ok) {
-        const data = await response.json()
-        alert(`Successfully purchased ${data.purchased} toll-free numbers!`)
-        fetchNumbers()
-      } else {
-        const error = await response.json()
-        alert(`Purchase failed: ${error.error}`)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to buy phone numbers')
       }
-    } catch (error) {
-      console.error('Purchase failed:', error)
-      alert('Purchase failed. Please try again.')
+
+      const data = await response.json()
+      
+      if (data.success) {
+        alert(`Successfully purchased ${data.purchased || 0} phone number(s)`)
+        setShowBuyForm(false)
+        setBuyCount('1')
+        setAreaCode('')
+        fetchPhoneNumbers()
+      } else {
+        throw new Error(data.error || 'Failed to buy phone numbers')
+      }
+    } catch (err) {
+      logger.error('Error buying phone numbers', { error: err instanceof Error ? err.message : 'Unknown error' })
+      alert(err instanceof Error ? err.message : 'Failed to buy phone numbers')
     } finally {
-      setPurchasing(false)
+      setBuying(false)
     }
   }
 
-  const filteredNumbers = numbers.filter(number => {
-    const matchesFilter = filter === 'all' || number.status === filter
-    const matchesSearch = number.number.includes(searchTerm) || 
-                         (number.business_name && number.business_name.toLowerCase().includes(searchTerm.toLowerCase()))
-    return matchesFilter && matchesSearch
-  })
+  // Update phone number status
+  const handleUpdateStatus = async (phoneId: string, newStatus: PhoneNumber['status']) => {
+    try {
+      const response = await fetch('/api/admin/phone-numbers', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        },
+        body: JSON.stringify({
+          id: phoneId,
+          status: newStatus
+        })
+      })
 
-  const stats = {
-    total: numbers.length,
-    available: numbers.filter(n => n.status === 'available').length,
-    assigned: numbers.filter(n => n.status === 'assigned').length,
-    pending: numbers.filter(n => n.status === 'pending').length
+      if (!response.ok) {
+        throw new Error('Failed to update phone number status')
+      }
+
+      fetchPhoneNumbers()
+    } catch (err) {
+      logger.error('Error updating phone number status', { error: err instanceof Error ? err.message : 'Unknown error' })
+      alert(err instanceof Error ? err.message : 'Failed to update phone number status')
+    }
+  }
+
+  useEffect(() => {
+    fetchPhoneNumbers()
+  }, [statusFilter])
+
+  const getStatusColor = (status: PhoneNumber['status']) => {
+    switch (status) {
+      case 'available': return 'bg-green-100 text-green-800'
+      case 'assigned': return 'bg-blue-100 text-blue-800'
+      case 'suspended': return 'bg-red-100 text-red-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">
-            Toll-Free Number Inventory
-          </h1>
-          <p className="text-gray-300 text-lg">
-            Manage your pre-approved toll-free numbers for automatic assignment to new businesses
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Phone Number Inventory</h1>
+          <p className="text-gray-600 mt-2">
+            Manage toll-free phone numbers for client assignment.
           </p>
         </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Total Numbers</p>
-                <p className="text-3xl font-bold text-white">{stats.total}</p>
-              </div>
-              <Phone className="w-8 h-8 text-blue-400" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Available</p>
-                <p className="text-3xl font-bold text-green-400">{stats.available}</p>
-              </div>
-              <CheckCircle className="w-8 h-8 text-green-400" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Assigned</p>
-                <p className="text-3xl font-bold text-blue-400">{stats.assigned}</p>
-              </div>
-              <XCircle className="w-8 h-8 text-blue-400" />
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-400 text-sm">Pending</p>
-                <p className="text-3xl font-bold text-yellow-400">{stats.pending}</p>
-              </div>
-              <Clock className="w-8 h-8 text-yellow-400" />
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Purchase Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 mb-8"
+        <Button 
+          onClick={() => setShowBuyForm(!showBuyForm)}
+          className="bg-blue-600 hover:bg-blue-700"
         >
-          <h2 className="text-xl font-semibold mb-4">Purchase New Numbers</h2>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-300">Quantity:</label>
-              <select
-                value={purchaseCount}
-                onChange={(e) => setPurchaseCount(Number(e.target.value))}
-                className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
-              >
-                <option value={1}>1</option>
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
-            <button
-              onClick={purchaseNumbers}
-              disabled={purchasing}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-6 py-2 rounded-lg flex items-center gap-2 transition-colors"
-            >
-              {purchasing ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Purchasing...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Purchase Numbers
-                </>
-              )}
-            </button>
-            <div className="text-sm text-gray-400">
-              ~${purchaseCount * 15}/month for {purchaseCount} numbers
-            </div>
-          </div>
-        </motion.div>
+          {showBuyForm ? 'Cancel' : '+ Buy Numbers'}
+        </Button>
+      </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as any)}
-              className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
-            >
-              <option value="all">All Numbers</option>
-              <option value="available">Available</option>
-              <option value="assigned">Assigned</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2 flex-1">
-            <Search className="w-4 h-4 text-gray-400" />
+      {/* Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-4 bg-white border border-gray-200">
+          <div className="text-sm text-gray-600">Total</div>
+          <div className="text-2xl font-bold">{statistics.total}</div>
+        </Card>
+        <Card className="p-4 bg-white border border-gray-200">
+          <div className="text-sm text-gray-600">Available</div>
+          <div className="text-2xl font-bold text-green-600">{statistics.available}</div>
+        </Card>
+        <Card className="p-4 bg-white border border-gray-200">
+          <div className="text-sm text-gray-600">Assigned</div>
+          <div className="text-2xl font-bold text-blue-600">{statistics.assigned}</div>
+        </Card>
+        <Card className="p-4 bg-white border border-gray-200">
+          <div className="text-sm text-gray-600">Suspended</div>
+          <div className="text-2xl font-bold text-red-600">{statistics.suspended}</div>
+        </Card>
+      </div>
+
+      {/* Buy Numbers Form */}
+      {showBuyForm && (
+        <Card className="p-6 bg-white border border-gray-200">
+          <h2 className="text-xl font-semibold mb-4">Buy Phone Numbers</h2>
+          <form onSubmit={handleBuyNumbers} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Number of Numbers *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max="10"
+                  value={buyCount}
+                  onChange={(e) => setBuyCount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Enter number of phone numbers to purchase (1-10)</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Area Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., 800"
+                  value={areaCode}
+                  onChange={(e) => setAreaCode(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Optional: Specify area code preference</p>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowBuyForm(false)
+                  setBuyCount('1')
+                  setAreaCode('')
+                }}
+                variant="outline"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={buying}
+              >
+                {buying ? 'Purchasing...' : 'Buy Numbers'}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
+
+      {/* Filters */}
+      <Card className="p-4 bg-white border border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Search
+            </label>
             <input
               type="text"
-              placeholder="Search by number or business name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white flex-1"
+              placeholder="Search by phone number or business name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Statuses</option>
+              <option value="available">Available</option>
+              <option value="assigned">Assigned</option>
+              <option value="suspended">Suspended</option>
+            </select>
+          </div>
         </div>
+      </Card>
 
-        {/* Numbers Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden"
-        >
+      {/* Phone Numbers Table */}
+      <Card className="p-6 bg-white border border-gray-200">
+        {loading ? (
+          <div className="text-center py-8">Loading phone numbers...</div>
+        ) : error ? (
+          <div className="text-center py-8 text-red-600">{error}</div>
+        ) : phoneNumbers.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">No phone numbers found</div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-white/10">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Phone Number</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Business</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Assigned Date</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-gray-300">Verification</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Phone Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Assigned To
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Assigned At
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredNumbers.map((number, index) => (
-                  <motion.tr
-                    key={number.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="border-b border-white/10 hover:bg-white/5"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-blue-400" />
-                        <span className="font-mono text-white">{number.number}</span>
-                      </div>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {phoneNumbers.map((phone) => (
+                  <tr key={phone.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{phone.number}</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        number.status === 'available' 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : number.status === 'assigned'
-                          ? 'bg-blue-500/20 text-blue-400'
-                          : 'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {number.status}
-                      </span>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <select
+                        value={phone.status}
+                        onChange={(e) => handleUpdateStatus(phone.id, e.target.value as PhoneNumber['status'])}
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(phone.status)} border-0 focus:ring-2 focus:ring-blue-500`}
+                      >
+                        <option value="available">Available</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
                     </td>
-                    <td className="px-6 py-4">
-                      {number.business_name ? (
-                        <span className="text-white">{number.business_name}</span>
-                      ) : (
-                        <span className="text-gray-400">Unassigned</span>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{phone.business_name || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {phone.assigned_at ? new Date(phone.assigned_at).toLocaleDateString() : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {phone.status === 'assigned' && (
+                        <span className="text-blue-600">In Use</span>
+                      )}
+                      {phone.status === 'available' && (
+                        <span className="text-green-600">Ready</span>
+                      )}
+                      {phone.status === 'suspended' && (
+                        <span className="text-red-600">Suspended</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      {number.assigned_at ? (
-                        <span className="text-gray-300">
-                          {new Date(number.assigned_at).toLocaleDateString()}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        number.verification_status === 'verified' 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : number.verification_status === 'failed'
-                          ? 'bg-red-500/20 text-red-400'
-                          : 'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {number.verification_status}
-                      </span>
-                    </td>
-                  </motion.tr>
+                  </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </motion.div>
-
-        {loading && (
-          <div className="text-center py-8">
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">Loading phone numbers...</p>
-          </div>
         )}
-      </div>
+      </Card>
     </div>
   )
 }
+

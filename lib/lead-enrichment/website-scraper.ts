@@ -13,6 +13,18 @@ export interface ScrapedContact {
   source: string
 }
 
+/**
+ * scrapeWebsite - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await scrapeWebsite(param1, param2)
+ * ```
+ */
 export async function scrapeWebsite(websiteUrl: string): Promise<ScrapedContact> {
   return circuitBreakers.websiteScraping.execute(async () => {
     return retryWebsiteScrape(async () => {
@@ -91,6 +103,30 @@ export async function scrapeWebsite(websiteUrl: string): Promise<ScrapedContact>
       }
       
       // Add degradation info if some pages failed
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (failures.length > 0) {
         return createFallbackResult(result, result, failures)
       }
@@ -129,6 +165,30 @@ async function scrapePage(url: string): Promise<{
     $('*').each((_, element) => {
       const text = $(element).text()
       const emailMatches = text.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g)
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (emailMatches) {
         emails.push(...emailMatches)
       }
@@ -139,6 +199,30 @@ async function scrapePage(url: string): Promise<{
     $('*').each((_, element) => {
       const text = $(element).text()
       const phoneMatches = text.match(/(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/g)
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (phoneMatches) {
         phones.push(...phoneMatches.map(p => normalizePhone(p)))
       }
@@ -148,6 +232,30 @@ async function scrapePage(url: string): Promise<{
     const linkedinUrls: string[] = []
     $('a[href*="linkedin.com"]').each((_, element) => {
       const href = $(element).attr('href')
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (href) {
         linkedinUrls.push(href)
       }
@@ -157,6 +265,30 @@ async function scrapePage(url: string): Promise<{
     const facebookUrls: string[] = []
     $('a[href*="facebook.com"]').each((_, element) => {
       const href = $(element).attr('href')
+      /**
+
+       * if - Add description here
+
+       * 
+
+       * @param {...any} args - Method parameters
+
+       * @returns {Promise<any>} Method return value
+
+       * @throws {Error} When operation fails
+
+       * 
+
+       * @example
+
+       * ```typescript
+
+       * await this.if(param1, param2)
+
+       * ```
+
+       */
+
       if (href) {
         facebookUrls.push(href)
       }

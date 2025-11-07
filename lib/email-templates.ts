@@ -221,10 +221,34 @@ P.S. This offer expires in 48 hours.`,
   }
 ]
 
+/**
+ * getTemplateById - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getTemplateById(param1, param2)
+ * ```
+ */
 export function getTemplateById(id: string): EmailTemplate | undefined {
   return emailTemplates.find(template => template.id === id)
 }
 
+/**
+ * getTemplatesByBusinessType - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getTemplatesByBusinessType(param1, param2)
+ * ```
+ */
 export function getTemplatesByBusinessType(businessType: string): EmailTemplate[] {
   return emailTemplates.filter(template => 
     template.businessType.includes(businessType) || 
@@ -232,6 +256,18 @@ export function getTemplatesByBusinessType(businessType: string): EmailTemplate[
   )
 }
 
+/**
+ * personalizeTemplate - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await personalizeTemplate(param1, param2)
+ * ```
+ */
 export function personalizeTemplate(template: EmailTemplate, variables: Record<string, string>): { subject: string; body: string } {
   let subject = template.subject
   let body = template.body
@@ -246,6 +282,18 @@ export function personalizeTemplate(template: EmailTemplate, variables: Record<s
   return { subject, body }
 }
 
+/**
+ * getNextTemplateInSequence - Add description here
+ * 
+ * @param {...any} args - Function parameters
+ * @returns {Promise<any>} Function return value
+ * @throws {Error} When operation fails
+ * 
+ * @example
+ * ```typescript
+ * await getNextTemplateInSequence(param1, param2)
+ * ```
+ */
 export function getNextTemplateInSequence(currentTemplateId: string, businessType: string): EmailTemplate | null {
   const templates = getTemplatesByBusinessType(businessType)
   const currentIndex = templates.findIndex(t => t.id === currentTemplateId)
