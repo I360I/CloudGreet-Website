@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card } from '@/app/components/ui/Card'
 import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
 
@@ -200,27 +199,29 @@ export default function AdminClientsPage() {
 
   if (selectedClient && clientDetail) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Button
-              onClick={() => {
-                setSelectedClient(null)
-                setClientDetail(null)
-              }}
-              variant="outline"
-              className="mb-4"
-            >
-              ← Back to Clients
-            </Button>
-            <h1 className="text-3xl font-bold text-gray-900">{clientDetail.client.business_name}</h1>
-            <p className="text-gray-600 mt-2">Client Details & Activity</p>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <Button
+                  onClick={() => {
+                    setSelectedClient(null)
+                    setClientDetail(null)
+                  }}
+                  variant="outline"
+                  className="mb-4"
+                >
+                  ← Back to Clients
+                </Button>
+                <h1 className="text-3xl font-bold text-gray-900">{clientDetail.client.business_name}</h1>
+                <p className="text-gray-600 mt-2">Client Details & Activity</p>
+              </div>
+            </div>
 
         {/* Client Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6 bg-white border border-gray-200">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <h2 className="text-xl font-semibold mb-4">Business Information</h2>
             <div className="space-y-3">
               <div>
@@ -246,9 +247,9 @@ export default function AdminClientsPage() {
                 </span>
               </div>
             </div>
-          </Card>
+          </div>
 
-          <Card className="p-6 bg-white border border-gray-200">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <h2 className="text-xl font-semibold mb-4">Owner Information</h2>
             <div className="space-y-3">
               <div>
@@ -270,31 +271,31 @@ export default function AdminClientsPage() {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         </div>
 
         {/* Activity Summary */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="p-4 bg-white border border-gray-200">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
             <div className="text-sm text-gray-600">Total Calls</div>
             <div className="text-2xl font-bold">{clientDetail.activity.calls.total}</div>
-          </Card>
-          <Card className="p-4 bg-white border border-gray-200">
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
             <div className="text-sm text-gray-600">Answered</div>
             <div className="text-2xl font-bold text-green-600">{clientDetail.activity.calls.answered}</div>
-          </Card>
-          <Card className="p-4 bg-white border border-gray-200">
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
             <div className="text-sm text-gray-600">Appointments</div>
             <div className="text-2xl font-bold">{clientDetail.activity.appointments.total}</div>
-          </Card>
-          <Card className="p-4 bg-white border border-gray-200">
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
             <div className="text-sm text-gray-600">Total Revenue</div>
             <div className="text-2xl font-bold text-green-600">${clientDetail.activity.revenue.total.toLocaleString()}</div>
-          </Card>
+          </div>
         </div>
 
         {/* Recent Calls */}
-        <Card className="p-6 bg-white border border-gray-200">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-4">Recent Calls</h2>
           {clientDetail.activity.calls.recent.length === 0 ? (
             <div className="text-center py-4 text-gray-500">No calls yet</div>
@@ -324,10 +325,10 @@ export default function AdminClientsPage() {
               </table>
             </div>
           )}
-        </Card>
+        </div>
 
         {/* Recent Appointments */}
-        <Card className="p-6 bg-white border border-gray-200">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-4">Recent Appointments</h2>
           {clientDetail.activity.appointments.recent.length === 0 ? (
             <div className="text-center py-4 text-gray-500">No appointments yet</div>
@@ -355,11 +356,11 @@ export default function AdminClientsPage() {
               </table>
             </div>
           )}
-        </Card>
+        </div>
 
         {/* AI Agent Info */}
         {clientDetail.aiAgent && (
-          <Card className="p-6 bg-white border border-gray-200">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <h2 className="text-xl font-semibold mb-4">AI Agent</h2>
             <div className="space-y-3">
               <div>
@@ -379,49 +380,53 @@ export default function AdminClientsPage() {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         )}
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Client Management</h1>
-          <p className="text-gray-600 mt-2">
-            View and manage all clients (businesses) on the platform.
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Client Management</h1>
+              <p className="text-gray-600 mt-2">
+                View and manage all clients (businesses) on the platform.
+              </p>
+            </div>
+          </div>
+
+          {/* Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+          <div className="text-sm font-medium text-gray-600 mb-1">Total</div>
+          <div className="text-2xl font-bold text-gray-900">{statistics.total}</div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+          <div className="text-sm font-medium text-gray-600 mb-1">Active</div>
+          <div className="text-2xl font-bold text-green-600">{statistics.active}</div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+          <div className="text-sm font-medium text-gray-600 mb-1">Inactive</div>
+          <div className="text-2xl font-bold text-gray-600">{statistics.inactive}</div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+          <div className="text-sm font-medium text-gray-600 mb-1">Suspended</div>
+          <div className="text-2xl font-bold text-red-600">{statistics.suspended}</div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+          <div className="text-sm font-medium text-gray-600 mb-1">Cancelled</div>
+          <div className="text-2xl font-bold text-gray-600">{statistics.cancelled}</div>
         </div>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">Total</div>
-          <div className="text-2xl font-bold">{statistics.total}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">Active</div>
-          <div className="text-2xl font-bold text-green-600">{statistics.active}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">Inactive</div>
-          <div className="text-2xl font-bold text-gray-600">{statistics.inactive}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">Suspended</div>
-          <div className="text-2xl font-bold text-red-600">{statistics.suspended}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">Cancelled</div>
-          <div className="text-2xl font-bold text-gray-600">{statistics.cancelled}</div>
-        </Card>
-      </div>
-
       {/* Filters */}
-      <Card className="p-4 bg-white border border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -458,10 +463,10 @@ export default function AdminClientsPage() {
             </select>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Clients Table */}
-      <Card className="p-6 bg-white border border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
         {loading ? (
           <div className="text-center py-8">Loading clients...</div>
         ) : error ? (
@@ -560,7 +565,9 @@ export default function AdminClientsPage() {
             )}
           </>
         )}
-      </Card>
+      </div>
+        </div>
+      </div>
     </div>
   )
 }

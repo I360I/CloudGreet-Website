@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card } from '@/app/components/ui/Card'
 import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
 
@@ -174,14 +173,16 @@ export default function AdminPhoneInventoryPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Phone Number Inventory</h1>
-          <p className="text-gray-600 mt-2">
-            Manage toll-free phone numbers for client assignment.
-          </p>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Phone Number Inventory</h1>
+              <p className="text-gray-600 mt-2">
+                Manage toll-free phone numbers for client assignment.
+              </p>
+            </div>
         <Button 
           onClick={() => setShowBuyForm(!showBuyForm)}
           className="bg-blue-600 hover:bg-blue-700"
@@ -192,27 +193,27 @@ export default function AdminPhoneInventoryPage() {
 
       {/* Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="p-4 bg-white border border-gray-200">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
           <div className="text-sm text-gray-600">Total</div>
           <div className="text-2xl font-bold">{statistics.total}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
           <div className="text-sm text-gray-600">Available</div>
           <div className="text-2xl font-bold text-green-600">{statistics.available}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
           <div className="text-sm text-gray-600">Assigned</div>
           <div className="text-2xl font-bold text-blue-600">{statistics.assigned}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
           <div className="text-sm text-gray-600">Suspended</div>
           <div className="text-2xl font-bold text-red-600">{statistics.suspended}</div>
-        </Card>
+        </div>
       </div>
 
       {/* Buy Numbers Form */}
       {showBuyForm && (
-        <Card className="p-6 bg-white border border-gray-200">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-4">Buy Phone Numbers</h2>
           <form onSubmit={handleBuyNumbers} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -266,11 +267,11 @@ export default function AdminPhoneInventoryPage() {
               </Button>
             </div>
           </form>
-        </Card>
+        </div>
       )}
 
       {/* Filters */}
-      <Card className="p-4 bg-white border border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -300,10 +301,10 @@ export default function AdminPhoneInventoryPage() {
             </select>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Phone Numbers Table */}
-      <Card className="p-6 bg-white border border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
         {loading ? (
           <div className="text-center py-8">Loading phone numbers...</div>
         ) : error ? (
@@ -372,7 +373,9 @@ export default function AdminPhoneInventoryPage() {
             </table>
           </div>
         )}
-      </Card>
+      </div>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card } from '@/app/components/ui/Card'
 import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
 
@@ -211,53 +210,55 @@ export default function AdminLeadsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Lead Management</h1>
-          <p className="text-gray-600 mt-2">
-            View, create, and manage leads for client acquisition.
-          </p>
-        </div>
-        <Button 
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          {showCreateForm ? 'Cancel' : '+ Create Lead'}
-        </Button>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Lead Management</h1>
+              <p className="text-gray-600 mt-2">
+                View, create, and manage leads for client acquisition.
+              </p>
+            </div>
+            <Button 
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              {showCreateForm ? 'Cancel' : '+ Create Lead'}
+            </Button>
+          </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">Total</div>
-          <div className="text-2xl font-bold">{statistics.total}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">New</div>
-          <div className="text-2xl font-bold text-blue-600">{statistics.new}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">Contacted</div>
-          <div className="text-2xl font-bold text-yellow-600">{statistics.contacted}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">Qualified</div>
-          <div className="text-2xl font-bold text-purple-600">{statistics.qualified}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">Converted</div>
-          <div className="text-2xl font-bold text-green-600">{statistics.converted}</div>
-        </Card>
-        <Card className="p-4 bg-white border border-gray-200">
-          <div className="text-sm text-gray-600">Closed</div>
-          <div className="text-2xl font-bold text-gray-600">{statistics.closed}</div>
-        </Card>
-      </div>
+          {/* Statistics */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+              <div className="text-sm font-medium text-gray-600 mb-1">Total</div>
+              <div className="text-2xl font-bold text-gray-900">{statistics.total}</div>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+              <div className="text-sm font-medium text-gray-600 mb-1">New</div>
+              <div className="text-2xl font-bold text-blue-600">{statistics.new}</div>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+              <div className="text-sm font-medium text-gray-600 mb-1">Contacted</div>
+              <div className="text-2xl font-bold text-yellow-600">{statistics.contacted}</div>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+              <div className="text-sm font-medium text-gray-600 mb-1">Qualified</div>
+              <div className="text-2xl font-bold text-purple-600">{statistics.qualified}</div>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+              <div className="text-sm font-medium text-gray-600 mb-1">Converted</div>
+              <div className="text-2xl font-bold text-green-600">{statistics.converted}</div>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+              <div className="text-sm font-medium text-gray-600 mb-1">Closed</div>
+              <div className="text-2xl font-bold text-gray-600">{statistics.closed}</div>
+            </div>
+          </div>
 
       {/* Create Lead Form */}
       {showCreateForm && (
-        <Card className="p-6 bg-white border border-gray-200">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-4">Create New Lead</h2>
           <form onSubmit={handleCreateLead} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -380,11 +381,11 @@ export default function AdminLeadsPage() {
               </Button>
             </div>
           </form>
-        </Card>
+        </div>
       )}
 
       {/* Filters */}
-      <Card className="p-4 bg-white border border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -441,10 +442,10 @@ export default function AdminLeadsPage() {
             </select>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Leads Table */}
-      <Card className="p-6 bg-white border border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
         {loading ? (
           <div className="text-center py-8">Loading leads...</div>
         ) : error ? (
@@ -557,7 +558,9 @@ export default function AdminLeadsPage() {
             )}
           </>
         )}
-      </Card>
+      </div>
+        </div>
+      </div>
     </div>
   )
 }
