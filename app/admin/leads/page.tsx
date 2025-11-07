@@ -210,19 +210,19 @@ export default function AdminLeadsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Lead Management</h1>
-              <p className="text-gray-600 mt-2">
+              <h1 className="text-3xl font-bold text-white">Lead Management</h1>
+              <p className="text-gray-300 mt-2">
                 View, create, and manage leads for client acquisition.
               </p>
             </div>
             <Button 
               onClick={() => setShowCreateForm(!showCreateForm)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              className="bg-white/15 backdrop-blur-xl text-white px-4 py-2 rounded-xl font-medium border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all"
             >
               {showCreateForm ? 'Cancel' : '+ Create Lead'}
             </Button>
@@ -230,40 +230,40 @@ export default function AdminLeadsPage() {
 
           {/* Statistics */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-              <div className="text-sm font-medium text-gray-600 mb-1">Total</div>
-              <div className="text-2xl font-bold text-gray-900">{statistics.total}</div>
+            <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
+              <div className="text-sm font-medium text-gray-400 mb-1">Total</div>
+              <div className="text-2xl font-bold text-white">{statistics.total}</div>
             </div>
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-              <div className="text-sm font-medium text-gray-600 mb-1">New</div>
-              <div className="text-2xl font-bold text-blue-600">{statistics.new}</div>
+            <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
+              <div className="text-sm font-medium text-gray-400 mb-1">New</div>
+              <div className="text-2xl font-bold text-blue-400">{statistics.new}</div>
             </div>
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-              <div className="text-sm font-medium text-gray-600 mb-1">Contacted</div>
-              <div className="text-2xl font-bold text-yellow-600">{statistics.contacted}</div>
+            <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
+              <div className="text-sm font-medium text-gray-400 mb-1">Contacted</div>
+              <div className="text-2xl font-bold text-yellow-400">{statistics.contacted}</div>
             </div>
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-              <div className="text-sm font-medium text-gray-600 mb-1">Qualified</div>
-              <div className="text-2xl font-bold text-purple-600">{statistics.qualified}</div>
+            <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
+              <div className="text-sm font-medium text-gray-400 mb-1">Qualified</div>
+              <div className="text-2xl font-bold text-purple-400">{statistics.qualified}</div>
             </div>
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-              <div className="text-sm font-medium text-gray-600 mb-1">Converted</div>
-              <div className="text-2xl font-bold text-green-600">{statistics.converted}</div>
+            <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
+              <div className="text-sm font-medium text-gray-400 mb-1">Converted</div>
+              <div className="text-2xl font-bold text-green-400">{statistics.converted}</div>
             </div>
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
-              <div className="text-sm font-medium text-gray-600 mb-1">Closed</div>
-              <div className="text-2xl font-bold text-gray-600">{statistics.closed}</div>
+            <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
+              <div className="text-sm font-medium text-gray-400 mb-1">Closed</div>
+              <div className="text-2xl font-bold text-gray-300">{statistics.closed}</div>
             </div>
           </div>
 
       {/* Create Lead Form */}
       {showCreateForm && (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-4">Create New Lead</h2>
+        <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold mb-4 text-white">Create New Lead</h2>
           <form onSubmit={handleCreateLead} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Business Name *
                 </label>
                 <input
@@ -271,22 +271,22 @@ export default function AdminLeadsPage() {
                   required
                   value={formData.business_name}
                   onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Contact Name
                 </label>
                 <input
                   type="text"
                   value={formData.contact_name}
                   onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Phone *
                 </label>
                 <input
@@ -294,50 +294,50 @@ export default function AdminLeadsPage() {
                   required
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Email
                 </label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Website
                 </label>
                 <input
                   type="url"
                   value={formData.website}
                   onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Business Type
                 </label>
                 <input
                   type="text"
                   value={formData.business_type}
                   onChange={(e) => setFormData({ ...formData, business_type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Source
                 </label>
                 <select
                   value={formData.source}
                   onChange={(e) => setFormData({ ...formData, source: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="manual">Manual</option>
                   <option value="google_places">Google Places</option>
@@ -346,14 +346,14 @@ export default function AdminLeadsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-300 mb-1">
                   Estimated Revenue
                 </label>
                 <input
                   type="number"
                   value={formData.estimated_revenue}
                   onChange={(e) => setFormData({ ...formData, estimated_revenue: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -376,7 +376,7 @@ export default function AdminLeadsPage() {
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              <Button type="submit" className="bg-white/15 backdrop-blur-xl text-white border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all">
                 Create Lead
               </Button>
             </div>
@@ -385,10 +385,10 @@ export default function AdminLeadsPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5">
+      <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-300 mb-1">
               Search
             </label>
             <input
@@ -399,7 +399,7 @@ export default function AdminLeadsPage() {
                 setSearchQuery(e.target.value)
                 setCurrentPage(1)
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
           <div>
@@ -445,20 +445,20 @@ export default function AdminLeadsPage() {
       </div>
 
       {/* Leads Table */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+      <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-6">
         {loading ? (
-          <div className="text-center py-8">Loading leads...</div>
+          <div className="text-center py-8 text-gray-300">Loading leads...</div>
         ) : error ? (
-          <div className="text-center py-8 text-red-600">{error}</div>
+          <div className="text-center py-8 text-red-400">{error}</div>
         ) : leads.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">No leads found</div>
+          <div className="text-center py-8 text-gray-400">No leads found</div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-800/50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Business
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -481,29 +481,29 @@ export default function AdminLeadsPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-transparent divide-y divide-gray-700/50">
                   {leads.map((lead) => (
-                    <tr key={lead.id}>
+                    <tr key={lead.id} className="hover:bg-gray-800/30 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{lead.business_name}</div>
+                        <div className="text-sm font-medium text-white">{lead.business_name}</div>
                         {lead.business_type && (
-                          <div className="text-sm text-gray-500">{lead.business_type}</div>
+                          <div className="text-sm text-gray-400">{lead.business_type}</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{lead.contact_name || '-'}</div>
+                        <div className="text-sm text-white">{lead.contact_name || '-'}</div>
                         {lead.email && (
-                          <div className="text-sm text-gray-500">{lead.email}</div>
+                          <div className="text-sm text-gray-400">{lead.email}</div>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                         {lead.phone}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <select
                           value={lead.status}
                           onChange={(e) => handleUpdateStatus(lead.id, e.target.value as Lead['status'])}
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.status)} border-0 focus:ring-2 focus:ring-blue-500`}
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(lead.status)} focus:ring-2 focus:ring-blue-500 bg-gray-800/50`}
                         >
                           <option value="new">New</option>
                           <option value="contacted">Contacted</option>
@@ -512,16 +512,16 @@ export default function AdminLeadsPage() {
                           <option value="closed">Closed</option>
                         </select>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                         {lead.source}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                         {lead.estimated_revenue ? `$${lead.estimated_revenue.toLocaleString()}` : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
                           onClick={() => setEditingLead(lead)}
-                          className="text-blue-600 hover:text-blue-900 mr-3"
+                          className="text-blue-400 hover:text-blue-300 mr-3 transition-colors"
                         >
                           Edit
                         </button>
@@ -535,7 +535,7 @@ export default function AdminLeadsPage() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-gray-700">
+                <div className="text-sm text-gray-300">
                   Page {currentPage} of {totalPages}
                 </div>
                 <div className="flex space-x-2">
