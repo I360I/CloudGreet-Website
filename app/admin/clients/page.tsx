@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 interface Client {
   id: string
@@ -124,11 +125,7 @@ export default function AdminClientsPage() {
       params.append('limit', limit.toString())
       params.append('offset', ((currentPage - 1) * limit).toString())
 
-      const response = await fetch(`/api/admin/clients?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-        }
-      })
+      const response = await fetchWithAuth(`/api/admin/clients?${params.toString()}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch clients')
@@ -157,11 +154,7 @@ export default function AdminClientsPage() {
     setSelectedClient(clientId)
     
     try {
-      const response = await fetch(`/api/admin/clients/${clientId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-        }
-      })
+      const response = await fetchWithAuth(`/api/admin/clients/${clientId}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch client details')

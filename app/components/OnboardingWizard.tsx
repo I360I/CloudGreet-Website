@@ -181,20 +181,12 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
         }
       }
 
-      // Get authentication token
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setError('Please log in to complete setup')
-        setIsLoading(false)
-        return
-      }
-
+      // Authentication handled automatically by fetchWithAuth
       // Save onboarding data to database
-      const response = await fetch('/api/onboarding/complete', {
+      const response = await fetchWithAuth('/api/onboarding/complete', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(completeFormData)
       })

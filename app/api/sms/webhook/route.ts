@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { verifyTelynyxSignature } from '@/lib/webhook-verification'
+import { logComplianceEvent } from '@/lib/compliance/logging'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -73,6 +74,15 @@ export async function POST(request: NextRequest) {
         })
       }
     }
+
+    // Track compliance event
+    await logComplianceEvent({
+      tenantId: businessId,
+      channel: 'sms',
+      eventType: cmd || 'message',
+      path: request.nextUrl.pathname,
+      requestBody: { from, to, text }
+    })
 
     // Track consent actions for TCPA/A2P compliance
     if (cmd === 'STOP' || cmd === 'UNSTOP' || cmd === 'HELP') {

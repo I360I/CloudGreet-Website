@@ -5,6 +5,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { dashboardCache, fetchWithCache } from '@/lib/dashboard-cache'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { logger } from '@/lib/monitoring'
 
 interface UseDashboardDataOptions {
   enabled?: boolean
@@ -34,11 +36,6 @@ export function useDashboardData<T>(
       setIsLoading(true)
       setError(null)
 
-      const token = localStorage.getItem('token')
-      if (!token) {
-        throw new Error('No authentication token')
-      }
-
       const cacheKey = `dashboard:${endpoint}`
 
       // Use cache if available and not forced
@@ -51,13 +48,8 @@ export function useDashboardData<T>(
         }
       }
 
-      // Fetch fresh data
-      const response = await fetch(endpoint, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
+      // Fetch fresh data with automatic authentication
+      const response = await fetchWithAuth(endpoint)
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
@@ -89,7 +81,10 @@ export function useDashboardData<T>(
         throw new Error(result.error || 'Unknown error')
       }
     } catch (err) {
-      console.error(`Error fetching ${endpoint}:`, err)
+      logger.error(`Error fetching ${endpoint}`, { 
+        error: err instanceof Error ? err.message : 'Unknown error',
+        endpoint 
+      })
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setIsLoading(false)
@@ -218,12 +213,8 @@ export function useRealtimeMetrics(businessId: string) {
           )
           .subscribe()
 
-        // Initial data fetch
-        const response = await fetch('/api/dashboard/data', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        })
+        // Initial data fetch with automatic authentication
+        const response = await fetchWithAuth('/api/dashboard/data')
         
         if (response.ok) {
           const result = await response.json()
@@ -233,7 +224,10 @@ export function useRealtimeMetrics(businessId: string) {
         }
 
       } catch (err) {
-        console.error('Realtime setup error:', err)
+        logger.error('Realtime setup error', { 
+          error: err instanceof Error ? err.message : 'Unknown error',
+          businessId 
+        })
         setError(err instanceof Error ? err.message : 'Failed to setup real-time updates')
       } finally {
         setIsLoading(false)

@@ -5,6 +5,8 @@ import { verifyJWT } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import { CONFIG } from '@/lib/config'
 import Stripe from 'stripe'
+import { logComplianceEvent } from '@/lib/compliance/logging'
+import { normalizePhoneForStorage } from '@/lib/phone-normalization'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -14,11 +16,12 @@ export const runtime = 'nodejs'
  * 
  * This endpoint:
  * 1. Saves business profile to database
- * 2. Creates personalized Retell AI agent automatically
- * 3. Creates Stripe customer automatically
- * 4. Creates Stripe subscription automatically (with products)
- * 5. Provisions phone number automatically
- * 6. Links everything together
+ * 2. Creates Stripe customer automatically
+ * 3. Creates Stripe products automatically
+ * 4. Provisions phone number automatically (FIRST - before agent creation)
+ * 5. Creates personalized Retell AI agent automatically (with phone number)
+ * 6. Links phone number to Retell agent
+ * 7. Links everything together
  * 
  * All automated - no manual steps required!
  */
@@ -112,7 +115,12 @@ export async function POST(request: NextRequest) {
       if (businessError || !newBusiness) {
         logger.error('Failed to create business', { error: businessError?.message || JSON.stringify(businessError) })
         return NextResponse.json(
-          { error: 'Failed to create business profile' },
+          { 
+            error: 'Failed to create business profile',
+            details: businessError?.message || 'Database error occurred',
+            action: 'Please try again. If the problem persists, contact support at support@cloudgreet.com',
+            step: 'business_creation'
+          },
           { status: 500 }
         )
       }
@@ -238,50 +246,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Create personalized Retell AI agent automatically
-    let retellAgentId: string | null = null
-    
-    try {
-      const agentConfig = {
-        businessId: businessId,
-        businessName: businessName,
-        businessType: businessType,
-        ownerName: ownerName,
-        services: services || [],
-        serviceAreas: serviceAreas || [],
-        businessHours: businessHours || {},
-        greetingMessage: greetingMessage || `Hello, thank you for calling ${businessName}. How can I help you today?`,
-        tone: (tone || 'professional') as 'professional' | 'friendly' | 'casual',
-        phoneNumber: phone || '',
-        website: website,
-        address: `${address || ''}, ${city || ''}, ${state || ''} ${zipCode || ''}`.trim()
-      }
-
-      const agentManager = retellAgentManager()
-      retellAgentId = await agentManager.createBusinessAgent(agentConfig)
-
-      // Update business with agent ID
-      await supabaseAdmin
-        .from('businesses')
-        .update({ 
-          retell_agent_id: retellAgentId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', businessId)
-
-      logger.info('Retell agent created', { 
-        businessId, 
-        agentId: retellAgentId 
-      })
-    } catch (agentError) {
-      logger.error('Retell agent creation failed', { 
-        error: agentError instanceof Error ? agentError.message : 'Unknown error',
-        businessId 
-      })
-      // Continue - agent can be created manually later
-    }
-
-    // 5. Provision toll-free phone number automatically
+    // 4. Provision toll-free phone number automatically (BEFORE agent creation)
     let provisionedPhoneNumber: string | null = null
     
     try {
@@ -366,6 +331,7 @@ export async function POST(request: NextRequest) {
             businessId,
             error: numberError?.message || 'No numbers available'
           })
+          // Note: This is non-blocking - phone can be assigned manually later
         }
       }
     } catch (phoneError) {
@@ -377,7 +343,110 @@ export async function POST(request: NextRequest) {
       // Continue - phone can be provisioned manually later
     }
 
-    // 6. Update business with onboarding completion
+    // 5. Normalize provisioned phone number
+    let normalizedPhoneNumber: string | null = null
+    if (provisionedPhoneNumber) {
+      normalizedPhoneNumber = normalizePhoneForStorage(provisionedPhoneNumber)
+      if (normalizedPhoneNumber && normalizedPhoneNumber !== provisionedPhoneNumber) {
+        // Update business with normalized phone number
+        await supabaseAdmin
+          .from('businesses')
+          .update({
+            phone_number: normalizedPhoneNumber,
+            phone: normalizedPhoneNumber,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', businessId)
+        
+        logger.info('Phone number normalized and updated', {
+          businessId,
+          original: provisionedPhoneNumber,
+          normalized: normalizedPhoneNumber
+        })
+      } else {
+        normalizedPhoneNumber = provisionedPhoneNumber
+      }
+    }
+
+    // 6. Create personalized Retell AI agent automatically (WITH phone number)
+    let retellAgentId: string | null = null
+    
+    try {
+      const agentConfig = {
+        businessId: businessId,
+        businessName: businessName,
+        businessType: businessType,
+        ownerName: ownerName,
+        services: services || [],
+        serviceAreas: serviceAreas || [],
+        businessHours: businessHours || {},
+        greetingMessage: greetingMessage || `Hello, thank you for calling ${businessName}. How can I help you today?`,
+        tone: (tone || 'professional') as 'professional' | 'friendly' | 'casual',
+        phoneNumber: normalizedPhoneNumber || phone || '', // Use provisioned normalized number
+        website: website,
+        address: `${address || ''}, ${city || ''}, ${state || ''} ${zipCode || ''}`.trim()
+      }
+
+      const agentManager = retellAgentManager()
+      retellAgentId = await agentManager.createBusinessAgent(agentConfig)
+
+      // Update business with agent ID
+      await supabaseAdmin
+        .from('businesses')
+        .update({ 
+          retell_agent_id: retellAgentId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', businessId)
+
+      logger.info('Retell agent created', { 
+        businessId, 
+        agentId: retellAgentId,
+        phoneNumber: normalizedPhoneNumber
+      })
+
+      // 7. Link phone number to Retell agent
+      if (retellAgentId && normalizedPhoneNumber) {
+        try {
+          const linkSuccess = await agentManager.linkPhoneNumberToAgent(retellAgentId, normalizedPhoneNumber)
+          if (linkSuccess) {
+            logger.info('Phone number linked to Retell agent', {
+              businessId,
+              agentId: retellAgentId,
+              phoneNumber: normalizedPhoneNumber
+            })
+          } else {
+            logger.warn('Phone number linking to Retell agent failed (may require manual linking)', {
+              businessId,
+              agentId: retellAgentId,
+              phoneNumber: normalizedPhoneNumber
+            })
+          }
+        } catch (linkError) {
+          logger.error('Error linking phone number to Retell agent', {
+            error: linkError instanceof Error ? linkError.message : 'Unknown error',
+            businessId,
+            agentId: retellAgentId,
+            phoneNumber: normalizedPhoneNumber
+          })
+          // Continue - linking can be done manually if needed
+        }
+      } else {
+        logger.warn('Cannot link phone to agent - missing agent ID or phone number', {
+          businessId,
+          hasAgentId: !!retellAgentId,
+          hasPhoneNumber: !!normalizedPhoneNumber
+        })
+      }
+    } catch (agentError) {
+      logger.error('Retell agent creation failed', { 
+        error: agentError instanceof Error ? agentError.message : 'Unknown error',
+        businessId 
+      })
+      // Continue - agent can be created manually later
+    }
+
+    // 8. Update business with onboarding completion
     await supabaseAdmin
       .from('businesses')
       .update({
@@ -421,6 +490,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    await logComplianceEvent({
+      tenantId: businessId,
+      channel: 'onboarding',
+      eventType: 'complete',
+      path: request.nextUrl.pathname,
+      requestBody: {
+        servicesCount: services?.length ?? 0,
+        createdStripeCustomer: Boolean(stripeCustomerId),
+        createdRetellAgent: Boolean(retellAgentId)
+      }
+    })
+
     return NextResponse.json({
       success: true,
       businessId: businessId,
@@ -435,10 +516,29 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     logger.error('Onboarding completion failed', { 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     })
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const isDatabaseError = errorMessage.includes('database') || errorMessage.includes('constraint') || errorMessage.includes('duplicate')
+    const isNetworkError = errorMessage.includes('network') || errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED')
+    
+    let action = 'Please try again in a few moments. If the problem persists, contact support at support@cloudgreet.com'
+    if (isDatabaseError) {
+      action = 'There was a database error. Please refresh the page and try again. If the problem continues, contact support at support@cloudgreet.com'
+    } else if (isNetworkError) {
+      action = 'Network error occurred. Please check your internet connection and try again.'
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to complete onboarding', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to complete onboarding',
+        details: errorMessage,
+        action: action,
+        step: 'onboarding_completion',
+        supportEmail: 'support@cloudgreet.com'
+      },
       { status: 500 }
     )
   }

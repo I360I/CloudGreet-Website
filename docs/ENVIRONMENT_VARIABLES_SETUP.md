@@ -116,6 +116,23 @@ NOTIFICATION_PHONE=+1-555-123-4567
 HUMAN_TRANSFER_PHONE=+1-555-123-4567
 
 # ========================================
+# SYNTHETIC MONITORING
+# ========================================
+SYNTHETIC_MONITOR_BASE_URL=https://your-domain.com
+OUTREACH_RUNNER_URL=https://your-domain.com/api/internal/outreach-runner
+MONITOR_EMPLOYEE_EMAIL=monitor-rep@your-domain.com
+MONITOR_EMPLOYEE_PASSWORD=set-a-strong-password
+CRON_SECRET=super-secure-32-char-secret
+
+# ========================================
+# DEMO / TRAINING DATA (OPTIONAL)
+# ========================================
+DEMO_OWNER_EMAIL=demo-owner@your-domain.com
+DEMO_OWNER_PASSWORD=change-me-owner
+DEMO_EMPLOYEE_EMAIL=demo-rep@your-domain.com
+DEMO_EMPLOYEE_PASSWORD=change-me-rep
+
+# ========================================
 # BILLING CONFIGURATION
 # ========================================
 MONTHLY_SUBSCRIPTION_FEE=299

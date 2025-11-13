@@ -18,6 +18,9 @@
     "test:coverage": "jest --coverage",
     "test:e2e": "playwright test",
     "test:integration": "jest --testPathPattern=integration",
+    "synthetic:registration": "node scripts/monitor-registration.js",
+    "seed:tollfree": "node scripts/seed-toll-free-numbers.js",
+    "seed:demo": "node scripts/seed-demo-data.js",
     "test:ui": "vitest --ui",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "validate:env": "node scripts/validate-environment.js",
@@ -80,6 +83,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.3",
     "@commitlint/cli": "^18.4.3",
     "@commitlint/config-conventional": "^18.4.3",
     "@playwright/test": "^1.40.0",

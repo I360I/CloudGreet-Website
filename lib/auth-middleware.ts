@@ -2,26 +2,16 @@ import { NextRequest } from 'next/server'
 import jwt from 'jsonwebtoken'
 import { JWTPayload } from './types'
 import { logger } from './monitoring'
+import { supabaseAdmin } from './supabase'
 
 export interface AuthResult {
   success: boolean
   userId?: string
   businessId?: string
+  role?: string
   error?: string
 }
 
-/**
- * requireAuth - Add description here
- * 
- * @param {...any} args - Function parameters
- * @returns {Promise<any>} Function return value
- * @throws {Error} When operation fails
- * 
- * @example
- * ```typescript
- * await requireAuth(param1, param2)
- * ```
- */
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   try {
     const authHeader = request.headers.get('authorization')
@@ -39,7 +29,12 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload
     
-    return { success: true, userId: decoded.userId, businessId: decoded.businessId }
+    return {
+      success: true,
+      userId: decoded.userId,
+      businessId: decoded.businessId,
+      role: decoded.role ?? 'user'
+    }
   } catch (error) {
     // Handle JWT errors gracefully - these should return 401, not 500
     if (error instanceof jwt.JsonWebTokenError) {
@@ -58,25 +53,6 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   }
 }
 
-/**
- * requireAdmin - Add description here
- * 
- * @param {...any} args - Function parameters
- * @returns {Promise<any>} Function return value
- * @throws {Error} When operation fails
- * 
- * @example
- * ```typescript
- * await requireAdmin(param1, param2)
- * ```
- */
-/**
- * verifyJWT - Wrapper around requireAuth that returns expected format
- * Used by endpoints that expect { user: { id: string } } format
- * 
- * @param request - NextRequest with authorization header
- * @returns Promise with auth result in { user: { id: string } } format or null
- */
 export async function verifyJWT(request: NextRequest): Promise<{ user: { id: string } } | { user: null }> {
   const authResult = await requireAuth(request)
   
@@ -90,73 +66,51 @@ export async function verifyJWT(request: NextRequest): Promise<{ user: { id: str
 export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
   const auth = await requireAuth(request)
   if (!auth.success) return auth
-  
-  try {
-    // Check if user has admin role
-    const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    
-    /**
-    
-     * if - Add description here
-    
-     * 
-    
-     * @param {...any} args - Method parameters
-    
-     * @returns {Promise<any>} Method return value
-    
-     * @throws {Error} When operation fails
-    
-     * 
-    
-     * @example
-    
-     * ```typescript
-    
-     * await this.if(param1, param2)
-    
-     * ```
-    
-     */
-    
-    if (!token || !process.env.JWT_SECRET) {
-      return { success: false, error: 'Authentication not configured' }
-    }
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload
-    
-    /**
-    
-     * if - Add description here
-    
-     * 
-    
-     * @param {...any} args - Method parameters
-    
-     * @returns {Promise<any>} Method return value
-    
-     * @throws {Error} When operation fails
-    
-     * 
-    
-     * @example
-    
-     * ```typescript
-    
-     * await this.if(param1, param2)
-    
-     * ```
-    
-     */
-    
-    if (decoded.role !== 'admin') {
-      return { success: false, error: 'Admin access required' }
-    }
-    
+
+  if (auth.role === 'admin' || auth.role === 'owner') {
     return auth
-  } catch (error) {
-    logger.error('Admin auth verification failed', { error: error instanceof Error ? error.message : 'Unknown' })
-    return { success: false, error: 'Admin authentication failed' }
+  }
+
+  return { success: false, error: 'Admin access required' }
+}
+
+export async function requireEmployee(
+  request: NextRequest,
+  options: { allowManager?: boolean } = {}
+): Promise<AuthResult> {
+  const auth = await requireAuth(request)
+  if (!auth.success || !auth.userId) return auth
+
+  const { data: user, error } = await supabaseAdmin
+    .from('custom_users')
+    .select('id, business_id, is_active, role')
+    .eq('id', auth.userId)
+    .single()
+
+  if (error || !user) {
+    logger.warn('Employee verification failed', { error })
+    return { success: false, error: 'User not found' }
+  }
+
+  if (!user.is_active) {
+    return { success: false, error: 'Account disabled' }
+  }
+
+  const effectiveRole = user.role ?? auth.role ?? 'user'
+  const allowedRoles = new Set<string>(['sales'])
+  if (options.allowManager) {
+    allowedRoles.add('owner')
+    allowedRoles.add('admin')
+  }
+
+  if (!allowedRoles.has(effectiveRole)) {
+    return { success: false, error: 'Employee access required' }
+  }
+
+  return {
+    success: true,
+    userId: user.id,
+    businessId: user.business_id ?? auth.businessId,
+    role: effectiveRole
   }
 }

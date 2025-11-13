@@ -62,7 +62,7 @@ export default function PricingPage() {
 
   const loadPricingRules = async () => {
     try {
-      const response = await fetch(`/api/pricing/rules?business_id=${businessId}`)
+      const response = await fetchWithAuth(`/api/pricing/rules?business_id=${businessId}`)
       if (response.ok) {
         const data = await response.json()
         setPricingRules(data.rules || [])
@@ -76,11 +76,10 @@ export default function PricingPage() {
 
   const handleAddRule = async (ruleData: Partial<PricingRule>) => {
     try {
-      const response = await fetch('/api/pricing/rules', {
+      const response = await fetchWithAuth('/api/pricing/rules', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           ...ruleData,
@@ -100,11 +99,10 @@ export default function PricingPage() {
   const handleUpdateRule = async (ruleData: Partial<PricingRule>) => {
     if (!editingRule) return;
     try {
-      const response = await fetch('/api/pricing/rules', {
+      const response = await fetchWithAuth('/api/pricing/rules', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           id: editingRule.id,
@@ -123,11 +121,8 @@ export default function PricingPage() {
 
   const handleDeleteRule = async (ruleId: string) => {
     try {
-      const response = await fetch(`/api/pricing/rules?id=${ruleId}`, {
+      const response = await fetchWithAuth(`/api/pricing/rules?id=${ruleId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
       })
 
       if (response.ok) {

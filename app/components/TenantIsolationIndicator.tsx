@@ -6,6 +6,8 @@ import {
   Shield, CheckCircle, AlertCircle, Lock, Users, 
   Database, Eye, EyeOff, Key, Building
 } from 'lucide-react'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { logger } from '@/lib/monitoring'
 
 interface TenantIsolationProps {
   businessId: string
@@ -26,18 +28,8 @@ export default function TenantIsolationIndicator({ businessId, businessName }: T
       setLoading(true)
       setError(null)
 
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setError('Please log in to test tenant isolation')
-        return
-      }
-
-      // Test tenant isolation
-      const response = await fetch('/api/test-tenant-isolation', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      // Test tenant isolation with automatic authentication
+      const response = await fetchWithAuth('/api/test-tenant-isolation')
 
       if (response.ok) {
         const data = await response.json()
@@ -46,7 +38,7 @@ export default function TenantIsolationIndicator({ businessId, businessName }: T
         setError('Failed to test tenant isolation')
       }
     } catch (error) {
-      console.error('Error:', error)
+      logger.error('Error testing tenant isolation', { error: error instanceof Error ? error.message : 'Unknown error' })
       setError('An error occurred while testing tenant isolation')
     } finally {
       setLoading(false)

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Clock, Save, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 import { Card } from './ui/Card'
 import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, ValidationResult, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, RateLimitConfig, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
 
 interface DayHours {
@@ -42,11 +43,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
   const loadBusinessHours = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      
-      const response = await fetch(`/api/business/hours?businessId=${businessId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+      const response = await fetchWithAuth(`/api/business/hours?businessId=${businessId}`)
       
       if (response.ok) {
         const data = await response.json()
@@ -66,7 +63,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
         })
       }
     } catch (error) {
-      console.error('Error loading business hours:', error)
+      logger.error('Error loading business hours', { error: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setLoading(false)
     }
@@ -76,12 +73,9 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
     if (!hours) return;
     try {
       setSaving(true)
-      const token = localStorage.getItem('token')
-      
-      const response = await fetch(`/api/business/hours?businessId=${businessId}`, {
+      const response = await fetchWithAuth(`/api/business/hours?businessId=${businessId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ hours })

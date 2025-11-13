@@ -5,9 +5,18 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Eye, EyeOff, CheckCircle } from 'lucide-react'
 import { PLACEHOLDERS, SUCCESS_MESSAGES } from '@/lib/constants'
+import { buildRegistrationPayload, type RegistrationFormData } from '@/lib/auth/register-payload'
+import { setAuthToken } from '@/lib/auth/token-manager'
 
 export default function SimpleRegisterPage() {
-  const [formData, setFormData] = useState({
+  type FormState = RegistrationFormData & {
+    firstName: string
+    lastName: string
+  }
+
+  const [formData, setFormData] = useState<FormState>({
+    firstName: '',
+    lastName: '',
     businessName: '',
     businessType: 'HVAC',
     email: '',
@@ -25,25 +34,32 @@ export default function SimpleRegisterPage() {
     setIsLoading(true)
     setError('')
 
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      setError('Please provide both your first and last name.')
+      setIsLoading(false)
+      return
+    }
+
     try {
+      const payload = buildRegistrationPayload(formData)
+
       const response = await fetch('/api/auth/register-simple', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       const result = await response.json()
 
       if (result.success) {
-        // Store token in both localStorage and cookies
-        localStorage.setItem('token', result.data.token)
+        // Store token securely in httpOnly cookie
+        await setAuthToken(result.data.token)
+        
+        // Store user/business data in localStorage (non-sensitive)
         localStorage.setItem('user', JSON.stringify(result.data.user))
         localStorage.setItem('business', JSON.stringify(result.data.business))
-        
-        // Set cookie for middleware
-        document.cookie = `token=${result.data.token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`
         
         setSuccess(true)
         setTimeout(() => {
@@ -111,6 +127,39 @@ export default function SimpleRegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2" htmlFor="firstName">
+                First Name *
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                required
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
+                placeholder={PLACEHOLDERS.FIRST_NAME}
+                autoComplete="given-name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2" htmlFor="lastName">
+                Last Name *
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                required
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
+                placeholder={PLACEHOLDERS.LAST_NAME}
+                autoComplete="family-name"
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Business Name *

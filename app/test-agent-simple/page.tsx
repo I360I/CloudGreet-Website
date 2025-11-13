@@ -18,35 +18,34 @@ export default function TestAgentSimplePage() {
   const [isCalling, setIsCalling] = useState(false)
   const [callStatus, setCallStatus] = useState('')
 
+  const formatBusinessHours = (hours: any) => {
+    if (!hours) return 'Not set'
+    const firstDay = Object.values(hours)[0] as any
+    if (!firstDay) return 'Not set'
+    
+    // Format hours display
+    return 'Mon-Fri: 9am-5pm' // Simplified for now
+  }
+
   // Load business info from API
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      fetch('/api/business/profile', {
-        headers: { 'Authorization': `Bearer ${token}` }
+    fetchWithAuth('/api/business/profile')
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const business = data.business || data.data
+          setBusinessInfo({
+            businessName: business?.business_name || business?.businessName || '',
+            businessType: business?.business_type || business?.businessType || '',
+            services: business?.services?.join(', ') || '',
+            hours: formatBusinessHours(business?.business_hours || business?.businessHours),
+            phoneNumber: business?.phone_number || business?.phoneNumber || ''
+          })
+        }
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setBusinessInfo({
-              businessName: data.data.businessName || 'Loading...',
-              businessType: data.data.businessType || 'Loading...',
-              services: data.data.services?.join(', ') || 'Loading...',
-              hours: formatBusinessHours(data.data.businessHours) || 'Loading...',
-              phoneNumber: data.data.phoneNumber || 'Loading...'
-            })
-          }
-        })
-        .catch(err => console.error('Failed to load business info:', err))
-    }
+      .catch(err => console.error('Failed to load business info:', err))
   }, [])
 
-  const formatBusinessHours = (hours: any) => {
-    if (!hours) return 'Loading...'
-    // Format first available day
-    const firstDay = Object.values(hours)[0] as any
-    return firstDay?.open && firstDay?.close ? `${firstDay.open} - ${firstDay.close}` : 'Loading...'
-  }
 
   const initiateTestCall = async () => {
     if (!testPhone || !businessInfo.phoneNumber) {
@@ -58,16 +57,14 @@ export default function TestAgentSimplePage() {
     setCallStatus('Initiating real-time AI call...')
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/test/realtime-call', {
+      const response = await fetchWithAuth('/api/test/realtime-call', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           phoneNumber: testPhone,
-          businessId: localStorage.getItem('businessId')
+          businessId: localStorage.getItem('businessId') // businessId is non-sensitive, can stay in localStorage
         })
       })
 

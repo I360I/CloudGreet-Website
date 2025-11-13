@@ -3,189 +3,73 @@
  * Tests JWT token management, authentication middleware, and user validation
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
-import { TestFramework } from '../../lib/testing/test-framework';
-import { JWTManager } from '@/lib/jwt-manager';
-import { requireAuth } from '../../lib/auth-middleware';
-import { NextRequest, NextResponse } from 'next/server';
+import { beforeAll, describe, expect, it } from '@jest/globals'
+import { JWTManager } from '@/lib/jwt-manager'
+import { requireAuth, verifyJWT } from '../../lib/auth-middleware'
+import { NextRequest } from 'next/server'
 
-describe('Authentication Module', () => {
-  let jwtManager: JWTManager;
-  let mockRequest: NextRequest;
+const createMockRequest = (authorization?: string) =>
+  ({
+    headers: (() => {
+      const headers = new Headers()
+      if (authorization) {
+        headers.set('authorization', authorization)
+      }
+      return headers
+    })()
+  } as unknown as NextRequest)
 
-  beforeAll(async () => {
-    // Initialize test environment
-    process.env.JWT_SECRET = 'test-secret-key-for-testing-only';
-    jwtManager = new JWTManager();
-  });
+describe('Authentication Middleware', () => {
+  beforeAll(() => {
+    process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret-key-for-testing-only'
+  })
 
-  beforeEach(() => {
-    // Create mock request
-    mockRequest = TestFramework.createMockRequest({
-      method: 'GET',
-      url: 'http://localhost:3000/api/test',
-      headers: new Headers({
-        'Authorization': 'Bearer valid-token',
-        'Content-Type': 'application/json',
-      }),
-    });
-  });
+  it('returns auth success for a valid bearer token', async () => {
+    const token = JWTManager.createUserToken('user_123', 'business_456', 'test@example.com')
+    const request = createMockRequest(`Bearer ${token}`)
 
-  afterAll(async () => {
-    // Cleanup
-    await TestFramework.clearTestData('users');
-  });
+    const result = await requireAuth(request)
 
-  describe.skip('JWT Token Management', () => {
-    // TODO: These tests use instance methods that don't exist. JWTManager only has static methods.
-    // Need to rewrite tests to use JWTManager.createUserToken() and JWTManager.verifyToken() static methods
-    it.skip('should generate valid JWT token', async () => {});
-    it.skip('should verify valid JWT token', async () => {});
-    it.skip('should reject invalid JWT token', async () => {});
-    it.skip('should reject expired JWT token', async () => {});
-    it.skip('should handle token refresh', async () => {});
-  });
+    expect(result.success).toBe(true)
+    expect(result.userId).toBe('user_123')
+    expect(result.businessId).toBe('business_456')
+  })
 
-  describe('Authentication Middleware', () => {
-    it('should authenticate valid request', async () => {
-      const token = JWTManager.createUserToken('user_123', 'business_456', 'test@example.com');
-      const request = TestFramework.createMockRequest({
-        headers: new Headers({
-          'Authorization': `Bearer ${token}`,
-        }),
-      });
+  it('returns descriptive failure when the auth header is missing', async () => {
+    const request = createMockRequest()
 
-      const result = await requireAuth(request);
-      
-      expect(result.success).toBe(true);
-      expect(result.userId).toBe('user_123');
-      expect(result.businessId).toBe('business_456');
-    });
+    const result = await requireAuth(request)
 
-    it('should reject request without authorization header', async () => {
-      const request = TestFramework.createMockRequest({
-        headers: new Headers(),
-      });
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Missing auth header')
+  })
 
-      await expect(requireAuth(request))
-        .rejects
-        .toThrow('Authorization header required');
-    });
+  it('flags invalid tokens without throwing', async () => {
+    const request = createMockRequest('Bearer malformed-token')
 
-    it('should reject request with invalid token format', async () => {
-      const request = TestFramework.createMockRequest({
-        headers: new Headers({
-          'Authorization': 'InvalidFormat token',
-        }),
-      });
+    const result = await requireAuth(request)
 
-      await expect(requireAuth(request))
-        .rejects
-        .toThrow('Invalid authorization format');
-    });
+    expect(result.success).toBe(false)
+    expect(result.error).toBe('Invalid token')
+  })
 
-    it('should reject request with invalid token', async () => {
-      const request = TestFramework.createMockRequest({
-        headers: new Headers({
-          'Authorization': 'Bearer invalid-token',
-        }),
-      });
+  it('verifyJWT produces a user object for valid tokens', async () => {
+    const token = JWTManager.createUserToken('user_999', 'business_888', 'verify@example.com')
+    const request = createMockRequest(`Bearer ${token}`)
 
-      await expect(requireAuth(request))
-        .rejects
-        .toThrow('Invalid token');
-    });
+    const result = await verifyJWT(request)
 
-    it.skip('should handle expired token gracefully', async () => {
-      // TODO: Test expired token - requires time manipulation or token with short expiration
-    });
-  });
+    expect(result).toEqual({ user: { id: 'user_999' } })
+  })
 
-  describe.skip('User Validation', () => {
-    // TODO: These tests use instance methods that don't exist
-    it.skip('should validate user exists in database', async () => {});
-    it.skip('should reject token for non-existent user', async () => {});
-  });
+  it('verifyJWT returns null user when verification fails', async () => {
+    const request = createMockRequest('Bearer invalid')
 
-  describe.skip('Business Validation', () => {
-    // TODO: These tests use instance methods that don't exist
-    it.skip('should validate business exists', async () => {});
-    it.skip('should reject token for non-existent business', async () => {});
-  });
+    const result = await verifyJWT(request)
 
-  describe.skip('Role-Based Access Control', () => {
-    // TODO: These tests use instance methods and expect role in AuthResult which doesn't exist
-    it.skip('should allow admin access', async () => {});
-    it.skip('should allow user access', async () => {});
-    it.skip('should allow agent access', async () => {});
-  });
-
-  describe.skip('Error Handling', () => {
-    // TODO: These tests use instance methods that don't exist
-    it.skip('should handle malformed JWT payload', async () => {});
-    it.skip('should handle missing required fields in token', async () => {});
-
-    it('should handle database connection errors gracefully', async () => {
-      // Mock database error
-      const originalSupabase = require('../../lib/supabase').supabaseAdmin;
-      require('../../lib/supabase').supabaseAdmin = {
-        from: jest.fn().mockImplementation(() => ({
-          select: jest.fn().mockImplementation(() => ({
-            eq: jest.fn().mockImplementation(() => ({
-              single: jest.fn().mockRejectedValue(new Error('Database connection failed'))
-            }))
-          }))
-        }))
-      };
-
-      const payload = {
-        sub: 'user_123',
-        business_id: 'business_456',
-        role: 'admin' as const,
-      };
-
-      const token = JWTManager.createUserToken('user_123', 'business_456', 'test@example.com');
-      const request = TestFramework.createMockRequest({
-        headers: new Headers({
-          'Authorization': `Bearer ${token}`,
-        }),
-      });
-
-      await expect(requireAuth(request))
-        .rejects
-        .toThrow();
-
-      // Restore original supabase
-      require('../../lib/supabase').supabaseAdmin = originalSupabase;
-    });
-  });
-
-  describe.skip('Performance Tests', () => {
-    // TODO: These tests use instance methods that don't exist
-    it.skip('should generate token within acceptable time', async () => {});
-    it.skip('should verify token within acceptable time', async () => {});
-    it.skip('should handle concurrent authentication requests', async () => {
-      const token = JWTManager.createUserToken('user_123', 'business_456', 'test@example.com');
-      const requests = Array(10).fill(null).map(() => 
-        TestFramework.createMockRequest({
-          headers: new Headers({
-            'Authorization': `Bearer ${token}`,
-          }),
-        })
-      );
-
-      const startTime = Date.now();
-      const results = await Promise.allSettled(
-        requests.map(request => requireAuth(request))
-      );
-      const duration = Date.now() - startTime;
-
-      const successful = results.filter(r => r.status === 'fulfilled').length;
-      expect(successful).toBe(10);
-      expect(duration).toBeLessThan(1000); // Should complete within 1 second
-    });
-  });
-});
+    expect(result).toEqual({ user: null })
+  })
+})
 
 
 

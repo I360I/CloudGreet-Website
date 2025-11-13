@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { logger } from '@/lib/monitoring'
 import { motion } from 'framer-motion'
 import { TrendingUp, DollarSign, Phone, Calendar, AlertCircle, CheckCircle } from 'lucide-react'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 interface ROIData {
   totalCalls: number
@@ -37,11 +38,7 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
   const loadRealROIData = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      
-      const response = await fetch(`/api/dashboard/roi-metrics`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+      const response = await fetchWithAuth(`/api/dashboard/roi-metrics`)
       
       if (response.ok) {
         const data = await response.json()

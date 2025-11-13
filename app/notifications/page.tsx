@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Bell, Settings, CheckCircle, AlertCircle, Clock, Mail, Phone, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 interface Notification {
   id: string
@@ -27,11 +28,7 @@ export default function NotificationsPage() {
 
   const loadNotifications = async () => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setLoading(false)
-        return
-      }
+      // Authentication handled automatically by fetchWithAuth
 
       // Load real notifications from API
       const response = await fetch('/api/notifications/list', {

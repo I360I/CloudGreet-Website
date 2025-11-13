@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Play, Pause, SkipBack, SkipForward, Download, Volume2, Clock, MessageSquare, Star, Bookmark } from 'lucide-react'
 import { Card } from './ui/Card'
 import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 interface CallRecording {
   id: string
@@ -61,11 +62,7 @@ export default function CallPlayer({ callId, businessId, className = '' }: CallP
   const loadCallRecording = async () => {
     try {
       setIsLoading(true)
-      const token = localStorage.getItem('token')
-      
-      const response = await fetch(`/api/calls/recording?callId=${callId}&businessId=${businessId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+      const response = await fetchWithAuth(`/api/calls/recording?callId=${callId}&businessId=${businessId}`)
       
       if (response.ok) {
         const data = await response.json()

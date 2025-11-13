@@ -1,0 +1,43 @@
+name: Daily Call Flow Test
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  test-call-flow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run complete call flow test
+        env:
+          TELNYX_API_KEY: ${{ secrets.TELNYX_API_KEY }}
+          TELNYX_CONNECTION_ID: ${{ secrets.TELNYX_CONNECTION_ID }}
+          TELNYX_PHONE_NUMBER: ${{ secrets.TELNYX_PHONE_NUMBER }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com' }}
+          TEST_BUSINESS_ID: ${{ secrets.TEST_BUSINESS_ID }}
+          TEST_CALLER_PHONE: ${{ secrets.TEST_CALLER_PHONE }}
+        run: node scripts/test-complete-call-flow.js
+
+      - name: Report results
+        if: always()
+        run: |
+          echo "Call flow test completed"
+          echo "Check logs above for details"
+

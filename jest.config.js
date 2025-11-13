@@ -21,7 +21,7 @@ const customJestConfig = {
   ],
   coverageReporters: ['text', 'lcov', 'html'],
   coverageDirectory: 'coverage',
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1'
   }
 }

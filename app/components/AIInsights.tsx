@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Lightbulb, TrendingUp, Clock, DollarSign, Target, AlertTriangle, CheckCircle, Star, Zap, Users, Calendar, Phone } from 'lucide-react'
 import { Card } from './ui/Card'
 import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 interface AIInsight {
   id: string
@@ -39,21 +40,7 @@ export default function AIInsights({ businessId, className = '' }: AIInsightsPro
   const loadInsights = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      
-      const response = await fetch(`/api/analytics/ai-insights?businessId=${businessId}
-
-    catch (error) {
-
-      logger.error('Error:', error);
-
-      throw error;
-
-    }
-
-    `, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+      const response = await fetchWithAuth(`/api/analytics/ai-insights?businessId=${businessId}`)
       
       if (response.ok) {
         const data = await response.json()

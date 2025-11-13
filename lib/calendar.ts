@@ -422,3 +422,67 @@ export function generateGoogleAuthUrl(businessId: string): string {
 }
 
 export { generateGoogleAuthUrl as generateAuthUrl }
+
+export async function saveGoogleTokens(businessId: string, tokens: {
+  access_token: string
+  refresh_token?: string
+  expires_in?: number
+  scope?: string
+  token_type?: string
+}): Promise<void> {
+  try {
+    const expiresAt = tokens.expires_in
+      ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+      : null
+
+    const { error } = await supabaseAdmin
+      .from('businesses')
+      .update({
+        google_access_token: tokens.access_token,
+        google_refresh_token: tokens.refresh_token ?? null,
+        google_token_expires_at: expiresAt,
+        calendar_connected: true,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', businessId)
+
+    if (error) {
+      logger.error('Failed to save Google tokens', {
+        businessId,
+        error: error.message
+      })
+    }
+  } catch (error) {
+    logger.error('Error saving Google tokens', {
+      businessId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+}
+
+export async function clearGoogleTokens(businessId: string): Promise<void> {
+  try {
+    const { error } = await supabaseAdmin
+      .from('businesses')
+      .update({
+        google_access_token: null,
+        google_refresh_token: null,
+        google_token_expires_at: null,
+        calendar_connected: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', businessId)
+
+    if (error) {
+      logger.error('Failed to clear Google tokens', {
+        businessId,
+        error: error.message
+      })
+    }
+  } catch (error) {
+    logger.error('Error clearing Google tokens', {
+      businessId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+  }
+}

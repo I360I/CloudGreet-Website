@@ -261,12 +261,12 @@ export class JWTManager {
   /**
    * Create a token for regular users
    */
-  static createUserToken(userId: string, businessId: string, email: string): string {
+  static createUserToken(userId: string, businessId: string, email: string, role: string = 'user'): string {
     return this.signToken({
       userId,
       businessId,
       email,
-      role: 'user'
+      role
     });
   }
 

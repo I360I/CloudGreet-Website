@@ -198,6 +198,9 @@
 - [ ] Set up uptime monitoring (UptimeRobot, etc.)
 - [ ] Configure error alerts
 - [ ] Set up log aggregation (if needed)
+- [ ] Populate GitHub secrets: `SYNTHETIC_MONITOR_BASE_URL`, `OUTREACH_RUNNER_URL`, `CRON_SECRET`, `MONITOR_EMPLOYEE_EMAIL`, `MONITOR_EMPLOYEE_PASSWORD`
+- [ ] Trigger Synthetic Monitors workflow and confirm registration, outreach, and sales workspace checks succeed
+- [ ] Document demo credentials produced by `scripts/seed-demo-data.js` in the ops vault
 
 ---
 

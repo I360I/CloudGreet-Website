@@ -18,6 +18,7 @@ import {
 } from 'chart.js'
 import { Line, Bar, Doughnut } from 'react-chartjs-2'
 import { TrendingUp, Phone, Calendar, DollarSign } from 'lucide-react'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 // Register Chart.js components
 ChartJS.register(
@@ -52,18 +53,8 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
       setLoading(true)
       setError(null)
 
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setError('Please log in to view charts')
-        return
-      }
-
-      // Fetch real chart data
-      const response = await fetch(`/api/dashboard/real-charts?timeframe=${timeframe}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      // Fetch real chart data with automatic authentication
+      const response = await fetchWithAuth(`/api/dashboard/real-charts?timeframe=${timeframe}`)
 
       if (response.ok) {
         const data = await response.json()

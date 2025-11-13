@@ -72,6 +72,8 @@ export const EMAIL_CONFIG = {
 
 // Placeholder Text
 export const PLACEHOLDERS = {
+  FIRST_NAME: 'Jane',
+  LAST_NAME: 'Doe',
   BUSINESS_NAME: 'Your Business Name',
   EMAIL: 'your@email.com',
   PHONE: '(555) 123-4567',

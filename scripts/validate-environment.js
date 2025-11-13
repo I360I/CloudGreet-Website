@@ -86,6 +86,18 @@ const envVarDefinitions = {
       description: 'Application base URL',
       validation: (val) => val && (val.startsWith('http://') || val.startsWith('https://')),
       whatBreaks: 'Webhooks, OAuth callbacks, email links, external API callbacks'
+    },
+    {
+      name: 'APOLLO_API_KEY',
+      description: 'Apollo.io API key for prospect acquisition',
+      validation: (val) => val && val.length > 20,
+      whatBreaks: 'Automated prospect sync, outbound pipeline seeding'
+    },
+    {
+      name: 'CRON_SECRET',
+      description: 'Secret used to authorize background cron invocations',
+      validation: (val) => val && val.length >= 16,
+      whatBreaks: 'Scheduled prospect syncs, webhook retries, any protected cron job'
     }
   ],
 
@@ -225,6 +237,90 @@ const envVarDefinitions = {
       validation: (val) => !val || ['development', 'production', 'test'].includes(val),
       whatBreaks: 'Environment-specific features, debug mode',
       fallback: 'Defaults to development'
+    },
+    {
+      name: 'SYNTHETIC_MONITOR_BASE_URL',
+      description: 'Base URL used by the synthetic monitor workflow',
+      validation: (val) => !val || val.startsWith('http://') || val.startsWith('https://'),
+      whatBreaks: 'Synthetic monitor GitHub Action cannot target production without a base URL',
+      fallback: 'Set in GitHub Actions secrets before enabling scheduled monitors'
+    },
+    {
+      name: 'CLEARBIT_API_KEY',
+      description: 'Clearbit API key for fallback prospecting',
+      validation: (val) => !val || val.length > 20,
+      whatBreaks: 'Fallback data source for prospect sync if Apollo fails',
+      fallback: 'Apollo remains primary provider'
+    },
+    {
+      name: 'PROSPECT_SYNC_URL',
+      description: 'Deployed endpoint invoked by the prospect sync workflow',
+      validation: (val) => !val || val.startsWith('http://') || val.startsWith('https://'),
+      whatBreaks: 'GitHub Actions prospect sync cron cannot run',
+      fallback: 'Set in GitHub Actions secrets when enabling scheduled sync'
+    },
+    {
+      name: 'OUTREACH_RUNNER_URL',
+      description: 'Deployed endpoint invoked by the outreach runner workflow',
+      validation: (val) => !val || val.startsWith('http://') || val.startsWith('https://'),
+      whatBreaks: 'Outreach cron is unable to trigger cadence execution',
+      fallback: 'Set in GitHub Actions secrets before enabling outreach cron'
+    },
+    {
+      name: 'OUTREACH_FROM_EMAIL',
+      description: 'From address for outreach emails',
+      validation: (val) => !val || val.includes('@'),
+      whatBreaks: 'Emails will fall back to noreply@cloudgreet.com',
+      fallback: 'Configure branded sender in integrations'
+    },
+    {
+      name: 'OUTREACH_SMS_FROM',
+      description: 'Dedicated SMS number for outreach',
+      validation: (val) => !val || /^\+?\d{10,15}$/.test(val.replace(/\s/g, '')),
+      whatBreaks: 'SMS will fall back to TELNYX connection ID or default number',
+      fallback: 'Provision number in admin phone inventory'
+    },
+    {
+      name: 'MONITOR_EMPLOYEE_EMAIL',
+      description: 'Synthetic monitor sales rep email',
+      validation: (val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
+      whatBreaks: 'Sales workspace synthetic monitor cannot authenticate',
+      fallback: 'Seed demo data and set credentials for monitoring user'
+    },
+    {
+      name: 'MONITOR_EMPLOYEE_PASSWORD',
+      description: 'Synthetic monitor sales rep password',
+      validation: (val) => !val || val.length >= 8,
+      whatBreaks: 'Sales workspace synthetic monitor cannot authenticate',
+      fallback: 'Seed demo data and set credentials for monitoring user'
+    },
+    {
+      name: 'DEMO_OWNER_EMAIL',
+      description: 'Override owner email for demo seed script',
+      validation: (val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
+      whatBreaks: 'Demo seed uses default demo-owner@cloudgreet.com',
+      fallback: 'Leave unset to use default demo owner credentials'
+    },
+    {
+      name: 'DEMO_OWNER_PASSWORD',
+      description: 'Override owner password for demo seed script',
+      validation: (val) => !val || val.length >= 8,
+      whatBreaks: 'Demo seed uses default DemoOwner123!',
+      fallback: 'Leave unset to use default demo owner credentials'
+    },
+    {
+      name: 'DEMO_EMPLOYEE_EMAIL',
+      description: 'Override sales rep email for demo seed script',
+      validation: (val) => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
+      whatBreaks: 'Demo seed uses default demo-rep@cloudgreet.com',
+      fallback: 'Leave unset to use default demo sales rep credentials'
+    },
+    {
+      name: 'DEMO_EMPLOYEE_PASSWORD',
+      description: 'Override sales rep password for demo seed script',
+      validation: (val) => !val || val.length >= 8,
+      whatBreaks: 'Demo seed uses default DemoRep123!',
+      fallback: 'Leave unset to use default demo sales rep credentials'
     }
   ]
 }

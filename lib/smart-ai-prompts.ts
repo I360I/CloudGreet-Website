@@ -11,6 +11,11 @@ export interface RevenueOptimizedConfig {
   website?: string
   phoneNumber?: string
   businessHours: Record<string, { enabled: boolean; start: string; end: string }>
+  knowledgeBase?: Array<{ title: string; content: string }>
+  confidenceThreshold?: number
+  maxSilenceSeconds?: number
+  escalationMessage?: string
+  additionalInstructions?: string | null
 }
 
 export interface PricingScripts {
@@ -45,6 +50,8 @@ export class SmartAIPrompts {
     const businessHours = this.formatBusinessHours(config.businessHours);
     const services = config.services.join(', ');
     const serviceAreas = config.serviceAreas.join(', ');
+    const knowledgeSection = this.formatKnowledgeBase(config.knowledgeBase ?? []);
+    const operationalRules = this.formatOperationalRules(config);
 
     return `You are an expert AI receptionist for ${config.businessName}, a ${config.businessType} business${config.ownerName ? ` owned by ${config.ownerName}` : ''}. Your primary goal is to maximize revenue while providing excellent customer service.
 
@@ -60,6 +67,9 @@ ${config.phoneNumber ? `- Phone: ${config.phoneNumber}` : ''}
 
 BUSINESS HOURS:
 ${businessHours}
+
+${knowledgeSection}
+${operationalRules}
 
 REVENUE OPTIMIZATION STRATEGIES:
 
@@ -281,5 +291,54 @@ CLEANING SPECIFIC REVENUE OPTIMIZATION:
     });
 
     return formattedHours;
+  }
+
+  private static formatKnowledgeBase(entries: Array<{ title: string; content: string }>): string {
+    if (!entries.length) {
+      return '';
+    }
+
+    const formatted = entries
+      .map((entry) => {
+        const condensed = entry.content.trim()
+          .replace(/\s+/g, ' ')
+          .slice(0, 600)
+        return `- ${entry.title}: ${condensed}${condensed.length === 600 ? '…' : ''}`
+      })
+      .join('\n')
+
+    return `KNOWLEDGE BASE:\n${formatted}\n`
+  }
+
+  private static formatOperationalRules(config: RevenueOptimizedConfig): string {
+    const directives: string[] = []
+
+    if (config.confidenceThreshold) {
+      directives.push(
+        `- If your confidence is below ${config.confidenceThreshold.toFixed(2)}, elegantly offer to connect the caller with a human specialist using the escalation copy provided.`
+      )
+    }
+
+    if (config.maxSilenceSeconds) {
+      directives.push(
+        `- Do not allow more than ${config.maxSilenceSeconds} seconds of silence before re-engaging the caller with a clarifying question or escalation.`
+      )
+    }
+
+    if (config.escalationMessage) {
+      directives.push(`- Escalation phrase: "${config.escalationMessage.trim()}"`)
+    }
+
+    if (config.additionalInstructions) {
+      directives.push(
+        `- Additional owner directives: ${config.additionalInstructions.trim().replace(/\s+/g, ' ')}`
+      )
+    }
+
+    if (!directives.length) {
+      return ''
+    }
+
+    return `OPERATIONAL SAFETY & ESCALATION RULES:\n${directives.join('\n')}\n`
   }
 }

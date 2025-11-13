@@ -3,23 +3,35 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, CheckCircle, Building, Phone } from 'lucide-react'
+import { buildRegistrationPayload, type RegistrationFormData } from '@/lib/auth/register-payload'
+import { PLACEHOLDERS } from '@/lib/constants'
+
+type StartFormState = RegistrationFormData & {
+  confirmPassword: string
+  website: string
+}
+
+const DEFAULT_FORM: StartFormState = {
+  firstName: '',
+  lastName: '',
+  businessName: '',
+  businessType: 'HVAC',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  phone: '',
+  address: '',
+  website: ''
+}
 
 export default function StartPage() {
-  const [formData, setFormData] = useState({
-    business_name: '',
-    business_type: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
-    address: '',
-    website: ''
-  })
+  const [formData, setFormData] = useState<StartFormState>(DEFAULT_FORM)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [step, setStep] = useState(1)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof StartFormState, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -28,6 +40,7 @@ export default function StartPage() {
 
     setIsSubmitting(true)
     setError('')
+    setSuccess(false)
     
     try {
       // Validate passwords match
@@ -44,38 +57,51 @@ export default function StartPage() {
         return
       }
       
-      // Create account using reliable API
+      const payload = buildRegistrationPayload(formData)
+
+      // Create account using unified API
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          business_name: formData.business_name,
-          business_type: formData.business_type,
-          email: formData.email,
-          password: formData.password,
-          phone: formData.phone,
-          address: formData.address,
+          ...payload,
           website: formData.website
         }),
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        const errorMessage = errorData.error?.message || errorData.message || 'Account creation failed'
-        throw new Error(errorMessage)
+      const result = await response.json()
+
+      if (!response.ok || !result?.success) {
+        const message =
+          result?.message ||
+          result?.error?.message ||
+          'Account creation failed. Please try again.'
+        throw new Error(message)
       }
-      
-      const user = await response.json()
 
-      // Store business data and account status
-      localStorage.setItem('businessData', JSON.stringify(formData))
+      // Store token and user data
+      localStorage.setItem('token', result.data.token)
+      localStorage.setItem('user', JSON.stringify(result.data.user))
+      localStorage.setItem('business', JSON.stringify(result.data.business))
+      localStorage.setItem(
+        'businessData',
+        JSON.stringify({
+          business_name: formData.businessName,
+          business_type: formData.businessType,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          website: formData.website
+        })
+      )
       localStorage.setItem('accountStatus', 'new_account')
-      localStorage.setItem('userId', user.id)
 
-      // Redirect to dashboard where onboarding wizard will open
-      window.location.href = '/dashboard'
+      setSuccess(true)
+      setTimeout(() => {
+        window.location.href = '/dashboard'
+      }, 2000)
     } catch (error) {
       // Enhanced error handling with specific user-friendly messages
       let errorMessage = 'Account creation failed. Please try again.'
@@ -105,9 +131,9 @@ export default function StartPage() {
   }
 
   const businessTypes = [
-    'HVAC Services',
-    'Painting Services',
-    'Roofing Contractor'
+    { value: 'HVAC', label: 'HVAC Services' },
+    { value: 'Painting', label: 'Painting Services' },
+    { value: 'Roofing', label: 'Roofing Contractor' }
   ]
 
   return (
@@ -159,6 +185,38 @@ export default function StartPage() {
                 <Building className="w-6 h-6 text-blue-400" />
                 Business Information
               </h2>
+
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label className="block text-gray-300 font-medium mb-3">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder={PLACEHOLDERS.FIRST_NAME}
+                    autoComplete="given-name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 font-medium mb-3">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    placeholder={PLACEHOLDERS.LAST_NAME}
+                    autoComplete="family-name"
+                  />
+                </div>
+              </div>
               
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
@@ -168,8 +226,8 @@ export default function StartPage() {
                   <input
                     type="text"
                     required
-                    value={formData.business_name}
-                    onChange={(e) => handleInputChange('business_name', e.target.value)}
+                    value={formData.businessName}
+                    onChange={(e) => handleInputChange('businessName', e.target.value)}
                     className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="ABC Services LLC"
                   />
@@ -181,13 +239,17 @@ export default function StartPage() {
                   </label>
                   <select
                     required
-                    value={formData.business_type}
-                    onChange={(e) => handleInputChange('business_type', e.target.value)}
+                    value={formData.businessType}
+                    onChange={(e) =>
+                      handleInputChange('businessType', e.target.value as StartFormState['businessType'])
+                    }
                     className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
                     <option value="">Select your business type</option>
                     {businessTypes.map((type) => (
-                      <option key={type} value={type}>{type}</option>
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -330,6 +392,17 @@ export default function StartPage() {
                   />
                   <p className="text-red-300 text-sm">{error}</p>
                 </div>
+              </motion.div>
+            )}
+
+            {success && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-green-500/10 border border-green-500/40 rounded-xl p-5 text-green-300 text-sm mb-6 flex items-center gap-3"
+              >
+                <CheckCircle className="w-5 h-5" />
+                <span>Account created successfully! Redirecting to your dashboard...</span>
               </motion.div>
             )}
 

@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
+import { setAuthToken } from '@/lib/auth/token-manager'
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -31,15 +32,14 @@ export default function LoginPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Store token and user data
-        localStorage.setItem('token', result.data.token)
+        // Store token securely in httpOnly cookie
+        await setAuthToken(result.data.token)
+        
+        // Store user/business data in localStorage (non-sensitive)
         localStorage.setItem('user', JSON.stringify(result.data.user))
         if (result.data.business) {
           localStorage.setItem('business', JSON.stringify(result.data.business))
         }
-        
-        // Set cookie for middleware
-        document.cookie = `token=${result.data.token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`
         
         // Redirect to dashboard
         window.location.href = '/dashboard'

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 interface Lead {
   id: string
@@ -92,11 +93,7 @@ export default function AdminLeadsPage() {
       params.append('limit', limit.toString())
       params.append('offset', ((currentPage - 1) * limit).toString())
 
-      const response = await fetch(`/api/admin/leads?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
-        }
-      })
+      const response = await fetchWithAuth(`/api/admin/leads?${params.toString()}`)
 
       if (!response.ok) {
         throw new Error('Failed to fetch leads')
@@ -128,11 +125,10 @@ export default function AdminLeadsPage() {
     e.preventDefault()
     
     try {
-      const response = await fetch('/api/admin/leads', {
+      const response = await fetchWithAuth('/api/admin/leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         },
         body: JSON.stringify({
           business_name: formData.business_name,
@@ -175,11 +171,10 @@ export default function AdminLeadsPage() {
   // Update lead status
   const handleUpdateStatus = async (leadId: string, newStatus: Lead['status']) => {
     try {
-      const response = await fetch('/api/admin/leads', {
+      const response = await fetchWithAuth('/api/admin/leads', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         },
         body: JSON.stringify({
           id: leadId,

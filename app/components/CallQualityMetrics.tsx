@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Phone, Clock, Volume2, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react'
 import { Card } from './ui/Card'
 import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 interface QualityMetrics {
   avgCallDuration: number,
@@ -30,21 +31,7 @@ export default function CallQualityMetrics({ businessId, className = '' }: CallQ
   const loadQualityMetrics = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      
-      const response = await fetch(`/api/calls/quality-metrics?businessId=${businessId}
-
-    catch (error) {
-
-      logger.error('Error:', error);
-
-      throw error;
-
-    }
-
-    `, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+      const response = await fetchWithAuth(`/api/calls/quality-metrics?businessId=${businessId}`)
       
       if (response.ok) {
         const data = await response.json()

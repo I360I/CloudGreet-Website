@@ -1,0 +1,35 @@
+name: Synthetic Voice & SMS Monitors
+
+on:
+  schedule:
+    - cron: '15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  voice-sms:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Voice agent synthetic call
+        run: node scripts/monitor-voice-agent.js
+        env:
+          RETELL_API_KEY: ${{ secrets.RETELL_API_KEY }}
+          SYNTHETIC_VOICE_AGENT_ID: ${{ secrets.SYNTHETIC_VOICE_AGENT_ID }}
+
+      - name: SMS HELP/STOP compliance
+        run: node scripts/monitor-sms-opt-in.js
+        env:
+          TELNYX_API_KEY: ${{ secrets.TELNYX_API_KEY }}
+          TELNYX_MONITOR_NUMBER: ${{ secrets.TELNYX_MONITOR_NUMBER }}
+          TELNYX_TEST_RECIPIENT: ${{ secrets.TELNYX_TEST_RECIPIENT }}
+

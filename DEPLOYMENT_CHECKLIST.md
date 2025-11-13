@@ -73,6 +73,8 @@ git push origin main
 - [ ] Test API endpoints with authentication
 - [ ] Verify database connections work
 - [ ] Verify external API integrations (Telnyx, Resend)
+- [ ] Run synthetic monitor sequence: `node scripts/monitor-registration.js --base-url https://<deployment-domain>` (verifies register → login → health)
+- [ ] Confirm `Synthetic Monitors` GitHub Action is green post-deploy
 
 ---
 
@@ -108,12 +110,17 @@ After deployment, test:
    - View client details
    - Verify activity data loads
 
-4. **Phone Inventory**
+4. **Registration Flow**
+   - Run `node scripts/monitor-registration.js --base-url https://<deployment-domain>`
+   - Confirm 200 response with `success: true`
+   - Validate new business appears in Supabase (`businesses`, `custom_users`, `users`)
+
+5. **Phone Inventory**
    - View phone numbers
    - Update phone status
    - Buy new numbers (if Telnyx configured)
 
-5. **Messaging**
+6. **Messaging**
    - Send SMS to client (if implemented in UI)
    - Send email to client (if implemented in UI)
 

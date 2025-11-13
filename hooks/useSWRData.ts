@@ -2,13 +2,12 @@
 
 import useSWR from 'swr'
 import { useCallback } from 'react'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { logger } from '@/lib/monitoring'
 
-// Fetcher function for SWR
+// Fetcher function for SWR with automatic authentication
 const fetcher = async (url: string) => {
-  const token = localStorage.getItem('token')
-  const response = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  })
+  const response = await fetchWithAuth(url)
   
   if (!response.ok) {
     throw new Error('Failed to fetch data')
@@ -171,7 +170,7 @@ export const swrConfig = {
   errorRetryCount: 3,
   errorRetryInterval: 5000,
   onError: (error: Error) => {
-    console.error('SWR Error:', error)
+    logger.error('SWR Error', { error: error.message })
   }
 }
 

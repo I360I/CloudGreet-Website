@@ -6,6 +6,8 @@ import {
   Phone, Calendar, DollarSign, TrendingUp, TrendingDown, 
   Users, Clock, Zap, Target, Award, Activity, BarChart3 
 } from 'lucide-react'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { logger } from '@/lib/monitoring'
 
 interface RealMetricsData {
   totalCalls: number
@@ -43,18 +45,8 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
       setLoading(true)
       setError(null)
 
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setError('Please log in to view analytics')
-        return
-      }
-
-      // Fetch real analytics data
-      const response = await fetch(`/api/dashboard/real-metrics?timeframe=${timeframe}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      // Fetch real analytics data with automatic authentication
+      const response = await fetchWithAuth(`/api/dashboard/real-metrics?timeframe=${timeframe}`)
 
       if (response.ok) {
         const data = await response.json()
@@ -63,7 +55,7 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
         setError('Failed to load analytics')
       }
     } catch (error) {
-      console.error('Error loading analytics:', error)
+      logger.error('Error loading analytics', { error: error instanceof Error ? error.message : 'Unknown error' })
       setError('Error loading analytics')
     } finally {
       setLoading(false)

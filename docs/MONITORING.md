@@ -652,6 +652,23 @@ interface SystemMetrics {
 - Access restrictions
 - Audit trails
 
+## Synthetic Monitors
+
+The GitHub Actions workflow `.github/workflows/synthetic-monitors.yml` runs hourly and can be triggered manually. It now executes three checks:
+
+1. **Registration / login / dashboard health** — `scripts/monitor-registration.js`  
+   - Secret requirements: `SYNTHETIC_MONITOR_BASE_URL`
+2. **Outreach runner health** — `scripts/monitor-outreach.js`  
+   - Secret requirements: `OUTREACH_RUNNER_URL`, `CRON_SECRET`
+3. **Sales workspace authentication** — `scripts/monitor-sales-dashboard.js`  
+   - Secret requirements: `SYNTHETIC_MONITOR_BASE_URL`, `MONITOR_EMPLOYEE_EMAIL`, `MONITOR_EMPLOYEE_PASSWORD`
+
+### Alert routing
+1. Enable the workflow and set all required secrets once production is live.
+2. Configure GitHub → Settings → Webhooks (or use the Slack GitHub app) to forward failed workflow notifications to the on-call Slack channel (#cloudgreet-alerts recommended).
+3. Follow the relevant runbook sections (`Synthetic monitor failures`, `Outreach runner monitor failing`, `Sales workspace monitor failing`) when an alert fires.
+4. Escalate via PagerDuty if the same monitor fails twice consecutively (two hours).
+
 ## Monitoring Tools and Integrations
 
 ### Primary Tools
@@ -698,6 +715,7 @@ interface SystemMetrics {
 5. **Performance Impact**: Minimize logging overhead
 
 This monitoring and observability strategy ensures CloudGreet maintains high availability, performance, and security while providing the necessary visibility for effective operations and incident response.
+
 
 
 

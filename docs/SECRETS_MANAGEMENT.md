@@ -295,6 +295,30 @@ For issues with secrets management:
 - **v1.2.0** - Enhanced monitoring and reporting
 - **v1.3.0** - Added compliance features
 
+### Monitoring Secrets
+- `SYNTHETIC_MONITOR_BASE_URL` (GitHub Actions secret) – Base URL used by the hourly synthetic workflow. Set this to the production domain before enabling the workflow so the monitor targets the live environment.
+- `OUTREACH_RUNNER_URL` (GitHub Actions secret) – Points at `/api/internal/outreach-runner` on the production deployment.
+- `MONITOR_EMPLOYEE_EMAIL`, `MONITOR_EMPLOYEE_PASSWORD` – Credentials for the synthetic sales workspace monitor. Seed via `scripts/seed-demo-data.js` and rotate if the login changes.
+
+### Production Environment Verification
+1. Run `npm run validate:env` locally (or in CI) to confirm all required Vercel environment variables (Stripe, Telnyx, Retell, Supabase) are present.
+2. In Vercel → Project Settings → Environment Variables, double-check the following have production values:
+   - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+   - `TELNYX_API_KEY`, `TELNYX_MESSAGING_PROFILE_ID`, `TELNYX_CONNECTION_ID`
+   - `RETELL_API_KEY`, `RETELL_WEBHOOK_SECRET`
+   - `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+3. Set `SYNTHETIC_MONITOR_BASE_URL` in GitHub → Settings → Secrets and variables → Actions. Use the full production URL (e.g., `https://cloudgreet.com`).
+4. After secrets are in place, re-run `npm run validate:env` and `npm run synthetic:registration -- --base-url https://<production-domain>` to confirm the stack is ready.
+
+## Owner Settings Console
+
+- Navigate to `Admin → Settings → Integration control center` to manage provider credentials without touching Vercel/GitHub.
+- Each card shows connection status, last validation timestamp, and links to provider docs.
+- Click “Manage” to rotate keys; values are encrypted client-side with AES-256-GCM before hitting Supabase.
+- Optional fields (e.g., Telnyx SIP connection, Clearbit) can be cleared by leaving the input blank and saving.
+- Validation uses live API calls (Stripe balance, Telnyx account, Retell agents, OpenAI models, Resend domains) so the status reflects real connectivity.
+
+
 
 
 

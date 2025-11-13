@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, MessageSquare, Phone, User } from 'lucide-react'
 import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 interface SMSReplyModalProps {
   isOpen: boolean,
@@ -25,11 +26,10 @@ export default function SMSReplyModal({ isOpen, onClose, contact, businessId }: 
     if (!message.trim()) return;
     setSending(true)
     try {
-      const response = await fetch('/api/sms/send', {
+      const response = await fetchWithAuth('/api/sms/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           to: contact.phone,

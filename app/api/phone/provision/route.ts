@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { normalizePhoneForStorage } from '@/lib/phone-normalization'
+import { retellAgentManager } from '@/lib/retell-agent-manager'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -119,11 +121,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update business record with the toll-free number
+    // Normalize phone number before storing
+    const normalizedPhone = normalizePhoneForStorage(availableNumber.number)
+    if (!normalizedPhone) {
+      logger.error('Failed to normalize phone number during provisioning', {
+        businessId,
+        originalPhone: availableNumber.number
+      })
+      // Rollback assignment
+      await supabaseAdmin
+        .from('toll_free_numbers')
+        .update({
+          status: 'available',
+          assigned_to: null,
+          business_name: null,
+          assigned_at: null
+        })
+        .eq('id', availableNumber.id)
+      
+      return NextResponse.json(
+        { error: 'Failed to normalize phone number' },
+        { status: 500 }
+      )
+    }
+
+    // Update business record with normalized phone number
     const { error: updateError } = await supabaseAdmin
       .from('businesses')
       .update({
-        phone_number: availableNumber.number,
+        phone_number: normalizedPhone,
+        phone: normalizedPhone, // Also update phone field
         updated_at: new Date().toISOString()
       })
       .eq('id', businessId)
@@ -131,7 +158,7 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       logger.error('Failed to update business with phone number', {
         businessId,
-        phoneNumber: availableNumber.number,
+        phoneNumber: normalizedPhone,
         error: updateError.message
       })
       // Try to rollback the assignment
@@ -151,15 +178,74 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    logger.info('Phone number successfully provisioned', {
+    // Update toll_free_numbers table with normalized number if different
+    if (normalizedPhone !== availableNumber.number) {
+      await supabaseAdmin
+        .from('toll_free_numbers')
+        .update({
+          number: normalizedPhone,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', availableNumber.id)
+    }
+
+    // Link phone number to existing Retell agent if present
+    try {
+      const { data: businessWithAgent } = await supabaseAdmin
+        .from('businesses')
+        .select('retell_agent_id')
+        .eq('id', businessId)
+        .single()
+
+      if (businessWithAgent?.retell_agent_id) {
+        const agentManager = retellAgentManager()
+        const linkSuccess = await agentManager.linkPhoneNumberToAgent(
+          businessWithAgent.retell_agent_id,
+          normalizedPhone
+        )
+
+        if (linkSuccess) {
+          logger.info('Phone number linked to existing Retell agent', {
+            businessId,
+            agentId: businessWithAgent.retell_agent_id,
+            phoneNumber: normalizedPhone
+          })
+        } else {
+          logger.warn('Failed to link phone number to existing Retell agent', {
+            businessId,
+            agentId: businessWithAgent.retell_agent_id,
+            phoneNumber: normalizedPhone
+          })
+        }
+
+        // Update ai_agents table with phone number
+        await supabaseAdmin
+          .from('ai_agents')
+          .update({
+            phone_number: normalizedPhone,
+            updated_at: new Date().toISOString()
+          })
+          .eq('retell_agent_id', businessWithAgent.retell_agent_id)
+      }
+    } catch (linkError) {
+      logger.warn('Error linking phone to existing agent (non-blocking)', {
+        businessId,
+        error: linkError instanceof Error ? linkError.message : 'Unknown error',
+        phoneNumber: normalizedPhone
+      })
+      // Continue - linking can be done manually if needed
+    }
+
+    logger.info('Phone number successfully provisioned and normalized', {
       businessId,
-      phoneNumber: availableNumber.number,
+      originalPhone: availableNumber.number,
+      normalizedPhone,
       userId
     })
 
     return NextResponse.json({
       success: true,
-      phoneNumber: availableNumber.number,
+      phoneNumber: normalizedPhone,
       message: 'Phone number successfully assigned'
     })
 

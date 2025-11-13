@@ -6,6 +6,30 @@ import { logger } from '@/lib/monitoring'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+const sanitizePhoneNumber = (input: unknown): string | null => {
+  if (typeof input !== 'string') return null
+  const trimmed = input.trim()
+  if (!trimmed) return null
+  const digits = trimmed.replace(/[^0-9]/g, '')
+  if (digits.length < 10) {
+    return null
+  }
+
+  if (trimmed.startsWith('+')) {
+    return `+${digits}`
+  }
+
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `+${digits}`
+  }
+
+  if (digits.length === 10) {
+    return `+1${digits}`
+  }
+
+  return `+${digits}`
+}
+
 /**
  * Admin Phone Number Management
  * 
@@ -91,7 +115,6 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify admin authentication
     const adminAuth = await requireAdmin(request)
     if (!adminAuth.success) {
       return NextResponse.json(
@@ -103,55 +126,98 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { numbers } = body
 
-    if (!numbers || !Array.isArray(numbers) || numbers.length === 0) {
+    if (!Array.isArray(numbers) || numbers.length === 0) {
       return NextResponse.json(
         { error: 'Invalid request. Expected array of phone numbers.' },
         { status: 400 }
       )
     }
 
-    // Prepare phone numbers for insertion
-    const phoneNumbersToInsert = numbers.map((number: string) => ({
-      number: number.trim(),
-      status: 'available',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }))
+    const sanitizedMap = new Map<string, string>()
+    const invalidNumbers: string[] = []
 
-    // Insert phone numbers
-    const { data: inserted, error } = await supabaseAdmin
-      .from('toll_free_numbers')
-      .insert(phoneNumbersToInsert)
-      .select()
-
-    if (error) {
-      // Check if error is due to duplicate numbers
-      if (error.code === '23505') { // Unique violation
-        logger.warn('Some phone numbers already exist in inventory', { error: error.message })
-        return NextResponse.json(
-          { error: 'One or more phone numbers already exist in inventory', details: error.message },
-          { status: 409 }
-        )
+    for (const raw of numbers) {
+      const sanitized = sanitizePhoneNumber(raw)
+      if (sanitized) {
+        sanitizedMap.set(sanitized, sanitized)
+      } else if (typeof raw === 'string') {
+        invalidNumbers.push(raw.trim())
       }
+    }
 
-      logger.error('Failed to add phone numbers', { error: error.message })
+    if (sanitizedMap.size === 0) {
+      return NextResponse.json(
+        { error: 'No valid phone numbers detected after sanitization.', invalid: invalidNumbers },
+        { status: 400 }
+      )
+    }
+
+    const sanitizedNumbers = Array.from(sanitizedMap.keys())
+
+    const { data: existingNumbers, error: existingError } = await supabaseAdmin
+      .from('toll_free_numbers')
+      .select('number')
+      .in('number', sanitizedNumbers)
+
+    if (existingError) {
+      logger.error('Failed to check existing phone numbers', { error: existingError.message })
       return NextResponse.json(
         { error: 'Failed to add phone numbers' },
         { status: 500 }
       )
     }
 
-    logger.info('Phone numbers added to inventory', {
-      count: inserted?.length || 0,
-      adminId: adminAuth.userId
+    const existingSet = new Set(existingNumbers?.map((n) => n.number) ?? [])
+    const duplicates = sanitizedNumbers.filter((num) => existingSet.has(num))
+    const newNumbers = sanitizedNumbers.filter((num) => !existingSet.has(num))
+
+    let insertedCount = 0
+    let insertedNumbers: string[] = []
+
+    if (newNumbers.length > 0) {
+      const rows = newNumbers.map((number) => ({
+        number,
+        status: 'available',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }))
+
+      const { data: inserted, error } = await supabaseAdmin
+        .from('toll_free_numbers')
+        .insert(rows)
+        .select('number')
+
+      if (error) {
+        logger.error('Failed to add phone numbers', { error: error.message })
+        return NextResponse.json(
+          { error: 'Failed to add phone numbers' },
+          { status: 500 }
+        )
+      }
+
+      insertedCount = inserted?.length ?? 0
+      insertedNumbers = inserted?.map((row) => row.number) ?? []
+    }
+
+    logger.info('Phone numbers processed for inventory', {
+      adminId: adminAuth.userId,
+      attempted: sanitizedNumbers.length,
+      inserted: insertedCount,
+      duplicates: duplicates.length,
+      invalid: invalidNumbers.length
     })
 
     return NextResponse.json({
       success: true,
-      added: inserted?.length || 0,
-      numbers: inserted || []
+      inserted: insertedCount,
+      duplicates: duplicates.length,
+      invalid: invalidNumbers.length,
+      numbers: {
+        inserted: insertedNumbers,
+        duplicates,
+        invalid: invalidNumbers
+      }
     })
-
   } catch (error) {
     logger.error('Admin phone numbers POST failed', {
       error: error instanceof Error ? error.message : 'Unknown error'

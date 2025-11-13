@@ -9,6 +9,7 @@ import { logger } from '@/lib/monitoring'
 import ProfileTab from '../components/account/ProfileTab'
 import SecurityTab from '../components/account/SecurityTab'
 import NotificationsTab from '../components/account/NotificationsTab'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 interface UserProfile {
   name: string
@@ -41,17 +42,8 @@ export default function AccountPage() {
 
   const loadProfile = async () => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setLoading(false)
-        return
-      }
-
-      const response = await fetch('/api/business/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      // Authentication handled automatically by fetchWithAuth
+      const response = await fetchWithAuth('/api/business/profile')
 
       if (response.ok) {
         const data = await response.json()

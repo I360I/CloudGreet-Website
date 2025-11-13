@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Find user
     const { data: user, error: userError } = await supabaseAdmin
       .from('custom_users')
-      .select('id, email, password_hash, business_id, is_active, first_name, last_name')
+      .select('id, email, password_hash, business_id, is_active, first_name, last_name, role, job_title, is_admin')
       .eq('email', email.toLowerCase())
       .single()
 
@@ -74,10 +74,15 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
 
     // Generate JWT token
+    const resolvedRole =
+      user.role ||
+      (user.is_admin ? 'admin' : user.business_id ? 'owner' : 'user')
+
     const token = JWTManager.createUserToken(
       user.id,
       user.business_id || '',
-      user.email
+      user.email,
+      resolvedRole
     )
 
     return NextResponse.json({
@@ -89,7 +94,9 @@ export async function POST(request: NextRequest) {
           email: user.email,
           first_name: user.first_name,
           last_name: user.last_name,
-          business_id: user.business_id
+          business_id: user.business_id,
+          role: resolvedRole,
+          job_title: user.job_title
         },
         business: business ? {
           id: business.id,
