@@ -40,13 +40,20 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
       setLoading(true)
       const response = await fetchWithAuth(`/api/dashboard/roi-metrics`)
       
-      if (response.ok) {
-        const data = await response.json()
-        setRoiData(data.roi)
-      } else {
+      if (!response.ok) {
         // Show empty state instead of mock data
         setRoiData(null)
+        return
       }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setRoiData(null)
+        return
+      }
+      setRoiData(data.roi)
     } catch (error) {
       logger.error('Failed to load ROI data:', { businessId, error: error instanceof Error ? error.message : 'Unknown' })
       setRoiData(null)

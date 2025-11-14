@@ -183,6 +183,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
 
       // Authentication handled automatically by fetchWithAuth
       // Save onboarding data to database
+      const { fetchWithAuth } = await import('@/lib/auth/fetch-with-auth')
       const response = await fetchWithAuth('/api/onboarding/complete', {
         method: 'POST',
         headers: { 
@@ -191,26 +192,38 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
         body: JSON.stringify(completeFormData)
       })
       
-      if (response.ok) {
-        const result = await response.json()
-        
-        // Verify the result actually contains success data
-        if (result.success && result.businessId) {
-          // Show success celebration
-          setCurrentStep(steps.length) // Move to celebration step
-          
-          // Auto-close and refresh after 3 seconds
-          setTimeout(() => {
-            onComplete()
-            onClose()
-            window.location.reload()
-          }, 3000)
-        } else {
-          setError('Onboarding completed but verification failed. Please check your dashboard.')
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
         }
+        setError(errorData.error || errorData.message || `Failed to complete setup (${response.status}). Please try again.`)
+        return
+      }
+
+      let result
+      try {
+        result = await response.json()
+      } catch (jsonError) {
+        setError('Invalid response from server')
+        return
+      }
+      
+      // Verify the result actually contains success data
+      if (result.success && result.businessId) {
+        // Show success celebration
+        setCurrentStep(steps.length) // Move to celebration step
+        
+        // Auto-close and refresh after 3 seconds
+        setTimeout(() => {
+          onComplete()
+          onClose()
+          window.location.reload()
+        }, 3000)
       } else {
-        const errorData = await response.json()
-        setError(errorData.error || errorData.message || 'Failed to complete setup. Please try again.')
+        setError('Onboarding completed but verification failed. Please check your dashboard.')
       }
     } catch (error) {
       console.error('Error completing onboarding:', error)

@@ -166,8 +166,24 @@ export default function OwnerSettingsPage() {
         }
       })
 
-      const data = (await response.json()) as IntegrationsResponse
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to load integrations (${response.status})`)
+      }
+
+      let data: IntegrationsResponse
+      try {
+        data = await response.json() as IntegrationsResponse
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.['error'] || 'Failed to load integrations.')
       }
       setIntegrations(data.integrations)
@@ -193,9 +209,22 @@ export default function OwnerSettingsPage() {
           headers: {
           }
         })
-        const data = (await response.json()) as ProspectingFiltersResponse
+        
         if (!response.ok) {
-          throw new Error((data as unknown as { error?: string })?.error ?? 'Failed to load filters')
+          let errorData
+          try {
+            errorData = await response.json()
+          } catch {
+            errorData = {}
+          }
+          throw new Error(errorData?.error ?? `Failed to load filters (${response.status})`)
+        }
+
+        let data: ProspectingFiltersResponse
+        try {
+          data = await response.json() as ProspectingFiltersResponse
+        } catch (jsonError) {
+          throw new Error('Invalid response from server')
         }
         setProspectingFilters({
           industries: (data.filters.industries ?? []).join(', '),
@@ -226,8 +255,25 @@ export default function OwnerSettingsPage() {
           headers: {
           }
         })
-        const data = await response.json()
-        if (!response.ok || !data.success) {
+        
+        if (!response.ok) {
+          let errorData
+          try {
+            errorData = await response.json()
+          } catch {
+            errorData = {}
+          }
+          throw new Error(errorData?.error || `Failed to load AI settings (${response.status})`)
+        }
+
+        let data
+        try {
+          data = await response.json()
+        } catch (jsonError) {
+          throw new Error('Invalid response from server')
+        }
+
+        if (!data.success) {
           throw new Error(data?.error || 'Failed to load AI settings')
         }
 
@@ -317,8 +363,24 @@ export default function OwnerSettingsPage() {
         })
       })
 
-      const data = await response.json()
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to save integration settings (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.error || 'Failed to save integration settings.')
       }
 
@@ -384,8 +446,24 @@ export default function OwnerSettingsPage() {
         })
       })
 
-      const data = await response.json()
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to save AI settings (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.error || 'Failed to save AI settings')
       }
 
@@ -431,9 +509,21 @@ export default function OwnerSettingsPage() {
         body: JSON.stringify({ filters: buildFiltersPayload() })
       })
 
-      const data = await response.json()
       if (!response.ok) {
-        throw new Error(data?.error || 'Failed to save filters')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to save filters (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
       }
 
       showSuccess('Prospecting filters saved', 'Next sync will use the new criteria.')
@@ -453,8 +543,25 @@ export default function OwnerSettingsPage() {
         headers: {
         }
       })
-      const data = await response.json()
-      if (!response.ok || !data.success) {
+      
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Prospect sync failed (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.error || 'Prospect sync failed')
       }
 

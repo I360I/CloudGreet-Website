@@ -33,12 +33,19 @@ export default function CallQualityMetrics({ businessId, className = '' }: CallQ
       setLoading(true)
       const response = await fetchWithAuth(`/api/calls/quality-metrics?businessId=${businessId}`)
       
-      if (response.ok) {
-        const data = await response.json()
-        setMetrics(data.quality)
-      } else {
+      if (!response.ok) {
         logger.error('Failed to load quality metrics', { businessId, status: response.status })
+        return
       }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        logger.error('Invalid response from server', { businessId })
+        return
+      }
+      setMetrics(data.quality)
     } catch (error) {
       console.error('Error loading quality metrics:', error)
     } finally {

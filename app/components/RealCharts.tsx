@@ -56,12 +56,19 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
       // Fetch real chart data with automatic authentication
       const response = await fetchWithAuth(`/api/dashboard/real-charts?timeframe=${timeframe}`)
 
-      if (response.ok) {
-        const data = await response.json()
-        setChartData(data.charts)
-      } else {
-        setError('Failed to load chart data')
+      if (!response.ok) {
+        setError(`Failed to load chart data (${response.status})`)
+        return
       }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setError('Invalid response from server')
+        return
+      }
+      setChartData(data.charts)
     } catch (error) {
       console.error('Error loading chart data:', error)
       setError('Error loading chart data')

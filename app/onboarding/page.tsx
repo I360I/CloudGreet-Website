@@ -173,9 +173,22 @@ function OnboardingContent() {
       try {
         setLoading(true)
         const response = await fetchWithAuth('/api/onboarding/state')
-        const data = await response.json()
+        
         if (!response.ok) {
-          throw new Error(data?.error || 'Failed to load onboarding state')
+          let errorData
+          try {
+            errorData = await response.json()
+          } catch {
+            errorData = {}
+          }
+          throw new Error(errorData?.error || `Failed to load onboarding state (${response.status})`)
+        }
+
+        let data
+        try {
+          data = await response.json()
+        } catch (jsonError) {
+          throw new Error('Invalid response from server')
         }
 
         setState(data)
@@ -252,9 +265,22 @@ function OnboardingContent() {
         },
         body: JSON.stringify(businessForm)
       })
-      const data = await response.json()
+      
       if (!response.ok) {
-        throw new Error(data?.error || 'Failed to save business profile')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to save business profile (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
       }
       showSuccess('Business profile saved', 'Let’s configure your services next.')
       setCurrentStep(2)
@@ -292,9 +318,22 @@ function OnboardingContent() {
           businessHours: servicesForm.businessHours
         })
       })
-      const data = await response.json()
+      
       if (!response.ok) {
-        throw new Error(data?.error || 'Failed to save services')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to save services (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
       }
 
       showSuccess('Services saved', 'Now connect your calendar for real-time scheduling.')
@@ -312,9 +351,26 @@ function OnboardingContent() {
   const handleConnectCalendar = async () => {
     try {
       const response = await fetchWithAuth('/api/onboarding/calendar/google')
-      const data = await response.json()
-      if (!response.ok || !data.url) {
-        throw new Error(data?.error || 'Unable to start Google Calendar connect')
+      
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Unable to start Google Calendar connect (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.url) {
+        throw new Error('Invalid response from server')
       }
       window.location.href = data.url
     } catch (error) {
@@ -334,8 +390,13 @@ function OnboardingContent() {
         }
       })
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data?.error || 'Unable to disconnect calendar')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Unable to disconnect calendar (${response.status})`)
       }
       showSuccess('Calendar disconnected', 'Reconnect any time to keep appointments in sync.')
       setState((prev) =>
@@ -375,9 +436,21 @@ function OnboardingContent() {
         body: JSON.stringify(payload)
       })
 
-      const data = await response.json()
       if (!response.ok) {
-        throw new Error(data?.error || 'Failed to configure phone number')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to configure phone number (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
       }
 
       showSuccess('Phone number ready', `We assigned ${data.phoneNumber} to your account.`)
@@ -438,9 +511,22 @@ function OnboardingContent() {
           description: businessForm.description
         })
       })
-      const data = await response.json()
+      
       if (!response.ok) {
-        throw new Error(data?.error || 'Failed to complete onboarding')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to complete onboarding (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
       }
 
       showSuccess('Onboarding complete', 'Let’s finalize billing so you can start greeting callers.')

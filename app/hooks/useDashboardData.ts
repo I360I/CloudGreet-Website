@@ -56,10 +56,21 @@ export function useDashboardData() {
       const response = await fetch('/api/dashboard/data')
       
       if (!response.ok) {
-        throw new Error('Failed to fetch dashboard data')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to fetch dashboard data (${response.status})`)
       }
 
-      const dashboardData = await response.json()
+      let dashboardData
+      try {
+        dashboardData = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
       setData(dashboardData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
@@ -89,10 +100,21 @@ export function useRealtimeMetrics(businessId?: string) {
       const response = await fetch('/api/dashboard/metrics')
       
       if (!response.ok) {
-        throw new Error('Failed to fetch metrics')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to fetch metrics (${response.status})`)
       }
 
-      const metricsData = await response.json()
+      let metricsData
+      try {
+        metricsData = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
       setMetrics(metricsData)
     } catch (err) {
       logger.error('Failed to fetch metrics:', { error: err instanceof Error ? err.message : 'Unknown error' })

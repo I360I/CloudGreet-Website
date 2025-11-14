@@ -128,10 +128,21 @@ export default function AdminClientsPage() {
       const response = await fetchWithAuth(`/api/admin/clients?${params.toString()}`)
 
       if (!response.ok) {
-        throw new Error('Failed to fetch clients')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to fetch clients (${response.status})`)
       }
 
-      const data: ClientsResponse = await response.json()
+      let data: ClientsResponse
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
       
       if (data.success) {
         setClients(data.clients)
@@ -157,10 +168,21 @@ export default function AdminClientsPage() {
       const response = await fetchWithAuth(`/api/admin/clients/${clientId}`)
 
       if (!response.ok) {
-        throw new Error('Failed to fetch client details')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to fetch client details (${response.status})`)
       }
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
       
       if (data.success) {
         setClientDetail(data)

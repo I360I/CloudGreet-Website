@@ -42,9 +42,22 @@ export default function AdminTestCallPage() {
   const loadBusinesses = async () => {
     try {
       const response = await fetchWithAuth('/api/admin/clients?limit=100')
-      if (!response.ok) throw new Error('Failed to load businesses')
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to load businesses (${response.status})`)
+      }
       
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
       // Filter to only businesses with Retell agents and phone numbers
       const eligibleBusinesses = (data.clients || []).filter((client: any) => 
         client.retell_agent_id && (client.phone_number || client.phone)
@@ -78,19 +91,35 @@ export default function AdminTestCallPage() {
         body: JSON.stringify(payload)
       })
 
-      const result = await response.json()
-      
       if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
         setTestResult({
           success: false,
-          error: result.error || 'Failed to place test call'
+          error: errorData?.error || `Failed to place test call (${response.status})`
         })
-      } else {
-        setTestResult(result)
-        // Load recent calls for this business
-        if (result.business?.id) {
-          loadRecentCalls(result.business.id, result.callControlId)
-        }
+        return
+      }
+
+      let result
+      try {
+        result = await response.json()
+      } catch (jsonError) {
+        setTestResult({
+          success: false,
+          error: 'Invalid response from server'
+        })
+        return
+      }
+      
+      setTestResult(result)
+      // Load recent calls for this business
+      if (result.business?.id) {
+        loadRecentCalls(result.business.id, result.callControlId)
       }
     } catch (error) {
       logger.error('Error placing test call', { error })

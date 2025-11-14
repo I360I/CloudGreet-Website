@@ -44,8 +44,25 @@ export default function KnowledgeBasePage() {
         headers: {
         }
       })
-      const data = await response.json()
-      if (!response.ok || !data.success) {
+      
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to load knowledge entries (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.error || 'Failed to load knowledge entries')
       }
       setEntries(data.entries)
@@ -84,8 +101,25 @@ export default function KnowledgeBasePage() {
             .filter(Boolean)
         })
       })
-      const data = await response.json()
-      if (!response.ok || !data.success) {
+      
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to create knowledge entry (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.error || 'Failed to create knowledge entry')
       }
       setEntries((prev) => [data.entry, ...prev])
@@ -127,8 +161,24 @@ export default function KnowledgeBasePage() {
         })
       })
 
-      const data = await response.json()
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to update knowledge entry (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.error || 'Failed to update knowledge entry')
       }
 
@@ -327,7 +377,7 @@ export default function KnowledgeBasePage() {
         </section>
       </div>
 
-      <Modal isOpen={Boolean(editingEntry)} onClose={() => setEditingEntry(null)} title="Edit knowledge entry">
+      <Modal open={Boolean(editingEntry)} onClose={() => setEditingEntry(null)} title="Edit knowledge entry">
         <div className="space-y-4">
           <label className="space-y-1 text-sm text-slate-300">
             <span className="text-xs uppercase tracking-[0.3em] text-slate-500">Title</span>

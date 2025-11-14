@@ -48,12 +48,19 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
       // Fetch real analytics data with automatic authentication
       const response = await fetchWithAuth(`/api/dashboard/real-metrics?timeframe=${timeframe}`)
 
-      if (response.ok) {
-        const data = await response.json()
-        setMetrics(data.metrics)
-      } else {
-        setError('Failed to load analytics')
+      if (!response.ok) {
+        setError(`Failed to load analytics (${response.status})`)
+        return
       }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setError('Invalid response from server')
+        return
+      }
+      setMetrics(data.metrics)
     } catch (error) {
       logger.error('Error loading analytics', { error: error instanceof Error ? error.message : 'Unknown error' })
       setError('Error loading analytics')

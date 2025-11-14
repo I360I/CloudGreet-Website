@@ -53,8 +53,25 @@ export default function QAWorkspacePage() {
         headers: {
         }
       })
-      const data = await response.json()
-      if (!response.ok || !data.success) {
+      
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to load QA reviews (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.error || 'Failed to load QA reviews')
       }
       setReviews(data.reviews)
@@ -89,8 +106,24 @@ export default function QAWorkspacePage() {
         })
       })
 
-      const data = await response.json()
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to log QA review (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.error || 'Failed to log QA review')
       }
 
@@ -131,8 +164,24 @@ export default function QAWorkspacePage() {
         })
       })
 
-      const data = await response.json()
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to update review (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.error || 'Failed to update review')
       }
 
@@ -342,7 +391,7 @@ export default function QAWorkspacePage() {
       </div>
 
       <Modal
-        isOpen={Boolean(activeReview)}
+        open={Boolean(activeReview)}
         onClose={() => setActiveReview(null)}
         title={activeReview ? `QA review – ${activeReview.rating}/5` : 'QA review'}
       >

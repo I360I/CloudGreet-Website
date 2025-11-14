@@ -66,8 +66,25 @@ export default function UsageAnalyticsPage() {
         headers: {
         }
       })
-      const data = await response.json()
-      if (!response.ok || !data.success) {
+      
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to load usage analytics (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
+
+      if (!data.success) {
         throw new Error(data?.error || 'Failed to load usage analytics')
       }
       setAnalytics(data.analytics)

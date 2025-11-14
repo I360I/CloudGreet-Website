@@ -96,10 +96,21 @@ export default function AdminLeadsPage() {
       const response = await fetchWithAuth(`/api/admin/leads?${params.toString()}`)
 
       if (!response.ok) {
-        throw new Error('Failed to fetch leads')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to fetch leads (${response.status})`)
       }
 
-      const data: LeadsResponse = await response.json()
+      let data: LeadsResponse
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
       
       if (data.success) {
         setLeads(data.leads)

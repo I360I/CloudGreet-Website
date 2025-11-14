@@ -136,9 +136,22 @@ export default function AcquisitionDesk() {
       headers: {
       }
     })
-    const data = await response.json()
+    
     if (!response.ok) {
-      throw new Error(data?.error || 'Failed to load sequences')
+      let errorData
+      try {
+        errorData = await response.json()
+      } catch {
+        errorData = {}
+      }
+      throw new Error(errorData?.error || `Failed to load sequences (${response.status})`)
+    }
+
+    let data
+    try {
+      data = await response.json()
+    } catch (jsonError) {
+      throw new Error('Invalid response from server')
     }
     setSequences(data.sequences as Sequence[])
   }
@@ -148,9 +161,22 @@ export default function AcquisitionDesk() {
       headers: {
       }
     })
-    const data = await response.json()
+    
     if (!response.ok) {
-      throw new Error(data?.error || 'Failed to load templates')
+      let errorData
+      try {
+        errorData = await response.json()
+      } catch {
+        errorData = {}
+      }
+      throw new Error(errorData?.error || `Failed to load templates (${response.status})`)
+    }
+
+    let data
+    try {
+      data = await response.json()
+    } catch (jsonError) {
+      throw new Error('Invalid response from server')
     }
     setTemplates(data.templates as Template[])
   }
@@ -160,9 +186,22 @@ export default function AcquisitionDesk() {
       headers: {
       }
     })
-    const data = await response.json()
+    
     if (!response.ok) {
-      throw new Error(data?.error || 'Failed to load performance metrics')
+      let errorData
+      try {
+        errorData = await response.json()
+      } catch {
+        errorData = {}
+      }
+      throw new Error(errorData?.error || `Failed to load performance metrics (${response.status})`)
+    }
+
+    let data
+    try {
+      data = await response.json()
+    } catch (jsonError) {
+      throw new Error('Invalid response from server')
     }
     setStats(data.stats as OutreachStats)
   }
@@ -245,9 +284,22 @@ export default function AcquisitionDesk() {
           }))
         })
       })
-      const data = await response.json()
+      
       if (!response.ok) {
-        throw new Error(data?.error || 'Failed to create sequence')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to create sequence (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
       }
       showSuccess('Sequence created', 'New outreach sequence saved.')
       await fetchSequences()
@@ -283,9 +335,22 @@ export default function AcquisitionDesk() {
         },
         body: JSON.stringify(templateForm)
       })
-      const data = await response.json()
+      
       if (!response.ok) {
-        throw new Error(data?.error || 'Failed to create template')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to create template (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
       }
       showSuccess('Template saved', 'Template is now available to use.')
       await fetchTemplates()
@@ -307,9 +372,22 @@ export default function AcquisitionDesk() {
         },
         body: JSON.stringify({ status })
       })
-      const data = await response.json()
+      
       if (!response.ok) {
-        throw new Error(data?.error || 'Failed to update status')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to update status (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
       }
       showSuccess('Sequence updated', `Status set to ${status}.`)
       await fetchSequences()
@@ -329,8 +407,13 @@ export default function AcquisitionDesk() {
         }
       })
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data?.error || 'Failed to delete sequence')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to delete sequence (${response.status})`)
       }
       showSuccess('Sequence deleted', 'Outreach sequence removed.')
       await fetchSequences()

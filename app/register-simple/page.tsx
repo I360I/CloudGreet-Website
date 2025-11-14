@@ -51,7 +51,24 @@ export default function SimpleRegisterPage() {
         body: JSON.stringify(payload),
       })
 
-      const result = await response.json()
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        setError(errorData?.message || `Registration failed (${response.status})`)
+        return
+      }
+
+      let result
+      try {
+        result = await response.json()
+      } catch (jsonError) {
+        setError('Invalid response from server')
+        return
+      }
 
       if (result.success) {
         // Store token securely in httpOnly cookie

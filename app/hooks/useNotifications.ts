@@ -61,7 +61,23 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
       setError(null)
       
       const response = await fetch(`/api/notifications?userId=${userId}&limit=100`)
-      const data = await response.json()
+      
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to fetch notifications (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
       
       if (data.success) {
         setNotifications(data.notifications || [])
@@ -176,7 +192,24 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
         body: JSON.stringify({ userId, notificationIds })
       })
       
-      const data = await response.json()
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        setError(errorData?.error || `Failed to mark notifications as read (${response.status})`)
+        return
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setError('Invalid response from server')
+        return
+      }
       
       if (data.success) {
         setNotifications(prev => 
@@ -204,7 +237,24 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
         body: JSON.stringify({ userId, markAllRead: true })
       })
       
-      const data = await response.json()
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        setError(errorData?.error || `Failed to mark all notifications as read (${response.status})`)
+        return
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setError('Invalid response from server')
+        return
+      }
       
       if (data.success) {
         setNotifications(prev => 
@@ -230,7 +280,24 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
         method: 'DELETE'
       })
       
-      const data = await response.json()
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        setError(errorData?.error || `Failed to delete notification (${response.status})`)
+        return
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setError('Invalid response from server')
+        return
+      }
       
       if (data.success) {
         setNotifications(prev => {

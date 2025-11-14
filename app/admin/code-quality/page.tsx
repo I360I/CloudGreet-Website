@@ -35,7 +35,18 @@ export default function CodeQualityPage() {
         return
       }
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setAnalysisResults([{
+          name: 'Code Analysis Error',
+          passed: false,
+          details: 'Invalid response from server',
+          severity: 'high'
+        }])
+        return
+      }
       setAnalysisResults((data.analysis as any[]).map((item: any) => ({
         ...item,
         severity: item.passed ? 'low' : 'high'
@@ -74,7 +85,18 @@ export default function CodeQualityPage() {
         return
       }
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setAnalysisResults([{
+          name: 'Security Scan Error',
+          passed: false,
+          details: 'Invalid response from server',
+          severity: 'high'
+        }])
+        return
+      }
       setAnalysisResults((data.analysis as any[]).map((item: any) => ({
         ...item,
         severity: item.passed ? 'low' : 'high'
@@ -113,7 +135,18 @@ export default function CodeQualityPage() {
         return
       }
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setAnalysisResults([{
+          name: 'Performance Analysis Error',
+          passed: false,
+          details: 'Invalid response from server',
+          severity: 'high'
+        }])
+        return
+      }
       setAnalysisResults((data.analysis as any[]).map((item: any) => ({
         ...item,
         severity: item.passed ? 'low' : 'medium'

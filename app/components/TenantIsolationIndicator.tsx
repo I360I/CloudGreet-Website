@@ -31,12 +31,19 @@ export default function TenantIsolationIndicator({ businessId, businessName }: T
       // Test tenant isolation with automatic authentication
       const response = await fetchWithAuth('/api/test-tenant-isolation')
 
-      if (response.ok) {
-        const data = await response.json()
-        setIsolationStatus(data.tests)
-      } else {
-        setError('Failed to test tenant isolation')
+      if (!response.ok) {
+        setError(`Failed to test tenant isolation (${response.status})`)
+        return
       }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setError('Invalid response from server')
+        return
+      }
+      setIsolationStatus(data.tests)
     } catch (error) {
       logger.error('Error testing tenant isolation', { error: error instanceof Error ? error.message : 'Unknown error' })
       setError('An error occurred while testing tenant isolation')

@@ -139,10 +139,21 @@ export default function AdminPhoneInventoryPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch phone numbers')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to fetch phone numbers (${response.status})`)
       }
 
-      const data: PhoneNumbersResponse = await response.json()
+      let data: PhoneNumbersResponse
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
 
       if (data.success) {
         const filtered = data.numbers.filter((number) => {
@@ -192,10 +203,21 @@ export default function AdminPhoneInventoryPage() {
         body: JSON.stringify({ numbers: bulkPreview.valid })
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data?.error || 'Failed to add phone numbers')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to add phone numbers (${response.status})`)
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
       }
 
       setFeedback({
@@ -229,8 +251,13 @@ export default function AdminPhoneInventoryPage() {
       })
 
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data?.error || 'Failed to update phone number status')
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to update phone number status (${response.status})`)
       }
 
       await fetchPhoneNumbers({ silent: true })
@@ -254,9 +281,22 @@ export default function AdminPhoneInventoryPage() {
     try {
       // Get business details including Retell agent ID
       const response = await fetchWithAuth(`/api/admin/clients/${phone.assigned_to}`)
-      if (!response.ok) throw new Error('Failed to fetch business details')
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        throw new Error(errorData?.error || `Failed to fetch business details (${response.status})`)
+      }
       
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error('Invalid response from server')
+      }
       const business = data.client
       
       setRetellLinkingModal({

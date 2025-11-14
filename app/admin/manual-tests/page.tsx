@@ -43,7 +43,24 @@ export default function ManualTestsPage() {
         body: JSON.stringify({ testType })
       })
 
-      const result = await response.json()
+      if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        logger.error('Test failed:', errorData?.error || `HTTP ${response.status}`)
+        return
+      }
+
+      let result
+      try {
+        result = await response.json()
+      } catch (jsonError) {
+        logger.error('Test failed: Invalid response from server')
+        return
+      }
       
       if (result.success) {
         setTestResults(prev => ({ ...prev, [testType]: result }))
@@ -52,6 +69,7 @@ export default function ManualTestsPage() {
       }
     } catch (error) {
       console.error('Error:', error)
+      logger.error('Test failed:', error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setRunningTests(prev => {
         const newSet = new Set(prev)
