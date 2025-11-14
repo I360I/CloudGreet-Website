@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       .eq('id', businessId)
 
     if (updateError) {
-      logger.error('Failed to save phone number for onboarding', { error: updateError, businessId })
+      logger.error('Failed to save phone number for onboarding', { error: updateError.message, businessId })
       return NextResponse.json({ error: 'Failed to save phone number' }, { status: 500 })
     }
 

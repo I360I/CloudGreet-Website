@@ -431,7 +431,7 @@ export default function OwnerSettingsPage() {
   const saveAiSettings = async () => {
     try {
       setAiSettingsSaving(true)
-      const response = await fetch('/api/admin/ai-settings', {
+      const response = await fetchWithAuth('/api/admin/ai-settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -501,7 +501,7 @@ export default function OwnerSettingsPage() {
   const saveProspectingFilters = async () => {
     try {
       setProspectingSaving(true)
-      const response = await fetch('/api/admin/prospecting/filters', {
+      const response = await fetchWithAuth('/api/admin/prospecting/filters', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

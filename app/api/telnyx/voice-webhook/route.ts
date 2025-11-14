@@ -231,7 +231,7 @@ async function bridgeCallToRetell(
         callControlId,
         normalizedPhone,
         originalPhone: phoneNumber,
-        strategiesAttempted: ['businesses_table', 'toll_free_numbers_table', 'ai_agents_table']
+        strategiesAttempted: 'businesses_table,toll_free_numbers_table,ai_agents_table'
       })
       // Fallback: Play message and hang up
       await playFallbackMessage(callControlId, 'We apologize, but we could not connect your call. Please try again later.')
@@ -366,7 +366,7 @@ async function bridgeCallToRetell(
         businessId: business.id,
         retellAgentId: business.retell_agent_id,
         normalizedPhone,
-        attemptedFormats: sipFormats
+        attemptedFormats: sipFormats.join(',')
       })
 
       // Try escalation phone first

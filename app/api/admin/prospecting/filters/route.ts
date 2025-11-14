@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { upsertProspectingFilters, getProspectingFilters } from '@/lib/prospecting/filters'
 import { logger } from '@/lib/monitoring'
@@ -8,7 +8,7 @@ const PROVIDER = 'apollo'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     await requireAdmin(request)
     const filters = await getProspectingFilters(PROVIDER)
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ provider: PROVIDER, filters, lastSync: log })
   } catch (error) {
-    logger.error('Failed to fetch prospecting filters', { error })
+    logger.error('Failed to fetch prospecting filters', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(
       { error: (error as Error).message },
       { status: (error as { status?: number }).status ?? 500 }
@@ -29,14 +29,14 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     await requireAdmin(request)
     const body = await request.json()
     await upsertProspectingFilters(PROVIDER, body.filters)
     return NextResponse.json({ success: true })
   } catch (error) {
-    logger.error('Failed to save prospecting filters', { error })
+    logger.error('Failed to save prospecting filters', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(
       { error: (error as Error).message },
       { status: (error as { status?: number }).status ?? 500 }

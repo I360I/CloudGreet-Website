@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Card } from '@/app/components/ui/Card'
 import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 interface TestResult {
   name: string,
@@ -37,7 +38,7 @@ export default function ManualTestsPage() {
     setRunningTests(prev => new Set(prev).add(testType))
     
     try {
-      const response = await fetch('/api/admin/manual-tests', {
+      const response = await fetchWithAuth('/api/admin/manual-tests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ testType })

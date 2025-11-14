@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { 
   Plus, 
   Edit, 
@@ -62,6 +63,7 @@ export default function PricingPage() {
 
   const loadPricingRules = async () => {
     try {
+      const { fetchWithAuth } = await import('@/lib/auth/fetch-with-auth')
       const response = await fetchWithAuth(`/api/pricing/rules?business_id=${businessId}`)
       if (response.ok) {
         const data = await response.json()

@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await supabaseAdmin
-      .from<StoredCredential>('integration_secret_values')
+      .from('integration_secret_values')
       .select('*')
 
     if (error) {
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      integrations: mapIntegrationsResponse(data ?? [])
+      integrations: mapIntegrationsResponse((data ?? []) as StoredCredential[])
     })
   } catch (error) {
     logger.error('Admin integrations GET failed', {
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
       const encrypted = encryptSecret(value)
 
       const { data, error } = await supabaseAdmin
-        .from<StoredCredential>('integration_secret_values')
+        .from('integration_secret_values')
         .upsert(
           {
             slug: integration.slug,
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
 
     // Retrieve the latest snapshot for response
     const { data, error } = await supabaseAdmin
-      .from<StoredCredential>('integration_secret_values')
+      .from('integration_secret_values')
       .select('*')
 
     if (error) {
@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      integrations: mapIntegrationsResponse(data ?? [])
+      integrations: mapIntegrationsResponse((data ?? []) as StoredCredential[])
     })
   } catch (error) {
     logger.error('Admin integrations POST failed', {

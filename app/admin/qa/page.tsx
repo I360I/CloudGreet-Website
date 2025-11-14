@@ -49,10 +49,7 @@ export default function QAWorkspacePage() {
       if (statusFilter !== 'all') {
         params.set('status', statusFilter)
       }
-      const response = await fetch(`/api/admin/qa-reviews${params.toString() ? `?${params.toString()}` : ''}`, {
-        headers: {
-        }
-      })
+      const response = await fetchWithAuth(`/api/admin/qa-reviews${params.toString() ? `?${params.toString()}` : ''}`)
       
       if (!response.ok) {
         let errorData
@@ -92,7 +89,7 @@ export default function QAWorkspacePage() {
     event.preventDefault()
     try {
       setCreating(true)
-      const response = await fetch('/api/admin/qa-reviews', {
+      const response = await fetchWithAuth('/api/admin/qa-reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

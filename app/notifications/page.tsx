@@ -31,9 +31,10 @@ export default function NotificationsPage() {
       // Authentication handled automatically by fetchWithAuth
 
       // Load real notifications from API
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
       const response = await fetch('/api/notifications/list', {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': token ? `Bearer ${token}` : ''
         }
       })
 

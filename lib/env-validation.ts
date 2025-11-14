@@ -37,6 +37,12 @@ const envSchema = z.object({
  * ```
  */
 export function validateEnv() {
+  // Skip validation during build - Vercel handles env vars separately
+  if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.NEXT_PHASE) {
+    logger.info('⏭️  Skipping env validation during build (Vercel handles env vars)\n')
+    return
+  }
+  
   try {
     envSchema.parse(process.env)
     logger.info('✅ All required environment variables present\n')

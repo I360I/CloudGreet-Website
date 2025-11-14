@@ -519,9 +519,9 @@ export default function EmployeeDashboardPage() {
                           }`}
                         >
                           {filter.label}
-                          {filter.key !== 'all' && statsCards.find((card) => card.label === filter.label)?.value ? (
+                          {filter.key !== 'all' && statusCards.find((card) => card.label === filter.label)?.value ? (
                             <span className="ml-1 text-[10px] text-slate-400">
-                              {statsCards.find((card) => card.label === filter.label)?.value}
+                              {statusCards.find((card) => card.label === filter.label)?.value}
                             </span>
                           ) : null}
                         </button>

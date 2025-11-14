@@ -40,10 +40,7 @@ export default function KnowledgeBasePage() {
       if (query) {
         params.set('search', query)
       }
-      const response = await fetch(`/api/admin/knowledge${params.toString() ? `?${params.toString()}` : ''}`, {
-        headers: {
-        }
-      })
+      const response = await fetchWithAuth(`/api/admin/knowledge${params.toString() ? `?${params.toString()}` : ''}`)
       
       if (!response.ok) {
         let errorData
@@ -146,7 +143,7 @@ export default function KnowledgeBasePage() {
     if (!editingEntry) return
     try {
       setSavingEdit(true)
-      const response = await fetch(`/api/admin/knowledge/${editingEntry.id}`, {
+      const response = await fetchWithAuth(`/api/admin/knowledge/${editingEntry.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -196,10 +193,8 @@ export default function KnowledgeBasePage() {
   const handleDelete = async (entryId: string) => {
     try {
       setDeletingId(entryId)
-      const response = await fetch(`/api/admin/knowledge/${entryId}`, {
-        method: 'DELETE',
-        headers: {
-        }
+      const response = await fetchWithAuth(`/api/admin/knowledge/${entryId}`, {
+        method: 'DELETE'
       })
       const data = await response.json()
       if (!response.ok || !data.success) {

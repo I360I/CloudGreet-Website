@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (userError) {
-      logger.warn('Unable to resolve user for onboarding state', { userId: auth.userId, userError })
+      logger.warn('Unable to resolve user for onboarding state', { userId: auth.userId, userError: userError.message })
     }
 
     const businessId = userRecord?.business_id || auth.businessId || null
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error) {
-      logger.error('Failed to load onboarding state', { error, businessId })
+      logger.error('Failed to load onboarding state', { error: error.message, businessId })
       return NextResponse.json({ error: 'Failed to load onboarding state' }, { status: 500 })
     }
 

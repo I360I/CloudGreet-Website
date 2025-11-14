@@ -71,7 +71,7 @@ export async function PUT(request: NextRequest) {
       .eq('id', businessId)
 
     if (error) {
-      logger.error('Failed to update services onboarding step', { error, businessId })
+      logger.error('Failed to update services onboarding step', { error: error.message, businessId })
       return NextResponse.json({ error: 'Failed to save services' }, { status: 500 })
     }
 

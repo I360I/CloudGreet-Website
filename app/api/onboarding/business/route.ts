@@ -36,7 +36,7 @@ async function resolveBusinessId(userId: string, businessId?: string | null) {
     .single()
 
   if (error) {
-    logger.warn('Failed to resolve business for onboarding business step', { userId, error })
+    logger.warn('Failed to resolve business for onboarding business step', { userId, error: error.message })
     return null
   }
 
@@ -94,7 +94,7 @@ export async function PUT(request: NextRequest) {
       .eq('id', businessId)
 
     if (error) {
-      logger.error('Failed to update business onboarding step', { error, businessId })
+      logger.error('Failed to update business onboarding step', { error: error.message, businessId })
       return NextResponse.json({ error: 'Failed to update business profile' }, { status: 500 })
     }
 

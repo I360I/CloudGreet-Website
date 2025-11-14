@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 type Severity = 'low' | 'medium' | 'high'
 interface AnalysisResult {
@@ -19,7 +20,7 @@ export default function CodeQualityPage() {
     setAnalysisResults([])
     
     try {
-      const response = await fetch('/api/admin/code-analyzer', {
+      const response = await fetchWithAuth('/api/admin/code-analyzer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysisType: 'quality' })
@@ -69,7 +70,7 @@ export default function CodeQualityPage() {
     setAnalysisResults([])
     
     try {
-      const response = await fetch('/api/admin/code-analyzer', {
+      const response = await fetchWithAuth('/api/admin/code-analyzer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysisType: 'security' })
@@ -119,7 +120,7 @@ export default function CodeQualityPage() {
     setAnalysisResults([])
     
     try {
-      const response = await fetch('/api/admin/code-analyzer', {
+      const response = await fetchWithAuth('/api/admin/code-analyzer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ analysisType: 'performance' })

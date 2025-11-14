@@ -133,10 +133,7 @@ export default function AdminPhoneInventoryPage() {
       const params = new URLSearchParams()
       if (statusFilter) params.append('status', statusFilter)
 
-      const response = await fetch(`/api/admin/phone-numbers?${params.toString()}`, {
-        headers: {
-        }
-      })
+      const response = await fetchWithAuth(`/api/admin/phone-numbers?${params.toString()}`)
 
       if (!response.ok) {
         let errorData
@@ -195,7 +192,7 @@ export default function AdminPhoneInventoryPage() {
     setBulkSubmitting(true)
 
     try {
-      const response = await fetch('/api/admin/phone-numbers', {
+      const response = await fetchWithAuth('/api/admin/phone-numbers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

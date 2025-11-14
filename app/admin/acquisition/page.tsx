@@ -132,10 +132,7 @@ export default function AcquisitionDesk() {
   })
 
   const fetchSequences = async () => {
-    const response = await fetch('/api/admin/outreach/sequences', {
-      headers: {
-      }
-    })
+    const response = await fetchWithAuth('/api/admin/outreach/sequences')
     
     if (!response.ok) {
       let errorData
@@ -157,10 +154,7 @@ export default function AcquisitionDesk() {
   }
 
   const fetchTemplates = async () => {
-    const response = await fetch('/api/admin/outreach/templates', {
-      headers: {
-      }
-    })
+    const response = await fetchWithAuth('/api/admin/outreach/templates')
     
     if (!response.ok) {
       let errorData
@@ -262,7 +256,7 @@ export default function AcquisitionDesk() {
     }
     try {
       setSavingSequence(true)
-      const response = await fetch('/api/admin/outreach/sequences', {
+      const response = await fetchWithAuth('/api/admin/outreach/sequences', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -328,7 +322,7 @@ export default function AcquisitionDesk() {
 
     try {
       setSavingTemplate(true)
-      const response = await fetch('/api/admin/outreach/templates', {
+      const response = await fetchWithAuth('/api/admin/outreach/templates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
