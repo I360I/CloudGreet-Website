@@ -12,6 +12,7 @@ import { logger } from '@/lib/monitoring'
 import SilkRibbon from '@/app/components/SilkRibbon'
 import RingOrb from '@/app/components/RingOrb'
 import CallOrb from '@/app/components/CallOrb'
+import Footer from '@/app/components/Footer'
 // import ROICalculator from '@/app/components/ROICalculator'
 
 function VoiceOrbDemoWithSettings() {
@@ -897,74 +898,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-br from-gray-900/80 via-black/80 to-gray-900/80 py-16 border-t border-gray-800/50 relative overflow-hidden">
-        {/* Background Elements */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/3 via-transparent to-purple-500/3" />
-        
-        <div className="max-w-6xl mx-auto px-4 relative z-10">
-          {/* Footer Content */}
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
-            {/* Brand */}
-            <div className="md:col-span-2">
-              <div className="flex items-center mb-6">
-                <span className="text-3xl font-bold text-white bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">CloudGreet</span>
-              </div>
-              <p className="text-gray-400 text-lg leading-relaxed max-w-md mb-4">
-                Never miss a call again. Transform missed opportunities into booked appointments with AI-powered call handling.
-              </p>
-              <div className="space-y-2">
-                <p className="text-gray-400 text-sm">
-                  <span className="text-white font-medium">Business Phone:</span> {process.env.NEXT_PUBLIC_BUSINESS_PHONE || '+1 (833) 395-6731'}
-                </p>
-                <p className="text-gray-400 text-sm">
-                  <span className="text-white font-medium">Email:</span> {process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@cloudgreet.com'}
-                </p>
-              </div>
-            </div>
-            
-            {/* Quick Links */}
-            <div>
-              <h4 className="text-white font-semibold text-lg mb-6">Quick Links</h4>
-              <div className="space-y-3">
-                <a href="#how-it-works" className="block text-gray-400 hover:text-white transition-colors duration-300">How it Works</a>
-                <a href="#pricing" className="block text-gray-400 hover:text-white transition-colors duration-300">Pricing</a>
-                <a href="#roi-calculator" className="block text-gray-400 hover:text-white transition-colors duration-300">ROI Calculator</a>
-              </div>
-            </div>
-            
-            {/* Support */}
-            <div>
-              <h4 className="text-white font-semibold text-lg mb-6">Support</h4>
-              <div className="space-y-3">
-                <a href="/contact" className="block text-gray-400 hover:text-white transition-colors duration-300">Contact Us</a>
-                <a href="/help" className="block text-gray-400 hover:text-white transition-colors duration-300">Help Center</a>
-                <a href={`tel:${process.env.NEXT_PUBLIC_BUSINESS_PHONE_RAW || '+18333956731'}`} className="block text-gray-400 hover:text-white transition-colors duration-300">Call: {process.env.NEXT_PUBLIC_BUSINESS_PHONE || '+1 (833) 395-6731'}</a>
-                <a href={`mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'support@cloudgreet.com'}`} className="block text-gray-400 hover:text-white transition-colors duration-300">Email Support</a>
-              </div>
-            </div>
-          </div>
-          
-          {/* Legal Links */}
-          <div className="border-t border-gray-800/50 pt-8 mb-8">
-            <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm">
-              <a href="/terms" className="text-gray-400 hover:text-white transition-colors duration-300">Terms of Service</a>
-              <a href="/privacy" className="text-gray-400 hover:text-white transition-colors duration-300">Privacy Policy</a>
-              <a href="/tcpa-a2p" className="text-gray-400 hover:text-white transition-colors duration-300">TCPA/A2P Policy</a>
-              <a href="/cookies" className="text-gray-400 hover:text-white transition-colors duration-300">Cookie Policy</a>
-            </div>
-          </div>
-          
-          {/* Bottom */}
-          <div className="text-center">
-            <p className="text-gray-400 text-sm mb-4">
-              &copy; {new Date().getFullYear()} CloudGreet. All rights reserved.
-            </p>
-            <p className="text-xs text-gray-500">
-              Reply STOP to opt out; HELP for help. Message and data rates may apply.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
