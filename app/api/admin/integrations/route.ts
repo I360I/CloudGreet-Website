@@ -118,7 +118,19 @@ export async function GET(request: NextRequest) {
       .select('*')
 
     if (error) {
-      logger.error('Failed to load integration credentials', { error: error.message })
+      logger.error('Failed to load integration credentials', { 
+        error: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      })
+      // If table doesn't exist, return empty array instead of error
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        return NextResponse.json({
+          success: true,
+          integrations: []
+        })
+      }
       return NextResponse.json({ error: 'Failed to load integration credentials' }, { status: 500 })
     }
 
@@ -128,7 +140,8 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     logger.error('Admin integrations GET failed', {
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     })
     return NextResponse.json({ error: 'Failed to load integration credentials' }, { status: 500 })
   }

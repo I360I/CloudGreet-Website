@@ -31,10 +31,26 @@ export async function GET(request: NextRequest) {
         .single()
 
       if (businessError || !userBusiness) {
-        return NextResponse.json(
-          { error: 'No business found' },
-          { status: 404 }
-        )
+        // Return empty metrics data instead of 404 for users without businesses
+        return NextResponse.json({
+          success: true,
+          metrics: {
+            totalCalls: 0,
+            totalAppointments: 0,
+            totalRevenue: 0,
+            conversionRate: 0,
+            avgCallDuration: 0,
+            customerSatisfaction: 0,
+            monthlyGrowth: 0,
+            revenueProjection: 0,
+            callsThisWeek: 0,
+            appointmentsThisWeek: 0,
+            revenueThisWeek: 0,
+            missedCalls: 0,
+            answeredCalls: 0,
+            callAnswerRate: 0
+          }
+        })
       }
       businessId = userBusiness.id
     }

@@ -19,9 +19,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const businessId = request.nextUrl.searchParams.get('business_id') || authResult.businessId
+    const businessIdParam = request.nextUrl.searchParams.get('business_id')
+    const businessId = (businessIdParam && businessIdParam.trim() !== '') 
+      ? businessIdParam 
+      : authResult.businessId
 
-    if (!businessId) {
+    if (!businessId || businessId.trim() === '') {
       return NextResponse.json(
         { success: false, message: 'Business ID is required' },
         { status: 400 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -114,7 +114,7 @@ export default function AdminClientsPage() {
   const limit = 20
 
   // Fetch clients
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     setLoading(true)
     setError(null)
     
@@ -157,7 +157,7 @@ export default function AdminClientsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [statusFilter, searchQuery, currentPage, limit])
 
   // Fetch client detail
   const fetchClientDetail = async (clientId: string) => {
@@ -200,7 +200,7 @@ export default function AdminClientsPage() {
 
   useEffect(() => {
     fetchClients()
-  }, [statusFilter, searchQuery, currentPage])
+  }, [fetchClients])
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {

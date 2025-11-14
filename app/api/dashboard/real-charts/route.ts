@@ -31,10 +31,16 @@ export async function GET(request: NextRequest) {
         .single()
 
       if (businessError || !userBusiness) {
-        return NextResponse.json(
-          { error: 'No business found' },
-          { status: 404 }
-        )
+        // Return empty charts data instead of 404 for users without businesses
+        return NextResponse.json({
+          success: true,
+          charts: {
+            callVolume: [],
+            bookingRate: [],
+            revenueTrend: [],
+            conversionFunnel: []
+          }
+        })
       }
       businessId = userBusiness.id
     }
