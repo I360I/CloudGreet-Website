@@ -128,6 +128,9 @@ export default function AdminLoginPage() {
             <Home className="w-4 h-4" />
             BACK TO HOME
           </a>
+          <p className="text-center text-xs text-gray-500 font-mono mt-4">
+            After logging in, use the sidebar to create employees
+          </p>
         </div>
       </div>
     </div>

@@ -56,12 +56,17 @@ export default function AdminLayout({
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [userEmail, setUserEmail] = useState<string | null>(null)
 
-  // Don't show sidebar on login page
+  // Don't show sidebar on login page - return early before any hooks
   if (pathname === '/admin/login') {
     return <>{children}</>
   }
 
   useEffect(() => {
+    // Skip auth check if on login page
+    if (pathname === '/admin/login') {
+      return
+    }
+
     const checkAuth = async () => {
       const token = localStorage.getItem('token')
       if (!token) {
@@ -70,8 +75,14 @@ export default function AdminLayout({
       }
 
       try {
-        // Verify admin access by checking a protected endpoint
-        const response = await fetchWithAuth('/api/admin/clients?limit=1')
+        // Use direct fetch with token instead of fetchWithAuth to avoid async token fetching issues
+        const response = await fetch('/api/admin/clients?limit=1', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
         if (!response.ok) {
           if (response.status === 401) {
             localStorage.removeItem('token')
@@ -96,8 +107,8 @@ export default function AdminLayout({
         setCheckingAuth(false)
       } catch (error) {
         console.error('Auth check error:', error)
-        localStorage.removeItem('token')
-        router.push('/admin/login')
+        // Don't redirect on network errors - just show loading state
+        setCheckingAuth(false)
       }
     }
 

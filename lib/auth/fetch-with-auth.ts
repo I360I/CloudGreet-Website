@@ -37,6 +37,11 @@ export async function fetchWithAuth(
       token = getAuthTokenSync()
     }
 
+    // If still no token, try localStorage directly as final fallback
+    if (!token && typeof window !== 'undefined') {
+      token = localStorage.getItem('token')
+    }
+
     if (token) {
       finalHeaders['Authorization'] = `Bearer ${token}`
     }
