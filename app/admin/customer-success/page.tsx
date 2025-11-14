@@ -90,7 +90,7 @@ export default function CustomerSuccessPage() {
   }, [])
 
   const milestones = useMemo(() => {
-    if (!snapshot) return []
+    if (!snapshot || !snapshot.activation) return []
     return [
       {
         title: 'Onboarding complete',
@@ -243,7 +243,7 @@ export default function CustomerSuccessPage() {
           )}
         </section>
 
-        {snapshot && (
+        {snapshot && snapshot.activation && (
           <>
             <section className="grid gap-5 md:grid-cols-2">
               {milestones.map((milestone) => (

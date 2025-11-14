@@ -12,18 +12,33 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // For admin users without businessId, return empty snapshot
+    // For admin users without businessId, return empty snapshot with correct structure
     if (!auth.businessId) {
       return NextResponse.json({
         success: true,
         snapshot: {
-          totalClients: 0,
-          activeClients: 0,
-          atRiskClients: 0,
-          churnedClients: 0,
-          recentSignups: [],
-          atRisk: [],
-          healthScores: []
+          businessId: 'admin-view',
+          businessName: 'Admin View',
+          ownerName: null,
+          ownerEmail: null,
+          subscriptionStatus: 'N/A',
+          accountAgeDays: 0,
+          onboardingLagDays: 0,
+          healthScore: 0,
+          alerts: ['No business selected for detailed view.'],
+          activation: {
+            onboardingCompleted: false,
+            onboardingStep: 0,
+            calendarConnected: false,
+            numberProvisioned: false,
+            outreachRunning: false,
+            firstCallHandled: false,
+            createdAt: new Date().toISOString(),
+            lastCallAt: null,
+            lastOutreachAt: null,
+            callsLast7Days: 0,
+            outreachLast7Days: 0,
+          },
         }
       })
     }
