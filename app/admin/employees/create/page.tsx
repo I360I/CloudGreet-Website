@@ -16,7 +16,7 @@ export default function CreateEmployeePage() {
   const [jobTitle, setJobTitle] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const { showToast } = useToast()
+  const { showError, showSuccess } = useToast()
 
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -43,7 +43,7 @@ export default function CreateEmployeePage() {
     e.preventDefault()
     
     if (!validateForm()) {
-      showToast('Please fix form errors', 'error')
+      showError('Please fix form errors')
       return
     }
 
@@ -51,9 +51,20 @@ export default function CreateEmployeePage() {
     setErrors({})
 
     try {
-      const response = await fetchWithAuth('/api/admin/employees', {
+      // Get token from localStorage
+      const token = localStorage.getItem('token')
+      if (!token) {
+        showError('Please login first')
+        router.push('/admin/login')
+        return
+      }
+
+      const response = await fetch('/api/admin/employees', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
@@ -70,19 +81,19 @@ export default function CreateEmployeePage() {
         // Handle specific error cases
         if (response.status === 409) {
           setErrors({ email: 'This email is already registered' })
-          showToast('Email already exists', 'error')
+          showError('Email already exists')
         } else if (response.status === 401) {
-          showToast('Session expired. Please login again.', 'error')
+          showError('Session expired. Please login again.')
           router.push('/admin/login')
           return
         } else {
-          showToast(data.error || 'Failed to create employee', 'error')
+          showError(data.error || 'Failed to create employee')
         }
         return
       }
 
       if (data.success) {
-        showToast('Employee created successfully!', 'success')
+        showSuccess('Employee created successfully!')
         // Reset form
         setEmail('')
         setPassword('')
@@ -96,18 +107,19 @@ export default function CreateEmployeePage() {
           router.push('/admin/employees')
         }, 1000)
       } else {
-        showToast(data.error || 'Failed to create employee', 'error')
+        showError(data.error || 'Failed to create employee')
       }
     } catch (error) {
+      console.error('Create employee error:', error)
       if (error instanceof Error) {
         if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-          showToast('Session expired. Please login again.', 'error')
+          showError('Session expired. Please login again.')
           router.push('/admin/login')
           return
         }
-        showToast(`Error: ${error.message}`, 'error')
+        showError(`Error: ${error.message}`)
       } else {
-        showToast('Network error. Please check your connection and try again.', 'error')
+        showError('Network error. Please check your connection and try again.')
       }
     } finally {
       setLoading(false)

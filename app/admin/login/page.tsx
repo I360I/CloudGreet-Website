@@ -10,7 +10,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const { showToast } = useToast()
+  const { showError, showSuccess } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,16 +32,16 @@ export default function AdminLoginPage() {
         // Check if user is admin
         if (data.data.user?.role === 'admin' || data.data.user?.is_admin) {
           router.push('/admin/clients')
-          showToast('Successfully logged in', 'success')
+          showSuccess('Successfully logged in')
         } else {
-          showToast('Admin access required', 'error')
+          showError('Admin access required')
           localStorage.removeItem('token')
         }
       } else {
-        showToast(data.message || 'Login failed', 'error')
+        showError(data.message || 'Login failed')
       }
     } catch (error) {
-      showToast('Network error. Please try again.', 'error')
+      showError('Network error. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -121,13 +121,6 @@ export default function AdminLoginPage() {
         </form>
 
         <div className="mt-6 pt-6 border-t-2 border-purple-500/30 space-y-3">
-          <a
-            href="/admin/employees/create"
-            className="flex items-center justify-center gap-2 w-full text-center text-sm text-purple-400 hover:text-purple-300 transition-colors py-2 px-4 border-2 border-purple-500/30 hover:border-purple-500 font-mono uppercase tracking-wider"
-          >
-            <UserPlus className="w-4 h-4" />
-            CREATE EMPLOYEE
-          </a>
           <a
             href="/"
             className="flex items-center justify-center gap-2 w-full text-center text-sm text-gray-500 hover:text-gray-400 transition-colors py-2 font-mono"

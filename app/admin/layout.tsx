@@ -51,7 +51,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { showToast } = useToast()
+  const { showSuccess } = useToast()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -95,17 +95,18 @@ export default function AdminLayout({
         
         setCheckingAuth(false)
       } catch (error) {
+        console.error('Auth check error:', error)
         localStorage.removeItem('token')
         router.push('/admin/login')
       }
     }
 
     checkAuth()
-  }, [router])
+  }, [router, pathname])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
-    showToast('Logged out successfully', 'success')
+    showSuccess('Logged out successfully')
     router.push('/admin/login')
   }
 
