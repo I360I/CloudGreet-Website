@@ -12,11 +12,25 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request)
-  if (!auth.success || !auth.businessId) {
+  if (!auth.success) {
     return NextResponse.json({ error: auth.error ?? 'Unauthorized' }, { status: 401 })
   }
 
   try {
+    // For admin users without businessId, return empty summary
+    if (!auth.businessId) {
+      return NextResponse.json({
+        success: true,
+        summary: {
+          mrrCents: 0,
+          bookingFeesCents: 0,
+          creditsCents: 0,
+          totalBilledCents: 0,
+          openAlerts: [],
+          pastDueInvoices: []
+        }
+      })
+    }
     const summary = await getReconciliationSummary(auth.businessId)
     return NextResponse.json({ success: true, summary })
   } catch (error) {

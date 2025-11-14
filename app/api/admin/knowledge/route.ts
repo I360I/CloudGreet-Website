@@ -15,19 +15,27 @@ const upsertSchema = z.object({
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request)
-  if (!auth.success || !auth.businessId) {
+  if (!auth.success) {
     return NextResponse.json({ error: auth.error ?? 'Unauthorized' }, { status: 401 })
   }
 
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search')?.trim()
+    const businessId = searchParams.get('businessId') // Optional: filter by business for admin
 
     let query = supabaseAdmin
       .from('business_knowledge_entries')
       .select('id, title, content, tags, created_at, updated_at')
-      .eq('business_id', auth.businessId)
       .order('updated_at', { ascending: false })
+
+    // If businessId provided, filter by it; otherwise admin sees all entries
+    if (businessId) {
+      query = query.eq('business_id', businessId)
+    } else if (auth.businessId) {
+      // Non-admin users must filter by their business
+      query = query.eq('business_id', auth.businessId)
+    }
 
     if (search) {
       query = query.ilike('title', `%${search}%`)
