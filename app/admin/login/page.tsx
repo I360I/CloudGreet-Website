@@ -23,7 +23,18 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ email, password })
       })
 
-      const data = await response.json()
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        showError('Invalid response from server. Please try again.')
+        return
+      }
+
+      if (!response.ok) {
+        showError(data?.message || `Login failed (${response.status})`)
+        return
+      }
 
       if (data.success && data.data?.token) {
         // Store token
@@ -38,9 +49,10 @@ export default function AdminLoginPage() {
           localStorage.removeItem('token')
         }
       } else {
-        showError(data.message || 'Login failed')
+        showError(data?.message || 'Login failed')
       }
     } catch (error) {
+      console.error('Login error:', error)
       showError('Network error. Please try again.')
     } finally {
       setLoading(false)

@@ -74,9 +74,14 @@ export default function CreateEmployeePage() {
         })
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        
         // Handle specific error cases
         if (response.status === 409) {
           setErrors({ email: 'This email is already registered' })
@@ -86,8 +91,16 @@ export default function CreateEmployeePage() {
           router.push('/admin/login')
           return
         } else {
-          showError(data.error || 'Failed to create employee')
+          showError(errorData.error || `Failed to create employee (${response.status})`)
         }
+        return
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        showError('Invalid response from server')
         return
       }
 

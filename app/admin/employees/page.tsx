@@ -23,7 +23,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const { showToast } = useToast()
+  const { showError, showSuccess } = useToast()
 
   useEffect(() => {
     fetchEmployees()
@@ -33,14 +33,33 @@ export default function EmployeesPage() {
     setLoading(true)
     try {
       const response = await fetchWithAuth('/api/admin/employees')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.success) {
-          setEmployees(data.employees || [])
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          showError('Session expired. Please login again.')
+          router.push('/admin/login')
+          return
         }
+        showError(`Failed to load employees (${response.status})`)
+        return
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        showError('Invalid response from server')
+        return
+      }
+
+      if (data.success) {
+        setEmployees(data.employees || [])
+      } else {
+        showError(data.error || 'Failed to load employees')
       }
     } catch (error) {
-      showToast('Failed to load employees', 'error')
+      console.error('Fetch employees error:', error)
+      showError('Network error. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -62,31 +81,44 @@ export default function EmployeesPage() {
         })
       })
 
-      const data = await response.json()
-      
       if (!response.ok) {
+        let errorData
+        try {
+          errorData = await response.json()
+        } catch {
+          errorData = {}
+        }
+        
         if (response.status === 401) {
-          showToast('Session expired. Please login again.', 'error')
+          showError('Session expired. Please login again.')
           router.push('/admin/login')
           return
         }
-        showToast(data.error || 'Failed to update employee', 'error')
+        showError(errorData.error || `Failed to update employee (${response.status})`)
+        return
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        showError('Invalid response from server')
         return
       }
 
       if (data.success) {
-        showToast(`Employee ${!currentStatus ? 'activated' : 'deactivated'} successfully`, 'success')
+        showSuccess(`Employee ${!currentStatus ? 'activated' : 'deactivated'} successfully`)
         fetchEmployees()
       } else {
-        showToast(data.error || 'Failed to update employee', 'error')
+        showError(data.error || 'Failed to update employee')
       }
-    } catch (error) {
-      if (error instanceof Error && (error.message.includes('401') || error.message.includes('Unauthorized'))) {
-        showToast('Session expired. Please login again.', 'error')
-        router.push('/admin/login')
-      } else {
-        showToast('Network error. Please try again.', 'error')
-      }
+        } catch (error) {
+          if (error instanceof Error && (error.message.includes('401') || error.message.includes('Unauthorized'))) {
+            showError('Session expired. Please login again.')
+            router.push('/admin/login')
+          } else {
+            showError('Network error. Please try again.')
+          }
     } finally {
       setUpdatingId(null)
     }
