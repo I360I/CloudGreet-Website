@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowRight,
@@ -13,7 +13,7 @@ import {
   Phone,
   Settings,
   Sparkles,
-  SquarePen,
+  PenSquare,
   User,
   Wallet
 } from 'lucide-react'
@@ -118,7 +118,7 @@ type PhoneFormState = {
   areaCode: string
 }
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { showError, showSuccess } = useToast()
@@ -1048,7 +1048,7 @@ export default function OnboardingPage() {
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
           <div className="flex items-center gap-2 text-white">
-            <SquarePen className="h-4 w-4 text-blue-300" />
+            <PenSquare className="h-4 w-4 text-blue-300" />
             <span className="font-semibold">Voice & brand</span>
           </div>
           <p>Tone: {businessForm.tone}</p>
@@ -1145,4 +1145,17 @@ export default function OnboardingPage() {
   )
 }
 
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-black to-slate-950 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-white text-lg font-mono">LOADING...</div>
+        </div>
+      </div>
+    }>
+      <OnboardingContent />
+    </Suspense>
+  )
+}
 
