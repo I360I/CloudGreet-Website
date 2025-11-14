@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/app/contexts/ToastContext'
-import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { UserPlus, ArrowLeft, Loader2, Shield } from 'lucide-react'
+import { UserPlus, ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/Button'
 
 export default function CreateEmployeePage() {
