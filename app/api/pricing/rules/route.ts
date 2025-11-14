@@ -75,8 +75,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { business_id, ...ruleData } = body
+    let body
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+    const { business_id, ...ruleData } = body || {}
 
     const businessId = business_id || authResult.businessId
 
@@ -135,8 +143,16 @@ export async function PUT(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { id, ...ruleData } = body
+    let body
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+    const { id, ...ruleData } = body || {}
 
     if (!id) {
       return NextResponse.json(

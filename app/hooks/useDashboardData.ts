@@ -48,12 +48,15 @@ export function useDashboardData() {
 
   useEffect(() => {
     fetchDashboardData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/dashboard/data')
+      // Use fetchWithAuth for authenticated endpoints
+      const { fetchWithAuth } = await import('@/lib/auth/fetch-with-auth')
+      const response = await fetchWithAuth('/api/dashboard/data')
       
       if (!response.ok) {
         let errorData
@@ -93,11 +96,14 @@ export function useRealtimeMetrics(businessId?: string) {
     const interval = setInterval(fetchMetrics, 30000)
     
     return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId])
 
   const fetchMetrics = async () => {
     try {
-      const response = await fetch('/api/dashboard/metrics')
+      // Use fetchWithAuth for authenticated endpoints
+      const { fetchWithAuth } = await import('@/lib/auth/fetch-with-auth')
+      const response = await fetchWithAuth('/api/dashboard/metrics')
       
       if (!response.ok) {
         let errorData

@@ -11,8 +11,16 @@ export const runtime = 'nodejs'
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { phoneNumber, businessId, businessInfo } = body
+    let body
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+    const { phoneNumber, businessId, businessInfo } = body || {}
 
     if (!phoneNumber) {
       return NextResponse.json(
@@ -70,18 +78,29 @@ export async function POST(request: NextRequest) {
     })
 
     if (!telnyxResponse.ok) {
-      const errorData = await telnyxResponse.text()
+      let errorData: string
+      try {
+        errorData = await telnyxResponse.text()
+      } catch (textError) {
+        errorData = 'Failed to read error response'
+      }
       logger.error('Telnyx call initiation failed (landing page)', {
         status: telnyxResponse.status,
         error: errorData,
         phoneNumber: formattedPhone
       })
 
-      let errorMessage = 'Failed to initiate call'
+      let errorMessage = 'Failed to initiate call. Please try again later.'
       try {
         const errorJson = JSON.parse(errorData)
         if (errorJson.errors && errorJson.errors.length > 0) {
-          errorMessage = errorJson.errors[0].detail || errorJson.errors[0].title || errorMessage
+          // Use user-friendly error message, don't expose internal details
+          const detail = errorJson.errors[0].detail || errorJson.errors[0].title || ''
+          if (detail.includes('invalid') || detail.includes('Invalid')) {
+            errorMessage = 'Invalid phone number. Please check and try again.'
+          } else if (detail.includes('rate limit') || detail.includes('limit')) {
+            errorMessage = 'Too many requests. Please try again in a moment.'
+          }
         }
       } catch (e) {
         // Keep default error message

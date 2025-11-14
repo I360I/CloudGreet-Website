@@ -130,10 +130,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
 
     // Validate required fields
-    if (!body.business_name || !body.phone) {
+    if (!body?.business_name || !body?.phone) {
       return NextResponse.json(
         { error: 'business_name and phone are required' },
         { status: 400 }
@@ -216,7 +224,15 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
 
     // Validate required fields
     if (!body.id) {

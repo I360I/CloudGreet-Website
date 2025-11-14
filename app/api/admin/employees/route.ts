@@ -93,8 +93,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { email, password, first_name, last_name, role = 'sales', job_title } = body
+    let body
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+    const { email, password, first_name, last_name, role = 'sales', job_title } = body || {}
 
     // Validate required fields
     if (!email || !password) {
@@ -238,8 +246,16 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { employee_id, is_active, role, password } = body
+    let body
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+    const { employee_id, is_active, role, password } = body || {}
 
     if (!employee_id || typeof employee_id !== 'string') {
       return NextResponse.json(

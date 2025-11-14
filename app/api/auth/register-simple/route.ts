@@ -11,7 +11,19 @@ export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    let body
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid JSON in request body',
+          code: 'INVALID_JSON'
+        },
+        { status: 400 }
+      )
+    }
     const result = await registerAccount(body)
 
     return NextResponse.json({

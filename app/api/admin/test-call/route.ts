@@ -23,8 +23,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { businessId, phoneNumber } = body
+    let body
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+    const { businessId, phoneNumber } = body || {}
 
     if (!businessId && !phoneNumber) {
       return NextResponse.json(
@@ -131,14 +139,20 @@ export async function POST(request: NextRequest) {
     })
 
     if (!telnyxResponse.ok) {
-      const errorText = await telnyxResponse.text()
+      let errorText: string
+      try {
+        errorText = await telnyxResponse.text()
+      } catch (textError) {
+        errorText = 'Failed to read error response'
+      }
       logger.error('Failed to place test call via Telnyx', {
         status: telnyxResponse.status,
         error: errorText,
         businessId: business.id
       })
+      // Don't expose full error details to client for security
       return NextResponse.json(
-        { error: 'Failed to place call', details: errorText },
+        { error: 'Failed to place call. Please check configuration and try again.' },
         { status: 500 }
       )
     }

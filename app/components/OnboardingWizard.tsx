@@ -27,14 +27,19 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
     if (typeof window !== 'undefined') {
       const businessData = localStorage.getItem('businessData')
       if (businessData) {
-        const parsed = JSON.parse(businessData)
-        return {
-          businessName: parsed.business_name || '',
-          businessType: parsed.business_type || 'HVAC', // Already mapped in Hero component
-          email: parsed.email || '',
-          phone: parsed.phone || '',
-          website: parsed.website || '',
-          address: parsed.address || '',
+        try {
+          const parsed = JSON.parse(businessData)
+          return {
+            businessName: parsed.business_name || '',
+            businessType: parsed.business_type || 'HVAC', // Already mapped in Hero component
+            email: parsed.email || '',
+            phone: parsed.phone || '',
+            website: parsed.website || '',
+            address: parsed.address || '',
+          }
+        } catch (parseError) {
+          // If JSON is invalid, clear it and return defaults
+          localStorage.removeItem('businessData')
         }
       }
     }
