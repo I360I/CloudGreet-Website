@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { verifyJWT } from '@/lib/auth-middleware'
+import { requireAuth } from '@/lib/auth-middleware'
 import { CONFIG } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
@@ -10,50 +10,33 @@ export const runtime = 'nodejs'
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
-    const authResult = await verifyJWT(request)
-    if (!authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    const authResult = await requireAuth(request)
+    if (!authResult.success || !authResult.userId || !authResult.businessId) {
+      // Return empty metrics data instead of 401 for users without businesses
+      return NextResponse.json({
+        success: true,
+        metrics: {
+          totalCalls: 0,
+          totalAppointments: 0,
+          totalRevenue: 0,
+          conversionRate: 0,
+          avgCallDuration: 0,
+          customerSatisfaction: 0,
+          monthlyGrowth: 0,
+          revenueProjection: 0,
+          callsThisWeek: 0,
+          appointmentsThisWeek: 0,
+          revenueThisWeek: 0,
+          missedCalls: 0,
+          answeredCalls: 0,
+          callAnswerRate: 0
+        }
+      })
     }
 
     const { searchParams } = new URL(request.url)
     const timeframe = searchParams.get('timeframe') || '30d'
-    let businessId = searchParams.get('businessId')
-
-    // If businessId not provided, default to user's business
-    if (!businessId) {
-      const { data: userBusiness, error: businessError } = await supabaseAdmin
-        .from('businesses')
-        .select('id')
-        .eq('owner_id', authResult.user.id)
-        .single()
-
-      if (businessError || !userBusiness) {
-        // Return empty metrics data instead of 404 for users without businesses
-        return NextResponse.json({
-          success: true,
-          metrics: {
-            totalCalls: 0,
-            totalAppointments: 0,
-            totalRevenue: 0,
-            conversionRate: 0,
-            avgCallDuration: 0,
-            customerSatisfaction: 0,
-            monthlyGrowth: 0,
-            revenueProjection: 0,
-            callsThisWeek: 0,
-            appointmentsThisWeek: 0,
-            revenueThisWeek: 0,
-            missedCalls: 0,
-            answeredCalls: 0,
-            callAnswerRate: 0
-          }
-        })
-      }
-      businessId = userBusiness.id
-    }
+    const businessId = authResult.businessId
 
     // Calculate date range
     const now = new Date()
@@ -71,27 +54,6 @@ export async function GET(request: NextRequest) {
         break
       default:
         startDate.setDate(now.getDate() - 30)
-    }
-
-    // Verify business ownership
-    const { data: business, error: businessError } = await supabaseAdmin
-      .from('businesses')
-      .select('id, owner_id')
-      .eq('id', businessId)
-      .single()
-
-    if (businessError || !business) {
-      return NextResponse.json(
-        { error: 'Business not found' },
-        { status: 404 }
-      )
-    }
-
-    if (business.owner_id !== authResult.user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
     }
 
     // Fetch calls for timeframe - only select needed fields
