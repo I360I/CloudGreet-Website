@@ -120,15 +120,13 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     }
   }, [])
   
-  const { startDate, endDate } = dateRange
-  
   const {
     data: appointmentsData,
     error: appointmentsError,
     isLoading: appointmentsLoading,
     mutate: mutateAppointments
   } = useSWR<{ appointments: Appointment[] }>(
-    `/api/dashboard/calendar?view=agenda&startDate=${startDate}&endDate=${endDate}`,
+    `/api/dashboard/calendar?view=agenda&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`,
     swrFetcher,
     {
       revalidateOnFocus: false,
