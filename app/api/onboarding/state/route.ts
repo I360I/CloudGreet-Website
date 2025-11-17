@@ -112,11 +112,15 @@ export async function GET(request: NextRequest) {
     // Get inventory count, but don't fail if table doesn't exist
     let inventoryCount = 0
     try {
-      const { data: inventory } = await supabaseAdmin
+      const { count, error: inventoryError } = await supabaseAdmin
         .from('toll_free_numbers')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'available')
-      inventoryCount = inventory?.length ?? 0
+      inventoryCount = count ?? 0
+      if (inventoryError) {
+        logger.warn('Error fetching inventory', { error: inventoryError.message })
+        inventoryCount = 0
+      }
     } catch (inventoryErr) {
       logger.warn('Error fetching inventory', { error: inventoryErr instanceof Error ? inventoryErr.message : 'Unknown' })
       inventoryCount = 0
