@@ -244,27 +244,33 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     if (!appointmentsData) return []
     
     // Get base appointments from API
-    let baseAppointments = appointmentsData.appointments || []
+    const baseAppointments = appointmentsData.appointments || []
+    
+    // If no optimistic updates, return base appointments
+    if (!optimisticUpdates || optimisticUpdates.length === 0) {
+      return baseAppointments
+    }
     
     // Apply optimistic updates
-    optimisticUpdates.forEach(update => {
+    let result = [...baseAppointments]
+    for (const update of optimisticUpdates) {
       if (update.type === 'create') {
         // Add new appointment to the list
-        baseAppointments = [...baseAppointments, update.data as Appointment]
+        result = [...result, update.data as Appointment]
       } else if (update.type === 'update') {
         // Update existing appointment
-        baseAppointments = baseAppointments.map(apt => 
+        result = result.map(apt => 
           apt.id === update.id 
             ? { ...apt, ...update.data } 
             : apt
         )
       } else if (update.type === 'delete') {
         // Remove appointment from list
-        baseAppointments = baseAppointments.filter(apt => apt.id !== update.id)
+        result = result.filter(apt => apt.id !== update.id)
       }
-    })
+    }
     
-    return baseAppointments
+    return result
   }, [appointmentsData, optimisticUpdates])
 
   const value: DashboardDataContextType = {
