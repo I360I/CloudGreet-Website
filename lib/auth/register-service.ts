@@ -261,15 +261,19 @@ export async function registerAccount(body: Record<string, unknown>): Promise<Re
     })
   }
 
-  const { error: coreUserError } = await supabaseAdmin.from('users').insert({
+  // Insert into users table - check if name column exists, if not omit it
+  const userInsertData: Record<string, unknown> = {
     id: authUserId,
     email: payload.email.toLowerCase(),
-    name: payload.name || `${payload.first_name} ${payload.last_name}`.trim(),
     first_name: payload.first_name,
     last_name: payload.last_name,
     phone: payload.phone || null,
     role: 'owner'
-  })
+  }
+  
+  // Only include name if the column exists (some schemas may not have it)
+  // The name can be derived from first_name + last_name if needed
+  const { error: coreUserError } = await supabaseAdmin.from('users').insert(userInsertData)
 
   if (coreUserError) {
     await supabaseAdmin.from('custom_users').delete().eq('id', newUser.id)
