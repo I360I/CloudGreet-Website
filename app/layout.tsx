@@ -107,7 +107,9 @@ export default function RootLayout({
                     .then(function(registration) {
                       // Service worker registered successfully
                     })
-                    .);
+                    .catch(function(error) {
+                      // Service worker registration failed
+                    });
                 });
               }
             `,
