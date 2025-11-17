@@ -110,15 +110,17 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   const [optimisticUpdates, setOptimisticUpdates] = React.useState<OptimisticUpdate[]>([])
 
   // Fetch appointments - need to calculate date range
-  const { startDate, endDate } = React.useMemo(() => {
+  const dateRange = React.useMemo(() => {
     const now = new Date()
-    const startDate = new Date(now)
-    startDate.setDate(now.getDate() - 90) // Get last 90 days for calendar
+    const start = new Date(now)
+    start.setDate(now.getDate() - 90) // Get last 90 days for calendar
     return {
-      startDate: startDate.toISOString().split('T')[0],
+      startDate: start.toISOString().split('T')[0],
       endDate: now.toISOString().split('T')[0]
     }
   }, [])
+  
+  const { startDate, endDate } = dateRange
   
   const {
     data: appointmentsData,
