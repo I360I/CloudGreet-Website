@@ -1,45 +1,46 @@
 import React from 'react'
 import Link from 'next/link'
 import { ArrowRight, Phone, Play, CheckCircle, Star, Clock, Users, TrendingUp } from 'lucide-react'
+import Footer from '@/app/components/Footer'
 
 export default function DemoPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900">
       {/* Navigation */}
-      <nav className="border-b border-purple-500/20 bg-black/30 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">CG</span>
-              </div>
-              <span className="text-white font-bold text-xl">CloudGreet</span>
+      <nav className="border-b border-gray-800/50 backdrop-blur-md bg-black/20 sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex justify-between items-center">
+            <Link href="/landing" className="flex items-center hover:opacity-80 transition-opacity">
+              <span className="text-2xl font-bold text-white">CloudGreet</span>
             </Link>
-            <div className="flex items-center space-x-4">
-              <Link href="/landing" className="text-gray-300 hover:text-white transition-colors">
+            <div className="hidden md:flex items-center space-x-6">
+              <Link href="/landing" className="text-gray-300 hover:text-white transition-colors duration-300 font-medium">
                 Home
               </Link>
-              <Link href="/features" className="text-gray-300 hover:text-white transition-colors">
+              <Link href="/features" className="text-gray-300 hover:text-white transition-colors duration-300 font-medium">
                 Features
               </Link>
-              <Link href="/contact" className="text-gray-300 hover:text-white transition-colors">
+              <Link href="/demo" className="text-white transition-colors duration-300 font-medium">
+                Demo
+              </Link>
+              <Link href="/contact" className="text-gray-300 hover:text-white transition-colors duration-300 font-medium">
                 Contact
               </Link>
-              <Link href="/register-simple" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all">
-                Get Started
-              </Link>
             </div>
+            <Link href="/register-simple" className="bg-white/15 backdrop-blur-xl text-white px-5 py-2 rounded-lg text-sm font-medium border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-lg">
+              Get Started
+            </Link>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="max-w-6xl mx-auto px-4 py-24">
         <div className="text-center">
-          <h1 className="text-5xl font-bold text-white mb-6">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
             Experience CloudGreet Live
           </h1>
-          <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto">
+          <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-3xl mx-auto">
             Call our demo number right now to experience the same AI that will handle your customers. 
             See how natural and intelligent our AI receptionist really is.
           </p>
@@ -47,8 +48,8 @@ export default function DemoPage() {
       </div>
 
       {/* Demo Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-12 border border-white/20">
+      <div className="max-w-6xl mx-auto px-4 py-24">
+        <div className="bg-white/5 backdrop-blur-xl rounded-xl p-6 md:p-8 border border-white/10 shadow-xl">
           <div className="text-center mb-12">
             <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
               <Phone className="w-10 h-10 text-white" />
@@ -63,16 +64,16 @@ export default function DemoPage() {
               <p className="text-gray-300">Available 24/7 • Try it right now!</p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <a 
                 href="tel:+18333956731" 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all flex items-center justify-center"
+                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg text-base font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-2"
               >
-                <Phone className="w-5 h-5 mr-2" />
+                <Phone className="w-4 h-4" />
                 Call Demo Now
               </a>
-              <Link href="/register-simple" className="bg-white/10 text-white px-8 py-4 rounded-lg hover:bg-white/20 transition-all flex items-center justify-center">
-                <ArrowRight className="w-5 h-5 mr-2" />
+              <Link href="/register-simple" className="bg-white/10 backdrop-blur-xl text-white px-6 py-3 rounded-lg text-base font-medium border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
+                <ArrowRight className="w-4 h-4" />
                 Get Your Own Number
               </Link>
             </div>
@@ -81,16 +82,16 @@ export default function DemoPage() {
       </div>
 
       {/* What to Try */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-white mb-6">What to Try During Your Demo Call</h2>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+      <div className="max-w-6xl mx-auto px-4 py-24">
+        <div className="text-center mb-12 md:mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">What to Try During Your Demo Call</h2>
+          <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto">
             Here are some things you can test to see how our AI handles real customer scenarios.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="bg-white/5 backdrop-blur-xl rounded-xl p-6 md:p-8 border border-white/10 shadow-lg">
             <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-6">
               <Play className="w-6 h-6 text-blue-400" />
             </div>
@@ -183,39 +184,39 @@ export default function DemoPage() {
       </div>
 
       {/* Demo Results */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        <div className="bg-gradient-to-r from-blue-500/20 to-purple-600/20 backdrop-blur-lg rounded-2xl p-12 border border-white/20">
+      <div className="max-w-6xl mx-auto px-4 py-24">
+        <div className="bg-gradient-to-r from-blue-500/20 to-purple-600/20 backdrop-blur-xl rounded-2xl p-8 md:p-10 border border-white/10 shadow-xl">
           <div className="text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">What You'll Experience</h2>
-            <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">What You'll Experience</h2>
+            <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-3xl mx-auto">
               Our AI delivers the same professional experience your customers will receive, 
               with natural conversation flow and intelligent responses.
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12">
               <div className="text-center">
-                <div className="text-4xl font-bold text-blue-400 mb-2">&lt; 1s</div>
+                <div className="text-4xl md:text-5xl font-bold text-blue-400 mb-2">&lt; 1s</div>
                 <div className="text-white font-semibold">Response Time</div>
-                <div className="text-gray-400 text-sm">Lightning fast answers</div>
+                <div className="text-gray-400 text-sm md:text-base">Lightning fast answers</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold text-green-400 mb-2">95%</div>
+                <div className="text-4xl md:text-5xl font-bold text-green-400 mb-2">95%</div>
                 <div className="text-white font-semibold">Accuracy Rate</div>
-                <div className="text-gray-400 text-sm">Correctly understands intent</div>
+                <div className="text-gray-400 text-sm md:text-base">Correctly understands intent</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold text-purple-400 mb-2">24/7</div>
+                <div className="text-4xl md:text-5xl font-bold text-purple-400 mb-2">24/7</div>
                 <div className="text-white font-semibold">Availability</div>
-                <div className="text-gray-400 text-sm">Never misses a call</div>
+                <div className="text-gray-400 text-sm md:text-base">Never misses a call</div>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/register-simple" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all flex items-center justify-center">
-                <ArrowRight className="w-5 h-5 mr-2" />
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link href="/register-simple" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg text-base font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
+                <ArrowRight className="w-4 h-4" />
                 Get Started Free
               </Link>
-              <Link href="/contact" className="bg-white/10 text-white px-8 py-4 rounded-lg hover:bg-white/20 transition-all">
+              <Link href="/contact" className="bg-white/10 backdrop-blur-xl text-white px-6 py-3 rounded-lg text-base font-medium border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg">
                 Questions? Contact Us
               </Link>
             </div>
@@ -224,48 +225,7 @@ export default function DemoPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-purple-500/20 bg-black/30 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">CG</span>
-                </div>
-                <span className="text-white font-bold text-xl">CloudGreet</span>
-              </div>
-              <p className="text-gray-400">AI-powered receptionist for your business.</p>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Product</h4>
-              <ul className="space-y-2">
-                <li><Link href="/features" className="text-gray-400 hover:text-white">Features</Link></li>
-                <li><Link href="/landing#pricing" className="text-gray-400 hover:text-white">Pricing</Link></li>
-                <li><Link href="/demo" className="text-gray-400 hover:text-white">Demo</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Support</h4>
-              <ul className="space-y-2">
-                <li><Link href="/contact" className="text-gray-400 hover:text-white">Contact</Link></li>
-                <li><Link href="/help" className="text-gray-400 hover:text-white">Help Center</Link></li>
-                <li><Link href="/status" className="text-gray-400 hover:text-white">Status</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2">
-                <li><Link href="/terms" className="text-gray-400 hover:text-white">Terms</Link></li>
-                <li><Link href="/privacy" className="text-gray-400 hover:text-white">Privacy</Link></li>
-                <li><Link href="/cookies" className="text-gray-400 hover:text-white">Cookies</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-700 mt-8 pt-8 text-center">
-            <p className="text-gray-400">© 2024 CloudGreet. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

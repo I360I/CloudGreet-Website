@@ -63,9 +63,9 @@ export default function Hero() {
           <Link
             href="/start"
             data-cta-button
-            className="inline-flex items-center justify-center bg-white/15 backdrop-blur-xl text-white px-8 py-4 rounded-xl text-lg font-bold border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-2xl transform hover:scale-105"
+            className="inline-flex items-center justify-center gap-2 bg-white/15 backdrop-blur-xl text-white px-6 py-3 rounded-lg text-base font-semibold border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-lg transform hover:scale-105"
           >
-            <Zap className="w-6 h-6 mr-3" />
+            <Zap className="w-5 h-5" />
             Get Started Free
           </Link>
         </motion.div>

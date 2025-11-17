@@ -131,89 +131,128 @@ export async function createCalendarEvent(businessId: string, event: Omit<Calend
     }
 
     // If Google Calendar is connected, create event there too
-    if (config?.calendar_connected && config.google_access_token) {
-      try {
-        const googleEvent = {
-          summary: event.title,
-          description: event.description || '',
-          location: event.location || '',
-          start: {
-            dateTime: event.start,
-            timeZone: config.timezone || 'America/New_York'
-          },
-          end: {
-            dateTime: event.end,
-            timeZone: config.timezone || 'America/New_York'
-          },
-          attendees: event.attendees?.map(email => ({ email })) || [],
-          reminders: {
-            useDefault: false,
-            overrides: [
-              { method: 'email', minutes: 24 * 60 }, // 1 day before
-              { method: 'popup', minutes: 60 } // 1 hour before
-            ]
+    if (config?.calendar_connected) {
+      // Get valid access token (refresh if expired)
+      let accessToken = await getValidAccessToken(businessId)
+      
+      if (!accessToken) {
+        logger.warn('No valid Google access token available, skipping calendar sync', { businessId })
+      } else {
+        // Retry logic for calendar API calls
+        let retries = 2
+        let calendarSuccess = false
+        
+        while (retries >= 0 && !calendarSuccess) {
+          try {
+            const googleEvent = {
+              summary: event.title,
+              description: event.description || '',
+              location: event.location || '',
+              start: {
+                dateTime: event.start,
+                timeZone: config.timezone || 'America/New_York'
+              },
+              end: {
+                dateTime: event.end,
+                timeZone: config.timezone || 'America/New_York'
+              },
+              attendees: event.attendees?.map(email => ({ email })) || [],
+              reminders: {
+                useDefault: false,
+                overrides: [
+                  { method: 'email', minutes: 24 * 60 }, // 1 day before
+                  { method: 'popup', minutes: 60 } // 1 hour before
+                ]
+              }
+            }
+
+            const calendarResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(googleEvent)
+            })
+
+            if (calendarResponse.ok) {
+              const googleEventData = await calendarResponse.json()
+              
+              // Update appointment with Google Calendar event ID
+              await supabaseAdmin
+                .from('appointments')
+                .update({
+                  google_event_id: googleEventData.id,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', appointment.id)
+
+              logger.info('Appointment created in Google Calendar', {
+                appointmentId: appointment.id,
+                googleEventId: googleEventData.id,
+                businessId
+              })
+              
+              calendarSuccess = true
+            } else if (calendarResponse.status === 401 && retries > 0) {
+              // Token expired, try to refresh and retry
+              logger.warn('Google Calendar API returned 401, refreshing token and retrying', {
+                businessId,
+                retries
+              })
+              
+              accessToken = await refreshGoogleToken(businessId)
+              if (!accessToken) {
+                logger.error('Failed to refresh token, cannot retry calendar sync', { businessId })
+                break
+              }
+              
+              retries--
+            } else {
+              const errorText = await calendarResponse.text().catch(() => 'Unknown error')
+              logger.error('Failed to create Google Calendar event', {
+                status: calendarResponse.status,
+                statusText: calendarResponse.statusText,
+                error: errorText,
+                businessId,
+                retries
+              })
+              
+              // Don't retry on non-auth errors
+              if (calendarResponse.status !== 401) {
+                break
+              }
+              
+              retries--
+            }
+          } catch (googleError) {
+            logger.error('Google Calendar API error', {
+              error: googleError instanceof Error ? googleError.message : 'Unknown error',
+              businessId,
+              retries
+            })
+            
+            // Only retry on network errors, not on other errors
+            if (retries > 0 && googleError instanceof Error && (
+              googleError.message.includes('network') ||
+              googleError.message.includes('timeout') ||
+              googleError.message.includes('ECONNREFUSED')
+            )) {
+              retries--
+              // Wait 1 second before retry
+              await new Promise(resolve => setTimeout(resolve, 1000))
+            } else {
+              break
+            }
           }
         }
-
-        const calendarResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${config.google_access_token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(googleEvent)
-        })
-
-        /**
-
-         * if - Add description here
-
-         * 
-
-         * @param {...any} args - Method parameters
-
-         * @returns {Promise<any>} Method return value
-
-         * @throws {Error} When operation fails
-
-         * 
-
-         * @example
-
-         * ```typescript
-
-         * await this.if(param1, param2)
-
-         * ```
-
-         */
-
-        if (calendarResponse.ok) {
-          const googleEventData = await calendarResponse.json()
-          
-          // Update appointment with Google Calendar event ID
-          await supabaseAdmin
-            .from('appointments')
-            .update({
-              google_event_id: googleEventData.id,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', appointment.id)
-
-          logger.info('Appointment created in Google Calendar', {
+        
+        if (!calendarSuccess) {
+          logger.warn('Failed to sync appointment to Google Calendar after retries, appointment saved in database', {
             appointmentId: appointment.id,
-            googleEventId: googleEventData.id,
             businessId
           })
-        } else {
-          logger.error('Failed to create Google Calendar event', {
-            status: calendarResponse.status,
-            statusText: calendarResponse.statusText
-          })
         }
-      } catch (googleError) {
-        logger.error('Google Calendar API error', { error: googleError instanceof Error ? googleError.message : 'Unknown error' })
-        // Continue anyway - appointment is in our database
       }
     }
 
@@ -460,6 +499,105 @@ export async function saveGoogleTokens(businessId: string, tokens: {
   }
 }
 
+/**
+ * refreshGoogleToken - Refresh expired Google access token using refresh token
+ * 
+ * @param businessId - Business ID to refresh token for
+ * @returns Promise<string | null> - New access token or null if refresh failed
+ */
+export async function refreshGoogleToken(businessId: string): Promise<string | null> {
+  try {
+    const config = await getCalendarConfig(businessId)
+    
+    if (!config?.google_refresh_token) {
+      logger.warn('No refresh token available for business', { businessId })
+      return null
+    }
+
+    if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      logger.error('Google OAuth credentials not configured')
+      return null
+    }
+
+    const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/calendar/callback`
+    
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        refresh_token: config.google_refresh_token,
+        grant_type: 'refresh_token'
+      })
+    })
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text()
+      logger.error('Failed to refresh Google token', {
+        status: tokenResponse.status,
+        error: errorText,
+        businessId
+      })
+      
+      // If refresh fails, clear tokens and mark calendar as disconnected
+      await clearGoogleTokens(businessId)
+      return null
+    }
+
+    const tokens = await tokenResponse.json()
+    
+    // Save new access token
+    await saveGoogleTokens(businessId, {
+      access_token: tokens.access_token,
+      refresh_token: config.google_refresh_token, // Keep existing refresh token
+      expires_in: tokens.expires_in,
+      scope: tokens.scope,
+      token_type: tokens.token_type
+    })
+
+    logger.info('Google token refreshed successfully', { businessId })
+    return tokens.access_token
+  } catch (error) {
+    logger.error('Error refreshing Google token', {
+      businessId,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })
+    return null
+  }
+}
+
+/**
+ * getValidAccessToken - Get valid Google access token, refreshing if expired
+ * 
+ * @param businessId - Business ID
+ * @returns Promise<string | null> - Valid access token or null
+ */
+export async function getValidAccessToken(businessId: string): Promise<string | null> {
+  const config = await getCalendarConfig(businessId)
+  
+  if (!config?.google_access_token) {
+    return null
+  }
+
+  // Check if token is expired (with 5 minute buffer)
+  if (config.google_token_expires_at) {
+    const expiresAt = new Date(config.google_token_expires_at)
+    const now = new Date()
+    const buffer = 5 * 60 * 1000 // 5 minutes
+    
+    if (now.getTime() >= expiresAt.getTime() - buffer) {
+      // Token expired or expiring soon, refresh it
+      logger.info('Google access token expired, refreshing', { businessId })
+      return await refreshGoogleToken(businessId)
+    }
+  }
+
+  return config.google_access_token
+}
+
 export async function clearGoogleTokens(businessId: string): Promise<void> {
   try {
     const { error } = await supabaseAdmin
@@ -484,5 +622,133 @@ export async function clearGoogleTokens(businessId: string): Promise<void> {
       businessId,
       error: error instanceof Error ? error.message : 'Unknown error'
     })
+  }
+}
+
+/**
+ * syncGoogleCalendarEvent - Update or create Google Calendar event for appointment
+ */
+export async function syncGoogleCalendarEvent(
+  calendarId: string,
+  appointment: any,
+  existingEventId?: string | null
+): Promise<string | null> {
+  try {
+    const businessId = appointment.business_id
+    const accessToken = await getValidAccessToken(businessId)
+    
+    if (!accessToken) {
+      logger.warn('No valid Google access token, skipping calendar sync', { businessId })
+      return null
+    }
+
+    const startTime = new Date(appointment.start_time)
+    const endTime = new Date(appointment.end_time)
+    
+    const eventData = {
+      summary: `${appointment.service_type} - ${appointment.customer_name}`,
+      description: appointment.notes || `Appointment with ${appointment.customer_name}`,
+      start: {
+        dateTime: startTime.toISOString(),
+        timeZone: 'UTC'
+      },
+      end: {
+        dateTime: endTime.toISOString(),
+        timeZone: 'UTC'
+      },
+      location: appointment.address || undefined,
+      attendees: appointment.customer_email ? [{ email: appointment.customer_email }] : undefined
+    }
+
+    const url = existingEventId
+      ? `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${existingEventId}`
+      : `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events`
+
+    const method = existingEventId ? 'PUT' : 'POST'
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(eventData)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      logger.error('Failed to sync Google Calendar event', {
+        status: response.status,
+        error: errorText,
+        appointmentId: appointment.id
+      })
+      return null
+    }
+
+    const event = await response.json()
+    return event.id || null
+  } catch (error) {
+    logger.error('Error syncing Google Calendar event', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      appointmentId: appointment.id
+    })
+    return null
+  }
+}
+
+/**
+ * deleteGoogleCalendarEvent - Delete Google Calendar event
+ */
+export async function deleteGoogleCalendarEvent(
+  calendarId: string,
+  eventId: string
+): Promise<boolean> {
+  try {
+    // Get businessId from calendarId (google_calendar_id)
+    const { data: business } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('google_calendar_id', calendarId)
+      .single()
+
+    if (!business) {
+      logger.error('Business not found for calendar ID', { calendarId })
+      return false
+    }
+
+    const accessToken = await getValidAccessToken(business.id)
+    
+    if (!accessToken) {
+      logger.warn('No valid Google access token, skipping calendar deletion', { businessId: business.id })
+      return false
+    }
+
+    const response = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events/${eventId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    )
+
+    if (!response.ok && response.status !== 404) {
+      const errorText = await response.text()
+      logger.error('Failed to delete Google Calendar event', {
+        status: response.status,
+        error: errorText,
+        eventId
+      })
+      return false
+    }
+
+    return true
+  } catch (error) {
+    logger.error('Error deleting Google Calendar event', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      eventId
+    })
+    return false
   }
 }

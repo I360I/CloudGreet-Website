@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
-import { TelnyxClient } from '@/lib/telnyx'
+import { queueJob } from '@/lib/job-queue'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -54,84 +54,44 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Initialize Telnyx client
-    const telnyxClient = new TelnyxClient()
-    
-    // Send SMS via Telnyx
-    let telnyxResponse = null
-    let smsStatus = 'failed'
-    let externalId = null
-    
+    // Queue SMS for async processing
     try {
-      telnyxResponse = await telnyxClient.sendSMS(
-        to,
-        message,
-        business?.phone_number
-      )
+      await queueJob('send_sms', {
+        to: to,
+        message: message,
+        from: business?.phone_number || undefined,
+        businessId: targetBusinessId,
+        userId: authResult.userId,
+        type: type || 'manual_sms'
+      }, { maxAttempts: 3 })
       
-      smsStatus = 'sent'
-      externalId = telnyxResponse?.data?.id || null
-      
-      logger.info('SMS sent successfully via Telnyx', {
+      logger.info('SMS queued successfully', {
         to,
         from: business?.phone_number,
-        messageId: externalId,
         businessId: targetBusinessId,
         type: type || 'manual_sms',
         userId: authResult.userId
       })
-    } catch (telnyxError) {
-      logger.error('Telnyx SMS send failed', {
-        error: telnyxError instanceof Error ? telnyxError.message : String(telnyxError),
+      
+      return NextResponse.json({
+        success: true,
+        message: 'SMS queued successfully. It will be sent shortly.'
+      })
+    } catch (queueError) {
+      logger.error('Failed to queue SMS', {
+        error: queueError instanceof Error ? queueError.message : String(queueError),
         to,
         businessId: targetBusinessId
       })
       
-      // Don't fail completely - still save to database with failed status
-      smsStatus = 'failed'
-    }
-
-    // Save SMS to database with actual status
-    const { data: smsRecord, error: smsError } = await supabaseAdmin
-      .from('sms_messages')
-      .insert({
-        business_id: targetBusinessId,
-        to_phone: to,
-        from_phone: business?.phone_number || null,
-        message: message,
-        direction: 'outbound',
-        status: smsStatus,
-        type: type || 'manual_sms',
-        external_id: externalId,
-        created_by: authResult.userId
-      })
-      .select()
-      .single()
-
-    if (smsError) {
-      logger.error('Failed to save SMS to database', { 
-        error: smsError instanceof Error ? smsError.message : String(smsError) 
-      })
-    }
-
-    // Return appropriate response based on status
-    if (smsStatus === 'failed') {
       return NextResponse.json(
         { 
           success: false, 
-          message: 'Failed to send SMS. Please check your phone number configuration and try again.',
-          smsId: smsRecord?.id || null
+          message: 'Failed to queue SMS. Please try again.'
         },
         { status: 500 }
       )
     }
-
-    return NextResponse.json({
-      success: true,
-      message: 'SMS sent successfully',
-      smsId: smsRecord?.id || null,
-      externalId: externalId
-    })
   } catch (error) {
     logger.error('Error sending SMS', { 
       error: error instanceof Error ? error.message : 'Unknown error' 

@@ -529,12 +529,26 @@ function OnboardingContent() {
         throw new Error('Invalid response from server')
       }
 
-      showSuccess('Onboarding complete', 'Let’s finalize billing so you can start greeting callers.')
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl
-      } else {
-        router.push('/dashboard')
+      if (!data.success) {
+        throw new Error(data?.error || 'Failed to complete onboarding')
       }
+
+      // Show success message
+      showSuccess(
+        'Onboarding complete!', 
+        data.phoneNumber 
+          ? `Your AI receptionist is ready! Phone number: ${data.phoneNumber}. Redirecting to billing...`
+          : 'Your AI receptionist is being set up. Redirecting to billing...'
+      )
+
+      // Small delay to show success message, then redirect
+      setTimeout(() => {
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl
+        } else {
+          router.push('/dashboard')
+        }
+      }, 2000)
     } catch (error) {
       showError(
         'Unable to complete onboarding',
@@ -587,7 +601,7 @@ function OnboardingContent() {
   )
 
   const renderBusinessForm = () => (
-    <div className="space-y-6 rounded-3xl border border-white/10 bg-black/40 p-8">
+    <div className="space-y-6 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 md:p-8 shadow-xl">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-white">Business Profile</h2>
         <p className="text-sm text-slate-400">
@@ -604,7 +618,7 @@ function OnboardingContent() {
             onChange={(event) =>
               setBusinessForm((prev) => ({ ...prev, businessName: event.target.value }))
             }
-            className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+            className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
             placeholder="Acme Home Services"
           />
         </label>
@@ -616,7 +630,7 @@ function OnboardingContent() {
             onChange={(event) =>
               setBusinessForm((prev) => ({ ...prev, businessType: event.target.value }))
             }
-            className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+            className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
             placeholder="HVAC, Painting, Roofing..."
           />
         </label>
@@ -631,7 +645,7 @@ function OnboardingContent() {
             onChange={(event) =>
               setBusinessForm((prev) => ({ ...prev, email: event.target.value }))
             }
-            className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+            className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
             placeholder="owner@example.com"
           />
         </label>
@@ -643,7 +657,7 @@ function OnboardingContent() {
             onChange={(event) =>
               setBusinessForm((prev) => ({ ...prev, phone: event.target.value }))
             }
-            className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+            className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
             placeholder="+1 415 555 0100"
           />
         </label>
@@ -658,7 +672,7 @@ function OnboardingContent() {
             onChange={(event) =>
               setBusinessForm((prev) => ({ ...prev, address: event.target.value }))
             }
-            className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+            className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
             placeholder="123 Main Street"
           />
         </label>
@@ -671,7 +685,7 @@ function OnboardingContent() {
               onChange={(event) =>
                 setBusinessForm((prev) => ({ ...prev, city: event.target.value }))
               }
-              className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+              className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
               placeholder="Austin"
             />
           </label>
@@ -683,7 +697,7 @@ function OnboardingContent() {
               onChange={(event) =>
                 setBusinessForm((prev) => ({ ...prev, state: event.target.value }))
               }
-              className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+              className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
               placeholder="TX"
             />
           </label>
@@ -695,7 +709,7 @@ function OnboardingContent() {
               onChange={(event) =>
                 setBusinessForm((prev) => ({ ...prev, zipCode: event.target.value }))
               }
-              className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+              className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
               placeholder="78701"
             />
           </label>
@@ -736,7 +750,7 @@ function OnboardingContent() {
               key={toneOption}
               type="button"
               onClick={() => setBusinessForm((prev) => ({ ...prev, tone: toneOption }))}
-              className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+              className={`rounded-lg px-4 py-2 text-xs font-semibold transition-all duration-300 ${
                 businessForm.tone === toneOption
                   ? 'border border-blue-400/40 bg-blue-500/20 text-blue-100'
                   : 'border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
@@ -766,7 +780,7 @@ function OnboardingContent() {
           type="button"
           onClick={handleSaveBusiness}
           disabled={savingBusiness}
-          className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {savingBusiness ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Save & continue
@@ -776,7 +790,7 @@ function OnboardingContent() {
   )
 
   const renderServicesForm = () => (
-    <div className="space-y-6 rounded-3xl border border-white/10 bg-black/40 p-8">
+    <div className="space-y-6 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 md:p-8 shadow-xl">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-white">Services & Availability</h2>
         <p className="text-sm text-slate-400">
@@ -793,7 +807,7 @@ function OnboardingContent() {
               setServicesForm((prev) => ({ ...prev, servicesText: event.target.value }))
             }
             rows={4}
-            className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+            className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
             placeholder="Residential HVAC install, Annual maintenance, Emergency repair"
           />
           <p className="text-xs text-slate-500">Separate with commas</p>
@@ -806,7 +820,7 @@ function OnboardingContent() {
               setServicesForm((prev) => ({ ...prev, serviceAreasText: event.target.value }))
             }
             rows={4}
-            className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+            className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
             placeholder="Austin, Round Rock, San Marcos"
           />
           <p className="text-xs text-slate-500">Separate with commas</p>
@@ -849,7 +863,7 @@ function OnboardingContent() {
                       }
                     }))
                   }
-                  className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-2 text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+                  className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-3 py-2 text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
                 />
               </label>
               <label className="flex items-center gap-2">
@@ -866,7 +880,7 @@ function OnboardingContent() {
                       }
                     }))
                   }
-                  className="rounded-full border border-white/10 bg-slate-900/70 px-3 py-2 text-xs text-white focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+                  className="rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-3 py-2 text-xs text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
                 />
               </label>
               <label className="flex items-center gap-2">
@@ -896,7 +910,7 @@ function OnboardingContent() {
           type="button"
           onClick={handleSaveServices}
           disabled={savingServices}
-          className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {savingServices ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -910,7 +924,7 @@ function OnboardingContent() {
   )
 
   const renderCalendarStep = () => (
-    <div className="space-y-6 rounded-3xl border border-white/10 bg-black/40 p-8">
+    <div className="space-y-6 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 md:p-8 shadow-xl">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-white">Connect your calendar</h2>
         <p className="text-sm text-slate-400">
@@ -959,7 +973,7 @@ function OnboardingContent() {
             <button
               type="button"
               onClick={handleDisconnectCalendar}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-6 py-3 text-sm font-semibold text-slate-200 shadow-lg transition-all duration-300 hover:bg-white/10"
             >
               Disconnect
             </button>
@@ -999,7 +1013,7 @@ function OnboardingContent() {
   )
 
   const renderPhoneStep = () => (
-    <div className="space-y-6 rounded-3xl border border-white/10 bg-black/40 p-8">
+    <div className="space-y-6 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 md:p-8 shadow-xl">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-white">Provision a forwarding number</h2>
         <p className="text-sm text-slate-400">
@@ -1030,7 +1044,7 @@ function OnboardingContent() {
             onChange={(event) =>
               setPhoneForm((prev) => ({ ...prev, existingNumber: event.target.value }))
             }
-            className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+            className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
             placeholder="+1 888 555 0100"
           />
           <p className="text-xs text-slate-500">
@@ -1046,7 +1060,7 @@ function OnboardingContent() {
             onChange={(event) =>
               setPhoneForm((prev) => ({ ...prev, areaCode: event.target.value.replace(/\D/g, '') }))
             }
-            className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
+            className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
             placeholder="888"
           />
           <p className="text-xs text-slate-500">
@@ -1060,7 +1074,7 @@ function OnboardingContent() {
           type="button"
           onClick={handleProvisionPhone}
           disabled={provisioningPhone}
-          className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {provisioningPhone ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
           {phoneStatus ? 'Update number' : 'Provision number'}
@@ -1070,7 +1084,7 @@ function OnboardingContent() {
   )
 
   const renderSummaryStep = () => (
-    <div className="space-y-6 rounded-3xl border border-white/10 bg-black/40 p-8">
+    <div className="space-y-6 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 md:p-8 shadow-xl">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-white">Ready to launch CloudGreet</h2>
         <p className="text-sm text-slate-400">
@@ -1167,7 +1181,7 @@ function OnboardingContent() {
           type="button"
           onClick={handleComplete}
           disabled={completing}
-          className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {completing ? (
             <Loader2 className="h-4 w-4 animate-spin" />

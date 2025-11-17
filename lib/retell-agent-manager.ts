@@ -63,6 +63,10 @@ class RetellAgentManager {
       // Generate revenue-optimized system prompt
       const systemPrompt = SmartAIPrompts.generateIndustrySpecificPrompt(mergedConfig.businessType, promptConfig);
       
+      // Get webhook URL for Retell events
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
+      const webhookUrl = `${appUrl}/api/retell/voice-webhook`
+
       // Create agent via Retell API
       const agentData = {
         name: `${mergedConfig.businessName} AI Receptionist`,
@@ -77,6 +81,8 @@ class RetellAgentManager {
         max_call_duration_ms: 900000, // 15 minutes
         ambient_sound: 'coffee-shop',
         stt_mode: 'accurate',
+        webhook_url: webhookUrl, // Configure webhook for receiving events
+        webhook_url_method: 'POST',
         metadata: {
           business_id: mergedConfig.businessId,
           business_type: mergedConfig.businessType,
@@ -134,11 +140,23 @@ class RetellAgentManager {
 
 
       if (!response.ok) {
-        throw new Error(`Failed to create agent: ${response.statusText}`);
+        const errorText = await response.text().catch(() => response.statusText)
+        logger.error('Retell agent creation failed', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          businessId: mergedConfig.businessId
+        })
+        throw new Error(`Failed to create agent: ${response.status} ${response.statusText}`);
       }
 
       const agent = await response.json();
-      const agentId = agent.agent_id;
+      const agentId = agent.agent_id || agent.id;
+
+      if (!agentId) {
+        logger.error('No agent ID in Retell response', { response: agent })
+        throw new Error('Invalid response from Retell API: missing agent ID')
+      }
 
       // Store agent info in database with phone number
       await this.storeAgentInfo(

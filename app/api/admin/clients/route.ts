@@ -83,48 +83,141 @@ async function getClientsList(request: NextRequest) {
       )
     }
 
-    // Get activity stats for each business
-    const clientsWithActivity = await Promise.all(
-      (businesses || []).map(async (business) => {
-        // Get call count
-        const { count: callCount } = await supabaseAdmin
-          .from('calls')
-          .select('id', { count: 'exact', head: true })
-          .eq('business_id', business.id)
-
-        // Get appointment count
-        const { count: appointmentCount } = await supabaseAdmin
-          .from('appointments')
-          .select('id', { count: 'exact', head: true })
-          .eq('business_id', business.id)
-
-        // Get last call date
-        const { data: lastCallData } = await supabaseAdmin
-          .from('calls')
-          .select('created_at')
-          .eq('business_id', business.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-        const lastCall = lastCallData && lastCallData.length > 0 ? lastCallData[0] : null
-
-        // Get last appointment date
-        const { data: lastAppointmentData } = await supabaseAdmin
-          .from('appointments')
-          .select('scheduled_date')
-          .eq('business_id', business.id)
-          .order('scheduled_date', { ascending: false })
-          .limit(1)
-        const lastAppointment = lastAppointmentData && lastAppointmentData.length > 0 ? lastAppointmentData[0] : null
-
-        return {
-          ...business,
-          totalCalls: callCount || 0,
-          totalAppointments: appointmentCount || 0,
-          lastCallDate: lastCall?.created_at || null,
-          lastAppointmentDate: lastAppointment?.scheduled_date || null
+    // Optimize: Use SQL aggregation to get all stats in one query per business
+    // This eliminates N+1 query pattern
+    const businessIds = (businesses || []).map(b => b.id)
+    
+    if (businessIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        clients: [],
+        statistics: {
+          total: count || 0,
+          active: 0,
+          inactive: 0,
+          suspended: 0,
+          cancelled: 0
+        },
+        pagination: {
+          total: count || 0,
+          limit,
+          offset,
+          hasMore: false
         }
       })
+    }
+
+    // Batch fetch call stats using SQL aggregation
+    const { data: callStats } = await supabaseAdmin.rpc('get_business_call_stats', {
+      business_ids: businessIds
+    }).catch(async () => {
+      // Fallback: If RPC doesn't exist, use optimized batch queries
+      const { data: allCalls } = await supabaseAdmin
+        .from('calls')
+        .select('business_id, created_at')
+        .in('business_id', businessIds)
+        .order('created_at', { ascending: false })
+
+      // Group by business_id and get counts and latest dates
+      const statsMap = new Map<string, { count: number; lastCall: string | null }>()
+      businessIds.forEach(id => statsMap.set(id, { count: 0, lastCall: null }))
+      
+      // Process calls to get counts and latest dates per business
+      const callMap = new Map<string, string[]>()
+      allCalls?.forEach(call => {
+        if (!callMap.has(call.business_id)) {
+          callMap.set(call.business_id, [])
+        }
+        callMap.get(call.business_id)!.push(call.created_at)
+      })
+      
+      // Update stats with correct counts and latest dates
+      callMap.forEach((dates, businessId) => {
+        const stats = statsMap.get(businessId)
+        if (stats) {
+          stats.count = dates.length
+          // Get latest date (dates are already sorted DESC from query)
+          stats.lastCall = dates[0] || null
+        }
+      })
+      
+      return { data: Array.from(statsMap.entries()).map(([business_id, stats]) => ({
+        business_id,
+        call_count: stats.count,
+        last_call_date: stats.lastCall
+      })) }
+    })
+
+    // Batch fetch appointment stats using SQL aggregation
+    const { data: appointmentStats } = await supabaseAdmin.rpc('get_business_appointment_stats', {
+      business_ids: businessIds
+    }).catch(async () => {
+      // Fallback: If RPC doesn't exist, use optimized batch queries
+      const { data: allAppointments } = await supabaseAdmin
+        .from('appointments')
+        .select('business_id, scheduled_date')
+        .in('business_id', businessIds)
+        .order('scheduled_date', { ascending: false })
+
+      // Group by business_id and get counts and latest dates
+      const statsMap = new Map<string, { count: number; lastAppointment: string | null }>()
+      businessIds.forEach(id => statsMap.set(id, { count: 0, lastAppointment: null }))
+      
+      // Process appointments to get counts and latest dates per business
+      const appointmentMap = new Map<string, string[]>()
+      allAppointments?.forEach(apt => {
+        if (!appointmentMap.has(apt.business_id)) {
+          appointmentMap.set(apt.business_id, [])
+        }
+        if (apt.scheduled_date) {
+          appointmentMap.get(apt.business_id)!.push(apt.scheduled_date)
+        }
+      })
+      
+      // Update stats with correct counts and latest dates
+      appointmentMap.forEach((dates, businessId) => {
+        const stats = statsMap.get(businessId)
+        if (stats) {
+          stats.count = dates.length
+          // Get latest date (dates are already sorted DESC from query)
+          stats.lastAppointment = dates[0] || null
+        }
+      })
+      
+      return { data: Array.from(statsMap.entries()).map(([business_id, stats]) => ({
+        business_id,
+        appointment_count: stats.count,
+        last_appointment_date: stats.lastAppointment
+      })) }
+    })
+
+    // Create lookup maps for O(1) access
+    const callStatsMap = new Map(
+      (callStats || []).map((stat: any) => [
+        stat.business_id,
+        { count: stat.call_count || 0, lastCall: stat.last_call_date || null }
+      ])
     )
+    const appointmentStatsMap = new Map(
+      (appointmentStats || []).map((stat: any) => [
+        stat.business_id,
+        { count: stat.appointment_count || 0, lastAppointment: stat.last_appointment_date || null }
+      ])
+    )
+
+    // Combine business data with stats
+    const clientsWithActivity = (businesses || []).map((business) => {
+      const callStats = callStatsMap.get(business.id) || { count: 0, lastCall: null }
+      const appointmentStats = appointmentStatsMap.get(business.id) || { count: 0, lastAppointment: null }
+
+      return {
+        ...business,
+        totalCalls: callStats.count,
+        totalAppointments: appointmentStats.count,
+        lastCallDate: callStats.lastCall,
+        lastAppointmentDate: appointmentStats.lastAppointment
+      }
+    })
 
     // Get statistics
     const { data: allBusinesses } = await supabaseAdmin

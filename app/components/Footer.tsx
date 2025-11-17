@@ -16,7 +16,7 @@ export default function Footer() {
   }
 
   return (
-    <footer className="bg-gray-800 text-white py-8 mt-auto">
+    <footer className="bg-black/40 backdrop-blur-xl border-t border-gray-800/50 text-white py-8 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
@@ -24,7 +24,7 @@ export default function Footer() {
             <p className="text-gray-300">AI-powered receptionist for your business.</p>
           </div>
           <div>
-            <h4 className="text-md font-semibold mb-4">Product</h4>
+            <h4 className="text-base font-semibold mb-4">Product</h4>
             <ul className="space-y-2">
               <li><Link href="/features" className="text-gray-300 hover:text-white transition-colors">Features</Link></li>
               <li><Link href="/pricing" className="text-gray-300 hover:text-white transition-colors">Pricing</Link></li>
@@ -32,7 +32,7 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h4 className="text-md font-semibold mb-4">Support</h4>
+            <h4 className="text-base font-semibold mb-4">Support</h4>
             <ul className="space-y-2">
               <li><Link href="/help" className="text-gray-300 hover:text-white transition-colors">Help Center</Link></li>
               <li><Link href="/contact" className="text-gray-300 hover:text-white transition-colors">Contact</Link></li>
@@ -40,7 +40,7 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h4 className="text-md font-semibold mb-4">Legal</h4>
+            <h4 className="text-base font-semibold mb-4">Legal</h4>
             <ul className="space-y-2">
               <li><Link href="/terms" className="text-gray-300 hover:text-white transition-colors">Terms</Link></li>
               <li><Link href="/privacy" className="text-gray-300 hover:text-white transition-colors">Privacy</Link></li>
@@ -54,7 +54,7 @@ export default function Footer() {
             <div className="flex items-center gap-4">
               <Link 
                 href="/admin/login" 
-                className="text-purple-400 hover:text-purple-300 font-semibold transition-colors border border-purple-500/30 px-4 py-2 rounded hover:border-purple-500 hover:bg-purple-500/10"
+                className="text-purple-400 hover:text-purple-300 font-semibold transition-colors border border-purple-500/30 px-4 py-2 rounded-lg hover:border-purple-500 hover:bg-purple-500/10"
               >
                 Admin
               </Link>

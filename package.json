@@ -24,6 +24,8 @@
     "test:ui": "vitest --ui",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "validate:env": "node scripts/validate-environment.js",
+    "validate:env:deploy": "node scripts/validate-env.js",
+    "pre-deploy": "bash scripts/pre-deploy-check.sh || node scripts/pre-deploy-check.sh",
     "validate:db": "node scripts/verify-database-schema.js",
     "generate:jwt-secret": "node scripts/generate-jwt-secret.js",
     "check:launch": "node scripts/check-launch-readiness.js",
@@ -83,10 +85,10 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.4.3",
     "@commitlint/cli": "^18.4.3",
     "@commitlint/config-conventional": "^18.4.3",
     "@playwright/test": "^1.40.0",
+    "@testing-library/jest-dom": "^6.4.3",
     "@types/glob": "^8.1.0",
     "@types/jest": "^29.5.8",
     "@types/node": "^20",
@@ -122,5 +124,8 @@
     "*.{json,md}": [
       "prettier --write"
     ]
+  },
+  "optionalDependencies": {
+    "@upstash/redis": "^1.35.6"
   }
 }

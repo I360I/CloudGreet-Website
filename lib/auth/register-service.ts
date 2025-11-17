@@ -264,6 +264,7 @@ export async function registerAccount(body: Record<string, unknown>): Promise<Re
   const { error: coreUserError } = await supabaseAdmin.from('users').insert({
     id: authUserId,
     email: payload.email.toLowerCase(),
+    name: payload.name || `${payload.first_name} ${payload.last_name}`.trim(),
     first_name: payload.first_name,
     last_name: payload.last_name,
     phone: payload.phone || null,
@@ -312,15 +313,31 @@ export async function registerAccount(body: Record<string, unknown>): Promise<Re
     })
   }
 
-  await supabaseAdmin
+  const { error: updateCustomUserError } = await supabaseAdmin
     .from('custom_users')
     .update({ business_id: newBusiness.id, role: 'owner' })
     .eq('id', newUser.id)
 
-  await supabaseAdmin
+  if (updateCustomUserError) {
+    logSupabaseError('Failed to update custom_user with business_id', updateCustomUserError, {
+      user_id: newUser.id,
+      business_id: newBusiness.id
+    })
+    // Non-fatal, continue
+  }
+
+  const { error: updateUserError } = await supabaseAdmin
     .from('users')
     .update({ business_id: newBusiness.id })
     .eq('id', newUser.id)
+
+  if (updateUserError) {
+    logSupabaseError('Failed to update user with business_id', updateUserError, {
+      user_id: newUser.id,
+      business_id: newBusiness.id
+    })
+    // Non-fatal, continue
+  }
 
   const token = JWTManager.createUserToken(newUser.id, newBusiness.id, payload.email.toLowerCase(), 'owner')
 

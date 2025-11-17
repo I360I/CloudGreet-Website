@@ -5,6 +5,8 @@ import { logger } from '@/lib/monitoring'
 import { motion } from 'framer-motion'
 import { TrendingUp, DollarSign, Phone, Calendar, AlertCircle, CheckCircle } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { useBusinessData } from '@/app/hooks/useBusinessData'
+import { getServiceColor } from '@/lib/business-theme'
 
 interface ROIData {
   totalCalls: number
@@ -28,8 +30,13 @@ interface ROICalculatorProps {
 }
 
 export default function ROICalculator({ businessId, className = '' }: ROICalculatorProps) {
+  const { theme, businessConfig } = useBusinessData()
   const [roiData, setRoiData] = useState<ROIData | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const primaryColor = theme?.primaryColor || '#8b5cf6'
+  const revenueColor = getServiceColor('revenue', businessConfig?.services || []) || '#10b981'
+  const callColor = getServiceColor('call', businessConfig?.services || []) || '#3b82f6'
 
   useEffect(() => {
     loadRealROIData()
@@ -75,7 +82,7 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
 
   if (loading) {
     return (
-      <div className={`bg-gray-900/50 backdrop-blur-xl border border-gray-700/50 rounded-xl p-6 ${className}`}>
+      <div className={`bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 ${className}`}>
         <div className="animate-pulse">
           <div className="h-6 bg-gray-700/50 rounded mb-4"></div>
           <div className="space-y-3">
@@ -90,7 +97,7 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
 
   if (!roiData) {
     return (
-      <div className={`bg-gray-900/50 backdrop-blur-xl border border-gray-700/50 rounded-xl p-6 ${className}`}>
+      <div className={`bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 ${className}`}>
         <h3 className="text-lg font-semibold text-white mb-4">ROI Calculator</h3>
         <p className="text-gray-400">No data available</p>
       </div>
@@ -98,11 +105,11 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
   }
 
   return (
-    <div className={`bg-gray-900/50 backdrop-blur-xl border border-gray-700/50 rounded-xl p-6 ${className}`}>
+    <div className={`bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 rounded-xl p-6 ${className}`}>
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
-          <TrendingUp className="w-5 h-5 text-green-400" />
+        <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: primaryColor + '20' }}>
+          <TrendingUp className="w-5 h-5" style={{ color: primaryColor }} />
         </div>
         <div>
           <h3 className="text-lg font-semibold text-white">ROI Calculator</h3>
@@ -115,16 +122,20 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-4"
+          style={{
+            background: `linear-gradient(to right, ${revenueColor}10, ${revenueColor}20)`,
+            borderColor: revenueColor + '30'
+          }}
+          className="border rounded-xl p-4"
         >
           <div className="flex items-center gap-3 mb-2">
-            <DollarSign className="w-5 h-5 text-green-400" />
-            <span className="text-green-400 font-medium">Net ROI</span>
+            <DollarSign className="w-5 h-5" style={{ color: revenueColor }} />
+            <span className="font-medium" style={{ color: revenueColor }}>Net ROI</span>
           </div>
           <div className="text-2xl font-bold text-white">
             {formatCurrency(roiData.netROI)}
           </div>
-          <div className="text-sm text-green-400">
+          <div className="text-sm" style={{ color: revenueColor }}>
             {formatPercentage(roiData.roiPercentage)} return
           </div>
         </motion.div>
@@ -133,16 +144,20 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-xl p-4"
+          style={{
+            background: `linear-gradient(to right, ${revenueColor}10, ${revenueColor}20)`,
+            borderColor: revenueColor + '30'
+          }}
+          className="border rounded-xl p-4"
         >
           <div className="flex items-center gap-3 mb-2">
-            <Phone className="w-5 h-5 text-blue-400" />
-            <span className="text-blue-400 font-medium">Revenue</span>
+            <DollarSign className="w-5 h-5" style={{ color: revenueColor }} />
+            <span className="font-medium" style={{ color: revenueColor }}>Revenue</span>
           </div>
           <div className="text-2xl font-bold text-white">
             {formatCurrency(roiData.totalRevenue)}
           </div>
-          <div className="text-sm text-blue-400">
+          <div className="text-sm" style={{ color: revenueColor }}>
             {roiData.appointmentsCompleted} completed jobs
           </div>
         </motion.div>
@@ -151,16 +166,20 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-xl p-4"
+          style={{
+            background: `linear-gradient(to right, ${callColor}10, ${callColor}20)`,
+            borderColor: callColor + '30'
+          }}
+          className="border rounded-xl p-4"
         >
           <div className="flex items-center gap-3 mb-2">
-            <Phone className="w-5 h-5 text-purple-400" />
-            <span className="text-purple-400 font-medium">Calls</span>
+            <Phone className="w-5 h-5" style={{ color: callColor }} />
+            <span className="font-medium" style={{ color: callColor }}>Calls</span>
           </div>
           <div className="text-2xl font-bold text-white">
             {roiData.totalCalls}
           </div>
-          <div className="text-sm text-purple-400">
+          <div className="text-sm" style={{ color: callColor }}>
             {roiData.answeredCalls} answered
           </div>
         </motion.div>
@@ -226,18 +245,18 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
       </div>
 
       {/* Cost Breakdown */}
-      <div className="mt-6 pt-6 border-t border-gray-700/50">
+      <div className="mt-6 pt-6 border-t border-slate-700/50">
         <h4 className="text-white font-medium mb-4">Cost Breakdown</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-gray-800/30 rounded-lg p-3">
+          <div className="bg-slate-700/30 rounded-lg p-3">
             <div className="text-sm text-gray-400">Monthly Subscription</div>
             <div className="text-lg font-semibold text-white">{formatCurrency(roiData.monthlyCost)}</div>
           </div>
-          <div className="bg-gray-800/30 rounded-lg p-3">
+          <div className="bg-slate-700/30 rounded-lg p-3">
             <div className="text-sm text-gray-400">Per-Booking Fees</div>
             <div className="text-lg font-semibold text-white">{formatCurrency(roiData.appointmentsBooked * roiData.perBookingFee)}</div>
           </div>
-          <div className="bg-gray-800/30 rounded-lg p-3">
+          <div className="bg-slate-700/30 rounded-lg p-3">
             <div className="text-sm text-gray-400">Total Costs</div>
             <div className="text-lg font-semibold text-white">{formatCurrency(roiData.totalFees)}</div>
           </div>
@@ -245,7 +264,7 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
       </div>
 
       {/* ROI Status */}
-      <div className="mt-6 pt-6 border-t border-gray-700/50">
+      <div className="mt-6 pt-6 border-t border-slate-700/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {roiData.roiPercentage > 0 ? (

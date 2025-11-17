@@ -98,7 +98,7 @@ export default function SimpleRegisterPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-black/40 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full border border-purple-500/20"
+          className="bg-black/40 backdrop-blur-xl rounded-2xl p-6 md:p-8 max-w-md w-full border border-white/10 shadow-2xl"
         >
           <div className="text-center">
             <motion.div
@@ -128,7 +128,7 @@ export default function SimpleRegisterPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-black/40 backdrop-blur-xl rounded-3xl p-8 max-w-md w-full border border-purple-500/20"
+        className="bg-black/40 backdrop-blur-xl rounded-2xl p-6 md:p-8 max-w-md w-full border border-white/10 shadow-2xl"
       >
         <div className="text-center mb-8">
           <Link href="/" className="inline-block mb-6">
@@ -155,7 +155,7 @@ export default function SimpleRegisterPage() {
                 required
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
+                className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
                 placeholder={PLACEHOLDERS.FIRST_NAME}
                 autoComplete="given-name"
               />
@@ -170,7 +170,7 @@ export default function SimpleRegisterPage() {
                 required
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
+                className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
                 placeholder={PLACEHOLDERS.LAST_NAME}
                 autoComplete="family-name"
               />
@@ -198,7 +198,7 @@ export default function SimpleRegisterPage() {
             <select
               value={formData.businessType}
               onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
+              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
             >
               <option value="HVAC">HVAC</option>
               <option value="Painting">Painting</option>
@@ -233,7 +233,7 @@ export default function SimpleRegisterPage() {
                 autoComplete="new-password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 pr-12 bg-gray-800/50 border border-gray-600/50 rounded-xl text-white placeholder-gray-400 focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition-all"
+                className="w-full px-4 py-3 pr-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
                 placeholder={PLACEHOLDERS.PASSWORD}
               />
               <button
@@ -278,7 +278,7 @@ export default function SimpleRegisterPage() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm"
+              className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm shadow-lg"
             >
               {error}
             </motion.div>
@@ -289,7 +289,7 @@ export default function SimpleRegisterPage() {
             disabled={isLoading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full py-4 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+            className="w-full px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>

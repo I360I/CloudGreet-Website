@@ -83,87 +83,166 @@ export async function POST(request: NextRequest) {
           const startTime = new Date(datetime)
           const endTime = new Date(startTime.getTime() + 60 * 60 * 1000) // Add 1 hour
 
-          // Create appointment in database
-          // Note: title field is required by schema - use service as title
-          const appointmentTitle = service || `Appointment for ${name}`
-          const insert = await supabaseAdmin
-            .from('appointments')
-            .insert({
-              business_id: business_id,
-              customer_name: name,
-              customer_phone: phone,
-              service_type: service,
-              title: appointmentTitle,
-              scheduled_date: datetime,
-              start_time: startTime.toISOString(),
-              end_time: endTime.toISOString(),
-              duration: 60,
-              status: 'scheduled'
-            })
-            .select('id')
-            .single()
+          // Create appointment in database using transaction function for atomicity
+          const { data: appointmentId, error: appointmentError } = await supabaseAdmin.rpc('create_appointment_safe', {
+            p_business_id: business_id,
+            p_customer_name: name,
+            p_customer_phone: phone,
+            p_customer_email: null, // Email not available from voice call
+            p_service_type: service,
+            p_scheduled_date: datetime,
+            p_start_time: startTime.toISOString(),
+            p_end_time: endTime.toISOString(),
+            p_duration: 60,
+            p_notes: null,
+            p_estimated_value: null
+          })
 
-          if (insert.error) {
-            logger.error('book_appointment insert failed', { error: insert.error.message })
+          if (appointmentError || !appointmentId) {
+            logger.error('book_appointment transaction failed', { 
+              error: appointmentError?.message || 'No appointment ID returned',
+              business_id,
+              customer_name: name
+            })
             return NextResponse.json({ success: false, error: 'db_error' }, { status: 500 })
           }
 
-          const apptId = insert.data.id
+          const apptId = appointmentId
 
           // Sync to Google Calendar if calendar is connected (appointment already created above)
-          // Note: createCalendarEvent creates appointments, so we'll create calendar event directly
           if (business_id) {
             try {
-              const { getCalendarConfig } = await import('@/lib/calendar')
+              const { getCalendarConfig, getValidAccessToken, refreshGoogleToken } = await import('@/lib/calendar')
               const config = await getCalendarConfig(business_id)
               
-              if (config?.calendar_connected && config.google_access_token) {
-                // Create Google Calendar event directly (appointment already in DB)
-                const googleEvent = {
-                  summary: `${service} - ${name}`,
-                  description: `Appointment for ${name} (${phone}). Service: ${service}`,
-                  location: '',
-                  start: {
-                    dateTime: startTime.toISOString(),
-                    timeZone: config.timezone || 'America/New_York'
-                  },
-                  end: {
-                    dateTime: endTime.toISOString(),
-                    timeZone: config.timezone || 'America/New_York'
-                  },
-                  reminders: {
-                    useDefault: false,
-                    overrides: [
-                      { method: 'email', minutes: 24 * 60 },
-                      { method: 'popup', minutes: 60 }
-                    ]
-                  }
-                }
-
-                const calendarResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${config.google_access_token}`,
-                    'Content-Type': 'application/json'
-                  },
-                  body: JSON.stringify(googleEvent)
-                })
-
-                if (calendarResponse.ok) {
-                  const googleEventData = await calendarResponse.json()
-                  // Update appointment with Google Calendar event ID
-                  await supabaseAdmin
-                    .from('appointments')
-                    .update({
-                      google_calendar_event_id: googleEventData.id,
-                      google_event_id: googleEventData.id,
-                      updated_at: new Date().toISOString()
-                    })
-                    .eq('id', apptId)
+              if (config?.calendar_connected) {
+                // Get valid access token (refresh if expired)
+                let accessToken = await getValidAccessToken(business_id)
+                
+                if (accessToken) {
+                  // Retry logic for calendar API calls
+                  let retries = 2
+                  let calendarSuccess = false
                   
-                  logger.info('Google Calendar event created', { 
-                    appointmentId: apptId, 
-                    googleEventId: googleEventData.id 
+                  while (retries >= 0 && !calendarSuccess) {
+                    try {
+                      const googleEvent = {
+                        summary: `${service} - ${name}`,
+                        description: `Appointment for ${name} (${phone}). Service: ${service}`,
+                        location: '',
+                        start: {
+                          dateTime: startTime.toISOString(),
+                          timeZone: config.timezone || 'America/New_York'
+                        },
+                        end: {
+                          dateTime: endTime.toISOString(),
+                          timeZone: config.timezone || 'America/New_York'
+                        },
+                        reminders: {
+                          useDefault: false,
+                          overrides: [
+                            { method: 'email', minutes: 24 * 60 },
+                            { method: 'popup', minutes: 60 }
+                          ]
+                        }
+                      }
+
+                      const calendarResponse = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                        method: 'POST',
+                        headers: {
+                          'Authorization': `Bearer ${accessToken}`,
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(googleEvent)
+                      })
+
+                      if (calendarResponse.ok) {
+                        const googleEventData = await calendarResponse.json()
+                        // Update appointment with Google Calendar event ID
+                        await supabaseAdmin
+                          .from('appointments')
+                          .update({
+                            google_calendar_event_id: googleEventData.id,
+                            google_event_id: googleEventData.id,
+                            updated_at: new Date().toISOString()
+                          })
+                          .eq('id', apptId)
+                        
+                        logger.info('Google Calendar event created', { 
+                          appointmentId: apptId, 
+                          googleEventId: googleEventData.id 
+                        })
+                        
+                        calendarSuccess = true
+                      } else if (calendarResponse.status === 401 && retries > 0) {
+                        // Token expired, try to refresh and retry
+                        logger.warn('Google Calendar API returned 401, refreshing token and retrying', {
+                          businessId: business_id,
+                          appointmentId: apptId,
+                          retries
+                        })
+                        
+                        accessToken = await refreshGoogleToken(business_id)
+                        if (!accessToken) {
+                          logger.error('Failed to refresh token, cannot retry calendar sync', {
+                            businessId: business_id,
+                            appointmentId: apptId
+                          })
+                          break
+                        }
+                        
+                        retries--
+                      } else {
+                        const errorText = await calendarResponse.text().catch(() => 'Unknown error')
+                        logger.error('Failed to create Google Calendar event', {
+                          status: calendarResponse.status,
+                          statusText: calendarResponse.statusText,
+                          error: errorText,
+                          businessId: business_id,
+                          appointmentId: apptId,
+                          retries
+                        })
+                        
+                        // Don't retry on non-auth errors
+                        if (calendarResponse.status !== 401) {
+                          break
+                        }
+                        
+                        retries--
+                      }
+                    } catch (calendarError) {
+                      logger.error('Google Calendar API error', {
+                        error: calendarError instanceof Error ? calendarError.message : 'Unknown error',
+                        businessId: business_id,
+                        appointmentId: apptId,
+                        retries
+                      })
+                      
+                      // Only retry on network errors
+                      if (retries > 0 && calendarError instanceof Error && (
+                        calendarError.message.includes('network') ||
+                        calendarError.message.includes('timeout') ||
+                        calendarError.message.includes('ECONNREFUSED')
+                      )) {
+                        retries--
+                        // Wait 1 second before retry
+                        await new Promise(resolve => setTimeout(resolve, 1000))
+                      } else {
+                        break
+                      }
+                    }
+                  }
+                  
+                  if (!calendarSuccess) {
+                    logger.warn('Failed to sync appointment to Google Calendar after retries, appointment saved in database', {
+                      appointmentId: apptId,
+                      businessId: business_id
+                    })
+                  }
+                } else {
+                  logger.warn('No valid Google access token available, skipping calendar sync', {
+                    businessId: business_id,
+                    appointmentId: apptId
                   })
                 }
               }
@@ -325,5 +404,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false }, { status: 500 })
   }
 }
-
-

@@ -22,7 +22,8 @@ import {
   Menu,
   X,
   Shield,
-  Loader2
+  Loader2,
+  Activity
 } from 'lucide-react'
 import { useToast } from '@/app/contexts/ToastContext'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -37,6 +38,8 @@ const adminNavItems = [
   { href: '/admin/acquisition', label: 'ACQUISITION', icon: TrendingUp, category: 'growth' },
   { href: '/admin/customer-success', label: 'CUSTOMER SUCCESS', icon: HeartHandshake, category: 'growth' },
   { href: '/admin/settings', label: 'SETTINGS', icon: Settings, category: 'system' },
+  { href: '/admin/health', label: 'HEALTH', icon: Activity, category: 'system' },
+  { href: '/admin/verify-mvp', label: 'VERIFY MVP', icon: Shield, category: 'system' },
   { href: '/admin/knowledge', label: 'KNOWLEDGE', icon: BookOpen, category: 'system' },
   { href: '/admin/code-quality', label: 'CODE QUALITY', icon: Code, category: 'dev' },
   { href: '/admin/manual-tests', label: 'MANUAL TESTS', icon: TestTube, category: 'dev' },

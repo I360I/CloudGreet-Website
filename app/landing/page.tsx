@@ -25,7 +25,7 @@ function VoiceOrbDemoWithSettings() {
   const [showForm, setShowForm] = React.useState(false)
 
   return (
-    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12">
+    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8">
       {/* Business Info Form */}
       <motion.div className="mb-6">
         <button
@@ -102,6 +102,8 @@ function VoiceOrbDemoWithSettings() {
 
 export default function LandingPage() {
   const [isLoaded, setIsLoaded] = React.useState(false)
+  const [isNavVisible, setIsNavVisible] = React.useState(true)
+  const [lastScrollY, setLastScrollY] = React.useState(0)
 
   React.useEffect(() => {
     // Ensure Hero component loads first
@@ -111,6 +113,28 @@ export default function LandingPage() {
     
     return () => clearTimeout(timer)
   }, [])
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      
+      // Show nav when scrolling up or at top, hide when scrolling down
+      if (currentScrollY < 10) {
+        setIsNavVisible(true)
+      } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down and past 100px
+        setIsNavVisible(false)
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up
+        setIsNavVisible(true)
+      }
+      
+      setLastScrollY(currentScrollY)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY])
 
   if (!isLoaded) {
     return (
@@ -124,13 +148,18 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white" style={{color: 'white'}}>
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white">
       {/* Navigation */}
       <motion.nav 
         initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="border-b border-gray-800/50 backdrop-blur-md bg-black/20 sticky top-0 z-50"
+        animate={{ 
+          opacity: isNavVisible ? 1 : 0,
+          y: isNavVisible ? 0 : -100
+        }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className={`border-b border-gray-800/50 backdrop-blur-md bg-black/20 sticky top-0 z-50 transition-all duration-300 ${
+          isNavVisible ? 'pointer-events-auto' : 'pointer-events-none'
+        }`}
       >
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -139,10 +168,10 @@ export default function LandingPage() {
                 whileHover={{ scale: 1.05 }}
                 className="flex items-center"
               >
-                <span className="text-2xl font-bold text-white" style={{color: 'white'}}>CloudGreet</span>
+                <span className="text-2xl font-bold text-white">CloudGreet</span>
               </motion.div>
             </Link>
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden md:flex items-center space-x-6">
               <motion.a 
                 whileHover={{ y: -2 }}
                 href="#how-it-works" 
@@ -172,7 +201,7 @@ export default function LandingPage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               href="/login"
-              className="bg-white/15 backdrop-blur-xl text-white px-8 py-3 rounded-xl font-semibold border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-2xl"
+              className="bg-white/15 backdrop-blur-xl text-white px-5 py-2 rounded-lg text-sm font-medium border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-lg"
               aria-label="Sign in to your CloudGreet account"
             >
               Sign In
@@ -197,7 +226,7 @@ export default function LandingPage() {
             <h2 className="text-5xl md:text-6xl font-bold mb-6 text-white">
               Try It Right Now
             </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
               Click the orb to call our AI receptionist. Experience real voice AI powered by your actual phone system.
             </p>
           </motion.div>
@@ -209,24 +238,24 @@ export default function LandingPage() {
             className="max-w-4xl mx-auto flex flex-col items-center"
           >
             {/* Ring-like Demo with Phone Input */}
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 text-center">
-              <h3 className="text-2xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-8 text-center">
+              <h3 className="text-xl md:text-2xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
                 Experience the Power of AI
               </h3>
-              <p className="text-gray-300 mb-8 max-w-2xl mx-auto">
+              <p className="text-gray-300 mb-6 max-w-2xl mx-auto text-sm md:text-base">
                 Enter your phone number and click the orb to call our AI receptionist
               </p>
               
               {/* Phone Number Input */}
-              <div className="max-w-md mx-auto mb-8">
-                <label className="block text-sm font-medium text-gray-300 mb-3">
+              <div className="max-w-md mx-auto mb-6">
+                <label className="block text-xs md:text-sm font-medium text-gray-300 mb-2">
                   Enter your phone number to test our AI
                 </label>
                 <input
                   type="tel"
                   id="phoneInput"
                   placeholder="(555) 123-4567"
-                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white text-center text-lg placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20"
+                  className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white text-center text-sm md:text-base placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20"
                 />
               </div>
               
@@ -385,7 +414,7 @@ export default function LandingPage() {
             <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent">
               Stop Losing Revenue
             </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
               Every missed call is a lost customer. CloudGreet ensures you never miss an opportunity.
             </p>
           </motion.div>
@@ -394,20 +423,20 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto"
+            className="grid md:grid-cols-3 gap-6 md:gap-8 max-w-5xl mx-auto"
           >
-            <div className="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 text-center">
-              <div className="text-5xl font-bold text-red-400 mb-4">30%</div>
-              <p className="text-gray-300">Of calls go to voicemail during business hours</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 text-center">
-              <div className="text-5xl font-bold text-yellow-400 mb-4">85%</div>
-              <p className="text-gray-300">Of callers won&apos;t leave a message</p>
-            </div>
-            <div className="bg-white/5 backdrop-blur-xl p-8 rounded-2xl border border-white/10 text-center">
-              <div className="text-5xl font-bold text-green-400 mb-4">$500+</div>
-              <p className="text-gray-300">Average value of a booked job</p>
-            </div>
+              <div className="bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 text-center">
+                <div className="text-4xl md:text-5xl font-bold text-red-400 mb-3">30%</div>
+                <p className="text-gray-300 text-sm md:text-base">Of calls go to voicemail during business hours</p>
+              </div>
+              <div className="bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 text-center">
+                <div className="text-4xl md:text-5xl font-bold text-yellow-400 mb-3">85%</div>
+                <p className="text-gray-300 text-sm md:text-base">Of callers won&apos;t leave a message</p>
+              </div>
+              <div className="bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 text-center">
+                <div className="text-4xl md:text-5xl font-bold text-green-400 mb-3">$500+</div>
+                <p className="text-gray-300 text-sm md:text-base">Average value of a booked job</p>
+              </div>
           </motion.div>
         </div>
       </section>
@@ -424,17 +453,17 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-20"
+            className="text-center mb-12 md:mb-16"
           >
             <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent">
               How CloudGreet Works
             </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
               Three simple steps to transform your business communication
             </p>
           </motion.div>
           
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
             <motion.div 
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -443,7 +472,7 @@ export default function LandingPage() {
               className="group relative"
             >
               <div className="absolute inset-0 bg-white/5 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
-              <div className="relative bg-gray-800/40 backdrop-blur-xl p-10 rounded-3xl border border-gray-700/50 text-center shadow-2xl group-hover:border-blue-500/30 transition-all duration-500">
+              <div className="relative bg-gray-800/40 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-gray-700/50 text-center shadow-2xl group-hover:border-blue-500/30 transition-all duration-500">
                 <div className="relative mb-8">
                   <div className="w-20 h-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto text-4xl font-bold shadow-lg group-hover:shadow-blue-500/25 transition-all duration-500">
                     1
@@ -452,10 +481,10 @@ export default function LandingPage() {
                     <Phone className="w-4 h-4 text-white" />
                   </div>
                 </div>
-                <h3 className="text-3xl font-bold mb-6 text-white from-blue-400 to-purple-400">
+                <h3 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-white">
                   AI Answers in &lt;1 Ring
                 </h3>
-                <p className="text-gray-300 text-lg leading-relaxed">
+                <p className="text-gray-300 text-base md:text-lg leading-relaxed">
                   Our AI receptionist picks up every call instantly, ensuring no customer is left waiting or hanging up.
                 </p>
                 <div className="mt-6 flex justify-center">
@@ -472,7 +501,7 @@ export default function LandingPage() {
               className="group relative"
             >
               <div className="absolute inset-0 bg-white/5 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
-              <div className="relative bg-gray-800/40 backdrop-blur-xl p-10 rounded-3xl border border-gray-700/50 text-center shadow-2xl group-hover:border-purple-500/30 transition-all duration-500">
+              <div className="relative bg-gray-800/40 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-gray-700/50 text-center shadow-2xl group-hover:border-purple-500/30 transition-all duration-500">
                 <div className="relative mb-8">
                   <div className="w-20 h-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto text-4xl font-bold shadow-lg group-hover:shadow-purple-500/25 transition-all duration-500">
                     2
@@ -481,10 +510,10 @@ export default function LandingPage() {
                     <CheckCircle className="w-4 h-4 text-white" />
                   </div>
                 </div>
-                <h3 className="text-3xl font-bold mb-6 text-white from-purple-400 to-pink-400">
+                <h3 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-white">
                   Qualifies Leads
                 </h3>
-                <p className="text-gray-300 text-lg leading-relaxed">
+                <p className="text-gray-300 text-base md:text-lg leading-relaxed">
                   The AI gathers all necessary details: service needed, location, urgency, and budget automatically.
                 </p>
                 <div className="mt-6 flex justify-center">
@@ -501,7 +530,7 @@ export default function LandingPage() {
               className="group relative"
             >
               <div className="absolute inset-0 bg-white/5 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
-              <div className="relative bg-gray-800/40 backdrop-blur-xl p-10 rounded-3xl border border-gray-700/50 text-center shadow-2xl group-hover:border-pink-500/30 transition-all duration-500">
+              <div className="relative bg-gray-800/40 backdrop-blur-xl p-6 md:p-8 rounded-3xl border border-gray-700/50 text-center shadow-2xl group-hover:border-pink-500/30 transition-all duration-500">
                 <div className="relative mb-8">
                   <div className="w-20 h-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mx-auto text-4xl font-bold shadow-lg group-hover:shadow-pink-500/25 transition-all duration-500">
                     3
@@ -510,10 +539,10 @@ export default function LandingPage() {
                     <Calendar className="w-4 h-4 text-white" />
                   </div>
                 </div>
-                <h3 className="text-3xl font-bold mb-6 text-white from-pink-400 to-red-400">
+                <h3 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-white">
                   Books Appointments
                 </h3>
-                <p className="text-gray-300 text-lg leading-relaxed">
+                <p className="text-gray-300 text-base md:text-lg leading-relaxed">
                   Seamlessly schedules qualified leads directly into your calendar and sends SMS confirmations.
                 </p>
                 <div className="mt-6 flex justify-center">
@@ -540,12 +569,12 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-20"
+            className="text-center mb-12 md:mb-16"
           >
             <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent">
               Professional Dashboard
             </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
               Real-time insights and analytics to track your business growth
             </p>
           </motion.div>
@@ -557,7 +586,7 @@ export default function LandingPage() {
             className="relative"
           >
             {/* Dashboard Container */}
-            <div className="bg-gray-800/20 backdrop-blur-2xl p-8 lg:p-12 rounded-3xl border border-gray-700/30 shadow-2xl">
+            <div className="bg-gray-800/20 backdrop-blur-2xl p-6 lg:p-8 rounded-3xl border border-gray-700/30 shadow-2xl">
               {/* Dashboard Header */}
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center space-x-4">
@@ -578,7 +607,7 @@ export default function LandingPage() {
                   className="group relative"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
-                  <div className="relative bg-gradient-to-br from-blue-600/10 to-purple-600/10 p-8 rounded-2xl border border-blue-500/20 backdrop-blur-sm group-hover:border-blue-400/40 transition-all duration-500">
+                  <div className="relative bg-gradient-to-br from-blue-600/10 to-purple-600/10 p-6 rounded-2xl border border-blue-500/20 backdrop-blur-sm group-hover:border-blue-400/40 transition-all duration-500">
                     <div className="flex items-center justify-between mb-6">
                       <div className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
                         <Phone className="w-6 h-6 text-white" />
@@ -604,7 +633,7 @@ export default function LandingPage() {
                   className="group relative"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
-                  <div className="relative bg-gradient-to-br from-green-600/10 to-emerald-600/10 p-8 rounded-2xl border border-green-500/20 backdrop-blur-sm group-hover:border-green-400/40 transition-all duration-500">
+                  <div className="relative bg-gradient-to-br from-green-600/10 to-emerald-600/10 p-6 rounded-2xl border border-green-500/20 backdrop-blur-sm group-hover:border-green-400/40 transition-all duration-500">
                     <div className="flex items-center justify-between mb-6">
                       <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
                         <Calendar className="w-6 h-6 text-white" />
@@ -630,7 +659,7 @@ export default function LandingPage() {
                   className="group relative"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
-                  <div className="relative bg-gradient-to-br from-purple-600/10 to-pink-600/10 p-8 rounded-2xl border border-purple-500/20 backdrop-blur-sm group-hover:border-purple-400/40 transition-all duration-500">
+                  <div className="relative bg-gradient-to-br from-purple-600/10 to-pink-600/10 p-6 rounded-2xl border border-purple-500/20 backdrop-blur-sm group-hover:border-purple-400/40 transition-all duration-500">
                     <div className="flex items-center justify-between mb-6">
                       <div className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
                         <Users className="w-6 h-6 text-white" />
@@ -656,7 +685,7 @@ export default function LandingPage() {
                   className="group relative"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500" />
-                  <div className="relative bg-gradient-to-br from-yellow-600/10 to-orange-600/10 p-8 rounded-2xl border border-yellow-500/20 backdrop-blur-sm group-hover:border-yellow-400/40 transition-all duration-500">
+                  <div className="relative bg-gradient-to-br from-yellow-600/10 to-orange-600/10 p-6 rounded-2xl border border-yellow-500/20 backdrop-blur-sm group-hover:border-yellow-400/40 transition-all duration-500">
                     <div className="flex items-center justify-between mb-6">
                       <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
                         <DollarSign className="w-6 h-6 text-white" />
@@ -680,7 +709,7 @@ export default function LandingPage() {
               
               {/* Dashboard Description */}
               <div className="text-center">
-                <p className="text-gray-300 text-lg leading-relaxed max-w-4xl mx-auto">
+                <p className="text-gray-300 text-base md:text-lg leading-relaxed max-w-4xl mx-auto">
                   Real-time analytics, call recordings, and performance insights to help you grow your business. 
                   Track every metric that matters and make data-driven decisions.
                 </p>
@@ -702,12 +731,12 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="mb-16"
+            className="mb-12 md:mb-16"
           >
             <h2 className="text-6xl md:text-7xl font-bold mb-6 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent">
               Simple, Transparent Pricing
             </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
               One plan, everything included. No hidden fees, no surprises, no confusion.
             </p>
           </motion.div>
@@ -724,7 +753,7 @@ export default function LandingPage() {
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
               
               {/* Card */}
-              <div className="relative bg-gray-800/30 backdrop-blur-2xl p-12 rounded-3xl border border-gray-700/50 shadow-2xl group-hover:border-blue-500/30 transition-all duration-500">
+              <div className="relative bg-gray-800/30 backdrop-blur-2xl p-8 md:p-10 rounded-3xl border border-gray-700/50 shadow-2xl group-hover:border-blue-500/30 transition-all duration-500">
                 {/* Only Plan Badge */}
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg">
@@ -733,24 +762,24 @@ export default function LandingPage() {
                 </div>
                 
                 {/* Plan Title */}
-                <h3 className="text-4xl font-bold mb-6 text-white from-blue-400 to-purple-400">
+                <h3 className="text-3xl md:text-4xl font-bold mb-6 text-white">
                   Complete Solution
                 </h3>
                 
                 {/* Pricing */}
                 <div className="mb-8">
                   <div className="flex items-baseline justify-center gap-2 mb-2">
-                    <span className="text-6xl font-bold text-white from-blue-400 to-purple-400">
+                    <span className="text-5xl md:text-6xl font-bold text-white">
                       $200
                     </span>
-                    <span className="text-xl text-gray-400">/mo</span>
+                    <span className="text-lg md:text-xl text-gray-400">/mo</span>
                   </div>
                   <div className="flex items-baseline justify-center gap-2 mb-4">
-                    <span className="text-2xl text-gray-300">+</span>
-                    <span className="text-4xl font-bold text-white from-green-400 to-emerald-400">
+                    <span className="text-xl md:text-2xl text-gray-300">+</span>
+                    <span className="text-3xl md:text-4xl font-bold text-white">
                       $50
                     </span>
-                    <span className="text-lg text-gray-400">per booking</span>
+                    <span className="text-base md:text-lg text-gray-400">per booking</span>
                   </div>
                 </div>
                 
@@ -776,30 +805,30 @@ export default function LandingPage() {
                       <div className="w-6 h-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center flex-shrink-0">
                         <CheckCircle className="w-4 h-4 text-white" />
                       </div>
-                      <span className="text-gray-200 text-lg">{feature}</span>
+                      <span className="text-gray-200 text-base md:text-lg">{feature}</span>
                     </motion.div>
                   ))}
                 </div>
                 
                 {/* CTA Buttons */}
-                <div className="flex flex-col sm:flex-row gap-4 w-full">
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
                   <Link
                     href="/test-agent-simple"
-                    className="flex-1 bg-white/15 backdrop-blur-xl text-white px-8 py-4 rounded-2xl text-lg font-semibold border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-2xl inline-block focus:ring-4 focus:ring-blue-500/50 focus:outline-none"
+                    className="flex-1 bg-white/15 backdrop-blur-xl text-white px-6 py-3 rounded-lg text-base font-medium border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-lg inline-block focus:ring-4 focus:ring-blue-500/50 focus:outline-none"
                     aria-label="Test CloudGreet AI agent"
                   >
-                    <div className="flex items-center justify-center gap-3">
-                      <Play className="w-5 h-5" aria-hidden="true" />
+                    <div className="flex items-center justify-center gap-2">
+                      <Play className="w-4 h-4" aria-hidden="true" />
                       Test AI Agent
                     </div>
                   </Link>
                   <Link
                     href="/register-simple"
-                    className="flex-1 bg-white/10 backdrop-blur-xl text-white px-8 py-4 rounded-2xl text-lg font-semibold border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-2xl inline-block focus:ring-4 focus:ring-white/20 focus:outline-none"
+                    className="flex-1 bg-white/10 backdrop-blur-xl text-white px-6 py-3 rounded-lg text-base font-medium border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg inline-block focus:ring-4 focus:ring-white/20 focus:outline-none"
                     aria-label="Create your CloudGreet account"
                   >
-                    <div className="flex items-center justify-center gap-3">
-                      <Zap className="w-5 h-5" aria-hidden="true" />
+                    <div className="flex items-center justify-center gap-2">
+                      <Zap className="w-4 h-4" aria-hidden="true" />
                       Get Started Now
                     </div>
                   </Link>
@@ -839,7 +868,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-2xl text-gray-300 mb-16 max-w-4xl mx-auto leading-relaxed"
+            className="text-lg md:text-xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed"
           >
             Join service businesses who never miss another opportunity. 
             <span className="text-blue-400 font-semibold"> Start growing today.</span>
@@ -853,9 +882,9 @@ export default function LandingPage() {
           >
             <Link
               href="/start"
-              className="bg-white/10 backdrop-blur-xl text-white px-12 py-6 rounded-2xl text-2xl font-semibold border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-2xl flex items-center justify-center gap-4 inline-block"
+              className="bg-white/10 backdrop-blur-xl text-white px-6 py-3 rounded-lg text-base font-semibold border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg flex items-center justify-center gap-2 inline-block"
             >
-              <Zap className="w-8 h-8" />
+              <Zap className="w-4 h-4" />
               Test for Free
             </Link>
             

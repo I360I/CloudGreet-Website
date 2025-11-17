@@ -94,15 +94,24 @@ export async function GET(
       .eq('business_id', clientId)
       .eq('status', 'completed')
 
-    // Calculate revenue
-    const { data: appointments } = await supabaseAdmin
-      .from('appointments')
-      .select('estimated_value, actual_value')
-      .eq('business_id', clientId)
+    // Calculate revenue using SQL aggregation (much more efficient)
+    const { data: revenueData } = await supabaseAdmin.rpc('calculate_business_revenue', {
+      p_business_id: clientId
+    }).catch(async () => {
+      // Fallback: If RPC doesn't exist, use optimized SQL query with SUM
+      const { data } = await supabaseAdmin
+        .from('appointments')
+        .select('estimated_value, actual_value')
+        .eq('business_id', clientId)
+      
+      const total = data?.reduce((sum, apt) => {
+        return sum + (parseFloat(apt.actual_value?.toString() || '0') || parseFloat(apt.estimated_value?.toString() || '0'))
+      }, 0) || 0
+      
+      return { data: [{ total_revenue: total }] }
+    })
 
-    const totalRevenue = appointments?.reduce((sum, apt) => {
-      return sum + (parseFloat(apt.actual_value?.toString() || '0') || parseFloat(apt.estimated_value?.toString() || '0'))
-    }, 0) || 0
+    const totalRevenue = revenueData?.[0]?.total_revenue || 0
 
     // Get AI agent info
     const { data: aiAgent } = await supabaseAdmin

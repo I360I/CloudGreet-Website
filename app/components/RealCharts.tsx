@@ -19,6 +19,7 @@ import {
 import { Line, Bar, Doughnut } from 'react-chartjs-2'
 import { TrendingUp, Phone, Calendar, DollarSign } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { useBusinessData } from '@/app/hooks/useBusinessData'
 
 // Register Chart.js components
 ChartJS.register(
@@ -40,9 +41,21 @@ interface RealChartsProps {
 }
 
 export default function RealCharts({ businessId, timeframe = '30d' }: RealChartsProps) {
+  const { theme, getServiceColor } = useBusinessData()
   const [chartData, setChartData] = useState<unknown>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const primaryColor = theme?.primaryColor || '#8b5cf6'
+  const secondaryColor = theme?.secondaryColor || '#a78bfa'
+  
+  // Generate colors from business theme
+  const callColor = getServiceColor('Calls') || primaryColor
+  const appointmentColor = getServiceColor('Appointments') || secondaryColor
+  const revenueColor = '#22c55e' // Keep green for revenue (universal positive)
+
+  // Memoize chart options to prevent re-renders
+  const chartOptionsMemo = React.useMemo(() => chartOptions, [primaryColor, callColor, appointmentColor, revenueColor])
 
   useEffect(() => {
     loadRealChartData()
@@ -118,7 +131,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {[...Array(2)].map((_, i) => (
-          <div key={i} className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 animate-pulse">
+          <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 animate-pulse">
             <div className="h-6 bg-gray-700/50 rounded w-32 mb-4"></div>
             <div className="h-64 bg-gray-700/50 rounded"></div>
           </div>
@@ -149,47 +162,81 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6"
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        whileHover={{ scale: 1.01, y: -2 }}
+        className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
+        style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <DollarSign className="w-5 h-5 text-green-400" />
+          <motion.div
+            whileHover={{ scale: 1.1, rotate: 5 }}
+          >
+            <DollarSign className="w-5 h-5" style={{ color: revenueColor }} />
+          </motion.div>
           <h3 className="text-lg font-semibold">Revenue Trend</h3>
         </div>
-        <div className="h-64">
-          <Line data={(chartData as any)?.revenueData} options={chartOptions} />
-        </div>
+        <motion.div 
+          className="h-64"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Line data={(chartData as any)?.revenueData} options={chartOptionsMemo} />
+        </motion.div>
       </motion.div>
 
       {/* Calls Chart */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6"
+        transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        whileHover={{ scale: 1.01, y: -2 }}
+        className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
+        style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <Phone className="w-5 h-5 text-blue-400" />
+          <motion.div
+            whileHover={{ scale: 1.1, rotate: 5 }}
+          >
+            <Phone className="w-5 h-5" style={{ color: callColor }} />
+          </motion.div>
           <h3 className="text-lg font-semibold">Call Volume</h3>
         </div>
-        <div className="h-64">
-          <Bar data={(chartData as any)?.callData} options={chartOptions} />
-        </div>
+        <motion.div 
+          className="h-64"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Bar data={(chartData as any)?.callData} options={chartOptionsMemo} />
+        </motion.div>
       </motion.div>
 
       {/* Conversion Chart */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6"
+        transition={{ delay: 0.2, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        whileHover={{ scale: 1.01, y: -2 }}
+        className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
+        style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
       >
         <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-purple-400" />
+          <motion.div
+            whileHover={{ scale: 1.1, rotate: 5 }}
+          >
+            <Calendar className="w-5 h-5" style={{ color: appointmentColor }} />
+          </motion.div>
           <h3 className="text-lg font-semibold">Call Outcomes</h3>
         </div>
-        <div className="h-64">
-          <Doughnut data={(chartData as any)?.conversionData} options={chartOptions} />
-        </div>
+        <motion.div 
+          className="h-64"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+        >
+          <Doughnut data={(chartData as any)?.conversionData} options={chartOptionsMemo} />
+        </motion.div>
       </motion.div>
     </div>
   )

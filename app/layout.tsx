@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from './contexts/ToastContext'
 import { RealtimeProvider } from './contexts/RealtimeProvider'
+import { DashboardDataProvider } from './contexts/DashboardDataContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import * as Sentry from '@sentry/nextjs'
 
@@ -117,7 +118,9 @@ export default function RootLayout({
         <ErrorBoundary>
           <ToastProvider>
             <RealtimeProvider>
-              {children}
+              <DashboardDataProvider>
+                {children}
+              </DashboardDataProvider>
             </RealtimeProvider>
           </ToastProvider>
         </ErrorBoundary>

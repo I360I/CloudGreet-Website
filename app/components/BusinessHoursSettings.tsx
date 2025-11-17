@@ -6,6 +6,8 @@ import { Clock, Save, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 import { Card } from './ui/Card'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { useBusinessData } from '@/app/hooks/useBusinessData'
+import { Button } from './ui/Button'
 import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, ValidationResult, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, RateLimitConfig, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
 
 interface DayHours {
@@ -31,10 +33,13 @@ interface BusinessHoursSettingsProps {
 }
 
 export default function BusinessHoursSettings({ businessId, className = '' }: BusinessHoursSettingsProps) {
+  const { theme } = useBusinessData()
   const [hours, setHours] = useState<BusinessHours | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const primaryColor = theme?.primaryColor || '#8b5cf6'
 
   useEffect(() => {
     loadBusinessHours()
@@ -141,12 +146,12 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
         <Clock className="w-12 h-12 mx-auto mb-4 text-gray-500" />
         <h3 className="text-lg font-semibold text-white mb-2">No Hours Set</h3>
         <p className="text-gray-400 mb-4">Unable to load business hours</p>
-        <button 
+        <Button 
           onClick={loadBusinessHours}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          style={{ backgroundColor: primaryColor }}
         >
           Try Again
-        </button>
+        </Button>
       </Card>
     )
   }
@@ -155,26 +160,28 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
     <Card className={`p-6 ${className}`}>
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Clock className="w-5 h-5 text-blue-400" />
+          <Clock className="w-5 h-5" style={{ color: primaryColor }} />
           Business Hours Settings
         </h3>
         
         <div className="flex gap-2">
-          <button 
+          <Button 
             onClick={loadBusinessHours}
-            className="px-3 py-1 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm flex items-center gap-1"
+            variant="secondary"
+            className="text-sm"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4 mr-1" />
             Refresh
-          </button>
-          <button 
+          </Button>
+          <Button 
             onClick={saveBusinessHours}
             disabled={saving}
-            className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center gap-1 disabled:opacity-50"
+            style={{ backgroundColor: primaryColor }}
+            className="text-sm"
           >
-            <Save className="w-4 h-4" />
+            <Save className="w-4 h-4 mr-1" />
             {saving ? 'Saving...' : 'Save'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -204,7 +211,11 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
         <select
           value={hours.timezone}
           onChange={(e) => setHours({ ...hours, timezone: e.target.value })}
-          className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700/50 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+          className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white focus:outline-none focus:ring-2"
+          style={{ 
+            '--tw-ring-color': primaryColor + '50',
+            '--tw-border-color': primaryColor + '50'
+          } as React.CSSProperties & { '--tw-ring-color'?: string; '--tw-border-color'?: string }}
         >
           <option value="America/New_York">Eastern Time (ET)</option>
           <option value="America/Chicago">Central Time (CT)</option>
@@ -221,7 +232,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-gray-800/50 rounded-lg p-4"
+            className="bg-slate-800/50 rounded-lg p-4"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -229,7 +240,11 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
                   type="checkbox"
                   checked={!hours[day.key].closed}
                   onChange={(e) => updateDayHours(day.key, 'closed', !e.target.checked)}
-                  className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
+                  className="w-4 h-4 bg-slate-700 border-slate-600 rounded focus:ring-2"
+                  style={{ 
+                    accentColor: primaryColor,
+                    '--tw-ring-color': primaryColor
+                  } as React.CSSProperties & { accentColor?: string; '--tw-ring-color'?: string }}
                 />
                 <span className="font-medium text-white w-20">{day.label}</span>
               </div>
@@ -240,18 +255,26 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
                     type="time"
                     value={hours[day.key].open}
                     onChange={(e) => updateDayHours(day.key, 'open', e.target.value)}
-                    className="px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+                    className="px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2"
+                    style={{ 
+                      '--tw-ring-color': primaryColor + '50',
+                      '--tw-border-color': primaryColor + '50'
+                    } as React.CSSProperties & { '--tw-ring-color'?: string; '--tw-border-color'?: string }}
                   />
-                  <span className="text-gray-400">to</span>
+                  <span className="text-slate-400">to</span>
                   <input
                     type="time"
                     value={hours[day.key].close}
                     onChange={(e) => updateDayHours(day.key, 'close', e.target.value)}
-                    className="px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50"
+                    className="px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-2"
+                    style={{ 
+                      '--tw-ring-color': primaryColor + '50',
+                      '--tw-border-color': primaryColor + '50'
+                    } as React.CSSProperties & { '--tw-ring-color'?: string; '--tw-border-color'?: string }}
                   />
                 </div>
               ) : (
-                <span className="text-gray-500 text-sm">Closed</span>
+                <span className="text-slate-500 text-sm">Closed</span>
               )}
             </div>
           </motion.div>
@@ -259,7 +282,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
       </div>
 
       {/* Quick Actions */}
-      <div className="mt-6 pt-4 border-t border-gray-700/50">
+      <div className="mt-6 pt-4 border-t border-slate-700/50">
         <div className="flex gap-2">
           <button
             onClick={() => {
@@ -274,7 +297,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
               }
               setHours({ ...hours, ...standardHours })
             }}
-            className="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+            className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm"
           >
             Set Standard Hours
           </button>
@@ -286,7 +309,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
               }, {} as any)
               setHours({ ...hours, ...allClosed })
             }}
-            className="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+            className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm"
           >
             Close All Days
           </button>

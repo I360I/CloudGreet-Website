@@ -446,15 +446,45 @@ export async function POST(request: NextRequest) {
       // Continue - agent can be created manually later
     }
 
-    // 8. Update business with onboarding completion
-    await supabaseAdmin
-      .from('businesses')
-      .update({
-        onboarding_completed: true,
-        onboarding_step: 999, // Mark as complete
-        updated_at: new Date().toISOString()
+    // 8. Update business with onboarding completion using transaction function for atomicity
+    // This ensures the onboarding_completed flag, compliance logging, and any related updates happen atomically
+    const businessDataJson = {
+      business_name: businessName,
+      business_type: businessType,
+      services: services || [],
+      hours: businessHours || {},
+      voice: { tone: tone || 'professional' }
+    }
+    
+    const { data: onboardingCompleteResult, error: onboardingCompleteError } = await supabaseAdmin.rpc('complete_onboarding_safe', {
+      p_business_id: businessId,
+      p_user_id: userId,
+      p_business_data: businessDataJson
+    })
+
+    if (onboardingCompleteError) {
+      logger.error('Onboarding completion transaction failed', {
+        error: onboardingCompleteError.message,
+        businessId,
+        userId
       })
-      .eq('id', businessId)
+      // Continue anyway - the main onboarding steps are complete
+      // Just update the flag manually as fallback
+      await supabaseAdmin
+        .from('businesses')
+        .update({
+          onboarding_completed: true,
+          onboarding_step: 999,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', businessId)
+    } else {
+      logger.info('Onboarding completed successfully with transaction', {
+        businessId,
+        userId,
+        result: onboardingCompleteResult
+      })
+    }
 
     // 6. Create subscription checkout session (if Stripe customer exists)
     let checkoutUrl: string | null = null
@@ -543,6 +573,4 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
-
 

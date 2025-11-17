@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { logger } from '@/lib/monitoring'
+import { useBusinessData } from '@/app/hooks/useBusinessData'
+import { AnimatedNumber } from './ui/AnimatedNumber'
 
 interface RealMetricsData {
   totalCalls: number
@@ -32,9 +34,19 @@ interface RealAnalyticsProps {
 }
 
 export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAnalyticsProps) {
+  const { theme, getServiceColor } = useBusinessData()
   const [metrics, setMetrics] = useState<RealMetricsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const primaryColor = theme?.primaryColor || '#8b5cf6'
+  const secondaryColor = theme?.secondaryColor || '#a78bfa'
+  
+  // Generate colors from business theme
+  const callColor = getServiceColor('Calls') || primaryColor
+  const appointmentColor = getServiceColor('Appointments') || secondaryColor
+  const revenueColor = '#eab308' // Keep yellow for revenue (universal)
+  const satisfactionColor = primaryColor
 
   useEffect(() => {
     loadRealMetrics()
@@ -73,7 +85,7 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 animate-pulse">
+          <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 animate-pulse">
             <div className="h-4 bg-gray-700/50 rounded w-24 mb-4"></div>
             <div className="h-8 bg-gray-700/50 rounded w-16 mb-2"></div>
             <div className="h-3 bg-gray-700/50 rounded w-20"></div>
@@ -118,12 +130,19 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6"
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          whileHover={{ scale: 1.02, y: -4 }}
+          className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
+          style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-blue-500/20 rounded-lg">
-              <Phone className="w-6 h-6 text-blue-400" />
-            </div>
+            <motion.div 
+              className="p-3 rounded-lg"
+              style={{ backgroundColor: `${callColor}20` }}
+              whileHover={{ scale: 1.1, rotate: 5 }}
+            >
+              <Phone className="w-6 h-6" style={{ color: callColor }} />
+            </motion.div>
             <div className="flex items-center gap-1">
               {getTrendIcon(metrics.monthlyGrowth)}
               <span className={`text-sm font-medium ${getTrendColor(metrics.monthlyGrowth)}`}>
@@ -131,23 +150,31 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
               </span>
             </div>
           </div>
-          <h3 className="text-2xl font-bold mb-1">{metrics.totalCalls}</h3>
+          <h3 className="text-2xl font-bold mb-1">
+            <AnimatedNumber value={metrics.totalCalls} />
+          </h3>
           <p className="text-gray-400">Total Calls</p>
           <div className="mt-2 text-xs text-gray-500">
-            {metrics.answeredCalls} answered, {metrics.missedCalls} missed
+            <AnimatedNumber value={metrics.answeredCalls} /> answered, <AnimatedNumber value={metrics.missedCalls} /> missed
           </div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6"
+          transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          whileHover={{ scale: 1.02, y: -4 }}
+          className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
+          style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-green-500/20 rounded-lg">
-              <Calendar className="w-6 h-6 text-green-400" />
-            </div>
+            <motion.div 
+              className="p-3 rounded-lg"
+              style={{ backgroundColor: `${appointmentColor}20` }}
+              whileHover={{ scale: 1.1, rotate: 5 }}
+            >
+              <Calendar className="w-6 h-6" style={{ color: appointmentColor }} />
+            </motion.div>
             <div className="flex items-center gap-1">
               {getTrendIcon(metrics.conversionRate)}
               <span className={`text-sm font-medium ${getTrendColor(metrics.conversionRate)}`}>
@@ -155,58 +182,75 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
               </span>
             </div>
           </div>
-          <h3 className="text-2xl font-bold mb-1">{metrics.totalAppointments}</h3>
+          <h3 className="text-2xl font-bold mb-1">
+            <AnimatedNumber value={metrics.totalAppointments} />
+          </h3>
           <p className="text-gray-400">Appointments</p>
           <div className="mt-2 text-xs text-gray-500">
-            {metrics.appointmentsThisWeek} this week
+            <AnimatedNumber value={metrics.appointmentsThisWeek} /> this week
           </div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6"
+          transition={{ delay: 0.2, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          whileHover={{ scale: 1.02, y: -4 }}
+          className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
+          style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-yellow-500/20 rounded-lg">
+            <motion.div 
+              className="p-3 bg-yellow-500/20 rounded-lg"
+              whileHover={{ scale: 1.1, rotate: 5 }}
+            >
               <DollarSign className="w-6 h-6 text-yellow-400" />
-            </div>
+            </motion.div>
             <div className="flex items-center gap-1">
               {getTrendIcon(metrics.revenueProjection)}
               <span className={`text-sm font-medium ${getTrendColor(metrics.revenueProjection)}`}>
-                ${metrics.revenueProjection.toFixed(0)}
+                $<AnimatedNumber value={metrics.revenueProjection} decimals={0} />
               </span>
             </div>
           </div>
-          <h3 className="text-2xl font-bold mb-1">${metrics.totalRevenue.toFixed(0)}</h3>
+          <h3 className="text-2xl font-bold mb-1">
+            $<AnimatedNumber value={metrics.totalRevenue} decimals={0} />
+          </h3>
           <p className="text-gray-400">Revenue</p>
           <div className="mt-2 text-xs text-gray-500">
-            ${metrics.revenueThisWeek.toFixed(0)} this week
+            $<AnimatedNumber value={metrics.revenueThisWeek} decimals={0} /> this week
           </div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6"
+          transition={{ delay: 0.3, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          whileHover={{ scale: 1.02, y: -4 }}
+          className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
+          style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-purple-500/20 rounded-lg">
-              <Target className="w-6 h-6 text-purple-400" />
-            </div>
+            <motion.div 
+              className="p-3 rounded-lg"
+              style={{ backgroundColor: `${satisfactionColor}20` }}
+              whileHover={{ scale: 1.1, rotate: 5 }}
+            >
+              <Target className="w-6 h-6" style={{ color: satisfactionColor }} />
+            </motion.div>
             <div className="flex items-center gap-1">
               {getTrendIcon(metrics.customerSatisfaction)}
               <span className={`text-sm font-medium ${getTrendColor(metrics.customerSatisfaction)}`}>
-                {metrics.customerSatisfaction.toFixed(1)}/5
+                <AnimatedNumber value={metrics.customerSatisfaction} decimals={1} />/5
               </span>
             </div>
           </div>
-          <h3 className="text-2xl font-bold mb-1">{metrics.callAnswerRate.toFixed(1)}%</h3>
+          <h3 className="text-2xl font-bold mb-1">
+            <AnimatedNumber value={metrics.callAnswerRate} decimals={1} />%
+          </h3>
           <p className="text-gray-400">Answer Rate</p>
           <div className="mt-2 text-xs text-gray-500">
-            {metrics.avgCallDuration.toFixed(0)}s avg duration
+            <AnimatedNumber value={metrics.avgCallDuration} decimals={0} />s avg duration
           </div>
         </motion.div>
       </div>
@@ -216,23 +260,23 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6"
+        className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6"
       >
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-blue-400" />
+          <BarChart3 className="w-5 h-5" style={{ color: primaryColor }} />
           Performance Summary
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-400">{metrics.conversionRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold" style={{ color: appointmentColor }}>{metrics.conversionRate.toFixed(1)}%</div>
             <div className="text-sm text-gray-400">Call to Appointment</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-400">{metrics.callAnswerRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold" style={{ color: callColor }}>{metrics.callAnswerRate.toFixed(1)}%</div>
             <div className="text-sm text-gray-400">Call Answer Rate</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-purple-400">{metrics.customerSatisfaction.toFixed(1)}/5</div>
+            <div className="text-2xl font-bold" style={{ color: satisfactionColor }}>{metrics.customerSatisfaction.toFixed(1)}/5</div>
             <div className="text-sm text-gray-400">Customer Rating</div>
           </div>
         </div>

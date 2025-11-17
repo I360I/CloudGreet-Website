@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { 
   Plus, 
   Edit, 
@@ -32,11 +33,14 @@ interface PricingRule {
 }
 
 export default function PricingPage() {
+  const { theme } = useBusinessData()
   const [pricingRules, setPricingRules] = useState<PricingRule[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddRule, setShowAddRule] = useState(false)
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null)
   const [businessId, setBusinessId] = useState('')
+
+  const primaryColor = theme?.primaryColor || '#8b5cf6'
 
   useEffect(() => {
     // Get business ID from localStorage or API
@@ -136,12 +140,8 @@ export default function PricingPage() {
   }
 
   const getServiceTypeColor = (serviceType: string) => {
-    switch (serviceType) {
-      case 'hvac': return 'bg-blue-600'
-      case 'roofing': return 'bg-gray-600'
-      case 'painting': return 'bg-green-600'
-      default: return 'bg-purple-600'
-    }
+    // Use business theme primary color for all service types
+    return primaryColor
   }
 
   const getUnitTypeLabel = (unitType: string) => {
@@ -158,7 +158,7 @@ export default function PricingPage() {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderColor: primaryColor + '50', borderTopColor: primaryColor }}></div>
           <p className="text-white text-lg">Loading Pricing Rules...</p>
         </div>
       </div>
@@ -173,8 +173,9 @@ export default function PricingPage() {
           <h1 className="text-2xl font-bold text-white mb-4">Please Log In</h1>
           <p className="text-gray-400 mb-6">You need to be logged in to access pricing rules.</p>
           <Link 
-            href="/login-simple" 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
+            href="/login" 
+            className="text-white px-6 py-3 rounded-lg shadow-lg transition-all duration-300 hover:opacity-90"
+            style={{ backgroundColor: primaryColor }}
           >
             Log In
           </Link>
@@ -193,7 +194,7 @@ export default function PricingPage() {
               <Link href="/dashboard" className="flex items-center space-x-4 hover:opacity-80 transition-opacity">
                 <ArrowLeft className="w-6 h-6 text-gray-300" />
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: primaryColor }}>
                     <Brain className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -224,7 +225,8 @@ export default function PricingPage() {
           
           <button
             onClick={() => setShowAddRule(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2"
+            className="text-white px-6 py-3 rounded-lg font-medium shadow-lg transition-all duration-300 hover:opacity-90 flex items-center gap-2"
+            style={{ backgroundColor: primaryColor }}
           >
             <Plus className="w-5 h-5" />
             <span>Add Rule</span>
@@ -234,10 +236,10 @@ export default function PricingPage() {
         {/* Pricing Rules Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {pricingRules.map((rule) => (
-            <div key={rule.id} className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors">
+            <div key={rule.id} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 shadow-lg hover:border-slate-600/50 transition-all duration-300">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${getServiceTypeColor(rule.service_type)}`}>
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: getServiceTypeColor(rule.service_type) }}>
                     <DollarSign className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -249,7 +251,7 @@ export default function PricingPage() {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setEditingRule(rule)}
-                    className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+                    className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
                   >
                     <Edit className="w-4 h-4 text-gray-300" />
                   </button>
@@ -301,14 +303,15 @@ export default function PricingPage() {
 
         {pricingRules.length === 0 && (
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
               <DollarSign className="w-8 h-8 text-gray-400" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">No Pricing Rules</h3>
             <p className="text-gray-400 mb-6">Create your first pricing rule to enable AI-generated quotes</p>
             <button
               onClick={() => setShowAddRule(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              className="text-white px-6 py-3 rounded-lg font-medium shadow-lg transition-all duration-300 hover:opacity-90"
+              style={{ backgroundColor: primaryColor }}
             >
               Add First Rule
             </button>
@@ -336,6 +339,7 @@ function RuleModal({ rule, onSave, onClose }: {
   onSave: (data: Partial<PricingRule>) => void,
   onClose: () => void
 }) {
+  const { theme } = useBusinessData()
   const [formData, setFormData] = useState({
     service_type: rule?.service_type || 'hvac' as const,
     name: rule?.name || '',
@@ -347,6 +351,8 @@ function RuleModal({ rule, onSave, onClose }: {
     max_price: rule?.max_price || 0
   })
 
+  const primaryColor = theme?.primaryColor || '#8b5cf6'
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave(formData)
@@ -357,7 +363,7 @@ function RuleModal({ rule, onSave, onClose }: {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-md mx-4"
+        className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 w-full max-w-md mx-4 shadow-2xl"
       >
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-semibold text-white">
@@ -365,7 +371,7 @@ function RuleModal({ rule, onSave, onClose }: {
           </h3>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+            className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
           >
             <X className="w-5 h-5 text-gray-300" />
           </button>
@@ -377,7 +383,10 @@ function RuleModal({ rule, onSave, onClose }: {
             <select
               value={formData.service_type}
               onChange={(e) => setFormData({ ...formData, service_type: e.target.value as any })}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+              style={{ 
+                '--tw-ring-color': primaryColor + '50'
+              } as React.CSSProperties & { '--tw-ring-color'?: string }}
             >
               <option value="hvac">HVAC</option>
               <option value="roofing">Roofing</option>
@@ -391,7 +400,10 @@ function RuleModal({ rule, onSave, onClose }: {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+              style={{ 
+                '--tw-ring-color': primaryColor + '50'
+              } as React.CSSProperties & { '--tw-ring-color'?: string }}
               placeholder="e.g., Exterior Painting"
               required
             />
@@ -402,7 +414,10 @@ function RuleModal({ rule, onSave, onClose }: {
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+              style={{ 
+                '--tw-ring-color': primaryColor + '50'
+              } as React.CSSProperties & { '--tw-ring-color'?: string }}
               rows={3}
               placeholder="Optional description of this pricing rule"
             />
@@ -415,7 +430,10 @@ function RuleModal({ rule, onSave, onClose }: {
                 type="number"
                 value={formData.base_price}
                 onChange={(e) => setFormData({ ...formData, base_price: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+                style={{ 
+                  '--tw-ring-color': primaryColor + '50'
+                } as React.CSSProperties & { '--tw-ring-color'?: string }}
                 placeholder="0"
                 required
               />
@@ -426,7 +444,10 @@ function RuleModal({ rule, onSave, onClose }: {
               <select
                 value={formData.unit_type}
                 onChange={(e) => setFormData({ ...formData, unit_type: e.target.value as any })}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+                style={{ 
+                  '--tw-ring-color': primaryColor + '50'
+                } as React.CSSProperties & { '--tw-ring-color'?: string }}
               >
                 <option value="fixed">Fixed Price</option>
                 <option value="per_sqft">Per Square Foot</option>
@@ -443,7 +464,10 @@ function RuleModal({ rule, onSave, onClose }: {
                 type="number"
                 value={formData.unit_price}
                 onChange={(e) => setFormData({ ...formData, unit_price: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+                style={{ 
+                  '--tw-ring-color': primaryColor + '50'
+                } as React.CSSProperties & { '--tw-ring-color'?: string }}
                 placeholder="0"
               />
             </div>
@@ -456,7 +480,10 @@ function RuleModal({ rule, onSave, onClose }: {
                 type="number"
                 value={formData.min_price}
                 onChange={(e) => setFormData({ ...formData, min_price: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+                style={{ 
+                  '--tw-ring-color': primaryColor + '50'
+                } as React.CSSProperties & { '--tw-ring-color'?: string }}
                 placeholder="0"
               />
             </div>
@@ -467,7 +494,10 @@ function RuleModal({ rule, onSave, onClose }: {
                 type="number"
                 value={formData.max_price}
                 onChange={(e) => setFormData({ ...formData, max_price: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+                style={{ 
+                  '--tw-ring-color': primaryColor + '50'
+                } as React.CSSProperties & { '--tw-ring-color'?: string }}
                 placeholder="0"
               />
             </div>
@@ -476,7 +506,8 @@ function RuleModal({ rule, onSave, onClose }: {
           <div className="flex items-center space-x-4 pt-4">
             <button
               type="submit"
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              style={{ backgroundColor: primaryColor }}
+              className="flex-1 hover:opacity-90 text-white px-6 py-3 rounded-lg font-medium shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
             >
               <Save className="w-5 h-5" />
               <span>{rule ? 'Update Rule' : 'Add Rule'}</span>
@@ -484,7 +515,7 @@ function RuleModal({ rule, onSave, onClose }: {
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+              className="px-6 py-3 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-colors"
             >
               Cancel
             </button>

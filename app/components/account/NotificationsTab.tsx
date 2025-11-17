@@ -3,6 +3,8 @@
 import React, { useState } from 'react'
 import { Bell, Save } from 'lucide-react'
 import { useToast } from '../../contexts/ToastContext'
+import { useBusinessData } from '@/app/hooks/useBusinessData'
+import { Button } from '../ui/Button'
 
 interface NotificationSettings {
   emailNotifications: boolean
@@ -18,6 +20,7 @@ interface NotificationsTabProps {
 }
 
 export default function NotificationsTab({ saving, setSaving, onSave }: NotificationsTabProps) {
+  const { theme } = useBusinessData()
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     emailNotifications: true,
     smsNotifications: true,
@@ -26,6 +29,8 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
   })
   
   const { showSuccess, showError } = useToast()
+
+  const primaryColor = theme?.primaryColor || '#8b5cf6'
 
   const handleSaveNotifications = async () => {
     setSaving(true)
@@ -50,10 +55,10 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
   return (
     <div className="space-y-8">
       {/* Notification Settings */}
-      <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8">
+      <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-8">
         <div className="flex items-center space-x-3 mb-6">
-          <div className="p-3 bg-purple-500/20 rounded-xl">
-            <Bell className="w-6 h-6 text-purple-400" />
+          <div className="p-3 rounded-xl" style={{ backgroundColor: primaryColor + '20' }}>
+            <Bell className="w-6 h-6" style={{ color: primaryColor }} />
           </div>
           <div>
             <h3 className="text-xl font-semibold text-white">Notification Preferences</h3>
@@ -63,7 +68,7 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
 
         <div className="space-y-6">
           {/* Email Notifications */}
-          <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
+          <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
             <div>
               <h4 className="text-white font-medium">Email Notifications</h4>
               <p className="text-gray-400 text-sm">Receive important updates via email</p>
@@ -71,8 +76,9 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
             <button
               onClick={() => handleToggle('emailNotifications')}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                notificationSettings.emailNotifications ? 'bg-blue-600' : 'bg-gray-600'
+                notificationSettings.emailNotifications ? '' : 'bg-slate-600'
               }`}
+              style={notificationSettings.emailNotifications ? { backgroundColor: primaryColor } : {}}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -83,7 +89,7 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
           </div>
 
           {/* SMS Notifications */}
-          <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
+          <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
             <div>
               <h4 className="text-white font-medium">SMS Notifications</h4>
               <p className="text-gray-400 text-sm">Get text messages for urgent updates</p>
@@ -91,8 +97,9 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
             <button
               onClick={() => handleToggle('smsNotifications')}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                notificationSettings.smsNotifications ? 'bg-blue-600' : 'bg-gray-600'
+                notificationSettings.smsNotifications ? '' : 'bg-slate-600'
               }`}
+              style={notificationSettings.smsNotifications ? { backgroundColor: primaryColor } : {}}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -103,7 +110,7 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
           </div>
 
           {/* Call Notifications */}
-          <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
+          <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
             <div>
               <h4 className="text-white font-medium">Call Notifications</h4>
               <p className="text-gray-400 text-sm">Notifications about incoming calls</p>
@@ -111,8 +118,9 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
             <button
               onClick={() => handleToggle('callNotifications')}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                notificationSettings.callNotifications ? 'bg-blue-600' : 'bg-gray-600'
+                notificationSettings.callNotifications ? '' : 'bg-slate-600'
               }`}
+              style={notificationSettings.callNotifications ? { backgroundColor: primaryColor } : {}}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -123,7 +131,7 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
           </div>
 
           {/* Marketing Emails */}
-          <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
+          <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
             <div>
               <h4 className="text-white font-medium">Marketing Emails</h4>
               <p className="text-gray-400 text-sm">Receive promotional content and updates</p>
@@ -131,8 +139,9 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
             <button
               onClick={() => handleToggle('marketingEmails')}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                notificationSettings.marketingEmails ? 'bg-blue-600' : 'bg-gray-600'
+                notificationSettings.marketingEmails ? '' : 'bg-slate-600'
               }`}
+              style={notificationSettings.marketingEmails ? { backgroundColor: primaryColor } : {}}
             >
               <span
                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -145,22 +154,23 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
 
         {/* Save Button */}
         <div className="flex justify-end mt-8">
-          <button
+          <Button
             onClick={handleSaveNotifications}
             disabled={saving}
-            className="px-8 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-600/50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors flex items-center space-x-2"
+            style={{ backgroundColor: primaryColor }}
+            className="px-8 py-3"
           >
-            <Save className="w-5 h-5" />
+            <Save className="w-5 h-5 mr-2" />
             <span>{saving ? 'Saving...' : 'Save Settings'}</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Notification History */}
-      <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8">
+      <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 p-8">
         <div className="flex items-center space-x-3 mb-6">
-          <div className="p-3 bg-orange-500/20 rounded-xl">
-            <Bell className="w-6 h-6 text-orange-400" />
+          <div className="p-3 rounded-xl" style={{ backgroundColor: primaryColor + '20' }}>
+            <Bell className="w-6 h-6" style={{ color: primaryColor }} />
           </div>
           <div>
             <h3 className="text-xl font-semibold text-white">Recent Notifications</h3>

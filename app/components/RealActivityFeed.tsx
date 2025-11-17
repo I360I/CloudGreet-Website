@@ -8,6 +8,8 @@ import {
   TrendingUp, TrendingDown
 } from 'lucide-react'
 import { useRealtimeMetrics } from '../../hooks/useDashboardData'
+import { useBusinessData } from '@/app/hooks/useBusinessData'
+import { getServiceColor } from '@/lib/business-theme'
 
 interface ActivityItem {
   id: string
@@ -26,8 +28,13 @@ interface RealActivityFeedProps {
 }
 
 export default function RealActivityFeed({ businessId, businessName }: RealActivityFeedProps) {
+  const { theme, businessConfig } = useBusinessData()
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const { data: realtimeData, isLoading, error } = useRealtimeMetrics(businessId)
+
+  const primaryColor = theme?.primaryColor || '#8b5cf6'
+  const callColor = getServiceColor('call', businessConfig?.services || []) || '#3b82f6'
+  const appointmentColor = getServiceColor('appointment', businessConfig?.services || []) || '#8b5cf6'
 
   useEffect(() => {
     if (realtimeData) {
@@ -87,20 +94,33 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
   const errorMessage = error
 
   const getActivityIcon = (type: string, status: string) => {
-    const iconClass = status === 'success' ? 'text-green-400' : 
-                     status === 'warning' ? 'text-yellow-400' : 'text-blue-400'
+    const getColor = () => {
+      if (status === 'success') {
+        switch (type) {
+          case 'call': return callColor
+          case 'appointment': return appointmentColor
+          default: return '#10b981'
+        }
+      } else if (status === 'warning') {
+        return '#f59e0b'
+      } else {
+        return primaryColor
+      }
+    }
+    
+    const iconColor = getColor()
     
     switch (type) {
       case 'call':
-        return <Phone className={`w-5 h-5 ${iconClass}`} />
+        return <Phone className="w-5 h-5" style={{ color: iconColor }} />
       case 'appointment':
-        return <Calendar className={`w-5 h-5 ${iconClass}`} />
+        return <Calendar className="w-5 h-5" style={{ color: iconColor }} />
       case 'revenue':
-        return <DollarSign className={`w-5 h-5 ${iconClass}`} />
+        return <DollarSign className="w-5 h-5" style={{ color: iconColor }} />
       case 'message':
-        return <MessageSquare className={`w-5 h-5 ${iconClass}`} />
+        return <MessageSquare className="w-5 h-5" style={{ color: iconColor }} />
       default:
-        return <Activity className={`w-5 h-5 ${iconClass}`} />
+        return <Activity className="w-5 h-5" style={{ color: iconColor }} />
     }
   }
 
@@ -130,18 +150,18 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
 
   if (loading) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Activity className="w-5 h-5 text-blue-400" />
+      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
+          <Activity className="w-5 h-5" style={{ color: primaryColor }} />
           Recent Activity
         </h3>
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="flex items-center gap-3 animate-pulse">
-              <div className="w-10 h-10 bg-gray-700/50 rounded-full"></div>
+              <div className="w-10 h-10 bg-slate-700/50 rounded-full"></div>
               <div className="flex-1">
-                <div className="h-4 bg-gray-700/50 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-700/50 rounded w-1/2"></div>
+                <div className="h-4 bg-slate-700/50 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-slate-700/50 rounded w-1/2"></div>
               </div>
             </div>
           ))}
@@ -167,21 +187,21 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6">
+    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Activity className="w-5 h-5 text-blue-400" />
+        <h3 className="text-lg font-semibold flex items-center gap-2 text-white">
+          <Activity className="w-5 h-5" style={{ color: primaryColor }} />
           Recent Activity
         </h3>
-        <div className="flex items-center gap-2 text-sm text-green-400">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+        <div className="flex items-center gap-2 text-sm" style={{ color: primaryColor }}>
+          <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }}></div>
           Live Updates
         </div>
       </div>
 
       {activities.length === 0 ? (
         <div className="text-center py-8">
-          <div className="w-16 h-16 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
             <Activity className="w-8 h-8 text-gray-500" />
           </div>
           <h4 className="text-lg font-medium text-gray-400 mb-2">No Activity Yet</h4>
@@ -195,13 +215,22 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
             {activities.map((activity, index) => (
               <motion.div
                 key={activity.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ delay: index * 0.1 }}
-                className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-700/30 transition-colors"
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                transition={{ 
+                  delay: index * 0.05,
+                  duration: 0.3,
+                  ease: [0.16, 1, 0.3, 1]
+                }}
+                whileHover={{ scale: 1.02, x: 4 }}
+                className="flex items-start gap-3 p-3 rounded-lg transition-all cursor-pointer"
+                style={{ 
+                  backgroundColor: 'transparent',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
               >
-                <div className="flex-shrink-0 w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center">
+                <div className="flex-shrink-0 w-10 h-10 bg-slate-700/50 rounded-full flex items-center justify-center">
                   {getActivityIcon(activity.type, activity.status)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -221,7 +250,7 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
                   </p>
                   {activity.value && (
                     <div className="mt-1">
-                      <span className="text-xs bg-gray-700/50 text-gray-300 px-2 py-1 rounded">
+                      <span className="text-xs bg-slate-700/50 text-gray-300 px-2 py-1 rounded">
                         {activity.value}
                       </span>
                     </div>
