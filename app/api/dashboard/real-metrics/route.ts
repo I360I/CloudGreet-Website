@@ -56,10 +56,11 @@ export async function GET(request: NextRequest) {
         startDate.setDate(now.getDate() - 30)
     }
 
-    // Fetch calls for timeframe - only select needed fields
+    // Fetch calls for timeframe - handle different column name variations
+    // Try to select all possible column name variations
     const { data: calls, count: totalCalls, error: callsError } = await supabaseAdmin
       .from('calls')
-      .select('status, duration, satisfaction_rating, created_at', { count: 'exact' })
+      .select('*', { count: 'exact' })
       .eq('business_id', businessId)
       .gte('created_at', startDate.toISOString())
 
@@ -81,13 +82,25 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Calculate metrics with null safety
-    const answeredCalls = calls?.filter(c => c?.status === 'completed' || c?.status === 'answered').length || 0
-    const missedCalls = calls?.filter(c => c?.status === 'missed' || c?.status === 'no_answer').length || 0
+    // Calculate metrics with null safety - handle different column name variations
+    const getStatus = (c: any) => c?.status || c?.call_status || 'unknown'
+    const getDuration = (c: any) => c?.duration || c?.call_duration || 0
+    const getSatisfaction = (c: any) => c?.satisfaction_rating || c?.satisfaction_score || null
+    
+    const answeredCalls = calls?.filter(c => {
+      const status = getStatus(c)
+      return status === 'completed' || status === 'answered' || status === 'completed'
+    }).length || 0
+    
+    const missedCalls = calls?.filter(c => {
+      const status = getStatus(c)
+      return status === 'missed' || status === 'no_answer' || status === 'busy' || status === 'failed'
+    }).length || 0
+    
     const callAnswerRate = totalCalls ? (answeredCalls / totalCalls) * 100 : 0
     
     // Calculate average call duration
-    const durations = calls?.map(c => c.duration || 0).filter(d => d > 0) || []
+    const durations = calls?.map(c => getDuration(c)).filter(d => d > 0) || []
     const avgCallDuration = durations.length > 0 
       ? durations.reduce((a, b) => a + b, 0) / durations.length 
       : 0
@@ -132,9 +145,9 @@ export async function GET(request: NextRequest) {
     const dailyAvg = totalCalls / (timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90)
     const revenueProjection = dailyAvg * 30 * conversionRate / 100 * closeRate * avgTicket
 
-    // Customer satisfaction - calculate from actual ratings
-    const satisfactionRatings = calls?.filter(c => c?.satisfaction_rating != null)
-      .map(c => c.satisfaction_rating)
+    // Customer satisfaction - calculate from actual ratings (handle different column names)
+    const satisfactionRatings = calls?.filter(c => getSatisfaction(c) != null)
+      .map(c => getSatisfaction(c))
       .filter((rating): rating is number => typeof rating === 'number' && rating > 0) || []
     
     const customerSatisfaction = satisfactionRatings.length > 0
@@ -166,10 +179,16 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('Real metrics error', { 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      businessId: authResult?.businessId,
+      timeframe
     })
     return NextResponse.json(
-      { error: 'Failed to fetch metrics' },
+      { 
+        error: 'Failed to fetch metrics',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
