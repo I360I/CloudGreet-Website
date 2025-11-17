@@ -242,7 +242,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   }, [])
 
   // Extract appointments from API response and apply optimistic updates
-  const appointments = React.useMemo(() => {
+  // Use a function instead of useMemo to avoid initialization issues
+  const getAppointments = React.useCallback(() => {
     if (!appointmentsData) return []
     
     // Get base appointments from API
@@ -274,6 +275,9 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     
     return result
   }, [appointmentsData, optimisticUpdates])
+  
+  // Call the function to get appointments
+  const appointments = getAppointments()
 
   // Construct context value - plain object, React will handle optimization
   const value: DashboardDataContextType = {
