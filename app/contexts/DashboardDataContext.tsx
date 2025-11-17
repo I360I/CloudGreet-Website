@@ -273,32 +273,53 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     return result
   }, [appointmentsData, optimisticUpdates])
 
-  const value: DashboardDataContextType = {
-    appointments,
-    appointmentsLoading,
-    appointmentsError: appointmentsError as Error | null,
+  // Construct context value - ensure all values are defined
+  const value: DashboardDataContextType = React.useMemo(() => ({
+    appointments: appointments || [],
+    appointmentsLoading: appointmentsLoading || false,
+    appointmentsError: (appointmentsError as Error | null) || null,
     refreshAppointments,
     
     metrics: metricsData?.metrics || null,
-    metricsLoading,
-    metricsError: metricsError as Error | null,
+    metricsLoading: metricsLoading || false,
+    metricsError: (metricsError as Error | null) || null,
     refreshMetrics,
     
     chartData: chartsData?.charts || null,
-    chartsLoading,
-    chartsError: chartsError as Error | null,
+    chartsLoading: chartsLoading || false,
+    chartsError: (chartsError as Error | null) || null,
     refreshCharts,
     
-    optimisticUpdates,
+    optimisticUpdates: optimisticUpdates || [],
     addOptimisticUpdate,
     removeOptimisticUpdate,
     rollbackOptimisticUpdate,
     
     refreshAll,
     
+    timeframe: timeframe || '7d',
+    setTimeframe
+  }), [
+    appointments,
+    appointmentsLoading,
+    appointmentsError,
+    refreshAppointments,
+    metricsData,
+    metricsLoading,
+    metricsError,
+    refreshMetrics,
+    chartsData,
+    chartsLoading,
+    chartsError,
+    refreshCharts,
+    optimisticUpdates,
+    addOptimisticUpdate,
+    removeOptimisticUpdate,
+    rollbackOptimisticUpdate,
+    refreshAll,
     timeframe,
     setTimeframe
-  }
+  ])
 
   return (
     <DashboardDataContext.Provider value={value}>
