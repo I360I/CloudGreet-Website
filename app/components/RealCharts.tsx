@@ -54,42 +54,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
   const appointmentColor = getServiceColor('Appointments') || secondaryColor
   const revenueColor = '#22c55e' // Keep green for revenue (universal positive)
 
-  // Memoize chart options to prevent re-renders
-  const chartOptionsMemo = React.useMemo(() => chartOptions, [primaryColor, callColor, appointmentColor, revenueColor])
-
-  useEffect(() => {
-    loadRealChartData()
-  }, [businessId, timeframe])
-
-  const loadRealChartData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Fetch real chart data with automatic authentication
-      const response = await fetchWithAuth(`/api/dashboard/real-charts?timeframe=${timeframe}`)
-
-      if (!response.ok) {
-        setError(`Failed to load chart data (${response.status})`)
-        return
-      }
-
-      let data
-      try {
-        data = await response.json()
-      } catch (jsonError) {
-        setError('Invalid response from server')
-        return
-      }
-      setChartData(data.charts)
-    } catch (error) {
-      console.error('Error loading chart data:', error)
-      setError('Error loading chart data')
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  // Define chart options BEFORE useMemo to avoid initialization error
   const chartOptions: unknown = {
     responsive: true,
     maintainAspectRatio: false,
@@ -124,6 +89,42 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
           color: '#374151'
         }
       }
+    }
+  }
+
+  // Memoize chart options to prevent re-renders (moved after chartOptions definition)
+  const chartOptionsMemo = React.useMemo(() => chartOptions, [primaryColor, callColor, appointmentColor, revenueColor])
+
+  useEffect(() => {
+    loadRealChartData()
+  }, [businessId, timeframe])
+
+  const loadRealChartData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch real chart data with automatic authentication
+      const response = await fetchWithAuth(`/api/dashboard/real-charts?timeframe=${timeframe}`)
+
+      if (!response.ok) {
+        setError(`Failed to load chart data (${response.status})`)
+        return
+      }
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        setError('Invalid response from server')
+        return
+      }
+      setChartData(data.charts)
+    } catch (error) {
+      console.error('Error loading chart data:', error)
+      setError('Error loading chart data')
+    } finally {
+      setLoading(false)
     }
   }
 
