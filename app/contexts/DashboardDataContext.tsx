@@ -176,25 +176,31 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     }
   )
 
-  // Refresh functions
+  // Refresh functions - use stable references
   const refreshAppointments = useCallback(async () => {
-    await mutateAppointments()
+    if (mutateAppointments) {
+      await mutateAppointments()
+    }
   }, [mutateAppointments])
 
   const refreshMetrics = useCallback(async () => {
-    await mutateMetrics()
+    if (mutateMetrics) {
+      await mutateMetrics()
+    }
   }, [mutateMetrics])
 
   const refreshCharts = useCallback(async () => {
-    await mutateCharts()
+    if (mutateCharts) {
+      await mutateCharts()
+    }
   }, [mutateCharts])
 
   const refreshAll = useCallback(async () => {
-    await Promise.all([
-      mutateAppointments(),
-      mutateMetrics(),
-      mutateCharts()
-    ])
+    const promises = []
+    if (mutateAppointments) promises.push(mutateAppointments())
+    if (mutateMetrics) promises.push(mutateMetrics())
+    if (mutateCharts) promises.push(mutateCharts())
+    await Promise.all(promises)
   }, [mutateAppointments, mutateMetrics, mutateCharts])
 
   // Optimistic update management
@@ -273,8 +279,8 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     return result
   }, [appointmentsData, optimisticUpdates])
 
-  // Construct context value - ensure all values are defined
-  const value: DashboardDataContextType = React.useMemo(() => ({
+  // Construct context value - plain object, React will handle optimization
+  const value: DashboardDataContextType = {
     appointments: appointments || [],
     appointmentsLoading: appointmentsLoading || false,
     appointmentsError: (appointmentsError as Error | null) || null,
@@ -299,27 +305,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     
     timeframe: timeframe || '7d',
     setTimeframe
-  }), [
-    appointments,
-    appointmentsLoading,
-    appointmentsError,
-    refreshAppointments,
-    metricsData,
-    metricsLoading,
-    metricsError,
-    refreshMetrics,
-    chartsData,
-    chartsLoading,
-    chartsError,
-    refreshCharts,
-    optimisticUpdates,
-    addOptimisticUpdate,
-    removeOptimisticUpdate,
-    rollbackOptimisticUpdate,
-    refreshAll,
-    timeframe,
-    setTimeframe
-  ])
+  }
 
   return (
     <DashboardDataContext.Provider value={value}>
