@@ -13,18 +13,28 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { data: userRecord, error: userError } = await supabaseAdmin
-      .from('custom_users')
-      .select('id, business_id, first_name, last_name, email')
-      .eq('id', auth.userId)
-      .single()
+    // Try to get user record, but don't fail if it doesn't exist
+    let userRecord = null
+    let businessId = auth.businessId || null
+    
+    try {
+      const { data, error: userError } = await supabaseAdmin
+        .from('custom_users')
+        .select('id, business_id, first_name, last_name, email')
+        .eq('id', auth.userId)
+        .single()
 
-    if (userError) {
-      logger.warn('Unable to resolve user for onboarding state', { userId: auth.userId, userError: userError.message })
+      if (!userError && data) {
+        userRecord = data
+        businessId = data.business_id || businessId
+      } else if (userError) {
+        logger.warn('Unable to resolve user for onboarding state', { userId: auth.userId, userError: userError.message })
+      }
+    } catch (userErr) {
+      logger.warn('Error fetching user record', { userId: auth.userId, error: userErr instanceof Error ? userErr.message : 'Unknown' })
     }
 
-    const businessId = userRecord?.business_id || auth.businessId || null
-
+    // If no business ID, return empty state
     if (!businessId) {
       return NextResponse.json({
         success: true,
@@ -33,69 +43,126 @@ export async function GET(request: NextRequest) {
           completed: false,
           step: 0
         },
+        user: userRecord ? {
+          id: userRecord.id,
+          first_name: userRecord.first_name,
+          last_name: userRecord.last_name,
+          email: userRecord.email
+        } : null,
         tollFreeInventory: {
           available: 0
         }
       })
     }
 
-    const { data: business, error } = await supabaseAdmin
-      .from('businesses')
-      .select(
-        `id,
-         business_name,
-         business_type,
-         email,
-         phone,
-         phone_number,
-         address,
-         city,
-         state,
-         zip_code,
-         website,
-         services,
-         service_areas,
-         business_hours,
-         timezone,
-         calendar_connected,
-         onboarding_completed,
-         onboarding_step,
-         onboarding_data,
-         stripe_customer_id,
-         retell_agent_id,
-         google_access_token,
-         google_refresh_token,
-         google_token_expires_at`
-      )
-      .eq('id', businessId)
-      .single()
+    // Try to get business, but handle errors gracefully
+    let business = null
+    try {
+      const { data: businessData, error: businessError } = await supabaseAdmin
+        .from('businesses')
+        .select('*')
+        .eq('id', businessId)
+        .single()
 
-    if (error) {
-      logger.error('Failed to load onboarding state', { error: error.message, businessId })
-      return NextResponse.json({ error: 'Failed to load onboarding state' }, { status: 500 })
+      if (!businessError && businessData) {
+        business = businessData
+      } else if (businessError) {
+        logger.warn('Business not found for onboarding state', { businessId, error: businessError.message })
+        // Return empty state instead of error
+        return NextResponse.json({
+          success: true,
+          business: null,
+          onboarding: {
+            completed: false,
+            step: 0
+          },
+          user: userRecord ? {
+            id: userRecord.id,
+            first_name: userRecord.first_name,
+            last_name: userRecord.last_name,
+            email: userRecord.email
+          } : null,
+          tollFreeInventory: {
+            available: 0
+          }
+        })
+      }
+    } catch (businessErr) {
+      logger.warn('Error fetching business', { businessId, error: businessErr instanceof Error ? businessErr.message : 'Unknown' })
+      // Return empty state instead of error
+      return NextResponse.json({
+        success: true,
+        business: null,
+        onboarding: {
+          completed: false,
+          step: 0
+        },
+        user: userRecord ? {
+          id: userRecord.id,
+          first_name: userRecord.first_name,
+          last_name: userRecord.last_name,
+          email: userRecord.email
+        } : null,
+        tollFreeInventory: {
+          available: 0
+        }
+      })
     }
 
-    const { data: inventory } = await supabaseAdmin
-      .from('toll_free_numbers')
-      .select('id')
-      .eq('status', 'available')
+    // Get inventory count, but don't fail if table doesn't exist
+    let inventoryCount = 0
+    try {
+      const { data: inventory } = await supabaseAdmin
+        .from('toll_free_numbers')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'available')
+      inventoryCount = inventory?.length ?? 0
+    } catch (inventoryErr) {
+      logger.warn('Error fetching inventory', { error: inventoryErr instanceof Error ? inventoryErr.message : 'Unknown' })
+      inventoryCount = 0
+    }
 
     return NextResponse.json({
       success: true,
-      business,
+      business: business ? {
+        id: business.id,
+        business_name: business.business_name,
+        business_type: business.business_type,
+        email: business.email,
+        phone: business.phone || business.phone_number,
+        phone_number: business.phone_number || business.phone,
+        address: business.address,
+        city: business.city,
+        state: business.state,
+        zip_code: business.zip_code,
+        website: business.website,
+        services: business.services,
+        service_areas: business.service_areas,
+        business_hours: business.business_hours,
+        timezone: business.timezone,
+        calendar_connected: business.calendar_connected,
+        onboarding_completed: business.onboarding_completed,
+        onboarding_step: business.onboarding_step,
+        onboarding_data: business.onboarding_data,
+        stripe_customer_id: business.stripe_customer_id,
+        retell_agent_id: business.retell_agent_id,
+        greeting_message: business.greeting_message,
+        tone: business.tone || business.ai_tone,
+        description: business.description
+      } : null,
       onboarding: {
         completed: business?.onboarding_completed ?? false,
         step: business?.onboarding_step ?? 0,
         canResume: !business?.onboarding_completed && (business?.onboarding_step ?? 0) > 0
       },
-      user: {
-        id: userRecord?.id,
-        first_name: userRecord?.first_name,
-        last_name: userRecord?.last_name,
-        email: userRecord?.email
-      },
+      user: userRecord ? {
+        id: userRecord.id,
+        first_name: userRecord.first_name,
+        last_name: userRecord.last_name,
+        email: userRecord.email
+      } : null,
       tollFreeInventory: {
-        available: inventory?.length ?? 0
+        available: inventoryCount
       }
     })
   } catch (error) {
