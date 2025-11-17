@@ -109,12 +109,16 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
   const optimisticUpdatesRef = useRef<OptimisticUpdate[]>([])
   const [optimisticUpdates, setOptimisticUpdates] = React.useState<OptimisticUpdate[]>([])
 
-  // Calculate date range for appointments (last 90 days)
-  const now = new Date()
-  const startDate = new Date(now)
-  startDate.setDate(now.getDate() - 90)
-  const appointmentsStartDate = startDate.toISOString().split('T')[0]
-  const appointmentsEndDate = now.toISOString().split('T')[0]
+  // Calculate date range for appointments (last 90 days) - use useMemo to avoid initialization issues
+  const appointmentsDateRange = React.useMemo(() => {
+    const now = new Date()
+    const start = new Date(now)
+    start.setDate(now.getDate() - 90)
+    return {
+      startDate: start.toISOString().split('T')[0],
+      endDate: now.toISOString().split('T')[0]
+    }
+  }, [])
   
   const {
     data: appointmentsData,
@@ -122,7 +126,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
     isLoading: appointmentsLoading,
     mutate: mutateAppointments
   } = useSWR<{ appointments: Appointment[] }>(
-    `/api/dashboard/calendar?view=agenda&startDate=${appointmentsStartDate}&endDate=${appointmentsEndDate}`,
+    `/api/dashboard/calendar?view=agenda&startDate=${appointmentsDateRange.startDate}&endDate=${appointmentsDateRange.endDate}`,
     swrFetcher,
     {
       revalidateOnFocus: false,
