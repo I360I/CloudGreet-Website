@@ -68,18 +68,40 @@
 - ✅ Register page - All 6+ required fields present, business type options (4+), checkbox present
 
 ### Bugs Fixed Today
-1. ✅ Dashboard JavaScript error - Fixed `chartOptions` useMemo initialization in RealCharts.tsx
-2. ✅ Onboarding state API - Improved error handling to prevent 500 errors
-3. ✅ Registration bug - Fixed missing `name` and `role` columns in custom_users table
+    1. ✅ Dashboard JavaScript error - Fixed `chartOptions` useMemo initialization in RealCharts.tsx
+    2. ✅ Onboarding state API - Improved error handling to prevent 500 errors
+    3. ✅ Registration bug - Fixed missing `name` and `role` columns in custom_users table
+    4. ⚠️ Dashboard Create Appointment modal - REGRESSION: Button click not opening modal (was working earlier, now broken)
+    5. 🔄 Dashboard Open full calendar button - Fix deployed, waiting for propagation
+    6. 🔄 Onboarding Save & continue button - Added debug logging and validation, waiting for deployment
 
-## 🔄 Currently Testing
+## 🔄 Currently Testing - Round 8
 
-- Dashboard modal interactions (create appointment, full calendar) — BUG: buttons no-op
-- Onboarding wizard step progression (Save & continue) — BUG: stuck on Step 1
-- Admin panel access after login
-- Form validation and field completeness
-- Mobile responsive behavior
-- Navigation and link functionality
+- ✅ Admin login page - Form complete, all fields present
+- ✅ Pricing page - Requires login (expected behavior)
+- ✅ Dashboard health check - No JS errors, 18 charts rendering, 13 buttons, all API calls successful
+- ✅ Landing page CTA buttons - All buttons present and clickable
+- ✅ Register form validation - Required fields detected
+- ✅ Contact form - All fields present (firstName, email, message, submit)
+- ⚠️ **CRITICAL: Session expired** - All authenticated pages returning 401 (Unauthorized)
+  - Dashboard: Not loading (401 on all API calls)
+  - Onboarding: Save & continue button WORKS (API call made), but returns 401 "Invalid token"
+  - Error handling working correctly (error toast displayed)
+- ✅ Onboarding button handler - Confirmed working (click detected, API call made, error shown)
+- ✅ Features page CTA - "Start Free Trial" button navigates correctly
+- ✅ Demo page tel: link - Phone number link functional (`tel:+18333956731`)
+- ✅ Login form - All fields present, sign up link working
+- ✅ Landing page - All 7 sections present, scroll behavior working
+- ✅ Register form - 8+ fields, validation ready
+- ✅ Contact form - All fields present, contact info displayed
+- ✅ Mobile responsive (375px) - Landing page responsive, all elements fit viewport
+- ✅ Admin login page - Form complete (email, password, submit, back link)
+- ✅ 404 error page - Error page displayed with home link
+- ✅ Tablet responsive (768px) - Layout adapts properly, all elements fit viewport
+- ✅ Login page - Form complete, validation ready, sign up link, logo link
+- ✅ Features page links - All navigation, footer, and CTA links present
+- ✅ Register form validation - Email, password, phone inputs with proper types
+- ✅ Desktop viewport (1920px) - All images loaded, performance good
 
 ## 📋 Remaining Tests
 

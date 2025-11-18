@@ -132,10 +132,16 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {[...Array(2)].map((_, i) => (
-          <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 animate-pulse">
-            <div className="h-6 bg-gray-700/50 rounded w-32 mb-4"></div>
-            <div className="h-64 bg-gray-700/50 rounded"></div>
-          </div>
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1, duration: 0.3 }}
+            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg"
+          >
+            <div className="h-6 bg-white/10 rounded-lg w-32 mb-4 animate-pulse"></div>
+            <div className="h-64 bg-white/10 rounded-xl animate-pulse"></div>
+          </motion.div>
         ))}
       </div>
     )
@@ -143,17 +149,26 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
 
   if (error || !chartData) {
     return (
-      <div className="bg-red-600/20 border border-red-500/30 rounded-xl p-6">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+        className="bg-red-500/10 backdrop-blur-xl border border-red-500/30 rounded-xl p-6 shadow-lg"
+      >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
-            <TrendingUp className="w-4 h-4 text-red-400" />
-          </div>
+          <motion.div
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center"
+          >
+            <TrendingUp className="w-5 h-5 text-red-400" />
+          </motion.div>
           <div>
-            <h3 className="text-lg font-semibold text-red-400">Charts Unavailable</h3>
-            <p className="text-red-300 text-sm">{error || 'No data available'}</p>
+            <h3 className="text-lg font-semibold text-red-400 mb-1">Charts Unavailable</h3>
+            <p className="text-red-300/80 text-sm">{error || 'No chart data available'}</p>
           </div>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
@@ -165,8 +180,10 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         whileHover={{ scale: 1.01, y: -2 }}
-        className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
-        style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
+        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 cursor-pointer transition-all shadow-lg hover:shadow-xl hover:border-white/20"
+        style={{ 
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1)'
+        }}
       >
         <div className="flex items-center gap-2 mb-4">
           <motion.div
@@ -192,8 +209,10 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         whileHover={{ scale: 1.01, y: -2 }}
-        className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
-        style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
+        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 cursor-pointer transition-all shadow-lg hover:shadow-xl hover:border-white/20"
+        style={{ 
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1)'
+        }}
       >
         <div className="flex items-center gap-2 mb-4">
           <motion.div
@@ -219,8 +238,10 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         whileHover={{ scale: 1.01, y: -2 }}
-        className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
-        style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
+        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 cursor-pointer transition-all shadow-lg hover:shadow-xl hover:border-white/20"
+        style={{ 
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1)'
+        }}
       >
         <div className="flex items-center gap-2 mb-4">
           <motion.div

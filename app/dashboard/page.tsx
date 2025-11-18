@@ -67,7 +67,7 @@ export default function DashboardPage() {
 
   if (loading || !theme) {
     return (
-      <div className="min-h-screen bg-slate-900">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900">
         <div className="mx-auto max-w-7xl px-4 py-8">
           <DashboardSkeleton />
         </div>
@@ -79,7 +79,7 @@ export default function DashboardPage() {
 
   return (
     <div
-      className="min-h-screen bg-slate-900"
+      className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900"
       style={{
         backgroundImage: `linear-gradient(to bottom, ${primaryColor}10, transparent)`
       }}

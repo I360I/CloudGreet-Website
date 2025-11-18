@@ -94,7 +94,7 @@ export function WeekCalendarWidget({
 
   if (businessLoading || loading) {
     return (
-      <div className="h-[120px] p-4 bg-slate-800/50 backdrop-blur-xl border border-slate-700/30 rounded-xl">
+      <div className="h-[120px] p-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl shadow-lg">
         <div className="flex gap-2">
           {Array.from({ length: 7 }).map((_, i) => (
             <LoadingSkeleton key={i} width={45} height={45} variant="rectangle" />
@@ -106,7 +106,7 @@ export function WeekCalendarWidget({
 
   if (error || !theme) {
     return (
-      <div className="h-[120px] p-4 bg-slate-800/50 backdrop-blur-xl border border-slate-700/30 rounded-xl flex items-center justify-center">
+      <div className="h-[120px] p-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl flex items-center justify-center shadow-lg">
         <p className="text-slate-400 text-sm">Failed to load calendar</p>
       </div>
     )
@@ -119,7 +119,7 @@ export function WeekCalendarWidget({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="h-[120px] p-4 bg-slate-800/50 backdrop-blur-xl rounded-xl border"
+          className="h-[120px] p-4 bg-white/5 backdrop-blur-xl rounded-xl border border-white/10 shadow-lg hover:shadow-xl hover:border-white/20 transition-all"
       style={{
         borderColor: `${primaryColor}30`,
         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
@@ -164,8 +164,8 @@ export function WeekCalendarWidget({
                 'relative w-[45px] h-[45px] flex flex-col items-center justify-center rounded-lg transition-all',
                 isToday
                   ? 'border-2 ring-2'
-                  : 'border border-slate-700/50',
-                hasAppointments ? 'bg-slate-800/30' : 'bg-slate-800/10'
+                  : 'border border-white/10',
+                hasAppointments ? 'bg-white/10' : 'bg-white/5'
               )}
               style={{
                 borderColor: isToday ? primaryColor : undefined,

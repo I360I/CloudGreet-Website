@@ -133,7 +133,7 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
       case 'down':
         return <TrendingDown className="w-4 h-4 text-red-500" />
       default:
-        return <div className="w-4 h-4 bg-gray-500 rounded-full" />
+        return <div className="w-4 h-4 bg-slate-500 rounded-full" />
     }
   }
 
@@ -150,7 +150,12 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
 
   if (loading) {
     return (
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg"
+      >
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
           <Activity className="w-5 h-5" style={{ color: primaryColor }} />
           Recent Activity
@@ -158,36 +163,50 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
             <div key={i} className="flex items-center gap-3 animate-pulse">
-              <div className="w-10 h-10 bg-slate-700/50 rounded-full"></div>
+              <div className="w-10 h-10 bg-white/10 rounded-full"></div>
               <div className="flex-1">
-                <div className="h-4 bg-slate-700/50 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-slate-700/50 rounded w-1/2"></div>
+                <div className="h-4 bg-white/10 rounded-lg w-3/4 mb-2"></div>
+                <div className="h-3 bg-white/10 rounded-lg w-1/2"></div>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   if (errorMessage) {
     return (
-      <div className="bg-red-600/20 border border-red-500/30 rounded-xl p-6">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+        className="bg-red-500/10 backdrop-blur-xl border border-red-500/30 rounded-xl p-6 shadow-lg"
+      >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
-            <AlertCircle className="w-4 h-4 text-red-400" />
-          </div>
+          <motion.div
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center"
+          >
+            <AlertCircle className="w-5 h-5 text-red-400" />
+          </motion.div>
           <div>
-            <h3 className="text-lg font-semibold text-red-400">Activity Unavailable</h3>
-            <p className="text-red-300 text-sm">{errorMessage}</p>
+            <h3 className="text-lg font-semibold text-red-400 mb-1">Activity Unavailable</h3>
+            <p className="text-red-300/80 text-sm">{errorMessage}</p>
           </div>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.3 }}
+      className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg"
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold flex items-center gap-2 text-white">
           <Activity className="w-5 h-5" style={{ color: primaryColor }} />
@@ -201,11 +220,11 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
 
       {activities.length === 0 ? (
         <div className="text-center py-8">
-          <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Activity className="w-8 h-8 text-gray-500" />
+          <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Activity className="w-8 h-8 text-slate-400" />
           </div>
-          <h4 className="text-lg font-medium text-gray-400 mb-2">No Activity Yet</h4>
-          <p className="text-gray-500 text-sm">
+          <h4 className="text-lg font-medium text-slate-300 mb-2">No Activity Yet</h4>
+          <p className="text-slate-400 text-sm">
             Activity will appear here once you start receiving calls and bookings
           </p>
         </div>
@@ -230,7 +249,7 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
                   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
                 }}
               >
-                <div className="flex-shrink-0 w-10 h-10 bg-slate-700/50 rounded-full flex items-center justify-center">
+                <div className="flex-shrink-0 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
                   {getActivityIcon(activity.type, activity.status)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -250,7 +269,7 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
                   </p>
                   {activity.value && (
                     <div className="mt-1">
-                      <span className="text-xs bg-slate-700/50 text-gray-300 px-2 py-1 rounded">
+                      <span className="text-xs bg-white/10 text-slate-300 px-2 py-1 rounded-lg">
                         {activity.value}
                       </span>
                     </div>
@@ -261,6 +280,6 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
           </AnimatePresence>
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

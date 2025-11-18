@@ -45,10 +45,10 @@ export function ControlCenter({
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
         whileHover={{ scale: 1.02 }}
-        className="p-4 rounded-xl bg-slate-800/50 backdrop-blur-xl border cursor-pointer transition-all"
+        className="p-4 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 cursor-pointer transition-all shadow-lg hover:shadow-xl hover:border-white/20"
         style={{ 
           borderColor: `${primaryColor}30`,
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1)'
         }}
       >
         <div className="flex items-center justify-between">
@@ -76,10 +76,10 @@ export function ControlCenter({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="p-4 rounded-xl bg-slate-800/50 backdrop-blur-xl border"
+        className="p-4 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-lg"
         style={{ 
           borderColor: `${primaryColor}30`,
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1)'
         }}
       >
         <h3 className="text-sm font-semibold text-white mb-3">Quick Actions</h3>

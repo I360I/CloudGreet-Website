@@ -85,11 +85,17 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 animate-pulse">
-            <div className="h-4 bg-gray-700/50 rounded w-24 mb-4"></div>
-            <div className="h-8 bg-gray-700/50 rounded w-16 mb-2"></div>
-            <div className="h-3 bg-gray-700/50 rounded w-20"></div>
-          </div>
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1, duration: 0.3 }}
+            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg"
+          >
+            <div className="h-4 bg-white/10 rounded-lg w-24 mb-4 animate-pulse"></div>
+            <div className="h-8 bg-white/10 rounded-lg w-16 mb-2 animate-pulse"></div>
+            <div className="h-3 bg-white/10 rounded-lg w-20 animate-pulse"></div>
+          </motion.div>
         ))}
       </div>
     )
@@ -97,17 +103,26 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
 
   if (error || !metrics) {
     return (
-      <div className="bg-red-600/20 border border-red-500/30 rounded-xl p-6 mb-8">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+        className="bg-red-500/10 backdrop-blur-xl border border-red-500/30 rounded-xl p-6 mb-8 shadow-lg"
+      >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
-            <Activity className="w-4 h-4 text-red-400" />
-          </div>
+          <motion.div
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center"
+          >
+            <Activity className="w-5 h-5 text-red-400" />
+          </motion.div>
           <div>
-            <h3 className="text-lg font-semibold text-red-400">Analytics Unavailable</h3>
-            <p className="text-red-300 text-sm">{error || 'No data available'}</p>
+            <h3 className="text-lg font-semibold text-red-400 mb-1">Analytics Unavailable</h3>
+            <p className="text-red-300/80 text-sm">{error || 'No data available'}</p>
           </div>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
@@ -132,8 +147,10 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           whileHover={{ scale: 1.02, y: -4 }}
-          className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
-          style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 cursor-pointer transition-all shadow-lg hover:shadow-xl hover:border-white/20"
+          style={{ 
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}
         >
           <div className="flex items-center justify-between mb-4">
             <motion.div 
@@ -164,8 +181,10 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           whileHover={{ scale: 1.02, y: -4 }}
-          className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
-          style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 cursor-pointer transition-all shadow-lg hover:shadow-xl hover:border-white/20"
+          style={{ 
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}
         >
           <div className="flex items-center justify-between mb-4">
             <motion.div 
@@ -196,8 +215,10 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           whileHover={{ scale: 1.02, y: -4 }}
-          className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
-          style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 cursor-pointer transition-all shadow-lg hover:shadow-xl hover:border-white/20"
+          style={{ 
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}
         >
           <div className="flex items-center justify-between mb-4">
             <motion.div 
@@ -227,8 +248,10 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           whileHover={{ scale: 1.02, y: -4 }}
-          className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 cursor-pointer transition-all"
-          style={{ boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 cursor-pointer transition-all shadow-lg hover:shadow-xl hover:border-white/20"
+          style={{ 
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2), 0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}
         >
           <div className="flex items-center justify-between mb-4">
             <motion.div 
@@ -260,7 +283,7 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6"
+        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg"
       >
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <BarChart3 className="w-5 h-5" style={{ color: primaryColor }} />
