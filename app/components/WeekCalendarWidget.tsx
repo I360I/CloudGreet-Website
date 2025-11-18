@@ -129,7 +129,12 @@ export function WeekCalendarWidget({
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-white">This Week</h3>
         <motion.button
-          onClick={handleFullCalendarClick}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            handleFullCalendarClick()
+          }}
           whileHover={{ scale: 1.1, rotate: -5 }}
           whileTap={{ scale: 0.9 }}
           className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors"

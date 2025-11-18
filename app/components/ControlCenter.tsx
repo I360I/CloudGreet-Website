@@ -85,7 +85,14 @@ export function ControlCenter({
         <h3 className="text-sm font-semibold text-white mb-3">Quick Actions</h3>
         <div className="space-y-2">
           <motion.button
-            onClick={onCreateAppointment}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              if (onCreateAppointment) {
+                onCreateAppointment()
+              }
+            }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="w-full px-4 py-2 text-sm rounded-lg transition-all"

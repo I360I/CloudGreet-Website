@@ -778,7 +778,11 @@ function OnboardingContent() {
       <div className="flex items-center justify-end gap-3">
         <button
           type="button"
-          onClick={handleSaveBusiness}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            handleSaveBusiness()
+          }}
           disabled={savingBusiness}
           className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
