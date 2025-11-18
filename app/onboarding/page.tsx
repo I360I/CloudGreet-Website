@@ -257,7 +257,17 @@ function OnboardingContent() {
 
   const handleSaveBusiness = async () => {
     try {
+      console.log('handleSaveBusiness called', { businessForm })
       setSavingBusiness(true)
+      
+      // Validate required fields
+      if (!businessForm.businessName || !businessForm.email || !businessForm.phone) {
+        showError('Validation failed', 'Please fill in all required fields (Business name, Email, Phone)')
+        setSavingBusiness(false)
+        return
+      }
+      
+      console.log('Making API call to /api/onboarding/business')
       const response = await fetchWithAuth('/api/onboarding/business', {
         method: 'PUT',
         headers: {
@@ -265,6 +275,8 @@ function OnboardingContent() {
         },
         body: JSON.stringify(businessForm)
       })
+      
+      console.log('API response received', { status: response.status, ok: response.ok })
       
       if (!response.ok) {
         let errorData
@@ -778,10 +790,11 @@ function OnboardingContent() {
       <div className="flex items-center justify-end gap-3">
         <button
           type="button"
-          onClick={(e) => {
+          onClick={async (e) => {
             e.preventDefault()
             e.stopPropagation()
-            handleSaveBusiness()
+            console.log('Save & continue button clicked')
+            await handleSaveBusiness()
           }}
           disabled={savingBusiness}
           className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
