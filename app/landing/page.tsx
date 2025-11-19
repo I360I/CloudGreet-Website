@@ -457,7 +457,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-8 md:mb-12"
+            className="text-center mb-6 md:mb-8"
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent leading-tight">
               How CloudGreet Works
@@ -576,7 +576,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-8 md:mb-12"
+            className="text-center mb-6 md:mb-8"
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent leading-tight">
               Professional Dashboard
@@ -593,7 +593,7 @@ export default function LandingPage() {
             className="relative"
           >
             {/* Dashboard Container */}
-            <div className="bg-gray-800/20 backdrop-blur-2xl p-4 md:p-6 lg:p-8 rounded-xl border border-gray-700/30 shadow-2xl">
+            <div className="bg-gray-800/20 backdrop-blur-2xl p-4 md:p-6 rounded-xl border border-gray-700/30 shadow-2xl">
               {/* Dashboard Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
@@ -739,7 +739,7 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8 }}
-            className="mb-8 md:mb-12"
+            className="mb-6 md:mb-8"
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white bg-gradient-to-r from-white via-blue-200 to-purple-300 bg-clip-text text-transparent leading-tight">
               Simple, Transparent Pricing
@@ -762,7 +762,7 @@ export default function LandingPage() {
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
               
               {/* Card */}
-              <div className="relative bg-gray-800/30 backdrop-blur-2xl p-4 md:p-6 lg:p-8 rounded-xl border border-gray-700/50 shadow-2xl group-hover:border-blue-500/30 transition-all duration-500">
+              <div className="relative bg-gray-800/30 backdrop-blur-2xl p-4 md:p-6 rounded-xl border border-gray-700/50 shadow-2xl group-hover:border-blue-500/30 transition-all duration-500">
                 {/* Only Plan Badge */}
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                   <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-lg">
@@ -920,7 +920,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
-              className="relative z-10 flex flex-wrap justify-center items-center gap-8 text-gray-400"
+              className="relative z-10 flex flex-wrap justify-center items-center gap-4 md:gap-6 text-gray-400"
             >
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
