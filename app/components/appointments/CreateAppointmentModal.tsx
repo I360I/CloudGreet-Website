@@ -153,15 +153,18 @@ export function CreateAppointmentModal({
 
       if (!response.ok) {
         // Rollback optimistic update on error
+        removeOptimisticUpdate(tempId)
         const error = await response.json()
         if (error.errors) {
           setErrors(error.errors)
         } else {
           toast.showError('Failed to create appointment', error.error || 'Unknown error')
         }
-        // Note: Optimistic update will be auto-cleaned up after 10 seconds
         return
       }
+
+      // Remove optimistic update since real data is coming
+      removeOptimisticUpdate(tempId)
 
       // Refresh appointments and metrics to get real data
       await refreshAll()

@@ -45,7 +45,7 @@ export function EditAppointmentModal({
   appointmentId
 }: EditAppointmentModalProps) {
   const { business, theme, getServiceColor } = useBusinessData()
-  const { addOptimisticUpdate, refreshAppointments, refreshAll } = useDashboardData()
+  const { addOptimisticUpdate, removeOptimisticUpdate, refreshAll } = useDashboardData()
   const toast = useToast()
   
   const [formData, setFormData] = useState({
@@ -215,15 +215,19 @@ export function EditAppointmentModal({
       })
 
       if (!response.ok) {
+        // Rollback optimistic update on error
+        removeOptimisticUpdate(appointmentId)
         const error = await response.json()
         if (error.errors) {
           setErrors(error.errors)
         } else {
           toast.showError('Failed to update appointment', error.error || 'Unknown error')
         }
-        // Note: Optimistic update will be auto-cleaned up after 10 seconds
         return
       }
+
+      // Remove optimistic update since real data is coming
+      removeOptimisticUpdate(appointmentId)
 
       // Refresh appointments and metrics to get real data
       await refreshAll()
@@ -264,11 +268,15 @@ export function EditAppointmentModal({
       })
 
       if (!response.ok) {
+        // Rollback optimistic update on error
+        removeOptimisticUpdate(appointmentId)
         const error = await response.json()
         toast.showError('Failed to delete appointment', error.error || 'Unknown error')
-        // Note: Optimistic update will be auto-cleaned up after 10 seconds
         return
       }
+
+      // Remove optimistic update since real data is coming
+      removeOptimisticUpdate(appointmentId)
 
       // Refresh appointments and metrics to get real data
       await refreshAll()
