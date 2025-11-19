@@ -178,21 +178,97 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
         }
       })
 
+    // Monitor connection health and fallback to polling if WebSocket fails
+    let healthCheckInterval: NodeJS.Timeout | null = null
+    let pollingFallback: NodeJS.Timeout | null = null
+    let reconnectAttempts = 0
+    const maxReconnectAttempts = 5
+
+    const startPollingFallback = () => {
+      // If WebSocket fails, poll API every 10 seconds as fallback
+      if (pollingFallback) return
+      
+      pollingFallback = setInterval(async () => {
+        try {
+          // Poll for updates via API
+          const response = await fetch(`/api/dashboard/real-metrics?timeframe=7d`, {
+            credentials: 'include',
+          })
+          if (response.ok) {
+            setLastActivity(new Date())
+          }
+        } catch (error) {
+          console.error('Polling fallback error:', error)
+        }
+      }, 10000) // Poll every 10 seconds
+    }
+
+    const stopPollingFallback = () => {
+      if (pollingFallback) {
+        clearInterval(pollingFallback)
+        pollingFallback = null
+      }
+    }
+
+    const handleConnectionError = (error: any) => {
+      console.error('Realtime connection error:', error)
+      setConnectionStatus('error')
+      setIsConnected(false)
+      
+      // Start polling fallback if WebSocket fails
+      startPollingFallback()
+      
+      // Attempt to reconnect (up to max attempts)
+      if (reconnectAttempts < maxReconnectAttempts) {
+        reconnectAttempts++
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            setConnectionStatus('connecting')
+            // Re-subscribe to channels
+            callsChannel.subscribe()
+            appointmentsChannel.subscribe()
+            messagesChannel.subscribe()
+          }
+        }, 5000 * reconnectAttempts) // Exponential backoff
+      }
+    }
+
     // Monitor connection health
-    const healthCheck = setInterval(() => {
+    healthCheckInterval = setInterval(() => {
+      // If connected, stop polling fallback
+      if (isConnected) {
+        stopPollingFallback()
+        reconnectAttempts = 0 // Reset on successful connection
+      }
       setLastActivity(new Date())
     }, 30000) // Ping every 30 seconds
 
+    // Add error handlers to channels
+    callsChannel.on('error', handleConnectionError)
+    appointmentsChannel.on('error', handleConnectionError)
+    messagesChannel.on('error', handleConnectionError)
+
+    // Check connection status after 5 seconds - if not connected, start polling
+    const connectionCheck = setTimeout(() => {
+      if (!isConnected && connectionStatus === 'connecting') {
+        console.warn('WebSocket connection timeout, starting polling fallback')
+        startPollingFallback()
+        setConnectionStatus('disconnected')
+      }
+    }, 5000)
+
     // Cleanup on unmount
     return () => {
-      clearInterval(healthCheck)
+      if (healthCheckInterval) clearInterval(healthCheckInterval)
+      if (pollingFallback) clearInterval(pollingFallback)
+      if (connectionCheck) clearTimeout(connectionCheck)
       supabase.removeChannel(callsChannel)
       supabase.removeChannel(appointmentsChannel)
       supabase.removeChannel(messagesChannel)
       setIsConnected(false)
       setConnectionStatus('disconnected')
     }
-  }, [])
+  }, [isConnected, connectionStatus])
 
   return (
     <RealtimeContext.Provider value={{
