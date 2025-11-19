@@ -45,7 +45,7 @@ export function EditAppointmentModal({
   appointmentId
 }: EditAppointmentModalProps) {
   const { business, theme, getServiceColor } = useBusinessData()
-  const { addOptimisticUpdate, refreshAppointments } = useDashboardData()
+  const { addOptimisticUpdate, refreshAppointments, refreshAll } = useDashboardData()
   const toast = useToast()
   
   const [formData, setFormData] = useState({
@@ -225,8 +225,8 @@ export function EditAppointmentModal({
         return
       }
 
-      // Refresh appointments to get real data
-      await refreshAppointments()
+      // Refresh appointments and metrics to get real data
+      await refreshAll()
       
       toast.showSuccess('Appointment updated successfully')
       onSuccess?.()
@@ -270,8 +270,8 @@ export function EditAppointmentModal({
         return
       }
 
-      // Refresh appointments to get real data
-      await refreshAppointments()
+      // Refresh appointments and metrics to get real data
+      await refreshAll()
       
       toast.showSuccess('Appointment deleted successfully')
       onSuccess?.()

@@ -44,7 +44,7 @@ export function CreateAppointmentModal({
   initialTime
 }: CreateAppointmentModalProps) {
   const { business, theme, getServiceColor } = useBusinessData()
-  const { addOptimisticUpdate, refreshAppointments } = useDashboardData()
+  const { addOptimisticUpdate, refreshAppointments, refreshAll } = useDashboardData()
   const toast = useToast()
   
   const [formData, setFormData] = useState({
@@ -163,8 +163,8 @@ export function CreateAppointmentModal({
         return
       }
 
-      // Refresh appointments to get real data
-      await refreshAppointments()
+      // Refresh appointments and metrics to get real data
+      await refreshAll()
       
       toast.showSuccess('Appointment created successfully')
       onSuccess?.()
