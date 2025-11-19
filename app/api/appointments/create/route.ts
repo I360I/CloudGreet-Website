@@ -5,6 +5,7 @@ import { logger } from '@/lib/monitoring'
 import { moderateRateLimit } from '@/lib/rate-limiting-redis'
 import { z } from 'zod'
 import { validateAndFormatPhone } from '@/lib/phone-validation'
+import { syncGoogleCalendarEvent } from '@/lib/calendar'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -130,7 +131,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Sync Google Calendar if calendar_connected
+    // Sync Google Calendar if calendar_connected
+    if (business.calendar_connected && appointment) {
+      try {
+        const calendarId = business.google_calendar_id || 'primary'
+        const eventId = await syncGoogleCalendarEvent(
+          calendarId,
+          appointment,
+          null // No existing event ID for new appointments
+        )
+        
+        if (eventId) {
+          // Update appointment with Google Calendar event ID
+          await supabaseAdmin
+            .from('appointments')
+            .update({ google_calendar_event_id: eventId })
+            .eq('id', appointment.id)
+          
+          logger.info('Appointment synced to Google Calendar', {
+            appointmentId: appointment.id,
+            googleEventId: eventId,
+            businessId
+          })
+        } else {
+          logger.warn('Failed to sync appointment to Google Calendar, appointment saved in database', {
+            appointmentId: appointment.id,
+            businessId
+          })
+        }
+      } catch (calendarError) {
+        // Don't fail the appointment creation if calendar sync fails
+        logger.error('Error syncing appointment to Google Calendar', {
+          error: calendarError instanceof Error ? calendarError.message : 'Unknown error',
+          appointmentId: appointment.id,
+          businessId
+        })
+      }
+    }
 
     return NextResponse.json({
       success: true,
