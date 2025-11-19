@@ -229,8 +229,8 @@ export default function AdminClientsPage() {
                 >
                   ← Back to Clients
                 </Button>
-                <h1 className="text-3xl font-bold text-white">{clientDetail.client.business_name}</h1>
-                <p className="text-gray-300 mt-2">Client Details & Activity</p>
+                <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">{clientDetail.client.business_name}</h1>
+                <p className="text-gray-300 mt-2 text-sm md:text-base leading-snug">Client Details & Activity</p>
               </div>
             </div>
 
@@ -293,7 +293,7 @@ export default function AdminClientsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
             <div className="text-sm text-gray-400">Total Calls</div>
-            <div className="text-2xl font-bold text-white">{clientDetail.activity.calls.total}</div>
+            <div className="text-xl md:text-2xl font-bold text-white leading-tight">{clientDetail.activity.calls.total}</div>
           </div>
           <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
             <div className="text-sm text-gray-400">Answered</div>
@@ -409,8 +409,8 @@ export default function AdminClientsPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white">Client Management</h1>
-              <p className="text-gray-300 mt-2">
+              <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">Client Management</h1>
+              <p className="text-gray-300 mt-2 text-sm md:text-base leading-snug">
                 View and manage all clients (businesses) on the platform.
               </p>
             </div>
@@ -420,7 +420,7 @@ export default function AdminClientsPage() {
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
           <div className="text-sm font-medium text-gray-400 mb-1">Total</div>
-          <div className="text-2xl font-bold text-white">{statistics.total}</div>
+          <div className="text-xl md:text-2xl font-bold text-white leading-tight">{statistics.total}</div>
         </div>
         <div className="bg-gray-900/50 border border-gray-700/50 backdrop-blur-xl rounded-xl shadow-md p-5">
           <div className="text-sm font-medium text-gray-400 mb-1">Active</div>

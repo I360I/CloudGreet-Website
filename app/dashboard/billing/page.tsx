@@ -160,8 +160,8 @@ export default function BillingPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-semibold text-white mb-2">Billing & Subscription</h1>
-        <p className="text-gray-400">Manage your subscription and view billing history</p>
+        <h1 className="text-2xl md:text-3xl font-semibold text-white mb-2 leading-tight">Billing & Subscription</h1>
+        <p className="text-gray-400 text-sm md:text-base leading-snug">Manage your subscription and view billing history</p>
       </div>
 
       {/* Subscription Status */}
@@ -225,7 +225,7 @@ export default function BillingPage() {
             <DollarSign className="w-5 h-5" style={{ color: primaryColor }} />
             <h3 className="text-sm font-medium text-gray-400">Monthly Subscription</h3>
           </div>
-          <p className="text-2xl font-bold text-white">{formatCurrency(billing.mrrCents)}</p>
+          <p className="text-xl md:text-2xl font-bold text-white leading-tight">{formatCurrency(billing.mrrCents)}</p>
           <p className="text-xs text-gray-500 mt-1">per month</p>
         </div>
 

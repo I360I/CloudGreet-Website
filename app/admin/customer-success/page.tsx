@@ -177,7 +177,7 @@ export default function CustomerSuccessPage() {
             Customer success cockpit
           </span>
           <div className="space-y-3">
-            <h1 className="text-3xl font-semibold sm:text-4xl">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold leading-tight">
               Activation health for {snapshot?.businessName ?? 'your team'}
             </h1>
             <p className="max-w-3xl text-base leading-relaxed text-slate-300">
@@ -200,7 +200,7 @@ export default function CustomerSuccessPage() {
                   <CheckCircle2 className="h-5 w-5 text-emerald-300" />
                 </div>
                 <div className="mt-3 flex items-end gap-2">
-                  <span className="text-4xl font-semibold text-white">{snapshot.healthScore}</span>
+                  <span className="text-2xl md:text-3xl lg:text-4xl font-semibold text-white leading-tight">{snapshot.healthScore}</span>
                   <span className="text-sm text-slate-400">/100</span>
                 </div>
                 <p className="mt-2 text-sm text-slate-300">
@@ -214,7 +214,7 @@ export default function CustomerSuccessPage() {
                   <CalendarCheck className="h-5 w-5 text-blue-300" />
                 </div>
                 <div className="mt-3 flex items-end gap-2">
-                  <span className="text-4xl font-semibold text-white">{snapshot.accountAgeDays}</span>
+                  <span className="text-2xl md:text-3xl lg:text-4xl font-semibold text-white leading-tight">{snapshot.accountAgeDays}</span>
                   <span className="text-sm text-slate-400">days</span>
                 </div>
                 <p className="mt-2 text-sm text-slate-300">

@@ -602,7 +602,7 @@ export default function OwnerSettingsPage() {
           </div>
         </header>
 
-        <section className="rounded-3xl border border-white/10 bg-black/40 p-8 shadow-2xl shadow-blue-900/20">
+        <section className="rounded-xl border border-white/10 bg-black/40 p-4 md:p-6 shadow-2xl shadow-blue-900/20">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-white">AI prompt tuning</h2>
@@ -719,7 +719,7 @@ export default function OwnerSettingsPage() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-4">
-          <article className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-6 shadow-2xl shadow-blue-900/10">
+          <article className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-4 md:p-6 shadow-2xl shadow-blue-900/10">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-semibold text-white">Knowledge base</h3>
@@ -740,7 +740,7 @@ export default function OwnerSettingsPage() {
             </div>
           </article>
 
-          <article className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-6 shadow-2xl shadow-blue-900/10">
+          <article className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-4 md:p-6 shadow-2xl shadow-blue-900/10">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-semibold text-white">Call QA reviews</h3>
@@ -761,7 +761,7 @@ export default function OwnerSettingsPage() {
             </div>
           </article>
 
-          <article className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-6 shadow-2xl shadow-blue-900/10">
+          <article className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-4 md:p-6 shadow-2xl shadow-blue-900/10">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-semibold text-white">Customer success</h3>
@@ -782,7 +782,7 @@ export default function OwnerSettingsPage() {
             </div>
           </article>
 
-          <article className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-6 shadow-2xl shadow-blue-900/10">
+          <article className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-4 md:p-6 shadow-2xl shadow-blue-900/10">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-lg font-semibold text-white">Usage analytics</h3>
@@ -803,7 +803,7 @@ export default function OwnerSettingsPage() {
           </article>
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-8 shadow-2xl shadow-blue-900/20">
+        <section className="rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-4 md:p-6 shadow-2xl shadow-blue-900/20">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-white">Prospecting filters</h2>
@@ -836,7 +836,7 @@ export default function OwnerSettingsPage() {
           {prospectingFiltersLoading ? (
             <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {[...Array(3)].map((_, index) => (
-                <div key={index} className="h-28 animate-pulse rounded-2xl border border-white/10 bg-white/5" />
+                <div key={index} className="h-28 animate-pulse rounded-xl border border-white/10 bg-white/5" />
               ))}
             </div>
           ) : (
@@ -951,12 +951,12 @@ export default function OwnerSettingsPage() {
             {[...Array(6)].map((_, idx) => (
               <div
                 key={idx}
-                className="h-44 animate-pulse rounded-3xl border border-white/10 bg-white/5"
+                className="h-44 animate-pulse rounded-xl border border-white/10 bg-white/5"
               />
             ))}
           </div>
         ) : error ? (
-          <div className="rounded-3xl border border-rose-500/30 bg-rose-500/10 p-8 text-center text-rose-100">
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 md:p-6 text-center text-rose-100">
             {error}
           </div>
         ) : (
@@ -974,7 +974,7 @@ export default function OwnerSettingsPage() {
                 {items.map((integration) => (
                   <article
                     key={integration.slug}
-                    className="group relative flex h-full flex-col justify-between rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-6 shadow-2xl shadow-blue-900/10 transition hover:-translate-y-1 hover:border-white/20 hover:shadow-blue-900/30"
+                    className="group relative flex h-full flex-col justify-between rounded-xl border border-white/10 bg-gradient-to-br from-white/5 via-white/0 to-white/10 p-4 md:p-6 shadow-2xl shadow-blue-900/10 transition hover:-translate-y-1 hover:border-white/20 hover:shadow-blue-900/30"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
