@@ -580,7 +580,7 @@ function OnboardingContent() {
         return (
           <div
             key={step.key}
-            className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm transition ${
+            className={`flex items-center gap-3 rounded-xl border px-3 py-2 text-sm transition ${
               active
                 ? 'border-blue-400/40 bg-blue-500/10 text-blue-100 shadow-[0_0_20px_rgba(59,130,246,0.35)]'
                 : completed
@@ -613,7 +613,7 @@ function OnboardingContent() {
   )
 
   const renderBusinessForm = () => (
-    <div className="space-y-6 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 md:p-8 shadow-xl">
+    <div className="space-y-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl p-4 md:p-6 shadow-xl">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-white">Business Profile</h2>
         <p className="text-sm text-slate-400">
@@ -797,7 +797,7 @@ function OnboardingContent() {
             await handleSaveBusiness()
           }}
           disabled={savingBusiness}
-          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {savingBusiness ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Save & continue
@@ -807,7 +807,7 @@ function OnboardingContent() {
   )
 
   const renderServicesForm = () => (
-    <div className="space-y-6 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 md:p-8 shadow-xl">
+    <div className="space-y-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl p-4 md:p-6 shadow-xl">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-white">Services & Availability</h2>
         <p className="text-sm text-slate-400">
@@ -859,7 +859,7 @@ function OnboardingContent() {
 
       <div className="space-y-3">
         <span className="text-xs uppercase tracking-[0.3em] text-slate-500">Business hours</span>
-        <div className="grid gap-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
+        <div className="grid gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-300">
           {Object.entries(servicesForm.businessHours).map(([day, config]) => (
             <div
               key={day}
@@ -927,7 +927,7 @@ function OnboardingContent() {
           type="button"
           onClick={handleSaveServices}
           disabled={savingServices}
-          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {savingServices ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -941,7 +941,7 @@ function OnboardingContent() {
   )
 
   const renderCalendarStep = () => (
-    <div className="space-y-6 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 md:p-8 shadow-xl">
+    <div className="space-y-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl p-4 md:p-6 shadow-xl">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-white">Connect your calendar</h2>
         <p className="text-sm text-slate-400">
@@ -950,7 +950,7 @@ function OnboardingContent() {
         </p>
       </div>
 
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-6">
+      <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-4 md:p-6">
         <div className="flex items-start gap-3">
           <CalendarDays className="h-6 w-6 text-blue-300" />
           <div className="space-y-1 text-sm text-slate-200">
@@ -961,7 +961,7 @@ function OnboardingContent() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-black/50 p-4 text-sm text-slate-300">
+        <div className="rounded-xl border border-white/10 bg-black/50 p-3 text-sm text-slate-300">
           <p className="flex items-center gap-2 text-slate-200">
             <span
               className={`h-2 w-2 rounded-full ${
@@ -981,7 +981,7 @@ function OnboardingContent() {
           <button
             type="button"
             onClick={handleConnectCalendar}
-            className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30"
+            className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30"
           >
             <CalendarDays className="h-4 w-4" />
             {calendarStatus ? 'Reconnect Google Calendar' : 'Connect Google Calendar'}
@@ -990,7 +990,7 @@ function OnboardingContent() {
             <button
               type="button"
               onClick={handleDisconnectCalendar}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-6 py-3 text-sm font-semibold text-slate-200 shadow-lg transition-all duration-300 hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-2 text-sm font-semibold text-slate-200 shadow-lg transition-all duration-300 hover:bg-white/10"
             >
               Disconnect
             </button>
@@ -998,7 +998,7 @@ function OnboardingContent() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-xs text-slate-300">
+      <div className="rounded-xl border border-white/10 bg-white/5 p-4 md:p-6 text-xs text-slate-300">
         <p className="font-semibold text-white">Why connect?</p>
         <ul className="mt-2 space-y-2 text-slate-400">
           <li className="flex items-start gap-2">
@@ -1030,7 +1030,7 @@ function OnboardingContent() {
   )
 
   const renderPhoneStep = () => (
-    <div className="space-y-6 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 md:p-8 shadow-xl">
+    <div className="space-y-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl p-4 md:p-6 shadow-xl">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-white">Provision a forwarding number</h2>
         <p className="text-sm text-slate-400">
@@ -1091,7 +1091,7 @@ function OnboardingContent() {
           type="button"
           onClick={handleProvisionPhone}
           disabled={provisioningPhone}
-          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {provisioningPhone ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
           {phoneStatus ? 'Update number' : 'Provision number'}
@@ -1101,7 +1101,7 @@ function OnboardingContent() {
   )
 
   const renderSummaryStep = () => (
-    <div className="space-y-6 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl p-6 md:p-8 shadow-xl">
+    <div className="space-y-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl p-4 md:p-6 shadow-xl">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold text-white">Ready to launch CloudGreet</h2>
         <p className="text-sm text-slate-400">
@@ -1111,7 +1111,7 @@ function OnboardingContent() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+        <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-300">
           <div className="flex items-center gap-2 text-white">
             <User className="h-4 w-4 text-blue-300" />
             <span className="font-semibold">Business</span>
@@ -1121,7 +1121,7 @@ function OnboardingContent() {
           <p>{businessForm.email}</p>
           {phoneStatus && <p>{phoneStatus}</p>}
         </div>
-        <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+        <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-300">
           <div className="flex items-center gap-2 text-white">
             <Globe className="h-4 w-4 text-blue-300" />
             <span className="font-semibold">Coverage</span>
@@ -1198,7 +1198,7 @@ function OnboardingContent() {
           type="button"
           onClick={handleComplete}
           disabled={completing}
-          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-6 py-3 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {completing ? (
             <Loader2 className="h-4 w-4 animate-spin" />

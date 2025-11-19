@@ -32,27 +32,27 @@ export default function FeaturesPage() {
       </nav>
 
       {/* Hero Section */}
-      <div className="max-w-6xl mx-auto px-4 py-24">
+      <div className="max-w-6xl mx-auto px-4 py-12 md:py-16 lg:py-20">
         <div className="text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
             Powerful Features for Your Business
           </h1>
-          <p className="text-lg md:text-xl text-gray-300 mb-12 max-w-3xl mx-auto">
+          <p className="text-base md:text-lg text-gray-300 mb-8 max-w-3xl mx-auto leading-snug">
             Everything you need to never miss a call, qualify leads, and grow your service business with AI-powered automation.
           </p>
         </div>
       </div>
 
       {/* Features Grid */}
-      <div className="max-w-6xl mx-auto px-4 py-24">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+      <div className="max-w-6xl mx-auto px-4 py-12 md:py-16 lg:py-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {/* Core Features */}
-          <div className="bg-white/5 backdrop-blur-xl rounded-xl p-6 md:p-8 border border-white/10 shadow-lg">
-            <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-6">
-              <Phone className="w-6 h-6 text-blue-400" />
+          <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 md:p-6 border border-white/10 shadow-lg">
+            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4">
+              <Phone className="w-5 h-5 text-blue-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-4">24/7 AI Call Answering</h3>
-            <p className="text-gray-300 mb-6">
+            <h3 className="text-base md:text-lg font-semibold text-white mb-3 leading-tight">24/7 AI Call Answering</h3>
+            <p className="text-sm md:text-base text-gray-300 mb-4 leading-snug">
               Never miss a call again. Our AI answers every call instantly, even outside business hours.
             </p>
             <ul className="space-y-2 text-sm text-gray-400">
@@ -62,12 +62,12 @@ export default function FeaturesPage() {
             </ul>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-            <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-6">
-              <Brain className="w-6 h-6 text-green-400" />
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 md:p-6 border border-white/20">
+            <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center mb-4">
+              <Brain className="w-5 h-5 text-green-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-4">Intelligent Lead Qualification</h3>
-            <p className="text-gray-300 mb-6">
+            <h3 className="text-base md:text-lg font-semibold text-white mb-3 leading-tight">Intelligent Lead Qualification</h3>
+            <p className="text-sm md:text-base text-gray-300 mb-4 leading-snug">
               AI automatically qualifies leads by gathering service needs, location, urgency, and budget.
             </p>
             <ul className="space-y-2 text-sm text-gray-400">
@@ -77,12 +77,12 @@ export default function FeaturesPage() {
             </ul>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-            <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-6">
-              <Calendar className="w-6 h-6 text-purple-400" />
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 md:p-6 border border-white/20">
+            <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4">
+              <Calendar className="w-5 h-5 text-purple-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-4">Automatic Booking</h3>
-            <p className="text-gray-300 mb-6">
+            <h3 className="text-base md:text-lg font-semibold text-white mb-3 leading-tight">Automatic Booking</h3>
+            <p className="text-sm md:text-base text-gray-300 mb-4 leading-snug">
               Seamlessly schedule qualified leads directly into your calendar with SMS confirmations.
             </p>
             <ul className="space-y-2 text-sm text-gray-400">
@@ -92,12 +92,12 @@ export default function FeaturesPage() {
             </ul>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-            <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center mb-6">
-              <MessageSquare className="w-6 h-6 text-orange-400" />
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 md:p-6 border border-white/20">
+            <div className="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center mb-4">
+              <MessageSquare className="w-5 h-5 text-orange-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-4">Missed Call Recovery</h3>
-            <p className="text-gray-300 mb-6">
+            <h3 className="text-base md:text-lg font-semibold text-white mb-3 leading-tight">Missed Call Recovery</h3>
+            <p className="text-sm md:text-base text-gray-300 mb-4 leading-snug">
               Automatically send follow-up SMS to missed calls to recover lost opportunities.
             </p>
             <ul className="space-y-2 text-sm text-gray-400">
@@ -107,12 +107,12 @@ export default function FeaturesPage() {
             </ul>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-            <div className="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center mb-6">
-              <Shield className="w-6 h-6 text-red-400" />
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 md:p-6 border border-white/20">
+            <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center mb-4">
+              <Shield className="w-5 h-5 text-red-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-4">Call Recordings & Transcripts</h3>
-            <p className="text-gray-300 mb-6">
+            <h3 className="text-base md:text-lg font-semibold text-white mb-3 leading-tight">Call Recordings & Transcripts</h3>
+            <p className="text-sm md:text-base text-gray-300 mb-4 leading-snug">
               Every call is recorded and transcribed for quality assurance and training.
             </p>
             <ul className="space-y-2 text-sm text-gray-400">
@@ -122,12 +122,12 @@ export default function FeaturesPage() {
             </ul>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
-            <div className="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center mb-6">
-              <BarChart3 className="w-6 h-6 text-cyan-400" />
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 md:p-6 border border-white/20">
+            <div className="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center mb-4">
+              <BarChart3 className="w-5 h-5 text-cyan-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-4">Professional Dashboard</h3>
-            <p className="text-gray-300 mb-6">
+            <h3 className="text-base md:text-lg font-semibold text-white mb-3 leading-tight">Professional Dashboard</h3>
+            <p className="text-sm md:text-base text-gray-300 mb-4 leading-snug">
               Real-time analytics, ROI tracking, and performance insights to grow your business.
             </p>
             <ul className="space-y-2 text-sm text-gray-400">
@@ -140,10 +140,10 @@ export default function FeaturesPage() {
       </div>
 
       {/* Advanced Features */}
-      <div className="max-w-6xl mx-auto px-4 py-24">
-        <div className="text-center mb-12 md:mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Advanced AI Capabilities</h2>
-          <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto">
+      <div className="max-w-6xl mx-auto px-4 py-12 md:py-16 lg:py-20">
+        <div className="text-center mb-8 md:mb-12">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">Advanced AI Capabilities</h2>
+          <p className="text-base md:text-lg text-gray-300 max-w-3xl mx-auto leading-snug">
             Powered by the latest AI technology to deliver human-like conversations and intelligent automation.
           </p>
         </div>
@@ -155,8 +155,8 @@ export default function FeaturesPage() {
                 <Zap className="w-5 h-5 text-blue-400" />
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-white mb-2">Lightning Fast Response</h3>
-                <p className="text-gray-300">AI responds in under 1 second, ensuring no customer waits or hangs up.</p>
+                <h3 className="text-base md:text-lg font-semibold text-white mb-2 leading-tight">Lightning Fast Response</h3>
+                <p className="text-sm md:text-base text-gray-300 leading-snug">AI responds in under 1 second, ensuring no customer waits or hangs up.</p>
               </div>
             </div>
 
@@ -216,18 +216,18 @@ export default function FeaturesPage() {
       </div>
 
       {/* CTA Section */}
-      <div className="max-w-6xl mx-auto px-4 py-24">
-        <div className="bg-gradient-to-r from-blue-500/20 to-purple-600/20 backdrop-blur-xl rounded-2xl p-8 md:p-10 text-center border border-white/10 shadow-xl">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Ready to Transform Your Business?</h2>
-          <p className="text-lg md:text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+      <div className="max-w-6xl mx-auto px-4 py-12 md:py-16 lg:py-20">
+        <div className="bg-gradient-to-r from-blue-500/20 to-purple-600/20 backdrop-blur-xl rounded-xl p-4 md:p-6 lg:p-8 text-center border border-white/10 shadow-xl">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">Ready to Transform Your Business?</h2>
+          <p className="text-base md:text-lg text-gray-300 mb-6 max-w-2xl mx-auto leading-snug">
             Join thousands of service businesses who never miss another opportunity.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/register-simple" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg text-base font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
+            <Link href="/register-simple" className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-2">
               Start Free Trial
               <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/contact" className="bg-white/10 backdrop-blur-xl text-white px-6 py-3 rounded-lg text-base font-medium border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg">
+            <Link href="/contact" className="bg-white/10 backdrop-blur-xl text-white px-4 py-2 rounded-lg text-sm font-medium border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg">
               Contact Sales
             </Link>
           </div>

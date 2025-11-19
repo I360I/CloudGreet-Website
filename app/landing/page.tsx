@@ -325,7 +325,7 @@ export default function LandingPage() {
                       } else {
                         // Show validation error
                         const errorMsg = document.createElement('div');
-                        errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                        errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
                         errorMsg.textContent = 'Please enter a valid 10-digit phone number.';
                         document.body.appendChild(errorMsg);
                         
@@ -336,7 +336,7 @@ export default function LandingPage() {
                     } else {
                       // Show validation error
                       const errorMsg = document.createElement('div');
-                      errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+                      errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
                       errorMsg.textContent = 'Please enter your phone number first.';
                       document.body.appendChild(errorMsg);
                       

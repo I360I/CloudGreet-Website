@@ -67,7 +67,7 @@ export default function ContactPage() {
             </Link>
             <Link
               href="/landing"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
             >
               Back to Home
             </Link>
@@ -163,7 +163,7 @@ export default function ContactPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-white/10 backdrop-blur-xl border border-white/20 text-white py-4 rounded-lg font-semibold hover:bg-white/20 hover:border-white/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="w-full bg-white/10 backdrop-blur-xl border border-white/20 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-white/20 hover:border-white/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   {isLoading ? (
                     <>
@@ -188,8 +188,8 @@ export default function ContactPage() {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="space-y-8"
           >
-            <div className="bg-gray-800/30 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50">
-              <h2 className="text-2xl font-bold mb-6 text-white">Get in touch</h2>
+            <div className="bg-gray-800/30 backdrop-blur-lg rounded-xl p-4 md:p-6 border border-gray-700/50">
+              <h2 className="text-xl md:text-2xl font-bold mb-4 text-white leading-tight">Get in touch</h2>
               
               <div className="space-y-6">
                 <div className="flex items-start space-x-4">
@@ -238,14 +238,14 @@ export default function ContactPage() {
               </div>
             </div>
             
-            <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-lg rounded-2xl p-8 border border-blue-500/20">
-              <h3 className="text-xl font-bold text-white mb-4">Need immediate help?</h3>
+            <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 backdrop-blur-lg rounded-xl p-4 md:p-6 border border-blue-500/20">
+              <h3 className="text-base md:text-lg font-bold text-white mb-3 leading-tight">Need immediate help?</h3>
               <p className="text-gray-300 mb-6">
                 For urgent technical issues or billing questions, call us directly or use our live chat.
               </p>
               <Link
                 href="/help"
-                className="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
+                className="inline-flex items-center bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
               >
                 Visit Help Center
                 <ArrowRight className="w-5 h-5 ml-2" />

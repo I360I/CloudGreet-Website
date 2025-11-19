@@ -98,19 +98,19 @@ export default function SimpleRegisterPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-black/40 backdrop-blur-xl rounded-2xl p-6 md:p-8 max-w-md w-full border border-white/10 shadow-2xl"
+          className="bg-black/40 backdrop-blur-xl rounded-xl p-4 md:p-6 max-w-md w-full border border-white/10 shadow-2xl"
         >
           <div className="text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2 }}
-              className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6"
+              className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4"
             >
-              <CheckCircle className="w-8 h-8 text-green-400" />
+              <CheckCircle className="w-6 h-6 text-green-400" />
             </motion.div>
-            <h1 className="text-2xl font-bold text-white mb-4">{SUCCESS_MESSAGES.REGISTRATION}</h1>
-            <p className="text-gray-300 mb-6">Redirecting to your dashboard...</p>
+            <h1 className="text-xl md:text-2xl font-bold text-white mb-3 leading-tight">{SUCCESS_MESSAGES.REGISTRATION}</h1>
+            <p className="text-sm md:text-base text-gray-300 mb-4 leading-snug">Redirecting to your dashboard...</p>
             <motion.div
               className="w-full bg-gray-700 rounded-full h-2"
               initial={{ width: 0 }}
@@ -128,19 +128,19 @@ export default function SimpleRegisterPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-black/40 backdrop-blur-xl rounded-2xl p-6 md:p-8 max-w-md w-full border border-white/10 shadow-2xl"
+        className="bg-black/40 backdrop-blur-xl rounded-xl p-4 md:p-6 max-w-md w-full border border-white/10 shadow-2xl"
       >
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block mb-6">
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-block mb-4">
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400"
+              className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400"
             >
               CloudGreet
             </motion.div>
           </Link>
-          <h1 className="text-2xl font-bold text-white mb-2">Create Your Account</h1>
-          <p className="text-gray-400">Start your AI receptionist journey</p>
+          <h1 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight">Create Your Account</h1>
+          <p className="text-sm md:text-base text-gray-400 leading-snug">Start your AI receptionist journey</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -289,7 +289,7 @@ export default function SimpleRegisterPage() {
             disabled={isLoading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+            className="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>

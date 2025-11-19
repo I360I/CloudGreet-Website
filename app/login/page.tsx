@@ -75,19 +75,19 @@ export default function LoginPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-black/40 backdrop-blur-xl rounded-2xl p-6 md:p-8 max-w-md w-full border border-white/10 shadow-2xl"
+        className="bg-black/40 backdrop-blur-xl rounded-xl p-4 md:p-6 max-w-md w-full border border-white/10 shadow-2xl"
       >
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-block mb-6">
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-block mb-4">
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400"
+              className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400"
             >
               CloudGreet
             </motion.div>
           </Link>
-          <h1 className="text-2xl font-bold text-white mb-2">Welcome Back</h1>
-          <p className="text-gray-400">Sign in to your AI receptionist</p>
+          <h1 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight">Welcome Back</h1>
+          <p className="text-sm md:text-base text-gray-400 leading-snug">Sign in to your AI receptionist</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
