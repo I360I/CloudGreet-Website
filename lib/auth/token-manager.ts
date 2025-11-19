@@ -46,7 +46,7 @@ export async function getAuthToken(): Promise<string | null> {
   } catch (error) {
     // Fallback to localStorage during migration
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('token')
+      return localStorage.getItem('token') || localStorage.getItem('auth_token')
     }
   }
   
