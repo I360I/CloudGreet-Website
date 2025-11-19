@@ -235,11 +235,6 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
     // Monitor connection health
     healthCheckInterval = setInterval(() => {
-      // If connected, stop polling fallback
-      if (isConnected) {
-        stopPollingFallback()
-        reconnectAttempts = 0 // Reset on successful connection
-      }
       setLastActivity(new Date())
     }, 30000) // Ping every 30 seconds
 
@@ -250,7 +245,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
 
     // Check connection status after 5 seconds - if not connected, start polling
     const connectionCheck = setTimeout(() => {
-      if (!isConnected && connectionStatus === 'connecting') {
+      if (connectionStatus === 'connecting') {
         console.warn('WebSocket connection timeout, starting polling fallback')
         startPollingFallback()
         setConnectionStatus('disconnected')
@@ -268,7 +263,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       setIsConnected(false)
       setConnectionStatus('disconnected')
     }
-  }, [isConnected, connectionStatus])
+  }, [])
 
   return (
     <RealtimeContext.Provider value={{

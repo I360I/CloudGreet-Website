@@ -171,11 +171,22 @@ export async function GET(request: NextRequest) {
       callAnswerRate: Math.round(callAnswerRate * 10) / 10
     }
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       metrics,
       timeframe
+    }
+
+    // Log response size for debugging
+    logger.info('Real metrics API response', {
+      businessId,
+      timeframe,
+      responseSize: JSON.stringify(responseData).length,
+      callsCount: totalCalls || 0,
+      appointmentsCount: totalAppointments || 0
     })
+
+    return NextResponse.json(responseData)
 
   } catch (error) {
     logger.error('Real metrics error', { 
