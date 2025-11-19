@@ -44,10 +44,10 @@ export default function Hero() {
           transition={{ duration: 0.8 }}
           className="mb-6"
         >
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-purple-300 leading-tight tracking-tight">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-purple-300 leading-tight tracking-tight">
             Never Miss a Call Again
           </h1>
-          <p className="text-lg md:text-xl text-gray-300 max-w-4xl mx-auto leading-snug">
+          <p className="text-base md:text-lg text-gray-300 max-w-4xl mx-auto leading-snug">
             CloudGreet answers, qualifies, and books jobs so you don&apos;t lose revenue.
             <br />
             <span className="text-blue-400 font-semibold">Simple pricing: $200/mo + $50 per booking</span>
