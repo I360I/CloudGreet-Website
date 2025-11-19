@@ -221,11 +221,14 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
         // Show success celebration
         setCurrentStep(steps.length) // Move to celebration step
         
-        // Auto-close and refresh after 3 seconds
+        // Auto-close and redirect after 3 seconds
         setTimeout(() => {
           onComplete()
           onClose()
-          window.location.reload()
+          // Redirect to dashboard instead of reloading
+          if (typeof window !== 'undefined') {
+            window.location.href = '/dashboard'
+          }
         }, 3000)
       } else {
         setError('Onboarding completed but verification failed. Please check your dashboard.')
