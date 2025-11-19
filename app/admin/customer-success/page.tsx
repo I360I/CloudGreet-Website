@@ -187,7 +187,7 @@ export default function CustomerSuccessPage() {
           </div>
         </header>
 
-        <section className="rounded-3xl border border-white/10 bg-black/40 p-6 shadow-2xl shadow-blue-900/20">
+        <section className="rounded-xl border border-white/10 bg-black/40 p-4 md:p-6 shadow-2xl shadow-blue-900/20">
           {loading ? (
             <div className="flex h-48 items-center justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
@@ -249,13 +249,13 @@ export default function CustomerSuccessPage() {
               {milestones.map((milestone) => (
                 <article
                   key={milestone.title}
-                  className={`rounded-3xl border ${
+                  className={`rounded-xl border ${
                     milestone.complete ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-white/10 bg-white/5'
-                  } p-6`}
+                  } p-4 md:p-6`}
                 >
                   <div className="flex items-start gap-4">
                     <div
-                      className={`rounded-2xl p-3 ${
+                      className={`rounded-xl p-3 ${
                         milestone.complete ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/10 text-slate-200'
                       }`}
                     >
@@ -307,7 +307,7 @@ export default function CustomerSuccessPage() {
                   snapshot.alerts.map((alert, index) => (
                     <div
                       key={`${alert}-${index}`}
-                      className="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-amber-100"
+                      className="flex items-start gap-3 rounded-xl border border-amber-400/40 bg-amber-500/10 p-3 md:p-4 text-amber-100"
                     >
                       <AlertTriangle className="h-5 w-5 flex-shrink-0" />
                       <p className="text-sm leading-relaxed">{alert}</p>
