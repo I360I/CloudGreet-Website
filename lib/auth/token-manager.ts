@@ -21,11 +21,21 @@ export async function setAuthToken(token: string): Promise<void> {
   })
 }
 
+// Token cache to avoid multiple API calls
+let tokenCache: { token: string | null; timestamp: number } | null = null
+const TOKEN_CACHE_TTL = 60000 // 1 minute cache
+
 /**
  * Get authentication token
  * First tries cookie (via API), falls back to localStorage for migration
+ * Includes caching to avoid multiple API calls
  */
 export async function getAuthToken(): Promise<string | null> {
+  // Check cache first (if less than 1 minute old)
+  if (tokenCache && Date.now() - tokenCache.timestamp < TOKEN_CACHE_TTL) {
+    return tokenCache.token
+  }
+
   try {
     // Try to get token from secure cookie via API
     const response = await fetch('/api/auth/get-token', {
@@ -35,6 +45,9 @@ export async function getAuthToken(): Promise<string | null> {
     if (response.ok) {
       const data = await response.json()
       if (data.token) {
+        // Cache the token
+        tokenCache = { token: data.token, timestamp: Date.now() }
+        
         // Migrate from localStorage if exists
         const oldToken = localStorage.getItem('token')
         if (oldToken && oldToken !== data.token) {
@@ -46,11 +59,25 @@ export async function getAuthToken(): Promise<string | null> {
   } catch (error) {
     // Fallback to localStorage during migration
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('token') || localStorage.getItem('auth_token')
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+      if (token) {
+        // Cache the token
+        tokenCache = { token, timestamp: Date.now() }
+        return token
+      }
     }
   }
   
+  // Clear cache if no token found
+  tokenCache = { token: null, timestamp: Date.now() }
   return null
+}
+
+/**
+ * Clear token cache (useful after logout or token refresh)
+ */
+export function clearTokenCache(): void {
+  tokenCache = null
 }
 
 /**

@@ -128,6 +128,16 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 60000, // 60s cache
+      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+        // Retry on 401 errors (up to 2 times)
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          if (retryCount < 2) {
+            // Wait 1 second before retry
+            setTimeout(() => revalidate({ retryCount }), 1000)
+          }
+        }
+        // Don't retry other errors
+      },
       onError: (error) => {
         console.error('Failed to fetch appointments:', error)
       }
@@ -147,6 +157,14 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 60000, // 60s cache
+      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+        // Retry on 401 errors (up to 2 times)
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          if (retryCount < 2) {
+            setTimeout(() => revalidate({ retryCount }), 1000)
+          }
+        }
+      },
       onError: (error) => {
         console.error('Failed to fetch metrics:', error)
       }
@@ -166,6 +184,14 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 60000, // 60s cache
+      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+        // Retry on 401 errors (up to 2 times)
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          if (retryCount < 2) {
+            setTimeout(() => revalidate({ retryCount }), 1000)
+          }
+        }
+      },
       onError: (error) => {
         console.error('Failed to fetch charts:', error)
       }

@@ -14,6 +14,7 @@ export interface FetchOptions extends RequestInit {
 /**
  * Fetch with automatic authentication
  * Automatically includes token from secure cookie or localStorage fallback
+ * Includes retry logic for 401 errors
  */
 export async function fetchWithAuth(
   url: string,
@@ -26,36 +27,59 @@ export async function fetchWithAuth(
     ...headers,
   }
 
-  if (requireAuth) {
-    // Prioritize secure cookie (httpOnly, more secure)
-    // Fallback to localStorage for migration/compatibility
-    let token: string | null = null
-    
+  // Helper to get token
+  const getToken = async (): Promise<string | null> => {
     // Try secure cookie via API first (preferred method)
     try {
-      token = await getAuthToken()
+      const token = await getAuthToken()
+      if (token) return token
     } catch (error) {
       // Fallback to localStorage if cookie retrieval fails
-      if (typeof window !== 'undefined') {
-        token = localStorage.getItem('token') || localStorage.getItem('auth_token')
-      }
     }
     
-    // If still no token, try localStorage as final fallback
-    if (!token && typeof window !== 'undefined') {
-      token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+    // Fallback to localStorage
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('token') || localStorage.getItem('auth_token')
     }
+    
+    return null
+  }
 
+  if (requireAuth) {
+    let token = await getToken()
+    
     if (token) {
       finalHeaders['Authorization'] = `Bearer ${token}`
     }
   }
 
-  return fetch(url, {
+  // Make initial request
+  let response = await fetch(url, {
     ...restOptions,
     headers: finalHeaders,
     credentials: 'include', // Include cookies
   })
+
+  // Retry once on 401 with fresh token
+  if (response.status === 401 && requireAuth) {
+    // Clear any cached token and get fresh one
+    if (typeof window !== 'undefined') {
+      // Force fresh token retrieval
+      const freshToken = await getToken()
+      
+      if (freshToken && freshToken !== finalHeaders['Authorization']?.toString().replace('Bearer ', '')) {
+        // Retry with fresh token
+        finalHeaders['Authorization'] = `Bearer ${freshToken}`
+        response = await fetch(url, {
+          ...restOptions,
+          headers: finalHeaders,
+          credentials: 'include',
+        })
+      }
+    }
+  }
+
+  return response
 }
 
 /**
