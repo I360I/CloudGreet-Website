@@ -80,22 +80,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Log response size for debugging
-    const responseData = {
-      success: true,
-      appointments: appointments?.data || [],
-      count: appointments?.data?.length || 0
-    }
-    
-    logger.info('Calendar API response', {
-      businessId,
-      view,
-      startDate: startDateParam,
-      endDate: endDateParam,
-      appointmentCount: appointments?.data?.length || 0,
-      responseSize: JSON.stringify(responseData).length
-    })
-
     // Format response based on view
     let responseData: any
 
@@ -226,13 +210,24 @@ export async function GET(request: NextRequest) {
         )
     }
 
-    // Use responseData if it exists, otherwise build response
-    const finalResponse = responseData || {
+    // Log response size for debugging
+    const finalResponse = {
       success: true,
       view,
       ...responseData,
       businessServices
-    }, {
+    }
+    
+    logger.info('Calendar API response', {
+      businessId,
+      view,
+      startDate: startDateParam,
+      endDate: endDateParam,
+      appointmentCount: appointments?.length || 0,
+      responseSize: JSON.stringify(finalResponse).length
+    })
+
+    return NextResponse.json(finalResponse, {
       headers: {
         'Cache-Control': 'private, max-age=60',
         ...rateLimitResult.headers
