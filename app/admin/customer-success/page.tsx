@@ -194,7 +194,7 @@ export default function CustomerSuccessPage() {
             </div>
           ) : snapshot ? (
             <div className="grid gap-6 md:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm uppercase tracking-[0.3em] text-slate-400">Health score</h2>
                   <CheckCircle2 className="h-5 w-5 text-emerald-300" />
@@ -208,7 +208,7 @@ export default function CustomerSuccessPage() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm uppercase tracking-[0.3em] text-slate-400">Account age</h2>
                   <CalendarCheck className="h-5 w-5 text-blue-300" />
@@ -222,7 +222,7 @@ export default function CustomerSuccessPage() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm uppercase tracking-[0.3em] text-slate-400">Owner</h2>
                   <Mail className="h-5 w-5 text-purple-300" />

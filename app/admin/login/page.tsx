@@ -70,19 +70,19 @@ export default function AdminLoginPage() {
         backgroundSize: '50px 50px'
       }}></div>
       
-      <div className="bg-black border-2 border-purple-500/30 rounded-none p-8 w-full max-w-md relative z-10 shadow-[0_0_30px_rgba(147,51,234,0.3)]">
+      <div className="bg-black border-2 border-purple-500/30 rounded-none p-4 md:p-6 w-full max-w-md relative z-10 shadow-[0_0_30px_rgba(147,51,234,0.3)]">
         {/* Corner accents */}
         <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-purple-500"></div>
         <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-purple-500"></div>
         <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-purple-500"></div>
         <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-purple-500"></div>
         
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 border-2 border-purple-500 mb-4 bg-black">
-            <Shield className="w-8 h-8 text-purple-500" />
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 border-2 border-purple-500 mb-3 bg-black">
+            <Shield className="w-6 h-6 text-purple-500" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2 font-mono tracking-wider">ADMIN LOGIN</h1>
-          <p className="text-gray-400 font-mono text-sm">ACCESS ADMIN DASHBOARD</p>
+          <h1 className="text-xl md:text-2xl font-bold text-white mb-2 font-mono tracking-wider leading-tight">ADMIN LOGIN</h1>
+          <p className="text-gray-400 font-mono text-xs md:text-sm leading-snug">ACCESS ADMIN DASHBOARD</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

@@ -174,7 +174,7 @@ export default function PricingPage() {
           <p className="text-gray-400 mb-6">You need to be logged in to access pricing rules.</p>
           <Link 
             href="/login" 
-            className="text-white px-6 py-3 rounded-lg shadow-lg transition-all duration-300 hover:opacity-90"
+            className="text-white px-4 py-2 rounded-lg text-sm shadow-lg transition-all duration-300 hover:opacity-90"
             style={{ backgroundColor: primaryColor }}
           >
             Log In
@@ -225,7 +225,7 @@ export default function PricingPage() {
           
           <button
             onClick={() => setShowAddRule(true)}
-            className="text-white px-6 py-3 rounded-lg font-medium shadow-lg transition-all duration-300 hover:opacity-90 flex items-center gap-2"
+            className="text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-300 hover:opacity-90 flex items-center gap-2"
             style={{ backgroundColor: primaryColor }}
           >
             <Plus className="w-5 h-5" />
@@ -363,7 +363,7 @@ function RuleModal({ rule, onSave, onClose }: {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 md:p-8 w-full max-w-md mx-4 shadow-2xl"
+        className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 md:p-6 w-full max-w-md mx-4 shadow-2xl"
       >
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-semibold text-white">
@@ -507,7 +507,7 @@ function RuleModal({ rule, onSave, onClose }: {
             <button
               type="submit"
               style={{ backgroundColor: primaryColor }}
-              className="flex-1 hover:opacity-90 text-white px-6 py-3 rounded-lg font-medium shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+              className="flex-1 hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
             >
               <Save className="w-5 h-5" />
               <span>{rule ? 'Update Rule' : 'Add Rule'}</span>
@@ -515,7 +515,7 @@ function RuleModal({ rule, onSave, onClose }: {
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-colors"
+              className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm font-medium transition-colors"
             >
               Cancel
             </button>

@@ -308,7 +308,7 @@ export default function AdminHealthPage() {
                 {healthData.overall_status === 'degraded' && <TrendingDown className="w-5 h-5 text-yellow-600" />}
                 {healthData.overall_status === 'down' && <TrendingDown className="w-5 h-5 text-red-600" />}
               </div>
-              <div className={`text-6xl font-bold ${getHealthScoreColor(healthData.health_score)}`}>
+              <div className={`text-3xl md:text-4xl lg:text-5xl font-bold leading-tight ${getHealthScoreColor(healthData.health_score)}`}>
                 {healthData.health_score}%
               </div>
               <div className="text-gray-600 mt-2">

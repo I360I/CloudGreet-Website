@@ -90,8 +90,8 @@ export default function AccountPage() {
                 <ArrowLeft className="w-6 h-6 text-white" />
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-white">Account Settings</h1>
-                <p className="text-gray-400 text-sm">Manage your account and preferences</p>
+                <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">Account Settings</h1>
+                <p className="text-gray-400 text-xs md:text-sm leading-snug">Manage your account and preferences</p>
               </div>
             </div>
             
@@ -116,7 +116,7 @@ export default function AccountPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key as any)}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all ${
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   activeTab === tab.key
                     ? 'bg-blue-600 text-white shadow-lg'
                     : 'text-gray-400 hover:text-white hover:bg-white/10'
