@@ -300,7 +300,7 @@ export default function CustomerSuccessPage() {
 
               <div className="mt-6 space-y-4">
                 {snapshot.alerts.length === 0 ? (
-                  <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-6 text-emerald-100">
+                  <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4 md:p-6 text-emerald-100">
                     No open alerts. Keep recording QA reviews weekly to maintain conversational quality.
                   </div>
                 ) : (
