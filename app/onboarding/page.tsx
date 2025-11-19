@@ -1236,7 +1236,7 @@ function OnboardingContent() {
             Onboarding wizard
           </span>
           <div className="max-w-3xl space-y-3">
-            <h1 className="text-3xl font-semibold sm:text-4xl">
+            <h1 className="text-2xl md:text-3xl font-semibold leading-tight">
               Launch your AI receptionist in under ten minutes
             </h1>
             <p className="text-base text-slate-300 sm:text-lg">
