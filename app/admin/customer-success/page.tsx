@@ -237,7 +237,7 @@ export default function CustomerSuccessPage() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-slate-400">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 md:p-6 text-center text-slate-400">
               Unable to load customer success metrics right now.
             </div>
           )}
@@ -270,7 +270,7 @@ export default function CustomerSuccessPage() {
               ))}
             </section>
 
-            <section className="rounded-3xl border border-white/10 bg-black/40 p-6 shadow-2xl shadow-blue-900/20">
+            <section className="rounded-xl border border-white/10 bg-black/40 p-4 md:p-6 shadow-2xl shadow-blue-900/20">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold text-white">Alerts & playbook follow-ups</h2>
