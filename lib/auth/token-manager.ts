@@ -77,6 +77,7 @@ export async function clearAuthToken(): Promise<void> {
  */
 export function getAuthTokenSync(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem('token')
+  // Check both 'token' and 'auth_token' for compatibility
+  return localStorage.getItem('token') || localStorage.getItem('auth_token')
 }
 

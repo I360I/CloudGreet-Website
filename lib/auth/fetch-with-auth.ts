@@ -27,22 +27,23 @@ export async function fetchWithAuth(
   }
 
   if (requireAuth) {
-    // For admin pages, prioritize localStorage (admin login stores tokens there)
-    // Then try secure cookie via API as fallback
+    // Prioritize secure cookie (httpOnly, more secure)
+    // Fallback to localStorage for migration/compatibility
     let token: string | null = null
     
-    // Check localStorage first (faster, works for admin login)
-    if (typeof window !== 'undefined') {
-      token = localStorage.getItem('token')
+    // Try secure cookie via API first (preferred method)
+    try {
+      token = await getAuthToken()
+    } catch (error) {
+      // Fallback to localStorage if cookie retrieval fails
+      if (typeof window !== 'undefined') {
+        token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+      }
     }
     
-    // If no token in localStorage, try secure cookie via API
-    if (!token) {
-      try {
-        token = await getAuthToken()
-      } catch (error) {
-        // Already checked localStorage above, so token remains null if not found
-      }
+    // If still no token, try localStorage as final fallback
+    if (!token && typeof window !== 'undefined') {
+      token = localStorage.getItem('token') || localStorage.getItem('auth_token')
     }
 
     if (token) {
