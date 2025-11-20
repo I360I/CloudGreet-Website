@@ -257,7 +257,6 @@ function OnboardingContent() {
 
   const handleSaveBusiness = async () => {
     try {
-      console.log('handleSaveBusiness called', { businessForm })
       setSavingBusiness(true)
       
       // Validate required fields
@@ -267,7 +266,6 @@ function OnboardingContent() {
         return
       }
       
-      console.log('Making API call to /api/onboarding/business')
       const response = await fetchWithAuth('/api/onboarding/business', {
         method: 'PUT',
         headers: {
@@ -275,8 +273,6 @@ function OnboardingContent() {
         },
         body: JSON.stringify(businessForm)
       })
-      
-      console.log('API response received', { status: response.status, ok: response.ok })
       
       if (!response.ok) {
         let errorData
@@ -793,7 +789,6 @@ function OnboardingContent() {
           onClick={async (e) => {
             e.preventDefault()
             e.stopPropagation()
-            console.log('Save & continue button clicked')
             await handleSaveBusiness()
           }}
           disabled={savingBusiness}

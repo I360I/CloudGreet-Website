@@ -59,7 +59,7 @@ BEGIN
     p_customer_phone,
     p_customer_email,
     p_service_type,
-    p_scheduled_date,
+    p_scheduled_date::DATE, -- Convert string to DATE
     v_start_time,
     v_end_time,
     p_duration,
