@@ -391,11 +391,8 @@ function OnboardingContent() {
 
   const handleDisconnectCalendar = async () => {
     try {
-      const response = await fetch('/api/onboarding/calendar/google', {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`
-        }
+      const response = await fetchWithAuth('/api/onboarding/calendar/google', {
+        method: 'DELETE'
       })
       if (!response.ok) {
         let errorData
