@@ -310,7 +310,7 @@ export default function LandingPage() {
                             }, 3000);
                           }
                         } catch (error) {
-                          console.error('Error:', error);
+                          // Error handled by toast notification
                           
                           // Show error message
                           const errorMsg = document.createElement('div');
