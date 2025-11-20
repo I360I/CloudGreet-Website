@@ -8,12 +8,13 @@ CREATE OR REPLACE FUNCTION create_appointment_safe(
   p_customer_phone TEXT,
   p_customer_email TEXT DEFAULT NULL,
   p_service_type TEXT,
-  p_scheduled_date TIMESTAMPTZ,
-  p_start_time TIMESTAMPTZ DEFAULT NULL,
-  p_end_time TIMESTAMPTZ DEFAULT NULL,
+  p_scheduled_date TEXT, -- ISO date string (YYYY-MM-DD)
+  p_start_time TEXT DEFAULT NULL, -- ISO datetime string
+  p_end_time TEXT DEFAULT NULL, -- ISO datetime string
   p_duration INTEGER DEFAULT 60,
   p_notes TEXT DEFAULT NULL,
-  p_estimated_value NUMERIC DEFAULT NULL
+  p_estimated_value NUMERIC DEFAULT NULL,
+  p_address TEXT DEFAULT NULL
 )
 RETURNS UUID AS $$
 DECLARE
@@ -43,9 +44,12 @@ BEGIN
     customer_email,
     service_type,
     scheduled_date,
+    start_time,
+    end_time,
     duration,
     notes,
     estimated_value,
+    address,
     status,
     created_at,
     updated_at
@@ -56,9 +60,12 @@ BEGIN
     p_customer_email,
     p_service_type,
     p_scheduled_date,
+    v_start_time,
+    v_end_time,
     p_duration,
     p_notes,
     p_estimated_value,
+    p_address,
     'scheduled',
     NOW(),
     NOW()
