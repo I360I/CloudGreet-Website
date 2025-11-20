@@ -104,7 +104,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create appointment using transaction function
-    const { data: appointment, error: createError } = await supabaseAdmin
+    // Note: create_appointment_safe returns UUID (appointment ID), not the full appointment object
+    const { data: appointmentId, error: createError } = await supabaseAdmin
       .rpc('create_appointment_safe', {
         p_business_id: businessId,
         p_customer_name: validated.customer_name,
@@ -120,13 +121,32 @@ export async function POST(request: NextRequest) {
         p_notes: validated.notes || null
       })
 
-    if (createError) {
+    if (createError || !appointmentId) {
       logger.error('Failed to create appointment', {
         error: createError instanceof Error ? createError.message : String(createError),
         businessId
       })
       return NextResponse.json(
         { success: false, error: 'Failed to create appointment' },
+        { status: 500 }
+      )
+    }
+
+    // Fetch the full appointment object
+    const { data: appointment, error: fetchError } = await supabaseAdmin
+      .from('appointments')
+      .select('*')
+      .eq('id', appointmentId)
+      .single()
+
+    if (fetchError || !appointment) {
+      logger.error('Failed to fetch created appointment', {
+        error: fetchError instanceof Error ? fetchError.message : String(fetchError),
+        appointmentId,
+        businessId
+      })
+      return NextResponse.json(
+        { success: false, error: 'Appointment created but failed to retrieve' },
         { status: 500 }
       )
     }
