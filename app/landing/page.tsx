@@ -268,81 +268,80 @@ export default function LandingPage() {
                   onClick={async () => {
                     const phoneInput = document.getElementById('phoneInput') as HTMLInputElement;
                     const phoneNumber = phoneInput?.value?.trim();
-                    if (phoneNumber) {
-                      // Format phone number
-                      const formattedNumber = phoneNumber.replace(/\D/g, '');
-                      if (formattedNumber.length >= 10) {
-                        try {
-                          // Show success message immediately (no system notification)
-                          const successMsg = document.createElement('div');
-                          successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
-                          successMsg.textContent = 'Call initiated! You should receive a call shortly.';
-                          document.body.appendChild(successMsg);
-                          
-                          // Remove message after 3 seconds
-                          setTimeout(() => {
-                            successMsg.remove();
-                          }, 3000);
-                          
-                          // Make REAL API call to initiate test call
-                          const response = await fetch('/api/telnyx/initiate-call', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                              phoneNumber: `+1${formattedNumber}`,
-                              businessId: 'demo-business'
-                            })
-                          });
-                          
-                          const result = await response.json();
-                          
-                          if (!result.success) {
-                            // Show error message if call fails
-                            const errorMsg = document.createElement('div');
-                            errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
-                            errorMsg.textContent = 'Failed to initiate call. Please try again.';
-                            document.body.appendChild(errorMsg);
-                            
-                            setTimeout(() => {
-                              errorMsg.remove();
-                            }, 3000);
-                          }
-                        } catch (error) {
-                          // Error handled by toast notification
-                          
-                          // Show error message
-                          const errorMsg = document.createElement('div');
-                          errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
-                          errorMsg.textContent = 'Failed to initiate call. Please try again.';
-                          document.body.appendChild(errorMsg);
-                          
-                          setTimeout(() => {
-                            errorMsg.remove();
-                          }, 3000);
-                        }
-                      } else {
-                        // Show validation error
-                        const errorMsg = document.createElement('div');
-                        errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
-                        errorMsg.textContent = 'Please enter a valid 10-digit phone number.';
-                        document.body.appendChild(errorMsg);
-                        
-                        setTimeout(() => {
-                          errorMsg.remove();
-                        }, 3000);
-                      }
-                    } else {
-                      // Show validation error
+                    
+                    // Validate phone number FIRST
+                    if (!phoneNumber) {
                       const errorMsg = document.createElement('div');
-                      errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
-                      errorMsg.textContent = 'Please enter your phone number first.';
+                      errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium';
+                      errorMsg.textContent = '📞 Please enter your phone number first';
                       document.body.appendChild(errorMsg);
+                      setTimeout(() => errorMsg.remove(), 3000);
+                      return;
+                    }
+                    
+                    const formattedNumber = phoneNumber.replace(/\D/g, '');
+                    if (formattedNumber.length < 10) {
+                      const errorMsg = document.createElement('div');
+                      errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium';
+                      errorMsg.textContent = '📞 Please enter a valid 10-digit phone number';
+                      document.body.appendChild(errorMsg);
+                      setTimeout(() => errorMsg.remove(), 3000);
+                      return;
+                    }
+                    
+                    // Show initiating message
+                    const initiatingMsg = document.createElement('div');
+                    initiatingMsg.id = 'call-status';
+                    initiatingMsg.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium';
+                    initiatingMsg.textContent = '📞 Initiating call...';
+                    document.body.appendChild(initiatingMsg);
+                    
+                    try {
+                      // Make API call
+                      const response = await fetch('/api/telnyx/initiate-call', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          phoneNumber: `+1${formattedNumber}`,
+                          businessId: null // FIX: null instead of invalid 'demo-business' string
+                        })
+                      });
                       
-                      setTimeout(() => {
-                        errorMsg.remove();
-                      }, 3000);
+                      const result = await response.json();
+                      initiatingMsg.remove();
+                      
+                      // Show result based on API response
+                      const resultMsg = document.createElement('div');
+                      resultMsg.className = `fixed top-4 right-4 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium ${result.success ? 'bg-green-500' : 'bg-red-500'}`;
+                      resultMsg.textContent = result.success 
+                        ? '✅ Call initiated! Answer your phone in 5-10 seconds.' 
+                        : `❌ ${result.message || 'Call failed. Please try again.'}`;
+                      document.body.appendChild(resultMsg);
+                      setTimeout(() => resultMsg.remove(), 5000);
+                      
+                      if (!result.success) {
+                        logger.error('Landing page call failed', {
+                          error: result.message,
+                          status: response.status
+                        });
+                      }
+                    } catch (error) {
+                      // Remove initiating message
+                      const initMsg = document.getElementById('call-status');
+                      if (initMsg) initMsg.remove();
+                      
+                      // Show error
+                      const errorMsg = document.createElement('div');
+                      errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium';
+                      errorMsg.textContent = '❌ Network error. Please check your connection and try again.';
+                      document.body.appendChild(errorMsg);
+                      setTimeout(() => errorMsg.remove(), 5000);
+                      
+                      logger.error('Landing page call network error', {
+                        error: error instanceof Error ? error.message : 'Unknown error'
+                      });
                     }
                   }}
                 />
