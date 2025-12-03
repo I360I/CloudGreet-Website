@@ -39,8 +39,7 @@ export default function Hero() {
       <div className="relative z-50 max-w-6xl mx-auto px-4 text-center min-h-screen flex flex-col items-center justify-center">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           className="mb-6"
         >
@@ -57,8 +56,7 @@ export default function Hero() {
         {/* CTA Buttons */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.8 }}
           className="flex justify-center items-center mb-12 mt-6 relative z-50"
         >
@@ -75,8 +73,7 @@ export default function Hero() {
         {/* Trust Badges */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.8 }}
           className="relative z-30 flex flex-wrap justify-center items-center gap-4 md:gap-6 text-gray-300 py-6 px-4"
         >
