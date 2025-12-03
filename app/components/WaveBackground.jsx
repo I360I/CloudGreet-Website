@@ -266,10 +266,14 @@ export default function WaveBackground({
     animationRef.current = requestAnimationFrame(animate);
   };
 
-  // Setup
+  // Setup - FIXED: Only run once on mount, prevent re-initialization on scroll
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Only initialize once - prevent re-initialization
+    if (canvas._initialized) return;
+    canvas._initialized = true;
 
     const resizeCanvas = () => {
       const rect = canvas.getBoundingClientRect();
@@ -281,8 +285,10 @@ export default function WaveBackground({
       const ctx = canvas.getContext('2d');
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       
-      // Initialize waves and store on canvas
-      canvas._waves = initializeWaves({ width: rect.width, height: rect.height });
+      // Only initialize waves if they don't exist
+      if (!canvas._waves) {
+        canvas._waves = initializeWaves({ width: rect.width, height: rect.height });
+      }
     };
 
     resizeCanvas();
@@ -300,7 +306,7 @@ export default function WaveBackground({
       clearInterval(buttonUpdateInterval);
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [intensity, updateButtonPosition, animate, initializeWaves]);
+  }, []); // Empty deps - only run once on mount
 
   return (
     <canvas

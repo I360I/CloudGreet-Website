@@ -63,16 +63,10 @@ export function ConfirmationModal({
             variant={variant === 'destructive' ? 'destructive' : 'default'}
             onClick={handleConfirm}
             disabled={loading}
+            loading={loading}
             className="px-4 py-2"
           >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Processing...
-              </span>
-            ) : (
-              confirmText
-            )}
+            {confirmText}
           </Button>
         </div>
       </div>

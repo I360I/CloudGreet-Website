@@ -47,7 +47,7 @@ export default function AIInsights({ businessId, className = '' }: AIInsightsPro
         setInsights(data.insights)
       }
     } catch (error) {
-      console.error('Error loading insights:', error)
+      logger.error('Error loading insights', { error: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setLoading(false)
     }

@@ -150,7 +150,14 @@ export function WeekView({ currentDate, onAppointmentClick, onEmptySlotClick }: 
   }
 
   const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':').map(Number)
+    const parts = time.split(':')
+    if (parts.length < 2) {
+      return time // Return original if invalid format
+    }
+    const [hours, minutes] = parts.map(Number)
+    if (isNaN(hours) || isNaN(minutes)) {
+      return time // Return original if invalid numbers
+    }
     const period = hours >= 12 ? 'PM' : 'AM'
     const displayHours = hours % 12 || 12
     return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`
@@ -200,8 +207,11 @@ export function WeekView({ currentDate, onAppointmentClick, onEmptySlotClick }: 
       <div className="w-[120px] flex-shrink-0">
         <div className="h-8" /> {/* Header spacer */}
         <div className="space-y-0">
-          {timeSlots.map((time, idx) => {
-            const [hours] = time.split(':').map(Number)
+          {timeSlots && timeSlots.length > 0 ? timeSlots.map((time, idx) => {
+            const timeParts = time.split(':')
+            if (timeParts.length === 0) return null
+            const [hours] = timeParts.map(Number)
+            if (isNaN(hours)) return null
             const showHour = idx % 2 === 0
             return (
               <div
@@ -212,7 +222,7 @@ export function WeekView({ currentDate, onAppointmentClick, onEmptySlotClick }: 
                 {showHour && formatTime(time)}
               </div>
             )
-          })}
+          }) : null}
         </div>
       </div>
 
@@ -246,10 +256,10 @@ export function WeekView({ currentDate, onAppointmentClick, onEmptySlotClick }: 
         })}
 
         {/* Time slots grid */}
-        {timeSlots.map((time, timeIdx) => {
+        {timeSlots && timeSlots.length > 0 ? timeSlots.map((time, timeIdx) => {
           return (
             <React.Fragment key={time}>
-              {weekDays.map((day, dayIdx) => {
+              {weekDays && weekDays.length > 0 ? weekDays.map((day, dayIdx) => {
                 const dayData = days.find(d => {
                   const dayDateStr = day.toISOString().split('T')[0]
                   return d.date === dayDateStr
@@ -260,7 +270,10 @@ export function WeekView({ currentDate, onAppointmentClick, onEmptySlotClick }: 
                 
                 // Check for current time indicator
                 const isToday = isTodayDate(day)
-                const [hours, minutes] = time.split(':').map(Number)
+                const timeParts = time.split(':')
+                if (timeParts.length < 2) return null
+                const [hours, minutes] = timeParts.map(Number)
+                if (isNaN(hours) || isNaN(minutes)) return null
                 const now = new Date()
                 const showCurrentTime = isToday && 
                   now.getHours() === hours && 
@@ -288,7 +301,7 @@ export function WeekView({ currentDate, onAppointmentClick, onEmptySlotClick }: 
                     )}
                     
                     {/* Appointment blocks */}
-                    {appointments.map((apt) => {
+                    {appointments && appointments.length > 0 ? appointments.map((apt) => {
                       const position = getAppointmentPosition(apt, day)
                       if (!position) return null
                       
@@ -329,13 +342,17 @@ export function WeekView({ currentDate, onAppointmentClick, onEmptySlotClick }: 
                           </div>
                         </motion.div>
                       )
-                    })}
+                    }) : null}
                   </div>
                 )
-              })}
+              }) : null}
             </React.Fragment>
           )
-        })}
+        }) : (
+          <div className="col-span-7 text-center py-8">
+            <p className="text-slate-400 text-sm">No time slots available</p>
+          </div>
+        )}
       </div>
     </div>
   )

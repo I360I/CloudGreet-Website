@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import type { TestCallPayload } from '@/lib/types/business-client'
 import { normalizePhoneForLookup } from '@/lib/phone-normalization'
 import { enforceRequestSizeLimit } from '@/lib/request-limits'
 import { moderateRateLimit } from '@/lib/rate-limiting-redis'
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
     // Check Telnyx configuration
     const telnyxApiKey = process.env.TELNYX_API_KEY
     const telnyxConnectionId = process.env.TELNYX_CONNECTION_ID
-    const telnyxPhoneNumber = process.env.TELNYX_PHONE_NUMBER
+    const telnyxPhoneNumber = process.env.TELNYX_PHONE_NUMBER || process.env.TELYNX_PHONE_NUMBER
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'
 
     if (!telnyxApiKey) {
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     // Place call via Telnyx
     const fromNumber = telnyxPhoneNumber || businessPhoneNumber
-    const callPayload: any = {
+    const callPayload: TestCallPayload = {
       to: targetPhone,
       from: fromNumber,
       webhook_url: `${appUrl}/api/telnyx/voice-webhook`,

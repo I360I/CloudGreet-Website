@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { verifyJWT } from '@/lib/auth-middleware'
+import { requireAuth } from '@/lib/auth-middleware'
 
 /**
  * GET /api/calls/history
@@ -40,8 +40,8 @@ export const runtime = 'nodejs'
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
-    const authResult = await verifyJWT(request)
-    if (!authResult.user) {
+    const authResult = await requireAuth(request)
+    if (!authResult.success || !authResult.userId || !authResult.businessId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -49,39 +49,21 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const businessId = searchParams.get('businessId')
-    const limit = parseInt(searchParams.get('limit') || '50', 10)
-    const offset = parseInt(searchParams.get('offset') || '0', 10)
-    const statusFilter = searchParams.get('status')
-
-    if (!businessId) {
-      return NextResponse.json(
-        { error: 'Missing required parameter: businessId' },
-        { status: 400 }
-      )
-    }
-
-    // Verify business ownership
-    const { data: business, error: businessError } = await supabaseAdmin
-      .from('businesses')
-      .select('id, owner_id')
-      .eq('id', businessId)
-      .single()
-
-    if (businessError || !business) {
-      logger.error('Business not found', { businessId, error: businessError?.message || JSON.stringify(businessError) })
-      return NextResponse.json(
-        { error: 'Business not found' },
-        { status: 404 }
-      )
-    }
-
-    if (business.owner_id !== authResult.user.id) {
+    // Use businessId from auth token, but allow override via query param for admin access
+    const requestedBusinessId = searchParams.get('businessId')
+    const businessId = requestedBusinessId || authResult.businessId
+    
+    // Verify tenant isolation - user can only access their own business
+    if (businessId !== authResult.businessId) {
       return NextResponse.json(
         { error: 'Unauthorized: You do not have access to this business' },
         { status: 403 }
       )
     }
+
+    const limit = parseInt(searchParams.get('limit') || '50', 10)
+    const offset = parseInt(searchParams.get('offset') || '0', 10)
+    const statusFilter = searchParams.get('status')
 
     // Build query
     let query = supabaseAdmin

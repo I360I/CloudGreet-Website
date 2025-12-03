@@ -14,7 +14,8 @@ const envSchema = z.object({
   
   // Telephony
   TELNYX_API_KEY: z.string().min(1),
-  TELNYX_PHONE_NUMBER: z.string().regex(/^\+\d{10,15}$/),
+  // Support both TELNYX_PHONE_NUMBER and TELYNX_PHONE_NUMBER (typo) for backward compatibility
+  TELNYX_PHONE_NUMBER: z.string().regex(/^\+\d{10,15}$/).optional(),
   
   // Payments
   STRIPE_SECRET_KEY: z.string().startsWith('sk_'),

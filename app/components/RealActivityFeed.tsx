@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, memo, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Phone, Calendar, DollarSign, User, Clock, 
@@ -10,6 +10,7 @@ import {
 import { useRealtimeMetrics } from '../../hooks/useDashboardData'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { getServiceColor } from '@/lib/business-theme'
+import type { RealtimeData } from '@/lib/types/realtime-data'
 
 interface ActivityItem {
   id: string
@@ -27,67 +28,76 @@ interface RealActivityFeedProps {
   businessName?: string
 }
 
-export default function RealActivityFeed({ businessId, businessName }: RealActivityFeedProps) {
-  const { theme, businessConfig } = useBusinessData()
+const RealActivityFeed = memo(function RealActivityFeed({ businessId, businessName }: RealActivityFeedProps) {
+  const { theme, business } = useBusinessData()
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const { data: realtimeData, isLoading, error } = useRealtimeMetrics(businessId)
 
   const primaryColor = theme?.primaryColor || '#8b5cf6'
-  const callColor = getServiceColor('call', businessConfig?.services || []) || '#3b82f6'
-  const appointmentColor = getServiceColor('appointment', businessConfig?.services || []) || '#8b5cf6'
+  // Use default colors for call/appointment types
+  const callColor = '#3b82f6'
+  const appointmentColor = '#8b5cf6'
+
+  const processedActivities = useMemo(() => {
+    if (!realtimeData) return []
+    
+    // Process real-time data into activity items
+    const newActivities: ActivityItem[] = []
+    const data = realtimeData as RealtimeData
+    
+    // Process calls
+    if (data.calls) {
+      data.calls.forEach((call) => {
+        newActivities.push({
+          id: `call-${call.id}`,
+          type: 'call',
+          title: `New call from ${call.from_number}`,
+          description: `Call ${call.status} - ${call.duration || 0}s`,
+          timestamp: call.created_at,
+          status: call.status === 'completed' ? 'success' : 'warning',
+          value: call.duration ? `${call.duration}s` : undefined
+        })
+      })
+    }
+    
+    // Process appointments
+    if (data.appointments) {
+      data.appointments.forEach((apt) => {
+        newActivities.push({
+          id: `apt-${apt.id}`,
+          type: 'appointment',
+          title: `Appointment scheduled`,
+          description: `${apt.customer_name} - ${apt.service_type}`,
+          timestamp: apt.created_at,
+          status: 'success',
+          value: apt.estimated_value ? `$${apt.estimated_value}` : undefined
+        })
+      })
+    }
+    
+    // Process SMS
+    if (data.sms) {
+      data.sms.forEach((sms) => {
+        newActivities.push({
+          id: `sms-${sms.id}`,
+          type: 'message',
+          title: `SMS ${sms.direction}`,
+          description: `To/From: ${sms.to_number || sms.from_number}`,
+          timestamp: sms.created_at,
+          status: sms.status === 'sent' ? 'success' : 'warning'
+        })
+      })
+    }
+    
+    // Return last 20 activities, sorted by timestamp (newest first)
+    return newActivities
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 20)
+  }, [realtimeData])
 
   useEffect(() => {
-    if (realtimeData) {
-      // Process real-time data into activity items
-      const newActivities: ActivityItem[] = []
-      
-      // Process calls
-      if ((realtimeData as any).calls) {
-        (realtimeData as any).calls.forEach((call: any) => {
-          newActivities.push({
-            id: `call-${call.id}`,
-            type: 'call',
-            title: `New call from ${call.from_number}`,
-            description: `Call ${call.status} - ${call.duration || 0}s`,
-            timestamp: call.created_at,
-            status: call.status === 'completed' ? 'success' : 'warning',
-            value: call.duration ? `${call.duration}s` : undefined
-          })
-        })
-      }
-      
-      // Process appointments
-      if ((realtimeData as any).appointments) {
-        (realtimeData as any).appointments.forEach((apt: any) => {
-          newActivities.push({
-            id: `apt-${apt.id}`,
-            type: 'appointment',
-            title: `Appointment scheduled`,
-            description: `${apt.customer_name} - ${apt.service_type}`,
-            timestamp: apt.created_at,
-            status: 'success',
-            value: apt.estimated_value ? `$${apt.estimated_value}` : undefined
-          })
-        })
-      }
-      
-      // Process SMS
-      if ((realtimeData as any).sms) {
-        (realtimeData as any).sms.forEach((sms: any) => {
-          newActivities.push({
-            id: `sms-${sms.id}`,
-            type: 'message',
-            title: `SMS ${sms.direction}`,
-            description: `To/From: ${sms.to_number || sms.from_number}`,
-            timestamp: sms.created_at,
-            status: sms.status === 'sent' ? 'success' : 'warning'
-          })
-        })
-      }
-      
-      setActivities(newActivities.slice(-20)) // Keep last 20 activities
-    }
-  }, [realtimeData])
+    setActivities(processedActivities)
+  }, [processedActivities])
 
   // Use real-time data from hook
   const loading = isLoading
@@ -231,7 +241,7 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
       ) : (
         <div className="space-y-3 max-h-96 overflow-y-auto">
           <AnimatePresence>
-            {activities.map((activity, index) => (
+            {activities && activities.length > 0 ? activities.map((activity, index) => (
               <motion.div
                 key={activity.id}
                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -276,10 +286,18 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
                   )}
                 </div>
               </motion.div>
-            ))}
+            )) : (
+              <div className="text-center py-4">
+                <p className="text-slate-400 text-sm">No activities to display</p>
+              </div>
+            )}
           </AnimatePresence>
         </div>
       )}
     </motion.div>
   )
-}
+})
+
+RealActivityFeed.displayName = 'RealActivityFeed'
+
+export default RealActivityFeed

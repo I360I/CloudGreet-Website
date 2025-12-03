@@ -98,8 +98,7 @@ export default function UsageAnalyticsPage() {
 
   useEffect(() => {
     loadAnalytics()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [showError])
 
   const trendMax = useMemo(() => {
     if (!analytics) return 1
@@ -122,6 +121,9 @@ export default function UsageAnalyticsPage() {
       }
 
       const blob = await response.blob()
+      if (typeof window === 'undefined' || typeof document === 'undefined') {
+        throw new Error('Browser APIs not available')
+      }
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url

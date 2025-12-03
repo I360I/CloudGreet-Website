@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Modal } from '@/app/components/ui/Modal'
 import { FormField } from '@/app/components/ui/FormField'
+import { Input } from '@/app/components/ui/Input'
 import { DatePicker } from '@/app/components/ui/DatePicker'
 import { TimePicker } from '@/app/components/ui/TimePicker'
 import { Select } from '@/app/components/ui/Select'
@@ -215,34 +216,33 @@ export function CreateAppointmentModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Customer Name */}
         <FormField label="Customer Name" required error={errors.customer_name}>
-          <input
+          <Input
             type="text"
             value={formData.customer_name}
             onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-            className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white focus:outline-none focus:ring-2"
-            style={{ focusRingColor: primaryColor }}
+            className="px-4 py-2 bg-slate-800/50 border border-slate-700/50"
             maxLength={100}
           />
         </FormField>
 
         {/* Customer Phone */}
         <FormField label="Customer Phone" required error={errors.customer_phone}>
-          <input
+          <Input
             type="tel"
             value={formData.customer_phone}
             onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
-            className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white focus:outline-none focus:ring-2"
+            className="px-4 py-2 bg-slate-800/50 border border-slate-700/50"
             placeholder="(555) 555-5555"
           />
         </FormField>
 
         {/* Customer Email */}
         <FormField label="Customer Email" error={errors.customer_email}>
-          <input
+          <Input
             type="email"
             value={formData.customer_email}
             onChange={(e) => setFormData({ ...formData, customer_email: e.target.value })}
-            className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white focus:outline-none focus:ring-2"
+            className="px-4 py-2 bg-slate-800/50 border border-slate-700/50"
           />
         </FormField>
 
@@ -289,11 +289,11 @@ export function CreateAppointmentModal({
 
         {/* Estimated Value */}
         <FormField label="Estimated Value" error={errors.estimated_value}>
-          <input
+          <Input
             type="number"
             value={formData.estimated_value}
             onChange={(e) => setFormData({ ...formData, estimated_value: e.target.value })}
-            className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white focus:outline-none focus:ring-2"
+            className="px-4 py-2 bg-slate-800/50 border border-slate-700/50"
             min="0"
             step="0.01"
             placeholder="0.00"
@@ -335,7 +335,8 @@ export function CreateAppointmentModal({
           <Button
             type="submit"
             disabled={loading}
-            style={{ backgroundColor: primaryColor }}
+            primaryColor={primaryColor}
+            loading={loading}
           >
             {loading ? 'Creating...' : 'Create Appointment'}
           </Button>

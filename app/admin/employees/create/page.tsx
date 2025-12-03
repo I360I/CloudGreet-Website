@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/app/contexts/ToastContext'
 import { UserPlus, ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/app/components/ui/Button'
+import { logger } from '@/lib/monitoring'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 export default function CreateEmployeePage() {
   const [email, setEmail] = useState('')
@@ -50,19 +52,10 @@ export default function CreateEmployeePage() {
     setErrors({})
 
     try {
-      // Get token from localStorage
-      const token = localStorage.getItem('token')
-      if (!token) {
-        showError('Please login first')
-        router.push('/admin/login')
-        return
-      }
-
-      const response = await fetch('/api/admin/employees', {
+      const response = await fetchWithAuth('/api/admin/employees', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
@@ -122,7 +115,7 @@ export default function CreateEmployeePage() {
         showError(data.error || 'Failed to create employee')
       }
     } catch (error) {
-      console.error('Create employee error:', error)
+      logger.error('Create employee error', { error: error instanceof Error ? error.message : 'Unknown error' })
       if (error instanceof Error) {
         if (error.message.includes('401') || error.message.includes('Unauthorized')) {
           showError('Session expired. Please login again.')

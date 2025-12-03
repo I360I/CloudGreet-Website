@@ -86,8 +86,7 @@ export default function CustomerSuccessPage() {
 
   useEffect(() => {
     loadSnapshot()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [showError])
 
   const milestones = useMemo(() => {
     if (!snapshot || !snapshot.activation) return []

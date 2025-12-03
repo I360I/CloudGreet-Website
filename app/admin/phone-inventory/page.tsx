@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { logger } from '@/lib/monitoring'
 import { Button } from '@/app/components/ui/Button'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { useToast } from '@/app/contexts/ToastContext'
 import {
   Upload,
   Check,
@@ -94,6 +95,7 @@ const computeBulkPreview = (value: string) => {
 }
 
 export default function AdminPhoneInventoryPage() {
+  const { showError } = useToast()
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([])
   const [statistics, setStatistics] = useState<PhoneNumbersResponse['statistics']>({
     total: 0,
@@ -271,7 +273,7 @@ export default function AdminPhoneInventoryPage() {
 
   const handleShowRetellLinking = async (phone: PhoneNumber) => {
     if (!phone.assigned_to) {
-      alert('Phone number is not assigned to a business')
+      showError('Error', 'Phone number is not assigned to a business')
       return
     }
 
@@ -321,8 +323,7 @@ export default function AdminPhoneInventoryPage() {
 
   useEffect(() => {
     fetchPhoneNumbers()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter])
+  }, [statusFilter, showError])
 
   const filteredPhoneNumbers = useMemo(() => {
     if (!searchQuery) return phoneNumbers

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Activity, RefreshCw, CheckCircle2, AlertCircle, XCircle, Clock, Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useToast } from '@/app/contexts/ToastContext'
+import { logger } from '@/lib/monitoring'
 import { Line } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -81,7 +82,7 @@ export default function AdminHealthPage() {
         fetchHistoricalData()
       }
     } catch (error) {
-      console.error('Failed to fetch health data:', error)
+      logger.error('Failed to fetch health data', { error: error instanceof Error ? error.message : 'Unknown error' })
       showError('Failed to fetch health data', error instanceof Error ? error.message : 'Unknown error')
     } finally {
       setLoading(false)
@@ -98,7 +99,7 @@ export default function AdminHealthPage() {
       }
     } catch (error) {
       // Historical data is optional, fail silently
-      console.warn('Failed to fetch historical data:', error)
+      logger.warn('Failed to fetch historical data', { error: error instanceof Error ? error.message : 'Unknown error' })
     }
   }
 

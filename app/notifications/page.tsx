@@ -6,6 +6,8 @@ import { ArrowLeft, Bell, Settings, CheckCircle, AlertCircle, Clock, Mail, Phone
 import Link from 'next/link'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { SkeletonList } from '@/app/components/ui/SkeletonLoader'
+import SkeletonLoader from '@/app/components/ui/SkeletonLoader'
 
 interface Notification {
   id: string
@@ -28,15 +30,8 @@ export default function NotificationsPage() {
 
   const loadNotifications = async () => {
     try {
-      // Authentication handled automatically by fetchWithAuth
-
-      // Load real notifications from API
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-      const response = await fetch('/api/notifications/list', {
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        }
-      })
+      // Load real notifications from API - authentication handled automatically by fetchWithAuth
+      const response = await fetchWithAuth('/api/notifications/list')
 
       if (response.ok) {
         const data = await response.json()
@@ -45,7 +40,7 @@ export default function NotificationsPage() {
         setNotifications([])
       }
     } catch (error) {
-      console.error('Error loading notifications:', error)
+      logger.error('Error loading notifications', { error: error instanceof Error ? error.message : 'Unknown error' })
       setNotifications([])
     } finally {
       setLoading(false)
@@ -113,19 +108,11 @@ export default function NotificationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center"
-        >
-          <motion.div
-            className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full mx-auto mb-4"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          />
-          <p className="text-white text-lg">Loading notifications...</p>
-        </motion.div>
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-black to-slate-900 text-white flex items-center justify-center p-4">
+        <div className="max-w-2xl w-full space-y-4">
+          <SkeletonLoader variant="rectangular" height={48} width="40%" className="mb-6" />
+          <SkeletonList items={5} />
+        </div>
       </div>
     )
   }
@@ -139,13 +126,14 @@ export default function NotificationsPage() {
             <div className="flex items-center space-x-4">
               <Link
                 href="/dashboard"
-                className="p-2 hover:bg-white/10 rounded-xl transition-colors"
+                className="p-2 hover:bg-white/10 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black"
+                aria-label="Back to dashboard"
               >
-                <ArrowLeft className="w-6 h-6 text-white" />
+                <ArrowLeft className="w-6 h-6 text-white" aria-hidden="true" />
               </Link>
               <div>
-                <h1 className="text-3xl font-bold text-white">Notifications</h1>
-                <p className="text-gray-400 text-sm">Stay updated with your AI receptionist</p>
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white">Notifications</h1>
+                <p className="text-gray-400 text-sm md:text-base">Stay updated with your AI receptionist</p>
               </div>
             </div>
             
@@ -162,7 +150,8 @@ export default function NotificationsPage() {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-xl font-semibold hover:bg-gray-700 transition-colors"
+                  className="px-4 py-3 min-h-[44px] bg-gray-600 text-white rounded-xl font-semibold hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-black"
+                  aria-label="Mark all notifications as read"
                 >
                   Mark All Read
                 </button>
@@ -183,12 +172,14 @@ export default function NotificationsPage() {
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setFilter(tab.key as any)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              onClick={() => setFilter(tab.key as 'all' | 'unread' | 'calls' | 'system')}
+              className={`px-4 py-3 min-h-[44px] rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black ${
                 filter === tab.key
                   ? 'bg-blue-600 text-white'
                   : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
               }`}
+              aria-label={`Filter notifications by ${tab.label.toLowerCase()}`}
+              aria-pressed={filter === tab.key}
             >
               {tab.label}
             </button>

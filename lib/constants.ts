@@ -60,7 +60,9 @@ export const UI_CONFIG = {
 export const PHONE_CONFIG = {
   DEFAULT_COUNTRY_CODE: '+1',
   PHONE_FORMAT_REGEX: /^\+?[1-9]\d{1,14}$/,
-  MAX_PHONE_LENGTH: 15
+  MAX_PHONE_LENGTH: 15,
+  // Fallback phone number for demo/landing page calls (should be overridden by env var)
+  FALLBACK_PHONE: process.env.TELNYX_PHONE_NUMBER || process.env.TELYNX_PHONE_NUMBER || '+18333956731'
 } as const
 
 // Email Configuration
@@ -76,10 +78,17 @@ export const PLACEHOLDERS = {
   LAST_NAME: 'Doe',
   BUSINESS_NAME: 'Your Business Name',
   EMAIL: 'your@email.com',
+  WEBSITE: 'https://yourwebsite.com',
   PHONE: '(555) 123-4567',
   ADDRESS: '123 Main St, City, State',
   PASSWORD: 'Create a password',
   MESSAGE: 'Your message...'
+} as const
+
+// Demo Configuration (for landing page demo calls)
+// Can be overridden via environment variable
+export const DEMO_CONFIG = {
+  BUSINESS_ID: process.env.DEMO_BUSINESS_ID || '00000000-0000-0000-0000-000000000001'
 } as const
 
 // Error Messages

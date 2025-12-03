@@ -3,10 +3,12 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { Eye, EyeOff, CheckCircle } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 import { PLACEHOLDERS, SUCCESS_MESSAGES } from '@/lib/constants'
 import { buildRegistrationPayload, type RegistrationFormData } from '@/lib/auth/register-payload'
 import { setAuthToken } from '@/lib/auth/token-manager'
+import FormInput from '@/app/components/ui/FormInput'
+import PhoneInput from '@/app/components/ui/PhoneInput'
 
 export default function SimpleRegisterPage() {
   type FormState = RegistrationFormData & {
@@ -24,10 +26,10 @@ export default function SimpleRegisterPage() {
     phone: '',
     address: ''
   })
-  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [isPhoneValid, setIsPhoneValid] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,9 +76,8 @@ export default function SimpleRegisterPage() {
         // Store token securely in httpOnly cookie
         await setAuthToken(result.data.token)
         
-        // Store user/business data in localStorage (non-sensitive)
-        localStorage.setItem('user', JSON.stringify(result.data.user))
-        localStorage.setItem('business', JSON.stringify(result.data.business))
+        // User/business data will be fetched from API when needed
+        // No need to store in localStorage - API provides fresh data
         
         setSuccess(true)
         setTimeout(() => {
@@ -98,25 +99,36 @@ export default function SimpleRegisterPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-black/40 backdrop-blur-xl rounded-xl p-4 md:p-6 max-w-md w-full border border-white/10 shadow-2xl"
+          className="bg-black/40 backdrop-blur-xl rounded-xl p-6 md:p-8 max-w-md w-full border border-white/10 shadow-2xl"
         >
           <div className="text-center">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ delay: 0.2 }}
-              className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4"
+              transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+              className="w-16 h-16 bg-success-500/20 rounded-full flex items-center justify-center mx-auto mb-6"
             >
-              <CheckCircle className="w-6 h-6 text-green-400" />
+              <CheckCircle className="w-8 h-8 text-success-400" aria-hidden="true" />
             </motion.div>
-            <h1 className="text-xl md:text-2xl font-bold text-white mb-3 leading-tight">{SUCCESS_MESSAGES.REGISTRATION}</h1>
-            <p className="text-sm md:text-base text-gray-300 mb-4 leading-snug">Redirecting to your dashboard...</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">
+              {SUCCESS_MESSAGES.REGISTRATION}
+            </h1>
+            <p className="text-base text-gray-300 mb-6">
+              Redirecting to your dashboard...
+            </p>
             <motion.div
-              className="w-full bg-gray-700 rounded-full h-2"
-              initial={{ width: 0 }}
-              animate={{ width: "100%" }}
-              transition={{ duration: 2 }}
-            />
+              className="w-full bg-gray-800 rounded-full h-2 overflow-hidden"
+              role="progressbar"
+              aria-label="Loading progress"
+              aria-valuenow={50}
+            >
+              <motion.div
+                className="h-full bg-gradient-to-r from-primary-500 to-secondary-500"
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 2, ease: "easeInOut" }}
+              />
+            </motion.div>
           </div>
         </motion.div>
       </div>
@@ -124,73 +136,66 @@ export default function SimpleRegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-900 flex items-center justify-center px-4 py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-black/40 backdrop-blur-xl rounded-xl p-4 md:p-6 max-w-md w-full border border-white/10 shadow-2xl"
+        className="bg-gray-900/60 backdrop-blur-xl rounded-xl p-6 md:p-8 max-w-md w-full border border-gray-800 shadow-2xl"
       >
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <Link href="/" className="inline-block mb-4">
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400"
+              className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-secondary-400"
             >
               CloudGreet
             </motion.div>
           </Link>
-          <h1 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight">Create Your Account</h1>
-          <p className="text-sm md:text-base text-gray-400 leading-snug">Start your AI receptionist journey</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">Create Your Account</h1>
+          <p className="text-base text-gray-400">Start your AI receptionist journey</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Name Fields */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2" htmlFor="firstName">
-                First Name *
-              </label>
-              <input
-                id="firstName"
-                type="text"
-                required
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
-                placeholder={PLACEHOLDERS.FIRST_NAME}
-                autoComplete="given-name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2" htmlFor="lastName">
-                Last Name *
-              </label>
-              <input
-                id="lastName"
-                type="text"
-                required
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
-                placeholder={PLACEHOLDERS.LAST_NAME}
-                autoComplete="family-name"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Business Name *
-            </label>
-            <input
+            <FormInput
               type="text"
+              value={formData.firstName}
+              onChange={(val) => setFormData({ ...formData, firstName: val })}
+              label="First Name"
+              placeholder={PLACEHOLDERS.FIRST_NAME}
               required
-              value={formData.businessName}
-              onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-              placeholder={PLACEHOLDERS.BUSINESS_NAME}
+              id="firstName"
+              name="firstName"
+              autoComplete="given-name"
+            />
+            <FormInput
+              type="text"
+              value={formData.lastName}
+              onChange={(val) => setFormData({ ...formData, lastName: val })}
+              label="Last Name"
+              placeholder={PLACEHOLDERS.LAST_NAME}
+              required
+              id="lastName"
+              name="lastName"
+              autoComplete="family-name"
             />
           </div>
 
+          {/* Business Name */}
+          <FormInput
+            type="text"
+            value={formData.businessName}
+            onChange={(val) => setFormData({ ...formData, businessName: val })}
+            label="Business Name"
+            placeholder={PLACEHOLDERS.BUSINESS_NAME}
+            required
+            id="businessName"
+            name="businessName"
+            autoComplete="organization"
+          />
+
+          {/* Business Type */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Business Type
@@ -198,7 +203,7 @@ export default function SimpleRegisterPage() {
             <select
               value={formData.businessType}
               onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+              className="w-full px-4 py-3 min-h-[44px] bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
             >
               <option value="HVAC">HVAC</option>
               <option value="Painting">Painting</option>
@@ -207,78 +212,66 @@ export default function SimpleRegisterPage() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Email *
-            </label>
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-              placeholder={PLACEHOLDERS.EMAIL}
-            />
-          </div>
+          {/* Email */}
+          <FormInput
+            type="email"
+            value={formData.email}
+            onChange={(val) => setFormData({ ...formData, email: val })}
+            label="Email"
+            placeholder={PLACEHOLDERS.EMAIL}
+            required
+            id="email"
+            name="email"
+            autoComplete="email"
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Password *
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 pr-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
-                placeholder={PLACEHOLDERS.PASSWORD}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </div>
+          {/* Password with Strength Meter */}
+          <FormInput
+            type="password"
+            value={formData.password}
+            onChange={(val) => setFormData({ ...formData, password: val })}
+            label="Password"
+            placeholder={PLACEHOLDERS.PASSWORD}
+            required
+            showPasswordToggle
+            id="password"
+            name="password"
+            autoComplete="new-password"
+            helperText="Must be at least 8 characters with uppercase, lowercase, and number"
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Phone Number *
-            </label>
-            <input
-              type="tel"
-              required
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-              placeholder={PLACEHOLDERS.PHONE}
-            />
-          </div>
+          {/* Phone Number with Formatting */}
+          <PhoneInput
+            value={formData.phone}
+            onChange={(val) => setFormData({ ...formData, phone: val })}
+            onValidChange={setIsPhoneValid}
+            label="Phone Number"
+            placeholder={PLACEHOLDERS.PHONE}
+            required
+            id="phone"
+            name="phone"
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Business Address *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl text-white placeholder-gray-400 focus:border-white/30 focus:ring-1 focus:ring-white/20 transition-all"
-              placeholder={PLACEHOLDERS.ADDRESS}
-            />
-          </div>
+          {/* Business Address */}
+          <FormInput
+            type="text"
+            value={formData.address}
+            onChange={(val) => setFormData({ ...formData, address: val })}
+            label="Business Address"
+            placeholder={PLACEHOLDERS.ADDRESS}
+            required
+            id="address"
+            name="address"
+            autoComplete="street-address"
+          />
 
           {error && (
             <motion.div
+              role="alert"
+              aria-live="polite"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm shadow-lg"
+              className="p-4 bg-error-500/10 border border-error-500/30 rounded-lg text-error-400 text-sm shadow-lg"
             >
               {error}
             </motion.div>
@@ -289,7 +282,8 @@ export default function SimpleRegisterPage() {
             disabled={isLoading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+            className="w-full min-h-[44px] px-4 py-3 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg shadow-lg transition-all duration-normal flex items-center justify-center gap-2"
+            aria-label={isLoading ? 'Creating your account' : 'Create account'}
           >
             {isLoading ? (
               <>
@@ -297,6 +291,7 @@ export default function SimpleRegisterPage() {
                   className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  aria-hidden="true"
                 />
                 Creating Account...
               </>
@@ -305,24 +300,35 @@ export default function SimpleRegisterPage() {
             )}
           </motion.button>
         
-          <div className="flex items-center">
+          <div className="flex items-start gap-3">
             <input
               id="terms"
               name="terms"
               type="checkbox"
               required
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="mt-1 h-5 w-5 min-h-[20px] min-w-[20px] text-primary-500 focus:ring-2 focus:ring-primary-500 border-gray-600 rounded bg-white/5 transition-all"
+              aria-describedby="terms-description"
             />
-            <label htmlFor="terms" className="ml-2 block text-sm text-gray-300">
-              I agree to the <a href="/terms" className="text-blue-400 hover:text-blue-300">Terms of Service</a> and <a href="/privacy" className="text-blue-400 hover:text-blue-300">Privacy Policy</a>
+            <label htmlFor="terms" id="terms-description" className="block text-sm text-gray-300 leading-relaxed">
+              I agree to the{' '}
+              <a href="/terms" className="text-primary-400 hover:text-primary-300 underline transition-colors">
+                Terms of Service
+              </a>{' '}
+              and{' '}
+              <a href="/privacy" className="text-primary-400 hover:text-primary-300 underline transition-colors">
+                Privacy Policy
+              </a>
             </label>
           </div>
         </form>
 
-        <div className="text-center mt-6">
+        <div className="text-center mt-8">
           <p className="text-gray-400">
             Already have an account?{' '}
-            <Link href="/login" className="text-blue-400 hover:text-blue-300 transition-colors">
+            <Link 
+              href="/login" 
+              className="text-primary-400 hover:text-primary-300 font-medium underline transition-colors"
+            >
               Sign in
             </Link>
           </p>

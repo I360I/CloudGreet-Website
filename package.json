@@ -32,6 +32,7 @@
     "prepare": "husky install",
     "setup": "node setup.js",
     "test-apis": "node test-apis.js",
+    "test-webhooks": "node scripts/test-webhooks.js",
     "check-trials": "node scripts/check-trials.js",
     "secrets:validate": "node scripts/validate-secrets.js validate",
     "secrets:check": "node scripts/validate-secrets.js check",

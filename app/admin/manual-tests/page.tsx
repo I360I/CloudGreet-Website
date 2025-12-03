@@ -69,8 +69,7 @@ export default function ManualTestsPage() {
         logger.error('Test failed:', result.error)
       }
     } catch (error) {
-      console.error('Error:', error)
-      logger.error('Test failed:', error instanceof Error ? error.message : 'Unknown error')
+      logger.error('Test execution error', { error: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setRunningTests(prev => {
         const newSet = new Set(prev)

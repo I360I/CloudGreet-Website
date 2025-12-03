@@ -130,15 +130,26 @@ export function DayView({ currentDate, onAppointmentClick, onEmptySlotClick }: D
   }
 
   const formatTime = (time: string) => {
-    const [hours, minutes] = time.split(':').map(Number)
+    const parts = time.split(':')
+    if (parts.length < 2) {
+      return time // Return original if invalid format
+    }
+    const [hours, minutes] = parts.map(Number)
+    if (isNaN(hours) || isNaN(minutes)) {
+      return time // Return original if invalid numbers
+    }
     const period = hours >= 12 ? 'PM' : 'AM'
     const displayHours = hours % 12 || 12
     return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`
   }
 
   const getAppointmentsForHour = (hour: number) => {
+    if (!slots || slots.length === 0) return []
     return slots.flatMap(slot => {
-      const [slotHour] = slot.time.split(':').map(Number)
+      const timeParts = slot.time.split(':')
+      if (timeParts.length === 0) return []
+      const [slotHour] = timeParts.map(Number)
+      if (isNaN(slotHour)) return []
       if (slotHour === hour) {
         return slot.appointments
       }
@@ -155,14 +166,14 @@ export function DayView({ currentDate, onAppointmentClick, onEmptySlotClick }: D
     return (
       <div className="flex">
         <div className="w-[80px] space-y-2">
-          {timeSlots.map((_, i) => (
+          {timeSlots && timeSlots.length > 0 ? timeSlots.map((_, i) => (
             <LoadingSkeleton key={i} width="100%" height={60} />
-          ))}
+          )) : null}
         </div>
         <div className="flex-1">
-          {timeSlots.map((_, i) => (
+          {timeSlots && timeSlots.length > 0 ? timeSlots.map((_, i) => (
             <LoadingSkeleton key={i} width="100%" height={60} />
-          ))}
+          )) : null}
         </div>
       </div>
     )
@@ -186,8 +197,11 @@ export function DayView({ currentDate, onAppointmentClick, onEmptySlotClick }: D
       <div className="w-[80px] flex-shrink-0">
         <div className="h-12" /> {/* Header spacer */}
         <div className="space-y-0">
-          {timeSlots.map((time) => {
-            const [hours] = time.split(':').map(Number)
+          {timeSlots && timeSlots.length > 0 ? timeSlots.map((time) => {
+            const timeParts = time.split(':')
+            if (timeParts.length === 0) return null
+            const [hours] = timeParts.map(Number)
+            if (isNaN(hours)) return null
             return (
               <div
                 key={time}
@@ -197,7 +211,7 @@ export function DayView({ currentDate, onAppointmentClick, onEmptySlotClick }: D
                 {formatTime(time)}
               </div>
             )
-          })}
+          }) : null}
         </div>
       </div>
 
@@ -226,7 +240,7 @@ export function DayView({ currentDate, onAppointmentClick, onEmptySlotClick }: D
 
         {/* Time slots */}
         <div className="relative" style={{ height: '720px' }}> {/* 12 hours × 60px */}
-          {timeSlots.map((time, idx) => {
+          {timeSlots && timeSlots.length > 0 ? timeSlots.map((time, idx) => {
             const [hours] = time.split(':').map(Number)
             const appointments = getAppointmentsForHour(hours)
             
@@ -262,7 +276,7 @@ export function DayView({ currentDate, onAppointmentClick, onEmptySlotClick }: D
                 )}
                 
                 {/* Appointment blocks */}
-                {appointments.map((apt) => {
+                {appointments && appointments.length > 0 ? appointments.map((apt) => {
                   const position = getAppointmentPosition(apt)
                   if (!position) return null
                   
@@ -307,10 +321,14 @@ export function DayView({ currentDate, onAppointmentClick, onEmptySlotClick }: D
                       </div>
                     </motion.div>
                   )
-                })}
+                }) : null}
               </div>
             )
-          })}
+          }) : (
+            <div className="text-center py-8">
+              <p className="text-slate-400 text-sm">No time slots available</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,11 +1,13 @@
 'use client'
 
-import React from 'react'
+import React, { memo } from 'react'
 import { motion } from 'framer-motion'
+import { CalendarPlus } from 'lucide-react'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { WeekCalendarWidget } from './WeekCalendarWidget'
 import RealActivityFeed from './RealActivityFeed'
 import { LoadingSkeleton } from './ui/LoadingSkeleton'
+import { Button } from './ui/Button'
 
 interface ControlCenterProps {
   onDayClick?: (date: string) => void
@@ -13,7 +15,7 @@ interface ControlCenterProps {
   onCreateAppointment?: () => void
 }
 
-export function ControlCenter({
+export const ControlCenter = memo(function ControlCenter({
   onDayClick,
   onFullCalendarClick,
   onCreateAppointment
@@ -84,7 +86,7 @@ export function ControlCenter({
       >
         <h3 className="text-sm font-semibold text-white mb-3">Quick Actions</h3>
         <div className="space-y-2">
-          <motion.button
+          <Button
             type="button"
             onClick={(e) => {
               e.preventDefault()
@@ -93,19 +95,21 @@ export function ControlCenter({
                 onCreateAppointment()
               }
             }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full px-4 py-2 text-sm rounded-lg transition-all"
+            variant="outline"
+            fullWidth
+            icon={<CalendarPlus className="w-4 h-4" />}
+            iconPosition="left"
+            className="text-sm"
             style={{
               backgroundColor: `${primaryColor}20`,
               color: primaryColor,
               borderColor: `${primaryColor}30`,
-              borderWidth: '1px',
               boxShadow: `0 2px 4px ${primaryColor}20`
             }}
+            aria-label="Create new appointment"
           >
             Create Appointment
-          </motion.button>
+          </Button>
         </div>
       </motion.div>
 
@@ -115,5 +119,7 @@ export function ControlCenter({
       </div>
     </motion.div>
   )
-}
+})
+
+ControlCenter.displayName = 'ControlCenter'
 

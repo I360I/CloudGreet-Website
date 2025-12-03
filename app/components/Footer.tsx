@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, memo } from 'react'
 import Link from 'next/link'
 
-export default function Footer() {
+const Footer = memo(function Footer() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -54,7 +54,8 @@ export default function Footer() {
             <div className="flex items-center gap-4">
               <Link 
                 href="/admin/login" 
-                className="text-purple-400 hover:text-purple-300 font-semibold transition-colors border border-purple-500/30 px-4 py-2 rounded-lg hover:border-purple-500 hover:bg-purple-500/10"
+                className="text-purple-400 hover:text-purple-300 font-semibold transition-colors border border-purple-500/30 px-4 py-3 min-h-[44px] rounded-lg hover:border-purple-500 hover:bg-purple-500/10 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-black"
+                aria-label="Admin login"
               >
                 Admin
               </Link>
@@ -64,5 +65,9 @@ export default function Footer() {
       </div>
     </footer>
   )
-}
+})
+
+Footer.displayName = 'Footer'
+
+export default Footer
 

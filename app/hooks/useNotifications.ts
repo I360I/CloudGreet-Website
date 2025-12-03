@@ -269,6 +269,8 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
         setError(data.error || 'Failed to mark all notifications as read')
       }
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      logger.error('Failed to mark all notifications as read', { error: errorMessage, userId })
       setError('Failed to mark all notifications as read')
     }
   }, [userId])
@@ -312,6 +314,8 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
         setError(data.error || 'Failed to delete notification')
       }
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      logger.error('Failed to delete notification', { error: errorMessage, notificationId, userId })
       setError('Failed to delete notification')
     }
   }, [userId, notifications])
@@ -332,6 +336,8 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
         setError(data.error || 'Failed to delete all notifications')
       }
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      logger.error('Failed to delete all notifications', { error: errorMessage, userId })
       setError('Failed to delete all notifications')
     }
   }, [userId])

@@ -137,7 +137,7 @@ async function getClientsList(request: NextRequest) {
         if (stats) {
           stats.count = dates.length
           // Get latest date (dates are already sorted DESC from query)
-          stats.lastCall = dates[0] || null
+          stats.lastCall = dates && dates.length > 0 ? dates[0] : null
         }
       })
       
@@ -192,14 +192,24 @@ async function getClientsList(request: NextRequest) {
     })
 
     // Create lookup maps for O(1) access
+    interface CallStat {
+      business_id: string
+      call_count?: number
+      last_call_date?: string | null
+    }
+    interface AppointmentStat {
+      business_id: string
+      appointment_count?: number
+      last_appointment_date?: string | null
+    }
     const callStatsMap = new Map(
-      (callStats || []).map((stat: any) => [
+      (callStats || []).map((stat: CallStat) => [
         stat.business_id,
         { count: stat.call_count || 0, lastCall: stat.last_call_date || null }
       ])
     )
     const appointmentStatsMap = new Map(
-      (appointmentStats || []).map((stat: any) => [
+      (appointmentStats || []).map((stat: AppointmentStat) => [
         stat.business_id,
         { count: stat.appointment_count || 0, lastAppointment: stat.last_appointment_date || null }
       ])

@@ -4,6 +4,9 @@ import { logger } from '@/lib/monitoring'
 import { verifyTelynyxSignature } from '@/lib/webhook-verification'
 import { logComplianceEvent } from '@/lib/compliance/logging'
 import { normalizePhoneForLookup, normalizePhoneForSIP } from '@/lib/phone-normalization'
+import type { TelnyxVoiceWebhookPayload } from '@/lib/types/webhook-payloads'
+import type { BusinessSelectFields } from '@/lib/types/business'
+import type { TelnyxEventData, TelnyxCallUpdateData } from '@/lib/types/telnyx-webhook'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -49,9 +52,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse JSON body after verification
-    let body: any
+    let body: TelnyxVoiceWebhookPayload
     try {
-      body = JSON.parse(rawBody)
+      body = JSON.parse(rawBody) as TelnyxVoiceWebhookPayload
     } catch (parseError) {
       logger.error('Telnyx voice webhook JSON parse error', { error: parseError instanceof Error ? parseError.message : JSON.stringify(parseError) })
       return NextResponse.json(
@@ -151,7 +154,7 @@ async function bridgeCallToRetell(
     })
 
     // Step 2: Multi-table lookup strategy
-    let business: any = null
+    let business: BusinessSelectFields | null = null
     let lookupStrategy = 'unknown'
 
     // Strategy 1: Try businesses table with normalized phone (check both fields)
@@ -499,7 +502,7 @@ async function forwardToEscalation(callControlId: string, escalationPhone: strin
  */
 async function handleCallEvent(
   eventType: string,
-  eventData: any,
+  eventData: TelnyxEventData,
   callControlId: string | undefined,
   phoneNumber: string | undefined,
   fromNumber: string | undefined
@@ -526,12 +529,18 @@ async function handleCallEvent(
     // Find existing call by call_control_id
     const { data: existingCall, error: findError } = await supabaseAdmin
       .from('calls')
-      .select('id, business_id, call_status')
+      .select('id, business_id, status')
       .eq('call_id', callControlId)
       .single()
 
     // Determine call status based on event
     let callStatus: string
+    let isMissedCall = false
+    
+    // Extract call duration if available (do this once, before switch)
+    const callDuration = (typeof eventData.duration_seconds === 'number' ? eventData.duration_seconds : 
+                         (typeof eventData.duration === 'number' ? eventData.duration : 0))
+    
     switch (eventType) {
       case 'call.initiated':
         callStatus = 'initiated'
@@ -541,24 +550,33 @@ async function handleCallEvent(
         break
       case 'call.ended':
       case 'call.hangup':
-        callStatus = 'completed'
+        // Check if call was actually answered
+        // If duration is very short (< 5 seconds) and status indicates no answer, it's missed
+        const hangupCause = (typeof eventData.hangup_cause === 'string' ? eventData.hangup_cause : 
+                            (typeof eventData.cause === 'string' ? eventData.cause : ''))
+        const wasAnswered = typeof eventData.was_answered === 'boolean' ? eventData.was_answered : false
+        
+        // Detect missed calls: not answered, or very short duration with specific hangup causes
+        if (!wasAnswered || (callDuration < 5 && (hangupCause === 'NO_ANSWER' || hangupCause === 'USER_BUSY' || hangupCause === 'CALL_REJECTED'))) {
+          callStatus = 'missed'
+          isMissedCall = true
+        } else {
+          callStatus = 'completed'
+        }
         break
       default:
         callStatus = 'unknown'
     }
 
-    // Extract call duration if available
-    const duration = eventData.duration_seconds || eventData.duration || null
-
     if (existingCall) {
       // Update existing call
-      const updateData: any = {
-        call_status: callStatus,
+      const updateData: TelnyxCallUpdateData = {
+        status: callStatus,
         updated_at: new Date().toISOString()
       }
 
-      if (duration && eventType === 'call.ended') {
-        updateData.duration = duration
+      if (callDuration > 0 && eventType === 'call.ended') {
+        updateData.duration = callDuration
       }
 
       if (phoneNumber && !existingCall.business_id) {
@@ -592,10 +610,32 @@ async function handleCallEvent(
       } else {
         logger.info('Call updated', {
           callId: existingCall.id,
-          callControlId,
+          callControlId: callControlId || undefined,
           status: callStatus,
-          duration
+          duration: callDuration > 0 ? callDuration : undefined
         })
+        
+        // Trigger missed call recovery if this is a missed call
+        if (isMissedCall && existingCall.business_id && fromNumber) {
+          // Queue missed call recovery (don't await - fire and forget)
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
+          fetch(`${baseUrl}/api/calls/missed-recovery`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              callId: existingCall.id,
+              businessId: existingCall.business_id,
+              callerPhone: fromNumber,
+              reason: 'missed_call'
+            })
+          }).catch((error) => {
+            logger.error('Failed to trigger missed call recovery', {
+              error: error instanceof Error ? error.message : 'Unknown error',
+              callId: existingCall.id,
+              businessId: existingCall.business_id
+            })
+          })
+        }
       }
     } else {
       // Create new call record if initiated
@@ -623,9 +663,10 @@ async function handleCallEvent(
           .insert({
             business_id: businessId,
             call_id: callControlId,
-            customer_phone: normalizedFromNumber || fromNumber, // Store normalized if available
-            call_status: callStatus,
-            duration: duration || 0,
+            from_number: normalizedFromNumber || fromNumber || '', // Store normalized if available
+            to_number: normalizedPhoneNumber || phoneNumber || '', // Store business number
+            status: callStatus,
+            duration: callDuration || 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -641,6 +682,10 @@ async function handleCallEvent(
             businessId,
             status: callStatus
           })
+          
+          // If this is a missed call (ended immediately without being answered)
+          // Note: We can't detect this on 'initiated', so we'll check on 'ended' event
+          // This will be handled in the update path above
         }
       }
     }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/app/contexts/ToastContext'
 import { Shield, UserPlus, Home, Loader2 } from 'lucide-react'
+import { logger } from '@/lib/monitoring'
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('')
@@ -37,8 +38,17 @@ export default function AdminLoginPage() {
       }
 
       if (data.success && data.data?.token) {
-        // Store token
-        localStorage.setItem('token', data.data.token)
+        // Store token in httpOnly cookie for security
+        const setTokenResponse = await fetch('/api/auth/set-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: data.data.token })
+        })
+
+        if (!setTokenResponse.ok) {
+          showError('Failed to save authentication. Please try again.')
+          return
+        }
         
         // Check if user is admin
         if (data.data.user?.role === 'admin' || data.data.user?.is_admin) {
@@ -46,13 +56,14 @@ export default function AdminLoginPage() {
           showSuccess('Successfully logged in')
         } else {
           showError('Admin access required')
-          localStorage.removeItem('token')
+          // Clear token cookie
+          await fetch('/api/auth/clear-token', { method: 'POST' })
         }
       } else {
         showError(data?.message || 'Login failed')
       }
     } catch (error) {
-      console.error('Login error:', error)
+      logger.error('Login error', { error: error instanceof Error ? error.message : 'Unknown error' })
       showError('Network error. Please try again.')
     } finally {
       setLoading(false)

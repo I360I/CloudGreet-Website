@@ -112,7 +112,12 @@ export function handleError(error: unknown): AppError {
 
   // Handle database errors
   if (error && typeof error === 'object' && 'code' in error) {
-    const dbError = error as any;
+    interface DatabaseError {
+      code?: string
+      message?: string
+      detail?: string
+    }
+    const dbError = error as DatabaseError;
     /**
 
      * if - Add description here

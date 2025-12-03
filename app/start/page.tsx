@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, CheckCircle, Building, Phone } from 'lucide-react'
 import { buildRegistrationPayload, type RegistrationFormData } from '@/lib/auth/register-payload'
 import { PLACEHOLDERS } from '@/lib/constants'
+import { setAuthToken } from '@/lib/auth/token-manager'
 
 type StartFormState = RegistrationFormData & {
   confirmPassword: string
@@ -81,22 +82,11 @@ export default function StartPage() {
         throw new Error(message)
       }
 
-      // Store token and user data
-      localStorage.setItem('token', result.data.token)
-      localStorage.setItem('user', JSON.stringify(result.data.user))
-      localStorage.setItem('business', JSON.stringify(result.data.business))
-      localStorage.setItem(
-        'businessData',
-        JSON.stringify({
-          business_name: formData.businessName,
-          business_type: formData.businessType,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          website: formData.website
-        })
-      )
-      localStorage.setItem('accountStatus', 'new_account')
+      // Store token securely in httpOnly cookie
+      await setAuthToken(result.data.token)
+      
+      // User/business data will be fetched from API when needed
+      // No need to store in localStorage - API provides fresh data
 
       setSuccess(true)
       setTimeout(() => {

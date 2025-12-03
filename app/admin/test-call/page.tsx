@@ -5,6 +5,7 @@ import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { PhoneCall, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react'
+import { useToast } from '@/app/contexts/ToastContext'
 
 interface Business {
   id: string
@@ -28,6 +29,7 @@ interface TestCallResult {
 }
 
 export default function AdminTestCallPage() {
+  const { showError } = useToast()
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>('')
   const [testPhoneNumber, setTestPhoneNumber] = useState<string>('')
@@ -59,7 +61,7 @@ export default function AdminTestCallPage() {
         throw new Error('Invalid response from server')
       }
       // Filter to only businesses with Retell agents and phone numbers
-      const eligibleBusinesses = (data.clients || []).filter((client: any) => 
+      const eligibleBusinesses = (data.clients || []).filter((client: BusinessClient) => 
         client.retell_agent_id && (client.phone_number || client.phone)
       )
       setBusinesses(eligibleBusinesses)
@@ -70,7 +72,7 @@ export default function AdminTestCallPage() {
 
   const placeTestCall = async () => {
     if (!selectedBusinessId && !testPhoneNumber.trim()) {
-      alert('Please select a business or enter a phone number')
+      showError('Validation Error', 'Please select a business or enter a phone number')
       return
     }
 
@@ -78,7 +80,7 @@ export default function AdminTestCallPage() {
     setTestResult(null)
 
     try {
-      const payload: any = {}
+      const payload: TestCallPayload = {}
       if (selectedBusinessId) {
         payload.businessId = selectedBusinessId
       } else {
@@ -140,7 +142,7 @@ export default function AdminTestCallPage() {
         if (response.ok) {
           const data = await response.json()
           const calls = data.client?.activity?.calls?.recent || []
-          setRecentCalls(calls.filter((call: any) => call.call_id === callControlId))
+          setRecentCalls(calls.filter((call: { call_id?: string; [key: string]: unknown }) => call.call_id === callControlId))
         }
       }
 

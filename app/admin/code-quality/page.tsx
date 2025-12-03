@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { logger } from '@/lib/monitoring'
 
 type Severity = 'low' | 'medium' | 'high'
 interface AnalysisResult {
@@ -48,12 +49,12 @@ export default function CodeQualityPage() {
         }])
         return
       }
-      setAnalysisResults((data.analysis as any[]).map((item: any) => ({
+      setAnalysisResults((data.analysis as CodeAnalysisItem[]).map((item) => ({
         ...item,
         severity: item.passed ? 'low' : 'high'
       })))
     } catch (error) {
-      console.error('Error:', error)
+      logger.error('Code analysis error', { error: error instanceof Error ? error.message : 'Unknown error' })
       setAnalysisResults([{
         name: 'Code Analysis Error',
         passed: false,
@@ -98,12 +99,12 @@ export default function CodeQualityPage() {
         }])
         return
       }
-      setAnalysisResults((data.analysis as any[]).map((item: any) => ({
+      setAnalysisResults((data.analysis as CodeAnalysisItem[]).map((item) => ({
         ...item,
         severity: item.passed ? 'low' : 'high'
       })))
     } catch (error) {
-      console.error('Error:', error)
+      logger.error('Security scan error', { error: error instanceof Error ? error.message : 'Unknown error' })
       setAnalysisResults([{
         name: 'Security Scan Error',
         passed: false,
@@ -148,12 +149,12 @@ export default function CodeQualityPage() {
         }])
         return
       }
-      setAnalysisResults((data.analysis as any[]).map((item: any) => ({
+      setAnalysisResults((data.analysis as CodeAnalysisItem[]).map((item) => ({
         ...item,
         severity: item.passed ? 'low' : 'medium'
       })))
     } catch (error) {
-      console.error('Error:', error)
+      logger.error('Performance analysis error', { error: error instanceof Error ? error.message : 'Unknown error' })
       setAnalysisResults([{
         name: 'Performance Analysis Error',
         passed: false,

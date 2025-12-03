@@ -47,7 +47,7 @@ export default function CallQualityMetrics({ businessId, className = '' }: CallQ
       }
       setMetrics(data.quality)
     } catch (error) {
-      console.error('Error loading quality metrics:', error)
+      logger.error('Error loading quality metrics', { error: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setLoading(false)
     }

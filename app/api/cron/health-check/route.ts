@@ -20,6 +20,7 @@ import {
 } from '@/lib/health-check'
 import { supabaseAdmin } from '@/lib/supabase'
 import Stripe from 'stripe'
+import { STRIPE_API_VERSION } from '@/lib/types/stripe'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -119,7 +120,7 @@ async function getBusinessMetrics(): Promise<{
     try {
       const stripeKey = process.env.STRIPE_SECRET_KEY
       if (stripeKey) {
-        const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' as any })
+        const stripe = new Stripe(stripeKey, { apiVersion: STRIPE_API_VERSION })
         const subscriptions = await stripe.subscriptions.list({
           status: 'active',
           limit: 100

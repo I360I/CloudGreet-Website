@@ -61,7 +61,7 @@ async function getBusinessMetrics(): Promise<{
     try {
       const stripeKey = process.env.STRIPE_SECRET_KEY
       if (stripeKey) {
-        const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' as any })
+        const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' as Stripe.LatestApiVersion })
         const subscriptions = await stripe.subscriptions.list({
           status: 'active',
           limit: 100

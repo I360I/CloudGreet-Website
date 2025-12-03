@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { verifyJWT } from '@/lib/auth-middleware'
+import { requireAuth } from '@/lib/auth-middleware'
 
 /**
  * GET /api/calls/recording
@@ -35,8 +35,8 @@ export const runtime = 'nodejs'
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
-    const authResult = await verifyJWT(request)
-    if (!authResult.user) {
+    const authResult = await requireAuth(request)
+    if (!authResult.success || !authResult.userId || !authResult.businessId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -45,31 +45,20 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const callId = searchParams.get('callId')
-    const businessId = searchParams.get('businessId')
+    const requestedBusinessId = searchParams.get('businessId')
+    
+    // Use businessId from auth token, but allow override via query param for admin access
+    const businessId = requestedBusinessId || authResult.businessId
 
-    if (!callId || !businessId) {
+    if (!callId) {
       return NextResponse.json(
-        { error: 'Missing required parameters: callId and businessId' },
+        { error: 'Missing required parameter: callId' },
         { status: 400 }
       )
     }
 
-    // Verify business ownership (user must own the business)
-    const { data: business, error: businessError } = await supabaseAdmin
-      .from('businesses')
-      .select('id, owner_id')
-      .eq('id', businessId)
-      .single()
-
-    if (businessError || !business) {
-      logger.error('Business not found', { businessId, error: businessError?.message || JSON.stringify(businessError) })
-      return NextResponse.json(
-        { error: 'Business not found' },
-        { status: 404 }
-      )
-    }
-
-    if (business.owner_id !== authResult.user.id) {
+    // Verify tenant isolation - user can only access their own business
+    if (businessId !== authResult.businessId) {
       return NextResponse.json(
         { error: 'Unauthorized: You do not have access to this business' },
         { status: 403 }

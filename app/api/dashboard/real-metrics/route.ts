@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { requireAuth } from '@/lib/auth-middleware'
 import { CONFIG } from '@/lib/config'
+import type { Call } from '@/lib/types/call'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -83,9 +84,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate metrics with null safety - handle different column name variations
-    const getStatus = (c: any) => c?.status || c?.call_status || 'unknown'
-    const getDuration = (c: any) => c?.duration || c?.call_duration || 0
-    const getSatisfaction = (c: any) => c?.satisfaction_rating || c?.satisfaction_score || null
+    const getStatus = (c: Call) => c?.status || c?.call_status || 'unknown'
+    const getDuration = (c: Call) => c?.duration || c?.call_duration || 0
+    const getSatisfaction = (c: Call) => c?.satisfaction_rating || c?.satisfaction_score || null
     
     const answeredCalls = calls?.filter(c => {
       const status = getStatus(c)
@@ -189,11 +190,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData)
 
   } catch (error) {
+    const { searchParams: errorSearchParams } = new URL(request.url)
+    const authResult = await requireAuth(request).catch(() => ({ success: false }))
     logger.error('Real metrics error', { 
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-      businessId: authResult?.businessId,
-      timeframe
+      businessId: authResult && 'businessId' in authResult ? authResult.businessId : undefined,
+      timeframe: errorSearchParams.get('timeframe') || '30d'
     })
     return NextResponse.json(
       { 

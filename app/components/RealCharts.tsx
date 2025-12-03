@@ -20,6 +20,8 @@ import { Line, Bar, Doughnut } from 'react-chartjs-2'
 import { TrendingUp, Phone, Calendar, DollarSign } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
+import { logger } from '@/lib/monitoring'
+import type { ChartsData } from '@/lib/types/chart-data'
 
 // Register Chart.js components
 ChartJS.register(
@@ -42,7 +44,7 @@ interface RealChartsProps {
 
 export default function RealCharts({ businessId, timeframe = '30d' }: RealChartsProps) {
   const { theme, getServiceColor } = useBusinessData()
-  const [chartData, setChartData] = useState<unknown>(null)
+  const [chartData, setChartData] = useState<ChartsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -121,7 +123,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
       }
       setChartData(data.charts)
     } catch (error) {
-      console.error('Error loading chart data:', error)
+      logger.error('Error loading chart data', { error: error instanceof Error ? error.message : 'Unknown error' })
       setError('Error loading chart data')
     } finally {
       setLoading(false)
@@ -199,7 +201,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          <Line data={(chartData as any)?.revenueData} options={chartOptionsMemo} />
+          <Line data={chartData?.revenueData} options={chartOptionsMemo} />
         </motion.div>
       </motion.div>
 
@@ -228,7 +230,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          <Bar data={(chartData as any)?.callData} options={chartOptionsMemo} />
+          <Bar data={chartData?.callData} options={chartOptionsMemo} />
         </motion.div>
       </motion.div>
 
@@ -257,7 +259,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          <Doughnut data={(chartData as any)?.conversionData} options={chartOptionsMemo} />
+          <Doughnut data={chartData?.conversionData} options={chartOptionsMemo} />
         </motion.div>
       </motion.div>
     </div>

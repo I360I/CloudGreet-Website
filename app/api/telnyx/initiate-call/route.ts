@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { enforceRequestSizeLimit } from '@/lib/request-limits'
 import { strictRateLimit } from '@/lib/rate-limiting-redis'
 import { withTimeout, TIMEOUT_CONFIG } from '@/lib/timeout'
+import { DEMO_CONFIG, PHONE_CONFIG } from '@/lib/constants'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -68,16 +69,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Use demo business or provided business
-    let fromNumber = process.env.TELNYX_PHONE_NUMBER || '+18333956731'
-    let targetBusinessId = businessId || '00000000-0000-0000-0000-000000000001'
-
-    // If businessId provided, get their phone number
+    // Validate business ID format (must be UUID or use demo for landing page)
+    let fromNumber = PHONE_CONFIG.FALLBACK_PHONE
+    let targetBusinessId: string | null = null
+    
     if (businessId) {
+      // Validate it's a UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (uuidRegex.test(businessId)) {
+        targetBusinessId = businessId
+      } else {
+        // Invalid business ID format - reject instead of falling back to demo
+        return NextResponse.json(
+          { success: false, message: 'Invalid business ID format' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // No business ID provided - use demo business for landing page test calls
+      targetBusinessId = DEMO_CONFIG.BUSINESS_ID
+    }
+
+    // Get phone number for the target business (demo or provided)
+    if (targetBusinessId) {
       const { data: business } = await supabaseAdmin
         .from('businesses')
         .select('phone_number')
-        .eq('id', businessId)
+        .eq('id', targetBusinessId)
         .single()
 
       if (business?.phone_number) {
@@ -157,10 +175,10 @@ export async function POST(request: NextRequest) {
         .insert({
           business_id: targetBusinessId,
           call_id: callControlId,
-          from_number: fromNumber,
-          customer_phone: formattedPhone,
-          call_status: 'initiated',
-          call_duration: 0,
+          from_number: formattedPhone, // Caller's phone number
+          to_number: fromNumber, // Business phone number
+          status: 'initiated',
+          duration: 0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { logger } from '@/lib/monitoring'
 
 interface DashboardData {
@@ -46,12 +46,7 @@ export function useDashboardData() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchDashboardData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true)
       // Use fetchWithAuth for authenticated endpoints
@@ -80,7 +75,11 @@ export function useDashboardData() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
 
   return { data, loading, error, refetch: fetchDashboardData }
 }
@@ -89,17 +88,7 @@ export function useRealtimeMetrics(businessId?: string) {
   const [metrics, setMetrics] = useState<MetricsData | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchMetrics()
-    
-    // Set up real-time updates every 30 seconds
-    const interval = setInterval(fetchMetrics, 30000)
-    
-    return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId])
-
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     try {
       // Use fetchWithAuth for authenticated endpoints
       const { fetchWithAuth } = await import('@/lib/auth/fetch-with-auth')
@@ -127,7 +116,16 @@ export function useRealtimeMetrics(businessId?: string) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [businessId])
+
+  useEffect(() => {
+    fetchMetrics()
+    
+    // Set up real-time updates every 30 seconds
+    const interval = setInterval(fetchMetrics, 30000)
+    
+    return () => clearInterval(interval)
+  }, [fetchMetrics])
 
   return { metrics, loading, refetch: fetchMetrics }
 }

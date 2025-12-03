@@ -4,10 +4,15 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Mail, Phone, MapPin, Clock, Send } from 'lucide-react'
 import Link from 'next/link'
+import { logger } from '@/lib/monitoring'
+import { useToast } from '@/app/contexts/ToastContext'
+import { FormField } from '@/app/components/ui/FormField'
+import { Input } from '@/app/components/ui/Input'
 
 export default function ContactPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const { showSuccess, showError } = useToast()
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -38,14 +43,19 @@ export default function ContactPage() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to send message')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.message || 'Failed to send message')
       }
       
-      setMessage('Thank you for your message! We\'ll get back to you within 24 hours.')
+      const successMessage = 'Thank you for your message! We\'ll get back to you within 24 hours.'
+      setMessage(successMessage)
+      showSuccess('Message Sent!', successMessage)
       event.currentTarget.reset()
     } catch (error) {
-      console.error('Error:', error)
-      setMessage('Sorry, there was an error sending your message. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Sorry, there was an error sending your message. Please try again.'
+      setMessage(errorMessage)
+      showError('Failed to Send Message', errorMessage)
+      logger.error('Contact form error', { error: errorMessage })
     } finally {
       setIsLoading(false)
     }
@@ -67,7 +77,8 @@ export default function ContactPage() {
             </Link>
             <Link
               href="/landing"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-3 min-h-[44px] rounded-lg text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black"
+              aria-label="Return to home page"
             >
               Back to Home
             </Link>
@@ -82,10 +93,10 @@ export default function ContactPage() {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-purple-300">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-200 to-purple-300">
             Contact Us
           </h1>
-          <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+          <p className="text-base md:text-lg lg:text-xl text-gray-400 max-w-3xl mx-auto">
             Have questions? Need support? We&apos;re here to help you succeed with CloudGreet.
           </p>
         </motion.div>
@@ -102,36 +113,55 @@ export default function ContactPage() {
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    name="firstName"
-                    placeholder="First Name"
+                  <FormField
+                    label="First Name"
                     required
-                    className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                  />
-                  <input
-                    type="text"
-                    name="lastName"
-                    placeholder="Last Name"
+                  >
+                    <Input
+                      type="text"
+                      name="firstName"
+                      placeholder="First Name"
+                      required
+                      className="px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10"
+                    />
+                  </FormField>
+                  <FormField
+                    label="Last Name"
                     required
-                    className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
-                  />
+                  >
+                    <Input
+                      type="text"
+                      name="lastName"
+                      placeholder="Last Name"
+                      required
+                      className="px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10"
+                    />
+                  </FormField>
                 </div>
                 
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email Address"
+                <FormField
+                  label="Email Address"
                   required
-                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                >
+                  <Input
+                    type="email"
+                    name="email"
+                    placeholder="Email Address"
+                    required
+                    className="px-4 py-3 bg-gray-700/50 border border-gray-600"
+                  />
+                </FormField>
                 
-                <input
-                  type="text"
-                  name="businessName"
-                  placeholder="Business Name"
-                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                <FormField
+                  label="Business Name"
+                >
+                  <Input
+                    type="text"
+                    name="businessName"
+                    placeholder="Business Name"
+                    className="px-4 py-3 bg-gray-700/50 border border-gray-600"
+                  />
+                </FormField>
                 
                 <select
                   name="subject"

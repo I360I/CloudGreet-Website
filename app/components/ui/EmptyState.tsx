@@ -65,7 +65,7 @@ export function EmptyState({
         <Button
           onClick={onAction}
           className="px-6 py-2"
-          style={iconColor ? { backgroundColor: iconColor } : undefined}
+          primaryColor={iconColor}
         >
           {actionLabel}
         </Button>

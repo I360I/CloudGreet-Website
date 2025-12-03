@@ -60,7 +60,7 @@ export default function AccountPage() {
         }
       }
     } catch (error) {
-      console.error('Error loading profile:', error)
+      logger.error('Error loading profile', { error: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setLoading(false)
     }
@@ -70,7 +70,7 @@ export default function AccountPage() {
     return <PageLoader text="Loading account information..." />
   }
 
-  const tabs = [
+  const tabs: Array<{ key: 'profile' | 'security' | 'notifications'; label: string; icon: React.ComponentType<{ className?: string }> }> = [
     { key: 'profile', label: 'Profile', icon: User },
     { key: 'security', label: 'Security', icon: Key },
     { key: 'notifications', label: 'Notifications', icon: Bell }
@@ -115,7 +115,7 @@ export default function AccountPage() {
             return (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as any)}
+                onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   activeTab === tab.key
                     ? 'bg-blue-600 text-white shadow-lg'
