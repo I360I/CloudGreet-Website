@@ -6,8 +6,7 @@ import { logger } from '@/lib/monitoring'
 import { CONFIG } from '@/lib/config'
 import Stripe from 'stripe'
 import { logComplianceEvent } from '@/lib/compliance/logging'
-import { provisionPhoneFromInventory } from '@/lib/phone-provisioning'
-import { STRIPE_API_VERSION } from '@/lib/types/stripe'
+import { normalizePhoneForStorage } from '@/lib/phone-normalization'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -133,7 +132,7 @@ export async function POST(request: NextRequest) {
     if (!stripeCustomerId && process.env.STRIPE_SECRET_KEY) {
       try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-          apiVersion: STRIPE_API_VERSION
+          apiVersion: '2023-10-16' as any
         })
 
         const customer = await stripe.customers.create({
@@ -174,7 +173,7 @@ export async function POST(request: NextRequest) {
     if (process.env.STRIPE_SECRET_KEY) {
       try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-          apiVersion: STRIPE_API_VERSION
+          apiVersion: '2023-10-16' as any
         })
 
         // Check if products already exist (by name)
@@ -248,30 +247,92 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Provision toll-free phone number automatically (BEFORE agent creation)
-    // Use shared provisioning utility (non-blocking - onboarding continues even if this fails)
     let provisionedPhoneNumber: string | null = null
     
     try {
-      const provisionResult = await provisionPhoneFromInventory(
-        businessId,
-        businessName,
-        false // Don't link to agent yet - agent doesn't exist at this point
-      )
+      // Check if business already has a toll-free number assigned
+      const { data: existingAssignment } = await supabaseAdmin
+        .from('toll_free_numbers')
+        .select('number, status')
+        .eq('assigned_to', businessId)
+        .eq('status', 'assigned')
+        .single()
 
-      if (provisionResult.success && provisionResult.phoneNumber) {
-        provisionedPhoneNumber = provisionResult.phoneNumber
-        logger.info('Phone number provisioned during onboarding', {
+      if (existingAssignment) {
+        provisionedPhoneNumber = existingAssignment.number
+        logger.info('Business already has phone number assigned', {
           businessId,
-          phoneNumber: provisionedPhoneNumber,
-          alreadyAssigned: provisionResult.alreadyAssigned
+          phoneNumber: provisionedPhoneNumber
         })
       } else {
-        // No available numbers - log but don't fail onboarding
-        logger.warn('Phone provisioning failed during onboarding (non-blocking)', {
-          businessId,
-          error: provisionResult.error || 'Unknown error'
-        })
-        // Note: This is non-blocking - phone can be assigned manually later
+        // Find next available toll-free number
+        const { data: availableNumber, error: numberError } = await supabaseAdmin
+          .from('toll_free_numbers')
+          .select('id, number')
+          .eq('status', 'available')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single()
+
+        if (!numberError && availableNumber) {
+          // Assign the number to the business
+          const { error: assignError } = await supabaseAdmin
+            .from('toll_free_numbers')
+            .update({
+              status: 'assigned',
+              assigned_to: businessId,
+              business_name: businessName,
+              assigned_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', availableNumber.id)
+
+          if (!assignError) {
+            // Update business record with the toll-free number
+            const { error: updateError } = await supabaseAdmin
+              .from('businesses')
+              .update({
+                phone_number: availableNumber.number,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', businessId)
+
+            if (!updateError) {
+              provisionedPhoneNumber = availableNumber.number
+              logger.info('Phone number provisioned during onboarding', {
+                businessId,
+                phoneNumber: provisionedPhoneNumber
+              })
+            } else {
+              // Rollback assignment if business update fails
+              await supabaseAdmin
+                .from('toll_free_numbers')
+                .update({
+                  status: 'available',
+                  assigned_to: null,
+                  business_name: null,
+                  assigned_at: null
+                })
+                .eq('id', availableNumber.id)
+              logger.warn('Failed to update business with phone number (rolled back)', {
+                businessId,
+                error: updateError.message
+              })
+            }
+          } else {
+            logger.warn('Failed to assign phone number during onboarding', {
+              businessId,
+              error: assignError.message
+            })
+          }
+        } else {
+          // No available numbers - log but don't fail onboarding
+          logger.warn('No available phone numbers in inventory during onboarding', {
+            businessId,
+            error: numberError?.message || 'No numbers available'
+          })
+          // Note: This is non-blocking - phone can be assigned manually later
+        }
       }
     } catch (phoneError) {
       // Log but don't fail onboarding if phone provisioning fails
@@ -282,8 +343,30 @@ export async function POST(request: NextRequest) {
       // Continue - phone can be provisioned manually later
     }
 
-    // 5. Use provisioned phone number (already normalized by utility)
-    const normalizedPhoneNumber = provisionedPhoneNumber
+    // 5. Normalize provisioned phone number
+    let normalizedPhoneNumber: string | null = null
+    if (provisionedPhoneNumber) {
+      normalizedPhoneNumber = normalizePhoneForStorage(provisionedPhoneNumber)
+      if (normalizedPhoneNumber && normalizedPhoneNumber !== provisionedPhoneNumber) {
+        // Update business with normalized phone number
+        await supabaseAdmin
+          .from('businesses')
+          .update({
+            phone_number: normalizedPhoneNumber,
+            phone: normalizedPhoneNumber,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', businessId)
+        
+        logger.info('Phone number normalized and updated', {
+          businessId,
+          original: provisionedPhoneNumber,
+          normalized: normalizedPhoneNumber
+        })
+      } else {
+        normalizedPhoneNumber = provisionedPhoneNumber
+      }
+    }
 
     // 6. Create personalized Retell AI agent automatically (WITH phone number)
     let retellAgentId: string | null = null
@@ -409,7 +492,7 @@ export async function POST(request: NextRequest) {
     if (stripeCustomerId && subscriptionPriceId && process.env.STRIPE_SECRET_KEY) {
       try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-          apiVersion: STRIPE_API_VERSION
+          apiVersion: '2023-10-16' as any
         })
 
         const session = await stripe.checkout.sessions.create({

@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useDashboardData } from '@/app/contexts/DashboardDataContext'
 import { useToast } from '@/app/contexts/ToastContext'
-import { logger } from '@/lib/monitoring'
 
 interface RealtimeDashboardOptions {
   enabled?: boolean
@@ -30,21 +29,26 @@ export function useRealtimeDashboard(options: RealtimeDashboardOptions = {}) {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const connectWebSocket = useCallback(async () => {
+  const connectWebSocket = useCallback(() => {
     if (!enabled) return
 
     try {
-      // Get business ID from API
-      const { fetchWithAuth } = await import('@/lib/auth/fetch-with-auth')
-      const response = await fetchWithAuth('/api/dashboard/data')
-      if (!response.ok) {
+      // Get business ID from localStorage
+      const user = localStorage.getItem('user')
+      if (!user) {
         setConnectionStatus('disconnected')
         return
       }
-      
-      const data = await response.json()
-      const businessId = data.businessId
-      if (!businessId) {
+
+      let businessId: string
+      try {
+        const userData = JSON.parse(user)
+        businessId = userData.business_id
+        if (!businessId) {
+          setConnectionStatus('disconnected')
+          return
+        }
+      } catch {
         setConnectionStatus('disconnected')
         return
       }
@@ -89,12 +93,12 @@ export function useRealtimeDashboard(options: RealtimeDashboardOptions = {}) {
             refreshAll({ silent: true })
           }
         } catch (error) {
-          logger.error('Failed to parse WebSocket message', { error: error instanceof Error ? error.message : 'Unknown error' })
+          console.error('Failed to parse WebSocket message:', error)
         }
       }
 
       ws.onerror = (error) => {
-        logger.error('WebSocket error', { error: error instanceof Error ? error.message : 'Unknown error' })
+        console.error('WebSocket error:', error)
         setConnectionStatus('error')
         setIsConnected(false)
       }
@@ -120,12 +124,12 @@ export function useRealtimeDashboard(options: RealtimeDashboardOptions = {}) {
           }, delay)
         } else {
           // Fallback to polling
-          logger.info('WebSocket failed, falling back to polling')
+          console.log('WebSocket failed, falling back to polling')
           startPolling()
         }
       }
     } catch (error) {
-      logger.error('Failed to connect WebSocket', { error: error instanceof Error ? error.message : 'Unknown error' })
+      console.error('Failed to connect WebSocket:', error)
       setConnectionStatus('error')
       setIsConnected(false)
       startPolling()
@@ -144,9 +148,7 @@ export function useRealtimeDashboard(options: RealtimeDashboardOptions = {}) {
 
   useEffect(() => {
     if (enabled) {
-      connectWebSocket().catch((error) => {
-        logger.error('Failed to connect WebSocket in useEffect', { error: error instanceof Error ? error.message : 'Unknown error' })
-      })
+      connectWebSocket()
     } else {
       // Use polling if WebSocket disabled
       startPolling()

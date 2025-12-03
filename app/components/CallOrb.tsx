@@ -1,22 +1,19 @@
 'use client'
 
-import React, { useRef, useEffect, useState, useCallback, memo } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Phone, Loader2 } from 'lucide-react'
 import { logger } from '@/lib/monitoring'
-import { useToast } from '@/app/contexts/ToastContext'
-import { Button } from '@/app/components/ui/Button'
 
 interface CallOrbProps {
   onCall: (phone: string) => Promise<void>
 }
 
-const CallOrb = memo(function CallOrb({ onCall }: CallOrbProps) {
+export default function CallOrb({ onCall }: CallOrbProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [phone, setPhone] = useState('')
   const [calling, setCalling] = useState(false)
   const [error, setError] = useState('')
-  const { showError, showSuccess } = useToast()
 
   class RingWave {
     baseRadius: number
@@ -99,32 +96,22 @@ const CallOrb = memo(function CallOrb({ onCall }: CallOrbProps) {
     return () => cancelAnimationFrame(animationId)
   }, [])
 
-  const handleCall = useCallback(async () => {
+  const handleCall = async () => {
     if (!phone || calling) return;
-    const cleaned = phone.replace(/\D/g, '')
+  const cleaned = phone.replace(/\D/g, '')
     if (cleaned.length < 10) {
-      const errorMessage = 'Please enter a valid 10-digit phone number'
-      setError(errorMessage)
-      showError('Invalid Phone Number', errorMessage)
+      setError('Invalid phone number')
       return
     }
-    try {
+  try {
       setCalling(true)
       setError('')
       await onCall(phone)
-      showSuccess('Call Initiated!', 'You should receive a call shortly.')
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to initiate call. Please try again.'
-      setError(errorMessage)
-      showError('Call Failed', errorMessage)
-      logger.error('Call failed in CallOrb component', {
-        error: errorMessage,
-        phone: cleaned
-      })
-    } finally {
+      setError('Call failed')
       setCalling(false)
     }
-  }, [phone, calling, onCall, showError, showSuccess])
+  }
 
   return (
     <div className="flex flex-col items-center">
@@ -138,52 +125,28 @@ const CallOrb = memo(function CallOrb({ onCall }: CallOrbProps) {
       </div>
 
       <div className="w-full max-w-sm">
-        <label htmlFor="callOrbPhoneInput" className="sr-only">
-          Phone number for test call
-        </label>
         <input
           type="tel"
-          id="callOrbPhoneInput"
-          name="phone"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="Enter phone number"
           disabled={calling}
-          aria-label="Phone number for test call"
-          aria-describedby={error ? "callOrbError" : "callOrbDescription"}
-          aria-required="true"
-          aria-invalid={!!error}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500"
         />
-        <p id="callOrbDescription" className="sr-only">
-          Enter your 10-digit phone number to receive a test call
-        </p>
-        {error && (
-          <p id="callOrbError" className="text-red-400 text-sm mt-2" role="alert" aria-live="polite">
-            {error}
-          </p>
-        )}
         
-        <Button
+        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+        
+        <motion.button
           onClick={handleCall}
           disabled={calling || !phone}
-          loading={calling}
-          primaryColor="#9333EA"
-          icon={!calling ? <Phone className="w-5 h-5" /> : undefined}
-          iconPosition="left"
-          fullWidth
-          className="mt-4"
-          aria-label={calling ? "Calling in progress" : "Initiate test call"}
-          aria-busy={calling}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="w-full mt-4 px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {calling ? 'Calling...' : 'Call Me Now'}
-        </Button>
+          {calling ? <><Loader2 className="w-5 h-5 animate-spin" /> Calling...</> : <><Phone className="w-5 h-5" /> Call Me Now</>}
+        </motion.button>
       </div>
     </div>
   )
-})
-
-CallOrb.displayName = 'CallOrb'
-
-export default CallOrb
+}
 

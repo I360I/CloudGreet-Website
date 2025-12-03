@@ -4,7 +4,6 @@ import React, { createContext, useContext, useCallback, useRef } from 'react'
 import useSWR, { mutate, useSWRConfig } from 'swr'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useToast } from './ToastContext'
-import { logger } from '@/lib/monitoring'
 
 interface Appointment {
   id: string
@@ -140,7 +139,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         // Don't retry other errors
       },
       onError: (error) => {
-        logger.error('Failed to fetch appointments', { error: error instanceof Error ? error.message : 'Unknown error' })
+        console.error('Failed to fetch appointments:', error)
       }
     }
   )
@@ -167,7 +166,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         }
       },
       onError: (error) => {
-        logger.error('Failed to fetch metrics', { error: error instanceof Error ? error.message : 'Unknown error' })
+        console.error('Failed to fetch metrics:', error)
       }
     }
   )
@@ -194,7 +193,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
         }
       },
       onError: (error) => {
-        logger.error('Failed to fetch charts', { error: error instanceof Error ? error.message : 'Unknown error' })
+        console.error('Failed to fetch charts:', error)
       }
     }
   )

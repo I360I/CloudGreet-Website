@@ -608,8 +608,8 @@ function OnboardingContent() {
   const renderBusinessForm = () => (
     <div className="space-y-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl p-4 md:p-6 shadow-xl">
       <div className="space-y-2">
-        <h2 className="text-xl md:text-2xl font-semibold text-white">Business Profile</h2>
-        <p className="text-sm md:text-base text-slate-400">
+        <h2 className="text-xl font-semibold text-white">Business Profile</h2>
+        <p className="text-sm text-slate-400">
           Tell us who you are so every greeting, email, and agent message gets the details right.
         </p>
       </div>
@@ -651,7 +651,7 @@ function OnboardingContent() {
               setBusinessForm((prev) => ({ ...prev, email: event.target.value }))
             }
             className="w-full rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
-            placeholder="your@email.com"
+            placeholder="owner@example.com"
           />
         </label>
         <label className="space-y-2 text-sm text-slate-300">
@@ -730,7 +730,7 @@ function OnboardingContent() {
             setBusinessForm((prev) => ({ ...prev, website: event.target.value }))
           }
           className="w-full rounded-xl border border-white/10 bg-slate-900/70 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/30"
-          placeholder="https://yourwebsite.com"
+          placeholder="https://example.com"
         />
       </label>
 
@@ -755,7 +755,7 @@ function OnboardingContent() {
               key={toneOption}
               type="button"
               onClick={() => setBusinessForm((prev) => ({ ...prev, tone: toneOption }))}
-              className={`rounded-lg px-4 py-3 min-h-[44px] text-xs font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black ${
+              className={`rounded-lg px-4 py-2 text-xs font-semibold transition-all duration-300 ${
                 businessForm.tone === toneOption
                   ? 'border border-blue-400/40 bg-blue-500/20 text-blue-100'
                   : 'border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
@@ -789,7 +789,7 @@ function OnboardingContent() {
             await handleSaveBusiness()
           }}
           disabled={savingBusiness}
-          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-3 min-h-[44px] text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {savingBusiness ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Save & continue
@@ -801,8 +801,8 @@ function OnboardingContent() {
   const renderServicesForm = () => (
     <div className="space-y-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl p-4 md:p-6 shadow-xl">
       <div className="space-y-2">
-        <h2 className="text-xl md:text-2xl font-semibold text-white">Services & Availability</h2>
-        <p className="text-sm md:text-base text-slate-400">
+        <h2 className="text-xl font-semibold text-white">Services & Availability</h2>
+        <p className="text-sm text-slate-400">
           These details power qualification, scheduling, and when CloudGreet introduces your business.
         </p>
       </div>
@@ -919,7 +919,7 @@ function OnboardingContent() {
           type="button"
           onClick={handleSaveServices}
           disabled={savingServices}
-          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-3 min-h-[44px] text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {savingServices ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -935,8 +935,8 @@ function OnboardingContent() {
   const renderCalendarStep = () => (
     <div className="space-y-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl p-4 md:p-6 shadow-xl">
       <div className="space-y-2">
-        <h2 className="text-xl md:text-2xl font-semibold text-white">Connect your calendar</h2>
-        <p className="text-sm md:text-base text-slate-400">
+        <h2 className="text-xl font-semibold text-white">Connect your calendar</h2>
+        <p className="text-sm text-slate-400">
           When CloudGreet books appointments, we’ll check your availability and drop meetings
           directly onto your calendar.
         </p>
@@ -973,7 +973,7 @@ function OnboardingContent() {
           <button
             type="button"
             onClick={handleConnectCalendar}
-            className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-4 py-3 min-h-[44px] text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black"
+            className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30"
           >
             <CalendarDays className="h-4 w-4" />
             {calendarStatus ? 'Reconnect Google Calendar' : 'Connect Google Calendar'}
@@ -982,7 +982,7 @@ function OnboardingContent() {
             <button
               type="button"
               onClick={handleDisconnectCalendar}
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-3 min-h-[44px] text-sm font-semibold text-slate-200 shadow-lg transition-all duration-300 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl px-4 py-2 text-sm font-semibold text-slate-200 shadow-lg transition-all duration-300 hover:bg-white/10"
             >
               Disconnect
             </button>
@@ -1024,8 +1024,8 @@ function OnboardingContent() {
   const renderPhoneStep = () => (
     <div className="space-y-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl p-4 md:p-6 shadow-xl">
       <div className="space-y-2">
-        <h2 className="text-xl md:text-2xl font-semibold text-white">Provision a forwarding number</h2>
-        <p className="text-sm md:text-base text-slate-400">
+        <h2 className="text-xl font-semibold text-white">Provision a forwarding number</h2>
+        <p className="text-sm text-slate-400">
           Every caller dials one branded number. We route calls to your AI agent, track attribution,
           and forward hot leads to your team.
         </p>
@@ -1083,7 +1083,7 @@ function OnboardingContent() {
           type="button"
           onClick={handleProvisionPhone}
           disabled={provisioningPhone}
-          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-3 min-h-[44px] text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {provisioningPhone ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />}
           {phoneStatus ? 'Update number' : 'Provision number'}
@@ -1095,8 +1095,8 @@ function OnboardingContent() {
   const renderSummaryStep = () => (
     <div className="space-y-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-xl p-4 md:p-6 shadow-xl">
       <div className="space-y-2">
-        <h2 className="text-xl md:text-2xl font-semibold text-white">Ready to launch CloudGreet</h2>
-        <p className="text-sm md:text-base text-slate-400">
+        <h2 className="text-xl font-semibold text-white">Ready to launch CloudGreet</h2>
+        <p className="text-sm text-slate-400">
           Review your configuration and lock in billing. You’ll instantly unlock AI call handling,
           SMS automation, and lead routing.
         </p>
@@ -1190,7 +1190,7 @@ function OnboardingContent() {
           type="button"
           onClick={handleComplete}
           disabled={completing}
-          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-3 min-h-[44px] text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-black"
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 shadow-lg transition-all duration-300 hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {completing ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -1228,7 +1228,7 @@ function OnboardingContent() {
             Onboarding wizard
           </span>
           <div className="max-w-3xl space-y-3">
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold leading-tight">
+            <h1 className="text-2xl md:text-3xl font-semibold leading-tight">
               Launch your AI receptionist in under ten minutes
             </h1>
             <p className="text-base text-slate-300 sm:text-lg">

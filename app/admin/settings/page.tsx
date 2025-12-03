@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import {
   BellRing,
@@ -196,13 +196,10 @@ export default function OwnerSettingsPage() {
     }
   }
 
-  const fetchIntegrationsMemo = useCallback(() => {
-    fetchIntegrations()
-  }, [showError])
-
   useEffect(() => {
-    fetchIntegrationsMemo()
-  }, [fetchIntegrationsMemo])
+    fetchIntegrations()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -247,7 +244,8 @@ export default function OwnerSettingsPage() {
     }
 
     fetchFilters()
-  }, [showError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const fetchAiSettings = async () => {
@@ -296,7 +294,8 @@ export default function OwnerSettingsPage() {
     }
 
     fetchAiSettings()
-  }, [showError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const groupedIntegrations = useMemo(() => {
     const groups: Record<string, IntegrationState[]> = {}
@@ -1058,7 +1057,7 @@ export default function OwnerSettingsPage() {
                       <div className="flex items-center gap-2">
                         <h4 className="text-sm font-semibold text-white">{field.label}</h4>
                         {field.optional && (
-                          <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-xs uppercase tracking-widest text-slate-400">
+                          <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-widest text-slate-400">
                             Optional
                           </span>
                         )}

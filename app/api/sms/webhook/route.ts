@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { SMSWebhookPayload } from '@/lib/types/webhook-payloads'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { verifyTelynyxSignature } from '@/lib/webhook-verification'
@@ -37,17 +36,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse JSON body after verification
-    let body: SMSWebhookPayload
+    let body: any
     try {
-      body = JSON.parse(rawBody) as SMSWebhookPayload
+      body = JSON.parse(rawBody)
     } catch (parseError) {
       logger.error('SMS webhook JSON parse error', { error: parseError instanceof Error ? parseError.message : JSON.stringify(parseError) })
       return NextResponse.json({ success: false, error: 'Invalid JSON payload' }, { status: 400 })
     }
 
-    const from = (body.from || body.From || '') as string
-    const to = (body.to || body.To || '') as string
-    const text = (body.text || body.Body || '') as string
+    const from: string = body.from || body.From || ''
+    const to: string = body.to || body.To || ''
+    const text: string = body.text || body.Body || ''
     const cmd = normalizeCommand(text)
 
     if (!from) {

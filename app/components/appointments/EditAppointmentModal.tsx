@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Modal } from '@/app/components/ui/Modal'
 import { FormField } from '@/app/components/ui/FormField'
-import { Input } from '@/app/components/ui/Input'
 import { DatePicker } from '@/app/components/ui/DatePicker'
 import { TimePicker } from '@/app/components/ui/TimePicker'
 import { Select } from '@/app/components/ui/Select'
@@ -319,7 +318,7 @@ export function EditAppointmentModal({
                 value={formData.customer_name}
                 onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
                 className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white focus:outline-none focus:ring-2"
-                style={{ '--tw-ring-color': `${primaryColor}50` } as React.CSSProperties}
+                style={{ focusRingColor: primaryColor }}
                 maxLength={100}
                 aria-label="Customer name"
                 aria-describedby={errors.customer_name ? 'customer_name-error' : undefined}
@@ -382,7 +381,7 @@ export function EditAppointmentModal({
               <Select
                 options={statusOptions}
                 value={formData.status}
-                onChange={(value) => setFormData({ ...formData, status: value as typeof formData.status })}
+                onChange={(value) => setFormData({ ...formData, status: value as any })}
                 placeholder="Select status"
                 aria-label="Appointment status"
               />
@@ -468,10 +467,9 @@ export function EditAppointmentModal({
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={loading || deleting}
                 className="text-red-400 border-red-400/30 hover:bg-red-400/10"
-                icon={<Trash2 className="w-4 h-4" />}
-                iconPosition="left"
                 aria-label="Delete appointment"
               >
+                <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </Button>
               <div className="flex gap-3">
@@ -487,8 +485,7 @@ export function EditAppointmentModal({
                 <Button
                   type="submit"
                   disabled={loading || deleting}
-                  primaryColor={primaryColor}
-                  loading={loading}
+                  style={{ backgroundColor: primaryColor }}
                   aria-label="Save changes"
                 >
                   {loading ? 'Saving...' : 'Save Changes'}
@@ -506,7 +503,7 @@ export function EditAppointmentModal({
         title="Delete Appointment"
         message="Are you sure you want to delete this appointment? This action cannot be undone."
         confirmText="Delete"
-        variant="destructive"
+        confirmVariant="danger"
         loading={deleting}
       />
     </>

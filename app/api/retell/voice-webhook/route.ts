@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { RetellVoiceWebhookPayload } from '@/lib/types/webhook-payloads'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { telnyxClient } from '@/lib/telnyx'
@@ -7,7 +6,6 @@ import { createCalendarEvent } from '@/lib/calendar'
 import { verifyRetellSignature } from '@/lib/webhook-verification'
 import { CONFIG } from '@/lib/config'
 import Stripe from 'stripe'
-import { STRIPE_API_VERSION } from '@/lib/types/stripe'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -23,15 +21,15 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.text()
     
     // Parse JSON to check event type first (allow ping without verification)
-    let body: RetellVoiceWebhookPayload
+    let body: any
     try {
-      body = JSON.parse(rawBody) as RetellVoiceWebhookPayload
+      body = JSON.parse(rawBody)
     } catch (parseError) {
       logger.error('Retell webhook JSON parse error', { error: parseError instanceof Error ? parseError.message : JSON.stringify(parseError) })
       return NextResponse.json({ success: false, error: 'Invalid JSON payload' }, { status: 400 })
     }
 
-    const eventType = (body.event || body.type || 'unknown') as string
+    const eventType: string = body.event || body.type || 'unknown'
     
     // Allow ping events without signature verification (Retell health checks)
     if (eventType === 'ping') {
@@ -57,9 +55,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Now process the verified body
-    const tool = (body.tool_call as RetellToolCall | undefined) || null
-    const metadata = body.metadata as { tenant_id?: string } | undefined
-    const tenantId: string | undefined = (body.tenant_id as string | undefined) || metadata?.tenant_id
+    const tool: RetellToolCall | null = body.tool_call || null
+    const tenantId: string | undefined = body.tenant_id || body.metadata?.tenant_id
 
     if (tool) {
       switch (tool.name) {
@@ -262,7 +259,7 @@ export async function POST(request: NextRequest) {
           if (business.stripe_customer_id && process.env.STRIPE_SECRET_KEY) {
             try {
               const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-                apiVersion: STRIPE_API_VERSION
+                apiVersion: '2023-10-16' as any
               })
 
               // Create invoice item for per-booking fee

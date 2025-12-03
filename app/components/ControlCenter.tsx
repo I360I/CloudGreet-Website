@@ -1,13 +1,11 @@
 'use client'
 
-import React, { memo } from 'react'
+import React from 'react'
 import { motion } from 'framer-motion'
-import { CalendarPlus } from 'lucide-react'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { WeekCalendarWidget } from './WeekCalendarWidget'
 import RealActivityFeed from './RealActivityFeed'
 import { LoadingSkeleton } from './ui/LoadingSkeleton'
-import { Button } from './ui/Button'
 
 interface ControlCenterProps {
   onDayClick?: (date: string) => void
@@ -15,7 +13,7 @@ interface ControlCenterProps {
   onCreateAppointment?: () => void
 }
 
-export const ControlCenter = memo(function ControlCenter({
+export function ControlCenter({
   onDayClick,
   onFullCalendarClick,
   onCreateAppointment
@@ -86,7 +84,7 @@ export const ControlCenter = memo(function ControlCenter({
       >
         <h3 className="text-sm font-semibold text-white mb-3">Quick Actions</h3>
         <div className="space-y-2">
-          <Button
+          <motion.button
             type="button"
             onClick={(e) => {
               e.preventDefault()
@@ -95,21 +93,19 @@ export const ControlCenter = memo(function ControlCenter({
                 onCreateAppointment()
               }
             }}
-            variant="outline"
-            fullWidth
-            icon={<CalendarPlus className="w-4 h-4" />}
-            iconPosition="left"
-            className="text-sm"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full px-4 py-2 text-sm rounded-lg transition-all"
             style={{
               backgroundColor: `${primaryColor}20`,
               color: primaryColor,
               borderColor: `${primaryColor}30`,
+              borderWidth: '1px',
               boxShadow: `0 2px 4px ${primaryColor}20`
             }}
-            aria-label="Create new appointment"
           >
             Create Appointment
-          </Button>
+          </motion.button>
         </div>
       </motion.div>
 
@@ -119,7 +115,5 @@ export const ControlCenter = memo(function ControlCenter({
       </div>
     </motion.div>
   )
-})
-
-ControlCenter.displayName = 'ControlCenter'
+}
 

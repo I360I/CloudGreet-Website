@@ -318,10 +318,9 @@ export function AppointmentDetailsModal({
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={deleting}
                 className="text-red-400 border-red-400/30 hover:bg-red-400/10"
-                icon={<Trash2 className="w-4 h-4" />}
-                iconPosition="left"
                 aria-label="Delete appointment"
               >
+                <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </Button>
               <div className="flex gap-3">
@@ -341,11 +340,10 @@ export function AppointmentDetailsModal({
                     onClose()
                   }}
                   disabled={deleting}
-                  primaryColor={primaryColor}
-                  icon={<Edit className="w-4 h-4" />}
-                  iconPosition="left"
+                  style={{ backgroundColor: primaryColor }}
                   aria-label="Edit appointment"
                 >
+                  <Edit className="w-4 h-4 mr-2" />
                   Edit
                 </Button>
               </div>
@@ -361,7 +359,7 @@ export function AppointmentDetailsModal({
         title="Delete Appointment"
         message="Are you sure you want to delete this appointment? This action cannot be undone."
         confirmText="Delete"
-        variant="destructive"
+        confirmVariant="danger"
         loading={deleting}
       />
     </>

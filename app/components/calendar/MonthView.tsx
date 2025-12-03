@@ -147,7 +147,7 @@ export function MonthView({ currentDate, onDayClick, selectedDate, onDateChange 
     
     return (
       <div className="flex items-center justify-center gap-1 mt-1 flex-wrap">
-        {displayAppointments && displayAppointments.length > 0 ? displayAppointments.map((apt, idx) => {
+        {displayAppointments.map((apt, idx) => {
           const color = getServiceColor(apt.service_type)
           return (
             <motion.div
@@ -160,7 +160,7 @@ export function MonthView({ currentDate, onDayClick, selectedDate, onDateChange 
               aria-label={`${apt.customer_name} - ${apt.service_type}`}
             />
           )
-        }) : null}
+        })}
         {remaining > 0 && (
           <motion.span 
             initial={{ opacity: 0, scale: 0 }}
@@ -225,7 +225,7 @@ export function MonthView({ currentDate, onDayClick, selectedDate, onDateChange 
 
       {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-1">
-        {calendarDays && calendarDays.length > 0 ? calendarDays.map((dayData, index) => {
+        {calendarDays.map((dayData, index) => {
           const { date, appointments } = dayData
           const dayIsToday = isToday(date)
           const dayIsSelected = isSelected(date)
@@ -283,11 +283,7 @@ export function MonthView({ currentDate, onDayClick, selectedDate, onDateChange 
               {getAppointmentDots(appointments)}
             </motion.button>
           )
-        }) : (
-          <div className="col-span-7 text-center py-8">
-            <p className="text-slate-400 text-sm">No calendar data available</p>
-          </div>
-        )}
+        })}
       </div>
     </div>
   )

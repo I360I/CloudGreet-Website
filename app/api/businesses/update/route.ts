@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { retellAgentManager } from '@/lib/retell-agent-manager'
-import { requireAuth } from '@/lib/auth-middleware'
+import { verifyJWT } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -20,32 +20,34 @@ export const runtime = 'nodejs'
 export async function PATCH(request: NextRequest) {
   try {
     // Verify authentication
-    const authResult = await requireAuth(request)
-    if (!authResult.success || !authResult.userId || !authResult.businessId) {
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { businessId: requestedBusinessId, ...updates } = body
-
-    // Use businessId from auth token, but allow override via body for admin access
-    const businessId = requestedBusinessId || authResult.businessId
-
-    // Verify tenant isolation - user can only update their own business
-    if (businessId !== authResult.businessId) {
-      return NextResponse.json({ error: 'Unauthorized: You do not have access to this business' }, { status: 403 })
+    const authResult = await verifyJWT(request)
+    if (!authResult.user?.id) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Fetch business to verify it exists and get agent ID
+    const userId = authResult.user.id
+    const body = await request.json()
+    const { businessId, ...updates } = body
+
+    if (!businessId) {
+      return NextResponse.json({ error: 'businessId required' }, { status: 400 })
+    }
+
+    // Verify business ownership
     const { data: business, error: businessError } = await supabaseAdmin
       .from('businesses')
       .select('id, owner_id, retell_agent_id, business_name, business_type')
       .eq('id', businessId)
+      .eq('owner_id', userId)
       .single()
 
     if (businessError || !business) {
-      logger.error('Business not found', { businessId, error: businessError?.message || JSON.stringify(businessError) })
-      return NextResponse.json({ error: 'Business not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Business not found or unauthorized' }, { status: 404 })
     }
 
     // 1. Update business in database

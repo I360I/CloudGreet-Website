@@ -90,7 +90,6 @@ export function AgendaView({ currentDate, onAppointmentClick, onCreateAppointmen
 
   // Filter and group appointments
   const filteredAndGrouped = useMemo(() => {
-    if (!appointments || appointments.length === 0) return []
     let filtered = appointments
 
     // Apply search filter
@@ -105,39 +104,31 @@ export function AgendaView({ currentDate, onAppointmentClick, onCreateAppointmen
 
     // Group by date
     const grouped = new Map<string, Appointment[]>()
-    if (filtered && filtered.length > 0) {
-      filtered.forEach(apt => {
-        const dateStr = apt.scheduled_date
-        if (!grouped.has(dateStr)) {
-          grouped.set(dateStr, [])
-        }
-        grouped.get(dateStr)!.push(apt)
-      })
-
-      // Sort dates
-      const sortedDates = Array.from(grouped.keys()).sort()
-
-      // Sort appointments within each date by time
-      if (sortedDates && sortedDates.length > 0) {
-        sortedDates.forEach(dateStr => {
-          const apts = grouped.get(dateStr)!
-          if (apts && apts.length > 0) {
-            apts.sort((a, b) => {
-              const timeA = new Date(a.start_time).getTime()
-              const timeB = new Date(b.start_time).getTime()
-              return timeA - timeB
-            })
-          }
-        })
-
-        return sortedDates.map(dateStr => ({
-          date: dateStr,
-          appointments: grouped.get(dateStr) || []
-        }))
+    filtered.forEach(apt => {
+      const dateStr = apt.scheduled_date
+      if (!grouped.has(dateStr)) {
+        grouped.set(dateStr, [])
       }
-    }
-    
-    return []
+      grouped.get(dateStr)!.push(apt)
+    })
+
+    // Sort dates
+    const sortedDates = Array.from(grouped.keys()).sort()
+
+    // Sort appointments within each date by time
+    sortedDates.forEach(dateStr => {
+      const apts = grouped.get(dateStr)!
+      apts.sort((a, b) => {
+        const timeA = new Date(a.start_time).getTime()
+        const timeB = new Date(b.start_time).getTime()
+        return timeA - timeB
+      })
+    })
+
+    return sortedDates.map(dateStr => ({
+      date: dateStr,
+      appointments: grouped.get(dateStr)!
+    }))
   }, [appointments, debouncedSearch])
 
   const formatDateHeader = (dateStr: string) => {
@@ -193,14 +184,22 @@ export function AgendaView({ currentDate, onAppointmentClick, onCreateAppointmen
       <EmptyState
         icon={CalendarIcon}
         title={debouncedSearch ? "No appointments found" : "No appointments"}
-        message={
+        description={
           debouncedSearch
             ? "Try adjusting your search terms"
             : "Get started by creating your first appointment"
         }
-        actionLabel={debouncedSearch ? "Clear Search" : "Create Appointment"}
-        onAction={debouncedSearch ? () => setSearchQuery('') : onCreateAppointment}
-        iconColor={primaryColor}
+        action={
+          !debouncedSearch ? (
+            <Button onClick={onCreateAppointment} style={{ backgroundColor: primaryColor }}>
+              Create Appointment
+            </Button>
+          ) : (
+            <Button onClick={() => setSearchQuery('')} variant="outline">
+              Clear Search
+            </Button>
+          )
+        }
       />
     )
   }

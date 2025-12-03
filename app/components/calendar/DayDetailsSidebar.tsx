@@ -69,7 +69,7 @@ export function DayDetailsSidebar({
 
       const data = await response.json()
       if (data.success && data.days && data.days.length > 0) {
-        const dayData = data.days.find((d: { date: string; [key: string]: unknown }) => d.date === dateStr)
+        const dayData = data.days.find((d: any) => d.date === dateStr)
         setAppointments(dayData?.appointments || [])
       } else {
         setAppointments([])
@@ -204,14 +204,21 @@ export function DayDetailsSidebar({
                 <EmptyState
                   icon={CalendarIcon}
                   title="No appointments"
-                  message="No appointments scheduled for this day"
-                  actionLabel="New Appointment"
-                  onAction={onCreateAppointment}
-                  iconColor={primaryColor}
+                  description="No appointments scheduled for this day"
+                  action={
+                    <Button 
+                      onClick={onCreateAppointment} 
+                      style={{ backgroundColor: primaryColor }}
+                      aria-label="Create new appointment"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Appointment
+                    </Button>
+                  }
                 />
               ) : (
                 <div className="space-y-3">
-                  {appointments && appointments.length > 0 ? appointments.map((apt, idx) => {
+                  {appointments.map((apt, idx) => {
                     const color = getServiceColor(apt.service_type)
                     const startTime = new Date(apt.start_time)
                     const endTime = new Date(apt.end_time)
@@ -266,11 +273,7 @@ export function DayDetailsSidebar({
                         </div>
                       </motion.button>
                     )
-                  }) : (
-                    <div className="text-center py-4">
-                      <p className="text-slate-400 text-sm">No appointments scheduled</p>
-                    </div>
-                  )}
+                  })}
                 </div>
               )}
             </div>

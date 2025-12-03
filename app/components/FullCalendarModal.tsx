@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, memo, useCallback, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Download, RefreshCw, Settings } from 'lucide-react'
 import { Modal } from './ui/Modal'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
-import type { Appointment as AppointmentModalType } from '@/lib/types/appointment-modal'
 import { LoadingSkeleton } from './ui/LoadingSkeleton'
 import { cn } from '@/lib/utils'
 import { MonthView } from './calendar/MonthView'
@@ -20,12 +19,12 @@ interface FullCalendarModalProps {
   onClose: () => void
   initialDate?: Date
   initialView?: CalendarView
-  onAppointmentClick?: (appointment: AppointmentModalType) => void
+  onAppointmentClick?: (appointment: any) => void
   onCreateAppointment?: () => void
   onDayClick?: (date: Date) => void
 }
 
-export const FullCalendarModal = memo(function FullCalendarModal({
+export function FullCalendarModal({
   open,
   onClose,
   initialDate = new Date(),
@@ -50,76 +49,71 @@ export const FullCalendarModal = memo(function FullCalendarModal({
     }
   }, [open, initialDate, initialView])
 
-  const handlePrev = useCallback(() => {
-    setCurrentDate(prevDate => {
-      const newDate = new Date(prevDate)
-      if (view === 'month') {
-        newDate.setMonth(newDate.getMonth() - 1)
-      } else if (view === 'week') {
-        newDate.setDate(newDate.getDate() - 7)
-      } else if (view === 'day') {
-        newDate.setDate(newDate.getDate() - 1)
-      } else if (view === 'agenda') {
-        newDate.setDate(newDate.getDate() - 7)
-      }
-      return newDate
-    })
-  }, [view])
+  const handlePrev = () => {
+    const newDate = new Date(currentDate)
+    if (view === 'month') {
+      newDate.setMonth(newDate.getMonth() - 1)
+    } else if (view === 'week') {
+      newDate.setDate(newDate.getDate() - 7)
+    } else if (view === 'day') {
+      newDate.setDate(newDate.getDate() - 1)
+    } else if (view === 'agenda') {
+      newDate.setDate(newDate.getDate() - 7)
+    }
+    setCurrentDate(newDate)
+  }
 
-  const handleNext = useCallback(() => {
-    setCurrentDate(prevDate => {
-      const newDate = new Date(prevDate)
-      if (view === 'month') {
-        newDate.setMonth(newDate.getMonth() + 1)
-      } else if (view === 'week') {
-        newDate.setDate(newDate.getDate() + 7)
-      } else if (view === 'day') {
-        newDate.setDate(newDate.getDate() + 1)
-      } else if (view === 'agenda') {
-        newDate.setDate(newDate.getDate() + 7)
-      }
-      return newDate
-    })
-  }, [view])
+  const handleNext = () => {
+    const newDate = new Date(currentDate)
+    if (view === 'month') {
+      newDate.setMonth(newDate.getMonth() + 1)
+    } else if (view === 'week') {
+      newDate.setDate(newDate.getDate() + 7)
+    } else if (view === 'day') {
+      newDate.setDate(newDate.getDate() + 1)
+    } else if (view === 'agenda') {
+      newDate.setDate(newDate.getDate() + 7)
+    }
+    setCurrentDate(newDate)
+  }
 
-  const handleToday = useCallback(() => {
+  const handleToday = () => {
     setCurrentDate(new Date())
-  }, [])
+  }
 
-  const handleDayClickInternal = useCallback((date: Date) => {
+  const handleDayClickInternal = (date: Date) => {
     setSelectedDate(date)
     if (onDayClick) {
       onDayClick(date)
     }
-  }, [onDayClick])
+  }
 
-  const handleAppointmentClick = useCallback((appointment: AppointmentModalType | { id: string; [key: string]: unknown }) => {
+  const handleAppointmentClick = (appointment: any) => {
     if (onAppointmentClick) {
-      // Calendar views use slightly different Appointment types, but they're compatible
-      onAppointmentClick(appointment as AppointmentModalType)
+      onAppointmentClick(appointment)
     }
-  }, [onAppointmentClick])
+  }
 
-  const handleEmptySlotClick = useCallback((date: Date, time: string) => {
+  const handleEmptySlotClick = (date: Date, time: string) => {
     if (onCreateAppointment) {
       onCreateAppointment()
     }
-  }, [onCreateAppointment])
+  }
 
-  const handleCreateAppointment = useCallback(() => {
+  const handleCreateAppointment = () => {
     if (onCreateAppointment) {
       onCreateAppointment()
     }
-  }, [onCreateAppointment])
+  }
 
-  const views: Array<{ value: CalendarView; label: string }> = useMemo(() => [
+  const views: Array<{ value: CalendarView; label: string }> = [
     { value: 'month', label: 'Month' },
     { value: 'week', label: 'Week' },
     { value: 'day', label: 'Day' },
     { value: 'agenda', label: 'Agenda' }
-  ], [])
+  ]
 
-  const getDateDisplay = useCallback(() => {
+  const getDateDisplay = () => {
     if (view === 'month') {
       return currentDate.toLocaleDateString('en-US', {
         month: 'long',
@@ -146,9 +140,9 @@ export const FullCalendarModal = memo(function FullCalendarModal({
         year: 'numeric'
       })
     }
-  }, [view, currentDate])
+  }
 
-  const renderView = useCallback(() => {
+  const renderView = () => {
     switch (view) {
       case 'month':
         return (
@@ -163,7 +157,7 @@ export const FullCalendarModal = memo(function FullCalendarModal({
         return (
           <WeekView
             currentDate={currentDate}
-            onAppointmentClick={(appointment) => handleAppointmentClick(appointment as AppointmentModalType | { id: string; [key: string]: unknown })}
+            onAppointmentClick={handleAppointmentClick}
             onEmptySlotClick={handleEmptySlotClick}
           />
         )
@@ -171,7 +165,7 @@ export const FullCalendarModal = memo(function FullCalendarModal({
         return (
           <DayView
             currentDate={currentDate}
-            onAppointmentClick={(appointment) => handleAppointmentClick(appointment as AppointmentModalType | { id: string; [key: string]: unknown })}
+            onAppointmentClick={handleAppointmentClick}
             onEmptySlotClick={handleEmptySlotClick}
           />
         )
@@ -179,14 +173,14 @@ export const FullCalendarModal = memo(function FullCalendarModal({
         return (
           <AgendaView
             currentDate={currentDate}
-            onAppointmentClick={(appointment) => handleAppointmentClick(appointment as AppointmentModalType | { id: string; [key: string]: unknown })}
+            onAppointmentClick={handleAppointmentClick}
             onCreateAppointment={handleCreateAppointment}
           />
         )
       default:
         return null
     }
-  }, [view, currentDate, selectedDate, handleDayClickInternal, handleAppointmentClick, handleEmptySlotClick, handleCreateAppointment])
+  }
 
   return (
     <Modal
@@ -301,7 +295,5 @@ export const FullCalendarModal = memo(function FullCalendarModal({
       </div>
     </Modal>
   )
-})
-
-FullCalendarModal.displayName = 'FullCalendarModal'
+}
 

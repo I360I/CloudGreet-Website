@@ -69,7 +69,7 @@ export default function CallPlayer({ callId, businessId, className = '' }: CallP
         setRecording(data.recording)
       }
     } catch (error) {
-      logger.error('Error loading recording', { error: error instanceof Error ? error.message : 'Unknown error' })
+      console.error('Error loading recording:', error)
     } finally {
       setIsLoading(false)
     }

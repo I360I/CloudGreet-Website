@@ -18,7 +18,6 @@ import {
 } from 'lucide-react'
 import { useToast } from '@/app/contexts/ToastContext'
 import { Modal } from '@/app/components/ui/Modal'
-import { ConfirmationModal } from '@/app/components/ui/ConfirmationModal'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 type SequenceStep = {
@@ -109,7 +108,6 @@ export default function AcquisitionDesk() {
   const [templateModalOpen, setTemplateModalOpen] = useState(false)
   const [savingSequence, setSavingSequence] = useState(false)
   const [savingTemplate, setSavingTemplate] = useState(false)
-  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ open: boolean; sequenceId: string | null }>({ open: false, sequenceId: null })
 
   const [sequenceForm, setSequenceForm] = useState({
     name: '',
@@ -214,7 +212,8 @@ export default function AcquisitionDesk() {
       }
     }
     load()
-  }, [showError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const orderedTemplates = useMemo(() => {
     return templates.filter((template) => template.isActive).sort((a, b) => a.name.localeCompare(b.name))
@@ -392,13 +391,11 @@ export default function AcquisitionDesk() {
   }
 
   const handleDeleteSequence = async (sequenceId: string) => {
-    setDeleteConfirmModal({ open: true, sequenceId })
-  }
-
-  const confirmDeleteSequence = async () => {
-    if (!deleteConfirmModal.sequenceId) return
+    if (!confirm('Delete this sequence? All scheduled outreach will be cancelled.')) {
+      return
+    }
     try {
-      const response = await fetch(`/api/admin/outreach/sequences/${deleteConfirmModal.sequenceId}`, {
+      const response = await fetch(`/api/admin/outreach/sequences/${sequenceId}`, {
         method: 'DELETE',
         headers: {
         }
@@ -412,12 +409,10 @@ export default function AcquisitionDesk() {
         }
         throw new Error(errorData?.error || `Failed to delete sequence (${response.status})`)
       }
-      showSuccess('Sequence deleted', 'All scheduled outreach has been cancelled.')
-      setDeleteConfirmModal({ open: false, sequenceId: null })
+      showSuccess('Sequence deleted', 'Outreach sequence removed.')
       await fetchSequences()
     } catch (error) {
       showError('Failed to delete sequence', error instanceof Error ? error.message : 'Unexpected error')
-      setDeleteConfirmModal({ open: false, sequenceId: null })
     }
   }
 
@@ -531,12 +526,12 @@ export default function AcquisitionDesk() {
                       const channelLabel = CHANNEL_OPTIONS.find((option) => option.value === step.channel)?.label
                       return (
                         <li key={`${sequence.id}-${step.stepOrder}`} className="flex items-center gap-2">
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-semibold text-white">
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[11px] font-semibold text-white">
                             {step.stepOrder}
                           </span>
                           <span className="font-semibold text-white">{channelLabel}</span>
                           {step.templateId && (
-                            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs uppercase tracking-widest text-slate-400">
+                            <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-widest text-slate-400">
                               uses template
                             </span>
                           )}
@@ -643,7 +638,7 @@ export default function AcquisitionDesk() {
                   <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{template.channel}</p>
                 </div>
                 {template.isDefault && (
-                  <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs uppercase tracking-widest text-slate-300">
+                  <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-slate-300">
                     Default
                   </span>
                 )}
@@ -1106,18 +1101,6 @@ export default function AcquisitionDesk() {
           </div>
         </div>
       </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmationModal
-        open={deleteConfirmModal.open}
-        onClose={() => setDeleteConfirmModal({ open: false, sequenceId: null })}
-        onConfirm={confirmDeleteSequence}
-        title="Delete Sequence"
-        message="Delete this sequence? All scheduled outreach will be cancelled."
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="destructive"
-      />
     </div>
   )
 }

@@ -6,7 +6,6 @@ import { useToast } from '@/app/contexts/ToastContext'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { UserPlus, Users, Loader2, CheckCircle2, XCircle, Shield } from 'lucide-react'
 import { Button } from '@/app/components/ui/Button'
-import { logger } from '@/lib/monitoring'
 
 interface Employee {
   id: string
@@ -59,7 +58,7 @@ export default function EmployeesPage() {
         showError(data.error || 'Failed to load employees')
       }
     } catch (error) {
-      logger.error('Fetch employees error', { error: error instanceof Error ? error.message : 'Unknown error' })
+      console.error('Fetch employees error:', error)
       showError('Network error. Please try again.')
     } finally {
       setLoading(false)

@@ -94,7 +94,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
         setTimeout(() => setMessage(null), 3000)
       }
     } catch (error) {
-      logger.error('Error saving business hours', { error: error instanceof Error ? error.message : 'Unknown error' })
+      console.error('Error saving business hours:', error)
       setMessage({ type: 'error', text: 'Failed to save business hours' })
       setTimeout(() => setMessage(null), 3000)
     } finally {
@@ -306,7 +306,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
               const allClosed = Object.keys(hours).reduce((acc, key) => {
                 if (key === 'timezone') return acc
                 return { ...acc, [key]: { open: '00:00', close: '00:00', closed: true } }
-              }, {} as Record<string, { open: string; close: string; closed: boolean }>)
+              }, {} as any)
               setHours({ ...hours, ...allClosed })
             }}
             className="px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors text-sm"

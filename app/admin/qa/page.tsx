@@ -82,7 +82,8 @@ export default function QAWorkspacePage() {
 
   useEffect(() => {
     loadReviews()
-  }, [statusFilter, showError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()

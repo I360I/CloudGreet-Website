@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { requireAuth } from '@/lib/auth-middleware'
+import { verifyJWT } from '@/lib/auth-middleware'
 import { CONFIG } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
@@ -10,8 +10,22 @@ export const runtime = 'nodejs'
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
-    const authResult = await requireAuth(request)
-    if (!authResult.success || !authResult.userId || !authResult.businessId) {
+    const authResult = await verifyJWT(request)
+    if (!authResult.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Find user's business
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('owner_id', authResult.user.id)
+      .single()
+
+    if (businessError || !business) {
       return NextResponse.json({
         totalCalls: 0,
         answeredCalls: 0,
@@ -23,7 +37,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const businessId = authResult.businessId
+    const businessId = business.id
 
     // Fetch calls
     const { data: calls, count: totalCalls } = await supabaseAdmin

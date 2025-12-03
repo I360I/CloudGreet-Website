@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { requireAuth } from '@/lib/auth-middleware'
+import { verifyJWT } from '@/lib/auth-middleware'
 import { CONFIG } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
@@ -10,8 +10,8 @@ export const runtime = 'nodejs'
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
-    const authResult = await requireAuth(request)
-    if (!authResult.success || !authResult.userId || !authResult.businessId) {
+    const authResult = await verifyJWT(request)
+    if (!authResult.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -19,12 +19,28 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    // Use businessId from auth token, but allow override via query param for admin access
-    const requestedBusinessId = searchParams.get('businessId')
-    const businessId = requestedBusinessId || authResult.businessId
+    const businessId = searchParams.get('businessId')
 
-    // Verify tenant isolation - user can only access their own business
-    if (businessId !== authResult.businessId) {
+    if (!businessId) {
+      return NextResponse.json({ error: 'businessId required' }, { status: 400 })
+    }
+
+    // Verify business ownership
+    const { data: business, error: businessError } = await supabaseAdmin
+      .from('businesses')
+      .select('id, owner_id')
+      .eq('id', businessId)
+      .single()
+
+    if (businessError || !business) {
+      logger.error('Business not found', { businessId, error: businessError?.message || JSON.stringify(businessError) })
+      return NextResponse.json(
+        { error: 'Business not found' },
+        { status: 404 }
+      )
+    }
+
+    if (business.owner_id !== authResult.user.id) {
       return NextResponse.json(
         { error: 'Unauthorized: You do not have access to this business' },
         { status: 403 }

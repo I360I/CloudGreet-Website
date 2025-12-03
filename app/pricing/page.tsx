@@ -6,8 +6,6 @@ import Link from 'next/link'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
-import { SkeletonTable } from '@/app/components/ui/SkeletonLoader'
-import type { ServiceType, UnitType } from '@/lib/types/pricing'
 import { 
   Plus, 
   Edit, 
@@ -40,33 +38,43 @@ export default function PricingPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showAddRule, setShowAddRule] = useState(false)
   const [editingRule, setEditingRule] = useState<PricingRule | null>(null)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [businessId, setBusinessId] = useState('')
 
   const primaryColor = theme?.primaryColor || '#8b5cf6'
 
   useEffect(() => {
-    // Load pricing rules - API will get business ID from auth token
-    loadPricingRules()
+    // Get business ID from localStorage or API
+    const token = localStorage.getItem('token')
+    if (token) {
+      // Get business ID from user data
+      const user = localStorage.getItem('user')
+      if (user) {
+        try {
+          const userData = JSON.parse(user)
+          setBusinessId(userData.business_id || userData.id)
+          loadPricingRules()
+        } catch (error) {
+          logger.error('Error parsing user data:', { error: error instanceof Error ? error.message : 'Unknown error' })
+          setIsLoading(false)
+        }
+      } else {
+        setIsLoading(false)
+      }
+    } else {
+      setIsLoading(false)
+    }
   }, [])
 
   const loadPricingRules = async () => {
     try {
-      // API will automatically get business ID from auth token via requireAuth
-      const response = await fetchWithAuth('/api/pricing/rules')
+      const { fetchWithAuth } = await import('@/lib/auth/fetch-with-auth')
+      const response = await fetchWithAuth(`/api/pricing/rules?business_id=${businessId}`)
       if (response.ok) {
         const data = await response.json()
-        if (data.success) {
-          setPricingRules(data.rules || [])
-          setIsAuthenticated(true)
-        }
-      } else if (response.status === 401) {
-        // User not authenticated
-        setIsAuthenticated(false)
-        setPricingRules([])
+        setPricingRules(data.rules || [])
       }
     } catch (error) {
       logger.error('Error loading pricing rules:', { error: error instanceof Error ? error.message : 'Unknown error' })
-      setIsAuthenticated(false)
     } finally {
       setIsLoading(false)
     }
@@ -74,13 +82,15 @@ export default function PricingPage() {
 
   const handleAddRule = async (ruleData: Partial<PricingRule>) => {
     try {
-      // API will automatically get business ID from auth token
       const response = await fetchWithAuth('/api/pricing/rules', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(ruleData)
+        body: JSON.stringify({
+          ...ruleData,
+          business_id: businessId
+        })
       })
 
       if (response.ok) {
@@ -146,17 +156,17 @@ export default function PricingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-white p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="h-12 w-64 bg-gray-700/50 rounded animate-pulse mb-8" />
-          <SkeletonTable rows={5} columns={4} />
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderColor: primaryColor + '50', borderTopColor: primaryColor }}></div>
+          <p className="text-white text-lg">Loading Pricing Rules...</p>
         </div>
       </div>
     )
   }
 
-  // If not authenticated, show login prompt
-  if (isAuthenticated === false && !isLoading) {
+  // If no business ID, show login prompt
+  if (!businessId) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
@@ -188,7 +198,7 @@ export default function PricingPage() {
                     <Brain className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-white">CloudGreet</h1>
+                    <h1 className="text-2xl font-bold text-white">CloudGreet</h1>
                     <p className="text-xs text-gray-400 font-medium">AI RECEPTIONIST</p>
                   </div>
                 </div>
@@ -209,17 +219,16 @@ export default function PricingPage() {
         {/* Page Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2">Pricing Rules</h2>
+            <h2 className="text-3xl font-bold text-white mb-2">Pricing Rules</h2>
             <p className="text-gray-400">Configure pricing rules for AI-generated quotes and estimates</p>
           </div>
           
           <button
             onClick={() => setShowAddRule(true)}
-            className="text-white px-4 py-3 min-h-[44px] rounded-lg text-sm font-medium shadow-lg transition-all duration-300 hover:opacity-90 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black"
+            className="text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-300 hover:opacity-90 flex items-center gap-2"
             style={{ backgroundColor: primaryColor }}
-            aria-label="Add new pricing rule"
           >
-            <Plus className="w-5 h-5" aria-hidden="true" />
+            <Plus className="w-5 h-5" />
             <span>Add Rule</span>
           </button>
         </div>
@@ -242,17 +251,15 @@ export default function PricingPage() {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setEditingRule(rule)}
-                    className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-black"
-                    aria-label={`Edit pricing rule: ${rule.name}`}
+                    className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
                   >
-                    <Edit className="w-4 h-4 text-gray-300" aria-hidden="true" />
+                    <Edit className="w-4 h-4 text-gray-300" />
                   </button>
                   <button
                     onClick={() => handleDeleteRule(rule.id)}
-                    className="p-2 rounded-lg bg-red-600 hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-black"
-                    aria-label={`Delete pricing rule: ${rule.name}`}
+                    className="p-2 rounded-lg bg-red-600 hover:bg-red-700 transition-colors"
                   >
-                    <Trash2 className="w-4 h-4 text-white" aria-hidden="true" />
+                    <Trash2 className="w-4 h-4 text-white" />
                   </button>
                 </div>
               </div>
@@ -303,9 +310,8 @@ export default function PricingPage() {
             <p className="text-gray-400 mb-6">Create your first pricing rule to enable AI-generated quotes</p>
             <button
               onClick={() => setShowAddRule(true)}
-              className="text-white px-6 py-3 min-h-[44px] rounded-lg font-medium shadow-lg transition-all duration-300 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black"
+              className="text-white px-6 py-3 rounded-lg font-medium shadow-lg transition-all duration-300 hover:opacity-90"
               style={{ backgroundColor: primaryColor }}
-              aria-label="Add first pricing rule"
             >
               Add First Rule
             </button>
@@ -376,7 +382,7 @@ function RuleModal({ rule, onSave, onClose }: {
             <label className="block text-gray-300 text-sm font-medium mb-2">Service Type</label>
             <select
               value={formData.service_type}
-              onChange={(e) => setFormData({ ...formData, service_type: e.target.value as ServiceType })}
+              onChange={(e) => setFormData({ ...formData, service_type: e.target.value as any })}
               className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
               style={{ 
                 '--tw-ring-color': primaryColor + '50'
@@ -437,7 +443,7 @@ function RuleModal({ rule, onSave, onClose }: {
               <label className="block text-gray-300 text-sm font-medium mb-2">Unit Type</label>
               <select
                 value={formData.unit_type}
-                onChange={(e) => setFormData({ ...formData, unit_type: e.target.value as UnitType })}
+                onChange={(e) => setFormData({ ...formData, unit_type: e.target.value as any })}
                 className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
                 style={{ 
                   '--tw-ring-color': primaryColor + '50'

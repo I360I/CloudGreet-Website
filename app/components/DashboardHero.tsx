@@ -1,15 +1,13 @@
 'use client'
 
-import React, { useState, memo, useCallback } from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Phone, DollarSign, Calendar, Zap } from 'lucide-react'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { LoadingSkeleton } from './ui/LoadingSkeleton'
 import { AnimatedNumber } from './ui/AnimatedNumber'
-import { Button } from './ui/Button'
 import { cn } from '@/lib/utils'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { logger } from '@/lib/monitoring'
 
 interface DashboardHeroProps {
   timeframe?: '7d' | '30d' | '90d' | 'custom'
@@ -22,7 +20,7 @@ interface QuickStats {
   appointmentsToday: number
 }
 
-export const DashboardHero = memo(function DashboardHero({
+export function DashboardHero({
   timeframe = '7d',
   onTimeframeChange
 }: DashboardHeroProps) {
@@ -30,7 +28,11 @@ export const DashboardHero = memo(function DashboardHero({
   const [stats, setStats] = useState<QuickStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
 
-  const loadQuickStats = useCallback(async () => {
+  React.useEffect(() => {
+    loadQuickStats()
+  }, [])
+
+  const loadQuickStats = async () => {
     try {
       setStatsLoading(true)
       // Fetch quick stats from dashboard data API
@@ -44,15 +46,11 @@ export const DashboardHero = memo(function DashboardHero({
         })
       }
     } catch (err) {
-      logger.error('Failed to load quick stats', { error: err instanceof Error ? err.message : 'Unknown error' })
+      console.error('Failed to load quick stats', err)
     } finally {
       setStatsLoading(false)
     }
-  }, [])
-
-  React.useEffect(() => {
-    loadQuickStats()
-  }, [loadQuickStats])
+  }
 
   if (loading || !theme || !business) {
     return (
@@ -87,10 +85,10 @@ export const DashboardHero = memo(function DashboardHero({
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-1">
+          <h1 className="text-3xl font-bold text-white mb-1">
             Welcome back, {business.name}
           </h1>
-          <p className="text-slate-400 text-sm md:text-base">
+          <p className="text-slate-400 text-sm">
             Here's what's happening with your business today
           </p>
         </div>
@@ -203,40 +201,38 @@ export const DashboardHero = memo(function DashboardHero({
         {timeframes.map((tf, index) => {
           const isActive = timeframe === tf.value
           return (
-            <motion.div
+            <motion.button
               key={tf.value}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 + index * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onTimeframeChange?.(tf.value)}
+              className={cn(
+                'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300',
+                isActive
+                  ? 'text-white'
+                  : 'text-slate-400 hover:text-white'
+              )}
+              style={
+                isActive
+                  ? {
+                      backgroundColor: primaryColor,
+                      color: 'white',
+                      boxShadow: `0 4px 12px ${primaryColor}40`
+                    }
+                  : {
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                    }
+              }
             >
-              <Button
-                onClick={() => onTimeframeChange?.(tf.value)}
-                variant={isActive ? 'default' : 'ghost'}
-                size="sm"
-                primaryColor={isActive ? primaryColor : undefined}
-                className={cn(
-                  'px-4 py-2 text-sm font-medium transition-all duration-300',
-                  !isActive && 'bg-white/5 hover:bg-white/10'
-                )}
-                style={
-                  isActive
-                    ? {
-                        boxShadow: `0 4px 12px ${primaryColor}40`
-                      }
-                    : undefined
-                }
-                aria-label={`View ${tf.label} timeframe`}
-                aria-pressed={isActive}
-              >
-                {tf.label}
-              </Button>
-            </motion.div>
+              {tf.label}
+            </motion.button>
           )
         })}
       </div>
     </motion.div>
   )
-})
-
-DashboardHero.displayName = 'DashboardHero'
+}
 

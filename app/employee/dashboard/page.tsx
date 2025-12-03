@@ -184,9 +184,13 @@ export default function EmployeeDashboardPage() {
   const [activeScope, setActiveScope] = useState<'self' | 'team'>('self')
 
   const authHeaders = useMemo(() => {
-    // Token is automatically included via fetchWithAuth
-    // No need to manually add headers - fetchWithAuth handles it
-    return {}
+    if (typeof window === 'undefined') return {}
+    const token = localStorage.getItem('token')
+    return token
+      ? {
+          Authorization: `Bearer ${token}`
+        }
+      : {}
   }, [])
 
   const fetchLeads = useCallback(
@@ -572,7 +576,7 @@ export default function EmployeeDashboardPage() {
                                 <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-400">
                                   {lead.email && <span>{lead.email}</span>}
                                   {lead.phone && <span>{lead.phone}</span>}
-                                  <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-xs uppercase tracking-wider text-slate-400">
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.3em] text-slate-400">
                                     Last touch {formatTimeAgo(lead.last_outreach_at)}
                                   </span>
                                 </div>
@@ -912,7 +916,7 @@ export default function EmployeeDashboardPage() {
                                 <p className="mt-1 text-xs text-slate-400">{activity.notes}</p>
                               )}
                               {activity.follow_up_at && (
-                                <p className="mt-1 text-xs uppercase tracking-wider text-slate-500">
+                                <p className="mt-1 text-[11px] uppercase tracking-[0.3em] text-slate-500">
                                   Follow-up {formatDate(activity.follow_up_at)}
                                 </p>
                               )}
@@ -934,11 +938,11 @@ export default function EmployeeDashboardPage() {
                             <div key={event.id} className="rounded-2xl border border-white/10 bg-black/60 p-3 text-xs text-slate-200">
                               <div className="flex items-center justify-between">
                                 <span className="capitalize">{event.channel}</span>
-                                <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-xs uppercase tracking-wider">
+                                <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.3em]">
                                   {event.status}
                                 </span>
                               </div>
-                              <p className="mt-1 text-xs text-slate-400">
+                              <p className="mt-1 text-[11px] text-slate-400">
                                 {new Date(event.created_at).toLocaleString()}
                               </p>
                             </div>

@@ -7,7 +7,6 @@ import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { Modal } from './ui/Modal'
-import { Button } from './ui/Button'
 
 interface SMSReplyModalProps {
   isOpen: boolean,
@@ -128,43 +127,45 @@ export default function SMSReplyModal({ isOpen, onClose, contact, businessId }: 
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {quickReplies.map((reply, index) => (
-                  <Button
+                  <button
                     key={index}
                     onClick={() => setMessage(reply)}
-                    variant="outline"
-                    size="sm"
-                    className="p-2 text-xs text-left bg-slate-800/50 hover:bg-slate-800/70 border border-slate-700/50 text-slate-300"
+                    className="p-2 text-xs text-left bg-slate-800/50 hover:bg-slate-800/70 border border-slate-700/50 rounded-lg transition-colors text-slate-300"
                     aria-label={`Use quick reply: ${reply}`}
                   >
                     {reply}
-                  </Button>
+                  </button>
                 ))}
               </div>
             </div>
 
             <div className="flex space-x-3 pt-4 border-t border-slate-700/50">
-              <Button
+              <button
                 onClick={onClose}
-                variant="outline"
-                fullWidth
-                className="px-4 py-2 border border-slate-700/50 text-slate-300 hover:bg-slate-800/50"
+                className="flex-1 px-4 py-2 border border-slate-700/50 text-slate-300 rounded-lg hover:bg-slate-800/50 transition-colors"
                 aria-label="Cancel sending SMS"
               >
                 Cancel
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={handleSend}
                 disabled={!message.trim() || sending}
-                loading={sending}
-                primaryColor={primaryColor}
-                icon={!sending ? <Send className="w-4 h-4" /> : undefined}
-                iconPosition="left"
-                fullWidth
-                className="px-4 py-2 text-white"
+                className="flex-1 px-4 py-2 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+                style={{ backgroundColor: primaryColor }}
                 aria-label="Send SMS message"
               >
-                {sending ? 'Sending...' : 'Send SMS'}
-              </Button>
+                {sending ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>Send SMS</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}

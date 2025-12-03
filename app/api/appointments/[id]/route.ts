@@ -180,21 +180,7 @@ export async function PUT(
     }
 
     // Prepare update data
-    interface AppointmentUpdateData {
-      customer_name?: string
-      customer_phone?: string
-      customer_email?: string | null
-      service_type?: string
-      scheduled_date?: string
-      start_time?: string
-      end_time?: string
-      duration?: number
-      status?: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
-      estimated_value?: number | null
-      address?: string | null
-      notes?: string | null
-    }
-    const updateData: AppointmentUpdateData = {}
+    const updateData: any = {}
 
     if (validated.customer_name !== undefined) {
       updateData.customer_name = validated.customer_name

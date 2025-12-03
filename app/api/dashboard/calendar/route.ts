@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import type { CalendarResponse } from '@/lib/types/calendar'
 import { moderateRateLimit } from '@/lib/rate-limiting-redis'
 
 export const dynamic = 'force-dynamic'
@@ -82,7 +81,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Format response based on view
-    let responseData: CalendarResponse
+    let responseData: any
 
     switch (view) {
       case 'month': {

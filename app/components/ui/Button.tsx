@@ -42,118 +42,20 @@ export interface ButtonProps
   asChild?: boolean
   loading?: boolean
   success?: boolean
-  primaryColor?: string
-  icon?: React.ReactNode
-  iconPosition?: 'left' | 'right'
-  fullWidth?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ 
-    className, 
-    variant, 
-    size, 
-    asChild = false, 
-    loading, 
-    success, 
-    disabled,
-    primaryColor,
-    icon,
-    iconPosition = 'left',
-    fullWidth,
-    children,
-    ...props 
-  }, ref) => {
-    // Determine if icon-only button (for ARIA label auto-generation)
-    const isIconOnly = !children && !!icon
+  ({ className, variant, size, asChild = false, loading, success, disabled, ...props }, ref) => {
+    const Comp = asChild ? Slot : motion.button
     
-    // Auto-generate ARIA label for icon-only buttons if not provided
-    const ariaLabel = isIconOnly && !props['aria-label']
-      ? props['aria-label'] || 'Button'
-      : props['aria-label']
-    
-    // Apply primaryColor to style if provided
-    const style = primaryColor 
-      ? { backgroundColor: primaryColor, ...props.style }
-      : props.style
-    
-    // Separate motion props from regular props for type safety when using asChild
-    // Extract animation event handlers that conflict with motion props
-    const {
-      onAnimationStart,
-      onAnimationEnd,
-      onAnimationIteration,
-      ...restProps
-    } = props as React.ButtonHTMLAttributes<HTMLButtonElement>
-    
-    if (asChild) {
-      // When asChild is true, use Slot (no motion props)
-      // Slot only accepts specific props, so we filter out incompatible ones
-      const slotProps = {
-        className: cn(
-          buttonVariants({ variant, size }),
-          fullWidth && 'w-full',
-          'min-h-[44px]',
-          className
-        ),
-        style,
-        'aria-label': ariaLabel,
-        ...(disabled || loading ? { disabled: true } : {}),
-      }
-      
-      return (
-        <Slot
-          {...slotProps as any}
-        >
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mr-2"
-            >
-              <Loader2 className="h-4 w-4 animate-spin" />
-            </motion.div>
-          )}
-          {success && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="mr-2"
-            >
-              ✓
-            </motion.div>
-          )}
-          {icon && iconPosition === 'left' && (
-            <span className="mr-2 flex items-center">{icon}</span>
-          )}
-          {children}
-          {icon && iconPosition === 'right' && (
-            <span className="ml-2 flex items-center">{icon}</span>
-          )}
-        </Slot>
-      )
-    }
-    
-    // When asChild is false, use motion.button (with motion props)
     const buttonContent = (
-      <motion.button
+      <Comp
         ref={ref}
-        className={cn(
-          buttonVariants({ variant, size }),
-          fullWidth && 'w-full',
-          'min-h-[44px]',
-          className
-        )}
-        style={style}
-        aria-label={ariaLabel}
+        className={cn(buttonVariants({ variant, size, className }))}
         whileHover={!disabled && !loading ? { scale: 1.02 } : undefined}
         whileTap={!disabled && !loading ? { scale: 0.98 } : undefined}
         disabled={disabled || loading}
-        {...(onAnimationStart ? { onAnimationStart: onAnimationStart as any } : {})}
-        {...(onAnimationEnd ? { onAnimationEnd: onAnimationEnd as any } : {})}
-        {...(onAnimationIteration ? { onAnimationIteration: onAnimationIteration as any } : {})}
-        {...(restProps as any)}
+        {...props}
       >
         {loading && (
           <motion.div
@@ -174,15 +76,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             ✓
           </motion.div>
         )}
-        {icon && iconPosition === 'left' && (
-          <span className="mr-2 flex items-center">{icon}</span>
-        )}
-        {children}
-        {icon && iconPosition === 'right' && (
-          <span className="ml-2 flex items-center">{icon}</span>
-        )}
-      </motion.button>
+        {props.children}
+      </Comp>
     )
+
+    if (asChild) {
+      return buttonContent
+    }
 
     return buttonContent
   }

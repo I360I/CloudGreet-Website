@@ -85,7 +85,8 @@ export default function BillingDashboardPage() {
 
   useEffect(() => {
     fetchSummary()
-  }, [showError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const stats = useMemo(() => {
     if (!summary) {
@@ -151,9 +152,6 @@ export default function BillingDashboardPage() {
         throw new Error('Unable to export CSV')
       }
       const blob = await response.blob()
-      if (typeof window === 'undefined' || typeof document === 'undefined') {
-        throw new Error('Browser APIs not available')
-      }
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url

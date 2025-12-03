@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, memo, useCallback, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Calendar } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -8,7 +8,6 @@ import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { LoadingSkeleton } from './ui/LoadingSkeleton'
 import { EmptyState } from './ui/EmptyState'
 import { cn } from '@/lib/utils'
-import { logger } from '@/lib/monitoring'
 
 interface DayData {
   date: string
@@ -29,7 +28,7 @@ interface WeekCalendarWidgetProps {
   onFullCalendarClick?: () => void
 }
 
-export const WeekCalendarWidget = memo(function WeekCalendarWidget({
+export function WeekCalendarWidget({
   onDayClick,
   onFullCalendarClick
 }: WeekCalendarWidgetProps) {
@@ -75,23 +74,23 @@ export const WeekCalendarWidget = memo(function WeekCalendarWidget({
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
-      logger.error('Failed to load week calendar', { error: err instanceof Error ? err.message : 'Unknown error' })
+      console.error('Failed to load week calendar', err)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDayClick = useCallback((date: string) => {
+  const handleDayClick = (date: string) => {
     if (onDayClick) {
       onDayClick(date)
     }
-  }, [onDayClick])
+  }
 
-  const handleFullCalendarClick = useCallback(() => {
+  const handleFullCalendarClick = () => {
     if (onFullCalendarClick) {
       onFullCalendarClick()
     }
-  }, [onFullCalendarClick])
+  }
 
   if (businessLoading || loading) {
     return (
@@ -147,7 +146,7 @@ export const WeekCalendarWidget = memo(function WeekCalendarWidget({
 
       {/* Days Row */}
       <div className="flex gap-2">
-        {days && days.length > 0 ? days.map((day, index) => {
+        {days.map((day, index) => {
           const isToday = day.isToday
           const hasAppointments = day.count > 0
           const maxDots = 3
@@ -164,12 +163,13 @@ export const WeekCalendarWidget = memo(function WeekCalendarWidget({
               className={cn(
                 'relative w-[45px] h-[45px] flex flex-col items-center justify-center rounded-lg transition-all',
                 isToday
-                  ? 'border-2 ring-2 ring-opacity-50'
+                  ? 'border-2 ring-2'
                   : 'border border-white/10',
                 hasAppointments ? 'bg-white/10' : 'bg-white/5'
               )}
               style={{
                 borderColor: isToday ? primaryColor : undefined,
+                ringColor: isToday ? `${primaryColor}50` : undefined,
                 boxShadow: isToday ? `0 2px 8px ${primaryColor}30` : '0 1px 3px rgba(0, 0, 0, 0.1)'
               }}
               aria-label={`${day.dayName}, ${day.dayName} ${day.dayNumber} - ${day.count} appointments`}
@@ -185,7 +185,7 @@ export const WeekCalendarWidget = memo(function WeekCalendarWidget({
               </span>
 
               {/* Appointment Dots */}
-              {hasAppointments && day.appointments && day.appointments.length > 0 && (
+              {hasAppointments && (
                 <motion.div 
                   className="flex items-center justify-center gap-0.5 mt-0.5"
                   initial={{ opacity: 0, scale: 0 }}
@@ -210,7 +210,7 @@ export const WeekCalendarWidget = memo(function WeekCalendarWidget({
                           initial={{ opacity: 0, scale: 0 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: index * 0.05 + 0.2, type: 'spring', stiffness: 300 }}
-                          className="text-xs font-semibold px-1 py-0.5 rounded"
+                          className="text-[8px] font-semibold px-1 py-0.5 rounded"
                           style={{
                             backgroundColor: primaryColor,
                             color: 'white'
@@ -228,7 +228,7 @@ export const WeekCalendarWidget = memo(function WeekCalendarWidget({
                   initial={{ opacity: 0, scale: 0, rotate: -180 }}
                   animate={{ opacity: 1, scale: 1, rotate: 0 }}
                   transition={{ delay: index * 0.05 + 0.3, type: 'spring', stiffness: 300 }}
-                  className="absolute -top-1 -right-1 text-xs font-bold px-1 py-0.5 rounded"
+                  className="absolute -top-1 -right-1 text-[8px] font-bold px-1 py-0.5 rounded"
                   style={{
                     backgroundColor: primaryColor,
                     color: 'white'
@@ -239,22 +239,16 @@ export const WeekCalendarWidget = memo(function WeekCalendarWidget({
               )}
             </motion.button>
           )
-        }) : (
-          <div className="w-full text-center py-4">
-            <p className="text-slate-400 text-sm">Loading calendar...</p>
-          </div>
-        )}
+        })}
       </div>
 
       {/* Empty State */}
-      {days && days.length > 0 && days.every(day => day.count === 0) && (
+      {days.every(day => day.count === 0) && (
         <div className="mt-2 text-center">
           <p className="text-xs text-slate-400">No appointments this week</p>
         </div>
       )}
     </motion.div>
   )
-})
-
-WeekCalendarWidget.displayName = 'WeekCalendarWidget'
+}
 

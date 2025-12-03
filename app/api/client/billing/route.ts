@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     if (business.stripe_customer_id && process.env.STRIPE_SECRET_KEY) {
       try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-          apiVersion: '2023-10-16' as Stripe.LatestApiVersion
+          apiVersion: '2023-10-16' as any
         })
 
         // Get active subscriptions

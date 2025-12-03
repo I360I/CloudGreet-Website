@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { logger } from '@/lib/monitoring'
 import {
   Users,
   UserPlus,
@@ -72,28 +71,45 @@ export default function AdminLayout({
     }
 
     const checkAuth = async () => {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        router.push('/admin/login')
+        return
+      }
+
       try {
-        const { fetchWithAuth } = await import('@/lib/auth/fetch-with-auth')
-        const response = await fetchWithAuth('/api/admin/clients?limit=1')
+        // Use direct fetch with token instead of fetchWithAuth to avoid async token fetching issues
+        const response = await fetch('/api/admin/clients?limit=1', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        })
         
         if (!response.ok) {
           if (response.status === 401) {
+            localStorage.removeItem('token')
             router.push('/admin/login')
             return
           }
         }
         
-        // Try to get user info from response or set default
+        // Try to get user info from token
         try {
-          const data = await response.json()
-          setUserEmail(data.user?.email || 'Admin')
+          const tokenParts = token.split('.')
+          if (tokenParts.length === 3) {
+            const tokenData = JSON.parse(atob(tokenParts[1]))
+            setUserEmail(tokenData.email || 'Admin')
+          } else {
+            setUserEmail('Admin')
+          }
         } catch {
           setUserEmail('Admin')
         }
         
         setCheckingAuth(false)
       } catch (error) {
-        logger.error('Auth check error', { error: error instanceof Error ? error.message : 'Unknown error' })
+        console.error('Auth check error:', error)
         // Don't redirect on network errors - just show loading state
         setCheckingAuth(false)
       }
@@ -102,16 +118,8 @@ export default function AdminLayout({
     checkAuth()
   }, [router, pathname])
 
-  const handleLogout = async () => {
-    try {
-      // Call logout API to clear server-side session
-      const { fetchWithAuth } = await import('@/lib/auth/fetch-with-auth')
-      await fetchWithAuth('/api/auth/logout', { method: 'POST' }).catch(() => {
-        // Ignore errors on logout
-      })
-    } catch {
-      // Ignore errors
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('token')
     showSuccess('Logged out successfully')
     router.push('/admin/login')
   }

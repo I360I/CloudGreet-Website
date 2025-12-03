@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   CheckCircle, ArrowRight, ArrowLeft, Building,
@@ -8,11 +8,6 @@ import {
   Shield, Zap, Star, Clock, MapPin,
   Mail, Globe, Users, Target, X, Gift, AlertCircle
 } from 'lucide-react'
-import { logger } from '@/lib/monitoring'
-import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { Button } from './ui/Button'
-import { FormField } from './ui/FormField'
-import { Input } from './ui/Input'
 
 interface OnboardingWizardProps {
   isOpen: boolean
@@ -25,54 +20,42 @@ interface OnboardingWizardProps {
 export default function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingInitialData, setIsLoadingInitialData] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  // Load initial data from API
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const response = await fetchWithAuth('/api/onboarding/state')
-        if (response.ok) {
-          const data = await response.json()
-          if (data.success && data.business) {
-            setFormData(prev => ({
-              ...prev,
-              businessName: data.business.business_name || '',
-              businessType: data.business.business_type || 'HVAC',
-              email: data.business.email || '',
-              phone: data.business.phone || data.business.phone_number || '',
-              website: data.business.website || '',
-              address: data.business.address || '',
-              services: data.business.services || [],
-              serviceAreas: data.business.service_areas || [],
-              businessHours: data.business.business_hours || prev.businessHours,
-              greetingMessage: data.business.greeting_message || '',
-              tone: data.business.tone || 'professional',
-            }))
+  // Load initial data from localStorage if available
+  const getInitialData = () => {
+    if (typeof window !== 'undefined') {
+      const businessData = localStorage.getItem('businessData')
+      if (businessData) {
+        try {
+          const parsed = JSON.parse(businessData)
+          return {
+            businessName: parsed.business_name || '',
+            businessType: parsed.business_type || 'HVAC', // Already mapped in Hero component
+            email: parsed.email || '',
+            phone: parsed.phone || '',
+            website: parsed.website || '',
+            address: parsed.address || '',
           }
+        } catch (parseError) {
+          // If JSON is invalid, clear it and return defaults
+          localStorage.removeItem('businessData')
         }
-      } catch (err) {
-        logger.error('Failed to load onboarding state', { error: err instanceof Error ? err.message : 'Unknown error' })
-        // Continue with defaults
-      } finally {
-        setIsLoadingInitialData(false)
       }
     }
-    
-    if (isOpen) {
-      loadInitialData()
+    return {
+      businessName: '',
+      businessType: 'HVAC',
+      email: '',
+      phone: '',
+      website: '',
+      address: '',
     }
-  }, [isOpen])
+  }
   
   const [formData, setFormData] = useState({
     // Business Basics
-    businessName: '',
-    businessType: 'HVAC',
-    email: '',
-    phone: '',
-    website: '',
-    address: '',
+    ...getInitialData(),
     
     // Services
     services: [] as string[],
@@ -251,7 +234,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
         setError('Onboarding completed but verification failed. Please check your dashboard.')
       }
     } catch (error) {
-      logger.error('Error completing onboarding', { error: error instanceof Error ? error.message : 'Unknown error' })
+      console.error('Error completing onboarding:', error)
       setError('Failed to complete setup. Please try again.')
     } finally {
       setIsLoading(false)
@@ -276,98 +259,91 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
               </div>
             )}
             
-            <FormField
-              label="Business Name"
-              required
-            >
-              <Input
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Business Name *
+              </label>
+              <input
                 type="text"
                 value={formData.businessName}
                 onChange={(e) => setFormData({...formData, businessName: e.target.value})}
-                className="px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl"
+                className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 placeholder="Enter your business name"
               />
-            </FormField>
+            </div>
             
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Business Type *
               </label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {businessTypes.map((type) => {
-                  const isSelected = formData.businessType === type.value
-                  return (
-                    <motion.div
-                      key={type.value}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Button
-                        onClick={() => setFormData({...formData, businessType: type.value})}
-                        variant={isSelected ? 'default' : 'outline'}
-                        className={`p-4 h-auto flex flex-col items-center justify-center ${
-                          isSelected
-                            ? 'border-blue-500 bg-blue-500/10'
-                            : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
-                        }`}
-                        aria-pressed={isSelected}
-                        aria-label={`Select ${type.label} business type`}
-                      >
-                        <div className="text-2xl mb-2">{type.icon}</div>
-                        <div className="text-white font-medium">{type.label}</div>
-                      </Button>
-                    </motion.div>
-                  )
-                })}
+                {businessTypes.map((type) => (
+                  <motion.button
+                    key={type.value}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setFormData({...formData, businessType: type.value})}
+                    className={`p-4 rounded-xl border-2 transition-all ${
+                      formData.businessType === type.value
+                        ? 'border-blue-500 bg-blue-500/10'
+                        : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
+                    }`}
+                  >
+                    <div className="text-2xl mb-2">{type.icon}</div>
+                    <div className="text-white font-medium">{type.label}</div>
+                  </motion.button>
+                ))}
               </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
-              <FormField
-                label="Business Phone"
-                required
-              >
-                <Input
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Business Phone *
+                </label>
+                <input
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  className="px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl"
+                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   placeholder="(833) 395-6731"
                 />
-              </FormField>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                label="Email Address"
-                required
-              >
-                <Input
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Email Address *
+                </label>
+                <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  className="px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl"
+                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   placeholder="your@business.com"
                 />
-              </FormField>
+              </div>
               
-              <FormField
-                label="Website"
-              >
-                <Input
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Website
+                </label>
+                <input
                   type="url"
                   value={formData.website}
                   onChange={(e) => setFormData({...formData, website: e.target.value})}
-                  className="px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl"
+                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   placeholder="https://yourwebsite.com"
                 />
-              </FormField>
+              </div>
             </div>
             
-            <FormField
-              label="Business Address"
-            >
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Business Address
+              </label>
               <textarea
                 value={formData.address}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
@@ -375,7 +351,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
                 placeholder="123 Main St, City, State 12345"
                 rows={3}
               />
-            </FormField>
+            </div>
           </div>
         )
         
@@ -533,31 +509,22 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
                   { value: 'professional', label: 'Professional', description: 'Formal and business-like' },
                   { value: 'friendly', label: 'Friendly', description: 'Warm and approachable' },
                   { value: 'casual', label: 'Casual', description: 'Relaxed and conversational' }
-                ].map((tone) => {
-                  const isSelected = formData.tone === tone.value
-                  return (
-                    <motion.div
-                      key={tone.value}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Button
-                        onClick={() => setFormData({...formData, tone: tone.value})}
-                        variant={isSelected ? 'default' : 'outline'}
-                        className={`p-4 h-auto text-left ${
-                          isSelected
-                            ? 'border-blue-500 bg-blue-500/10'
-                            : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
-                        }`}
-                        aria-pressed={isSelected}
-                        aria-label={`Select ${tone.label} tone`}
-                      >
-                        <div className="text-white font-medium mb-1">{tone.label}</div>
-                        <div className="text-gray-400 text-sm">{tone.description}</div>
-                      </Button>
-                    </motion.div>
-                  )
-                })}
+                ].map((tone) => (
+                  <motion.button
+                    key={tone.value}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setFormData({...formData, tone: tone.value})}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${
+                      formData.tone === tone.value
+                        ? 'border-blue-500 bg-blue-500/10'
+                        : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
+                    }`}
+                  >
+                    <div className="text-white font-medium mb-1">{tone.label}</div>
+                    <div className="text-gray-400 text-sm">{tone.description}</div>
+                  </motion.button>
+                ))}
               </div>
             </div>
           </div>
@@ -756,15 +723,12 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
                   <span>{steps[currentStep].why}</span>
                 </div>
               </div>
-              <Button
+              <button
                 onClick={onClose}
-                variant="ghost"
-                size="icon"
-                className="p-2 bg-gray-700/50 hover:bg-gray-600/50"
-                aria-label="Close onboarding wizard"
+                className="p-2 rounded-lg bg-gray-700/50 hover:bg-gray-600/50 transition-colors"
               >
                 <X className="w-6 h-6 text-gray-300" />
-              </Button>
+              </button>
             </div>
             
             {/* Progress Bar */}
@@ -819,30 +783,36 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
           {/* Footer */}
           <div className="border-t border-gray-700/50 p-6">
             <div className="flex items-center justify-between">
-              <Button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handlePrevious}
                 disabled={currentStep === 0}
-                variant="outline"
-                icon={<ArrowLeft className="w-5 h-5" />}
-                iconPosition="left"
-                className="px-6 py-3 bg-gray-700/50 hover:bg-gray-600/50"
-                aria-label="Go to previous step"
+                className="flex items-center space-x-2 px-6 py-3 bg-gray-700/50 text-white rounded-lg font-medium hover:bg-gray-600/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Previous
-              </Button>
+                <ArrowLeft className="w-5 h-5" />
+                <span>Previous</span>
+              </motion.button>
               
-              <Button
+              <motion.button
+                whileHover={{ scale: isLoading ? 1 : 1.05 }}
+                whileTap={{ scale: isLoading ? 1 : 0.95 }}
                 onClick={handleNext}
                 disabled={isLoading}
-                loading={isLoading}
-                variant="default"
-                icon={!isLoading && <ArrowRight className="w-5 h-5" />}
-                iconPosition="right"
-                className="px-8 py-3 bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/20"
-                aria-label={currentStep === steps.length - 1 ? 'Complete onboarding setup' : 'Go to next step'}
+                className="flex items-center space-x-2 px-8 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-lg font-medium hover:bg-white/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {currentStep === steps.length - 1 ? 'Complete Setup' : 'Next'}
-              </Button>
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Setting up...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{currentStep === steps.length - 1 ? 'Complete Setup' : 'Next'}</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </motion.button>
             </div>
           </div>
         </motion.div>

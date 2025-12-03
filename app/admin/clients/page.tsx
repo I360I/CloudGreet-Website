@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { useToast } from '@/app/contexts/ToastContext'
 
 interface Client {
   id: string
@@ -91,7 +90,6 @@ interface ClientsResponse {
 }
 
 export default function AdminClientsPage() {
-  const { showError } = useToast()
   const [clients, setClients] = useState<Client[]>([])
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [clientDetail, setClientDetail] = useState<ClientDetail | null>(null)
@@ -193,7 +191,7 @@ export default function AdminClientsPage() {
       }
     } catch (err) {
       logger.error('Error fetching client detail', { error: err instanceof Error ? err.message : 'Unknown error' })
-      showError('Error', err instanceof Error ? err.message : 'Failed to fetch client details')
+      alert(err instanceof Error ? err.message : 'Failed to fetch client details')
       setSelectedClient(null)
     } finally {
       setDetailLoading(false)

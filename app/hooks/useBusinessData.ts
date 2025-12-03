@@ -13,7 +13,6 @@ import {
   formatPhoneDisplay,
   type BusinessTheme
 } from '@/lib/business-theme'
-import { logger } from '@/lib/monitoring'
 
 export interface Business {
   id: string
@@ -116,7 +115,7 @@ export function useBusinessData(): UseBusinessDataReturn {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'
       setError(errorMessage)
-      logger.error('Failed to fetch business config', { error: errorMessage })
+      console.error('Failed to fetch business config', { error: errorMessage })
     } finally {
       setLoading(false)
     }

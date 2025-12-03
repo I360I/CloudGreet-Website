@@ -2,7 +2,6 @@
 
 import React, { Suspense, useState } from 'react'
 import { motion } from 'framer-motion'
-import MobileNav from '@/app/components/MobileNav'
 import { DashboardHero } from '@/app/components/DashboardHero'
 import { ControlCenter } from '@/app/components/ControlCenter'
 import { FullCalendarModal } from '@/app/components/FullCalendarModal'
@@ -17,7 +16,6 @@ import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { useDashboardData } from '@/app/contexts/DashboardDataContext'
 import { useDashboardRefresh } from '@/app/hooks/useDashboardRefresh'
 import { LoadingSkeleton } from '@/app/components/ui/LoadingSkeleton'
-import type { Appointment } from '@/lib/types/appointment'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,8 +41,7 @@ export default function DashboardPage() {
     setShowFullCalendar(true)
   }
 
-  const handleAppointmentClick = (appointment: Appointment | { id: string; [key: string]: unknown }) => {
-    // Accept flexible appointment shape since different components use slightly different Appointment types
+  const handleAppointmentClick = (appointment: any) => {
     setSelectedAppointmentId(appointment.id)
     setShowAppointmentDetails(true)
   }
@@ -87,9 +84,6 @@ export default function DashboardPage() {
         backgroundImage: `linear-gradient(to bottom, ${primaryColor}10, transparent)`
       }}
     >
-      {/* Mobile Navigation */}
-      <MobileNav currentPath="/dashboard" />
-
       <div className="mx-auto max-w-7xl px-4 py-8">
         {/* Main Layout: 70/30 split */}
         <div className="grid grid-cols-10 gap-6">
@@ -103,11 +97,11 @@ export default function DashboardPage() {
             </Suspense>
 
             <Suspense fallback={<LoadingSkeleton width="100%" height={300} />}>
-              <RealAnalytics timeframe={timeframe === 'custom' ? '30d' : timeframe} />
+              <RealAnalytics timeframe={timeframe} />
             </Suspense>
 
             <Suspense fallback={<LoadingSkeleton width="100%" height={400} />}>
-              <RealCharts timeframe={timeframe === 'custom' ? '30d' : timeframe} />
+              <RealCharts timeframe={timeframe} />
             </Suspense>
           </div>
 

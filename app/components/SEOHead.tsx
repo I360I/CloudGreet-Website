@@ -37,44 +37,7 @@ export default function SEOHead({
   const fullUrl = url ? `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}${url}` : process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
   const fullImage = image.startsWith('http') ? image : `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'}${image}`
 
-  interface StructuredData {
-    '@context': string
-    '@type': string
-    name: string
-    description: string
-    url: string
-    applicationCategory: string
-    operatingSystem: string
-    offers: {
-      '@type': string
-      price: string
-      priceCurrency: string
-      priceValidUntil: string
-    }
-    aggregateRating: {
-      '@type': string
-      ratingValue: string
-      ratingCount: string
-    }
-    author: {
-      '@type': string
-      name: string
-    }
-    publisher: {
-      '@type': string
-      name: string
-      logo: {
-        '@type': string
-        url: string
-      }
-    }
-    datePublished?: string
-    dateModified?: string
-    articleSection?: string
-    keywords?: string
-  }
-
-  const structuredData: StructuredData = {
+  const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: 'CloudGreet',
@@ -108,11 +71,11 @@ export default function SEOHead({
   }
 
   if (type === 'article' && publishedTime) {
-    structuredData['@type'] = 'Article'
-    structuredData.datePublished = publishedTime
-    if (modifiedTime) structuredData.dateModified = modifiedTime
-    if (section) structuredData.articleSection = section
-    if (tags.length > 0) structuredData.keywords = tags.join(', ')
+    (structuredData as any)['@type'] = 'Article'
+    ;(structuredData as any).datePublished = publishedTime
+    if (modifiedTime) (structuredData as any).dateModified = modifiedTime
+    if (section) (structuredData as any).articleSection = section
+    if (tags.length > 0) (structuredData as any).keywords = tags.join(', ')
   }
 
   return (

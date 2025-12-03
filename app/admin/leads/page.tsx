@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { useToast } from '@/app/contexts/ToastContext'
 
 interface Lead {
   id: string
@@ -43,7 +42,6 @@ interface LeadsResponse {
 }
 
 export default function AdminLeadsPage() {
-  const { showError } = useToast()
   const [leads, setLeads] = useState<Lead[]>([])
   const [statistics, setStatistics] = useState<LeadsResponse['statistics']>({
     total: 0,
@@ -69,18 +67,7 @@ export default function AdminLeadsPage() {
   const limit = 20
 
   // Form state
-  const [formData, setFormData] = useState<{
-    business_name: string
-    contact_name: string
-    phone: string
-    email: string
-    website: string
-    address: string
-    business_type: string
-    source: Lead['source']
-    notes: string
-    estimated_revenue: string
-  }>({
+  const [formData, setFormData] = useState({
     business_name: '',
     contact_name: '',
     phone: '',
@@ -88,7 +75,7 @@ export default function AdminLeadsPage() {
     website: '',
     address: '',
     business_type: '',
-    source: 'manual',
+    source: 'manual' as const,
     notes: '',
     estimated_revenue: ''
   })
@@ -188,7 +175,7 @@ export default function AdminLeadsPage() {
       fetchLeads()
     } catch (err) {
       logger.error('Error creating lead', { error: err instanceof Error ? err.message : 'Unknown error' })
-      showError('Error', err instanceof Error ? err.message : 'Failed to create lead')
+      alert(err instanceof Error ? err.message : 'Failed to create lead')
     }
   }
 
@@ -213,7 +200,7 @@ export default function AdminLeadsPage() {
       fetchLeads()
     } catch (err) {
       logger.error('Error updating lead status', { error: err instanceof Error ? err.message : 'Unknown error' })
-      showError('Error', err instanceof Error ? err.message : 'Failed to update lead status')
+      alert(err instanceof Error ? err.message : 'Failed to update lead status')
     }
   }
 
@@ -355,7 +342,7 @@ export default function AdminLeadsPage() {
                 </label>
                 <select
                   value={formData.source}
-                  onChange={(e) => setFormData({ ...formData, source: e.target.value as Lead['source'] })}
+                  onChange={(e) => setFormData({ ...formData, source: e.target.value as any })}
                   className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="manual">Manual</option>
