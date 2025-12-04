@@ -17,194 +17,162 @@ const RingOrb: React.FC<RingOrbProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number>()
-  const timeRef = useRef(0)
+  const wavesRef = useRef<Wave[]>([])
 
-  // Ring Wave class - EXACT match to hero wave style but circular
-  class RingWave {
-    canvas: HTMLCanvasElement
-    index: number
-    centerX: number
-    centerY: number
-    radius: number
+  class Wave {
+    baseRadius: number
     amplitude: number
     frequency: number
+    speed: number
     phase: number
     opacity: number
     width: number
     color: string
-    pulsePhase: number
-    pulseSpeed: number
-    currentAmplitude: number
-    currentOpacity: number
 
-    constructor(canvas: HTMLCanvasElement, index: number, centerX: number, centerY: number, radius: number) {
-      this.canvas = canvas
-      this.index = index
-      this.centerX = centerX
-      this.centerY = centerY
-      this.radius = radius
-      
-      // EXACT properties from hero WaveBackground
-      this.amplitude = Math.random() * 25 + 15
-      this.frequency = Math.random() * 0.008 + 0.004
+    constructor(index: number) {
+      this.baseRadius = 80 + (index * 12) // Spread out rings
+      this.amplitude = 8 + Math.random() * 4
+      this.frequency = 0.01 + Math.random() * 0.01
+      this.speed = 0.3 + Math.random() * 0.3
       this.phase = Math.random() * Math.PI * 2
-      this.opacity = Math.random() * 0.5 + 0.3
-      this.width = Math.random() * 1.5 + 1
-      this.color = this.getElectricPurple()
-      this.pulsePhase = Math.random() * Math.PI * 2
-      this.pulseSpeed = Math.random() * 0.015 + 0.005
-      this.currentAmplitude = this.amplitude
-      this.currentOpacity = this.opacity
-    }
-
-    getElectricPurple() {
-      const vibrantPurples = [
-        '#8B5CF6', '#A855F7', '#9333EA', '#C084FC', '#A78BFA'
+      this.opacity = 0.6 + Math.random() * 0.4 // BRIGHT
+      this.width = 2 + Math.random() * 1
+      
+      // BRIGHT electric purple/blue colors
+      const colors = [
+        'rgba(168, 85, 247, 1)',   // Bright purple
+        'rgba(139, 92, 246, 1)',   // Medium purple
+        'rgba(192, 132, 252, 1)',  // Light purple
+        'rgba(147, 197, 253, 1)',  // Sky blue
       ]
-      return vibrantPurples[Math.floor(Math.random() * vibrantPurples.length)]
+      this.color = colors[index % colors.length]
     }
 
     update() {
-      // EXACT update from hero
-      this.phase += 0.008
-      this.pulsePhase += this.pulseSpeed
-      
-      const pulse = Math.sin(this.pulsePhase) * 0.2 + 0.8
-      this.currentAmplitude = this.amplitude * (0.9 + pulse * 0.2)
-      this.currentOpacity = this.opacity * pulse
+      this.phase += this.speed * 0.02
     }
 
-    draw(ctx: CanvasRenderingContext2D) {
+    draw(ctx: CanvasRenderingContext2D, centerX: number, centerY: number) {
       ctx.save()
-      ctx.globalCompositeOperation = 'screen'
-      
-      // Smooth gradient for glow
-      const gradient = ctx.createRadialGradient(
-        this.centerX, this.centerY, this.radius - this.currentAmplitude,
-        this.centerX, this.centerY, this.radius + this.currentAmplitude
-      )
-      
-      const createColorWithAlpha = (color: string, alpha: number) => {
-        const clampedAlpha = Math.max(0, Math.min(1, alpha))
-        const alphaHex = Math.floor(clampedAlpha * 255).toString(16).padStart(2, '0')
-        return `${color}${alphaHex}`
-      }
-      
-      gradient.addColorStop(0, createColorWithAlpha(this.color, 0))
-      gradient.addColorStop(0.4, createColorWithAlpha(this.color, this.currentOpacity * 0.4))
-      gradient.addColorStop(0.6, createColorWithAlpha(this.color, this.currentOpacity * 0.8))
-      gradient.addColorStop(0.8, createColorWithAlpha(this.color, this.currentOpacity))
-      gradient.addColorStop(1, createColorWithAlpha(this.color, 0))
-      
-      ctx.strokeStyle = gradient
+      ctx.globalCompositeOperation = 'screen' // ADD light (makes it brighter)
+      ctx.shadowBlur = 20
+      ctx.shadowColor = this.color
+      ctx.strokeStyle = this.color.replace('1)', `${this.opacity})`)
       ctx.lineWidth = this.width
       ctx.lineCap = 'round'
-      ctx.shadowColor = this.color
-      ctx.shadowBlur = 12
-      
       ctx.beginPath()
-      
-      // Draw smooth circular wave
-      const points = 360 // More points for smoother circle
+
+      const points = 200 // Smooth circle
       for (let i = 0; i <= points; i++) {
         const angle = (i / points) * Math.PI * 2
         
-        // EXACT wave calculation from hero
-        const baseWave = Math.sin(angle * 8 + this.phase) * this.currentAmplitude
-        const secondaryWave = Math.sin(angle * 12 + this.phase * 1.2) * this.currentAmplitude * 0.2
+        // Wave calculation
+        const wave1 = Math.sin((angle * 8 * this.frequency) + this.phase) * this.amplitude
+        const wave2 = Math.sin((angle * 12 * this.frequency * 1.3) + this.phase * 1.2) * this.amplitude * 0.3
         
-        const finalRadius = this.radius + baseWave + secondaryWave
+        const radius = this.baseRadius + wave1 + wave2
+        const x = centerX + Math.cos(angle) * radius
+        const y = centerY + Math.sin(angle) * radius
         
-        const x = this.centerX + Math.cos(angle) * finalRadius
-        const y = this.centerY + Math.sin(angle) * finalRadius
-        
-        if (i === 0) {
-          ctx.moveTo(x, y)
-        } else {
-          ctx.lineTo(x, y)
-        }
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
       }
-      
+
       ctx.closePath()
       ctx.stroke()
       
-      // Add glow layer like hero
-      ctx.strokeStyle = createColorWithAlpha(this.color, this.currentOpacity * 0.2)
-      ctx.lineWidth = this.width * 1.8
+      // Extra glow pass
+      ctx.globalAlpha = 0.3
+      ctx.lineWidth = this.width * 2
       ctx.stroke()
       
       ctx.restore()
     }
   }
 
-  const wavesRef = useRef<RingWave[]>([])
-
-  const drawRing = useCallback(() => {
+  const animate = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Clear with subtle fade for smooth trails (like hero)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)'
+    // Clear with SLIGHT fade (not too dark)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     
     const centerX = canvas.width / 2
     const centerY = canvas.height / 2
-    const baseRadius = size * 0.35
     
     // Initialize waves once
     if (wavesRef.current.length === 0) {
-      for (let i = 0; i < 8; i++) {
-        const radiusOffset = (i - 4) * 8
-        wavesRef.current.push(new RingWave(canvas, i, centerX, centerY, baseRadius + radiusOffset))
+      for (let i = 0; i < 6; i++) {
+        wavesRef.current.push(new Wave(i))
       }
     }
     
-    // Update and draw all waves
+    // Draw all waves
     wavesRef.current.forEach(wave => {
       wave.update()
-      wave.draw(ctx)
+      wave.draw(ctx, centerX, centerY)
     })
     
-    timeRef.current += 1
-  }, [size])
-
-  const animate = useCallback(() => {
-    drawRing()
     animationRef.current = requestAnimationFrame(animate)
-  }, [drawRing])
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Set canvas size
     canvas.width = size
     canvas.height = size
-    
-    // Start animation
+
+    // Start with black background
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      ctx.fillStyle = 'rgb(0, 0, 0)'
+      ctx.fillRect(0, 0, size, size)
+    }
+
     animate()
-    
+
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [animate, size])
+  }, [size, animate])
 
   return (
     <div 
-      className={`relative flex items-center justify-center ${isClickable ? 'cursor-pointer hover:scale-105 transition-transform duration-300' : ''} ${className}`} 
+      className={`relative flex items-center justify-center ${isClickable ? 'cursor-pointer hover:scale-105' : ''} transition-transform duration-300 ${className}`}
       style={{ width: size, height: size }}
-      onClick={isClickable ? onClick : undefined}
+      onClick={onClick}
     >
-      <canvas
+      <canvas 
         ref={canvasRef}
         className="absolute inset-0"
         style={{ width: size, height: size }}
       />
+      {isClickable && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-purple-500/20 backdrop-blur-sm border border-purple-400/40 flex items-center justify-center hover:bg-purple-500/30 transition-colors">
+            <svg 
+              className="w-8 h-8 text-purple-300" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" 
+              />
+            </svg>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
