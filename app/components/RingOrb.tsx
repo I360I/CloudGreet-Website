@@ -169,9 +169,8 @@ const RingOrb: React.FC<RingOrbProps> = ({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // TRANSPARENT fade trail (not black!)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    // FULL CLEAR - no fade trail (keeps waves bright!)
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
     
     const centerX = canvas.width / 2
     const centerY = canvas.height / 2
