@@ -66,8 +66,8 @@ const RingOrb: React.FC<RingOrbProps> = ({
       const c = colorPalette[index % colorPalette.length]
       this.color = `rgb(${c.r}, ${c.g}, ${c.b})`
       
-      // Opacity fades naturally (inner brighter, outer dimmer)
-      this.opacity = 0.8 - (normalized * 0.4)
+      // MAXIMUM BRIGHTNESS - all rings visible
+      this.opacity = 1.0 // Full opacity for maximum visibility
       
       // Line width varies (creates depth)
       this.width = 2.5 - (normalized * 1)
@@ -104,8 +104,8 @@ const RingOrb: React.FC<RingOrbProps> = ({
       if (!rgbMatch) return
       const [r, g, b] = rgbMatch.map(Number)
       
-      // Main stroke with glow
-      ctx.shadowBlur = 25
+      // MASSIVE glow for visibility
+      ctx.shadowBlur = 40
       ctx.shadowColor = this.color
       ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${currentOpacity})`
       ctx.lineWidth = this.width
@@ -152,10 +152,16 @@ const RingOrb: React.FC<RingOrbProps> = ({
       ctx.closePath()
       ctx.stroke()
       
-      // Secondary glow pass for extra luminosity
+      // TRIPLE glow pass for MAXIMUM luminosity
+      ctx.globalAlpha = 0.5
+      ctx.shadowBlur = 50
+      ctx.lineWidth = this.width * 3
+      ctx.stroke()
+      
+      // Fourth pass for even more glow
       ctx.globalAlpha = 0.3
-      ctx.shadowBlur = 35
-      ctx.lineWidth = this.width * 2.5
+      ctx.shadowBlur = 60
+      ctx.lineWidth = this.width * 4
       ctx.stroke()
       
       ctx.restore()
