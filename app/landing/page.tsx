@@ -244,13 +244,100 @@ export default function LandingPage() {
                 Experience the Power of AI
               </h3>
               <p className="text-gray-300 mb-6 max-w-2xl mx-auto text-sm md:text-base">
-                Enter your phone number and click the orb to call our AI receptionist
+                Click the orb to call our AI receptionist
               </p>
               
-              {/* Phone Number Input */}
-              <div className="max-w-md mx-auto mb-6">
+              {/* Ring-like Orb - THE CALL BUTTON */}
+              <div className="flex justify-center mb-6 relative z-10">
+                <RingOrb
+                  size={300}
+                  isClickable={true}
+                  onClick={async () => {
+                    const phoneInput = document.getElementById('phoneInput') as HTMLInputElement;
+                    const statusDiv = document.getElementById('call-status-message') as HTMLDivElement;
+                    const phoneNumber = phoneInput?.value?.trim();
+                    
+                    // Clear previous status
+                    if (statusDiv) {
+                      statusDiv.textContent = '';
+                      statusDiv.className = 'mt-4 text-sm font-medium';
+                    }
+                    
+                    // Validate phone number FIRST
+                    if (!phoneNumber) {
+                      if (statusDiv) {
+                        statusDiv.textContent = '📞 Please enter your phone number first';
+                        statusDiv.className = 'mt-4 text-sm font-medium text-red-400';
+                      }
+                      return;
+                    }
+                    
+                    const formattedNumber = phoneNumber.replace(/\D/g, '');
+                    if (formattedNumber.length < 10) {
+                      if (statusDiv) {
+                        statusDiv.textContent = '📞 Please enter a valid 10-digit phone number';
+                        statusDiv.className = 'mt-4 text-sm font-medium text-red-400';
+                      }
+                      return;
+                    }
+                    
+                    // Show initiating message
+                    if (statusDiv) {
+                      statusDiv.textContent = '📞 Initiating call...';
+                      statusDiv.className = 'mt-4 text-sm font-medium text-blue-400';
+                    }
+                    
+                    try {
+                      // Make API call - send phone number WITHOUT +1 prefix (API handles formatting)
+                      const response = await fetch('/api/telnyx/initiate-call', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          phoneNumber: formattedNumber, // API will add +1 if needed
+                          businessId: null
+                        })
+                      });
+                      
+                      const result = await response.json();
+                      
+                      // Show result based on API response
+                      if (statusDiv) {
+                        if (result.success) {
+                          statusDiv.textContent = '✅ Call initiated! Answer your phone in 5-10 seconds.';
+                          statusDiv.className = 'mt-4 text-sm font-medium text-green-400';
+                        } else {
+                          statusDiv.textContent = `❌ ${result.message || 'Call failed. Please try again.'}`;
+                          statusDiv.className = 'mt-4 text-sm font-medium text-red-400';
+                        }
+                      }
+                      
+                      if (!result.success) {
+                        logger.error('Landing page call failed', {
+                          error: result.message,
+                          status: response.status
+                        });
+                      }
+                    } catch (error) {
+                      // Show error
+                      if (statusDiv) {
+                        statusDiv.textContent = '❌ Network error. Please check your connection and try again.';
+                        statusDiv.className = 'mt-4 text-sm font-medium text-red-400';
+                      }
+                      
+                      logger.error('Landing page call network error', {
+                        error: error instanceof Error ? error.message : 'Unknown error'
+                      });
+                    }
+                  }}
+                />
+              </div>
+              
+              {/* Phone Number Input - UNDER THE ORB */}
+              <div className="max-w-md mx-auto mb-4">
                 <label className="block text-xs md:text-sm font-medium text-gray-300 mb-2">
-                  Enter your phone number to test our AI
+                  Enter your phone number
                 </label>
                 <input
                   type="tel"
@@ -260,92 +347,8 @@ export default function LandingPage() {
                 />
               </div>
               
-              {/* Ring-like Orb - THE CALL BUTTON */}
-              <div className="flex justify-center mb-8 relative z-10">
-                <RingOrb
-                  size={300}
-                  isClickable={true}
-                  onClick={async () => {
-                    const phoneInput = document.getElementById('phoneInput') as HTMLInputElement;
-                    const phoneNumber = phoneInput?.value?.trim();
-                    
-                    // Validate phone number FIRST
-                    if (!phoneNumber) {
-                      const errorMsg = document.createElement('div');
-                      errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium';
-                      errorMsg.textContent = '📞 Please enter your phone number first';
-                      document.body.appendChild(errorMsg);
-                      setTimeout(() => errorMsg.remove(), 3000);
-                      return;
-                    }
-                    
-                    const formattedNumber = phoneNumber.replace(/\D/g, '');
-                    if (formattedNumber.length < 10) {
-                      const errorMsg = document.createElement('div');
-                      errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium';
-                      errorMsg.textContent = '📞 Please enter a valid 10-digit phone number';
-                      document.body.appendChild(errorMsg);
-                      setTimeout(() => errorMsg.remove(), 3000);
-                      return;
-                    }
-                    
-                    // Show initiating message
-                    const initiatingMsg = document.createElement('div');
-                    initiatingMsg.id = 'call-status';
-                    initiatingMsg.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium';
-                    initiatingMsg.textContent = '📞 Initiating call...';
-                    document.body.appendChild(initiatingMsg);
-                    
-                    try {
-                      // Make API call
-                      const response = await fetch('/api/telnyx/initiate-call', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                          phoneNumber: `+1${formattedNumber}`,
-                          businessId: null // FIX: null instead of invalid 'demo-business' string
-                        })
-                      });
-                      
-                      const result = await response.json();
-                      initiatingMsg.remove();
-                      
-                      // Show result based on API response
-                      const resultMsg = document.createElement('div');
-                      resultMsg.className = `fixed top-4 right-4 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium ${result.success ? 'bg-green-500' : 'bg-red-500'}`;
-                      resultMsg.textContent = result.success 
-                        ? '✅ Call initiated! Answer your phone in 5-10 seconds.' 
-                        : `❌ ${result.message || 'Call failed. Please try again.'}`;
-                      document.body.appendChild(resultMsg);
-                      setTimeout(() => resultMsg.remove(), 5000);
-                      
-                      if (!result.success) {
-                        logger.error('Landing page call failed', {
-                          error: result.message,
-                          status: response.status
-                        });
-                      }
-                    } catch (error) {
-                      // Remove initiating message
-                      const initMsg = document.getElementById('call-status');
-                      if (initMsg) initMsg.remove();
-                      
-                      // Show error
-                      const errorMsg = document.createElement('div');
-                      errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm font-medium';
-                      errorMsg.textContent = '❌ Network error. Please check your connection and try again.';
-                      document.body.appendChild(errorMsg);
-                      setTimeout(() => errorMsg.remove(), 5000);
-                      
-                      logger.error('Landing page call network error', {
-                        error: error instanceof Error ? error.message : 'Unknown error'
-                      });
-                    }
-                  }}
-                />
-              </div>
+              {/* Status Message - UNDER INPUT, INTEGRATED */}
+              <div id="call-status-message" className="mt-4 text-sm font-medium min-h-[24px]"></div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
