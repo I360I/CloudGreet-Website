@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useRef, useEffect, useCallback } from 'react'
+import { Phone } from 'lucide-react'
 
 interface RingOrbProps {
   size?: number
@@ -17,130 +18,136 @@ const RingOrb: React.FC<RingOrbProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number>()
-  const wavesRef = useRef<Wave[]>([])
   const timeRef = useRef(0)
+  const wavesRef = useRef<RingWave[]>([])
 
-  class Wave {
+  // EXACT COPY of Hero WaveBackground wave class, but converted to circular rings
+  class RingWave {
+    canvas: HTMLCanvasElement
+    index: number
+    centerX: number
+    centerY: number
     baseRadius: number
     amplitude: number
-    frequencies: number[]
-    speeds: number[]
-    phases: number[]
+    frequency: number
+    speed: number
+    phase: number
     opacity: number
     width: number
     color: string
     pulsePhase: number
     pulseSpeed: number
-    complexityLayers: number
+    waveLength: number
+    complexity: number
+    currentOpacity: number
+    currentAmplitude: number
 
-    constructor(index: number, totalWaves: number) {
-      // Spread rings naturally with golden ratio spacing
-      const goldenRatio = (1 + Math.sqrt(5)) / 2
-      const normalized = index / totalWaves
-      this.baseRadius = 60 + (normalized * 80) + (Math.sin(normalized * Math.PI) * 15)
+    constructor(canvas: HTMLCanvasElement, index: number, centerX: number, centerY: number) {
+      this.canvas = canvas
+      this.index = index
+      this.centerX = centerX
+      this.centerY = centerY
       
-      // High-quality multi-frequency wave system (like real fluid dynamics)
-      this.complexityLayers = 5 // Multiple sine waves for organic shape
-      this.frequencies = []
-      this.speeds = []
-      this.phases = []
+      // EXACT same properties as Hero WaveBackground
+      this.amplitude = Math.random() * 25 + 15  // 15-40 (same as hero)
+      this.frequency = Math.random() * 0.008 + 0.004  // 0.004-0.012 (same as hero)
+      this.speed = 0.008  // Same phase speed as hero
+      this.phase = Math.random() * Math.PI * 2
       
-      for (let i = 0; i < this.complexityLayers; i++) {
-        // Natural frequency distribution (like harmonics in music)
-        this.frequencies.push(4 + i * 2 + Math.random() * 1.5)
-        this.speeds.push(0.008 + Math.random() * 0.012)
-        this.phases.push(Math.random() * Math.PI * 2)
-      }
+      // EXACT visual properties from hero
+      this.opacity = Math.random() * 0.5 + 0.3  // 0.3-0.8 (same as hero)
+      this.width = Math.random() * 1.5 + 1  // 1-2.5 (same as hero)
+      this.color = this.getElectricPurple()
       
-      // Amplitude varies with distance (outer rings more wavy)
-      this.amplitude = 6 + (normalized * 8) + Math.random() * 3
-      
-      // Beautiful purple gradient colors
-      const colorPalette = [
-        { r: 168, g: 85, b: 247 },   // Electric purple
-        { r: 139, g: 92, b: 246 },   // Deep purple
-        { r: 192, g: 132, b: 252 },  // Light purple
-        { r: 147, g: 197, b: 253 },  // Sky blue
-        { r: 196, g: 181, b: 253 },  // Lavender
-      ]
-      const c = colorPalette[index % colorPalette.length]
-      this.color = `rgb(${c.r}, ${c.g}, ${c.b})`
-      
-      // MAXIMUM BRIGHTNESS - all rings visible
-      this.opacity = 1.0 // Full opacity for maximum visibility
-      
-      // Line width varies (creates depth)
-      this.width = 2.5 - (normalized * 1)
-      
-      // Breathing pulse effect
+      // EXACT animation properties from hero
       this.pulsePhase = Math.random() * Math.PI * 2
-      this.pulseSpeed = 0.001 + Math.random() * 0.002
+      this.pulseSpeed = Math.random() * 0.015 + 0.005  // Same as hero
+      this.waveLength = Math.random() * 100 + 50  // Same as hero
+      this.complexity = Math.random() * 0.5 + 0.5  // Same as hero
+      
+      // Ring-specific: spread rings outward from center
+      const normalized = index / 8  // 8 rings like hero has 8 waves
+      this.baseRadius = 50 + (normalized * 80)  // Spread from 50 to 130
+      
+      this.currentOpacity = this.opacity
+      this.currentAmplitude = this.amplitude
+    }
+
+    getElectricPurple() {
+      // EXACT same color palette as Hero WaveBackground
+      const vibrantPurples = [
+        '#8B5CF6', // Purple-500
+        '#A855F7', // Purple-600
+        '#9333EA', // Purple-700
+        '#C084FC', // Purple-400
+        '#A78BFA', // Purple-500
+        '#8B5CF6', // Purple-500
+      ]
+      return vibrantPurples[Math.floor(Math.random() * vibrantPurples.length)]
     }
 
     update() {
-      // Update all frequency phases for smooth animation
-      for (let i = 0; i < this.complexityLayers; i++) {
-        this.phases[i] += this.speeds[i]
-      }
+      // EXACT same update logic as hero
+      this.phase += this.speed
       this.pulsePhase += this.pulseSpeed
+      
+      // EXACT same pulse calculation as hero
+      const pulse = Math.sin(this.pulsePhase) * 0.2 + 0.8  // 0.6 to 1.0
+      this.currentOpacity = this.opacity * pulse
+      this.currentAmplitude = this.amplitude * (0.9 + pulse * 0.2)
     }
 
-    draw(ctx: CanvasRenderingContext2D, centerX: number, centerY: number, time: number) {
+    draw(ctx: CanvasRenderingContext2D) {
       ctx.save()
       
-      // Breathing pulse effect
-      const pulse = Math.sin(this.pulsePhase) * 0.15 + 1
-      const currentOpacity = this.opacity * pulse
-      
-      // Use 'screen' blend mode for additive glow (like light)
+      // EXACT same blend mode as hero
       ctx.globalCompositeOperation = 'screen'
       
-      // High-quality anti-aliasing
+      // High-quality rendering
       ctx.imageSmoothingEnabled = true
       ctx.imageSmoothingQuality = 'high'
       
-      // Build color with alpha
-      const rgbMatch = this.color.match(/\d+/g)
-      if (!rgbMatch) return
-      const [r, g, b] = rgbMatch.map(Number)
+      // Create radial gradient for glow (like hero's linear gradient but radial)
+      const gradient = ctx.createRadialGradient(
+        this.centerX, this.centerY, this.baseRadius - this.currentAmplitude,
+        this.centerX, this.centerY, this.baseRadius + this.currentAmplitude * 2
+      )
       
-      // MASSIVE glow for visibility
-      ctx.shadowBlur = 40
-      ctx.shadowColor = this.color
-      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${currentOpacity})`
+      // EXACT same gradient stops as hero (converted to radial)
+      const createColorWithAlpha = (color: string, alpha: number) => {
+        const clampedAlpha = Math.max(0, Math.min(1, alpha))
+        const alphaHex = Math.floor(clampedAlpha * 255).toString(16).padStart(2, '0')
+        return `${color}${alphaHex}`
+      }
+      
+      gradient.addColorStop(0, createColorWithAlpha(this.color, 0))
+      gradient.addColorStop(0.2, createColorWithAlpha(this.color, this.currentOpacity * 0.1))
+      gradient.addColorStop(0.4, createColorWithAlpha(this.color, this.currentOpacity * 0.4))
+      gradient.addColorStop(0.6, createColorWithAlpha(this.color, this.currentOpacity * 0.8))
+      gradient.addColorStop(0.8, createColorWithAlpha(this.color, this.currentOpacity))
+      gradient.addColorStop(1, createColorWithAlpha(this.color, 0))
+      
+      ctx.strokeStyle = gradient
       ctx.lineWidth = this.width
       ctx.lineCap = 'round'
-      ctx.lineJoin = 'round'
+      ctx.shadowColor = this.color
+      ctx.shadowBlur = 12  // EXACT same as hero
       
       ctx.beginPath()
       
-      // Ultra-smooth circle with 360 points (one per degree)
-      const points = 360
+      // EXACT same wave calculation as hero, but for circular path
+      const points = 360  // One point per degree for smooth circle
       for (let i = 0; i <= points; i++) {
         const angle = (i / points) * Math.PI * 2
         
-        // Complex multi-frequency wave (creates organic, fluid motion)
-        let totalWave = 0
-        for (let j = 0; j < this.complexityLayers; j++) {
-          const freq = this.frequencies[j]
-          const phase = this.phases[j]
-          const weight = 1 / (j + 1) // Higher frequencies have less impact
-          
-          // Multiple sine waves at different frequencies
-          const wave = Math.sin(angle * freq + phase) * weight
-          totalWave += wave
-        }
+        // EXACT same wave math as hero (x * frequency → angle * frequency)
+        const baseWave = Math.sin((angle * this.frequency) + this.phase) * this.currentAmplitude
+        const secondaryWave = Math.sin((angle * this.frequency * 1.5) + this.phase * 1.2) * this.currentAmplitude * 0.2
         
-        // Normalize and apply amplitude
-        const normalizedWave = (totalWave / this.complexityLayers) * this.amplitude * pulse
+        const finalRadius = this.baseRadius + baseWave + secondaryWave
         
-        // Add subtle noise for natural variation
-        const noise = (Math.sin(angle * 50 + time * 0.1) * 0.3)
-        
-        const finalRadius = this.baseRadius + normalizedWave + noise
-        
-        const x = centerX + Math.cos(angle) * finalRadius
-        const y = centerY + Math.sin(angle) * finalRadius
+        const x = this.centerX + Math.cos(angle) * finalRadius
+        const y = this.centerY + Math.sin(angle) * finalRadius
         
         if (i === 0) {
           ctx.moveTo(x, y)
@@ -149,19 +156,12 @@ const RingOrb: React.FC<RingOrbProps> = ({
         }
       }
       
-      ctx.closePath()
       ctx.stroke()
       
-      // TRIPLE glow pass for MAXIMUM luminosity
-      ctx.globalAlpha = 0.5
-      ctx.shadowBlur = 50
-      ctx.lineWidth = this.width * 3
-      ctx.stroke()
-      
-      // Fourth pass for even more glow
-      ctx.globalAlpha = 0.3
-      ctx.shadowBlur = 60
-      ctx.lineWidth = this.width * 4
+      // EXACT same glow layer as hero
+      ctx.strokeStyle = createColorWithAlpha(this.color, this.currentOpacity * 0.2)
+      ctx.lineWidth = this.width * 1.8
+      ctx.shadowBlur = 12
       ctx.stroke()
       
       ctx.restore()
@@ -172,29 +172,30 @@ const RingOrb: React.FC<RingOrbProps> = ({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext('2d', { alpha: true })  // IMPORTANT: alpha channel enabled
     if (!ctx) return
 
-    // FULL CLEAR - no fade trail (keeps waves bright!)
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    // EXACT same clear method as hero (subtle fade for trails)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.015)'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
     
     const centerX = canvas.width / 2
     const centerY = canvas.height / 2
     
-    // Initialize waves once with perfect count (8 waves for depth)
+    // Initialize waves once (8 rings like hero has 8 waves)
     if (wavesRef.current.length === 0) {
       for (let i = 0; i < 8; i++) {
-        wavesRef.current.push(new Wave(i, 8))
+        wavesRef.current.push(new RingWave(canvas, i, centerX, centerY))
       }
     }
     
     // Update and draw all waves
     wavesRef.current.forEach(wave => {
       wave.update()
-      wave.draw(ctx, centerX, centerY, timeRef.current)
+      wave.draw(ctx)
     })
     
-    timeRef.current += 1
+    timeRef.current += 16  // Same as hero (60fps timing)
     animationRef.current = requestAnimationFrame(animate)
   }, [])
 
@@ -202,15 +203,24 @@ const RingOrb: React.FC<RingOrbProps> = ({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    canvas.width = size
-    canvas.height = size
+    // Set canvas size with device pixel ratio for crisp rendering
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = size * dpr
+    canvas.height = size * dpr
+    canvas.style.width = size + 'px'
+    canvas.style.height = size + 'px'
 
-    // DON'T fill with black - keep transparent!
-    // Clear to transparent
-    const ctx = canvas.getContext('2d')
+    // Scale context for high-DPI displays
+    const ctx = canvas.getContext('2d', { alpha: true })  // CRITICAL: alpha channel for transparency
     if (ctx) {
+      ctx.scale(dpr, dpr)
+      // Clear to fully transparent
       ctx.clearRect(0, 0, size, size)
     }
+
+    // Reset waves on mount/resize
+    wavesRef.current = []
+    timeRef.current = 0
 
     animate()
 
@@ -227,27 +237,20 @@ const RingOrb: React.FC<RingOrbProps> = ({
       style={{ width: size, height: size }}
       onClick={onClick}
     >
+      {/* Canvas - FULLY TRANSPARENT, no black background */}
       <canvas 
         ref={canvasRef}
         className="absolute inset-0"
-        style={{ width: size, height: size }}
+        style={{ 
+          width: size, 
+          height: size,
+          backgroundColor: 'transparent'  // Explicit transparent background
+        }}
       />
       {isClickable && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
           <div className="w-20 h-20 rounded-full bg-purple-500/10 backdrop-blur-sm border-2 border-purple-400/30 flex items-center justify-center hover:bg-purple-500/20 hover:border-purple-400/50 transition-all duration-300 pointer-events-auto shadow-lg shadow-purple-500/20">
-            <svg 
-              className="w-10 h-10 text-purple-300 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-              strokeWidth={2.5}
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" 
-              />
-            </svg>
+            <Phone className="w-10 h-10 text-purple-300 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]" />
           </div>
         </div>
       )}
