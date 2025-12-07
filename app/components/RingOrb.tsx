@@ -64,10 +64,10 @@ const RingOrb: React.FC<RingOrbProps> = ({
       this.baseRadius = 50 + (normalized * 90)  // Spread from 50 to 140
       
       // SPINNING: Each wave spins at different speed (like The Ring)
-      this.spinSpeed = 0.01 + (normalized * 0.02)  // Faster outer rings
+      this.spinSpeed = 0.02 + (normalized * 0.03)  // FASTER - visible spinning
       
       // FLOWING: Ripples flow outward (expansion speed)
-      this.flowSpeed = 0.003 + (normalized * 0.005)  // Outer ripples flow faster
+      this.flowSpeed = 0.005 + (normalized * 0.008)  // FASTER - visible flowing
       
       this.currentOpacity = this.opacity
       this.currentAmplitude = this.amplitude
@@ -92,8 +92,8 @@ const RingOrb: React.FC<RingOrbProps> = ({
       
       // FLOWING: Ripples expand outward like The Ring well
       // Each ring flows at different phase (creates wave effect)
-      const flowPhase = time * this.flowSpeed + (this.index * 0.5)
-      const flowOffset = Math.sin(flowPhase) * 8  // Larger flow range
+      const flowPhase = time * this.flowSpeed + (this.index * 0.8)
+      const flowOffset = Math.sin(flowPhase) * 12  // LARGER flow range - more visible
       
       // Base radius with flow - CONSTRAINED to not exceed canvas
       const targetBase = 50 + (this.index / 8 * 90)
