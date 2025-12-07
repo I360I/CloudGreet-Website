@@ -183,9 +183,9 @@ const RingOrb: React.FC<RingOrbProps> = ({
     // FULL CLEAR - NO FADE TRAIL (eliminates black square!)
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     
-    // PERFECT CENTER - Use actual canvas center
-    const centerX = canvas.width / 2 / (window.devicePixelRatio || 1)
-    const centerY = canvas.height / 2 / (window.devicePixelRatio || 1)
+    // PERFECT CENTER - Use size (not scaled canvas dimensions)
+    const centerX = size / 2
+    const centerY = size / 2
     
     // Initialize waves once (8 rings like hero has 8 waves)
     if (wavesRef.current.length === 0) {
