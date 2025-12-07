@@ -21,7 +21,7 @@ const RingOrb: React.FC<RingOrbProps> = ({
   const timeRef = useRef(0)
   const wavesRef = useRef<RingWave[]>([])
 
-  // Ring Wave - Hero waves converted to circular ripples (The Ring style)
+  // Ring Wave - SPINNING and FLOWING ripples (The Ring movie style)
   class RingWave {
     index: number
     baseRadius: number
@@ -37,8 +37,8 @@ const RingOrb: React.FC<RingOrbProps> = ({
     complexity: number
     currentOpacity: number
     currentAmplitude: number
-    rippleSpeed: number  // For radial expansion (ripple effect)
-    ripplePhase: number  // For radial expansion
+    spinSpeed: number  // How fast wave spins around circle
+    flowSpeed: number  // How fast ripple flows outward
 
     constructor(index: number, totalWaves: number) {
       this.index = index
@@ -53,7 +53,7 @@ const RingOrb: React.FC<RingOrbProps> = ({
       this.width = Math.random() * 1.5 + 1  // 1-2.5
       this.color = this.getElectricPurple()
       
-      // EXACT animation properties from hero
+      // Animation properties
       this.pulsePhase = Math.random() * Math.PI * 2
       this.pulseSpeed = Math.random() * 0.015 + 0.005
       this.waveLength = Math.random() * 100 + 50
@@ -63,9 +63,11 @@ const RingOrb: React.FC<RingOrbProps> = ({
       const normalized = index / totalWaves
       this.baseRadius = 50 + (normalized * 90)  // Spread from 50 to 140
       
-      // Ripple effect: rings expand/contract like The Ring well
-      this.rippleSpeed = 0.002 + Math.random() * 0.003  // Slow expansion
-      this.ripplePhase = Math.random() * Math.PI * 2
+      // SPINNING: Each wave spins at different speed (like The Ring)
+      this.spinSpeed = 0.01 + (normalized * 0.02)  // Faster outer rings
+      
+      // FLOWING: Ripples flow outward (expansion speed)
+      this.flowSpeed = 0.003 + (normalized * 0.005)  // Outer ripples flow faster
       
       this.currentOpacity = this.opacity
       this.currentAmplitude = this.amplitude
@@ -84,24 +86,19 @@ const RingOrb: React.FC<RingOrbProps> = ({
       return vibrantPurples[Math.floor(Math.random() * vibrantPurples.length)]
     }
 
-    update() {
-      // EXACT same update logic as hero
-      this.phase += 0.008  // Wave flows around circle
+    update(time: number) {
+      // SPINNING: Wave rotates around circle
+      this.phase += this.spinSpeed
+      
+      // FLOWING: Ripple expands outward over time
+      const flowOffset = Math.sin(time * this.flowSpeed) * 5  // Gentle expansion/contraction
+      this.baseRadius = (50 + (this.index / 8 * 90)) + flowOffset
+      
+      // Subtle pulse
       this.pulsePhase += this.pulseSpeed
-      
-      // Ripple expansion (like The Ring well)
-      this.ripplePhase += this.rippleSpeed
-      
-      // EXACT same pulse calculation as hero
-      const pulse = Math.sin(this.pulsePhase) * 0.2 + 0.8  // 0.6 to 1.0
+      const pulse = Math.sin(this.pulsePhase) * 0.1 + 0.9  // Subtle breathing
       this.currentOpacity = this.opacity * pulse
-      this.currentAmplitude = this.amplitude * (0.9 + pulse * 0.2)
-    }
-
-    getCurrentRadius() {
-      // Ripple expansion - rings expand and contract like ripples
-      const ripple = Math.sin(this.ripplePhase) * 3  // Gentle expansion/contraction
-      return this.baseRadius + ripple
+      this.currentAmplitude = this.amplitude * (0.95 + pulse * 0.1)
     }
 
     draw(ctx: CanvasRenderingContext2D, centerX: number, centerY: number) {
@@ -114,13 +111,10 @@ const RingOrb: React.FC<RingOrbProps> = ({
       ctx.imageSmoothingEnabled = true
       ctx.imageSmoothingQuality = 'high'
       
-      // Get current radius with ripple effect
-      const currentRadius = this.getCurrentRadius()
-      
-      // Create radial gradient for glow (like hero's linear but radial)
+      // Create radial gradient for glow
       const gradient = ctx.createRadialGradient(
-        centerX, centerY, currentRadius - this.currentAmplitude,
-        centerX, centerY, currentRadius + this.currentAmplitude * 2
+        centerX, centerY, this.baseRadius - this.currentAmplitude,
+        centerX, centerY, this.baseRadius + this.currentAmplitude * 2
       )
       
       // EXACT same gradient stops as hero
@@ -151,12 +145,11 @@ const RingOrb: React.FC<RingOrbProps> = ({
         const angle = (i / points) * Math.PI * 2
         
         // EXACT same wave math as hero, but using angle instead of x
-        // Hero: Math.sin((x * frequency) + phase)
-        // Ring: Math.sin((angle * frequency) + phase)
+        // SPINNING: phase increases → wave rotates around circle
         const baseWave = Math.sin((angle * this.frequency) + this.phase) * this.currentAmplitude
         const secondaryWave = Math.sin((angle * this.frequency * 1.5) + this.phase * 1.2) * this.currentAmplitude * 0.2
         
-        const finalRadius = currentRadius + baseWave + secondaryWave
+        const finalRadius = this.baseRadius + baseWave + secondaryWave
         
         const x = centerX + Math.cos(angle) * finalRadius
         const y = centerY + Math.sin(angle) * finalRadius
@@ -184,14 +177,15 @@ const RingOrb: React.FC<RingOrbProps> = ({
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const ctx = canvas.getContext('2d', { alpha: true })  // Alpha channel for transparency
+    const ctx = canvas.getContext('2d', { alpha: true })
     if (!ctx) return
 
     // FULL CLEAR - NO FADE TRAIL (eliminates black square!)
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     
-    const centerX = canvas.width / 2
-    const centerY = canvas.height / 2
+    // PERFECT CENTER - Use actual canvas center
+    const centerX = canvas.width / 2 / (window.devicePixelRatio || 1)
+    const centerY = canvas.height / 2 / (window.devicePixelRatio || 1)
     
     // Initialize waves once (8 rings like hero has 8 waves)
     if (wavesRef.current.length === 0) {
@@ -200,13 +194,13 @@ const RingOrb: React.FC<RingOrbProps> = ({
       }
     }
     
-    // Update and draw all waves
+    // Update and draw all waves with SPINNING and FLOWING
     wavesRef.current.forEach(wave => {
-      wave.update()
+      wave.update(timeRef.current)
       wave.draw(ctx, centerX, centerY)
     })
     
-    timeRef.current += 16  // 60fps timing (same as hero)
+    timeRef.current += 16  // 60fps timing
     animationRef.current = requestAnimationFrame(animate)
   }, [])
 
@@ -222,7 +216,7 @@ const RingOrb: React.FC<RingOrbProps> = ({
     canvas.style.height = size + 'px'
 
     // Scale context for high-DPI
-    const ctx = canvas.getContext('2d', { alpha: true })  // CRITICAL: alpha channel
+    const ctx = canvas.getContext('2d', { alpha: true })
     if (ctx) {
       ctx.scale(dpr, dpr)
       // Clear to fully transparent
@@ -248,14 +242,15 @@ const RingOrb: React.FC<RingOrbProps> = ({
       style={{ width: size, height: size }}
       onClick={onClick}
     >
-      {/* Canvas - FULLY TRANSPARENT, NO black background */}
+      {/* Canvas - FULLY TRANSPARENT, perfectly centered */}
       <canvas 
         ref={canvasRef}
-        className="absolute inset-0"
+        className="absolute inset-0 m-auto"
         style={{ 
           width: size, 
           height: size,
-          backgroundColor: 'transparent'
+          backgroundColor: 'transparent',
+          display: 'block'
         }}
       />
       {isClickable && (
