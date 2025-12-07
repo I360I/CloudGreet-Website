@@ -86,19 +86,22 @@ const RingOrb: React.FC<RingOrbProps> = ({
       return vibrantPurples[Math.floor(Math.random() * vibrantPurples.length)]
     }
 
-    update(time: number) {
-      // SPINNING: Wave rotates around circle
+    update(time: number, maxRadius: number) {
+      // SPINNING: Wave rotates around circle continuously
       this.phase += this.spinSpeed
       
-      // FLOWING: Ripple expands outward over time
-      const flowOffset = Math.sin(time * this.flowSpeed) * 5  // Gentle expansion/contraction
-      this.baseRadius = (50 + (this.index / 8 * 90)) + flowOffset
+      // FLOWING: Ripples expand outward like The Ring well
+      // Each ring flows at different phase (creates wave effect)
+      const flowPhase = time * this.flowSpeed + (this.index * 0.5)
+      const flowOffset = Math.sin(flowPhase) * 8  // Larger flow range
       
-      // Subtle pulse
-      this.pulsePhase += this.pulseSpeed
-      const pulse = Math.sin(this.pulsePhase) * 0.1 + 0.9  // Subtle breathing
-      this.currentOpacity = this.opacity * pulse
-      this.currentAmplitude = this.amplitude * (0.95 + pulse * 0.1)
+      // Base radius with flow - CONSTRAINED to not exceed canvas
+      const targetBase = 50 + (this.index / 8 * 90)
+      this.baseRadius = Math.min(targetBase + flowOffset, maxRadius - this.currentAmplitude - 10)
+      
+      // Keep opacity constant (no breathing) - just spinning and flowing
+      this.currentOpacity = this.opacity
+      this.currentAmplitude = this.amplitude
     }
 
     draw(ctx: CanvasRenderingContext2D, centerX: number, centerY: number) {
@@ -194,9 +197,12 @@ const RingOrb: React.FC<RingOrbProps> = ({
       }
     }
     
+    // Calculate max radius to prevent cutoff (leave 10px margin)
+    const maxRadius = (size / 2) - 10
+    
     // Update and draw all waves with SPINNING and FLOWING
     wavesRef.current.forEach(wave => {
-      wave.update(timeRef.current)
+      wave.update(timeRef.current, maxRadius)
       wave.draw(ctx, centerX, centerY)
     })
     
