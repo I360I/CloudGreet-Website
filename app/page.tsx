@@ -189,14 +189,6 @@ export default function LandingPage() {
  >
  Pricing
  </motion.a>
- <motion.a 
- whileHover={{ y: -2 }}
- href="#roi-calculator" 
- className="text-gray-300 hover:text-white transition-colors duration-300 font-medium"
- aria-label="See value proposition"
- >
- Value Proposition
- </motion.a>
  </div>
  <motion.a
  whileHover={{ scale: 1.05 }}
