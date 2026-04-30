@@ -145,8 +145,8 @@ export default function LoginPage() {
  </button>
 
  <div className="text-center text-sm text-gray-400">
- <Link href="/register-simple" className="text-sky-400 hover:text-sky-300">
- Don't have an account? Sign up
+ <Link href="/contact" className="text-sky-400 hover:text-sky-300">
+ Don&apos;t have an account? Book a demo
  </Link>
  </div>
  </form>
