@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  registerAccount,
-  RegistrationError,
-  serializeUnknown
+ registerAccount,
+ RegistrationError,
+ serializeUnknown
 } from '@/lib/auth/register-service'
 import { logger } from '@/lib/monitoring'
 
@@ -14,39 +14,39 @@ export const runtime = 'nodejs'
  * Creates a user account and business with full details
  */
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const result = await registerAccount(body)
+ try {
+ const body = await request.json()
+ const result = await registerAccount(body)
 
-    return NextResponse.json({
-      success: true,
-      data: result
-    })
-  } catch (error) {
-    if (error instanceof RegistrationError) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: error.message,
-          code: error.code,
-          details: serializeUnknown(error.details)
-        },
-        { status: error.status }
-      )
-    }
+ return NextResponse.json({
+ success: true,
+ data: result
+ })
+ } catch (error) {
+ if (error instanceof RegistrationError) {
+ return NextResponse.json(
+ {
+ success: false,
+ message: error.message,
+ code: error.code,
+ details: serializeUnknown(error.details)
+ },
+ { status: error.status }
+ )
+ }
 
-    logger.error('Registration error', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      rawError: serializeUnknown(error)
-    })
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Registration failed. Please try again.',
-        details: serializeUnknown(error)
-      },
-      { status: 500 }
-    )
-  }
+ logger.error('Registration error', {
+ error: error instanceof Error ? error.message : 'Unknown error',
+ rawError: serializeUnknown(error)
+ })
+ return NextResponse.json(
+ {
+ success: false,
+ message: 'Registration failed. Please try again.',
+ details: serializeUnknown(error)
+ },
+ { status: 500 }
+ )
+ }
 }
 
