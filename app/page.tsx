@@ -368,29 +368,6 @@ export default function LandingPage() {
  </div>
  </motion.div>
 
- {/* Benefits Below Demo */}
- <motion.div
- initial={{ opacity: 0, y: 20 }}
- whileInView={{ opacity: 1, y: 0 }}
- transition={{ duration: 0.8, delay: 0.4 }}
- className="mt-12 grid md:grid-cols-3 gap-6 text-center"
- >
- <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
- <div className="text-2xl mb-2">🎤</div>
- <h4 className="text-base md:text-lg font-semibold mb-2 leading-tight">Natural Speech</h4>
- <p className="text-sm text-gray-400 leading-snug">Talk naturally, like calling a real receptionist</p>
- </div>
- <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
- <div className="text-2xl mb-2">🧠</div>
- <h4 className="text-base md:text-lg font-semibold mb-2 leading-tight">Understands Context</h4>
- <p className="text-sm text-gray-400 leading-snug">AI remembers and adapts to the conversation</p>
- </div>
- <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 md:p-6">
- <div className="text-2xl mb-2">📅</div>
- <h4 className="text-base md:text-lg font-semibold mb-2 leading-tight">Books Instantly</h4>
- <p className="text-sm text-gray-400 leading-snug">Can schedule appointments during the call</p>
- </div>
- </motion.div>
  </div>
  </section>
 
