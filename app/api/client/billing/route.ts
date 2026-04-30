@@ -127,8 +127,7 @@ export async function GET(request: NextRequest) {
  .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
 
  const bookingsLast30Days = appointments?.length || 0
- const perBookingFeeCents = 5000 // $50 per booking
- const bookingFeesLast30DaysCents = bookingsLast30Days * perBookingFeeCents
+ const bookingFeesLast30DaysCents = 0 // Flat-monthly pricing; no per-booking fees.
 
  return NextResponse.json({
  success: true,

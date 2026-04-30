@@ -47,7 +47,7 @@ const envVarDefinitions = {
  name: 'OPENAI_API_KEY',
  description: 'OpenAI API key',
  validation: (val: string) => val && val.startsWith('sk-'),
- whatBreaks: 'AI conversations, GPT-4 functionality'
+ whatBreaks: 'AI conversations, advanced AI functionality'
  },
  {
  name: 'STRIPE_SECRET_KEY',
