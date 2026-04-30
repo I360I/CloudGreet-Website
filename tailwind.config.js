@@ -19,7 +19,8 @@ module.exports = {
         '4xl': ['36px', { lineHeight: '1.2', letterSpacing: '-0.02em' }],
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'Inter Tight', 'Inter', 'system-ui', 'sans-serif'],
       },
       fontWeight: {
         regular: '400',

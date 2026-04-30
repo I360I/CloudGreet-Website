@@ -63,35 +63,37 @@ function Nav() {
 
 function Hero() {
  return (
-  <section className="px-6 pt-20 md:pt-28 pb-16 md:pb-24">
-   <div className="max-w-5xl mx-auto text-center">
-    <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.95] text-gray-900 mb-6">
-     Stop losing profit
+  <section className="px-6 pt-32 md:pt-44 pb-32 md:pb-48">
+   <div className="max-w-6xl mx-auto text-center">
+    <h1 className="font-display font-extrabold tracking-tight leading-[0.92] text-[64px] sm:text-[88px] md:text-[120px] lg:text-[140px] mb-10">
+     <span className="text-gray-900">Stop losing</span>{' '}
+     <span className="text-gray-400">profit</span>
      <br />
-     <span className="text-gray-500">to voicemail.</span>
+     <span className="text-gray-900">to voicemail.</span>
     </h1>
-    <p className="text-base md:text-lg text-gray-600 max-w-xl mx-auto mb-10 leading-relaxed">
-     Answers calls, books jobs, and keeps customers happy &mdash;
-     even when you&apos;re on a ladder.
+    <p className="text-base md:text-lg text-gray-500 max-w-md mx-auto mb-14 leading-relaxed">
+     Answers calls, books jobs, organizes details and keeps customers happy.
     </p>
-    <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
      <a
       href={DEMO_TEL}
-      className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-900 px-6 py-3.5 rounded-full text-sm font-medium hover:border-gray-400 transition-colors shadow-sm"
+      className="group inline-flex items-center gap-3 bg-white text-gray-900 px-7 py-4 rounded-2xl text-base font-medium border border-gray-200 hover:border-gray-300 transition-all shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)] hover:shadow-[0_0_80px_-10px_rgba(56,189,248,0.55)]"
      >
       Call our AI
-      <ArrowRight className="w-4 h-4" />
+      <span className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center group-hover:border-gray-900 transition-colors">
+       <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} />
+      </span>
      </a>
      <Link
       href="/contact"
-      className="inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3.5 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+      className="inline-flex items-center gap-3 bg-gray-900 text-white px-7 py-4 rounded-2xl text-base font-medium hover:bg-gray-800 transition-colors"
      >
       Book Demo
-      <ArrowUpRight className="w-4 h-4" />
+      <ArrowUpRight className="w-5 h-5" strokeWidth={2} />
      </Link>
     </div>
-    <p className="text-xs text-gray-500 mt-6">
-     Try it now &mdash; <a href={DEMO_TEL} className="font-medium text-gray-900 hover:underline">{DEMO_NUMBER}</a>
+    <p className="text-sm text-gray-400 mt-8">
+     Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a>
     </p>
    </div>
   </section>
@@ -102,16 +104,16 @@ function Hero() {
 
 function ProductCard() {
  return (
-  <section className="px-6 pb-16">
-   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200/80 shadow-[0_0_60px_-15px_rgba(56,189,248,0.18)] p-6 md:p-12">
+  <section className="px-6 pb-32 md:pb-40">
+   <div className="max-w-6xl mx-auto bg-white rounded-[32px] border border-gray-200/80 shadow-[0_0_80px_-20px_rgba(56,189,248,0.25)] p-8 md:p-16">
     <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
      <PhoneTranscript />
-     <div className="text-lg md:text-xl leading-relaxed text-gray-700">
-      Meet the AI agent that connects to your phone line,{' '}
-      <span className="font-semibold text-gray-900">answers</span> calls, handles{' '}
-      <span className="font-semibold text-gray-900">questions</span>, books{' '}
-      <span className="font-semibold text-gray-900">appointments</span>, transfers calls, takes{' '}
-      <span className="font-semibold text-gray-900">notes</span>, and more.
+     <div className="font-display text-2xl md:text-3xl lg:text-4xl leading-[1.25] text-gray-400 font-medium">
+      Meet the <strong className="text-gray-900 font-extrabold">AI agent</strong> that connects to your phone line,{' '}
+      <strong className="text-gray-900 font-extrabold">answers</strong> calls, handles{' '}
+      <strong className="text-gray-900 font-extrabold">questions</strong>, books{' '}
+      <strong className="text-gray-900 font-extrabold">appointments</strong>, transfers calls, takes{' '}
+      <strong className="text-gray-900 font-extrabold">notes</strong>, and more.
      </div>
     </div>
    </div>
@@ -169,7 +171,7 @@ function PhoneTranscript() {
 function Platforms() {
  const items = ['Stripe', 'Telnyx', 'Retell', 'Google Calendar', 'Outlook', 'Twilio']
  return (
-  <section className="px-6 pb-20">
+  <section className="px-6 pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto text-center">
     <p className="text-sm text-gray-500 mb-6">CloudGreet works with the tools you already use</p>
     <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-gray-400">
@@ -192,7 +194,7 @@ function Stats() {
   { icon: Star, value: '+1.2 stars', label: 'in average review ratings' },
  ]
  return (
-  <section className="px-6 pb-20">
+  <section className="px-6 pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto">
     <p className="text-sm text-gray-500 text-center mb-6">Results on average per client</p>
     <div className="grid sm:grid-cols-2 gap-4 relative">
@@ -223,7 +225,7 @@ function CallFlow() {
 
      {/* Header card */}
      <div className="relative bg-white border border-gray-200 rounded-2xl p-6 md:row-span-2 flex items-end">
-      <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-none">
+      <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-tight leading-[0.9]">
        Basic
        <br />
        Call
@@ -267,7 +269,7 @@ function FlowCard({
  return (
   <div className={`relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6 ${tall ? 'md:row-span-2' : ''} ${wide ? '' : ''}`}>
    <Icon className="w-5 h-5 text-gray-400 mb-4" strokeWidth={1.5} />
-   <h3 className="text-lg md:text-xl font-bold tracking-tight mb-2 text-gray-900">{title}</h3>
+   <h3 className="font-display text-xl md:text-2xl font-bold tracking-tight mb-2 text-gray-900">{title}</h3>
    <div className="text-sm text-gray-600 leading-relaxed">{body}</div>
   </div>
  )
@@ -289,10 +291,12 @@ function DashboardPreview() {
   { name: 'Lisa M.', when: 'Mon 1:00 PM', service: 'Interior painting estimate' },
  ]
  return (
-  <section className="px-6 pb-20">
+  <section className="px-6 pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto text-center mb-8">
-    <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-3">Every call. Every appointment.</h2>
-    <p className="text-base md:text-lg text-gray-600">One screen.</p>
+    <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[0.95] mb-4">
+     Every call. <span className="text-gray-400">Every appointment.</span>
+    </h2>
+    <p className="text-base md:text-lg text-gray-500">One screen.</p>
    </div>
    <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-4 relative">
     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
@@ -353,8 +357,10 @@ function Pricing() {
  return (
   <section id="pricing" className="px-6 pb-20">
    <div className="max-w-6xl mx-auto text-center mb-10">
-    <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-3">Simple, flat pricing.</h2>
-    <p className="text-base md:text-lg text-gray-600">Two plans. No per-booking fees. No surprises.</p>
+    <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[0.95] mb-4">
+     Simple, <span className="text-gray-400">flat pricing.</span>
+    </h2>
+    <p className="text-base md:text-lg text-gray-500">Two plans. No per-booking fees. No surprises.</p>
    </div>
 
    <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-4 relative">
@@ -406,10 +412,10 @@ function PriceCard({
      Most Popular
     </div>
    )}
-   <h3 className="text-xl font-bold text-gray-900 mb-1">{name}</h3>
+   <h3 className="font-display text-2xl font-extrabold text-gray-900 mb-1">{name}</h3>
    <p className="text-sm text-gray-500 mb-5">{desc}</p>
    <div className="mb-6 flex items-baseline gap-2">
-    <span className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">{price}</span>
+    <span className="font-display text-5xl md:text-6xl font-extrabold tracking-tight text-gray-900">{price}</span>
     <span className="text-base text-gray-500">/mo</span>
    </div>
    <div className="space-y-2.5 mb-7">
@@ -442,10 +448,10 @@ function FinalCTA() {
    <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-8 md:p-12 grid md:grid-cols-2 gap-6 items-center relative overflow-hidden">
     <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-sky-100/60 blur-3xl rounded-full pointer-events-none" />
     <div className="relative">
-     <h2 className="text-3xl md:text-5xl font-bold tracking-tight leading-[1.05]">
-      Stop Losing Calls.
+     <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[0.95]">
+      Stop losing calls.
       <br />
-      Start Winning Customers.
+      <span className="text-gray-400">Start winning customers.</span>
      </h2>
      <p className="text-gray-600 mt-4">Book a 15-min 1:1 demo to see if you&apos;re a fit.</p>
     </div>

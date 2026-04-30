@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Inter_Tight } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from './contexts/ToastContext'
 import { RealtimeProvider } from './contexts/RealtimeProvider'
@@ -15,7 +15,12 @@ if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
  })
 }
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const interTight = Inter_Tight({
+ subsets: ['latin'],
+ weight: ['600', '700', '800', '900'],
+ variable: '--font-display',
+})
 
 export const metadata: Metadata = {
  metadataBase: new URL('https://cloudgreet.com'),
@@ -116,7 +121,7 @@ export default function RootLayout({
  }}
  />
  </head>
- <body className={`${inter.className} overscroll-none bg-[#f6f5f1] text-gray-900`}>
+ <body className={`${inter.variable} ${interTight.variable} font-sans overscroll-none bg-[#f6f5f1] text-gray-900 antialiased`}>
  <ErrorBoundary>
  <ToastProvider>
  <RealtimeProvider>
