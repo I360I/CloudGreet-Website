@@ -65,13 +65,12 @@ function Hero() {
  return (
   <section className="px-6 pt-32 md:pt-44 pb-32 md:pb-48">
    <div className="max-w-6xl mx-auto text-center">
-    <h1 className="font-display font-extrabold tracking-tight leading-[0.92] text-[64px] sm:text-[88px] md:text-[120px] lg:text-[140px] mb-10">
-     <span className="text-gray-900">Stop losing</span>{' '}
-     <span className="text-gray-400">profit</span>
+    <h1 className="font-display font-bold tracking-tight leading-[1.05] text-[44px] sm:text-[56px] md:text-[72px] lg:text-[80px] mb-8 text-gray-900">
+     Stop losing <span className="text-gray-400">profit</span>
      <br />
-     <span className="text-gray-900">to voicemail.</span>
+     to voicemail.
     </h1>
-    <p className="text-base md:text-lg text-gray-500 max-w-md mx-auto mb-14 leading-relaxed">
+    <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto mb-12 leading-relaxed">
      Answers calls, books jobs, organizes details and keeps customers happy.
     </p>
     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -108,7 +107,7 @@ function ProductCard() {
    <div className="max-w-6xl mx-auto bg-white rounded-[32px] border border-gray-200/80 shadow-[0_0_80px_-20px_rgba(56,189,248,0.25)] p-8 md:p-16">
     <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
      <PhoneTranscript />
-     <div className="font-display text-2xl md:text-3xl lg:text-4xl leading-[1.25] text-gray-400 font-medium">
+     <div className="text-xl md:text-2xl lg:text-3xl leading-[1.4] text-gray-400 font-normal">
       Meet the <strong className="text-gray-900 font-extrabold">AI agent</strong> that connects to your phone line,{' '}
       <strong className="text-gray-900 font-extrabold">answers</strong> calls, handles{' '}
       <strong className="text-gray-900 font-extrabold">questions</strong>, books{' '}
@@ -225,7 +224,7 @@ function CallFlow() {
 
      {/* Header card */}
      <div className="relative bg-white border border-gray-200 rounded-2xl p-6 md:row-span-2 flex items-end">
-      <h2 className="font-display text-4xl md:text-5xl font-extrabold tracking-tight leading-[0.9]">
+      <h2 className="font-display text-3xl md:text-4xl font-bold tracking-tight leading-[1]">
        Basic
        <br />
        Call
@@ -269,7 +268,7 @@ function FlowCard({
  return (
   <div className={`relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6 ${tall ? 'md:row-span-2' : ''} ${wide ? '' : ''}`}>
    <Icon className="w-5 h-5 text-gray-400 mb-4" strokeWidth={1.5} />
-   <h3 className="font-display text-xl md:text-2xl font-bold tracking-tight mb-2 text-gray-900">{title}</h3>
+   <h3 className="font-display text-lg md:text-xl font-bold tracking-tight mb-2 text-gray-900">{title}</h3>
    <div className="text-sm text-gray-600 leading-relaxed">{body}</div>
   </div>
  )
@@ -293,7 +292,7 @@ function DashboardPreview() {
  return (
   <section className="px-6 pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto text-center mb-8">
-    <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[0.95] mb-4">
+    <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight leading-[1.05] mb-4">
      Every call. <span className="text-gray-400">Every appointment.</span>
     </h2>
     <p className="text-base md:text-lg text-gray-500">One screen.</p>
@@ -357,7 +356,7 @@ function Pricing() {
  return (
   <section id="pricing" className="px-6 pb-20">
    <div className="max-w-6xl mx-auto text-center mb-10">
-    <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[0.95] mb-4">
+    <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight leading-[1.05] mb-4">
      Simple, <span className="text-gray-400">flat pricing.</span>
     </h2>
     <p className="text-base md:text-lg text-gray-500">Two plans. No per-booking fees. No surprises.</p>
@@ -415,7 +414,7 @@ function PriceCard({
    <h3 className="font-display text-2xl font-extrabold text-gray-900 mb-1">{name}</h3>
    <p className="text-sm text-gray-500 mb-5">{desc}</p>
    <div className="mb-6 flex items-baseline gap-2">
-    <span className="font-display text-5xl md:text-6xl font-extrabold tracking-tight text-gray-900">{price}</span>
+    <span className="font-display text-4xl md:text-5xl font-bold tracking-tight text-gray-900">{price}</span>
     <span className="text-base text-gray-500">/mo</span>
    </div>
    <div className="space-y-2.5 mb-7">
@@ -448,7 +447,7 @@ function FinalCTA() {
    <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-8 md:p-12 grid md:grid-cols-2 gap-6 items-center relative overflow-hidden">
     <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-sky-100/60 blur-3xl rounded-full pointer-events-none" />
     <div className="relative">
-     <h2 className="font-display text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight leading-[0.95]">
+     <h2 className="font-display text-4xl md:text-5xl font-bold tracking-tight leading-[1.05]">
       Stop losing calls.
       <br />
       <span className="text-gray-400">Start winning customers.</span>
