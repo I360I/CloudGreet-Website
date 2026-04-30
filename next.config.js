@@ -51,6 +51,16 @@ const nextConfig = {
     maxInactiveAge: 25 * 1000,
     pagesBufferLength: 2,
   },
+  async redirects() {
+    return [
+      { source: '/landing', destination: '/', permanent: true },
+      { source: '/start', destination: '/contact', permanent: true },
+      { source: '/onboarding', destination: '/contact', permanent: true },
+      { source: '/register-simple', destination: '/contact', permanent: true },
+      { source: '/test-agent-simple', destination: '/contact', permanent: true },
+      { source: '/demo', destination: '/contact', permanent: true },
+    ]
+  },
   // Security headers (production-grade)
   async headers() {
     return [
