@@ -255,60 +255,7 @@ export async function POST(request: NextRequest) {
  }
  }
 
- // Charge Stripe per-booking fee ($50)
- if (business.stripe_customer_id && process.env.STRIPE_SECRET_KEY) {
- try {
- const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
- apiVersion: '2023-10-16' as any
- })
-
- // Create invoice item for per-booking fee
- await stripe.invoiceItems.create({
- customer: business.stripe_customer_id,
- amount: CONFIG.BUSINESS.PER_BOOKING_FEE * 100, // Convert to cents
- currency: 'usd',
- description: `Appointment booking fee - ${service} on ${new Date(datetime).toLocaleDateString()}`,
- metadata: {
- appointment_id: apptId,
- business_id: business_id,
- service_type: service,
- booking_date: datetime
- }
- })
-
- // Create and finalize invoice immediately
- const invoice = await stripe.invoices.create({
- customer: business.stripe_customer_id,
- auto_advance: true, // Auto-finalize
- collection_method: 'charge_automatically'
- })
-
- await stripe.invoices.finalizeInvoice(invoice.id)
- await stripe.invoices.pay(invoice.id)
-
- logger.info('Per-booking fee charged', { 
- appointmentId: apptId, 
- invoiceId: invoice.id,
- amount: CONFIG.BUSINESS.PER_BOOKING_FEE * 100 
- })
-
- // Update appointment with invoice ID
- await supabaseAdmin
- .from('appointments')
- .update({ 
- notes: `Booking fee charged: Invoice ${invoice.id}`,
- updated_at: new Date().toISOString()
- })
- .eq('id', apptId)
- } catch (stripeError) {
- // Log but don't fail appointment creation
- logger.error('Stripe per-booking fee failed', { 
- error: stripeError instanceof Error ? stripeError.message : 'Unknown error',
- appointmentId: apptId,
- businessId: business_id
- })
- }
- }
+ // Per-booking fees removed; pricing is flat-monthly only.
 
  // Send SMS confirmation
  if (phone) {

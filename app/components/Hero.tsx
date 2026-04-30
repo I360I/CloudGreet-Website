@@ -46,7 +46,7 @@ export default function Hero() {
  <p className="text-base md:text-lg text-gray-300 max-w-4xl mx-auto leading-snug">
  CloudGreet answers, qualifies, and books jobs so you don&apos;t lose revenue.
  <br />
- <span className="text-blue-400 font-semibold">Simple pricing: $200/mo + $50 per booking</span>
+ <span className="text-sky-400 font-semibold">Plans from $499/mo &mdash; flat pricing, no per-booking fees</span>
  </p>
  </motion.div>
 

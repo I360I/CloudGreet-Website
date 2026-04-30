@@ -65,12 +65,13 @@ function TermsPageContent() {
 
  <h2 className="text-2xl font-bold text-white mb-6">3. Pricing and Billing</h2>
  <p className="text-gray-300 leading-relaxed mb-4">
- Our pricing is $200 per month plus $50 per qualified booking. You will be charged:
+ CloudGreet offers two flat monthly plans:
  </p>
  <ul className="list-disc list-inside text-gray-300 space-y-2 mb-6">
- <li>$200 monthly base fee, billed in advance</li>
- <li>$50 per qualified booking that results in a scheduled appointment</li>
- <li>All fees are non-refundable except as required by law</li>
+ <li>Starter: $499 per month &mdash; AI receptionist for after-hours calls only</li>
+ <li>Full 24/7: $899 per month &mdash; AI receptionist for all incoming calls, around the clock</li>
+ <li>All fees are billed monthly in advance and are non-refundable except as required by law</li>
+ <li>No per-booking fees</li>
  <li>Pricing may change with 30 days notice</li>
  </ul>
 

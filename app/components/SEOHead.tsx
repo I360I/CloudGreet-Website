@@ -186,7 +186,7 @@ export default function SEOHead({
  name: 'How much does CloudGreet cost?',
  acceptedAnswer: {
  '@type': 'Answer',
- text: 'CloudGreet starts at $200/month for professional AI receptionist services. Get started today.'
+ text: 'CloudGreet has two flat monthly plans: Starter at $499/month for after-hours coverage, and Full 24/7 at $899/month.'
  }
  },
  {

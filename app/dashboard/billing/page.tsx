@@ -267,13 +267,7 @@ export default function BillingPage() {
  <li className="flex items-start gap-2">
  <span style={{ color: primaryColor }}>•</span>
  <span>
- <strong className="text-white">Per-Booking Fee:</strong> $50.00 per appointment booked via AI
- </span>
- </li>
- <li className="flex items-start gap-2">
- <span style={{ color: primaryColor }}>•</span>
- <span>
- <strong className="text-white">Billing:</strong> Subscription charges monthly. Per-booking fees are added to your next invoice.
+ <strong className="text-white">Billing:</strong> Flat monthly subscription. No per-booking fees.
  </span>
  </li>
  </ul>

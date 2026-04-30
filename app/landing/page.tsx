@@ -743,116 +743,101 @@ export default function LandingPage() {
  transition={{ duration: 0.8 }}
  className="mb-6 md:mb-8"
  >
- <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white from-white leading-tight">
+ <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white leading-tight">
  Simple, Transparent Pricing
  </h2>
  <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
- One plan, everything included. No hidden fees, no surprises, no confusion.
+ Two plans. Flat monthly pricing. No per-booking fees, no surprises.
  </p>
  </motion.div>
- 
- <motion.div 
+
+ <motion.div
  initial={{ opacity: 0, scale: 0.95, y: 50 }}
  whileInView={{ opacity: 1, scale: 1, y: 0 }}
  viewport={{ once: true }}
  transition={{ duration: 1, delay: 0.2 }}
- className="relative max-w-2xl mx-auto"
+ className="relative grid md:grid-cols-2 gap-6 max-w-4xl mx-auto"
  >
- {/* Pricing Card */}
- <div className="relative group">
- {/* Glow Effect */}
- <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-2xl group-hover:blur-3xl transition-all duration-500" />
- 
- {/* Card */}
- <div className="relative bg-gray-800/30 backdrop-blur-2xl p-4 md:p-6 rounded-xl border border-gray-700/50 shadow-2xl group-hover:border-blue-500/30 transition-all duration-500">
- {/* Only Plan Badge */}
- <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
- <div className="bg-green-500 text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-lg">
- Only Plan
+ {/* Starter Plan */}
+ <div className="relative bg-gray-800/30 backdrop-blur-2xl p-6 md:p-8 rounded-xl border border-gray-700/50 shadow-2xl text-left">
+ <h3 className="text-xl md:text-2xl font-bold mb-1 text-white">Starter</h3>
+ <p className="text-sm text-gray-400 mb-6">After-hours coverage only</p>
+
+ <div className="mb-6 flex items-baseline gap-2">
+ <span className="text-4xl md:text-5xl font-bold text-white">$499</span>
+ <span className="text-base text-gray-400">/mo</span>
  </div>
- </div>
- 
- {/* Plan Title */}
- <h3 className="text-xl md:text-2xl lg:text-3xl font-bold mb-4 text-white leading-tight">
- Complete Solution
- </h3>
- 
- {/* Pricing */}
- <div className="mb-6">
- <div className="flex items-baseline justify-center gap-2 mb-2">
- <span className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight">
- $200
- </span>
- <span className="text-base md:text-lg text-gray-400">/mo</span>
- </div>
- <div className="flex items-baseline justify-center gap-2 mb-4">
- <span className="text-base md:text-lg text-gray-300">+</span>
- <span className="text-xl md:text-2xl lg:text-3xl font-bold text-white leading-tight">
- $50
- </span>
- <span className="text-sm md:text-base text-gray-400">per booking</span>
- </div>
- </div>
- 
- {/* Features List */}
- <div className="space-y-3 mb-6">
+
+ <div className="space-y-3 mb-8">
  {[
- "24/7 AI Call Answering",
- "Intelligent Lead Qualification", 
- "Calendar Booking & SMS Confirmations",
- "Missed-Call Recovery Texts",
- "Call Recordings & Transcripts",
- "Professional Dashboard & ROI Tracking",
- "Custom Business Greeting",
- "Integration with Google/Microsoft Calendar"
- ].map((feature, index) => (
- <motion.div
- key={feature}
- initial={{ opacity: 0, x: -20 }}
- whileInView={{ opacity: 1, x: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.5, delay: index * 0.1 }}
- className="flex items-center gap-4 text-left"
- >
- <div className="w-6 h-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full flex items-center justify-center flex-shrink-0">
- <CheckCircle className="w-4 h-4 text-white" />
+ "AI answers calls outside business hours",
+ "Lead qualification & message capture",
+ "Calendar booking & SMS confirmations",
+ "Missed-call recovery texts",
+ "Call recordings & transcripts",
+ "Dashboard & ROI tracking",
+ ].map((feature) => (
+ <div key={feature} className="flex items-start gap-3">
+ <CheckCircle className="w-5 h-5 text-sky-400 flex-shrink-0 mt-0.5" />
+ <span className="text-gray-200 text-sm md:text-base">{feature}</span>
  </div>
- <span className="text-gray-200 text-sm md:text-base leading-snug">{feature}</span>
- </motion.div>
  ))}
  </div>
- 
- {/* CTA Buttons */}
- <div className="flex flex-col sm:flex-row gap-3 w-full">
+
  <Link
- href="/test-agent-simple"
- className="flex-1 bg-white/15 backdrop-blur-xl text-white px-4 py-2 rounded-lg text-sm font-medium border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-lg inline-block focus:ring-4 focus:ring-blue-500/50 focus:outline-none"
- aria-label="Test CloudGreet AI agent"
+ href="/contact"
+ className="block w-full text-center bg-white/10 text-white px-4 py-3 rounded-lg text-sm font-semibold border border-white/20 hover:bg-white/20 transition-colors"
  >
- <div className="flex items-center justify-center gap-2">
- <Play className="w-4 h-4" aria-hidden="true" />
- Test AI Agent
- </div>
- </Link>
- <Link
- href="/register-simple"
- className="flex-1 bg-white/10 backdrop-blur-xl text-white px-4 py-2 rounded-lg text-sm font-medium border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg inline-block focus:ring-4 focus:ring-white/20 focus:outline-none"
- aria-label="Create your CloudGreet account"
- >
- <div className="flex items-center justify-center gap-2">
- <Zap className="w-4 h-4" aria-hidden="true" />
- Get Started Now
- </div>
+ Get Started
  </Link>
  </div>
- 
- {/* Professional messaging for exclusive feel */}
- <p className="text-gray-400 text-xs md:text-sm mt-4 leading-snug">
- No credit card required • Setup in minutes • Professional AI receptionist
- </p>
+
+ {/* Full 24/7 Plan */}
+ <div className="relative bg-gray-800/30 backdrop-blur-2xl p-6 md:p-8 rounded-xl border border-sky-500/40 shadow-2xl text-left">
+ <div className="absolute -top-3 left-6">
+ <div className="bg-sky-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+ Most Popular
  </div>
+ </div>
+
+ <h3 className="text-xl md:text-2xl font-bold mb-1 text-white">Full 24/7</h3>
+ <p className="text-sm text-gray-400 mb-6">Around-the-clock coverage</p>
+
+ <div className="mb-6 flex items-baseline gap-2">
+ <span className="text-4xl md:text-5xl font-bold text-white">$899</span>
+ <span className="text-base text-gray-400">/mo</span>
+ </div>
+
+ <div className="space-y-3 mb-8">
+ {[
+ "AI answers every call, 24/7",
+ "Lead qualification & message capture",
+ "Calendar booking & SMS confirmations",
+ "Missed-call recovery texts",
+ "Call recordings & transcripts",
+ "Dashboard & ROI tracking",
+ "Custom business greeting",
+ "Google & Microsoft Calendar integration",
+ ].map((feature) => (
+ <div key={feature} className="flex items-start gap-3">
+ <CheckCircle className="w-5 h-5 text-sky-400 flex-shrink-0 mt-0.5" />
+ <span className="text-gray-200 text-sm md:text-base">{feature}</span>
+ </div>
+ ))}
+ </div>
+
+ <Link
+ href="/contact"
+ className="block w-full text-center bg-sky-500 text-white px-4 py-3 rounded-lg text-sm font-semibold hover:bg-sky-400 transition-colors"
+ >
+ Get Started
+ </Link>
  </div>
  </motion.div>
+
+ <p className="text-gray-400 text-xs md:text-sm mt-8">
+ Flat monthly pricing • No per-booking fees • Cancel anytime
+ </p>
  </div>
  </section>
 
