@@ -1,860 +1,517 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import React from 'react'
 import Link from 'next/link'
-import { 
- Phone, Play, CheckCircle, Calendar, Zap, 
- TrendingUp, Users, DollarSign, Settings
+import {
+ Phone, ArrowUpRight, ArrowRight, Calendar, Clock, DollarSign, Star,
+ PhoneIncoming, MessageSquare, FileText, PhoneForwarded, CheckCircle2,
+ MapPin, ShieldCheck,
 } from 'lucide-react'
-import Hero from '@/app/components/Hero'
-import { logger } from '@/lib/monitoring'
-import SilkRibbon from '@/app/components/SilkRibbon'
-import RingOrb from '@/app/components/RingOrb'
-import CallOrb from '@/app/components/CallOrb'
-import Footer from '@/app/components/Footer'
-// import ROICalculator from '@/app/components/ROICalculator'
 
-function VoiceOrbDemoWithSettings() {
- const [businessInfo, setBusinessInfo] = React.useState({
- name: 'CloudGreet',
- type: 'AI Receptionist Service',
- services: 'AI phone answering, appointment scheduling, 24/7 support',
- hours: '24/7'
- })
- const [showForm, setShowForm] = React.useState(false)
+const DEMO_NUMBER = '+1 (737) 937-0084'
+const DEMO_TEL = 'tel:+17379370084'
 
- return (
- <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 md:p-6">
- {/* Business Info Form */}
- <motion.div className="mb-6">
- <button
- onClick={() => setShowForm(!showForm)}
- className="text-sm text-sky-400 hover:text-sky-300 mb-3 flex items-center gap-2"
- >
- <Settings className="w-4 h-4" />
- {showForm ? 'Hide' : 'Customize'} Business Info
- </button>
- 
- {showForm && (
- <motion.div
- initial={{ opacity: 0, height: 0 }}
- animate={{ opacity: 1, height: 'auto' }}
- className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-black/30 rounded-xl"
- >
- <div>
- <label className="text-xs text-gray-400 mb-1 block">Business Name</label>
- <input
- type="text"
- value={businessInfo.name}
- onChange={(e) => setBusinessInfo({...businessInfo, name: e.target.value})}
- className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
- />
- </div>
- <div>
- <label className="text-xs text-gray-400 mb-1 block">Business Type</label>
- <input
- type="text"
- value={businessInfo.type}
- onChange={(e) => setBusinessInfo({...businessInfo, type: e.target.value})}
- className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
- />
- </div>
- <div>
- <label className="text-xs text-gray-400 mb-1 block">Services</label>
- <input
- type="text"
- value={businessInfo.services}
- onChange={(e) => setBusinessInfo({...businessInfo, services: e.target.value})}
- className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
- />
- </div>
- <div>
- <label className="text-xs text-gray-400 mb-1 block">Hours</label>
- <input
- type="text"
- value={businessInfo.hours}
- onChange={(e) => setBusinessInfo({...businessInfo, hours: e.target.value})}
- className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
- />
- </div>
- </motion.div>
- )}
- 
- <p className="text-xs text-gray-500 mb-4">
- 💡 Real phone call • Experience the same AI that handles your customers
- </p>
- </motion.div>
+export const dynamic = 'force-dynamic'
 
- <CallOrb 
- onCall={async (phoneNumber) => {
- const response = await fetch('/api/telnyx/initiate-call', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ phoneNumber, businessId: 'demo', businessInfo })
- })
- if (!response.ok) throw new Error('Call failed')
- }}
- />
- </div>
- )
-}
-
-export const dynamic = "force-dynamic"
 export default function LandingPage() {
- const [isLoaded, setIsLoaded] = React.useState(false)
- const [isNavVisible, setIsNavVisible] = React.useState(true)
- const [lastScrollY, setLastScrollY] = React.useState(0)
-
- React.useEffect(() => {
- // Ensure Hero component loads first
- const timer = setTimeout(() => {
- setIsLoaded(true)
- }, 100)
- 
- return () => clearTimeout(timer)
- }, [])
-
- React.useEffect(() => {
- const handleScroll = () => {
- const currentScrollY = window.scrollY
- 
- // Show nav when scrolling up or at top, hide when scrolling down
- if (currentScrollY < 10) {
- setIsNavVisible(true)
- } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
- // Scrolling down and past 100px
- setIsNavVisible(false)
- } else if (currentScrollY < lastScrollY) {
- // Scrolling up
- setIsNavVisible(true)
- }
- 
- setLastScrollY(currentScrollY)
- }
-
- window.addEventListener('scroll', handleScroll, { passive: true })
- return () => window.removeEventListener('scroll', handleScroll)
- }, [lastScrollY])
-
- if (!isLoaded) {
  return (
- <div className="min-h-screen via-black flex items-center justify-center">
- <div className="text-center">
- <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
- <p className="text-white text-lg">Loading CloudGreet...</p>
- </div>
- </div>
- )
- }
-
- return (
- <div className="min-h-screen via-black text-white">
- {/* Navigation */}
- <motion.nav 
- initial={{ opacity: 0, y: -20 }}
- animate={{ 
- opacity: isNavVisible ? 1 : 0,
- y: isNavVisible ? 0 : -100
- }}
- transition={{ duration: 0.3, ease: 'easeInOut' }}
- className={`border-b border-gray-800/50 backdrop-blur-md bg-black/20 sticky top-0 z-50 transition-all duration-300 ${
- isNavVisible ? 'pointer-events-auto' : 'pointer-events-none'
- }`}
- >
- <div className="max-w-6xl mx-auto px-4 py-4">
- <div className="flex items-center justify-between">
- <Link href="/landing" className="flex items-center hover:opacity-80 transition-opacity cursor-pointer relative z-10">
- <motion.div 
- whileHover={{ scale: 1.05 }}
- className="flex items-center"
- >
- <span className="text-2xl font-bold text-white">CloudGreet</span>
- </motion.div>
- </Link>
- <div className="hidden md:flex items-center space-x-6">
- <motion.a 
- whileHover={{ y: -2 }}
- href="#how-it-works" 
- className="text-gray-300 hover:text-white transition-colors duration-300 font-medium"
- aria-label="Learn how CloudGreet works"
- >
- How it Works
- </motion.a>
- <motion.a 
- whileHover={{ y: -2 }}
- href="#pricing" 
- className="text-gray-300 hover:text-white transition-colors duration-300 font-medium"
- aria-label="View CloudGreet pricing"
- >
- Pricing
- </motion.a>
- </div>
- <motion.a
- whileHover={{ scale: 1.05 }}
- whileTap={{ scale: 0.95 }}
- href="/login"
- className="bg-white/15 backdrop-blur-xl text-white px-5 py-2 rounded-lg text-sm font-medium border border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 shadow-lg"
- aria-label="Sign in to your CloudGreet account"
- >
- Sign In
- </motion.a>
- </div>
- </div>
- </motion.nav>
-
- {/* Hero Section with 3D Ribbon */}
- <Hero />
-
- {/* Interactive Voice Demo */}
- <section className="py-12 md:py-16 lg:py-20 relative overflow-hidden via-black ">
- 
- <div className="max-w-5xl mx-auto px-4 relative z-10">
- <motion.div
- initial={{ opacity: 0, y: 30 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8 }}
- className="text-center mb-8"
- >
- <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white leading-tight">
- Book a Demo Call
- </h2>
- <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
- Click the orb to call our AI receptionist. Experience real voice AI powered by your actual phone system.
- </p>
- </motion.div>
- 
- <motion.div
- initial={{ opacity: 0, scale: 0.9 }}
- whileInView={{ opacity: 1, scale: 1 }}
- transition={{ duration: 0.8, delay: 0.2 }}
- className="max-w-4xl mx-auto flex flex-col items-center"
- >
- {/* Ring-like Demo with Phone Input */}
- <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 md:p-6 text-center">
- <h3 className="text-lg md:text-xl lg:text-2xl font-semibold mb-3 bg-sky-400 leading-tight">
- Experience the Power of AI
- </h3>
- <p className="text-gray-300 mb-6 max-w-2xl mx-auto text-sm md:text-base">
- Click the orb to call our AI receptionist
- </p>
- 
- {/* Ring-like Orb - THE CALL BUTTON */}
- <div className="flex justify-center mb-6 relative z-10">
- <RingOrb
- size={300}
- isClickable={true}
- onClick={async () => {
- const phoneInput = document.getElementById('phoneInput') as HTMLInputElement;
- const statusDiv = document.getElementById('call-status-message') as HTMLDivElement;
- const phoneNumber = phoneInput?.value?.trim();
- 
- // Clear previous status
- if (statusDiv) {
- statusDiv.textContent = '';
- statusDiv.className = 'mt-4 text-sm font-medium';
- }
- 
- // Validate phone number FIRST
- if (!phoneNumber) {
- if (statusDiv) {
- statusDiv.textContent = '📞 Please enter your phone number first';
- statusDiv.className = 'mt-4 text-sm font-medium text-red-400';
- }
- return;
- }
- 
- const formattedNumber = phoneNumber.replace(/\D/g, '');
- if (formattedNumber.length < 10) {
- if (statusDiv) {
- statusDiv.textContent = '📞 Please enter a valid 10-digit phone number';
- statusDiv.className = 'mt-4 text-sm font-medium text-red-400';
- }
- return;
- }
- 
- // Show initiating message
- if (statusDiv) {
- statusDiv.textContent = '📞 Initiating call...';
- statusDiv.className = 'mt-4 text-sm font-medium text-blue-400';
- }
- 
- try {
- // Make API call - send phone number WITHOUT +1 prefix (API handles formatting)
- const response = await fetch('/api/telnyx/initiate-call', {
- method: 'POST',
- headers: {
- 'Content-Type': 'application/json',
- },
- body: JSON.stringify({
- phoneNumber: formattedNumber, // API will add +1 if needed
- businessId: null
- })
- });
- 
- const result = await response.json();
- 
- // Show result based on API response
- if (statusDiv) {
- if (result.success) {
- statusDiv.textContent = '✅ Call initiated! Answer your phone in 5-10 seconds.';
- statusDiv.className = 'mt-4 text-sm font-medium text-green-400';
- } else {
- statusDiv.textContent = `❌ ${result.message || 'Call failed. Please try again.'}`;
- statusDiv.className = 'mt-4 text-sm font-medium text-red-400';
- }
- }
- 
- if (!result.success) {
- logger.error('Landing page call failed', {
- error: result.message,
- status: response.status
- });
- }
- } catch (error) {
- // Show error
- if (statusDiv) {
- statusDiv.textContent = '❌ Network error. Please check your connection and try again.';
- statusDiv.className = 'mt-4 text-sm font-medium text-red-400';
- }
- 
- logger.error('Landing page call network error', {
- error: error instanceof Error ? error.message : 'Unknown error'
- });
- }
- }}
- />
- </div>
- 
- {/* Phone Number Input - UNDER THE ORB */}
- <div className="max-w-md mx-auto mb-4">
- <label className="block text-xs md:text-sm font-medium text-gray-300 mb-2">
- Enter your phone number
- </label>
- <input
- type="tel"
- id="phoneInput"
- placeholder="(555) 123-4567"
- className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white text-center text-sm md:text-base placeholder-gray-400 focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20"
- />
- </div>
- 
- {/* Status Message - UNDER INPUT, INTEGRATED */}
- <div id="call-status-message" className="mt-4 text-sm font-medium min-h-[24px]"></div>
- 
- <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
- <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
- <div className="text-sky-400 font-semibold mb-2">Real-time Processing</div>
- <div className="text-gray-400">AI analyzes speech instantly</div>
- </div>
- <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
- <div className="text-sky-400 font-semibold mb-2">Neural Networks</div>
- <div className="text-gray-400">Advanced machine learning</div>
- </div>
- <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
- <div className="text-sky-400 font-semibold mb-2">24/7 Active</div>
- <div className="text-gray-400">Always ready to help</div>
- </div>
- </div>
- </div>
- </motion.div>
-
- </div>
- </section>
-
- {/* ROI Calculator */}
- <section id="roi-calculator" className="py-12 md:py-16 lg:py-20 relative overflow-hidden">
- {/* Background Elements */}
- <div className="absolute inset-0 via-transparent " />
- <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
- <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl" />
- 
- <div className="max-w-6xl mx-auto px-4 relative z-10">
- {/* <ROICalculator /> */}
- </div>
- </section>
-
- {/* Value Proposition */}
- <section className="py-12 md:py-16 lg:py-20 relative overflow-hidden">
- <div className="max-w-6xl mx-auto px-4 relative z-10">
- <motion.div
- initial={{ opacity: 0, y: 30 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8 }}
- className="text-center mb-8"
- >
- <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white from-white leading-tight">
- Stop Losing Revenue
- </h2>
- <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
- Every missed call is a lost customer. CloudGreet ensures you never miss an opportunity.
- </p>
- </motion.div>
- 
- <motion.div 
- initial={{ opacity: 0, y: 30 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8, delay: 0.2 }}
- className="grid md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto"
- >
- <div className="bg-white/5 backdrop-blur-xl p-4 md:p-6 rounded-xl border border-white/10 text-center">
- <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-red-400 mb-2 leading-tight">30%</div>
- <p className="text-gray-300 text-sm md:text-base leading-snug">Of calls go to voicemail during business hours</p>
- </div>
- <div className="bg-white/5 backdrop-blur-xl p-4 md:p-6 rounded-xl border border-white/10 text-center">
- <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-yellow-400 mb-2 leading-tight">85%</div>
- <p className="text-gray-300 text-sm md:text-base leading-snug">Of callers won&apos;t leave a message</p>
- </div>
- <div className="bg-white/5 backdrop-blur-xl p-4 md:p-6 rounded-xl border border-white/10 text-center">
- <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-green-400 mb-2 leading-tight">$500+</div>
- <p className="text-gray-300 text-sm md:text-base leading-snug">Average value of a booked job</p>
- </div>
- </motion.div>
- </div>
- </section>
-
- {/* How It Works */}
- <section id="how-it-works" className="py-12 md:py-16 lg:py-20 relative overflow-hidden">
- {/* Background Elements */}
- <div className="absolute inset-0 via-transparent " />
- <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
- <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl" />
- 
- <div className="max-w-6xl mx-auto px-4 relative z-10">
- <motion.div
- initial={{ opacity: 0, y: 30 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8 }}
- className="text-center mb-6 md:mb-8"
- >
- <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white from-white leading-tight">
- How CloudGreet Works
- </h2>
- <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
- Three simple steps to transform your business communication
- </p>
- </motion.div>
- 
- <div className="grid md:grid-cols-3 gap-4 md:gap-6">
- <motion.div 
- initial={{ opacity: 0, y: 50 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8, delay: 0.1 }}
- whileHover={{ y: -10, scale: 1.02 }}
- className="group relative"
- >
- <div className="absolute inset-0 bg-white/5 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-500" />
- <div className="relative bg-gray-800/40 backdrop-blur-xl p-4 md:p-6 rounded-xl border border-gray-700/50 text-center shadow-2xl group-hover:border-blue-500/30 transition-all duration-500">
- <div className="relative mb-6">
- <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center mx-auto text-2xl md:text-3xl font-bold shadow-lg group-hover:shadow-blue-500/25 transition-all duration-500">
- 1
- </div>
- <div className="absolute -top-2 -right-2 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
- <Phone className="w-3 h-3 text-white" />
- </div>
- </div>
- <h3 className="text-xl md:text-2xl lg:text-3xl font-bold mb-3 md:mb-4 text-white leading-tight">
- AI Answers in &lt;1 Ring
- </h3>
- <p className="text-gray-300 text-sm md:text-base leading-snug">
- Our AI receptionist picks up every call instantly, ensuring no customer is left waiting or hanging up.
- </p>
- <div className="mt-6 flex justify-center">
- <div className="w-12 h-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full" />
- </div>
- </div>
- </motion.div>
- 
- <motion.div 
- initial={{ opacity: 0, y: 50 }}
- whileInView={{ opacity: 1, y: 0 }}
- transition={{ duration: 0.8, delay: 0.2 }}
- whileHover={{ y: -10, scale: 1.02 }}
- className="group relative"
- >
- <div className="absolute inset-0 bg-white/5 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-500" />
- <div className="relative bg-gray-800/40 backdrop-blur-xl p-4 md:p-6 rounded-xl border border-gray-700/50 text-center shadow-2xl group-hover:border-sky-500/30 transition-all duration-500">
- <div className="relative mb-6">
- <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center mx-auto text-2xl md:text-3xl font-bold shadow-lg group-hover:shadow-sky-500/25 transition-all duration-500">
- 2
- </div>
- <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
- <CheckCircle className="w-4 h-4 text-white" />
- </div>
- </div>
- <h3 className="text-xl md:text-2xl lg:text-3xl font-bold mb-3 md:mb-4 text-white leading-tight">
- Qualifies Leads
- </h3>
- <p className="text-gray-300 text-sm md:text-base leading-snug">
- The AI gathers all necessary details: service needed, location, urgency, and budget automatically.
- </p>
- <div className="mt-6 flex justify-center">
- <div className="w-12 h-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full" />
- </div>
- </div>
- </motion.div>
- 
- <motion.div 
- initial={{ opacity: 0, y: 50 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8, delay: 0.3 }}
- whileHover={{ y: -10, scale: 1.02 }}
- className="group relative"
- >
- <div className="absolute inset-0 bg-white/5 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-500" />
- <div className="relative bg-gray-800/40 backdrop-blur-xl p-4 md:p-6 rounded-xl border border-gray-700/50 text-center shadow-2xl group-hover:border-cyan-500/30 transition-all duration-500">
- <div className="relative mb-6">
- <div className="w-16 h-16 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center mx-auto text-2xl md:text-3xl font-bold shadow-lg group-hover:shadow-cyan-500/25 transition-all duration-500">
- 3
- </div>
- <div className="absolute -top-2 -right-2 w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center">
- <Calendar className="w-4 h-4 text-white" />
- </div>
- </div>
- <h3 className="text-xl md:text-2xl lg:text-3xl font-bold mb-3 md:mb-4 text-white leading-tight">
- Books Appointments
- </h3>
- <p className="text-gray-300 text-sm md:text-base leading-snug">
- Seamlessly schedules qualified leads directly into your calendar and sends SMS confirmations.
- </p>
- <div className="mt-6 flex justify-center">
- <div className="w-12 h-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full" />
- </div>
- </div>
- </motion.div>
- </div>
- 
- {/* Connection Lines */}
- <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 from-transparent to-transparent z-0" style={{ transform: 'translateY(-50%)' }} />
- </div>
- </section>
-
- {/* Dashboard Preview */}
- <section className="py-12 md:py-16 lg:py-20 via-black/50 relative overflow-hidden">
- {/* Background Elements */}
- <div className="absolute inset-0 via-transparent " />
- <div className="absolute top-0 left-1/4 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl" />
- <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl" />
- 
- <div className="max-w-7xl mx-auto px-4 relative z-10">
- <motion.div
- initial={{ opacity: 0, y: 30 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8 }}
- className="text-center mb-6 md:mb-8"
- >
- <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white from-white leading-tight">
- Professional Dashboard
- </h2>
- <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
- Real-time insights and analytics to track your business growth
- </p>
- </motion.div>
- 
- <motion.div 
- initial={{ opacity: 0, scale: 0.95, y: 50 }}
- whileInView={{ opacity: 1, scale: 1, y: 0 }}
- transition={{ duration: 1, delay: 0.2 }}
- className="relative"
- >
- {/* Dashboard Container */}
- <div className="bg-gray-800/20 backdrop-blur-2xl p-4 md:p-6 rounded-xl border border-gray-700/30 shadow-2xl">
- {/* Dashboard Header */}
- <div className="flex items-center justify-between mb-6">
- <div className="flex items-center space-x-4">
- <div className="w-3 h-3 bg-red-500 rounded-full" />
- <div className="w-3 h-3 bg-yellow-500 rounded-full" />
- <div className="w-3 h-3 bg-green-500 rounded-full" />
- <span className="ml-4 text-gray-400 text-sm">CloudGreet Dashboard</span>
- </div>
- <div className="text-sm text-gray-400">
- Last updated: Just now
- </div>
- </div>
- 
- {/* Two-panel preview: Recent Calls / Upcoming Appointments */}
- <div className="grid md:grid-cols-2 gap-4 md:gap-6 mb-8">
- {/* Recent Calls */}
- <div className="bg-gray-900/60 border border-gray-700/60 rounded-xl p-5 md:p-6">
- <div className="flex items-center justify-between mb-4">
- <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2">
- <Phone className="w-5 h-5 text-sky-400" />
- Recent Calls
- </h3>
- <span className="text-xs text-gray-500">Today</span>
- </div>
- <div className="space-y-3">
- {[
- { name: 'Mike R.', when: '2 min ago', detail: 'Booked: AC repair Tue 9am', booked: true },
- { name: 'Sarah K.', when: '18 min ago', detail: 'Booked: Roof inspection Thu 2pm', booked: true },
- { name: 'John D.', when: '1 hr ago', detail: 'Message taken: callback requested', booked: false },
- { name: 'Lisa M.', when: '2 hrs ago', detail: 'Booked: Interior painting estimate', booked: true },
- ].map((c) => (
- <div key={c.name} className="flex items-start gap-3 py-2 border-b border-gray-800/60 last:border-0">
- <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${c.booked ? 'bg-sky-400' : 'bg-gray-500'}`} />
- <div className="flex-1 min-w-0">
- <div className="flex items-baseline justify-between gap-2">
- <span className="text-sm font-medium text-white truncate">{c.name}</span>
- <span className="text-xs text-gray-500 flex-shrink-0">{c.when}</span>
- </div>
- <p className="text-xs text-gray-400 mt-0.5">{c.detail}</p>
- </div>
- </div>
- ))}
- </div>
- </div>
-
- {/* Upcoming Appointments */}
- <div className="bg-gray-900/60 border border-gray-700/60 rounded-xl p-5 md:p-6">
- <div className="flex items-center justify-between mb-4">
- <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2">
- <Calendar className="w-5 h-5 text-sky-400" />
- Upcoming Appointments
- </h3>
- <span className="text-xs text-gray-500">This week</span>
- </div>
- <div className="space-y-3">
- {[
- { name: 'Mike R.', when: 'Tue 9:00 AM', service: 'AC repair · 4421 Burnet Rd' },
- { name: 'Sarah K.', when: 'Thu 2:00 PM', service: 'Roof inspection · 1208 W 38th' },
- { name: 'David T.', when: 'Fri 10:30 AM', service: 'HVAC tune-up · 902 E Cesar Chavez' },
- { name: 'Lisa M.', when: 'Mon 1:00 PM', service: 'Interior painting estimate' },
- ].map((a) => (
- <div key={a.name + a.when} className="flex items-start gap-3 py-2 border-b border-gray-800/60 last:border-0">
- <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0 bg-sky-400" />
- <div className="flex-1 min-w-0">
- <div className="flex items-baseline justify-between gap-2">
- <span className="text-sm font-medium text-white truncate">{a.name}</span>
- <span className="text-xs text-gray-500 flex-shrink-0">{a.when}</span>
- </div>
- <p className="text-xs text-gray-400 mt-0.5">{a.service}</p>
- </div>
- </div>
- ))}
- </div>
- </div>
- </div>
-
- <div className="text-center">
- <p className="text-gray-300 text-base md:text-lg leading-relaxed max-w-4xl mx-auto">
- Every call, every appointment, one screen. Listen to recordings, read transcripts, and watch your booked jobs roll in.
- </p>
- </div>
- </div>
- </motion.div>
- </div>
- </section>
-
- {/* Pricing Section */}
- <section id="pricing" className="py-12 md:py-16 lg:py-20 via-black/50 relative overflow-hidden">
- {/* Background Elements */}
- <div className="absolute inset-0 via-transparent " />
- <div className="absolute top-1/4 left-1/3 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
- <div className="absolute bottom-1/4 right-1/3 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl" />
- 
- <div className="max-w-5xl mx-auto px-4 text-center relative z-10">
- <motion.div
- initial={{ opacity: 0, y: 30 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8 }}
- className="mb-6 md:mb-8"
- >
- <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white leading-tight">
- Simple, Transparent Pricing
- </h2>
- <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
- Two plans. Flat monthly pricing. No per-booking fees, no surprises.
- </p>
- </motion.div>
-
- <motion.div
- initial={{ opacity: 0, scale: 0.95, y: 50 }}
- whileInView={{ opacity: 1, scale: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 1, delay: 0.2 }}
- className="relative grid md:grid-cols-2 gap-6 max-w-4xl mx-auto"
- >
- {/* Starter Plan */}
- <div className="relative bg-gray-800/30 backdrop-blur-2xl p-6 md:p-8 rounded-xl border border-gray-700/50 shadow-2xl text-left">
- <h3 className="text-xl md:text-2xl font-bold mb-1 text-white">Starter</h3>
- <p className="text-sm text-gray-400 mb-6">After-hours coverage only</p>
-
- <div className="mb-6 flex items-baseline gap-2">
- <span className="text-4xl md:text-5xl font-bold text-white">$499</span>
- <span className="text-base text-gray-400">/mo</span>
- </div>
-
- <div className="space-y-3 mb-8">
- {[
- "AI answers calls outside business hours",
- "Lead qualification & message capture",
- "Calendar booking & SMS confirmations",
- "Missed-call recovery texts",
- "Call recordings & transcripts",
- "Dashboard & ROI tracking",
- ].map((feature) => (
- <div key={feature} className="flex items-start gap-3">
- <CheckCircle className="w-5 h-5 text-sky-400 flex-shrink-0 mt-0.5" />
- <span className="text-gray-200 text-sm md:text-base">{feature}</span>
- </div>
- ))}
- </div>
-
- <Link
- href="/contact"
- className="block w-full text-center bg-white/10 text-white px-4 py-3 rounded-lg text-sm font-semibold border border-white/20 hover:bg-white/20 transition-colors"
- >
- Get Started
- </Link>
- </div>
-
- {/* Full 24/7 Plan */}
- <div className="relative bg-gray-800/30 backdrop-blur-2xl p-6 md:p-8 rounded-xl border border-sky-500/40 shadow-2xl text-left">
- <div className="absolute -top-3 left-6">
- <div className="bg-sky-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
- Most Popular
- </div>
- </div>
-
- <h3 className="text-xl md:text-2xl font-bold mb-1 text-white">Full 24/7</h3>
- <p className="text-sm text-gray-400 mb-6">Around-the-clock coverage</p>
-
- <div className="mb-6 flex items-baseline gap-2">
- <span className="text-4xl md:text-5xl font-bold text-white">$899</span>
- <span className="text-base text-gray-400">/mo</span>
- </div>
-
- <div className="space-y-3 mb-8">
- {[
- "AI answers every call, 24/7",
- "Lead qualification & message capture",
- "Calendar booking & SMS confirmations",
- "Missed-call recovery texts",
- "Call recordings & transcripts",
- "Dashboard & ROI tracking",
- "Custom business greeting",
- "Google & Microsoft Calendar integration",
- ].map((feature) => (
- <div key={feature} className="flex items-start gap-3">
- <CheckCircle className="w-5 h-5 text-sky-400 flex-shrink-0 mt-0.5" />
- <span className="text-gray-200 text-sm md:text-base">{feature}</span>
- </div>
- ))}
- </div>
-
- <Link
- href="/contact"
- className="block w-full text-center bg-sky-500 text-white px-4 py-3 rounded-lg text-sm font-semibold hover:bg-sky-400 transition-colors"
- >
- Get Started
- </Link>
- </div>
- </motion.div>
-
- <p className="text-gray-400 text-xs md:text-sm mt-8">
- Flat monthly pricing • No per-booking fees • Cancel anytime
- </p>
- </div>
- </section>
-
-
- {/* Final CTA Banner */}
- <section className="py-12 md:py-16 lg:py-20 bg-blue-600/10 border-y border-gray-800/50 relative overflow-hidden">
- {/* Background Elements */}
- <div className="absolute inset-0 via-transparent " />
- <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
- <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl" />
- 
- <div className="max-w-5xl mx-auto px-4 text-center relative z-10">
- <motion.div
- initial={{ opacity: 0, y: 30 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8 }}
- className="mb-6"
- >
- <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white from-white leading-tight">
- Turn missed calls into revenue.
- </h2>
- </motion.div>
- 
- <motion.p 
- initial={{ opacity: 0, y: 20 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8, delay: 0.2 }}
- className="text-lg md:text-xl text-gray-300 mb-8 max-w-4xl mx-auto leading-snug"
- >
- Join service businesses who never miss another opportunity. 
- <span className="text-blue-400 font-semibold"> Start growing today.</span>
- </motion.p>
- 
- <motion.div
- initial={{ opacity: 0, y: 30 }}
- whileInView={{ opacity: 1, y: 0 }}
- viewport={{ once: true }}
- transition={{ duration: 0.8, delay: 0.4 }}
- className="flex justify-center items-center"
- >
- <Link
- href="/contact"
- className="bg-white/10 backdrop-blur-xl text-white px-4 py-2 rounded-lg text-sm font-semibold border border-white/20 hover:bg-white/20 hover:border-white/40 transition-all duration-300 shadow-lg flex items-center justify-center gap-2 inline-block"
- >
- <Zap className="w-4 h-4" />
- Test for Free
- </Link>
- 
- </motion.div>
- 
- {/* Trust Indicators with Animated Background */}
- <div className="relative mt-16">
- {/* Animated Background Lines */}
- <div className="absolute inset-0 opacity-20 pointer-events-none">
- <SilkRibbon
- className="absolute inset-x-0 top-0 h-full"
- speed={1.5}
- amplitude={0.8}
- colorA="#A06BFF"
- colorB="#6AA7FF"
- />
- </div>
- 
- <motion.div
- initial={{ opacity: 0, y: 20 }}
- whileInView={{ opacity: 1, y: 0 }}
- transition={{ duration: 0.8, delay: 0.6 }}
- className="relative z-10 flex flex-wrap justify-center items-center gap-4 md:gap-6 text-gray-400"
- >
- <div className="flex items-center gap-2">
- <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
- <span className="text-sm font-medium">Stripe Secure</span>
- </div>
- <div className="flex items-center gap-2">
- <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
- <span className="text-sm font-medium">Telnyx Powered</span>
- </div>
- <div className="flex items-center gap-2">
- <div className="w-2 h-2 bg-sky-500 rounded-full animate-pulse" />
- <span className="text-sm font-medium">Google Calendar</span>
- </div>
- </motion.div>
- </div>
- </div>
- </section>
-
- {/* Footer */}
- <Footer />
- </div>
+  <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
+   <Nav />
+   <Hero />
+   <ProductCard />
+   <Platforms />
+   <Stats />
+   <CallFlow />
+   <DashboardPreview />
+   <Pricing />
+   <FinalCTA />
+   <FooterCard />
+  </main>
  )
 }
 
+/* ----------------------------- Nav ----------------------------- */
 
+function Nav() {
+ return (
+  <nav className="sticky top-0 z-50 bg-[#f6f5f1]/80 backdrop-blur-md border-b border-black/5">
+   <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <Link href="/" className="flex items-center gap-2">
+     <div className="w-7 h-7 bg-gray-900 rounded-md flex items-center justify-center">
+      <Phone className="w-4 h-4 text-white" />
+     </div>
+     <span className="font-semibold text-lg tracking-tight">CloudGreet</span>
+    </Link>
+    <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
+     <a href="#how-it-works" className="hover:text-gray-900 transition-colors">How it works</a>
+     <a href="#pricing" className="hover:text-gray-900 transition-colors">Pricing</a>
+     <Link href="/login" className="hover:text-gray-900 transition-colors">Sign in</Link>
+    </div>
+    <Link
+     href="/contact"
+     className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+    >
+     Book Demo
+     <ArrowUpRight className="w-4 h-4" />
+    </Link>
+   </div>
+  </nav>
+ )
+}
 
+/* ----------------------------- Hero ----------------------------- */
+
+function Hero() {
+ return (
+  <section className="px-6 pt-20 md:pt-28 pb-16 md:pb-24">
+   <div className="max-w-5xl mx-auto text-center">
+    <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[0.95] text-gray-900 mb-6">
+     Stop losing profit
+     <br />
+     <span className="text-gray-500">to voicemail.</span>
+    </h1>
+    <p className="text-base md:text-lg text-gray-600 max-w-xl mx-auto mb-10 leading-relaxed">
+     Answers calls, books jobs, and keeps customers happy &mdash;
+     even when you&apos;re on a ladder.
+    </p>
+    <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+     <a
+      href={DEMO_TEL}
+      className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-900 px-6 py-3.5 rounded-full text-sm font-medium hover:border-gray-400 transition-colors shadow-sm"
+     >
+      Call our AI
+      <ArrowRight className="w-4 h-4" />
+     </a>
+     <Link
+      href="/contact"
+      className="inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3.5 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+     >
+      Book Demo
+      <ArrowUpRight className="w-4 h-4" />
+     </Link>
+    </div>
+    <p className="text-xs text-gray-500 mt-6">
+     Try it now &mdash; <a href={DEMO_TEL} className="font-medium text-gray-900 hover:underline">{DEMO_NUMBER}</a>
+    </p>
+   </div>
+  </section>
+ )
+}
+
+/* ------------------------ Product card ------------------------- */
+
+function ProductCard() {
+ return (
+  <section className="px-6 pb-16">
+   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200/80 shadow-[0_0_60px_-15px_rgba(56,189,248,0.18)] p-6 md:p-12">
+    <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
+     <PhoneTranscript />
+     <div className="text-lg md:text-xl leading-relaxed text-gray-700">
+      Meet the AI agent that connects to your phone line,{' '}
+      <span className="font-semibold text-gray-900">answers</span> calls, handles{' '}
+      <span className="font-semibold text-gray-900">questions</span>, books{' '}
+      <span className="font-semibold text-gray-900">appointments</span>, transfers calls, takes{' '}
+      <span className="font-semibold text-gray-900">notes</span>, and more.
+     </div>
+    </div>
+   </div>
+  </section>
+ )
+}
+
+function PhoneTranscript() {
+ const lines: { who: 'ai' | 'caller'; text: string }[] = [
+  { who: 'ai', text: "Hi, thanks for calling Mike's HVAC, this is the virtual receptionist. How can I help?" },
+  { who: 'caller', text: "My AC stopped blowing cold this morning." },
+  { who: 'ai', text: "Sorry to hear that. I can get a tech out — Tuesday at 9 AM works. Should I book it?" },
+  { who: 'caller', text: "Yes please." },
+  { who: 'ai', text: "Booked. You'll get a confirmation text. Anything else?" },
+ ]
+ return (
+  <div className="relative">
+   <div className="absolute -inset-6 bg-sky-100/50 blur-2xl rounded-3xl pointer-events-none" />
+   <div className="relative bg-gray-50 border border-gray-200 rounded-3xl p-5 md:p-6">
+    <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
+     <div className="w-9 h-9 bg-gray-900 rounded-full flex items-center justify-center">
+      <Phone className="w-4 h-4 text-white" />
+     </div>
+     <div>
+      <div className="text-sm font-semibold text-gray-900">Live call</div>
+      <div className="text-xs text-gray-500">CloudGreet AI &middot; 0:42</div>
+     </div>
+     <div className="ml-auto flex items-center gap-1.5">
+      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+      <span className="text-xs text-gray-500 font-medium">REC</span>
+     </div>
+    </div>
+    <div className="space-y-2.5">
+     {lines.map((l, i) => (
+      <div key={i} className={`flex ${l.who === 'caller' ? 'justify-end' : 'justify-start'}`}>
+       <div
+        className={`max-w-[85%] px-3.5 py-2 rounded-2xl text-sm leading-snug ${
+         l.who === 'ai'
+          ? 'bg-white border border-gray-200 text-gray-800'
+          : 'bg-gray-900 text-white'
+        }`}
+       >
+        {l.text}
+       </div>
+      </div>
+     ))}
+    </div>
+   </div>
+  </div>
+ )
+}
+
+/* --------------------------- Platforms ------------------------- */
+
+function Platforms() {
+ const items = ['Stripe', 'Telnyx', 'Retell', 'Google Calendar', 'Outlook', 'Twilio']
+ return (
+  <section className="px-6 pb-20">
+   <div className="max-w-6xl mx-auto text-center">
+    <p className="text-sm text-gray-500 mb-6">CloudGreet works with the tools you already use</p>
+    <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-gray-400">
+     {items.map((p) => (
+      <span key={p} className="text-base md:text-lg font-medium">{p}</span>
+     ))}
+    </div>
+   </div>
+  </section>
+ )
+}
+
+/* ----------------------------- Stats --------------------------- */
+
+function Stats() {
+ const items = [
+  { icon: Clock, value: '5+ hrs/week', label: 'saved on the phone' },
+  { icon: DollarSign, value: '$2,500/mo', label: 'recovered from missed calls' },
+  { icon: Calendar, value: '24/7', label: 'coverage, never miss a call' },
+  { icon: Star, value: '+1.2 stars', label: 'in average review ratings' },
+ ]
+ return (
+  <section className="px-6 pb-20">
+   <div className="max-w-6xl mx-auto">
+    <p className="text-sm text-gray-500 text-center mb-6">Results on average per client</p>
+    <div className="grid sm:grid-cols-2 gap-4 relative">
+     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+     {items.map(({ icon: Icon, value, label }) => (
+      <div key={value} className="relative bg-white border border-gray-200 rounded-2xl px-6 py-5 flex items-center justify-between">
+       <Icon className="w-5 h-5 text-gray-400" strokeWidth={1.5} />
+       <div className="text-right">
+        <span className="text-base md:text-lg font-semibold text-gray-900">{value}</span>
+        <span className="text-base md:text-lg text-gray-500"> {label}</span>
+       </div>
+      </div>
+     ))}
+    </div>
+   </div>
+  </section>
+ )
+}
+
+/* ---------------------------- Call flow ------------------------ */
+
+function CallFlow() {
+ return (
+  <section id="how-it-works" className="px-6 pb-20">
+   <div className="max-w-6xl mx-auto">
+    <div className="grid md:grid-cols-4 gap-3 relative">
+     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+
+     {/* Header card */}
+     <div className="relative bg-white border border-gray-200 rounded-2xl p-6 md:row-span-2 flex items-end">
+      <h2 className="text-3xl md:text-4xl font-bold tracking-tight leading-none">
+       Basic
+       <br />
+       Call
+       <br />
+       Flow.
+      </h2>
+     </div>
+
+     <FlowCard icon={PhoneIncoming} title="Incoming call." body="Customer dials your main number — no new lines needed." />
+     <FlowCard icon={Phone} title="AI agent answers." body="Picks up instantly or after a set number of rings." wide />
+
+     <FlowCard
+      icon={MessageSquare}
+      title="Call is handled."
+      body={
+       <>
+        The AI talks <strong>naturally</strong> with the caller. From{' '}
+        <strong>common</strong> and <strong>complex</strong> questions to managing{' '}
+        <strong>appointments</strong> and anything else it&apos;s trained for.
+        <br />
+        <br />
+        If it&apos;s outside scope, the AI <strong>transfers</strong> the call to your team.
+       </>
+      }
+      tall
+     />
+
+     <FlowCard icon={FileText} title="Summary sent." body="Name, number, and reason for calling sent instantly to you by SMS." />
+     <FlowCard icon={PhoneForwarded} title="Ends or transfers." body="Resolved calls end. Others are passed to your team." />
+    </div>
+   </div>
+  </section>
+ )
+}
+
+function FlowCard({
+ icon: Icon, title, body, wide = false, tall = false,
+}: {
+ icon: React.ElementType; title: string; body: React.ReactNode; wide?: boolean; tall?: boolean
+}) {
+ return (
+  <div className={`relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6 ${tall ? 'md:row-span-2' : ''} ${wide ? '' : ''}`}>
+   <Icon className="w-5 h-5 text-gray-400 mb-4" strokeWidth={1.5} />
+   <h3 className="text-lg md:text-xl font-bold tracking-tight mb-2 text-gray-900">{title}</h3>
+   <div className="text-sm text-gray-600 leading-relaxed">{body}</div>
+  </div>
+ )
+}
+
+/* ---------------------- Dashboard preview ---------------------- */
+
+function DashboardPreview() {
+ const calls = [
+  { name: 'Mike R.', when: '2 min ago', detail: 'Booked: AC repair Tue 9am', booked: true },
+  { name: 'Sarah K.', when: '18 min ago', detail: 'Booked: Roof inspection Thu 2pm', booked: true },
+  { name: 'John D.', when: '1 hr ago', detail: 'Message taken: callback requested', booked: false },
+  { name: 'Lisa M.', when: '2 hrs ago', detail: 'Booked: Interior painting estimate', booked: true },
+ ]
+ const appts = [
+  { name: 'Mike R.', when: 'Tue 9:00 AM', service: 'AC repair · 4421 Burnet Rd' },
+  { name: 'Sarah K.', when: 'Thu 2:00 PM', service: 'Roof inspection · 1208 W 38th' },
+  { name: 'David T.', when: 'Fri 10:30 AM', service: 'HVAC tune-up · 902 E Cesar Chavez' },
+  { name: 'Lisa M.', when: 'Mon 1:00 PM', service: 'Interior painting estimate' },
+ ]
+ return (
+  <section className="px-6 pb-20">
+   <div className="max-w-6xl mx-auto text-center mb-8">
+    <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-3">Every call. Every appointment.</h2>
+    <p className="text-base md:text-lg text-gray-600">One screen.</p>
+   </div>
+   <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-4 relative">
+    <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+
+    <div className="relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
+     <div className="flex items-center justify-between mb-4">
+      <h3 className="text-base font-semibold flex items-center gap-2">
+       <Phone className="w-4 h-4 text-sky-500" /> Recent Calls
+      </h3>
+      <span className="text-xs text-gray-400">Today</span>
+     </div>
+     <div className="space-y-3">
+      {calls.map((c) => (
+       <div key={c.name} className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${c.booked ? 'bg-sky-500' : 'bg-gray-300'}`} />
+        <div className="flex-1 min-w-0 text-left">
+         <div className="flex items-baseline justify-between gap-2">
+          <span className="text-sm font-medium text-gray-900 truncate">{c.name}</span>
+          <span className="text-xs text-gray-400 flex-shrink-0">{c.when}</span>
+         </div>
+         <p className="text-xs text-gray-600 mt-0.5">{c.detail}</p>
+        </div>
+       </div>
+      ))}
+     </div>
+    </div>
+
+    <div className="relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
+     <div className="flex items-center justify-between mb-4">
+      <h3 className="text-base font-semibold flex items-center gap-2">
+       <Calendar className="w-4 h-4 text-sky-500" /> Upcoming Appointments
+      </h3>
+      <span className="text-xs text-gray-400">This week</span>
+     </div>
+     <div className="space-y-3">
+      {appts.map((a) => (
+       <div key={a.name + a.when} className="flex items-start gap-3 py-2 border-b border-gray-100 last:border-0">
+        <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0 bg-sky-500" />
+        <div className="flex-1 min-w-0 text-left">
+         <div className="flex items-baseline justify-between gap-2">
+          <span className="text-sm font-medium text-gray-900 truncate">{a.name}</span>
+          <span className="text-xs text-gray-400 flex-shrink-0">{a.when}</span>
+         </div>
+         <p className="text-xs text-gray-600 mt-0.5">{a.service}</p>
+        </div>
+       </div>
+      ))}
+     </div>
+    </div>
+   </div>
+  </section>
+ )
+}
+
+/* ----------------------------- Pricing ------------------------- */
+
+function Pricing() {
+ return (
+  <section id="pricing" className="px-6 pb-20">
+   <div className="max-w-6xl mx-auto text-center mb-10">
+    <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-3">Simple, flat pricing.</h2>
+    <p className="text-base md:text-lg text-gray-600">Two plans. No per-booking fees. No surprises.</p>
+   </div>
+
+   <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-4 relative">
+    <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+
+    <PriceCard
+     name="Starter"
+     desc="After-hours coverage only"
+     price="$499"
+     features={[
+      'AI answers calls outside business hours',
+      'Lead qualification & message capture',
+      'Calendar booking & SMS confirmations',
+      'Missed-call recovery texts',
+      'Call recordings & transcripts',
+      'Dashboard & ROI tracking',
+     ]}
+    />
+    <PriceCard
+     name="Full 24/7"
+     desc="Around-the-clock coverage"
+     price="$899"
+     popular
+     features={[
+      'AI answers every call, 24/7',
+      'Lead qualification & message capture',
+      'Calendar booking & SMS confirmations',
+      'Missed-call recovery texts',
+      'Call recordings & transcripts',
+      'Dashboard & ROI tracking',
+      'Custom business greeting',
+      'Google & Microsoft Calendar integration',
+     ]}
+    />
+   </div>
+  </section>
+ )
+}
+
+function PriceCard({
+ name, desc, price, features, popular = false,
+}: {
+ name: string; desc: string; price: string; features: string[]; popular?: boolean
+}) {
+ return (
+  <div className={`relative bg-white border ${popular ? 'border-gray-900' : 'border-gray-200'} rounded-2xl p-6 md:p-8 text-left`}>
+   {popular && (
+    <div className="absolute -top-3 left-6 bg-gray-900 text-white px-3 py-1 rounded-full text-xs font-medium">
+     Most Popular
+    </div>
+   )}
+   <h3 className="text-xl font-bold text-gray-900 mb-1">{name}</h3>
+   <p className="text-sm text-gray-500 mb-5">{desc}</p>
+   <div className="mb-6 flex items-baseline gap-2">
+    <span className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">{price}</span>
+    <span className="text-base text-gray-500">/mo</span>
+   </div>
+   <div className="space-y-2.5 mb-7">
+    {features.map((f) => (
+     <div key={f} className="flex items-start gap-2.5 text-sm text-gray-700">
+      <CheckCircle2 className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" strokeWidth={2} />
+      <span>{f}</span>
+     </div>
+    ))}
+   </div>
+   <Link
+    href="/contact"
+    className={`block w-full text-center px-4 py-3 rounded-full text-sm font-medium transition-colors ${
+     popular
+      ? 'bg-gray-900 text-white hover:bg-gray-800'
+      : 'bg-white border border-gray-200 text-gray-900 hover:border-gray-400'
+    }`}
+   >
+    Book Demo
+   </Link>
+  </div>
+ )
+}
+
+/* --------------------------- Final CTA ------------------------- */
+
+function FinalCTA() {
+ return (
+  <section className="px-6 pb-12">
+   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-8 md:p-12 grid md:grid-cols-2 gap-6 items-center relative overflow-hidden">
+    <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-sky-100/60 blur-3xl rounded-full pointer-events-none" />
+    <div className="relative">
+     <h2 className="text-3xl md:text-5xl font-bold tracking-tight leading-[1.05]">
+      Stop Losing Calls.
+      <br />
+      Start Winning Customers.
+     </h2>
+     <p className="text-gray-600 mt-4">Book a 15-min 1:1 demo to see if you&apos;re a fit.</p>
+    </div>
+    <div className="relative flex md:justify-end">
+     <div className="bg-[#f6f5f1] rounded-2xl p-6 md:p-8 w-full md:max-w-sm">
+      <Link
+       href="/contact"
+       className="inline-flex items-center gap-2 bg-gray-900 text-white px-7 py-4 rounded-full text-base font-medium hover:bg-gray-800 transition-colors w-full justify-center"
+      >
+       Book Demo
+       <ArrowUpRight className="w-4 h-4" />
+      </Link>
+      <p className="text-xs text-gray-500 mt-3 text-center">No setup fee for the first 5 Texas pilot customers.</p>
+     </div>
+    </div>
+   </div>
+  </section>
+ )
+}
+
+/* ---------------------------- Footer --------------------------- */
+
+function FooterCard() {
+ return (
+  <section className="px-6 pb-12">
+   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-8 md:p-10">
+    <div className="grid md:grid-cols-4 gap-8">
+     <div>
+      <Link href="/" className="flex items-center gap-2 mb-3">
+       <div className="w-7 h-7 bg-gray-900 rounded-md flex items-center justify-center">
+        <Phone className="w-4 h-4 text-white" />
+       </div>
+       <span className="font-semibold text-lg tracking-tight">CloudGreet</span>
+      </Link>
+      <p className="text-sm text-gray-500 flex items-center gap-1.5">
+       <MapPin className="w-3.5 h-3.5" /> Built in Austin, TX
+      </p>
+     </div>
+     <div>
+      <h4 className="text-sm font-semibold text-gray-900 mb-3">Menu</h4>
+      <ul className="space-y-2 text-sm text-gray-600">
+       <li><Link href="/" className="hover:text-gray-900">Home</Link></li>
+       <li><Link href="/contact" className="hover:text-gray-900">Contact</Link></li>
+       <li><Link href="/login" className="hover:text-gray-900">Sign in</Link></li>
+      </ul>
+     </div>
+     <div>
+      <h4 className="text-sm font-semibold text-gray-900 mb-3">Legal</h4>
+      <ul className="space-y-2 text-sm text-gray-600">
+       <li><Link href="/privacy" className="hover:text-gray-900">Privacy</Link></li>
+       <li><Link href="/terms" className="hover:text-gray-900">Terms</Link></li>
+       <li><Link href="/tcpa-a2p" className="hover:text-gray-900">TCPA / A2P</Link></li>
+      </ul>
+     </div>
+     <div>
+      <h4 className="text-sm font-semibold text-gray-900 mb-3">Contact</h4>
+      <ul className="space-y-2 text-sm text-gray-600">
+       <li><a href={DEMO_TEL} className="hover:text-gray-900">{DEMO_NUMBER}</a></li>
+       <li className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> 30-day money-back</li>
+      </ul>
+     </div>
+    </div>
+    <div className="mt-8 pt-6 border-t border-gray-200 text-xs text-gray-400">
+     © {new Date().getFullYear()} CloudGreet · Serving Texas contractors
+    </div>
+   </div>
+  </section>
+ )
+}

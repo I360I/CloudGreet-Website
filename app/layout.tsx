@@ -116,7 +116,7 @@ export default function RootLayout({
  }}
  />
  </head>
- <body className={`${inter.className} overscroll-none bg-slate-900`}>
+ <body className={`${inter.className} overscroll-none bg-[#f6f5f1] text-gray-900`}>
  <ErrorBoundary>
  <ToastProvider>
  <RealtimeProvider>
