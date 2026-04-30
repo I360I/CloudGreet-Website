@@ -610,118 +610,72 @@ export default function LandingPage() {
  </div>
  </div>
  
- {/* KPI Cards Grid - Feature Showcase */}
- <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
- <motion.div 
- whileHover={{ y: -5, scale: 1.02 }}
- className="group relative"
- >
- <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-500" />
- <div className="relative bg-blue-600/10 p-4 md:p-6 rounded-xl border border-blue-500/20 backdrop-blur-sm group-hover:border-blue-400/40 transition-all duration-500">
- <div className="flex items-center justify-between mb-6">
- <div className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
- <Phone className="w-6 h-6 text-white" />
+ {/* Two-panel preview: Recent Calls / Upcoming Appointments */}
+ <div className="grid md:grid-cols-2 gap-4 md:gap-6 mb-8">
+ {/* Recent Calls */}
+ <div className="bg-gray-900/60 border border-gray-700/60 rounded-xl p-5 md:p-6">
+ <div className="flex items-center justify-between mb-4">
+ <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2">
+ <Phone className="w-5 h-5 text-sky-400" />
+ Recent Calls
+ </h3>
+ <span className="text-xs text-gray-500">Today</span>
  </div>
- <motion.div
- animate={{ rotate: [0, 5, -5, 0] }}
- transition={{ duration: 2, repeat: Infinity }}
- className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"
- >
- <TrendingUp className="w-5 h-5 text-green-400" />
- </motion.div>
+ <div className="space-y-3">
+ {[
+ { name: 'Mike R.', when: '2 min ago', detail: 'Booked: AC repair Tue 9am', booked: true },
+ { name: 'Sarah K.', when: '18 min ago', detail: 'Booked: Roof inspection Thu 2pm', booked: true },
+ { name: 'John D.', when: '1 hr ago', detail: 'Message taken: callback requested', booked: false },
+ { name: 'Lisa M.', when: '2 hrs ago', detail: 'Booked: Interior painting estimate', booked: true },
+ ].map((c) => (
+ <div key={c.name} className="flex items-start gap-3 py-2 border-b border-gray-800/60 last:border-0">
+ <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${c.booked ? 'bg-sky-400' : 'bg-gray-500'}`} />
+ <div className="flex-1 min-w-0">
+ <div className="flex items-baseline justify-between gap-2">
+ <span className="text-sm font-medium text-white truncate">{c.name}</span>
+ <span className="text-xs text-gray-500 flex-shrink-0">{c.when}</span>
  </div>
- <h3 className="text-base md:text-lg font-bold mb-2 text-gray-200 leading-tight">24/7 Coverage</h3>
- <div className="flex items-baseline gap-2">
- <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-blue-400 leading-tight">100%</p>
+ <p className="text-xs text-gray-400 mt-0.5">{c.detail}</p>
  </div>
- <p className="text-sm text-gray-400 mt-2">Never miss a call</p>
  </div>
- </motion.div>
- 
- <motion.div 
- whileHover={{ y: -5, scale: 1.02 }}
- className="group relative"
- >
- <div className="absolute inset-0 bg-green-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-500" />
- <div className="relative bg-green-600/10 p-4 md:p-6 rounded-xl border border-green-500/20 backdrop-blur-sm group-hover:border-green-400/40 transition-all duration-500">
- <div className="flex items-center justify-between mb-6">
- <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-lg">
- <Calendar className="w-6 h-6 text-white" />
+ ))}
  </div>
- <motion.div
- animate={{ rotate: [0, 5, -5, 0] }}
- transition={{ duration: 2, repeat: Infinity, delay: 0.2 }}
- className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"
- >
- <CheckCircle className="w-5 h-5 text-green-400" />
- </motion.div>
  </div>
- <h3 className="text-base md:text-lg font-bold mb-2 text-gray-200 leading-tight">Auto-Booking</h3>
- <div className="flex items-baseline gap-2">
- <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-green-400 leading-tight">Instant</p>
+
+ {/* Upcoming Appointments */}
+ <div className="bg-gray-900/60 border border-gray-700/60 rounded-xl p-5 md:p-6">
+ <div className="flex items-center justify-between mb-4">
+ <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2">
+ <Calendar className="w-5 h-5 text-sky-400" />
+ Upcoming Appointments
+ </h3>
+ <span className="text-xs text-gray-500">This week</span>
  </div>
- <p className="text-sm text-gray-400 mt-2">Appointments scheduled</p>
+ <div className="space-y-3">
+ {[
+ { name: 'Mike R.', when: 'Tue 9:00 AM', service: 'AC repair · 4421 Burnet Rd' },
+ { name: 'Sarah K.', when: 'Thu 2:00 PM', service: 'Roof inspection · 1208 W 38th' },
+ { name: 'David T.', when: 'Fri 10:30 AM', service: 'HVAC tune-up · 902 E Cesar Chavez' },
+ { name: 'Lisa M.', when: 'Mon 1:00 PM', service: 'Interior painting estimate' },
+ ].map((a) => (
+ <div key={a.name + a.when} className="flex items-start gap-3 py-2 border-b border-gray-800/60 last:border-0">
+ <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0 bg-sky-400" />
+ <div className="flex-1 min-w-0">
+ <div className="flex items-baseline justify-between gap-2">
+ <span className="text-sm font-medium text-white truncate">{a.name}</span>
+ <span className="text-xs text-gray-500 flex-shrink-0">{a.when}</span>
  </div>
- </motion.div>
- 
- <motion.div 
- whileHover={{ y: -5, scale: 1.02 }}
- className="group relative"
- >
- <div className="absolute inset-0 bg-sky-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-500" />
- <div className="relative bg-sky-600/10 p-4 md:p-6 rounded-xl border border-sky-500/20 backdrop-blur-sm group-hover:border-sky-400/40 transition-all duration-500">
- <div className="flex items-center justify-between mb-6">
- <div className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl flex items-center justify-center shadow-lg">
- <Users className="w-6 h-6 text-white" />
+ <p className="text-xs text-gray-400 mt-0.5">{a.service}</p>
  </div>
- <motion.div
- animate={{ rotate: [0, 5, -5, 0] }}
- transition={{ duration: 2, repeat: Infinity, delay: 0.4 }}
- className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"
- >
- <Zap className="w-5 h-5 text-sky-400" />
- </motion.div>
  </div>
- <h3 className="text-base md:text-lg font-bold mb-2 text-gray-200 leading-tight">Smart AI</h3>
- <div className="flex items-baseline gap-2">
- <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-sky-400 leading-tight">GPT-4</p>
+ ))}
  </div>
- <p className="text-sm text-gray-400 mt-2">Powered intelligence</p>
  </div>
- </motion.div>
- 
- <motion.div 
- whileHover={{ y: -5, scale: 1.02 }}
- className="group relative"
- >
- <div className="absolute inset-0 bg-yellow-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-500" />
- <div className="relative bg-yellow-600/10 p-4 md:p-6 rounded-xl border border-yellow-500/20 backdrop-blur-sm group-hover:border-yellow-400/40 transition-all duration-500">
- <div className="flex items-center justify-between mb-6">
- <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
- <DollarSign className="w-6 h-6 text-white" />
  </div>
- <motion.div
- animate={{ rotate: [0, 5, -5, 0] }}
- transition={{ duration: 2, repeat: Infinity, delay: 0.6 }}
- className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center"
- >
- <TrendingUp className="w-5 h-5 text-green-400" />
- </motion.div>
- </div>
- <h3 className="text-base md:text-lg font-bold mb-2 text-gray-200 leading-tight">ROI Tracking</h3>
- <div className="flex items-baseline gap-2">
- <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-yellow-400 leading-tight">Real-time</p>
- </div>
- <p className="text-sm text-gray-400 mt-2">Revenue insights</p>
- </div>
- </motion.div>
- </div>
- 
- {/* Dashboard Description */}
+
  <div className="text-center">
  <p className="text-gray-300 text-base md:text-lg leading-relaxed max-w-4xl mx-auto">
- Real-time analytics, call recordings, and performance insights to help you grow your business. 
- Track every metric that matters and make data-driven decisions.
+ Every call, every appointment, one screen. Listen to recordings, read transcripts, and watch your booked jobs roll in.
  </p>
  </div>
  </div>
