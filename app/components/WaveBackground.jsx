@@ -251,7 +251,7 @@ export default function WaveBackground({
     timeRef.current += 16;
 
     // Clear with subtle fade for trail effect
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.015)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Get waves from canvas data attribute

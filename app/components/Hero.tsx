@@ -22,12 +22,12 @@ export default function Hero() {
  initial={{ opacity: 0, y: 30 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ duration: 0.8 }}
- className="mb-6"
+ className="mb-6 bg-black/50 backdrop-blur-sm rounded-2xl px-6 md:px-10 py-6 md:py-8"
  >
  <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-5 text-white leading-tight tracking-tight max-w-4xl mx-auto">
- Stop losing roofing, HVAC, and painting jobs to voicemail.
+ Stop losing profit to voicemail.
  </h1>
- <p className="text-base md:text-lg text-gray-300 max-w-3xl mx-auto leading-relaxed">
+ <p className="text-base md:text-lg text-gray-200 max-w-3xl mx-auto leading-relaxed">
  CloudGreet&apos;s AI answers your phone, qualifies the customer, and books the appointment &mdash; even when you&apos;re on a ladder. Built for Texas contractors.
  </p>
  <p className="text-sky-400 font-semibold mt-4">
