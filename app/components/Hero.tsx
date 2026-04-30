@@ -12,21 +12,18 @@ import dynamic from 'next/dynamic'
 // Use dynamic import to prevent hydration issues
 const WaveBackground = dynamic(() => import('./WaveBackground.jsx'), { 
  ssr: false,
- loading: () => <div className="absolute inset-0 via-black " />
+ loading: () => <div className="absolute inset-0 bg-slate-900" />
 })
 
 export default function Hero() {
 
  return (
- <section className="relative min-h-screen flex items-center justify-center overflow-hidden via-black ">
+ <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-900">
 
  {/* Vignette overlay for better text readability */}
- <div className="absolute inset-0 from-black/20 via-transparent to-black/30 pointer-events-none" />
+ <div className="absolute inset-0 bg-black/20 pointer-events-none" />
 
  {/* Premium Background Effects */}
- <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.15)_0%,transparent_50%)]"></div>
- <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(147,51,234,0.15)_0%,transparent_50%)]"></div>
- <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(16,185,129,0.1)_0%,transparent_50%)]"></div>
  
 
  {/* WAVE BACKGROUND - Original canvas-based purple waves with magnetic field effects */}

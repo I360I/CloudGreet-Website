@@ -51,15 +51,15 @@ export default function WaveBackground({
     }
 
     getElectricPurple() {
-      const vibrantPurples = [
-        '#8B5CF6', // Purple-500 - bright and vibrant
-        '#A855F7', // Purple-600 - rich and electric
-        '#9333EA', // Purple-700 - deep and glowing
-        '#C084FC', // Purple-400 - bright and luminous
-        '#A78BFA', // Purple-500 - more saturated purple
-        '#8B5CF6', // Purple-500 - consistent vibrant purple
+      const skyBlues = [
+        '#38BDF8', // sky-400
+        '#0EA5E9', // sky-500
+        '#0284C7', // sky-600
+        '#22D3EE', // cyan-400
+        '#06B6D4', // cyan-500
+        '#7DD3FC', // sky-300
       ];
-      return vibrantPurples[Math.floor(Math.random() * vibrantPurples.length)];
+      return skyBlues[Math.floor(Math.random() * skyBlues.length)];
     }
 
     update(time, button) {
@@ -300,7 +300,8 @@ export default function WaveBackground({
       clearInterval(buttonUpdateInterval);
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [intensity, updateButtonPosition, animate, initializeWaves]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intensity]);
 
   return (
     <canvas
