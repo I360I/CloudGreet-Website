@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect } from 'react';
 
 /**
  * WaveBackground - Exact Match to Reference Image
@@ -20,7 +20,6 @@ export default function WaveBackground({
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const timeRef = useRef(0);
-  const buttonRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
   // Wave class matching the reference image exactly
   class ReferenceWave {
@@ -62,69 +61,10 @@ export default function WaveBackground({
       return skyBlues[Math.floor(Math.random() * skyBlues.length)];
     }
 
-    update(time, button) {
-      // No horizontal movement - waves stay in position
+    update(time) {
       this.phase += 0.008;
       this.pulsePhase += this.pulseSpeed;
-      
-        // Enhanced button interaction - waves create magnetic field around button
-        if (button && button.width > 0) {
-          const buttonCenterX = button.x + button.width / 2;
-          const buttonCenterY = button.y + button.height / 2;
-          const buttonRadius = Math.max(button.width, button.height) / 2 + 40;
-          
-          // First, align waves to button level with more attraction
-          if (!this.alignedToButton) {
-            const targetY = buttonCenterY + (this.index - 4) * 12; // Spread around button
-            this.y += (targetY - this.y) * 0.15; // Stronger alignment
-            this.originalY = targetY;
-            
-            // Mark as aligned when close enough
-            if (Math.abs(this.y - targetY) < 8) {
-              this.alignedToButton = true;
-            }
-          }
-          
-          // MAGNETIC FIELD EFFECT - Waves are attracted then repelled
-          const horizontalDistance = Math.abs(this.x - buttonCenterX);
-          const verticalDistance = Math.abs(this.y - buttonCenterY);
-          const totalDistance = Math.sqrt(horizontalDistance * horizontalDistance + verticalDistance * verticalDistance);
-          
-          // Create a magnetic field around the button
-          const magneticRadius = buttonRadius * 1.5;
-          
-          if (totalDistance < magneticRadius * 2) {
-            // Check if wave is in the button's vertical space
-            const buttonTop = buttonCenterY - buttonRadius;
-            const buttonBottom = buttonCenterY + buttonRadius;
-            
-            // MAGNETIC REPULSION - Waves flow around button like magnetic field
-            if (this.y >= buttonTop && this.y <= buttonBottom) {
-              // Wave is in button's vertical space - create magnetic deflection
-              const deflectionStrength = 1 - (totalDistance / (magneticRadius * 2));
-              
-              if (this.y < buttonCenterY) {
-                // Wave is in upper half - push it up with magnetic force
-                this.y = buttonTop - (30 + deflectionStrength * 40);
-              } else {
-                // Wave is in lower half - push it down with magnetic force
-                this.y = buttonBottom + (30 + deflectionStrength * 40);
-              }
-            }
-            
-            // Additional magnetic field effect - waves curve around button
-            if (horizontalDistance < magneticRadius) {
-              const magneticForce = (1 - horizontalDistance / magneticRadius) * 0.3;
-              if (this.x < buttonCenterX) {
-                this.y += Math.sin(time * 0.01) * magneticForce * 5; // Slight wave distortion
-              } else {
-                this.y += Math.sin(time * 0.01 + Math.PI) * magneticForce * 5; // Opposite distortion
-              }
-            }
-          }
-        }
-      
-      // Dynamic pulsing - balanced
+
       const pulse = Math.sin(this.pulsePhase) * 0.2 + 0.8;
       this.currentOpacity = this.opacity * pulse * intensity;
       this.currentAmplitude = this.amplitude * (0.9 + pulse * 0.2);
@@ -201,65 +141,37 @@ export default function WaveBackground({
     }
   }
 
-  // Button tracking
-  const updateButtonPosition = useCallback(() => {
-    const button = document.querySelector('[data-cta-button]');
-    if (button && canvasRef.current) {
-      const canvasRect = canvasRef.current.getBoundingClientRect();
-      const buttonRect = button.getBoundingClientRect();
-      
-      buttonRef.current = {
-        x: buttonRect.left - canvasRect.left,
-        y: buttonRect.top - canvasRect.top,
-        width: buttonRect.width,
-        height: buttonRect.height
-      };
-      
-      // Debug: log button position
-      // Console log removed for production
-    } else {
-      // Console log removed for production
-    }
-  }, []);
-
   // Initialize waves
   const initializeWaves = (canvas) => {
     const waves = [];
-    const waveCount = 8; // Fewer waves for cleaner effect
-    
-    // Create waves that will align with button when it's detected
+    const waveCount = 8;
+
     for (let i = 0; i < waveCount; i++) {
       const wave = new ReferenceWave(canvas, i);
-      
-      // Start with default positioning - will be adjusted when button is detected
-      const spread = (i - waveCount / 2) * 8; // Small vertical spread
-      wave.y = canvas.height * 0.5 + spread;
-      wave.originalY = wave.y; // Store original position
-      
+      // Anchor waves to the bottom third so they don't bisect hero text
+      const spread = (i - waveCount / 2) * 8;
+      wave.y = canvas.height * 0.78 + spread;
+      wave.originalY = wave.y;
       waves.push(wave);
     }
-    
+
     return waves;
   };
 
   // Animation loop
-  const animate = (currentTime) => {
+  const animate = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     timeRef.current += 16;
 
-    // Clear with subtle fade for trail effect
     ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Get waves from canvas data attribute
     const waves = canvas._waves || [];
-    
-    // Update and draw waves
     waves.forEach(wave => {
-      wave.update(timeRef.current, buttonRef.current);
+      wave.update(timeRef.current);
       wave.draw(ctx);
     });
 
@@ -277,19 +189,15 @@ export default function WaveBackground({
       canvas.height = rect.height * window.devicePixelRatio;
       canvas.style.width = rect.width + 'px';
       canvas.style.height = rect.height + 'px';
-      
+
       const ctx = canvas.getContext('2d');
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-      
-      // Initialize waves and store on canvas
+
       canvas._waves = initializeWaves({ width: rect.width, height: rect.height });
     };
 
     resizeCanvas();
     animationRef.current = requestAnimationFrame(animate);
-
-    // Update button position periodically
-    const buttonUpdateInterval = setInterval(updateButtonPosition, 100);
 
     window.addEventListener('resize', resizeCanvas);
 
@@ -297,7 +205,6 @@ export default function WaveBackground({
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-      clearInterval(buttonUpdateInterval);
       window.removeEventListener('resize', resizeCanvas);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
