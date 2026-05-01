@@ -10,7 +10,7 @@ import {
  Loader2, ChevronRight, LayoutDashboard, PhoneCall, CalendarCheck,
  Settings, CreditCard, LogOut, ArrowUpRight, ArrowDownRight,
  Search, Activity,
-} from 'react-icons/md'
+} from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement,
