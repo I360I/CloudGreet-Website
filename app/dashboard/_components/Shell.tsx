@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Sidebar, SidebarSkeleton } from './Sidebar'
 import { TopBar } from './TopBar'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 const PAGE_EASE = [0.22, 1, 0.36, 1] as const
 
@@ -16,7 +17,9 @@ export function DashShell({
  children: React.ReactNode
 }) {
  const router = useRouter()
+ const pathname = usePathname() || ''
  const [businessName, setBusinessName] = useState<string | null>(null)
+ const [redirecting, setRedirecting] = useState(false)
 
  useEffect(() => {
   try {
@@ -32,13 +35,33 @@ export function DashShell({
   }
  }, [])
 
+ // Bounce to onboarding if the contractor hasn't finished setup yet.
+ // Skip the check on the onboarding page itself so it can render normally.
+ useEffect(() => {
+  if (pathname.startsWith('/dashboard/onboarding')) return
+  let cancelled = false
+  ;(async () => {
+   try {
+    const res = await fetchWithAuth('/api/onboarding/state')
+    if (!res.ok) return
+    const json = await res.json()
+    if (!json?.success || !json.business) return
+    if (!json.business.onboarding_completed && !cancelled) {
+     setRedirecting(true)
+     router.replace('/dashboard/onboarding')
+    }
+   } catch { /* non-fatal — fall through to normal render */ }
+  })()
+  return () => { cancelled = true }
+ }, [pathname, router])
+
  const handleSignOut = async () => {
   try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
   localStorage.removeItem('user'); localStorage.removeItem('business'); localStorage.removeItem('token')
   router.replace('/login')
  }
 
- if (businessName === null) {
+ if (businessName === null || redirecting) {
   return (
    <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
     <SidebarSkeleton />
