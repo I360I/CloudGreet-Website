@@ -21,7 +21,6 @@ export default function LandingPage() {
    <ProductCard />
    <Platforms />
    <Stats />
-   <CallFlow />
    <DashboardPreview />
    <RoiCalculator />
    <FinalCTA />
@@ -43,8 +42,7 @@ function Nav() {
      <span className="font-semibold text-lg tracking-tight">CloudGreet</span>
     </Link>
     <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
-     <a href="#how-it-works" className="hover:text-gray-900 transition-colors">How it works</a>
-     <a href="#pricing" className="hover:text-gray-900 transition-colors">ROI Calculator</a>
+          <a href="#pricing" className="hover:text-gray-900 transition-colors">ROI Calculator</a>
      <Link href="/login" className="hover:text-gray-900 transition-colors">Sign in</Link>
     </div>
     <Link
