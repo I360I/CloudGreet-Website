@@ -113,9 +113,10 @@ function NewClientForm({ onCreated }: { onCreated: () => void }) {
 
  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault()
+  const form = e.currentTarget // capture before any await — React reuses synthetic events
   setSubmitting(true)
   setError('')
-  const fd = new FormData(e.currentTarget)
+  const fd = new FormData(form)
   const body = Object.fromEntries(fd.entries())
   try {
    const res = await fetchWithAuth('/api/admin/clients', {
@@ -128,7 +129,7 @@ function NewClientForm({ onCreated }: { onCreated: () => void }) {
     setError(data.error || data.detail || 'Failed to create client')
     return
    }
-   ;(e.currentTarget as HTMLFormElement).reset()
+   form.reset()
    onCreated()
   } catch (err) {
    setError(`Request failed: ${err instanceof Error ? err.message : String(err)}`)
