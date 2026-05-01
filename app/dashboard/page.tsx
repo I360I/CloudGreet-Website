@@ -1,16 +1,15 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
  Phone, Calendar, Clock, TrendingUp, X, Play,
- Loader2, ChevronRight, LayoutDashboard, PhoneCall, CalendarCheck,
- Settings, CreditCard, LogOut, ArrowUpRight, ArrowDownRight,
+ Loader2, ChevronRight, PhoneCall, CalendarCheck,
+ ArrowUpRight, ArrowDownRight,
  Search, Activity,
 } from 'lucide-react'
+import { Sidebar, SidebarSkeleton } from './_components/Sidebar'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement,
@@ -209,9 +208,9 @@ export default function DashboardPage() {
       {/* Calls + Appointments */}
       <motion.div
        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-       className="grid md:grid-cols-2 gap-3"
+       className="grid md:grid-cols-2 gap-3 scroll-mt-20"
       >
-       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px]">
+       <div id="calls" className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px] scroll-mt-20">
         <div className="px-6 pt-5 pb-4 border-b border-gray-100">
          <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -269,7 +268,7 @@ export default function DashboardPage() {
         </div>
        </div>
 
-       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px]">
+       <div id="appointments" className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px] scroll-mt-20">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
          <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
           <Calendar className="w-4 h-4 text-sky-500" /> Upcoming appointments
@@ -313,62 +312,6 @@ export default function DashboardPage() {
 
 /* ====================== SIDEBAR ====================== */
 
-function Sidebar({ businessName, onSignOut }: { businessName: string; onSignOut: () => void }) {
- const items: { icon: React.ElementType; label: string; href: string; active?: boolean }[] = [
-  { icon: LayoutDashboard, label: 'Overview', href: '/dashboard', active: true },
-  { icon: PhoneCall, label: 'Calls', href: '/dashboard' },
-  { icon: Calendar, label: 'Appointments', href: '/dashboard' },
-  { icon: Settings, label: 'Settings', href: '/dashboard' },
-  { icon: CreditCard, label: 'Billing', href: '/dashboard/billing' },
- ]
- return (
-  <aside className="hidden lg:flex w-60 flex-col bg-white/40 border-r border-black/5 sticky top-0 h-screen">
-   <div className="px-5 py-5">
-    <Link href="/dashboard" className="flex items-center" aria-label="CloudGreet">
-     <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={140} height={40} priority className="h-7 w-auto" />
-    </Link>
-   </div>
-
-   <nav className="px-3 flex-1">
-    {items.map((item) => (
-     <Link key={item.label} href={item.href}
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-0.5 ${
-       item.active
-        ? 'bg-gray-900 text-white'
-        : 'text-gray-600 hover:text-gray-900 hover:bg-black/[.04]'
-      }`}
-     >
-      <item.icon className="w-4 h-4" strokeWidth={1.75} />
-      {item.label}
-     </Link>
-    ))}
-   </nav>
-
-   <div className="px-3 pb-5 border-t border-black/5 pt-4 mt-4">
-    <div className="px-3 mb-3">
-     <div className="text-xs text-gray-500 mb-1">Signed in as</div>
-     <div className="text-sm font-medium text-gray-900 truncate">{businessName}</div>
-    </div>
-    <button onClick={onSignOut}
-     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-gray-900 hover:bg-black/[.04] transition-colors"
-    >
-     <LogOut className="w-4 h-4" strokeWidth={1.75} /> Sign out
-    </button>
-   </div>
-  </aside>
- )
-}
-
-function SidebarSkeleton() {
- return (
-  <aside className="hidden lg:block w-60 border-r border-black/5 sticky top-0 h-screen">
-   <div className="p-5"><div className="h-7 w-32 bg-gray-200/70 rounded animate-pulse" /></div>
-   <div className="px-5 space-y-2.5">
-    {[...Array(5)].map((_, i) => <div key={i} className="h-7 bg-gray-200/50 rounded animate-pulse" />)}
-   </div>
-  </aside>
- )
-}
 
 /* ====================== TOP BAR with live status ====================== */
 
