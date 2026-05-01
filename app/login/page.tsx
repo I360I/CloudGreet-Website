@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { MdOutlineVisibility, MdOutlineVisibilityOff, MdOutlineArrowOutward } from "react-icons/md"
+import { Eye, EyeOff, ArrowUpRight } from "lucide-react"
 import { setAuthToken } from '@/lib/auth/token-manager'
 
 export default function LoginPage() {
@@ -103,7 +103,7 @@ export default function LoginPage() {
           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
           aria-label={showPassword ? 'Hide password' : 'Show password'}
          >
-          {showPassword ? <MdOutlineVisibilityOff className="w-4 h-4" /> : <MdOutlineVisibility className="w-4 h-4" />}
+          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
          </button>
         </div>
        </div>
@@ -122,7 +122,7 @@ export default function LoginPage() {
         {isLoading ? 'Signing in…' : (
          <>
           Sign in
-          <MdOutlineArrowOutward className="w-4 h-4" />
+          <ArrowUpRight className="w-4 h-4" />
          </>
         )}
        </button>

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MdOutlineVisibility, MdOutlineVisibilityOff, MdOutlineArrowOutward } from "react-icons/md"
+import { Eye, EyeOff, ArrowUpRight } from "lucide-react"
 import { setAuthToken } from '@/lib/auth/token-manager'
 
 export default function AdminLoginPage() {
@@ -85,7 +85,7 @@ export default function AdminLoginPage() {
           className="w-full px-4 py-3 pr-11 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
          />
          <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">
-          {showPassword ? <MdOutlineVisibilityOff className="w-4 h-4" /> : <MdOutlineVisibility className="w-4 h-4" />}
+          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
          </button>
         </div>
        </div>
@@ -93,7 +93,7 @@ export default function AdminLoginPage() {
        {error && <div className="bg-red-50 border border-red-200 text-red-900 rounded-xl p-3 text-sm">{error}</div>}
 
        <button type="submit" disabled={isLoading} className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50">
-        {isLoading ? 'Signing in…' : (<>Sign in<MdOutlineArrowOutward className="w-4 h-4" /></>)}
+        {isLoading ? 'Signing in…' : (<>Sign in<ArrowUpRight className="w-4 h-4" /></>)}
        </button>
       </form>
      </div>
