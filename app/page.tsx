@@ -357,15 +357,13 @@ function RoiCalculator() {
  const [avgJobValue, setAvgJobValue] = useState(450)
  const [closeRate, setCloseRate] = useState(30)
 
- const { lostMonth, recoveredMonth, netGain } = useMemo(() => {
+ const { lostMonth, recoveredMonth } = useMemo(() => {
   const workDays = 22
   const missedPerMonth = missedPerDay * workDays
   const lostMonth = missedPerMonth * (closeRate / 100) * avgJobValue
   // Assume CloudGreet recovers ~70% of those missed jobs
   const recoveredMonth = lostMonth * 0.7
-  // Subtract the Full 24/7 plan as worst-case ROI math
-  const netGain = recoveredMonth - 899
-  return { lostMonth, recoveredMonth, netGain }
+  return { lostMonth, recoveredMonth }
  }, [missedPerDay, avgJobValue, closeRate])
 
  const fmt = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
@@ -396,15 +394,35 @@ function RoiCalculator() {
        display={`${missedPerDay}`}
        onChange={setMissedPerDay}
       />
-      <Slider
-       label="Average job value"
-       value={avgJobValue}
-       min={100}
-       max={5000}
-       step={50}
-       display={fmt(avgJobValue)}
-       onChange={setAvgJobValue}
-      />
+      <div>
+       <div className="flex items-baseline justify-between mb-3">
+        <label className="text-sm text-gray-600">Average job value</label>
+        <div className="flex items-baseline">
+         <span className="font-display text-xl font-medium text-gray-500 mr-1">$</span>
+         <input
+          type="number"
+          min={50}
+          step={50}
+          value={avgJobValue}
+          onChange={(e) => setAvgJobValue(Math.max(0, Number(e.target.value) || 0))}
+          className="font-display text-xl font-medium text-gray-900 bg-transparent border-b border-gray-300 focus:border-gray-900 focus:outline-none w-28 text-right"
+         />
+        </div>
+       </div>
+       <input
+        type="range"
+        min={100}
+        max={10000}
+        step={50}
+        value={Math.min(avgJobValue, 10000)}
+        onChange={(e) => setAvgJobValue(Number(e.target.value))}
+        className="w-full h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-sky-500
+         [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+         [&::-webkit-slider-thumb]:bg-gray-900 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+         [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(255,255,255,1),0_0_0_5px_rgba(229,231,235,1)]"
+       />
+       <p className="text-xs text-gray-400 mt-1.5">Slider goes to $10k. Type any amount above.</p>
+      </div>
       <Slider
        label="Booking rate on answered calls"
        value={closeRate}
@@ -424,15 +442,14 @@ function RoiCalculator() {
       </div>
       <div className="text-sm text-gray-500 mb-8">in revenue every month.</div>
 
-      <div className="border-t border-gray-200 pt-6 space-y-3">
-       <Row label="CloudGreet recovers (~70%)" value={fmt(recoveredMonth)} />
-       <Row label="CloudGreet plan (Full 24/7)" value="−$899" muted />
-       <div className="flex items-baseline justify-between pt-3 border-t border-gray-200">
-        <span className="text-sm text-gray-700 font-medium">Net gain / month</span>
+      <div className="border-t border-gray-200 pt-6">
+       <div className="flex items-baseline justify-between">
+        <span className="text-sm text-gray-700 font-medium">CloudGreet recovers about</span>
         <span className="font-display text-2xl md:text-3xl font-medium text-sky-600">
-         {netGain >= 0 ? `+${fmt(netGain)}` : fmt(netGain)}
+         {fmt(recoveredMonth)}
         </span>
        </div>
+       <div className="text-xs text-gray-500 mt-1">per month, based on a 70% recovery rate</div>
       </div>
 
       <Link
@@ -513,7 +530,6 @@ function FinalCTA() {
        Book Demo
        <ArrowUpRight className="w-4 h-4" />
       </Link>
-      <p className="text-xs text-gray-500 mt-3 text-center">No setup fee for the first 5 Texas pilot customers.</p>
      </div>
     </div>
    </div>
