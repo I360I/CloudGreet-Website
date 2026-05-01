@@ -140,7 +140,25 @@ function NewClientForm({ onCreated }: { onCreated: () => void }) {
  return (
   <form onSubmit={onSubmit} className="bg-white border border-gray-200 rounded-[28px] p-6 md:p-8 mb-6 grid sm:grid-cols-2 gap-4">
    <Field name="business_name" label="Business name" required />
-   <Field name="business_type" label="Business type" placeholder="HVAC / Roofing / Painting…" />
+   <div>
+    <label htmlFor="business_type" className="text-sm text-gray-700 mb-2 block">
+     Business type<span className="text-gray-400"> *</span>
+    </label>
+    <select
+     id="business_type" name="business_type" required
+     className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-gray-900 transition-colors"
+    >
+     <option value="">Select type…</option>
+     <option value="HVAC">HVAC</option>
+     <option value="Roofing">Roofing</option>
+     <option value="Painting">Painting</option>
+     <option value="Plumbing">Plumbing</option>
+     <option value="Electrical">Electrical</option>
+     <option value="Other">Other</option>
+    </select>
+   </div>
+   <Field name="first_name" label="Owner first name" placeholder="Mike" />
+   <Field name="last_name" label="Owner last name" placeholder="Rodriguez" />
    <Field name="email" label="Owner email" type="email" required />
    <Field name="password" label="Temporary password" type="text" required />
    <Field name="phone_number" label="Business phone" placeholder="+1 (512) 555-1234" />
