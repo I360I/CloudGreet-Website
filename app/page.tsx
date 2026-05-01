@@ -216,61 +216,40 @@ function Stats() {
 /* ---------------------------- Call flow ------------------------ */
 
 function CallFlow() {
+ const steps = [
+  { icon: PhoneIncoming, title: 'Incoming call.', body: 'Customer dials your main number — no new lines needed.' },
+  { icon: Phone, title: 'AI agent answers.', body: 'Picks up instantly or after a set number of rings.' },
+  { icon: MessageSquare, title: 'Call is handled.', body: 'AI talks naturally, answers questions, and books appointments.' },
+  { icon: FileText, title: 'Summary sent.', body: 'Name, number, and reason for calling sent to you by SMS.' },
+  { icon: PhoneForwarded, title: 'Ends or transfers.', body: 'Resolved calls end. Others are passed to your team.' },
+ ]
  return (
-  <section id="how-it-works" className="px-6 pb-20">
+  <section id="how-it-works" className="px-6 pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto">
-    <div className="grid md:grid-cols-4 gap-3 relative">
+    <div className="text-center mb-10">
+     <h2 className="font-display text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
+      How it <span className="text-gray-400">works.</span>
+     </h2>
+     <p className="text-base md:text-lg text-gray-500">Five simple steps. No setup on your end.</p>
+    </div>
+
+    <div className="relative">
      <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
-
-     {/* Header card */}
-     <div className="relative bg-white border border-gray-200 rounded-2xl p-6 md:row-span-2 flex items-end">
-      <h2 className="font-display text-3xl md:text-4xl font-medium tracking-tight leading-[1]">
-       Basic
-       <br />
-       Call
-       <br />
-       Flow.
-      </h2>
+     <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      {steps.map((s, i) => (
+       <div key={s.title} className="bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
+        <div className="flex items-center gap-2 mb-4">
+         <span className="text-xs text-gray-400 font-medium">0{i + 1}</span>
+         <s.icon className="w-4 h-4 text-gray-400" strokeWidth={1.5} />
+        </div>
+        <h3 className="font-display text-lg font-medium tracking-tight mb-2 text-gray-900">{s.title}</h3>
+        <div className="text-sm text-gray-600 leading-relaxed">{s.body}</div>
+       </div>
+      ))}
      </div>
-
-     <FlowCard icon={PhoneIncoming} title="Incoming call." body="Customer dials your main number — no new lines needed." />
-     <FlowCard icon={Phone} title="AI agent answers." body="Picks up instantly or after a set number of rings." wide />
-
-     <FlowCard
-      icon={MessageSquare}
-      title="Call is handled."
-      body={
-       <>
-        The AI talks <strong>naturally</strong> with the caller. From{' '}
-        <strong>common</strong> and <strong>complex</strong> questions to managing{' '}
-        <strong>appointments</strong> and anything else it&apos;s trained for.
-        <br />
-        <br />
-        If it&apos;s outside scope, the AI <strong>transfers</strong> the call to your team.
-       </>
-      }
-      tall
-     />
-
-     <FlowCard icon={FileText} title="Summary sent." body="Name, number, and reason for calling sent instantly to you by SMS." />
-     <FlowCard icon={PhoneForwarded} title="Ends or transfers." body="Resolved calls end. Others are passed to your team." />
     </div>
    </div>
   </section>
- )
-}
-
-function FlowCard({
- icon: Icon, title, body, wide = false, tall = false,
-}: {
- icon: React.ElementType; title: string; body: React.ReactNode; wide?: boolean; tall?: boolean
-}) {
- return (
-  <div className={`relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6 ${tall ? 'md:row-span-2' : ''} ${wide ? '' : ''}`}>
-   <Icon className="w-5 h-5 text-gray-400 mb-4" strokeWidth={1.5} />
-   <h3 className="font-display text-lg md:text-xl font-medium tracking-tight mb-2 text-gray-900">{title}</h3>
-   <div className="text-sm text-gray-600 leading-relaxed">{body}</div>
-  </div>
  )
 }
 
