@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useMemo } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import {
  Phone, ArrowUpRight, ArrowRight, Calendar, Clock, DollarSign, Star,
@@ -35,11 +36,15 @@ function Nav() {
  return (
   <nav className="sticky top-0 z-50 bg-[#f6f5f1]/80 backdrop-blur-md border-b border-black/5">
    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-    <Link href="/" className="flex items-center gap-2">
-     <div className="w-7 h-7 bg-gray-900 rounded-md flex items-center justify-center">
-      <Phone className="w-4 h-4 text-white" />
-     </div>
-     <span className="font-semibold text-lg tracking-tight">CloudGreet</span>
+    <Link href="/" className="flex items-center" aria-label="CloudGreet">
+     <Image
+      src="/cloudgreet-logo.png"
+      alt="CloudGreet"
+      width={160}
+      height={48}
+      priority
+      className="h-9 w-auto"
+     />
     </Link>
     <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
           <a href="#pricing" className="hover:text-gray-900 transition-colors">ROI Calculator</a>
@@ -522,11 +527,14 @@ function FooterCard() {
    <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-8 md:p-10">
     <div className="grid md:grid-cols-4 gap-8">
      <div>
-      <Link href="/" className="flex items-center gap-2 mb-3">
-       <div className="w-7 h-7 bg-gray-900 rounded-md flex items-center justify-center">
-        <Phone className="w-4 h-4 text-white" />
-       </div>
-       <span className="font-semibold text-lg tracking-tight">CloudGreet</span>
+      <Link href="/" className="flex items-center mb-3" aria-label="CloudGreet">
+       <Image
+        src="/cloudgreet-logo.png"
+        alt="CloudGreet"
+        width={160}
+        height={48}
+        className="h-8 w-auto"
+       />
       </Link>
       <p className="text-sm text-gray-500 flex items-center gap-1.5">
        <MapPin className="w-3.5 h-3.5" /> Built in Austin, TX
