@@ -1,156 +1,141 @@
 "use client"
 
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
+import Image from 'next/image'
 import Link from 'next/link'
-import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, ArrowUpRight } from 'lucide-react'
 import { setAuthToken } from '@/lib/auth/token-manager'
 
 export default function LoginPage() {
- const [formData, setFormData] = useState({
- email: '',
- password: ''
- })
+ const [email, setEmail] = useState('')
+ const [password, setPassword] = useState('')
  const [showPassword, setShowPassword] = useState(false)
  const [isLoading, setIsLoading] = useState(false)
  const [error, setError] = useState('')
 
- const handleSubmit = async (e: React.FormEvent) => {
- e.preventDefault()
- setIsLoading(true)
- setError('')
-
- try {
- const response = await fetch('/api/auth/login-simple', {
- method: 'POST',
- headers: {
- 'Content-Type': 'application/json',
- },
- body: JSON.stringify(formData),
- })
-
- if (!response.ok) {
- let errorData
- try {
- errorData = await response.json()
- } catch {
- errorData = {}
- }
- setError(errorData?.message || `Login failed (${response.status})`)
- return
- }
-
- let result
- try {
- result = await response.json()
- } catch (jsonError) {
- setError('Invalid response from server')
- return
- }
-
- if (result.success) {
- // Store token securely in httpOnly cookie
- await setAuthToken(result.data.token)
- 
- // Store user/business data in localStorage (non-sensitive)
- localStorage.setItem('user', JSON.stringify(result.data.user))
- if (result.data.business) {
- localStorage.setItem('business', JSON.stringify(result.data.business))
- }
- 
- // Redirect to dashboard
- window.location.href = '/dashboard'
- } else {
- setError(result.message || 'Login failed')
- }
- } catch (err) {
- setError('Login failed. Please try again.')
- } finally {
- setIsLoading(false)
- }
+ const onSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setIsLoading(true)
+  setError('')
+  try {
+   const res = await fetch('/api/auth/login-simple', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+   })
+   const result = await res.json().catch(() => ({}))
+   if (!res.ok || !result.success) {
+    setError(result.message || `Login failed (${res.status})`)
+    return
+   }
+   await setAuthToken(result.data.token)
+   localStorage.setItem('user', JSON.stringify(result.data.user))
+   if (result.data.business) {
+    localStorage.setItem('business', JSON.stringify(result.data.business))
+   }
+   window.location.href = '/dashboard'
+  } catch {
+   setError('Login failed. Please try again.')
+  } finally {
+   setIsLoading(false)
+  }
  }
 
  return (
- <div className="min-h-screen via-black flex items-center justify-center px-4">
- <motion.div
- initial={{ opacity: 0, y: 20 }}
- animate={{ opacity: 1, y: 0 }}
- className="bg-black/40 backdrop-blur-xl rounded-xl p-4 md:p-6 max-w-md w-full border border-white/10 shadow-2xl"
- >
- <div className="text-center mb-6">
- <Link href="/" className="inline-block mb-4">
- <motion.div
- whileHover={{ scale: 1.05 }}
- className="text-2xl md:text-3xl font-bold bg-blue-400"
- >
- CloudGreet
- </motion.div>
- </Link>
- <h1 className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight">Welcome Back</h1>
- <p className="text-sm md:text-base text-gray-400 leading-snug">Sign in to your AI receptionist</p>
- </div>
+  <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
+   {/* Nav */}
+   <nav className="border-b border-black/5">
+    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+     <Link href="/" className="flex items-center" aria-label="CloudGreet">
+      <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={160} height={48} priority className="h-9 w-auto" />
+     </Link>
+     <Link href="/" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+      ← Back home
+     </Link>
+    </div>
+   </nav>
 
- <form onSubmit={handleSubmit} className="space-y-6">
- <div>
- <label className="block text-sm font-medium text-gray-300 mb-2">
- Email
- </label>
- <input
- type="email"
- required
- autoComplete="email"
- value={formData.email}
- onChange={(e) => setFormData({ ...formData, email: e.target.value })}
- className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
- placeholder="Enter your email"
- />
- </div>
+   {/* Login card */}
+   <section className="px-6 pt-16 md:pt-24 pb-32">
+    <div className="max-w-md mx-auto relative">
+     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
 
- <div>
- <label className="block text-sm font-medium text-gray-300 mb-2">
- Password
- </label>
- <div className="relative">
- <input
- type={showPassword ? 'text' : 'password'}
- required
- autoComplete="current-password"
- value={formData.password}
- onChange={(e) => setFormData({ ...formData, password: e.target.value })}
- className="w-full px-4 py-3 pr-12 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
- placeholder="Enter your password"
- />
- <button
- type="button"
- onClick={() => setShowPassword(!showPassword)}
- className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
- >
- {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
- </button>
- </div>
- </div>
+     <div className="relative bg-white border border-gray-200 rounded-[28px] p-8 md:p-10">
+      <h1 className="font-display font-medium tracking-tight leading-[1.05] text-3xl md:text-4xl mb-2 text-gray-900">
+       Welcome <span className="text-gray-400">back.</span>
+      </h1>
+      <p className="text-sm text-gray-500 mb-8">Sign in to your CloudGreet dashboard.</p>
 
- {error && (
- <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm shadow-lg">
- {error}
- </div>
- )}
+      <form onSubmit={onSubmit} className="space-y-5">
+       <div>
+        <label htmlFor="email" className="text-sm text-gray-700 mb-2 block">
+         Email
+        </label>
+        <input
+         id="email"
+         type="email"
+         value={email}
+         onChange={(e) => setEmail(e.target.value)}
+         required
+         autoComplete="email"
+         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+        />
+       </div>
 
- <button
- type="submit"
- disabled={isLoading}
- className="w-full bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
- >
- {isLoading ? 'Signing in...' : 'Sign In'}
- </button>
+       <div>
+        <label htmlFor="password" className="text-sm text-gray-700 mb-2 block">
+         Password
+        </label>
+        <div className="relative">
+         <input
+          id="password"
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          autoComplete="current-password"
+          className="w-full px-4 py-3 pr-11 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+         />
+         <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
+          aria-label={showPassword ? 'Hide password' : 'Show password'}
+         >
+          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+         </button>
+        </div>
+       </div>
 
- <div className="text-center text-sm text-gray-400">
- <Link href="/contact" className="text-sky-400 hover:text-sky-300">
- Don&apos;t have an account? Book a demo
- </Link>
- </div>
- </form>
- </motion.div>
- </div>
+       {error && (
+        <div className="bg-red-50 border border-red-200 text-red-900 rounded-xl p-3 text-sm">
+         {error}
+        </div>
+       )}
+
+       <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+       >
+        {isLoading ? 'Signing in…' : (
+         <>
+          Sign in
+          <ArrowUpRight className="w-4 h-4" />
+         </>
+        )}
+       </button>
+      </form>
+
+      <p className="text-center text-sm text-gray-500 mt-6">
+       Don&apos;t have an account?{' '}
+       <Link href="/contact" className="text-gray-900 font-medium hover:underline">
+        Book a demo
+       </Link>
+      </p>
+     </div>
+    </div>
+   </section>
+  </main>
  )
 }
