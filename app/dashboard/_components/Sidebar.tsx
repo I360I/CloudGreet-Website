@@ -11,8 +11,8 @@ type Item = { icon: React.ElementType; label: string; href: string; match: (path
 
 const items: Item[] = [
  { icon: LayoutDashboard, label: 'Overview', href: '/dashboard', match: (p) => p === '/dashboard' },
- { icon: PhoneCall, label: 'Calls', href: '/dashboard#calls', match: (p) => p === '/dashboard' },
- { icon: Calendar, label: 'Appointments', href: '/dashboard#appointments', match: (p) => p === '/dashboard' },
+ { icon: PhoneCall, label: 'Calls', href: '/dashboard/calls', match: (p) => p.startsWith('/dashboard/calls') },
+ { icon: Calendar, label: 'Appointments', href: '/dashboard/appointments', match: (p) => p.startsWith('/dashboard/appointments') },
  { icon: Settings, label: 'Settings', href: '/dashboard/settings', match: (p) => p.startsWith('/dashboard/settings') },
  { icon: CreditCard, label: 'Billing', href: '/dashboard/billing', match: (p) => p.startsWith('/dashboard/billing') },
 ]
