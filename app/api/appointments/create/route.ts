@@ -5,7 +5,7 @@ import { logger } from '@/lib/monitoring'
 import { moderateRateLimit } from '@/lib/rate-limiting-redis'
 import { z } from 'zod'
 import { validateAndFormatPhone } from '@/lib/phone-validation'
-import { syncGoogleCalendarEvent } from '@/lib/calendar'
+import { createBooking, CalcomError } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
  // Fetch business to verify service_type
  const { data: business, error: businessError } = await supabaseAdmin
  .from('businesses')
- .select('services, business_hours, timezone, calendar_connected, google_calendar_id')
+ .select('services, business_hours, timezone, business_name, cal_com_api_key, cal_com_event_type_id, calcom_connected')
  .eq('id', businessId)
  .single()
 
@@ -151,42 +151,40 @@ export async function POST(request: NextRequest) {
  )
  }
 
- // Sync Google Calendar if calendar_connected
- if (business.calendar_connected && appointment) {
- try {
- const calendarId = business.google_calendar_id || 'primary'
- const eventId = await syncGoogleCalendarEvent(
- calendarId,
- appointment,
- null // No existing event ID for new appointments
- )
- 
- if (eventId) {
- // Update appointment with Google Calendar event ID
- await supabaseAdmin
- .from('appointments')
- .update({ google_calendar_event_id: eventId })
- .eq('id', appointment.id)
- 
- logger.info('Appointment synced to Google Calendar', {
- appointmentId: appointment.id,
- googleEventId: eventId,
- businessId
- })
- } else {
- logger.warn('Failed to sync appointment to Google Calendar, appointment saved in database', {
- appointmentId: appointment.id,
- businessId
- })
- }
- } catch (calendarError) {
- // Don't fail the appointment creation if calendar sync fails
- logger.error('Error syncing appointment to Google Calendar', {
- error: calendarError instanceof Error ? calendarError.message : 'Unknown error',
- appointmentId: appointment.id,
- businessId
- })
- }
+ // Mirror to Cal.com when connected. Cal.com fans out to whatever calendar
+ // (Google, Apple, Outlook) the contractor connected on their end.
+ if (business.calcom_connected && business.cal_com_api_key && business.cal_com_event_type_id && appointment) {
+  try {
+   const booking = await createBooking(business.cal_com_api_key, {
+    startIso: new Date(validated.start_time).toISOString(),
+    eventTypeId: business.cal_com_event_type_id,
+    attendee: {
+     name: validated.customer_name,
+     email: validated.customer_email || `noemail+${appointment.id}@cloudgreet.com`,
+     timeZone: business.timezone || 'America/New_York',
+     phoneNumber: formattedPhone,
+    },
+    location: validated.address,
+    notes: validated.notes,
+    metadata: {
+     cloudgreetAppointmentId: appointment.id,
+     cloudgreetBusinessId: businessId,
+    },
+   })
+   await supabaseAdmin
+    .from('appointments')
+    .update({ cal_com_booking_uid: booking.uid, cal_com_booking_id: booking.id })
+    .eq('id', appointment.id)
+   logger.info('Appointment synced to Cal.com', {
+    appointmentId: appointment.id, bookingUid: booking.uid, businessId,
+   })
+  } catch (calError) {
+   const status = calError instanceof CalcomError ? calError.status : 0
+   logger.error('Cal.com sync failed; appointment retained in CloudGreet DB', {
+    error: calError instanceof Error ? calError.message : 'Unknown',
+    status, appointmentId: appointment.id, businessId,
+   })
+  }
  }
 
  return NextResponse.json({
