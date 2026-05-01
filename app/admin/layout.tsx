@@ -22,7 +22,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
   ;(async () => {
    try {
-    const res = await fetchWithAuth('/api/admin/health')
+    // Hit an actual admin-auth-required endpoint to verify token + role
+    const res = await fetchWithAuth('/api/admin/clients?limit=1', { method: 'GET' })
     if (res.ok) setAuthed(true)
     else router.replace('/admin/login')
    } catch {
