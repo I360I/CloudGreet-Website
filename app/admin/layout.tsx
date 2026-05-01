@@ -22,10 +22,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
   ;(async () => {
    try {
-    // Hit an actual admin-auth-required endpoint to verify token + role
-    const res = await fetchWithAuth('/api/admin/clients?limit=1', { method: 'GET' })
-    if (res.ok) setAuthed(true)
-    else router.replace('/admin/login')
+    // Read user from localStorage (set on login). Cheap client check.
+    const raw = localStorage.getItem('user')
+    if (!raw) {
+     router.replace('/admin/login')
+     return
+    }
+    const u = JSON.parse(raw)
+    if (!(u?.is_admin || u?.role === 'admin')) {
+     router.replace('/admin/login')
+     return
+    }
+    setAuthed(true)
    } catch {
     router.replace('/admin/login')
    } finally {
