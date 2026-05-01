@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import {
  Phone, ArrowUpRight, ArrowRight, Calendar, Clock, DollarSign, Star,
@@ -23,7 +23,7 @@ export default function LandingPage() {
    <Stats />
    <CallFlow />
    <DashboardPreview />
-   <Pricing />
+   <RoiCalculator />
    <FinalCTA />
    <FooterCard />
   </main>
@@ -44,7 +44,7 @@ function Nav() {
     </Link>
     <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
      <a href="#how-it-works" className="hover:text-gray-900 transition-colors">How it works</a>
-     <a href="#pricing" className="hover:text-gray-900 transition-colors">Pricing</a>
+     <a href="#pricing" className="hover:text-gray-900 transition-colors">ROI Calculator</a>
      <Link href="/login" className="hover:text-gray-900 transition-colors">Sign in</Link>
     </div>
     <Link
@@ -350,91 +350,141 @@ function DashboardPreview() {
  )
 }
 
-/* ----------------------------- Pricing ------------------------- */
+/* ---------------------- ROI Calculator ------------------------- */
 
-function Pricing() {
+function RoiCalculator() {
+ const [missedPerDay, setMissedPerDay] = useState(5)
+ const [avgJobValue, setAvgJobValue] = useState(450)
+ const [closeRate, setCloseRate] = useState(30)
+
+ const { lostMonth, recoveredMonth, netGain } = useMemo(() => {
+  const workDays = 22
+  const missedPerMonth = missedPerDay * workDays
+  const lostMonth = missedPerMonth * (closeRate / 100) * avgJobValue
+  // Assume CloudGreet recovers ~70% of those missed jobs
+  const recoveredMonth = lostMonth * 0.7
+  // Subtract the Full 24/7 plan as worst-case ROI math
+  const netGain = recoveredMonth - 899
+  return { lostMonth, recoveredMonth, netGain }
+ }, [missedPerDay, avgJobValue, closeRate])
+
+ const fmt = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
+
  return (
-  <section id="pricing" className="px-6 pb-20">
+  <section id="pricing" className="px-6 pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto text-center mb-10">
     <h2 className="font-display text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
-     Simple, <span className="text-gray-400">flat pricing.</span>
+     See <span className="text-gray-400">your numbers.</span>
     </h2>
-    <p className="text-base md:text-lg text-gray-500">Two plans. No per-booking fees. No surprises.</p>
+    <p className="text-base md:text-lg text-gray-500 max-w-md mx-auto">
+     Drag the sliders to estimate what missed calls cost you each month.
+    </p>
    </div>
 
-   <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-4 relative">
+   <div className="max-w-5xl mx-auto relative">
     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
 
-    <PriceCard
-     name="Starter"
-     desc="After-hours coverage only"
-     price="$499"
-     features={[
-      'AI answers calls outside business hours',
-      'Lead qualification & message capture',
-      'Calendar booking & SMS confirmations',
-      'Missed-call recovery texts',
-      'Call recordings & transcripts',
-      'Dashboard & ROI tracking',
-     ]}
-    />
-    <PriceCard
-     name="Full 24/7"
-     desc="Around-the-clock coverage"
-     price="$899"
-     popular
-     features={[
-      'AI answers every call, 24/7',
-      'Lead qualification & message capture',
-      'Calendar booking & SMS confirmations',
-      'Missed-call recovery texts',
-      'Call recordings & transcripts',
-      'Dashboard & ROI tracking',
-      'Custom business greeting',
-      'Google & Microsoft Calendar integration',
-     ]}
-    />
+    <div className="relative bg-white border border-gray-200 rounded-[32px] p-6 md:p-12 grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+     {/* Sliders */}
+     <div className="space-y-8">
+      <Slider
+       label="Missed calls per day"
+       value={missedPerDay}
+       min={1}
+       max={20}
+       step={1}
+       display={`${missedPerDay}`}
+       onChange={setMissedPerDay}
+      />
+      <Slider
+       label="Average job value"
+       value={avgJobValue}
+       min={100}
+       max={5000}
+       step={50}
+       display={fmt(avgJobValue)}
+       onChange={setAvgJobValue}
+      />
+      <Slider
+       label="Booking rate on answered calls"
+       value={closeRate}
+       min={10}
+       max={70}
+       step={5}
+       display={`${closeRate}%`}
+       onChange={setCloseRate}
+      />
+     </div>
+
+     {/* Results */}
+     <div className="text-left">
+      <div className="text-sm text-gray-500 mb-2">You&apos;re losing about</div>
+      <div className="font-display text-5xl md:text-6xl font-medium tracking-tight text-gray-900 mb-1">
+       {fmt(lostMonth)}
+      </div>
+      <div className="text-sm text-gray-500 mb-8">in revenue every month.</div>
+
+      <div className="border-t border-gray-200 pt-6 space-y-3">
+       <Row label="CloudGreet recovers (~70%)" value={fmt(recoveredMonth)} />
+       <Row label="CloudGreet plan (Full 24/7)" value="−$899" muted />
+       <div className="flex items-baseline justify-between pt-3 border-t border-gray-200">
+        <span className="text-sm text-gray-700 font-medium">Net gain / month</span>
+        <span className="font-display text-2xl md:text-3xl font-medium text-sky-600">
+         {netGain >= 0 ? `+${fmt(netGain)}` : fmt(netGain)}
+        </span>
+       </div>
+      </div>
+
+      <Link
+       href="/contact"
+       className="mt-8 inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors w-full justify-center"
+      >
+       Book a Demo
+       <ArrowUpRight className="w-4 h-4" />
+      </Link>
+     </div>
+    </div>
+
+    <p className="text-center text-xs text-gray-400 mt-6">
+     Plans: $499/mo Starter (after-hours) · $899/mo Full 24/7. No per-booking fees.
+    </p>
    </div>
   </section>
  )
 }
 
-function PriceCard({
- name, desc, price, features, popular = false,
+function Slider({
+ label, value, min, max, step, display, onChange,
 }: {
- name: string; desc: string; price: string; features: string[]; popular?: boolean
+ label: string; value: number; min: number; max: number; step: number; display: string; onChange: (n: number) => void
 }) {
  return (
-  <div className={`relative bg-white border ${popular ? 'border-gray-900' : 'border-gray-200'} rounded-2xl p-6 md:p-8 text-left`}>
-   {popular && (
-    <div className="absolute -top-3 left-6 bg-gray-900 text-white px-3 py-1 rounded-full text-xs font-medium">
-     Most Popular
-    </div>
-   )}
-   <h3 className="font-display text-2xl font-semibold text-gray-900 mb-1">{name}</h3>
-   <p className="text-sm text-gray-500 mb-5">{desc}</p>
-   <div className="mb-6 flex items-baseline gap-2">
-    <span className="font-display text-4xl md:text-5xl font-medium tracking-tight text-gray-900">{price}</span>
-    <span className="text-base text-gray-500">/mo</span>
+  <div>
+   <div className="flex items-baseline justify-between mb-3">
+    <label className="text-sm text-gray-600">{label}</label>
+    <span className="font-display text-xl font-medium text-gray-900">{display}</span>
    </div>
-   <div className="space-y-2.5 mb-7">
-    {features.map((f) => (
-     <div key={f} className="flex items-start gap-2.5 text-sm text-gray-700">
-      <CheckCircle2 className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" strokeWidth={2} />
-      <span>{f}</span>
-     </div>
-    ))}
-   </div>
-   <Link
-    href="/contact"
-    className={`block w-full text-center px-4 py-3 rounded-full text-sm font-medium transition-colors ${
-     popular
-      ? 'bg-gray-900 text-white hover:bg-gray-800'
-      : 'bg-white border border-gray-200 text-gray-900 hover:border-gray-400'
-    }`}
-   >
-    Book Demo
-   </Link>
+   <input
+    type="range"
+    min={min}
+    max={max}
+    step={step}
+    value={value}
+    onChange={(e) => onChange(Number(e.target.value))}
+    className="w-full h-1.5 bg-gray-200 rounded-full appearance-none cursor-pointer accent-sky-500
+     [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5
+     [&::-webkit-slider-thumb]:bg-gray-900 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer
+     [&::-webkit-slider-thumb]:shadow-[0_0_0_4px_rgba(255,255,255,1),0_0_0_5px_rgba(229,231,235,1)]"
+   />
+  </div>
+ )
+}
+
+function Row({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
+ return (
+  <div className="flex items-baseline justify-between text-sm">
+   <span className="text-gray-600">{label}</span>
+   <span className={muted ? 'text-gray-500' : 'text-gray-900 font-medium'}>{value}</span>
   </div>
  )
 }
