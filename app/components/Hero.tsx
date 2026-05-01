@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { MdPhone, MdPlace, MdVerifiedUser, MdCalendarToday } from "react-icons/md"
+import { MdOutlinePhone, MdOutlinePlace, MdOutlineVerifiedUser, MdOutlineCalendarToday } from "react-icons/md"
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 
@@ -46,14 +46,14 @@ export default function Hero() {
  data-cta-button
  className="inline-flex items-center justify-center gap-2 bg-sky-500 text-white px-6 py-3 rounded-lg text-sm md:text-base font-semibold hover:bg-sky-400 transition-colors shadow-lg"
  >
- <MdCalendarToday className="w-4 h-4" />
+ <MdOutlineCalendarToday className="w-4 h-4" />
  Book a 15-Minute Demo Call
  </Link>
  <Link
  href="/contact"
  className="inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur-sm text-white px-6 py-3 rounded-lg text-sm md:text-base font-semibold border border-white/20 hover:bg-white/20 transition-colors"
  >
- <MdPhone className="w-4 h-4" />
+ <MdOutlinePhone className="w-4 h-4" />
  Hear the AI in action
  </Link>
  </motion.div>
@@ -65,15 +65,15 @@ export default function Hero() {
  className="relative z-30 flex flex-wrap justify-center items-center gap-3 md:gap-4 text-gray-300 py-4 px-4"
  >
  <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
- <MdPlace className="w-4 h-4 text-sky-400" />
+ <MdOutlinePlace className="w-4 h-4 text-sky-400" />
  <span className="text-sm font-medium">Built in Austin</span>
  </div>
  <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
- <MdPhone className="w-4 h-4 text-sky-400" />
+ <MdOutlinePhone className="w-4 h-4 text-sky-400" />
  <span className="text-sm font-medium">Serving Texas Contractors</span>
  </div>
  <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
- <MdVerifiedUser className="w-4 h-4 text-sky-400" />
+ <MdOutlineVerifiedUser className="w-4 h-4 text-sky-400" />
  <span className="text-sm font-medium">30-Day Money-Back Guarantee</span>
  </div>
  </motion.div>

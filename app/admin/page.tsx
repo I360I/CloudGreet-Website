@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { MdAdd, MdArrowOutward, MdAutorenew } from "react-icons/md"
+import { MdOutlineAdd, MdOutlineArrowOutward, MdOutlineAutorenew } from "react-icons/md"
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 type Client = {
@@ -49,7 +49,7 @@ export default function AdminHome() {
       onClick={() => setShowForm(!showForm)}
       className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors"
      >
-      <MdAdd className="w-4 h-4" />
+      <MdOutlineAdd className="w-4 h-4" />
       {showForm ? 'Close' : 'New client'}
      </button>
     </div>
@@ -63,7 +63,7 @@ export default function AdminHome() {
     <div className="bg-white border border-gray-200 rounded-[28px] overflow-hidden">
      {loading ? (
       <div className="p-12 flex items-center justify-center text-gray-400">
-       <MdAutorenew className="w-5 h-5 animate-spin" />
+       <MdOutlineAutorenew className="w-5 h-5 animate-spin" />
       </div>
      ) : clients.length === 0 ? (
       <div className="p-12 text-center text-gray-500 text-sm">
@@ -93,7 +93,7 @@ export default function AdminHome() {
           </td>
           <td className="px-5 py-4 text-right">
            <a href={`/admin/clients/${c.id}`} className="text-gray-400 hover:text-gray-900">
-            <MdArrowOutward className="w-4 h-4 inline" />
+            <MdOutlineArrowOutward className="w-4 h-4 inline" />
            </a>
           </td>
          </tr>
