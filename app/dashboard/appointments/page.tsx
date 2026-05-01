@@ -1,12 +1,16 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
- ChevronLeft, ChevronRight, Loader2, AlertCircle, Clock,
+ ChevronLeft, ChevronRight, Loader2, AlertCircle, Clock, Plus,
 } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
+import {
+ MonthGrid, BookingFormModal, AppointmentDrawer,
+ type MonthDay,
+} from '../_components/appointments'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -39,6 +43,14 @@ function addDays(d: Date, n: number) {
  return out
 }
 
+function startOfMonth(d: Date) {
+ return new Date(d.getFullYear(), d.getMonth(), 1)
+}
+
+function isoDate(d: Date) {
+ return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function fmtRange(start: Date, end: Date) {
  const sameMonth = start.getMonth() === end.getMonth()
  const sameYear = start.getFullYear() === end.getFullYear()
@@ -54,11 +66,28 @@ function fmtRange(start: Date, end: Date) {
 
 export default function AppointmentsPage() {
  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
+ const [monthStart, setMonthStart] = useState<Date>(() => startOfMonth(new Date()))
  const [days, setDays] = useState<Day[] | null>(null)
+ const [monthDays, setMonthDays] = useState<MonthDay[] | null>(null)
+ const [services, setServices] = useState<string[]>([])
  const [loading, setLoading] = useState(true)
  const [error, setError] = useState('')
 
+ const [createDate, setCreateDate] = useState<string | null>(null)
+ const [openApptId, setOpenApptId] = useState<string | null>(null)
+ const [refreshTick, setRefreshTick] = useState(0)
+
  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
+
+ useEffect(() => {
+  ;(async () => {
+   try {
+    const res = await fetchWithAuth('/api/business/profile')
+    const json = await res.json().catch(() => ({}))
+    if (res.ok && json.success) setServices(json.data?.services || [])
+   } catch { /* non-fatal */ }
+  })()
+ }, [])
 
  useEffect(() => {
   let cancelled = false
@@ -80,7 +109,28 @@ export default function AppointmentsPage() {
    }
   })()
   return () => { cancelled = true }
- }, [weekStart])
+ }, [weekStart, refreshTick])
+
+ useEffect(() => {
+  let cancelled = false
+  ;(async () => {
+   try {
+    const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0)
+    const params = new URLSearchParams({
+     view: 'month',
+     startDate: monthStart.toISOString(),
+     endDate: monthEnd.toISOString(),
+    })
+    const res = await fetchWithAuth(`/api/dashboard/calendar?${params.toString()}`)
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok || !json.success) return
+    if (!cancelled) setMonthDays(json.days || [])
+   } catch { /* ignore — week view is the primary surface */ }
+  })()
+  return () => { cancelled = true }
+ }, [monthStart, refreshTick])
+
+ const refresh = useCallback(() => setRefreshTick((n) => n + 1), [])
 
  const totalThisWeek = days?.reduce((s, d) => s + d.count, 0) ?? 0
 
@@ -93,27 +143,35 @@ export default function AppointmentsPage() {
        <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Appointments</h1>
        {totalThisWeek > 0 && <span className="text-sm text-gray-500 font-mono">{totalThisWeek} this week</span>}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
        <button
-        onClick={() => setWeekStart(addDays(weekStart, -7))}
-        className="p-2 rounded-lg border border-gray-200 hover:bg-white transition-colors"
-        aria-label="Previous week"
+        onClick={() => setCreateDate(isoDate(new Date()))}
+        className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-gray-800 transition-all duration-300 ease-out"
        >
-        <ChevronLeft className="w-4 h-4 text-gray-600" />
+        <Plus className="w-3.5 h-3.5" /> New booking
        </button>
-       <button
-        onClick={() => setWeekStart(startOfWeek(new Date()))}
-        className="px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 hover:bg-white text-gray-700 transition-colors"
-       >
-        Today
-       </button>
-       <button
-        onClick={() => setWeekStart(addDays(weekStart, 7))}
-        className="p-2 rounded-lg border border-gray-200 hover:bg-white transition-colors"
-        aria-label="Next week"
-       >
-        <ChevronRight className="w-4 h-4 text-gray-600" />
-       </button>
+       <div className="flex items-center gap-1 ml-2">
+        <button
+         onClick={() => setWeekStart(addDays(weekStart, -7))}
+         className="p-2 rounded-lg border border-gray-200 hover:bg-white transition-all duration-300 ease-out"
+         aria-label="Previous week"
+        >
+         <ChevronLeft className="w-4 h-4 text-gray-600" />
+        </button>
+        <button
+         onClick={() => setWeekStart(startOfWeek(new Date()))}
+         className="px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 hover:bg-white text-gray-700 transition-all duration-300 ease-out"
+        >
+         Today
+        </button>
+        <button
+         onClick={() => setWeekStart(addDays(weekStart, 7))}
+         className="p-2 rounded-lg border border-gray-200 hover:bg-white transition-all duration-300 ease-out"
+         aria-label="Next week"
+        >
+         <ChevronRight className="w-4 h-4 text-gray-600" />
+        </button>
+       </div>
        <span className="ml-2 text-sm text-gray-700 font-medium">{fmtRange(weekStart, weekEnd)}</span>
       </div>
      </div>
@@ -147,7 +205,8 @@ export default function AppointmentsPage() {
           key={day.date}
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE, delay: 0.03 * i }}
-          className={`bg-white border rounded-2xl overflow-hidden flex flex-col transition-colors duration-300 ${
+          onClick={() => setCreateDate(day.date)}
+          className={`bg-white border rounded-2xl overflow-hidden flex flex-col cursor-pointer transition-all duration-300 ease-out hover:border-sky-300 ${
            day.appointments.length === 0 ? 'min-h-[112px]' : 'min-h-[180px]'
           } ${day.isToday ? 'border-sky-300 ring-1 ring-sky-200' : 'border-gray-200'}`}
          >
@@ -169,6 +228,7 @@ export default function AppointmentsPage() {
               key={a.id}
               initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, ease: EASE, delay: 0.03 * i + 0.04 * idx }}
+              onClick={(e) => { e.stopPropagation(); setOpenApptId(a.id) }}
               className="bg-sky-50 border border-sky-100 rounded-lg px-2.5 py-2 text-left hover:border-sky-300 hover:bg-sky-100/60 transition-all duration-300"
              >
               <div className="flex items-center gap-1 text-[10px] text-sky-700 font-mono mb-1">
@@ -194,8 +254,45 @@ export default function AppointmentsPage() {
        No appointments this week.
       </motion.p>
      )}
+
+     {/* Month grid */}
+     <motion.div
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2, ease: EASE }}
+      className="mt-6"
+     >
+      <MonthGrid
+       monthStart={monthStart}
+       monthDays={monthDays}
+       onPrev={() => setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1))}
+       onNext={() => setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1))}
+       onToday={() => setMonthStart(startOfMonth(new Date()))}
+       onPickDate={(iso) => setCreateDate(iso)}
+       onPickAppt={(id) => setOpenApptId(id)}
+      />
+     </motion.div>
     </div>
    </section>
+
+   <AnimatePresence>
+    {createDate && (
+     <BookingFormModal
+      key={createDate}
+      dateIso={createDate}
+      services={services}
+      onClose={() => setCreateDate(null)}
+      onCreated={() => { setCreateDate(null); refresh() }}
+     />
+    )}
+    {openApptId && (
+     <AppointmentDrawer
+      key={openApptId}
+      apptId={openApptId}
+      onClose={() => setOpenApptId(null)}
+      onChanged={refresh}
+     />
+    )}
+   </AnimatePresence>
   </DashShell>
  )
 }
