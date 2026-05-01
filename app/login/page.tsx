@@ -29,6 +29,7 @@ export default function LoginPage() {
     return
    }
    await setAuthToken(result.data.token)
+   localStorage.setItem('token', result.data.token)
    localStorage.setItem('user', JSON.stringify(result.data.user))
    if (result.data.business) {
     localStorage.setItem('business', JSON.stringify(result.data.business))

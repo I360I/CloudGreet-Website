@@ -36,6 +36,7 @@ export default function AdminLoginPage() {
     return
    }
    await setAuthToken(result.data.token)
+   localStorage.setItem('token', result.data.token)
    localStorage.setItem('user', JSON.stringify(u))
    router.replace('/admin')
   } catch {
