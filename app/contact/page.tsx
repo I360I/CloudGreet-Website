@@ -1,260 +1,201 @@
 "use client"
 
 import React, { useState } from 'react'
-import { motion } from 'framer-motion'
-import { ArrowRight, Mail, Phone, MapPin, Clock, Send } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
+import { ArrowUpRight, Phone, Mail, MapPin, Check } from 'lucide-react'
+
+const DEMO_NUMBER = '+1 (737) 937-0084'
+const DEMO_TEL = 'tel:+17379370084'
+const SUPPORT_EMAIL = 'hello@cloudgreet.ai'
 
 export default function ContactPage() {
  const [isLoading, setIsLoading] = useState(false)
- const [message, setMessage] = useState('')
+ const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
+ const [errorMsg, setErrorMsg] = useState('')
 
- const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
- event.preventDefault()
- setIsLoading(true)
- setMessage('')
- 
- try {
- const formData = new FormData(event.currentTarget)
- const data = Object.fromEntries(formData.entries())
- 
- // Convert to the expected API format
- const apiData = {
- subject: data.subject || 'General Question',
- message: data.message || '',
- firstName: data.firstName || '',
- lastName: data.lastName || '',
- email: data.email || '',
- businessName: data.businessName || ''
- }
- 
- // Submit contact form
- const response = await fetch('/api/contact/submit', {
- method: 'POST',
- headers: {
- 'Content-Type': 'application/json',
- },
- body: JSON.stringify(apiData),
- })
-
- if (!response.ok) {
- throw new Error('Failed to send message')
- }
- 
- setMessage('Thank you for your message! We\'ll get back to you within 24 hours.')
- event.currentTarget.reset()
- } catch (error) {
- console.error('Error:', error)
- setMessage('Sorry, there was an error sending your message. Please try again.')
- } finally {
- setIsLoading(false)
- }
+ const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault()
+  setIsLoading(true)
+  setErrorMsg('')
+  setStatus('idle')
+  try {
+   const fd = new FormData(e.currentTarget)
+   const data = Object.fromEntries(fd.entries()) as Record<string, string>
+   const apiData = {
+    subject: 'Demo request',
+    message: data.message || `Demo request from ${data.firstName} ${data.lastName}. Phone: ${data.phone}. Service: ${data.service}.`,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    email: data.email,
+    businessName: data.businessName,
+   }
+   const res = await fetch('/api/contact/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(apiData),
+   })
+   if (!res.ok) throw new Error('Failed')
+   setStatus('success')
+   e.currentTarget.reset()
+  } catch (err) {
+   setStatus('error')
+   setErrorMsg('Something went wrong. Try the phone number on the right instead.')
+  } finally {
+   setIsLoading(false)
+  }
  }
 
  return (
- <div className="min-h-screen via-black text-white">
- {/* Navigation */}
- <motion.nav 
- initial={{ opacity: 0, y: -20 }}
- animate={{ opacity: 1, y: 0 }}
- transition={{ duration: 0.6 }}
- className="border-b border-gray-800/50 backdrop-blur-md bg-black/20 sticky top-0 z-50"
- >
- <div className="max-w-6xl mx-auto px-4 py-4">
- <div className="flex items-center justify-between">
- <Link href="/landing" className="flex items-center">
- <span className="text-2xl font-bold bg-blue-300">CloudGreet</span>
- </Link>
- <Link
- href="/landing"
- className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300"
- >
- Back to Home
- </Link>
- </div>
- </div>
- </motion.nav>
+  <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
+   {/* Nav */}
+   <nav className="sticky top-0 z-50 bg-[#f6f5f1]/80 backdrop-blur-md border-b border-black/5">
+    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+     <Link href="/" className="flex items-center" aria-label="CloudGreet">
+      <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={160} height={48} priority className="h-9 w-auto" />
+     </Link>
+     <Link
+      href="/"
+      className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+     >
+      ← Back home
+     </Link>
+    </div>
+   </nav>
 
- <div className="max-w-6xl mx-auto px-4 py-16">
- <motion.div
- initial={{ opacity: 0, y: 30 }}
- animate={{ opacity: 1, y: 0 }}
- transition={{ duration: 0.8 }}
- className="text-center mb-16"
- >
- <h1 className="text-5xl md:text-6xl font-bold mb-6 from-white ">
- Contact Us
- </h1>
- <p className="text-xl text-gray-400 max-w-3xl mx-auto">
- Have questions? Need support? We&apos;re here to help you succeed with CloudGreet.
- </p>
- </motion.div>
+   {/* Header */}
+   <section className="px-6 pt-20 md:pt-28 pb-12 md:pb-16 text-center">
+    <h1 className="font-display font-medium tracking-tight leading-[1.05] text-[40px] md:text-[64px] mb-6 text-gray-900">
+     Book a <span className="text-gray-400">15-minute demo.</span>
+    </h1>
+    <p className="text-base md:text-lg text-gray-500 max-w-md mx-auto">
+     Tell us about your business. We&apos;ll show you exactly how CloudGreet handles your calls.
+    </p>
+   </section>
 
- <div className="grid lg:grid-cols-2 gap-12">
- {/* Contact Form */}
- <motion.div
- initial={{ opacity: 0, x: -30 }}
- animate={{ opacity: 1, x: 0 }}
- transition={{ duration: 0.8, delay: 0.2 }}
- >
- <div className="bg-gray-800/30 backdrop-blur-lg rounded-2xl p-8 border border-gray-700/50">
- <h2 className="text-2xl font-bold mb-6 text-white">Send us a message</h2>
- 
- <form onSubmit={handleSubmit} className="space-y-6">
- <div className="grid md:grid-cols-2 gap-4">
- <input
- type="text"
- name="firstName"
- placeholder="First Name"
- required
- className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
- />
- <input
- type="text"
- name="lastName"
- placeholder="Last Name"
- required
- className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30"
- />
- </div>
- 
- <input
- type="email"
- name="email"
- placeholder="Email Address"
- required
- className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
- />
- 
- <input
- type="text"
- name="businessName"
- placeholder="Business Name"
- className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
- />
- 
- <select
- name="subject"
- required
- className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
- >
- <option value="">Select a topic</option>
- <option value="general">General Question</option>
- <option value="support">Technical Support</option>
- <option value="billing">Billing Question</option>
- <option value="partnership">Partnership Inquiry</option>
- <option value="feature">Feature Request</option>
- </select>
- 
- <textarea
- name="message"
- placeholder="Your message..."
- rows={5}
- required
- className="w-full px-4 py-3 bg-white/5 backdrop-blur-xl border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-white/30 resize-none"
- />
- 
- {message && (
- <div className={`p-4 rounded-lg ${message.includes('Thank you') ? 'bg-green-900/20 border border-green-500/30 text-green-300' : 'bg-red-900/20 border border-red-500/30 text-red-300'}`}>
- {message}
- </div>
- )}
- 
- <button
- type="submit"
- disabled={isLoading}
- className="w-full bg-white/10 backdrop-blur-xl border border-white/20 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-white/20 hover:border-white/40 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
- >
- {isLoading ? (
- <>
- <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
- Sending...
- </>
- ) : (
- <>
- <Send className="w-5 h-5 mr-3" />
- Send Message
- </>
- )}
- </button>
- </form>
- </div>
- </motion.div>
+   {/* Form + side panel */}
+   <section className="px-6 pb-32">
+    <div className="max-w-5xl mx-auto grid md:grid-cols-5 gap-6 relative">
+     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
 
- {/* Contact Info */}
- <motion.div
- initial={{ opacity: 0, x: 30 }}
- animate={{ opacity: 1, x: 0 }}
- transition={{ duration: 0.8, delay: 0.4 }}
- className="space-y-8"
- >
- <div className="bg-gray-800/30 backdrop-blur-lg rounded-xl p-4 md:p-6 border border-gray-700/50">
- <h2 className="text-xl md:text-2xl font-bold mb-4 text-white leading-tight">Get in touch</h2>
- 
- <div className="space-y-6">
- <div className="flex items-start space-x-4">
- <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
- <Mail className="w-6 h-6 text-white" />
- </div>
- <div>
- <h3 className="text-lg font-semibold text-white mb-1">Email</h3>
- <p className="text-gray-400">support@cloudgreet.ai</p>
- <p className="text-sm text-gray-500">We respond within 24 hours</p>
- </div>
- </div>
- 
- <div className="flex items-start space-x-4">
- <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
- <Phone className="w-6 h-6 text-white" />
- </div>
- <div>
- <h3 className="text-lg font-semibold text-white mb-1">Phone</h3>
- <p className="text-gray-400">1-800-CLOUDGREET</p>
- <p className="text-sm text-gray-500">Mon-Fri 9AM-6PM EST</p>
- </div>
- </div>
- 
- <div className="flex items-start space-x-4">
- <div className="w-12 h-12 bg-sky-500 rounded-xl flex items-center justify-center flex-shrink-0">
- <MapPin className="w-6 h-6 text-white" />
- </div>
- <div>
- <h3 className="text-lg font-semibold text-white mb-1">Office</h3>
- <p className="text-gray-400">San Francisco, CA</p>
- <p className="text-sm text-gray-500">Remote-first company</p>
- </div>
- </div>
- 
- <div className="flex items-start space-x-4">
- <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center flex-shrink-0">
- <Clock className="w-6 h-6 text-white" />
- </div>
- <div>
- <h3 className="text-lg font-semibold text-white mb-1">Response Time</h3>
- <p className="text-gray-400">24 hours or less</p>
- <p className="text-sm text-gray-500">Priority support for customers</p>
- </div>
- </div>
- </div>
- </div>
- 
- <div className="bg-blue-500/10 backdrop-blur-lg rounded-xl p-4 md:p-6 border border-blue-500/20">
- <h3 className="text-base md:text-lg font-bold text-white mb-3 leading-tight">Need immediate help?</h3>
- <p className="text-gray-300 mb-6">
- For urgent technical issues or billing questions, call us directly or use our live chat.
- </p>
- <Link
- href="/help"
- className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300"
- >
- Visit Help Center
- <ArrowRight className="w-5 h-5 ml-2" />
- </Link>
- </div>
- </motion.div>
- </div>
- </div>
- </div>
+     {/* Form */}
+     <div className="relative md:col-span-3 bg-white border border-gray-200 rounded-[28px] p-6 md:p-10">
+      <form onSubmit={onSubmit} className="space-y-5">
+       <div className="grid sm:grid-cols-2 gap-4">
+        <Field name="firstName" label="First name" required />
+        <Field name="lastName" label="Last name" required />
+       </div>
+       <Field name="email" label="Email" type="email" required />
+       <Field name="phone" label="Phone" type="tel" required />
+       <Field name="businessName" label="Business name" required />
+       <div>
+        <label className="text-sm text-gray-700 mb-2 block">Service type</label>
+        <select
+         name="service"
+         required
+         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-gray-900 transition-colors"
+        >
+         <option value="">Select your service</option>
+         <option value="HVAC">HVAC</option>
+         <option value="Roofing">Roofing</option>
+         <option value="Painting">Painting</option>
+         <option value="Plumbing">Plumbing</option>
+         <option value="Electrical">Electrical</option>
+         <option value="Other">Other</option>
+        </select>
+       </div>
+       <div>
+        <label className="text-sm text-gray-700 mb-2 block">Anything we should know? <span className="text-gray-400">(optional)</span></label>
+        <textarea
+         name="message"
+         rows={3}
+         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors resize-none"
+         placeholder="How many calls a day, biggest pain point, etc."
+        />
+       </div>
+
+       {status === 'success' && (
+        <div className="bg-sky-50 border border-sky-200 text-sky-900 rounded-xl p-4 text-sm">
+         Got it. We&apos;ll reach out within 24 hours to set up your demo.
+        </div>
+       )}
+       {status === 'error' && (
+        <div className="bg-red-50 border border-red-200 text-red-900 rounded-xl p-4 text-sm">
+         {errorMsg}
+        </div>
+       )}
+
+       <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+       >
+        {isLoading ? 'Sending…' : (
+         <>
+          Request Demo
+          <ArrowUpRight className="w-4 h-4" />
+         </>
+        )}
+       </button>
+      </form>
+     </div>
+
+     {/* Side panel */}
+     <div className="relative md:col-span-2 space-y-4">
+      <div className="bg-white border border-gray-200 rounded-[28px] p-6 md:p-8">
+       <p className="text-sm text-gray-500 mb-2">Want to skip the form?</p>
+       <p className="font-display text-2xl font-medium text-gray-900 mb-1">Call our AI yourself.</p>
+       <p className="text-sm text-gray-500 mb-5">Hear how it sounds — pretend you&apos;re a customer with an HVAC problem.</p>
+       <a
+        href={DEMO_TEL}
+        className="inline-flex items-center gap-2 bg-white text-gray-900 px-5 py-3 rounded-2xl text-sm font-medium border border-gray-200 hover:border-gray-300 transition-all shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)] w-full justify-center"
+       >
+        <Phone className="w-4 h-4" />
+        {DEMO_NUMBER}
+       </a>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-[28px] p-6 md:p-8">
+       <p className="font-display text-lg font-medium text-gray-900 mb-4">What you&apos;ll get on the call:</p>
+       <ul className="space-y-3 text-sm text-gray-700">
+        <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />A demo of the AI handling a sample call for your business</li>
+        <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />Setup walkthrough — we wire it up for you, no DIY</li>
+        <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />Pricing, plan options, and a clear ROI for your numbers</li>
+       </ul>
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-[28px] p-6 md:p-8 space-y-3 text-sm">
+       <div className="flex items-center gap-2 text-gray-600">
+        <Mail className="w-4 h-4" />
+        <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-gray-900">{SUPPORT_EMAIL}</a>
+       </div>
+       <div className="flex items-center gap-2 text-gray-600">
+        <MapPin className="w-4 h-4" />
+        <span>Built in Austin, TX</span>
+       </div>
+      </div>
+     </div>
+    </div>
+   </section>
+  </main>
  )
 }
 
+function Field({
+ name, label, type = 'text', required = false,
+}: { name: string; label: string; type?: string; required?: boolean }) {
+ return (
+  <div>
+   <label htmlFor={name} className="text-sm text-gray-700 mb-2 block">
+    {label}{required && <span className="text-gray-400"> *</span>}
+   </label>
+   <input
+    id={name}
+    name={name}
+    type={type}
+    required={required}
+    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+   />
+  </div>
+ )
+}
