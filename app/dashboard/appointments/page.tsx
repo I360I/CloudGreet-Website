@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import {
- Calendar as CalendarIcon, ChevronLeft, ChevronRight, Loader2, AlertCircle, Clock,
+ ChevronLeft, ChevronRight, Loader2, AlertCircle, Clock,
 } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
@@ -86,11 +86,9 @@ export default function AppointmentsPage() {
    <section className="px-8 py-10">
     <div className="max-w-7xl">
      <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-      <div>
+      <div className="flex items-baseline gap-4">
        <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Appointments</h1>
-       <p className="text-sm text-gray-500 mt-1">
-        {totalThisWeek > 0 ? `${totalThisWeek} this week` : 'Bookings made by your AI agent.'}
-       </p>
+       {totalThisWeek > 0 && <span className="text-sm text-gray-500 font-mono">{totalThisWeek} this week</span>}
       </div>
       <div className="flex items-center gap-2">
        <button
@@ -179,15 +177,7 @@ export default function AppointmentsPage() {
      )}
 
      {!loading && !error && days && totalThisWeek === 0 && (
-      <div className="mt-3 bg-white border border-gray-200 rounded-2xl p-8 text-center">
-       <div className="w-10 h-10 rounded-full bg-sky-50 border border-sky-100 flex items-center justify-center mx-auto mb-4">
-        <CalendarIcon className="w-4 h-4 text-sky-500" />
-       </div>
-       <p className="text-sm font-medium text-gray-900 mb-1">No appointments this week.</p>
-       <p className="text-xs text-gray-500 max-w-sm mx-auto leading-relaxed">
-        Your AI agent books appointments automatically as it handles calls.
-       </p>
-      </div>
+      <p className="text-sm text-gray-500 mt-4">No appointments this week.</p>
      )}
     </div>
    </section>

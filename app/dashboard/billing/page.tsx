@@ -61,7 +61,6 @@ export default function BillingPage() {
     <div className="max-w-4xl">
      <div className="mb-8">
       <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Billing</h1>
-      <p className="text-sm text-gray-500 mt-1">Subscription, invoices, and payment.</p>
      </div>
 
      {loading && (

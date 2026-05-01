@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, Inter_Tight } from 'next/font/google'
+import { JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from './contexts/ToastContext'
 import { RealtimeProvider } from './contexts/RealtimeProvider'
@@ -15,11 +15,10 @@ if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
  })
 }
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const interTight = Inter_Tight({
+const mono = JetBrains_Mono({
  subsets: ['latin'],
- weight: ['600', '700', '800', '900'],
- variable: '--font-display',
+ weight: ['400', '500'],
+ variable: '--font-mono',
 })
 
 export const metadata: Metadata = {
@@ -96,6 +95,11 @@ export default function RootLayout({
  return (
  <html lang="en" className="overscroll-none">
  <head>
+ <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
+ <link
+  rel="stylesheet"
+  href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap"
+ />
  <link rel="icon" href="/favicon.ico" />
  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
  <link rel="manifest" href="/manifest.json" />
@@ -121,7 +125,7 @@ export default function RootLayout({
  }}
  />
  </head>
- <body className={`${inter.variable} ${interTight.variable} font-sans overscroll-none bg-[#f6f5f1] text-gray-900 antialiased`}>
+ <body className={`${mono.variable} font-sans overscroll-none bg-[#f6f5f1] text-gray-900 antialiased`}>
  <ErrorBoundary>
  <ToastProvider>
  <RealtimeProvider>

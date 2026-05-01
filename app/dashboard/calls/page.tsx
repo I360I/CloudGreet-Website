@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { Phone, ChevronRight, Search, Loader2, AlertCircle, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react'
+import { ChevronRight, Search, Loader2, AlertCircle, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 import {
@@ -89,11 +89,9 @@ export default function CallsPage() {
   <DashShell activeLabel="Calls">
    <section className="px-8 py-10">
     <div className="max-w-6xl">
-     <div className="mb-8">
+     <div className="mb-8 flex items-baseline justify-between gap-4 flex-wrap">
       <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Calls</h1>
-      <p className="text-sm text-gray-500 mt-1">
-       {total > 0 ? `${total} total` : 'Every call your AI agent handled.'}
-      </p>
+      {total > 0 && <span className="text-sm text-gray-500 font-mono">{total} total</span>}
      </div>
 
      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
@@ -208,19 +206,18 @@ function Pill({ active, onClick, children }: { active: boolean; onClick: () => v
 function Empty({ hasAny }: { hasAny: boolean }) {
  if (hasAny) {
   return (
-   <div className="px-8 py-16 text-center">
+   <div className="px-6 py-6">
     <p className="text-sm text-gray-500">No calls match your filters.</p>
    </div>
   )
  }
  return (
-  <div className="px-8 py-16 text-center">
-   <div className="w-10 h-10 rounded-full bg-sky-50 border border-sky-100 flex items-center justify-center mx-auto mb-4">
-    <Phone className="w-4 h-4 text-sky-500" />
-   </div>
-   <p className="text-sm font-medium text-gray-900 mb-1">No calls yet.</p>
-   <p className="text-xs text-gray-500 max-w-sm mx-auto leading-relaxed">
-    Calls will appear here as soon as your AI agent answers them.
+  <div className="px-6 py-6">
+   <p className="text-sm text-gray-700">
+    Nothing yet. Try the demo line:{' '}
+    <a href="tel:+17379370084" className="font-mono text-sky-600 hover:underline">
+     +1 (737) 937-0084
+    </a>
    </p>
   </div>
  )

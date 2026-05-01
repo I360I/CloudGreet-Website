@@ -19,8 +19,9 @@ module.exports = {
         '4xl': ['36px', { lineHeight: '1.2', letterSpacing: '-0.02em' }],
       },
       fontFamily: {
-        sans: ['"Helvetica Neue"', 'HelveticaNeue', 'Helvetica', 'Arial', 'sans-serif'],
-        display: ['"Helvetica Neue"', 'HelveticaNeue', 'Helvetica', 'Arial', 'sans-serif'],
+        sans: ['"General Sans"', '"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
+        display: ['"General Sans"', '"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       fontWeight: {
         regular: '400',

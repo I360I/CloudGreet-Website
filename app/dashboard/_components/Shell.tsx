@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar, SidebarSkeleton } from './Sidebar'
-
-const DEMO_NUMBER = '+1 (737) 937-0084'
+import { TopBar } from './TopBar'
 
 export function DashShell({
  activeLabel,
@@ -49,18 +48,7 @@ export function DashShell({
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
    <Sidebar businessName={businessName} onSignOut={handleSignOut} activeLabel={activeLabel} />
    <div className="flex-1 min-w-0">
-    <div className="border-b border-black/5 bg-[#f6f5f1]/80 backdrop-blur-md sticky top-0 z-30">
-     <div className="px-8 py-3 flex items-center justify-between">
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-50 border border-sky-100">
-       <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-60" />
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500" />
-       </span>
-       <span className="text-xs font-medium text-sky-700">AI agent online</span>
-      </div>
-      <div className="text-xs text-gray-500">Demo line: <span className="font-mono text-gray-700">{DEMO_NUMBER}</span></div>
-     </div>
-    </div>
+    <TopBar />
     {children}
    </div>
   </main>

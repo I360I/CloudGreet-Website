@@ -4,12 +4,13 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
- Phone, Calendar, Clock, TrendingUp,
- Loader2, ChevronRight, PhoneCall, CalendarCheck,
+ Phone, Calendar,
+ Loader2, ChevronRight, PhoneCall,
  ArrowUpRight, ArrowDownRight,
- Search, Activity,
+ Search,
 } from 'lucide-react'
 import { Sidebar, SidebarSkeleton } from './_components/Sidebar'
+import { TopBar } from './_components/TopBar'
 import {
  type Call, CallDrawer, OutcomeBadge, OutcomeDot, tagOutcome,
  fmtDur, relTime, fmtDateTime,
@@ -153,28 +154,21 @@ export default function DashboardPage() {
        <RangeSelector range={range} onChange={setRange} />
       </motion.div>
 
-      {/* KPI cards */}
+      {/* KPI cards — Total calls is the hero */}
       <motion.div
        initial="hidden" animate="show"
        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
-       className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
+       className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-6"
       >
-       <Kpi
-        icon={Phone} label="Total calls" value={String(k.totalCalls)}
-        delta={totalDelta} deltaLabel={`vs prior ${data.range}d`} spark={k.spark}
-       />
-       <Kpi
-        icon={Activity} label="Calls today" value={String(k.callsToday)}
-        delta={dayDelta} deltaLabel="vs yesterday" spark={k.spark.slice(-7)}
-       />
-       <Kpi
-        icon={Clock} label="Avg duration" value={fmtDur(k.avgDurationSec)}
-        delta={durDelta} deltaLabel={`vs prior ${data.range}d`}
-       />
-       <Kpi
-        icon={CalendarCheck} label="Booked rate" value={`${k.bookedRate}%`}
-        delta={bookedDelta} deltaLabel="pp" accent
-       />
+       <div className="lg:col-span-3">
+        <Kpi
+         hero label="Total calls" value={String(k.totalCalls)}
+         delta={totalDelta} deltaLabel={`vs prior ${data.range}d`} spark={k.spark}
+        />
+       </div>
+       <Kpi label="Calls today" value={String(k.callsToday)} delta={dayDelta} deltaLabel="vs yesterday" />
+       <Kpi label="Avg duration" value={fmtDur(k.avgDurationSec)} delta={durDelta} deltaLabel={`vs prior ${data.range}d`} />
+       <Kpi label="Booked rate" value={`${k.bookedRate}%`} delta={bookedDelta} deltaLabel="pp" accent />
       </motion.div>
 
       {/* Charts row */}
@@ -311,30 +305,6 @@ export default function DashboardPage() {
 /* ====================== SIDEBAR ====================== */
 
 
-/* ====================== TOP BAR with live status ====================== */
-
-function TopBar() {
- return (
-  <div className="border-b border-black/5 bg-[#f6f5f1]/80 backdrop-blur-md sticky top-0 z-30">
-   <div className="px-8 py-3 flex items-center justify-between">
-    <LiveStatusPill />
-    <div className="text-xs text-gray-500">Demo line: <span className="font-mono text-gray-700">{DEMO_NUMBER}</span></div>
-   </div>
-  </div>
- )
-}
-
-function LiveStatusPill() {
- return (
-  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-50 border border-sky-100">
-   <span className="relative flex h-2 w-2">
-    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-60" />
-    <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500" />
-   </span>
-   <span className="text-xs font-medium text-sky-700">AI agent online</span>
-  </div>
- )
-}
 
 /* ====================== RANGE SELECTOR ====================== */
 
@@ -360,34 +330,38 @@ function RangeSelector({ range, onChange }: { range: Range; onChange: (r: Range)
 /* ====================== KPI CARD with sparkline + delta ====================== */
 
 function Kpi({
- icon: Icon, label, value, delta, deltaLabel, spark, accent = false,
+ label, value, delta, deltaLabel, spark, accent = false, hero = false,
 }: {
- icon: React.ElementType; label: string; value: string
- delta: number; deltaLabel: string; spark?: number[]; accent?: boolean
+ label: string; value: string
+ delta: number; deltaLabel: string; spark?: number[]; accent?: boolean; hero?: boolean
 }) {
  const isUp = delta > 0
  const isFlat = delta === 0
  return (
   <motion.div
    variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
-   className={`bg-white border ${accent ? 'border-sky-200' : 'border-gray-200'} rounded-2xl p-5 relative overflow-hidden`}
+   className={`bg-white border ${accent ? 'border-sky-200' : 'border-gray-200'} rounded-2xl ${hero ? 'p-7 md:p-8' : 'p-5'} relative overflow-hidden`}
   >
-   <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-    <Icon className="w-3.5 h-3.5" strokeWidth={1.75} />
-    {label}
-   </div>
-   <div className="flex items-baseline gap-2 mb-1">
-    <div className={`font-display text-3xl md:text-4xl font-medium tracking-tight ${accent ? 'text-sky-600' : 'text-gray-900'}`}>
+   <div className={`text-xs text-gray-500 ${hero ? 'mb-4' : 'mb-2'}`}>{label}</div>
+   <div className={`flex items-end gap-6 ${hero ? '' : 'mb-1'}`}>
+    <div className={`font-mono font-medium tracking-tight tabular-nums ${
+     hero ? 'text-6xl md:text-7xl' : 'text-3xl md:text-4xl'
+    } ${accent ? 'text-sky-600' : 'text-gray-900'}`}>
      {value}
     </div>
+    {hero && spark && spark.length > 1 && (
+     <div className="flex-1 max-w-[280px] pb-2">
+      <Sparkline data={spark} accent={accent} large />
+     </div>
+    )}
    </div>
-   <div className="flex items-center justify-between">
+   <div className={`flex items-center justify-between ${hero ? 'mt-3' : ''}`}>
     <div className="flex items-center gap-1 text-xs">
      {isFlat ? (
       <span className="text-gray-400">— {deltaLabel}</span>
      ) : (
       <>
-       <span className={`inline-flex items-center gap-0.5 font-medium ${isUp ? 'text-emerald-600' : 'text-rose-500'}`}>
+       <span className={`inline-flex items-center gap-0.5 font-medium font-mono ${isUp ? 'text-emerald-600' : 'text-rose-500'}`}>
         {isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
         {Math.abs(delta).toLocaleString()}{deltaLabel === 'pp' ? 'pp' : ''}
        </span>
@@ -395,24 +369,24 @@ function Kpi({
       </>
      )}
     </div>
-    {spark && spark.length > 1 && <Sparkline data={spark} accent={accent} />}
+    {!hero && spark && spark.length > 1 && <Sparkline data={spark} accent={accent} />}
    </div>
   </motion.div>
  )
 }
 
-function Sparkline({ data, accent = false }: { data: number[]; accent?: boolean }) {
+function Sparkline({ data, accent = false, large = false }: { data: number[]; accent?: boolean; large?: boolean }) {
  const max = Math.max(...data, 1)
- const w = 60, h = 18
+ const w = large ? 240 : 60, h = large ? 36 : 18
  const pts = data.map((v, i) => {
   const x = (i / (data.length - 1)) * w
   const y = h - (v / max) * h
   return `${x.toFixed(1)},${y.toFixed(1)}`
  }).join(' ')
  return (
-  <svg width={w} height={h} className="overflow-visible">
+  <svg width={large ? '100%' : w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="overflow-visible">
    <polyline
-    fill="none" stroke={accent ? '#0ea5e9' : '#9ca3af'} strokeWidth="1.5"
+    fill="none" stroke={accent ? '#0ea5e9' : (large ? '#0ea5e9' : '#9ca3af')} strokeWidth={large ? '2' : '1.5'}
     strokeLinecap="round" strokeLinejoin="round" points={pts}
    />
   </svg>
@@ -447,9 +421,8 @@ function VolumeChart({ data }: { data: { date: string; count: number }[] }) {
 
 function ChartEmpty() {
  return (
-  <div className="h-full flex flex-col items-center justify-center text-center">
-   <p className="text-sm text-gray-500 mb-1">No call activity yet.</p>
-   <p className="text-xs text-gray-400">Calls will populate once your AI receptionist starts answering.</p>
+  <div className="h-full flex items-end pb-2">
+   <p className="text-xs text-gray-400">No call activity yet.</p>
   </div>
  )
 }
@@ -525,41 +498,30 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
 function CallsEmpty({ hasAnyData }: { hasAnyData: boolean }) {
  if (hasAnyData) {
   return (
-   <div className="h-full flex flex-col items-center justify-center text-center px-8 py-12">
+   <div className="px-6 py-6">
     <p className="text-sm text-gray-500">No matches.</p>
-    <p className="text-xs text-gray-400 mt-1">Try a different filter or search term.</p>
    </div>
   )
  }
  return (
-  <div className="h-full flex flex-col items-center justify-center text-center px-8 py-12">
-   <div className="w-10 h-10 rounded-full bg-sky-50 border border-sky-100 flex items-center justify-center mb-4">
-    <Phone className="w-4 h-4 text-sky-500" />
-   </div>
-   <p className="text-sm font-medium text-gray-900 mb-1">No calls yet.</p>
-   <p className="text-xs text-gray-500 max-w-xs leading-relaxed mb-4">
-    Calls will appear here as soon as your AI agent answers them. Want to test it?
+  <div className="px-6 py-6">
+   <p className="text-sm text-gray-700">
+    Nothing yet. Try the demo line:{' '}
+    <a
+     href={`tel:${DEMO_NUMBER.replace(/[^0-9+]/g, '')}`}
+     className="font-mono text-sky-600 hover:underline"
+    >
+     {DEMO_NUMBER}
+    </a>
    </p>
-   <a
-    href={`tel:${DEMO_NUMBER.replace(/[^0-9+]/g, '')}`}
-    className="inline-flex items-center gap-2 text-xs font-medium text-gray-900 bg-gray-50 border border-gray-200 hover:border-gray-300 px-3 py-1.5 rounded-lg transition-colors"
-   >
-    <Phone className="w-3 h-3" /> Call your AI: <span className="font-mono">{DEMO_NUMBER}</span>
-   </a>
   </div>
  )
 }
 
 function ApptsEmpty() {
  return (
-  <div className="h-full flex flex-col items-center justify-center text-center px-8 py-12">
-   <div className="w-10 h-10 rounded-full bg-sky-50 border border-sky-100 flex items-center justify-center mb-4">
-    <Calendar className="w-4 h-4 text-sky-500" />
-   </div>
-   <p className="text-sm font-medium text-gray-900 mb-1">No appointments yet.</p>
-   <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
-    Your AI agent will book appointments here automatically as it handles calls.
-   </p>
+  <div className="px-6 py-6">
+   <p className="text-sm text-gray-500">No appointments yet.</p>
   </div>
  )
 }
