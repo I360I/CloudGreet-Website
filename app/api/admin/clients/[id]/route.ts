@@ -209,7 +209,22 @@ export async function DELETE(
    }
   }
 
-  // Delete the business itself
+  // Delete owner + any user rows still pointing at this business BEFORE the
+  // business row, otherwise custom_users.business_id FK blocks the delete.
+  const { error: uByBizErr } = await supabaseAdmin
+   .from("custom_users").delete().eq("business_id", clientId)
+  if (uByBizErr && uByBizErr.code !== "42P01") {
+   stepErrors.push(`custom_users (by business_id): ${uByBizErr.message}`)
+  }
+  if (business.owner_id) {
+   const { error: uByOwnerErr } = await supabaseAdmin
+    .from("custom_users").delete().eq("id", business.owner_id)
+   if (uByOwnerErr && uByOwnerErr.code !== "42P01" && uByOwnerErr.code !== "PGRST116") {
+    stepErrors.push(`custom_users (by owner_id): ${uByOwnerErr.message}`)
+   }
+  }
+
+  // Delete the business itself.
   const { error: bDelErr } = await supabaseAdmin
    .from("businesses").delete().eq("id", clientId)
   if (bDelErr) {
@@ -221,15 +236,6 @@ export async function DELETE(
     detail: bDelErr.message,
     stepErrors,
    }, { status: 409 })
-  }
-
-  // Delete the owner user
-  if (business.owner_id) {
-   const { error: uDelErr } = await supabaseAdmin
-    .from("custom_users").delete().eq("id", business.owner_id)
-   if (uDelErr) {
-    stepErrors.push(`custom_users: ${uDelErr.message}`)
-   }
   }
 
   logger.info("Admin deleted client", {
