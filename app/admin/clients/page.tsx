@@ -202,6 +202,27 @@ export default function AdminClientsPage() {
  fetchClients()
  }, [fetchClients])
 
+ const deleteClient = async (clientId: string, businessName: string) => {
+ if (!confirm(`Delete "${businessName}"? This permanently removes the business, owner login, and all calls/appointments. Cannot be undone.`)) return
+ try {
+  const response = await fetchWithAuth(`/api/admin/clients/${clientId}`, { method: 'DELETE' })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok || !data.success) {
+   throw new Error(data?.detail || data?.error || `Delete failed (${response.status})`)
+  }
+  if (data.stepErrors?.length) {
+   alert(`Deleted, but some cleanup steps had issues:\n\n${data.stepErrors.join('\n')}`)
+  }
+  if (selectedClient === clientId) {
+   setSelectedClient(null)
+   setClientDetail(null)
+  }
+  fetchClients()
+ } catch (err) {
+  alert(err instanceof Error ? err.message : 'Delete failed')
+ }
+ }
+
  const getStatusColor = (status: string) => {
  switch (status.toLowerCase()) {
  case 'active': return 'bg-green-500/20 text-green-300 border border-green-500/30'
@@ -232,6 +253,13 @@ export default function AdminClientsPage() {
  <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight">{clientDetail.client.business_name}</h1>
  <p className="text-gray-300 mt-2 text-sm md:text-base leading-snug">Client Details & Activity</p>
  </div>
+ <Button
+ onClick={() => deleteClient(clientDetail.client.id, clientDetail.client.business_name)}
+ variant="outline"
+ className="bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20"
+ >
+ Delete client
+ </Button>
  </div>
 
  {/* Client Info */}
@@ -541,12 +569,20 @@ export default function AdminClientsPage() {
  {client.totalAppointments}
  </td>
  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+ <div className="flex items-center gap-3">
  <button
  onClick={() => fetchClientDetail(client.id)}
  className="text-blue-400 hover:text-blue-300 transition-colors"
  >
  View Details
  </button>
+ <button
+ onClick={() => deleteClient(client.id, client.business_name)}
+ className="text-red-400 hover:text-red-300 transition-colors"
+ >
+ Delete
+ </button>
+ </div>
  </td>
  </tr>
  ))}

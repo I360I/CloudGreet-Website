@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { deleteWebhook } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -154,6 +155,98 @@ export async function GET(
  { error: 'Failed to fetch client details' },
  { status: 500 }
  )
+ }
+}
+
+
+/**
+ * Admin Delete Client - hard delete a business + owner user.
+ * Sequentially clears child tables (best-effort), drops Cal.com webhook,
+ * then removes the business and the owner. Reports any failed step in
+ * the response so admin can clean up manually if needed.
+ */
+export async function DELETE(
+ request: NextRequest,
+ { params }: { params: { id: string } }
+) {
+ try {
+  const adminAuth = await requireAdmin(request)
+  if (!adminAuth.success) {
+   return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 401 })
+  }
+
+  const clientId = params.id
+
+  const { data: business, error: businessError } = await supabaseAdmin
+   .from("businesses")
+   .select("id, business_name, owner_id, cal_com_api_key, cal_com_webhook_id")
+   .eq("id", clientId)
+   .single()
+
+  if (businessError || !business) {
+   return NextResponse.json({ error: "Client not found" }, { status: 404 })
+  }
+
+  // Best-effort Cal.com webhook teardown
+  if (business.cal_com_api_key && business.cal_com_webhook_id) {
+   await deleteWebhook(business.cal_com_api_key, business.cal_com_webhook_id)
+  }
+
+  // Sequentially clear child rows. We dont fail the delete if a table
+  // doesnt exist or has zero rows; we collect errors and report them.
+  const childTables = [
+   "calls", "appointments", "phone_numbers", "sms_messages",
+   "messages", "notes", "tags", "notifications",
+   "ai_agents", "knowledge_base", "knowledge_articles",
+   "billing_records", "subscription_events", "audit_logs",
+  ]
+  const stepErrors: string[] = []
+  for (const table of childTables) {
+   const { error } = await supabaseAdmin.from(table).delete().eq("business_id", clientId)
+   if (error && error.code !== "42P01") {
+    // 42P01 = relation does not exist; ignore
+    stepErrors.push(`${table}: ${error.message}`)
+   }
+  }
+
+  // Delete the business itself
+  const { error: bDelErr } = await supabaseAdmin
+   .from("businesses").delete().eq("id", clientId)
+  if (bDelErr) {
+   logger.error("Admin delete client: business row failed", {
+    clientId, error: bDelErr.message,
+   })
+   return NextResponse.json({
+    error: "Could not delete business row",
+    detail: bDelErr.message,
+    stepErrors,
+   }, { status: 409 })
+  }
+
+  // Delete the owner user
+  if (business.owner_id) {
+   const { error: uDelErr } = await supabaseAdmin
+    .from("custom_users").delete().eq("id", business.owner_id)
+   if (uDelErr) {
+    stepErrors.push(`custom_users: ${uDelErr.message}`)
+   }
+  }
+
+  logger.info("Admin deleted client", {
+   clientId, businessName: business.business_name, stepErrors,
+  })
+
+  return NextResponse.json({
+   success: true,
+   deletedId: clientId,
+   stepErrors: stepErrors.length ? stepErrors : undefined,
+  })
+ } catch (error) {
+  logger.error("Failed to delete client", {
+   error: error instanceof Error ? error.message : "Unknown",
+   clientId: params.id,
+  })
+  return NextResponse.json({ error: "Failed to delete client" }, { status: 500 })
  }
 }
 
