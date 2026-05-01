@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Plus, ArrowUpRight, Loader2 } from "lucide-react"
+import { Plus, ArrowUpRight, Loader2, Trash2 } from "lucide-react"
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 type Client = {
@@ -34,6 +34,23 @@ export default function AdminHome() {
  }
 
  useEffect(() => { loadClients() }, [])
+
+ const deleteClient = async (id: string, name: string) => {
+  if (!confirm(`Delete "${name}"? This permanently removes the business, owner login, and all calls/appointments. Cannot be undone.`)) return
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${id}`, { method: 'DELETE' })
+   const data = await res.json().catch(() => ({}))
+   if (!res.ok || !data.success) {
+    throw new Error(data?.detail || data?.error || `Delete failed (${res.status})`)
+   }
+   if (data.stepErrors?.length) {
+    alert(`Deleted, but some cleanup steps had issues:\n\n${data.stepErrors.join('\n')}`)
+   }
+   loadClients()
+  } catch (e) {
+   alert(e instanceof Error ? e.message : 'Delete failed')
+  }
+ }
 
  return (
   <main className="px-6 pt-12 md:pt-16 pb-32">
@@ -92,9 +109,18 @@ export default function AdminHome() {
            </span>
           </td>
           <td className="px-5 py-4 text-right">
-           <a href={`/admin/clients/${c.id}`} className="text-gray-400 hover:text-gray-900">
-            <ArrowUpRight className="w-4 h-4 inline" />
-           </a>
+           <div className="inline-flex items-center gap-3">
+            <button
+             onClick={() => deleteClient(c.id, c.business_name)}
+             className="text-gray-400 hover:text-red-600 transition-colors"
+             aria-label={`Delete ${c.business_name}`}
+            >
+             <Trash2 className="w-4 h-4 inline" />
+            </button>
+            <a href={`/admin/clients/${c.id}`} className="text-gray-400 hover:text-gray-900 transition-colors">
+             <ArrowUpRight className="w-4 h-4 inline" />
+            </a>
+           </div>
           </td>
          </tr>
         ))}
