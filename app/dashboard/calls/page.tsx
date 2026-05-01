@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronRight, Search, Loader2, AlertCircle, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react'
+
+const EASE = [0.22, 1, 0.36, 1] as const
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 import {
@@ -127,12 +129,19 @@ export default function CallsPage() {
       ) : filtered.length === 0 ? (
        <Empty hasAny={(calls?.length ?? 0) > 0} />
       ) : (
-       <ul className="divide-y divide-gray-100">
+       <motion.ul
+        initial="hidden" animate="show"
+        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.025, delayChildren: 0.05 } } }}
+        className="divide-y divide-gray-100"
+       >
         {filtered.map((c) => (
-         <li key={c.id}>
+         <motion.li
+          key={c.id}
+          variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } } }}
+         >
           <button
            onClick={() => setOpenCall(c)}
-           className="w-full text-left px-6 py-4 hover:bg-gray-50/60 flex items-center gap-4 group transition-colors"
+           className="w-full text-left px-6 py-4 hover:bg-gray-50/60 flex items-center gap-4 group transition-all duration-300 ease-out"
           >
            <OutcomeDot outcome={tagOutcome(c)} />
            <div className="flex-1 min-w-0 grid grid-cols-12 gap-4 items-baseline">
@@ -151,11 +160,11 @@ export default function CallsPage() {
              <div className="text-gray-400 mt-0.5">{fmtDur(c.duration || 0)}</div>
             </div>
            </div>
-           <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" />
+           <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 flex-shrink-0 transition-all duration-300 ease-out" />
           </button>
-         </li>
+         </motion.li>
         ))}
-       </ul>
+       </motion.ul>
       )}
 
       {!loading && !error && total > PAGE_SIZE && (

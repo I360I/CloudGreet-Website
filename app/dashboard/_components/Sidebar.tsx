@@ -37,7 +37,7 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
      const active = activeLabel ? item.label === activeLabel : item.match(pathname)
      return (
       <Link key={item.label} href={item.href}
-       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors mb-0.5 ${
+       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-300 ease-out mb-0.5 ${
         active
          ? 'bg-gray-900 text-white'
          : 'text-gray-600 hover:text-gray-900 hover:bg-black/[.04]'
@@ -56,7 +56,7 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
      <div className="text-sm font-medium text-gray-900 truncate">{businessName}</div>
     </div>
     <button onClick={onSignOut}
-     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-gray-900 hover:bg-black/[.04] transition-colors"
+     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-gray-900 hover:bg-black/[.04] transition-all duration-300 ease-out"
     >
      <LogOut className="w-4 h-4" strokeWidth={1.75} /> Sign out
     </button>

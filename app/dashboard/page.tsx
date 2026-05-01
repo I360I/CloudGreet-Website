@@ -173,7 +173,7 @@ export default function DashboardPage() {
 
       {/* Charts row */}
       <motion.div
-       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
        className="grid lg:grid-cols-3 gap-3 mb-6"
       >
        <div className="lg:col-span-2 bg-white border border-gray-200 rounded-2xl p-6">
@@ -199,7 +199,7 @@ export default function DashboardPage() {
 
       {/* Calls + Appointments */}
       <motion.div
-       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
        className="grid md:grid-cols-2 gap-3 scroll-mt-20"
       >
        <div id="calls" className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px] scroll-mt-20">
@@ -234,7 +234,7 @@ export default function DashboardPage() {
             <li key={c.id}>
              <button
               onClick={() => setOpenCall(c)}
-              className="w-full text-left px-6 py-3.5 hover:bg-gray-50/60 flex items-center gap-3 group transition-colors"
+              className="w-full text-left px-6 py-3.5 hover:bg-gray-50/60 flex items-center gap-3 group transition-all duration-300 ease-out"
              >
               <OutcomeDot outcome={tagOutcome(c)} />
               <div className="flex-1 min-w-0">

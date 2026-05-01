@@ -1,11 +1,14 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
  ChevronLeft, ChevronRight, Loader2, AlertCircle, Clock,
 } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
+
+const EASE = [0.22, 1, 0.36, 1] as const
 
 type Appt = {
  id: string
@@ -131,53 +134,65 @@ export default function AppointmentsPage() {
       </div>
      )}
 
-     {!loading && !error && days && (
-      <div className="grid grid-cols-1 md:grid-cols-7 gap-2">
-       {days.map((day) => (
-        <div
-         key={day.date}
-         className={`bg-white border rounded-2xl overflow-hidden flex flex-col min-h-[280px] ${
-          day.isToday ? 'border-sky-300 ring-1 ring-sky-200' : 'border-gray-200'
-         }`}
-        >
-         <div className={`px-3 py-2.5 border-b border-gray-100 ${day.isToday ? 'bg-sky-50/60' : ''}`}>
-          <div className="flex items-baseline justify-between gap-2">
-           <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500">{day.dayName.slice(0, 3)}</span>
-           <span className={`text-xs ${day.isToday ? 'text-sky-700 font-semibold' : 'text-gray-400'}`}>
-            {day.count > 0 ? `${day.count}` : ''}
-           </span>
-          </div>
-          <div className={`text-lg font-medium mt-0.5 ${day.isToday ? 'text-sky-700' : 'text-gray-900'}`}>
-           {day.dayNumber}
-          </div>
-         </div>
-         <div className="flex-1 px-2 py-2 space-y-1 overflow-y-auto">
-          {day.appointments.length === 0 ? (
-           <div className="h-full flex items-center justify-center">
-            <span className="text-[10px] text-gray-300">—</span>
+     <AnimatePresence mode="wait">
+      {!loading && !error && days && (
+       <motion.div
+        key={days[0]?.date || 'empty'}
+        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+        transition={{ duration: 0.35, ease: EASE }}
+        className="grid grid-cols-1 md:grid-cols-7 gap-2"
+       >
+        {days.map((day, i) => (
+         <motion.div
+          key={day.date}
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE, delay: 0.03 * i }}
+          className={`bg-white border rounded-2xl overflow-hidden flex flex-col transition-colors duration-300 ${
+           day.appointments.length === 0 ? 'min-h-[112px]' : 'min-h-[180px]'
+          } ${day.isToday ? 'border-sky-300 ring-1 ring-sky-200' : 'border-gray-200'}`}
+         >
+          <div className={`px-3 py-2.5 border-b border-gray-100 ${day.isToday ? 'bg-sky-50/60' : ''}`}>
+           <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500">{day.dayName.slice(0, 3)}</span>
+            <span className={`text-xs font-mono ${day.isToday ? 'text-sky-700 font-semibold' : 'text-gray-400'}`}>
+             {day.count > 0 ? `${day.count}` : ''}
+            </span>
            </div>
-          ) : (
-           day.appointments.map((a) => (
-            <div
-             key={a.id}
-             className="bg-sky-50 border border-sky-100 rounded-lg px-2.5 py-2 text-left hover:border-sky-200 transition-colors"
-            >
-             <div className="flex items-center gap-1 text-[10px] text-sky-700 font-mono mb-1">
-              <Clock className="w-2.5 h-2.5" /> {a.time}
-             </div>
-             <div className="text-xs font-medium text-gray-900 truncate leading-tight">{a.customer}</div>
-             <div className="text-[10px] text-gray-500 truncate mt-0.5">{a.serviceType}</div>
-            </div>
-           ))
+           <div className={`text-lg font-mono font-medium mt-0.5 ${day.isToday ? 'text-sky-700' : 'text-gray-900'}`}>
+            {day.dayNumber}
+           </div>
+          </div>
+          {day.appointments.length > 0 && (
+           <div className="flex-1 px-2 py-2 space-y-1 overflow-y-auto">
+            {day.appointments.map((a, idx) => (
+             <motion.div
+              key={a.id}
+              initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, ease: EASE, delay: 0.03 * i + 0.04 * idx }}
+              className="bg-sky-50 border border-sky-100 rounded-lg px-2.5 py-2 text-left hover:border-sky-300 hover:bg-sky-100/60 transition-all duration-300"
+             >
+              <div className="flex items-center gap-1 text-[10px] text-sky-700 font-mono mb-1">
+               <Clock className="w-2.5 h-2.5" /> {a.time}
+              </div>
+              <div className="text-xs font-medium text-gray-900 truncate leading-tight">{a.customer}</div>
+              <div className="text-[10px] text-gray-500 truncate mt-0.5">{a.serviceType}</div>
+             </motion.div>
+            ))}
+           </div>
           )}
-         </div>
-        </div>
-       ))}
-      </div>
-     )}
+         </motion.div>
+        ))}
+       </motion.div>
+      )}
+     </AnimatePresence>
 
      {!loading && !error && days && totalThisWeek === 0 && (
-      <p className="text-sm text-gray-500 mt-4">No appointments this week.</p>
+      <motion.p
+       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.3, ease: EASE }}
+       className="text-sm text-gray-500 mt-4"
+      >
+       No appointments this week.
+      </motion.p>
      )}
     </div>
    </section>
