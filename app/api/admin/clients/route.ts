@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
@@ -255,3 +256,89 @@ async function getClientsList(request: NextRequest) {
  }
 }
 
+
+/**
+ * POST /api/admin/clients
+ * Create a new client (business + owner user). Admin only.
+ */
+export async function POST(request: NextRequest) {
+ try {
+  const adminAuth = await requireAdmin(request)
+  if (!adminAuth.success) {
+   return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 })
+  }
+
+  const body = await request.json().catch(() => null)
+  if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+
+  const {
+   business_name, email, password,
+   phone_number, business_type,
+   retell_agent_id, retell_phone_number,
+  } = body as Record<string, string | undefined>
+
+  if (!business_name || !email || !password) {
+   return NextResponse.json(
+    { error: 'business_name, email, and password are required' },
+    { status: 400 }
+   )
+  }
+
+  const { data: existing } = await supabaseAdmin
+   .from('users')
+   .select('id')
+   .eq('email', email)
+   .maybeSingle()
+  if (existing) {
+   return NextResponse.json({ error: 'A user with that email already exists' }, { status: 409 })
+  }
+
+  const businessInsert: Record<string, unknown> = {
+   business_name,
+   email,
+   phone_number: phone_number || null,
+   business_type: business_type || null,
+   subscription_status: 'pending',
+   account_status: 'active',
+   onboarding_completed: false,
+  }
+  if (retell_agent_id) businessInsert.retell_agent_id = retell_agent_id
+  if (retell_phone_number) businessInsert.retell_phone_number = retell_phone_number
+
+  const { data: business, error: bErr } = await supabaseAdmin
+   .from('businesses')
+   .insert(businessInsert)
+   .select('id, business_name, email')
+   .single()
+
+  if (bErr || !business) {
+   logger.error('Failed to create business', { error: bErr?.message })
+   return NextResponse.json({ error: 'Failed to create business', detail: bErr?.message }, { status: 500 })
+  }
+
+  const password_hash = await bcrypt.hash(password, 10)
+  const { data: user, error: uErr } = await supabaseAdmin
+   .from('users')
+   .insert({
+    email,
+    password_hash,
+    business_id: business.id,
+    is_active: true,
+    is_admin: false,
+    role: 'owner',
+   })
+   .select('id, email')
+   .single()
+
+  if (uErr || !user) {
+   await supabaseAdmin.from('businesses').delete().eq('id', business.id)
+   logger.error('Failed to create user, rolled back business', { error: uErr?.message })
+   return NextResponse.json({ error: 'Failed to create user', detail: uErr?.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true, business, user }, { status: 201 })
+ } catch (error) {
+  logger.error('Admin clients POST failed', { error: error instanceof Error ? error.message : 'Unknown' })
+  return NextResponse.json({ error: 'Failed to create client' }, { status: 500 })
+ }
+}

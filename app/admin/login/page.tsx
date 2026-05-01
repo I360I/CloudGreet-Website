@@ -1,151 +1,103 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useToast } from '@/app/contexts/ToastContext'
-import { Shield, UserPlus, Home, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, ArrowUpRight } from 'lucide-react'
+import { setAuthToken } from '@/lib/auth/token-manager'
 
 export default function AdminLoginPage() {
+ const router = useRouter()
  const [email, setEmail] = useState('')
  const [password, setPassword] = useState('')
- const [loading, setLoading] = useState(false)
- const router = useRouter()
- const { showError, showSuccess } = useToast()
+ const [showPassword, setShowPassword] = useState(false)
+ const [isLoading, setIsLoading] = useState(false)
+ const [error, setError] = useState('')
 
- const handleLogin = async (e: React.FormEvent) => {
- e.preventDefault()
- setLoading(true)
-
- try {
- const response = await fetch('/api/auth/login-simple', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ email, password })
- })
-
- let data
- try {
- data = await response.json()
- } catch (jsonError) {
- showError('Invalid response from server. Please try again.')
- return
- }
-
- if (!response.ok) {
- showError(data?.message || `Login failed (${response.status})`)
- return
- }
-
- if (data.success && data.data?.token) {
- // Store token
- localStorage.setItem('token', data.data.token)
- 
- // Check if user is admin
- if (data.data.user?.role === 'admin' || data.data.user?.is_admin) {
- router.push('/admin/clients')
- showSuccess('Successfully logged in')
- } else {
- showError('Admin access required')
- localStorage.removeItem('token')
- }
- } else {
- showError(data?.message || 'Login failed')
- }
- } catch (error) {
- console.error('Login error:', error)
- showError('Network error. Please try again.')
- } finally {
- setLoading(false)
- }
+ const onSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setIsLoading(true)
+  setError('')
+  try {
+   const res = await fetch('/api/auth/login-simple', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+   })
+   const result = await res.json().catch(() => ({}))
+   if (!res.ok || !result.success) {
+    setError(result.message || 'Login failed')
+    return
+   }
+   const u = result.data?.user
+   if (!(u?.is_admin || u?.role === 'admin')) {
+    setError('This account is not an admin.')
+    return
+   }
+   await setAuthToken(result.data.token)
+   localStorage.setItem('user', JSON.stringify(u))
+   router.replace('/admin')
+  } catch {
+   setError('Login failed. Please try again.')
+  } finally {
+   setIsLoading(false)
+  }
  }
 
  return (
- <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
- {/* Matrix-style grid background */}
- <div className="absolute inset-0 opacity-10" style={{
- backgroundImage: `
- linear-gradient(rgba(147, 51, 234, 0.1) 1px, transparent 1px),
- linear-gradient(90deg, rgba(147, 51, 234, 0.1) 1px, transparent 1px)
- `,
- backgroundSize: '50px 50px'
- }}></div>
- 
- <div className="bg-black border-2 border-sky-500/30 rounded-none p-4 md:p-6 w-full max-w-md relative z-10 shadow-[0_0_30px_rgba(147,51,234,0.3)]">
- {/* Corner accents */}
- <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-sky-500"></div>
- <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-sky-500"></div>
- <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-sky-500"></div>
- <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-sky-500"></div>
- 
- <div className="text-center mb-6">
- <div className="inline-flex items-center justify-center w-12 h-12 border-2 border-sky-500 mb-3 bg-black">
- <Shield className="w-6 h-6 text-sky-500" />
- </div>
- <h1 className="text-xl md:text-2xl font-bold text-white mb-2 font-mono tracking-wider leading-tight">ADMIN LOGIN</h1>
- <p className="text-gray-400 font-mono text-xs md:text-sm leading-snug">ACCESS ADMIN DASHBOARD</p>
- </div>
+  <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
+   <nav className="border-b border-black/5">
+    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+     <Link href="/" className="flex items-center" aria-label="CloudGreet">
+      <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={160} height={48} priority className="h-9 w-auto" />
+      <span className="ml-3 text-xs font-medium text-gray-400 uppercase tracking-widest">Admin</span>
+     </Link>
+     <Link href="/" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">← Back home</Link>
+    </div>
+   </nav>
 
- <form onSubmit={handleLogin} className="space-y-6">
- <div>
- <label htmlFor="email" className="block text-sm font-medium text-sky-400 mb-2 font-mono">
- EMAIL
- </label>
- <input
- id="email"
- type="email"
- value={email}
- onChange={(e) => setEmail(e.target.value)}
- required
- className="w-full px-4 py-3 bg-black border-2 border-sky-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-sky-500 transition-all font-mono"
- placeholder="admin@cloudgreet.com"
- />
- </div>
+   <section className="px-6 pt-16 md:pt-24 pb-32">
+    <div className="max-w-md mx-auto relative">
+     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+     <div className="relative bg-white border border-gray-200 rounded-[28px] p-8 md:p-10">
+      <h1 className="font-display font-medium tracking-tight leading-[1.05] text-3xl md:text-4xl mb-2 text-gray-900">
+       Admin <span className="text-gray-400">sign in.</span>
+      </h1>
+      <p className="text-sm text-gray-500 mb-8">Restricted area.</p>
 
- <div>
- <label htmlFor="password" className="block text-sm font-medium text-sky-400 mb-2 font-mono">
- PASSWORD
- </label>
- <input
- id="password"
- type="password"
- value={password}
- onChange={(e) => setPassword(e.target.value)}
- required
- className="w-full px-4 py-3 bg-black border-2 border-sky-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-sky-500 transition-all font-mono"
- placeholder="••••••••"
- />
- </div>
+      <form onSubmit={onSubmit} className="space-y-5">
+       <div>
+        <label htmlFor="email" className="text-sm text-gray-700 mb-2 block">Email</label>
+        <input
+         id="email" type="email" required autoComplete="email"
+         value={email} onChange={(e) => setEmail(e.target.value)}
+         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+        />
+       </div>
+       <div>
+        <label htmlFor="password" className="text-sm text-gray-700 mb-2 block">Password</label>
+        <div className="relative">
+         <input
+          id="password" type={showPassword ? 'text' : 'password'} required autoComplete="current-password"
+          value={password} onChange={(e) => setPassword(e.target.value)}
+          className="w-full px-4 py-3 pr-11 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
+         />
+         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700">
+          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+         </button>
+        </div>
+       </div>
 
- <button
- type="submit"
- disabled={loading}
- className="w-full bg-black border-2 border-sky-500 text-sky-400 py-3 font-mono font-semibold hover:bg-sky-500/10 hover:text-sky-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 uppercase tracking-wider"
- >
- {loading ? (
- <>
- <Loader2 className="w-5 h-5 animate-spin" />
- LOGGING IN...
- </>
- ) : (
- 'LOGIN'
- )}
- </button>
- </form>
+       {error && <div className="bg-red-50 border border-red-200 text-red-900 rounded-xl p-3 text-sm">{error}</div>}
 
- <div className="mt-6 pt-6 border-t-2 border-sky-500/30 space-y-3">
- <a
- href="/"
- className="flex items-center justify-center gap-2 w-full text-center text-sm text-gray-500 hover:text-gray-400 transition-colors py-2 font-mono"
- >
- <Home className="w-4 h-4" />
- BACK TO HOME
- </a>
- <p className="text-center text-xs text-gray-500 font-mono mt-4">
- After logging in, use the sidebar to create employees
- </p>
- </div>
- </div>
- </div>
+       <button type="submit" disabled={isLoading} className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50">
+        {isLoading ? 'Signing in…' : (<>Sign in<ArrowUpRight className="w-4 h-4" /></>)}
+       </button>
+      </form>
+     </div>
+    </div>
+   </section>
+  </main>
  )
 }
-
