@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
  if (userError || !user) {
  return NextResponse.json(
- { success: false, message: 'Invalid email or password' },
+ { success: false, message: 'Invalid email or password', debug: { stage: 'lookup', userError: userError?.message || null, hasUser: !!user, emailQueried: email.toLowerCase() } },
  { status: 401 }
  )
  }
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
  const isValidPassword = await bcrypt.compare(password, user.password_hash)
  if (!isValidPassword) {
  return NextResponse.json(
- { success: false, message: 'Invalid email or password' },
+ { success: false, message: 'Invalid email or password', debug: { stage: 'bcrypt', hashPrefix: user.password_hash?.slice(0, 7), pwLen: password?.length } },
  { status: 401 }
  )
  }
