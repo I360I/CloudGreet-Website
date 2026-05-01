@@ -1,131 +1,130 @@
 # CloudGreet — Current State
 
-Last cleaned: 2026-04-29. This file replaces all the old `*_AUDIT.md`, `*_REPORT.md`, `*_STATUS.md` etc. (now under `_archive/old-docs/`).
-
-## Business model
-
-- Direct outreach → contractors (HVAC / roofing / painting).
-- Manual concierge onboarding: I provision Retell/Vapi + phone numbers for the client.
-- Client logs into `/dashboard` to see calls + appointments.
-- I use `/admin` to manage all clients.
-- Stripe billing: I invoice; clients do **not** self-checkout.
-- **No self-serve signup.** Accounts are created by me.
+Last updated: 2026-05-01. Replaces all prior `*_AUDIT.md`, `*_REPORT.md`, `*_STATUS.md` (archived under `_archive/old-docs/`).
 
 ---
 
-## Pages
+## Branches
 
-### Marketing (public)
-- `/` — landing
-- `/pricing`
-- `/contact`
-- `/privacy`, `/terms`, `/tcpa-a2p`, `/cookies`
+| Branch | What's there | Where it deploys |
+|---|---|---|
+| `main` | Public marketing site as of last push (light theme, Cal.com booking, ROI calc, real logo) | **cloudgreet.com** |
+| `dashboard-rebuild` | Everything from main + new admin shell + Retell webhooks + dashboard work in progress | `cloud-greet-website-git-dashboard-rebuild-i360is-projects.vercel.app` |
 
-### Auth
-- `/login` — client login
-- `/admin/login` — admin login
-
-### Client dashboard (`/dashboard`)
-- `/dashboard` — main view (see UI note below)
-- `/dashboard/billing` — subscription / invoice info
-
-### Admin dashboard (`/admin`)
-- `/admin/clients` — list of all clients (drill-in via `[id]`)
-- `/admin/billing` — billing reconciliation
-- `/admin/analytics/usage`
-- `/admin/health`
-- `/admin/knowledge`
-- `/admin/phone-inventory`
-- `/admin/settings`
-- `/admin/test-call`
+`dashboard-rebuild` is **ahead of main**. Don't merge yet — customer dashboard isn't built.
 
 ---
 
-## API routes (67 total)
+## What works today (verified end-to-end)
 
-### Auth (`/api/auth/*`)
-`register`, `register-simple`, `login-simple`, `get-token`, `set-token`, `clear-token`
+### Public marketing site (on main + preview)
+- `/` — light cream theme landing: hero, product card with phone-call transcript, platforms strip, stats, ROI calculator (3 sliders + typeable job-value), final CTA, footer card
+- `/contact` — Cal.com inline embed (`cal.com/cloudgreet`) handles booking + calendar sync + confirmation emails
+- `/login` — light-theme client login
+- Real CloudGreet black logo wired in nav + footer
+- Sky-blue accents, Helvetica Neue, no gradients
 
-### Client dashboard data (`/api/dashboard/*`)
-`data`, `metrics`, `real-metrics`, `real-charts`, `roi-metrics`, `calendar`, `week-calendar`, `business-config`
+### Admin (only on `dashboard-rebuild`)
+- `/admin/login` — light theme, only allows `is_admin = true` users
+- `/admin` — clients table + "New client" form
+- `POST /api/admin/clients` — creates `custom_users` (owner) + `businesses` + optional `phone_numbers` row, properly handles the `owner_id` chicken-and-egg, rolls back on failure
+- `GET /api/admin/clients` — simple list of all businesses
+- Admin login: `aedwards4242@gmail.com` / `Anthonyis42!` (password hash generated via Postgres `crypt()` to avoid copy-paste mangling)
 
-### Calls & appointments
-- `/api/calls/history`, `/api/calls/recording`, `/api/calls/process-recoveries`
-- `/api/appointments/create`, `/api/appointments/[id]`
-
-### Business config
-- `/api/business/hours`, `/api/business/profile`
-- `/api/businesses/update`
-
-### Voice / phone webhooks
-- `/api/retell/voice-webhook`, `/api/retell/outbound`, `/api/retell/session-token`
-- `/api/telnyx/voice-webhook`, `/api/telnyx/initiate-call`
-- `/api/sms/send`, `/api/sms/webhook`
-
-### Stripe / billing
-- `/api/stripe/webhook`
-- `/api/client/billing`
-- `/api/admin/billing/portal`, `/api/admin/billing/reconciliation`, `/api/admin/billing/reconciliation/export`
-
-### Admin (`/api/admin/*`)
-`clients`, `clients/[id]`, `ai-settings`, `analytics/usage`, `analytics/usage/export`, `employees`, `health`, `health/history`, `integrations`, `knowledge`, `knowledge/[id]`, `message-client`, `phone-numbers`, `phone-numbers/buy`, `test-call`
-
-### Misc
-- `/api/health`, `/api/health/env`
-- `/api/cron/health-check`, `/api/cron/process-jobs`
-- `/api/contact/submit`
-- `/api/notifications`, `/api/notifications/list`
-- `/api/calendar/callback`
-- `/api/user/gdpr/export`, `/api/user/gdpr/delete`
-- `/api/monitoring/error`
-- `/api/pricing/rules`
-- `/api/progress/confirm`
-- `/api/client/test-call`
-- `/api/internal/compliance/audit`, `/api/internal/outreach-runner`, `/api/internal/prospecting-sync`, `/api/internal/stripe/alerts`
+### Retell ingestion (only on `dashboard-rebuild`)
+- `POST /api/retell/call-events` — handles `call_started` / `call_ended` / `call_analyzed` Retell events
+- Resolves `business_id` by `retell_agent_id` first, falls back to `to_number → phone_numbers.phone_number`
+- Upserts into `calls` table by `retell_call_id`. Captures: duration, transcript, recording_url, sentiment, summary, full call_analysis JSON
+- Signature verification with `RETELL_WEBHOOK_SECRET` (falls through if unset)
 
 ---
 
-## Dashboards — what's actually rendered today
+## What's still missing / next phase
 
-### Client dashboard (`/dashboard/page.tsx`)
-Currently a **70/30 split**:
-- **Left (70%)**: `DashboardHero` (hero/greeting) → `RealAnalytics` (KPIs) → `RealCharts`
-- **Right (30%)**: `ControlCenter` (calendar + appointments)
+### Phase 5: Customer dashboard (next session)
+The `/dashboard` route currently shows the OLD analytics+calendar view. Needs rebuild:
+- 4 KPI cards: Total calls / Calls today / Avg duration / Booked rate
+- Two-column: Recent Calls list (click → transcript drawer + audio player) | Upcoming Appointments
+- Charts: daily volume line (30d), outcomes donut, duration histogram (Recharts)
+- Light theme matching landing
+- Multi-tenant isolation: queries filter by `business_id` from JWT
 
-> ⚠️ **This is not yet calls + appointments side-by-side.** It's analytics + calendar. Restructuring to a true calls-list-on-left / appointments-on-right layout is pending.
+### Phase 6: Voice webhook update
+`/api/retell/voice-webhook` (handles in-call `book_appointment`) currently requires `business_id` as a tool arg. Update it to look up `business_id` from `to_number` like call-events does, so Retell agent config doesn't embed a UUID.
 
-Modals: `CreateAppointmentModal`, `EditAppointmentModal`, `AppointmentDetailsModal`, `FullCalendarModal`, `DayDetailsSidebar`.
+### Phase 7: Real call test
+After Phase 5+6: configure a Retell agent, point its webhook at `/api/retell/call-events`, make a test call, verify the row lands in `calls` and shows on the dashboard.
 
-### Admin dashboard (`/admin/clients/page.tsx`)
-Lists all clients. Click-through to `/admin/clients/[id]` (data, config, calls, appointments per client). Sibling pages handle billing, analytics, health, knowledge, phone inventory, settings, test-call.
+### Phase 8: Multi-tenant isolation test
+Create two test clients via admin, log in as each, verify each only sees their own data.
 
----
-
-## What was deleted / archived (2026-04-29)
-
-**Deleted outright** (not archived; restore from original zip if needed):
-- Self-serve flow: `app/onboarding`, `app/register-simple`, `app/start`, `app/api/onboarding`, `app/api/phone/provision`
-- Employee dashboard: `app/employee`, `app/api/employee`
-- Test/demo: `app/demo`, `app/test-agent-simple`, `app/test-styling`, `app/test-jsx.tsx`, `app/api/test`, `app/api/test-tenant-isolation`
-- Misc app pages: `account`, `notifications`, `help`, `status`, `features`, `landing`
-- Apollo / outreach / lead enrichment admin: `outreach`, `leads`, `customer-success`, `prospecting`, `code-analyzer`, `manual-tests`, `qa-reviews`, `verify-mvp`, `audit-logs` (both `/admin/*` and `/api/admin/*`)
-- Tests: `__tests__/`, `e2e/`, `tests/`, `jest.config.js`, `jest.setup.js`, `test-minimal-build.js`, `test-voice-system.js`
-- Junk: `pages_backup/`, `commitlint.config.js`, `deploy-now.bat`, `etup-env.js`, `lighthouse-report.json`, a corrupt-named file
-
-**Archived** under `_archive/`:
-- `old-docs/` — 193 root markdown files + root reports
-- `old-docs-folder/docs/` — old `docs/` folder
-- `old-scripts/scripts/` — entire 176-script folder
-- `old-sql/` — all root `*.sql` except `COMPLETE_SUPABASE_SCHEMA_FINAL.sql` and `RLS_POLICIES.sql`; plus the old `migrations/` folder
+### Phase 9: Polish
+Subtle framer-motion enter animations, loading skeletons, number tickers on KPIs.
 
 ---
 
-## Build status
+## Open issues / known bugs
 
-`npm run build` compiles successfully. One non-blocking page-data-collection error on `/api/admin/integrations` from missing Supabase env vars at build time — not caused by deletions, will resolve when `.env.local` is populated.
+1. **Old `/api/admin/integrations`** still 500s during build collect-page-data because of Supabase init. Pre-existing, doesn't affect runtime, ignore.
+2. **`anthony@cloudgreet.com`** still exists as a second admin row from old build. Harmless. Delete with `DELETE FROM custom_users WHERE email = 'anthony@cloudgreet.com';` if desired.
+3. **Old admin sub-pages** (`/admin/clients/[id]/page.tsx`, `/admin/billing`, etc.) are still on the dark theme. They'll work but look out of place. Will rebuild during Phase 5/6.
+4. **Vercel deploys** — only `cloud-greet-website` remains. The two failing duplicates (`cloudgreet-premium`, `new-folder`) were deleted.
 
-## Open items
+---
 
-1. **Dashboard layout** — switch right column from calendar to a calls list so it's truly calls + appointments side-by-side. (Or keep the calendar and add a calls panel; user decision.)
-2. Several legacy routes (`auth/login-simple`, `auth/register-simple`, `internal/outreach-runner`, `internal/prospecting-sync`) are still wired up but inconsistent with the no-self-serve / no-outreach direction. Candidates for next cleanup pass.
-3. `hooks/` at repo root and `app/hooks/` both exist — possible duplication.
+## Database (Supabase) — current state
+
+After today's cleanup:
+- `custom_users` — wiped of ~3,000 synthetic test rows. Currently 2 rows: `aedwards4242@gmail.com` (admin), `anthony@cloudgreet.com` (legacy admin).
+- `businesses` — TRUNCATEd CASCADE. 0 rows.
+- `calls`, `appointments`, `phone_numbers` — empty (cascaded).
+- Schema unchanged except: dropped FK `businesses_owner_id_fkey` (pointed at wrong table).
+
+Auth: `custom_users.id` is user identity. `businesses.owner_id` references custom_users (no enforced FK now). JWT carries `{ userId, businessId, email, role }`.
+
+---
+
+## Vercel env vars
+
+Critical 4 are set:
+- `NEXT_PUBLIC_SUPABASE_URL` ✓
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` ✓
+- `SUPABASE_SERVICE_ROLE_KEY` ✓ (legacy key — keep using legacy until we migrate)
+- `JWT_SECRET` ✓
+
+Missing/optional:
+- `RETELL_WEBHOOK_SECRET` — not set; webhook accepts events without signature verification (warning logged). Set before going live with paying clients.
+- `RESEND_API_KEY` — for outbound email. Cal.com handles demo confirmations directly, so this is optional unless we want admin-side notifications.
+
+---
+
+## Per-client Retell setup checklist (when onboarding a contractor)
+
+1. Create Retell agent (voice + prompt)
+2. Buy/assign Retell phone number to that agent
+3. Set agent **webhook URL** to `https://cloudgreet.com/api/retell/call-events` (or preview URL while testing on `dashboard-rebuild`). Enable `call_started`, `call_ended`, `call_analyzed`.
+4. Add custom function `book_appointment` → URL `https://cloudgreet.com/api/retell/voice-webhook`, params: `name`, `phone`, `service`, `datetime`. (Once Phase 6 lands, no `business_id` param needed.)
+5. In CloudGreet `/admin` → New client → fill business info + paste Retell **agent ID** + **phone number** (E.164 format).
+
+Contractor forwards their existing business line to the Retell number.
+
+---
+
+## Login credentials
+
+- **Admin**: `aedwards4242@gmail.com` / `Anthonyis42!` → `/admin/login`
+- **Demo Retell number** (sounds like a CloudGreet receptionist): `+1 (737) 937-0084`
+- **Cal.com booking**: `cal.com/cloudgreet`
+
+---
+
+## File counts (sanity)
+
+- 172 TypeScript files in `app/`
+- 68 API routes
+- 20 pages
+
+## Old branches to delete
+
+- `redesign-clean-light` — already merged
+- `fix-pricing-and-dashboard` — already merged
