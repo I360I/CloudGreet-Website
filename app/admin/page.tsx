@@ -131,7 +131,8 @@ function NewClientForm({ onCreated }: { onCreated: () => void }) {
    ;(e.currentTarget as HTMLFormElement).reset()
    onCreated()
   } catch (err) {
-   setError('Network error')
+   setError(`Request failed: ${err instanceof Error ? err.message : String(err)}`)
+   console.error('Create client error:', err)
   } finally {
    setSubmitting(false)
   }
