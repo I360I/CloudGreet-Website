@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import {
- CreditCard,
- DollarSign,
- Calendar,
- AlertCircle,
- CheckCircle2,
- Loader2,
- ExternalLink,
- PhoneCall
-} from 'lucide-react'
+ MdCreditCard,
+ MdAttachMoney,
+ MdCalendarToday,
+ MdErrorOutline,
+ MdCheckCircle,
+ MdAutorenew,
+ MdOpenInNew,
+ MdCall
+} from "react-icons/md"
 import { useToast } from '@/app/contexts/ToastContext'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { Button } from '@/app/components/ui/Button'
@@ -120,13 +120,13 @@ export default function BillingPage() {
  const getStatusIcon = (status: string) => {
  switch (status) {
  case 'active':
- return <CheckCircle2 className="w-5 h-5 text-green-400" />
+ return <MdCheckCircle className="w-5 h-5 text-green-400" />
  case 'trialing':
- return <Calendar className="w-5 h-5 text-blue-400" />
+ return <MdCalendarToday className="w-5 h-5 text-blue-400" />
  case 'past_due':
- return <AlertCircle className="w-5 h-5 text-yellow-400" />
+ return <MdErrorOutline className="w-5 h-5 text-yellow-400" />
  default:
- return <AlertCircle className="w-5 h-5 text-gray-400" />
+ return <MdErrorOutline className="w-5 h-5 text-gray-400" />
  }
  }
 
@@ -134,7 +134,7 @@ export default function BillingPage() {
  return (
  <div className="mx-auto max-w-4xl px-4 py-8">
  <div className="flex items-center justify-center py-32">
- <Loader2 className="h-10 w-10 animate-spin" style={{ color: primaryColor }} />
+ <MdAutorenew className="h-10 w-10 animate-spin" style={{ color: primaryColor }} />
  </div>
  </div>
  )
@@ -144,7 +144,7 @@ export default function BillingPage() {
  return (
  <div className="mx-auto max-w-4xl px-4 py-8">
  <div className="bg-slate-800/50 border border-red-500/30 rounded-lg p-6">
- <AlertCircle className="w-6 h-6 text-red-400 mb-4" />
+ <MdErrorOutline className="w-6 h-6 text-red-400 mb-4" />
  <h2 className="text-xl font-semibold text-white mb-2">Billing Information Unavailable</h2>
  <p className="text-gray-400 mb-4">
  We couldn't load your billing information. Please try again or contact support.
@@ -185,12 +185,12 @@ export default function BillingPage() {
  >
  {openingPortal ? (
  <>
- <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+ <MdAutorenew className="w-4 h-4 mr-2 animate-spin" />
  Opening...
  </>
  ) : (
  <>
- <ExternalLink className="w-4 h-4 mr-2" />
+ <MdOpenInNew className="w-4 h-4 mr-2" />
  Manage Subscription
  </>
  )}
@@ -222,7 +222,7 @@ export default function BillingPage() {
  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
  <div className="bg-slate-800/50 border rounded-lg p-6" style={{ borderColor: primaryColor + '30' }}>
  <div className="flex items-center gap-3 mb-2">
- <DollarSign className="w-5 h-5" style={{ color: primaryColor }} />
+ <MdAttachMoney className="w-5 h-5" style={{ color: primaryColor }} />
  <h3 className="text-sm font-medium text-gray-400">Monthly Subscription</h3>
  </div>
  <p className="text-xl md:text-2xl font-bold text-white leading-tight">{formatCurrency(billing.mrrCents)}</p>
@@ -231,7 +231,7 @@ export default function BillingPage() {
 
  <div className="bg-slate-800/50 border rounded-lg p-6" style={{ borderColor: primaryColor + '30' }}>
  <div className="flex items-center gap-3 mb-2">
- <PhoneCall className="w-5 h-5" style={{ color: primaryColor }} />
+ <MdCall className="w-5 h-5" style={{ color: primaryColor }} />
  <h3 className="text-sm font-medium text-gray-400">Per-Booking Fees</h3>
  </div>
  <p className="text-2xl font-bold text-white">{formatCurrency(billing.bookingFeesLast30DaysCents)}</p>
@@ -242,7 +242,7 @@ export default function BillingPage() {
 
  <div className="bg-slate-800/50 border rounded-lg p-6" style={{ borderColor: primaryColor + '30' }}>
  <div className="flex items-center gap-3 mb-2">
- <CreditCard className="w-5 h-5" style={{ color: primaryColor }} />
+ <MdCreditCard className="w-5 h-5" style={{ color: primaryColor }} />
  <h3 className="text-sm font-medium text-gray-400">Next Invoice</h3>
  </div>
  <p className="text-2xl font-bold text-white">

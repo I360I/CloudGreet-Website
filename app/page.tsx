@@ -4,10 +4,10 @@ import React, { useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
- Phone, ArrowUpRight, ArrowRight, Calendar, Clock, DollarSign, Star,
- PhoneIncoming, MessageSquare, FileText, PhoneForwarded, CheckCircle2,
- MapPin, ShieldCheck,
-} from 'lucide-react'
+ MdPhone, MdArrowOutward, MdArrowForward, MdCalendarToday, MdAccessTime, MdAttachMoney, MdStar,
+ MdPhoneCallback, MdChatBubbleOutline, MdDescription, MdPhoneForwarded, MdCheckCircle,
+ MdPlace, MdVerifiedUser,
+} from "react-icons/md"
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -55,7 +55,7 @@ function Nav() {
      className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
     >
      Book Demo
-     <ArrowUpRight className="w-4 h-4" />
+     <MdArrowOutward className="w-4 h-4" />
     </Link>
    </div>
   </nav>
@@ -83,7 +83,7 @@ function Hero() {
      >
       Call our AI
       <span className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center group-hover:border-gray-900 transition-colors">
-       <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} />
+       <MdArrowForward className="w-3.5 h-3.5" strokeWidth={2.5} />
       </span>
      </a>
      <Link
@@ -91,7 +91,7 @@ function Hero() {
       className="inline-flex items-center gap-3 bg-gray-900 text-white px-7 py-4 rounded-2xl text-base font-medium hover:bg-gray-800 transition-colors"
      >
       Book Demo
-      <ArrowUpRight className="w-5 h-5" strokeWidth={2} />
+      <MdArrowOutward className="w-5 h-5" strokeWidth={2} />
      </Link>
     </div>
     <p className="text-sm text-gray-400 mt-8">
@@ -137,7 +137,7 @@ function PhoneTranscript() {
    <div className="relative bg-gray-50 border border-gray-200 rounded-3xl p-5 md:p-6">
     <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200">
      <div className="w-9 h-9 bg-gray-900 rounded-full flex items-center justify-center">
-      <Phone className="w-4 h-4 text-white" />
+      <MdPhone className="w-4 h-4 text-white" />
      </div>
      <div>
       <div className="text-sm font-semibold text-gray-900">Live call</div>
@@ -190,10 +190,10 @@ function Platforms() {
 
 function Stats() {
  const items = [
-  { icon: Clock, value: '5+ hrs/week', label: 'saved on the phone' },
-  { icon: DollarSign, value: '$2,500/mo', label: 'recovered from missed calls' },
-  { icon: Calendar, value: '24/7', label: 'coverage, never miss a call' },
-  { icon: Star, value: '+1.2 stars', label: 'in average review ratings' },
+  { icon: MdAccessTime, value: '5+ hrs/week', label: 'saved on the phone' },
+  { icon: MdAttachMoney, value: '$2,500/mo', label: 'recovered from missed calls' },
+  { icon: MdCalendarToday, value: '24/7', label: 'coverage, never miss a call' },
+  { icon: MdStar, value: '+1.2 stars', label: 'in average review ratings' },
  ]
  return (
   <section className="px-6 pb-32 md:pb-40">
@@ -220,11 +220,11 @@ function Stats() {
 
 function CallFlow() {
  const steps = [
-  { icon: PhoneIncoming, title: 'Incoming call.', body: 'Customer dials your main number — no new lines needed.' },
-  { icon: Phone, title: 'AI agent answers.', body: 'Picks up instantly or after a set number of rings.' },
-  { icon: MessageSquare, title: 'Call is handled.', body: 'AI talks naturally, answers questions, and books appointments.' },
-  { icon: FileText, title: 'Summary sent.', body: 'Name, number, and reason for calling sent to you by SMS.' },
-  { icon: PhoneForwarded, title: 'Ends or transfers.', body: 'Resolved calls end. Others are passed to your team.' },
+  { icon: MdPhoneCallback, title: 'Incoming call.', body: 'Customer dials your main number — no new lines needed.' },
+  { icon: MdPhone, title: 'AI agent answers.', body: 'Picks up instantly or after a set number of rings.' },
+  { icon: MdChatBubbleOutline, title: 'Call is handled.', body: 'AI talks naturally, answers questions, and books appointments.' },
+  { icon: MdDescription, title: 'Summary sent.', body: 'Name, number, and reason for calling sent to you by SMS.' },
+  { icon: MdPhoneForwarded, title: 'Ends or transfers.', body: 'Resolved calls end. Others are passed to your team.' },
  ]
  return (
   <section id="how-it-works" className="px-6 pb-32 md:pb-40">
@@ -285,7 +285,7 @@ function DashboardPreview() {
     <div className="relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
      <div className="flex items-center justify-between mb-4">
       <h3 className="text-base font-semibold flex items-center gap-2">
-       <Phone className="w-4 h-4 text-sky-500" /> Recent Calls
+       <MdPhone className="w-4 h-4 text-sky-500" /> Recent Calls
       </h3>
       <span className="text-xs text-gray-400">Today</span>
      </div>
@@ -308,7 +308,7 @@ function DashboardPreview() {
     <div className="relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
      <div className="flex items-center justify-between mb-4">
       <h3 className="text-base font-semibold flex items-center gap-2">
-       <Calendar className="w-4 h-4 text-sky-500" /> Upcoming Appointments
+       <MdCalendarToday className="w-4 h-4 text-sky-500" /> Upcoming Appointments
       </h3>
       <span className="text-xs text-gray-400">This week</span>
      </div>
@@ -439,7 +439,7 @@ function RoiCalculator() {
        className="mt-8 inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors w-full justify-center"
       >
        Book a Demo
-       <ArrowUpRight className="w-4 h-4" />
+       <MdArrowOutward className="w-4 h-4" />
       </Link>
      </div>
     </div>
@@ -510,7 +510,7 @@ function FinalCTA() {
        className="inline-flex items-center gap-2 bg-gray-900 text-white px-7 py-4 rounded-full text-base font-medium hover:bg-gray-800 transition-colors w-full justify-center"
       >
        Book Demo
-       <ArrowUpRight className="w-4 h-4" />
+       <MdArrowOutward className="w-4 h-4" />
       </Link>
      </div>
     </div>
@@ -537,7 +537,7 @@ function FooterCard() {
        />
       </Link>
       <p className="text-sm text-gray-500 flex items-center gap-1.5">
-       <MapPin className="w-3.5 h-3.5" /> Built in Austin, TX
+       <MdPlace className="w-3.5 h-3.5" /> Built in Austin, TX
       </p>
      </div>
      <div>
@@ -560,7 +560,7 @@ function FooterCard() {
       <h4 className="text-sm font-semibold text-gray-900 mb-3">Contact</h4>
       <ul className="space-y-2 text-sm text-gray-600">
        <li><a href={DEMO_TEL} className="hover:text-gray-900">{DEMO_NUMBER}</a></li>
-       <li className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> 30-day money-back</li>
+       <li className="flex items-center gap-1.5"><MdVerifiedUser className="w-3.5 h-3.5" /> 30-day money-back</li>
       </ul>
      </div>
     </div>

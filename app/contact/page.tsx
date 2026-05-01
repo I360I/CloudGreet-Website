@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Phone, Mail, MapPin, Check } from 'lucide-react'
+import { MdPhone, MdMail, MdPlace, MdCheck } from "react-icons/md"
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -98,7 +98,7 @@ export default function ContactPage() {
         href={DEMO_TEL}
         className="inline-flex items-center gap-2 bg-white text-gray-900 px-5 py-3 rounded-2xl text-sm font-medium border border-gray-200 hover:border-gray-300 transition-all shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)] w-full justify-center"
        >
-        <Phone className="w-4 h-4" />
+        <MdPhone className="w-4 h-4" />
         {DEMO_NUMBER}
        </a>
       </div>
@@ -106,19 +106,19 @@ export default function ContactPage() {
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 md:p-8">
        <p className="font-display text-lg font-medium text-gray-900 mb-4">What you&apos;ll get on the call:</p>
        <ul className="space-y-3 text-sm text-gray-700">
-        <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />A demo of the AI handling a sample call for your business</li>
-        <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />Setup walkthrough &mdash; we wire it up for you, no DIY</li>
-        <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />Pricing, plan options, and a clear ROI for your numbers</li>
+        <li className="flex items-start gap-2.5"><MdCheck className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />A demo of the AI handling a sample call for your business</li>
+        <li className="flex items-start gap-2.5"><MdCheck className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />Setup walkthrough &mdash; we wire it up for you, no DIY</li>
+        <li className="flex items-start gap-2.5"><MdCheck className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />Pricing, plan options, and a clear ROI for your numbers</li>
        </ul>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 md:p-8 space-y-3 text-sm">
        <div className="flex items-center gap-2 text-gray-600">
-        <Mail className="w-4 h-4" />
+        <MdMail className="w-4 h-4" />
         <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-gray-900">{SUPPORT_EMAIL}</a>
        </div>
        <div className="flex items-center gap-2 text-gray-600">
-        <MapPin className="w-4 h-4" />
+        <MdPlace className="w-4 h-4" />
         <span>Built in Austin, TX</span>
        </div>
       </div>

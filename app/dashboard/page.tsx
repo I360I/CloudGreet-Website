@@ -6,10 +6,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
- Phone, Calendar, Clock, TrendingUp, X, Play, Loader2, ChevronRight,
- LayoutDashboard, PhoneCall, CalendarCheck, Settings, CreditCard, LogOut,
- ArrowUpRight, ArrowDownRight, Search, Activity,
-} from 'lucide-react'
+ MdPhone, MdCalendarToday, MdAccessTime, MdTrendingUp, MdClose, MdPlayArrow,
+ MdAutorenew, MdChevronRight, MdDashboard, MdCall, MdEventAvailable,
+ MdSettings, MdCreditCard, MdLogout, MdArrowOutward, MdSouthEast,
+ MdSearch, MdGraphicEq,
+} from 'react-icons/md'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement,
@@ -162,19 +163,19 @@ export default function DashboardPage() {
        className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
       >
        <Kpi
-        icon={Phone} label="Total calls" value={String(k.totalCalls)}
+        icon={MdPhone} label="Total calls" value={String(k.totalCalls)}
         delta={totalDelta} deltaLabel={`vs prior ${data.range}d`} spark={k.spark}
        />
        <Kpi
-        icon={Activity} label="Calls today" value={String(k.callsToday)}
+        icon={MdGraphicEq} label="Calls today" value={String(k.callsToday)}
         delta={dayDelta} deltaLabel="vs yesterday" spark={k.spark.slice(-7)}
        />
        <Kpi
-        icon={Clock} label="Avg duration" value={fmtDur(k.avgDurationSec)}
+        icon={MdAccessTime} label="Avg duration" value={fmtDur(k.avgDurationSec)}
         delta={durDelta} deltaLabel={`vs prior ${data.range}d`}
        />
        <Kpi
-        icon={CalendarCheck} label="Booked rate" value={`${k.bookedRate}%`}
+        icon={MdEventAvailable} label="Booked rate" value={`${k.bookedRate}%`}
         delta={bookedDelta} deltaLabel="pp" accent
        />
       </motion.div>
@@ -214,7 +215,7 @@ export default function DashboardPage() {
         <div className="px-6 pt-5 pb-4 border-b border-gray-100">
          <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-           <PhoneCall className="w-4 h-4 text-sky-500" /> Recent calls
+           <MdCall className="w-4 h-4 text-sky-500" /> Recent calls
           </h3>
           <span className="text-xs text-gray-400">{filteredCalls.length}</span>
          </div>
@@ -224,9 +225,9 @@ export default function DashboardPage() {
           <FilterChip active={callFilter === 'message'} onClick={() => setCallFilter('message')}>Messages</FilterChip>
           <FilterChip active={callFilter === 'dropped'} onClick={() => setCallFilter('dropped')}>Dropped</FilterChip>
           <div className="ml-auto relative">
-           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+           <MdSearch className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
            <input
-            type="search" placeholder="Search…"
+            type="search" placeholder="MdSearch…"
             value={search} onChange={(e) => setSearch(e.target.value)}
             className="pl-7 pr-2 py-1 text-xs bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:border-gray-400 w-32 transition-colors"
            />
@@ -259,7 +260,7 @@ export default function DashboardPage() {
                 </p>
                </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" />
+              <MdChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" />
              </button>
             </li>
            ))}
@@ -271,7 +272,7 @@ export default function DashboardPage() {
        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px]">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
          <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-sky-500" /> Upcoming appointments
+          <MdCalendarToday className="w-4 h-4 text-sky-500" /> Upcoming appointments
          </h3>
          <span className="text-xs text-gray-400">{data.upcomingAppointments.length}</span>
         </div>
@@ -314,11 +315,11 @@ export default function DashboardPage() {
 
 function Sidebar({ businessName, onSignOut }: { businessName: string; onSignOut: () => void }) {
  const items: { icon: React.ElementType; label: string; href: string; active?: boolean }[] = [
-  { icon: LayoutDashboard, label: 'Overview', href: '/dashboard', active: true },
-  { icon: PhoneCall, label: 'Calls', href: '/dashboard' },
-  { icon: Calendar, label: 'Appointments', href: '/dashboard' },
-  { icon: Settings, label: 'Settings', href: '/dashboard' },
-  { icon: CreditCard, label: 'Billing', href: '/dashboard/billing' },
+  { icon: MdDashboard, label: 'Overview', href: '/dashboard', active: true },
+  { icon: MdCall, label: 'Calls', href: '/dashboard' },
+  { icon: MdCalendarToday, label: 'Appointments', href: '/dashboard' },
+  { icon: MdSettings, label: 'MdSettings', href: '/dashboard' },
+  { icon: MdCreditCard, label: 'Billing', href: '/dashboard/billing' },
  ]
  return (
   <aside className="hidden lg:flex w-60 flex-col bg-white/40 border-r border-black/5 sticky top-0 h-screen">
@@ -351,7 +352,7 @@ function Sidebar({ businessName, onSignOut }: { businessName: string; onSignOut:
     <button onClick={onSignOut}
      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-gray-900 hover:bg-black/[.04] transition-colors"
     >
-     <LogOut className="w-4 h-4" strokeWidth={1.75} /> Sign out
+     <MdLogout className="w-4 h-4" strokeWidth={1.75} /> Sign out
     </button>
    </div>
   </aside>
@@ -446,7 +447,7 @@ function Kpi({
      ) : (
       <>
        <span className={`inline-flex items-center gap-0.5 font-medium ${isUp ? 'text-emerald-600' : 'text-rose-500'}`}>
-        {isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+        {isUp ? <MdArrowOutward className="w-3 h-3" /> : <MdSouthEast className="w-3 h-3" />}
         {Math.abs(delta).toLocaleString()}{deltaLabel === 'pp' ? 'pp' : ''}
        </span>
        <span className="text-gray-400">{deltaLabel === 'pp' ? '' : deltaLabel}</span>
@@ -612,7 +613,7 @@ function CallsEmpty({ hasAnyData }: { hasAnyData: boolean }) {
  return (
   <div className="h-full flex flex-col items-center justify-center text-center px-8 py-12">
    <div className="w-10 h-10 rounded-full bg-sky-50 border border-sky-100 flex items-center justify-center mb-4">
-    <Phone className="w-4 h-4 text-sky-500" />
+    <MdPhone className="w-4 h-4 text-sky-500" />
    </div>
    <p className="text-sm font-medium text-gray-900 mb-1">No calls yet.</p>
    <p className="text-xs text-gray-500 max-w-xs leading-relaxed mb-4">
@@ -622,7 +623,7 @@ function CallsEmpty({ hasAnyData }: { hasAnyData: boolean }) {
     href={`tel:${DEMO_NUMBER.replace(/[^0-9+]/g, '')}`}
     className="inline-flex items-center gap-2 text-xs font-medium text-gray-900 bg-gray-50 border border-gray-200 hover:border-gray-300 px-3 py-1.5 rounded-lg transition-colors"
    >
-    <Phone className="w-3 h-3" /> Call your AI: <span className="font-mono">{DEMO_NUMBER}</span>
+    <MdPhone className="w-3 h-3" /> Call your AI: <span className="font-mono">{DEMO_NUMBER}</span>
    </a>
   </div>
  )
@@ -632,7 +633,7 @@ function ApptsEmpty() {
  return (
   <div className="h-full flex flex-col items-center justify-center text-center px-8 py-12">
    <div className="w-10 h-10 rounded-full bg-sky-50 border border-sky-100 flex items-center justify-center mb-4">
-    <Calendar className="w-4 h-4 text-sky-500" />
+    <MdCalendarToday className="w-4 h-4 text-sky-500" />
    </div>
    <p className="text-sm font-medium text-gray-900 mb-1">No appointments yet.</p>
    <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
@@ -668,7 +669,7 @@ function CallDrawer({ call, onClose }: { call: Call; onClose: () => void }) {
       <div className="text-xs text-gray-500">{fmtDateTime(call.created_at)} · {fmtDur(call.duration || 0)}</div>
      </div>
      <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-gray-100">
-      <X className="w-4 h-4 text-gray-500" />
+      <MdClose className="w-4 h-4 text-gray-500" />
      </button>
     </div>
 
@@ -681,7 +682,7 @@ function CallDrawer({ call, onClose }: { call: Call; onClose: () => void }) {
      {call.recording_url && (
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
        <div className="flex items-center gap-2 mb-2">
-        <Play className="w-3.5 h-3.5 text-gray-500" />
+        <MdPlayArrow className="w-3.5 h-3.5 text-gray-500" />
         <span className="text-xs text-gray-500 font-medium">Recording</span>
        </div>
        <audio controls src={call.recording_url} className="w-full">

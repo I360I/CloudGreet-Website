@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Loader2 } from 'lucide-react'
+import { MdAutorenew } from "react-icons/md"
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -47,7 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
  if (checking) {
   return (
    <div className="min-h-screen bg-[#f6f5f1] flex items-center justify-center">
-    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+    <MdAutorenew className="w-5 h-5 text-gray-400 animate-spin" />
    </div>
   )
  }
