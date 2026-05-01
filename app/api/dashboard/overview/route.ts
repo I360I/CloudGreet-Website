@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const businessId = auth.businessId
+  const url = new URL(request.url)
+  const range = Math.max(1, Math.min(180, parseInt(url.searchParams.get('range') || '30')))
 
   const { data: business } = await supabaseAdmin
    .from('businesses')
@@ -35,38 +37,58 @@ export async function GET(request: NextRequest) {
    .eq('id', businessId)
    .maybeSingle()
 
-  // 30-day window for charts
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  // Two windows: current period (range days) and previous period (range days before that) for delta calcs
+  const now = Date.now()
+  const startCurrent = new Date(now - range * 24 * 60 * 60 * 1000).toISOString()
+  const startPrevious = new Date(now - range * 2 * 24 * 60 * 60 * 1000).toISOString()
   const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0)
+  const startOfYesterday = new Date(startOfToday); startOfYesterday.setDate(startOfYesterday.getDate() - 1)
 
-  // All calls in the last 30 days for this business
-  const { data: calls30d } = await supabaseAdmin
+  // Pull 2x range so we can compute deltas without a second round-trip
+  const { data: callsAll } = await supabaseAdmin
    .from('calls')
    .select('id, retell_call_id, from_number, to_number, status, duration, transcript, recording_url, sentiment, call_summary, outcome, caller_name, created_at')
    .eq('business_id', businessId)
-   .gte('created_at', thirtyDaysAgo)
+   .gte('created_at', startPrevious)
    .order('created_at', { ascending: false })
 
-  const allCalls = calls30d || []
+  const allCallsBoth = callsAll || []
+  const allCalls = allCallsBoth.filter((c) => new Date(c.created_at).toISOString() >= startCurrent)
+  const prevCalls = allCallsBoth.filter((c) => new Date(c.created_at).toISOString() < startCurrent)
+
   const totalCalls = allCalls.length
   const callsToday = allCalls.filter((c) => new Date(c.created_at) >= startOfToday).length
+  const callsYesterday = allCalls.filter((c) => {
+   const d = new Date(c.created_at)
+   return d >= startOfYesterday && d < startOfToday
+  }).length
   const totalDuration = allCalls.reduce((sum, c) => sum + (c.duration || 0), 0)
   const avgDurationSec = totalCalls > 0 ? Math.round(totalDuration / totalCalls) : 0
+  const prevAvgDur = prevCalls.length > 0 ? Math.round(prevCalls.reduce((s, c) => s + (c.duration || 0), 0) / prevCalls.length) : 0
 
-  // Outcome counts (best-effort: use outcome column or infer from status)
+  const tagOutcome = (c: any): 'booked' | 'message' | 'dropped' => {
+   const o = (c.outcome || '').toLowerCase()
+   if (o.includes('book') || o.includes('appoint')) return 'booked'
+   if (o.includes('message') || o.includes('voicemail')) return 'message'
+   if (c.status === 'failed' || (c.duration ?? 0) < 5) return 'dropped'
+   return 'message'
+  }
+
   let booked = 0, message = 0, dropped = 0
   for (const c of allCalls) {
-   const o = (c.outcome || '').toLowerCase()
-   if (o.includes('book') || o.includes('appoint')) booked++
-   else if (o.includes('message') || o.includes('voicemail')) message++
-   else if (c.status === 'failed' || (c.duration ?? 0) < 5) dropped++
-   else message++
+   const t = tagOutcome(c)
+   if (t === 'booked') booked++
+   else if (t === 'message') message++
+   else dropped++
   }
+  let prevBooked = 0
+  for (const c of prevCalls) if (tagOutcome(c) === 'booked') prevBooked++
   const bookedRate = totalCalls > 0 ? Math.round((booked / totalCalls) * 100) : 0
+  const prevBookedRate = prevCalls.length > 0 ? Math.round((prevBooked / prevCalls.length) * 100) : 0
 
-  // Daily volume for the last 30 days
+  // Daily volume for the current period
   const dailyMap = new Map<string, number>()
-  for (let i = 29; i >= 0; i--) {
+  for (let i = range - 1; i >= 0; i--) {
    const d = new Date(); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0)
    dailyMap.set(d.toISOString().slice(0, 10), 0)
   }
@@ -93,20 +115,37 @@ export async function GET(request: NextRequest) {
   }))
 
   // Upcoming appointments (next 14 days)
-  const now = new Date().toISOString()
-  const twoWeeksOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+  const nowIso = new Date(now).toISOString()
+  const twoWeeksOut = new Date(now + 14 * 24 * 60 * 60 * 1000).toISOString()
   const { data: appts } = await supabaseAdmin
    .from('appointments')
    .select('id, customer_name, customer_phone, service_type, scheduled_date, start_time, status, notes')
    .eq('business_id', businessId)
-   .gte('scheduled_date', now)
+   .gte('scheduled_date', nowIso)
    .lte('scheduled_date', twoWeeksOut)
    .order('scheduled_date', { ascending: true })
    .limit(20)
 
+  // Sparkline data for KPI cards (last 14 days regardless of range)
+  const sparkDays = Math.min(14, range)
+  const spark = dailyVolume.slice(-sparkDays).map((d) => d.count)
+
   return NextResponse.json({
    business: business || { id: businessId, business_name: 'Your Business' },
-   kpis: { totalCalls, callsToday, avgDurationSec, bookedRate },
+   range,
+   kpis: {
+    totalCalls,
+    callsToday,
+    avgDurationSec,
+    bookedRate,
+    deltas: {
+     totalCalls: prevCalls.length,
+     callsYesterday,
+     avgDurationSec: prevAvgDur,
+     bookedRate: prevBookedRate,
+    },
+    spark,
+   },
    outcomes: { booked, message, dropped },
    dailyVolume,
    recentCalls,
