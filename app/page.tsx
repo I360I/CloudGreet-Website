@@ -503,16 +503,14 @@ function FinalCTA() {
      </h2>
      <p className="text-gray-600 mt-4">Book a 15-min 1:1 demo to see if you&apos;re a fit.</p>
     </div>
-    <div className="relative flex md:justify-end">
-     <div className="bg-[#f6f5f1] rounded-2xl p-6 md:p-8 w-full md:max-w-sm">
-      <Link
-       href="/contact"
-       className="inline-flex items-center gap-2 bg-gray-900 text-white px-7 py-4 rounded-full text-base font-medium hover:bg-gray-800 transition-colors w-full justify-center"
-      >
-       Book Demo
-       <ArrowUpRight className="w-4 h-4" />
-      </Link>
-     </div>
+    <div className="relative md:flex md:justify-end">
+     <Link
+      href="/contact"
+      className="flex items-center justify-center gap-2 bg-gray-900 text-white px-6 py-3.5 sm:py-4 rounded-2xl text-base font-medium hover:bg-gray-800 transition-colors w-full md:w-auto md:min-w-[220px] whitespace-nowrap"
+     >
+      Book Demo
+      <ArrowUpRight className="w-4 h-4" />
+     </Link>
     </div>
    </div>
   </section>
