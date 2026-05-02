@@ -55,7 +55,9 @@ export async function GET(request: NextRequest) {
  city: business.city,
  state: business.state,
  zipCode: business.zip_code,
- website: business.website
+ website: business.website,
+ greetingMessage: business.greeting_message || business.greeting || '',
+ aiTone: business.ai_tone || business.tone || 'professional',
  }
  })
  } catch (error) {
