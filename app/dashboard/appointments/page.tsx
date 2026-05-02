@@ -233,7 +233,9 @@ export default function AppointmentsPage() {
           onClick={() => setCreateDate(day.date)}
           className={`bg-white border rounded-2xl overflow-hidden flex flex-col cursor-pointer transition-all duration-300 ease-out hover:border-sky-300 ${
            day.appointments.length === 0 ? 'min-h-[112px]' : 'min-h-[180px]'
-          } ${day.isToday ? 'border-sky-300 ring-1 ring-sky-200' : 'border-gray-200'}`}
+          } ${day.appointments.length > 0 ? 'max-h-[260px]' : ''} ${
+           day.isToday ? 'border-sky-300 ring-1 ring-sky-200' : 'border-gray-200'
+          }`}
          >
           <div className={`px-3 py-2.5 border-b border-gray-100 ${day.isToday ? 'bg-sky-50/60' : ''}`}>
            <div className="flex items-baseline justify-between gap-2">
@@ -247,8 +249,8 @@ export default function AppointmentsPage() {
            </div>
           </div>
           {day.appointments.length > 0 && (
-           <div className="flex-1 px-2 py-2 space-y-1 overflow-y-auto">
-            {day.appointments.map((a, idx) => (
+           <div className="flex-1 px-2 py-2 space-y-1">
+            {day.appointments.slice(0, 2).map((a, idx) => (
              <motion.div
               key={a.id}
               initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
@@ -263,6 +265,18 @@ export default function AppointmentsPage() {
               <div className="text-[10px] text-gray-500 truncate mt-0.5">{a.serviceType}</div>
              </motion.div>
             ))}
+            {day.appointments.length > 2 && (
+             <button
+              onClick={(e) => {
+               e.stopPropagation()
+               // Open the third (next overflow) booking; users can advance via the drawer
+               setOpenApptId(day.appointments[2].id)
+              }}
+              className="w-full text-[11px] font-medium text-sky-700 hover:text-sky-900 px-2.5 py-1.5 rounded-lg hover:bg-sky-50 transition-colors text-center"
+             >
+              + {day.appointments.length - 2} more
+             </button>
+            )}
            </div>
           )}
          </motion.div>
