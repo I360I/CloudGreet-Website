@@ -201,10 +201,13 @@ export async function DELETE(
    "billing_records", "subscription_events", "audit_logs",
   ]
   const stepErrors: string[] = []
+  const isMissingTable = (err: any) =>
+   err?.code === "42P01" ||
+   err?.code === "PGRST205" ||
+   /Could not find the table|does not exist|schema cache/i.test(err?.message || "")
   for (const table of childTables) {
    const { error } = await supabaseAdmin.from(table).delete().eq("business_id", clientId)
-   if (error && error.code !== "42P01") {
-    // 42P01 = relation does not exist; ignore
+   if (error && !isMissingTable(error)) {
     stepErrors.push(`${table}: ${error.message}`)
    }
   }
@@ -213,13 +216,13 @@ export async function DELETE(
   // business row, otherwise custom_users.business_id FK blocks the delete.
   const { error: uByBizErr } = await supabaseAdmin
    .from("custom_users").delete().eq("business_id", clientId)
-  if (uByBizErr && uByBizErr.code !== "42P01") {
+  if (uByBizErr && !isMissingTable(uByBizErr)) {
    stepErrors.push(`custom_users (by business_id): ${uByBizErr.message}`)
   }
   if (business.owner_id) {
    const { error: uByOwnerErr } = await supabaseAdmin
     .from("custom_users").delete().eq("id", business.owner_id)
-   if (uByOwnerErr && uByOwnerErr.code !== "42P01" && uByOwnerErr.code !== "PGRST116") {
+   if (uByOwnerErr && uByOwnerErr.code !== "PGRST116" && !isMissingTable(uByOwnerErr)) {
     stepErrors.push(`custom_users (by owner_id): ${uByOwnerErr.message}`)
    }
   }
