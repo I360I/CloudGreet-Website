@@ -1,31 +1,29 @@
-const CACHE_NAME = 'cloudgreet-v2.0.0'
+// Legacy service worker — kept here only so existing installs can
+// fetch a worker that tears itself down. New visits don't register a
+// worker at all (see app/layout.tsx).
 
-// Simple service worker - no complex caching that can fail
 self.addEventListener('install', (event) => {
-  
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
-  
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            
-            return caches.delete(cacheName)
-          }
-        })
-      )
-    }).then(() => {
-      
-      return self.clients.claim()
-    })
+    (async () => {
+      try {
+        const keys = await caches.keys()
+        await Promise.all(keys.map((k) => caches.delete(k)))
+      } catch {}
+      try { await self.clients.claim() } catch {}
+      try { await self.registration.unregister() } catch {}
+      try {
+        const list = await self.clients.matchAll({ type: 'window' })
+        list.forEach((c) => c.navigate(c.url))
+      } catch {}
+    })()
   )
 })
 
+// Pass-through; never cache anything.
 self.addEventListener('fetch', (event) => {
-  // Simple fetch handling - no complex caching
   event.respondWith(fetch(event.request))
 })

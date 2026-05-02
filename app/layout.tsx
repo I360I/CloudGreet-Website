@@ -107,19 +107,21 @@ export default function RootLayout({
  <meta name="apple-mobile-web-app-capable" content="yes" />
  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
  <meta name="apple-mobile-web-app-title" content="CloudGreet" />
+ {/* Unregister any service worker that earlier builds installed; the
+     pass-through SW added no value and was holding stale assets that
+     showed up on iOS as a black rectangle below the nav. */}
  <script
  dangerouslySetInnerHTML={{
  __html: `
  if ('serviceWorker' in navigator) {
- window.addEventListener('load', function() {
- navigator.serviceWorker.register('/sw.js')
- .then(function(registration) {
- // Service worker registered successfully
- })
- .catch(function(error) {
- // Service worker registration failed
+ navigator.serviceWorker.getRegistrations().then(function (regs) {
+  regs.forEach(function (r) { r.unregister(); });
  });
- });
+ if (window.caches && caches.keys) {
+  caches.keys().then(function (keys) {
+   keys.forEach(function (k) { caches.delete(k); });
+  });
+ }
  }
  `,
  }}
