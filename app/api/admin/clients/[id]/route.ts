@@ -42,12 +42,21 @@ export async function GET(
  )
  }
 
- // Get owner/user details
- const { data: owner } = await supabaseAdmin
- .from('users')
- .select('id, email, name, phone, created_at, last_login')
+ // Get owner/user details. Auth lives in custom_users; the legacy
+ // 'users' table may not have a matching row.
+ const { data: ownerRow } = await supabaseAdmin
+ .from('custom_users')
+ .select('id, email, first_name, last_name, phone, created_at, last_login')
  .eq('id', business.owner_id)
- .single()
+ .maybeSingle()
+ const owner = ownerRow ? {
+  id: ownerRow.id,
+  email: ownerRow.email,
+  name: [ownerRow.first_name, ownerRow.last_name].filter(Boolean).join(' ') || null,
+  phone: ownerRow.phone || null,
+  created_at: ownerRow.created_at,
+  last_login: ownerRow.last_login,
+ } : null
 
  // Get recent calls (last 20)
  const { data: recentCalls } = await supabaseAdmin
