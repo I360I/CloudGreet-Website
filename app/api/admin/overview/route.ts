@@ -1,0 +1,160 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireAdmin } from '@/lib/auth-middleware'
+import { logger } from '@/lib/monitoring'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+/**
+ * GET /api/admin/overview
+ *
+ * Single roundtrip for the admin home: cross-tenant KPIs +
+ * per-client aggregates (calls this month, last activity,
+ * 14-day sparkline) so the table can render rich rows without
+ * N+1 fetching.
+ */
+export async function GET(request: NextRequest) {
+ try {
+  const auth = await requireAdmin(request)
+  if (!auth.success) {
+   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // 1) Pull every business
+  const { data: businesses, error: bizError } = await supabaseAdmin
+   .from('businesses')
+   .select(`
+    id, business_name, email, phone_number, business_type,
+    subscription_status, account_status, onboarding_completed,
+    calcom_connected, forwarding_verified_at, created_at
+   `)
+   .order('created_at', { ascending: false })
+
+  if (bizError) {
+   logger.error('Admin overview: businesses query failed', { error: bizError.message })
+   return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 })
+  }
+
+  const allBusinesses = businesses || []
+  const ids = allBusinesses.map((b) => b.id)
+
+  // 2) Pull every call from the last 30 days for these businesses (one query)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: recentCalls } = ids.length
+   ? await supabaseAdmin
+    .from('calls')
+    .select('id, business_id, created_at, status')
+    .in('business_id', ids)
+    .gte('created_at', thirtyDaysAgo)
+   : { data: [] as any[] }
+
+  const calls = recentCalls || []
+
+  // 3) Compute per-client aggregates
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0)
+  const startOfTodayIso = startOfToday.toISOString()
+
+  // Bucketing helpers
+  const localDateKey = (d: Date) =>
+   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  // 14-day sparkline buckets (oldest → newest)
+  const sparkBuckets: string[] = []
+  for (let i = 13; i >= 0; i--) {
+   const d = new Date(now); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0)
+   sparkBuckets.push(localDateKey(d))
+  }
+
+  type Aggregate = {
+   callsThisMonth: number
+   callsToday: number
+   spark: number[]
+   lastCallAt: string | null
+  }
+
+  const aggregateByBiz = new Map<string, Aggregate>()
+  for (const id of ids) {
+   aggregateByBiz.set(id, {
+    callsThisMonth: 0,
+    callsToday: 0,
+    spark: new Array(14).fill(0),
+    lastCallAt: null,
+   })
+  }
+
+  for (const c of calls) {
+   const a = aggregateByBiz.get(c.business_id)
+   if (!a) continue
+   const created = new Date(c.created_at)
+   const iso = c.created_at
+   if (iso >= startOfMonth) a.callsThisMonth++
+   if (iso >= startOfTodayIso) a.callsToday++
+   const key = localDateKey(created)
+   const idx = sparkBuckets.indexOf(key)
+   if (idx >= 0) a.spark[idx]++
+   if (!a.lastCallAt || iso > a.lastCallAt) a.lastCallAt = iso
+  }
+
+  // 4) Cross-tenant KPIs
+  const totalClients = allBusinesses.length
+  const activeClients = allBusinesses.filter((b) => b.subscription_status === 'active').length
+  const trialingClients = allBusinesses.filter((b) => b.subscription_status === 'trialing').length
+  const inOnboarding = allBusinesses.filter((b) => !b.onboarding_completed).length
+  const callsToday = calls.filter((c) => c.created_at >= startOfTodayIso).length
+  const callsThisMonth = calls.filter((c) => c.created_at >= startOfMonth).length
+
+  // Cross-tenant 14-day sparkline (sum across all clients)
+  const overallSpark = new Array(14).fill(0)
+  for (const c of calls) {
+   const key = localDateKey(new Date(c.created_at))
+   const idx = sparkBuckets.indexOf(key)
+   if (idx >= 0) overallSpark[idx]++
+  }
+
+  // 5) Stitch it together
+  const enrichedClients = allBusinesses.map((b) => {
+   const a = aggregateByBiz.get(b.id) || {
+    callsThisMonth: 0, callsToday: 0, spark: new Array(14).fill(0), lastCallAt: null,
+   }
+   return {
+    id: b.id,
+    business_name: b.business_name,
+    email: b.email,
+    phone_number: b.phone_number,
+    business_type: b.business_type,
+    subscription_status: b.subscription_status,
+    account_status: b.account_status,
+    onboarding_completed: b.onboarding_completed,
+    calcom_connected: b.calcom_connected,
+    forwarding_verified_at: b.forwarding_verified_at,
+    created_at: b.created_at,
+    calls_this_month: a.callsThisMonth,
+    calls_today: a.callsToday,
+    spark: a.spark,
+    last_call_at: a.lastCallAt,
+   }
+  })
+
+  return NextResponse.json({
+   success: true,
+   kpis: {
+    totalClients,
+    activeClients,
+    trialingClients,
+    inOnboarding,
+    callsToday,
+    callsThisMonth,
+    overallSpark,
+   },
+   clients: enrichedClients,
+  })
+ } catch (e) {
+  logger.error('Admin overview failed', {
+   error: e instanceof Error ? e.message : 'Unknown',
+  })
+  return NextResponse.json({ error: 'Failed to load overview' }, { status: 500 })
+ }
+}
