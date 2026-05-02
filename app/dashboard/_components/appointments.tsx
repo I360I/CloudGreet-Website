@@ -415,10 +415,19 @@ export function AppointmentDrawer({
   return () => window.removeEventListener('keydown', onKey)
  }, [onClose])
 
+ const isDemoId = apptId.startsWith('demo-')
+
  useEffect(() => {
   let cancelled = false
   ;(async () => {
    setLoading(true); setError('')
+   if (isDemoId) {
+    // Synthesize a plausible appointment for demo IDs so the drawer
+    // shows what real bookings will look like.
+    if (!cancelled) setAppt(buildDemoDetail(apptId))
+    setLoading(false)
+    return
+   }
    try {
     const res = await fetchWithAuth(`/api/appointments/${apptId}`)
     const json = await res.json().catch(() => ({}))
@@ -431,10 +440,15 @@ export function AppointmentDrawer({
    }
   })()
   return () => { cancelled = true }
- }, [apptId])
+ }, [apptId, isDemoId])
 
  const setStatus = async (status: 'cancelled' | 'confirmed' | 'completed') => {
   if (!appt) return
+  if (isDemoId) {
+   // Demo bookings live entirely client-side — just reflect the change.
+   setAppt({ ...appt, status })
+   return
+  }
   setBusy(true); setError('')
   try {
    const res = await fetchWithAuth(`/api/appointments/${appt.id}`, {
@@ -567,4 +581,35 @@ function Row({ icon: Icon, children }: { icon: React.ElementType | null; childre
 
 function fmtDateLong(iso: string) {
  return new Date(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+const DEMO_DETAILS: Record<string, Partial<AppointmentDetail>> = {
+ 'a1': { customer_name: 'Sarah Mitchell', customer_phone: '+15125551234', customer_email: 'sarah.mitchell@example.com', service_type: 'AC Tune-up', address: '1409 Bouldin Ave, Austin, TX', notes: 'Annual maintenance plan. Front of house, garage code 4421.' },
+ 'a2': { customer_name: 'Priya Shah', customer_phone: '+15125559912', customer_email: 'priya.shah@example.com', service_type: 'Emergency Repair', address: '88 Lakeway Dr, Austin, TX', notes: 'No AC, infant in house. High priority.' },
+ 'a3': { customer_name: 'Erika Long', customer_phone: '+15124446060', customer_email: null, service_type: 'Thermostat Install', address: '305 W 32nd St, Austin, TX', notes: 'Customer purchased their own Ecobee.' },
+ 'a4': { customer_name: 'Marcus Reed', customer_phone: '+15125557788', customer_email: 'marcus@reedconst.com', service_type: 'Estimate', address: '7700 Burnet Rd #340, Austin, TX', notes: 'Furnace replacement quote. Has PDF of current unit specs.' },
+}
+
+function buildDemoDetail(id: string): AppointmentDetail {
+ const key = id.replace(/^demo-[wma]?-?/, '').replace(/^a/, '')
+ const stub = DEMO_DETAILS[`a${key}`] || DEMO_DETAILS['a1']
+ const start = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000); start.setHours(14, 0, 0, 0)
+ const end = new Date(start.getTime() + 60 * 60 * 1000)
+ return {
+  id,
+  customer_name: stub.customer_name || 'Sample Customer',
+  customer_phone: stub.customer_phone || '+15125550100',
+  customer_email: stub.customer_email ?? null,
+  service_type: stub.service_type || 'Service Visit',
+  scheduled_date: start.toISOString().slice(0, 10),
+  start_time: start.toISOString(),
+  end_time: end.toISOString(),
+  duration: 60,
+  status: 'scheduled',
+  estimated_value: null,
+  address: stub.address ?? null,
+  notes: stub.notes ?? null,
+  google_calendar_event_id: null,
+  created_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+ }
 }
