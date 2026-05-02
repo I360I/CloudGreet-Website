@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
+import { demoMonthDays, demoWeekDays } from '../_components/demo-data'
 import {
  MonthGrid, BookingFormModal, AppointmentDrawer,
  type MonthDay,
@@ -76,6 +77,22 @@ export default function AppointmentsPage() {
  const [createDate, setCreateDate] = useState<string | null>(null)
  const [openApptId, setOpenApptId] = useState<string | null>(null)
  const [refreshTick, setRefreshTick] = useState(0)
+ const [needsSetup, setNeedsSetup] = useState(false)
+
+ useEffect(() => {
+  let cancelled = false
+  ;(async () => {
+   try {
+    const res = await fetchWithAuth('/api/onboarding/state')
+    if (!res.ok) return
+    const json = await res.json()
+    if (!cancelled && json?.success && json.business) {
+     setNeedsSetup(!json.business.onboarding_completed)
+    }
+   } catch { /* non-fatal */ }
+  })()
+  return () => { cancelled = true }
+ }, [])
 
  const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
 
@@ -132,7 +149,15 @@ export default function AppointmentsPage() {
 
  const refresh = useCallback(() => setRefreshTick((n) => n + 1), [])
 
- const totalThisWeek = days?.reduce((s, d) => s + d.count, 0) ?? 0
+ // Substitute demo data when onboarding is incomplete and no real data exists.
+ const realWeek = days?.reduce((s, d) => s + d.count, 0) ?? 0
+ const isWeekDemo = needsSetup && realWeek === 0 && !!days
+ const displayDays = isWeekDemo ? demoWeekDays(weekStart) : days
+ const totalThisWeek = displayDays?.reduce((s, d) => s + d.count, 0) ?? 0
+
+ const realMonthCount = monthDays?.reduce((s, d) => s + d.appointments.length, 0) ?? 0
+ const isMonthDemo = needsSetup && realMonthCount === 0 && !!monthDays
+ const displayMonthDays = isMonthDemo ? demoMonthDays(monthStart) : monthDays
 
  return (
   <DashShell activeLabel="Appointments">
@@ -193,14 +218,14 @@ export default function AppointmentsPage() {
      )}
 
      <AnimatePresence mode="wait">
-      {!loading && !error && days && (
+      {!loading && !error && displayDays && (
        <motion.div
-        key={days[0]?.date || 'empty'}
+        key={displayDays[0]?.date || 'empty'}
         initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
         transition={{ duration: 0.35, ease: EASE }}
         className="grid grid-cols-1 md:grid-cols-7 gap-2"
        >
-        {days.map((day, i) => (
+        {displayDays.map((day, i) => (
          <motion.div
           key={day.date}
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -246,7 +271,7 @@ export default function AppointmentsPage() {
       )}
      </AnimatePresence>
 
-     {!loading && !error && days && totalThisWeek === 0 && (
+     {!loading && !error && displayDays && totalThisWeek === 0 && (
       <motion.p
        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.3, ease: EASE }}
        className="text-sm text-gray-500 mt-4"
@@ -263,7 +288,7 @@ export default function AppointmentsPage() {
      >
       <MonthGrid
        monthStart={monthStart}
-       monthDays={monthDays}
+       monthDays={displayMonthDays}
        onPrev={() => setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1))}
        onNext={() => setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1))}
        onToday={() => setMonthStart(startOfMonth(new Date()))}

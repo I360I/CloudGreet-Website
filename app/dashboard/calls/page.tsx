@@ -7,6 +7,7 @@ import { ChevronRight, Search, Loader2, AlertCircle, ChevronLeft, ChevronRight a
 const EASE = [0.22, 1, 0.36, 1] as const
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
+import { demoCalls } from '../_components/demo-data'
 import {
  type Call, CallDrawer, OutcomeBadge, OutcomeDot, tagOutcome,
  fmtDur, relTime,
@@ -25,6 +26,22 @@ export default function CallsPage() {
  const [search, setSearch] = useState('')
  const [page, setPage] = useState(0)
  const [openCall, setOpenCall] = useState<Call | null>(null)
+ const [needsSetup, setNeedsSetup] = useState(false)
+
+ useEffect(() => {
+  let cancelled = false
+  ;(async () => {
+   try {
+    const res = await fetchWithAuth('/api/onboarding/state')
+    if (!res.ok) return
+    const json = await res.json()
+    if (!cancelled && json?.success && json.business) {
+     setNeedsSetup(!json.business.onboarding_completed)
+    }
+   } catch { /* non-fatal */ }
+  })()
+  return () => { cancelled = true }
+ }, [])
 
  useEffect(() => {
   let cancelled = false
@@ -70,9 +87,13 @@ export default function CallsPage() {
   return () => { cancelled = true }
  }, [page])
 
+ // Show demo calls when onboarding is incomplete and no real calls exist.
+ const isDemo = needsSetup && (calls?.length ?? 0) === 0 && !loading && !error
+ const sourceCalls = isDemo ? demoCalls() : calls
+
  const filtered = useMemo(() => {
-  if (!calls) return []
-  let list = calls
+  if (!sourceCalls) return []
+  let list = sourceCalls
   if (filter !== 'all') list = list.filter((c) => tagOutcome(c) === filter)
   if (search) {
    const q = search.toLowerCase()
@@ -83,7 +104,7 @@ export default function CallsPage() {
    )
   }
   return list
- }, [calls, filter, search])
+ }, [sourceCalls, filter, search])
 
  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 

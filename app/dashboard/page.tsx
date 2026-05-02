@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { Sidebar, SidebarSkeleton } from './_components/Sidebar'
 import { TopBar } from './_components/TopBar'
+import { demoOverview } from './_components/demo-data'
 import {
  type Call, CallDrawer, OutcomeBadge, OutcomeDot, tagOutcome,
  fmtDur, relTime, fmtDateTime,
@@ -57,6 +58,23 @@ export default function DashboardPage() {
  const [range, setRange] = useState<Range>(30)
  const [callFilter, setCallFilter] = useState<CallFilter>('all')
  const [search, setSearch] = useState('')
+ const [needsSetup, setNeedsSetup] = useState(false)
+
+ // Fetch onboarding state once so we know whether to fall back to demo data.
+ useEffect(() => {
+  let cancelled = false
+  ;(async () => {
+   try {
+    const res = await fetchWithAuth('/api/onboarding/state')
+    if (!res.ok) return
+    const json = await res.json()
+    if (!cancelled && json?.success && json.business) {
+     setNeedsSetup(!json.business.onboarding_completed)
+    }
+   } catch { /* non-fatal */ }
+  })()
+  return () => { cancelled = true }
+ }, [])
 
  useEffect(() => {
   let cancelled = false
@@ -79,9 +97,15 @@ export default function DashboardPage() {
   return () => { cancelled = true }
  }, [router, range])
 
+ // If onboarding isn't done and there's no real data yet, swap in demo data
+ // so the contractor can see what a populated dashboard looks like.
+ const isEmpty = !data || (data.kpis.totalCalls === 0 && (data.recentCalls?.length ?? 0) === 0)
+ const isDemo = needsSetup && isEmpty
+ const displayData: Overview | null = isDemo ? (demoOverview(range) as Overview) : data
+
  const filteredCalls = useMemo(() => {
-  if (!data) return []
-  let list = data.recentCalls
+  if (!displayData) return []
+  let list = displayData.recentCalls
   if (callFilter !== 'all') list = list.filter((c) => tagOutcome(c) === callFilter)
   if (search.trim()) {
    const q = search.toLowerCase()
@@ -92,7 +116,7 @@ export default function DashboardPage() {
    )
   }
   return list
- }, [data, callFilter, search])
+ }, [displayData, callFilter, search])
 
  const handleSignOut = async () => {
   try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
@@ -112,7 +136,9 @@ export default function DashboardPage() {
   )
  }
 
- if (error || !data) {
+ // If we have an error but onboarding is incomplete, fall through to demo data
+ // rather than blocking the UI on an error screen.
+ if ((error || !data) && !displayData) {
   return (
    <main className="min-h-screen bg-[#f6f5f1] flex items-center justify-center px-6">
     <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center max-w-md">
@@ -122,8 +148,9 @@ export default function DashboardPage() {
    </main>
   )
  }
+ if (!displayData) return null
 
- const k = data.kpis
+ const k = displayData.kpis
  const totalDelta = pctDelta(k.totalCalls, k.deltas.totalCalls)
  const dayDelta = absDelta(k.callsToday, k.deltas.callsYesterday)
  const durDelta = pctDelta(k.avgDurationSec, k.deltas.avgDurationSec)
@@ -131,7 +158,7 @@ export default function DashboardPage() {
 
  return (
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
-   <Sidebar businessName={data.business.business_name} onSignOut={handleSignOut} />
+   <Sidebar businessName={displayData.business.business_name} onSignOut={handleSignOut} />
 
    <div className="flex-1 min-w-0">
     <TopBar />
@@ -148,7 +175,7 @@ export default function DashboardPage() {
          Overview
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-         {data.business.business_name} · last {data.range} days
+         {displayData.business.business_name} · last {displayData.range} days
         </p>
        </div>
        <RangeSelector range={range} onChange={setRange} />
@@ -163,11 +190,11 @@ export default function DashboardPage() {
        <div className="lg:col-span-3">
         <Kpi
          hero label="Total calls" value={String(k.totalCalls)}
-         delta={totalDelta} deltaLabel={`vs prior ${data.range}d`} spark={k.spark}
+         delta={totalDelta} deltaLabel={`vs prior ${displayData.range}d`} spark={k.spark}
         />
        </div>
        <Kpi label="Calls today" value={String(k.callsToday)} delta={dayDelta} deltaLabel="vs yesterday" />
-       <Kpi label="Avg duration" value={fmtDur(k.avgDurationSec)} delta={durDelta} deltaLabel={`vs prior ${data.range}d`} />
+       <Kpi label="Avg duration" value={fmtDur(k.avgDurationSec)} delta={durDelta} deltaLabel={`vs prior ${displayData.range}d`} />
        <Kpi label="Booked rate" value={`${k.bookedRate}%`} delta={bookedDelta} deltaLabel="pp" accent />
       </motion.div>
 
@@ -180,20 +207,20 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-1">
          <h3 className="text-sm font-medium text-gray-700">Daily call volume</h3>
         </div>
-        <p className="text-xs text-gray-400 mb-4">Last {data.range} days</p>
+        <p className="text-xs text-gray-400 mb-4">Last {displayData.range} days</p>
         <div className="h-56">
-         {data.dailyVolume.some((d) => d.count > 0)
-          ? <VolumeChart data={data.dailyVolume} />
+         {displayData.dailyVolume.some((d) => d.count > 0)
+          ? <VolumeChart data={displayData.dailyVolume} />
           : <ChartEmpty />}
         </div>
        </div>
        <div className="bg-white border border-gray-200 rounded-2xl p-6">
         <h3 className="text-sm font-medium text-gray-700 mb-1">Outcomes</h3>
-        <p className="text-xs text-gray-400 mb-4">Of {data.kpis.totalCalls} call{data.kpis.totalCalls === 1 ? '' : 's'}</p>
+        <p className="text-xs text-gray-400 mb-4">Of {displayData.kpis.totalCalls} call{displayData.kpis.totalCalls === 1 ? '' : 's'}</p>
         <div className="h-56 flex items-center justify-center">
-         <OutcomesChart data={data.outcomes} />
+         <OutcomesChart data={displayData.outcomes} />
         </div>
-        <OutcomesLegend data={data.outcomes} />
+        <OutcomesLegend data={displayData.outcomes} />
        </div>
       </motion.div>
 
@@ -227,7 +254,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex-1 overflow-y-auto">
          {filteredCalls.length === 0 ? (
-          <CallsEmpty hasAnyData={data.recentCalls.length > 0} />
+          <CallsEmpty hasAnyData={displayData.recentCalls.length > 0} />
          ) : (
           <ul className="divide-y divide-gray-100">
            {filteredCalls.map((c) => (
@@ -265,14 +292,14 @@ export default function DashboardPage() {
          <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
           <Calendar className="w-4 h-4 text-sky-500" /> Upcoming appointments
          </h3>
-         <span className="text-xs text-gray-400">{data.upcomingAppointments.length}</span>
+         <span className="text-xs text-gray-400">{displayData.upcomingAppointments.length}</span>
         </div>
         <div className="flex-1 overflow-y-auto">
-         {data.upcomingAppointments.length === 0 ? (
+         {displayData.upcomingAppointments.length === 0 ? (
           <ApptsEmpty />
          ) : (
           <ul className="divide-y divide-gray-100">
-           {data.upcomingAppointments.map((a) => (
+           {displayData.upcomingAppointments.map((a) => (
             <li key={a.id} className="px-6 py-3.5 flex items-start gap-3">
              <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0 bg-sky-500" />
              <div className="flex-1 min-w-0">
