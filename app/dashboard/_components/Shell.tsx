@@ -82,7 +82,7 @@ export function DashShell({
   <OnboardingProvider value={{ needsSetup }}>
    <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
     <Sidebar businessName={businessName} onSignOut={handleSignOut} activeLabel={activeLabel} />
-    <div className="flex-1 min-w-0">
+    <div className="flex-1 min-w-0 pb-20 lg:pb-0">
      <TopBar />
      {needsSetup && activeLabel !== 'Setup' && <SetupBanner />}
      <motion.div

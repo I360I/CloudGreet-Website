@@ -73,7 +73,7 @@ export default function OnboardingPage() {
  if (error || !state) {
   return (
    <DashShell activeLabel="Setup">
-    <div className="px-8 py-10 max-w-2xl">
+    <div className="px-4 lg:px-8 py-6 lg:py-10 max-w-2xl">
      <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-start gap-3">
       <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
       <p className="text-sm text-gray-700">{error || 'Could not load onboarding'}</p>
@@ -85,7 +85,7 @@ export default function OnboardingPage() {
 
  return (
   <DashShell activeLabel="Setup">
-   <section className="px-8 py-10">
+   <section className="px-4 lg:px-8 py-6 lg:py-10">
     <div className="max-w-3xl">
      <Header step={step} />
 

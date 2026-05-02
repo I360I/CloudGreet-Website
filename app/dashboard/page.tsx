@@ -128,7 +128,7 @@ export default function DashboardPage() {
   return (
    <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
     <SidebarSkeleton />
-    <div className="flex-1 px-8 py-10">
+    <div className="flex-1 px-4 lg:px-8 py-10 pb-20 lg:pb-10">
      <SkeletonHeader />
      <SkeletonGrid />
     </div>
@@ -160,10 +160,10 @@ export default function DashboardPage() {
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
    <Sidebar businessName={displayData.business.business_name} onSignOut={handleSignOut} />
 
-   <div className="flex-1 min-w-0">
+   <div className="flex-1 min-w-0 pb-20 lg:pb-0">
     <TopBar />
 
-    <section className="px-8 py-10">
+    <section className="px-4 lg:px-8 py-6 lg:py-10">
      <div className="max-w-7xl">
       {/* Header strip */}
       <motion.div
@@ -367,17 +367,17 @@ function Kpi({
  return (
   <motion.div
    variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
-   className={`bg-white border ${accent ? 'border-sky-200' : 'border-gray-200'} rounded-2xl ${hero ? 'p-7 md:p-8' : 'p-5'} relative overflow-hidden`}
+   className={`bg-white border ${accent ? 'border-sky-200' : 'border-gray-200'} rounded-2xl ${hero ? 'p-5 sm:p-7 md:p-8' : 'p-5'} relative overflow-hidden`}
   >
-   <div className={`text-xs text-gray-500 ${hero ? 'mb-4' : 'mb-2'}`}>{label}</div>
-   <div className={`flex items-end gap-6 ${hero ? '' : 'mb-1'}`}>
+   <div className={`text-xs text-gray-500 ${hero ? 'mb-3 sm:mb-4' : 'mb-2'}`}>{label}</div>
+   <div className={`${hero ? 'flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-6' : 'flex items-end gap-6 mb-1'}`}>
     <div className={`font-mono font-medium tracking-tight tabular-nums ${
-     hero ? 'text-6xl md:text-7xl' : 'text-3xl md:text-4xl'
+     hero ? 'text-5xl sm:text-6xl md:text-7xl' : 'text-3xl md:text-4xl'
     } ${accent ? 'text-sky-600' : 'text-gray-900'}`}>
      {value}
     </div>
     {hero && spark && spark.length > 1 && (
-     <div className="flex-1 max-w-[280px] pb-2">
+     <div className="w-full sm:flex-1 sm:max-w-[280px] sm:pb-2">
       <Sparkline data={spark} accent={accent} large />
      </div>
     )}

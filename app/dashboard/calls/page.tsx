@@ -110,7 +110,7 @@ export default function CallsPage() {
 
  return (
   <DashShell activeLabel="Calls">
-   <section className="px-8 py-10">
+   <section className="px-4 lg:px-8 py-6 lg:py-10">
     <div className="max-w-6xl">
      <div className="mb-8 flex items-baseline justify-between gap-4 flex-wrap">
       <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Calls</h1>
@@ -129,7 +129,7 @@ export default function CallsPage() {
          <input
           type="search" placeholder="Search by name, number, summary…"
           value={search} onChange={(e) => setSearch(e.target.value)}
-          className="pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:bg-white focus:border-gray-400 w-72 transition-colors"
+          className="pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:bg-white focus:border-gray-400 w-full sm:w-72 transition-colors"
          />
         </div>
        </div>
@@ -162,21 +162,26 @@ export default function CallsPage() {
          >
           <button
            onClick={() => setOpenCall(c)}
-           className="w-full text-left px-6 py-4 hover:bg-gray-50/60 flex items-center gap-4 group transition-all duration-300 ease-out"
+           className="w-full text-left px-4 lg:px-6 py-3.5 lg:py-4 hover:bg-gray-50/60 flex items-center gap-3 lg:gap-4 group transition-all duration-300 ease-out"
           >
            <OutcomeDot outcome={tagOutcome(c)} />
-           <div className="flex-1 min-w-0 grid grid-cols-12 gap-4 items-baseline">
-            <div className="col-span-4 min-w-0">
+           <div className="flex-1 min-w-0 lg:grid lg:grid-cols-12 lg:gap-4 lg:items-baseline">
+            {/* Mobile: stacked compact layout; Desktop: 12-col table */}
+            <div className="lg:col-span-4 min-w-0">
              <div className="text-sm font-medium text-gray-900 truncate">
               {c.caller_name || c.from_number || 'Unknown'}
              </div>
-             <div className="text-xs text-gray-500 font-mono truncate mt-0.5">{c.from_number}</div>
+             <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs text-gray-500 font-mono truncate">{c.from_number}</span>
+              <span className="lg:hidden text-xs text-gray-400">·</span>
+              <span className="lg:hidden text-xs text-gray-400">{relTime(c.created_at)}</span>
+             </div>
             </div>
-            <div className="col-span-2"><OutcomeBadge outcome={tagOutcome(c)} /></div>
-            <div className="col-span-4 text-xs text-gray-500 truncate">
+            <div className="lg:col-span-2 mt-1.5 lg:mt-0"><OutcomeBadge outcome={tagOutcome(c)} /></div>
+            <div className="hidden lg:block lg:col-span-4 text-xs text-gray-500 truncate">
              {c.summary || '—'}
             </div>
-            <div className="col-span-2 text-right text-xs text-gray-500">
+            <div className="hidden lg:block lg:col-span-2 text-right text-xs text-gray-500">
              <div>{relTime(c.created_at)}</div>
              <div className="text-gray-400 mt-0.5">{fmtDur(c.duration || 0)}</div>
             </div>

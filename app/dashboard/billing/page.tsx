@@ -57,7 +57,7 @@ export default function BillingPage() {
 
  return (
   <DashShell activeLabel="Billing">
-   <section className="px-8 py-10">
+   <section className="px-4 lg:px-8 py-6 lg:py-10">
     <div className="max-w-4xl">
      <div className="mb-8">
       <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Billing</h1>

@@ -66,16 +66,16 @@ export function MonthGrid({
        key={cell.iso}
        onClick={() => cell.inMonth && onPickDate(cell.iso)}
        disabled={!cell.inMonth}
-       className={`relative text-left min-h-[96px] px-2 py-2 border-r border-b border-gray-100 last:border-r-0 transition-all duration-300 ease-out ${
+       className={`relative text-left min-h-[64px] sm:min-h-[96px] px-1 sm:px-2 py-1.5 sm:py-2 border-r border-b border-gray-100 last:border-r-0 transition-all duration-300 ease-out ${
         isLastRow ? 'border-b-0' : ''
-       } ${isWeekStart ? '' : ''} ${
+       } ${
         cell.inMonth
          ? 'hover:bg-sky-50/60 cursor-pointer'
          : 'bg-gray-50/40 cursor-default'
        } ${cell.isToday ? 'bg-sky-50/80' : ''}`}
       >
-       <div className="flex items-center justify-between mb-1.5">
-        <span className={`text-xs font-mono ${
+       <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+        <span className={`text-[11px] sm:text-xs font-mono ${
          cell.isToday
           ? 'text-sky-700 font-semibold'
           : cell.inMonth ? 'text-gray-900' : 'text-gray-300'
@@ -83,10 +83,17 @@ export function MonthGrid({
          {cell.dayNumber}
         </span>
         {cell.appointments.length > 0 && (
-         <span className="text-[10px] font-mono text-sky-600">{cell.appointments.length}</span>
+         <span className="text-[9px] sm:text-[10px] font-mono text-sky-600">{cell.appointments.length}</span>
         )}
        </div>
-       <div className="space-y-0.5">
+       {/* On mobile we collapse the chips into a single dot — there's no room
+           to render times. Tap the cell to see the day's bookings. */}
+       <div className="sm:hidden">
+        {cell.appointments.length > 0 && (
+         <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+        )}
+       </div>
+       <div className="hidden sm:block space-y-0.5">
         {cell.appointments.slice(0, 3).map((a) => (
          <div
           key={a.id}

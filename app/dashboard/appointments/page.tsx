@@ -168,7 +168,7 @@ export default function AppointmentsPage() {
 
  return (
   <DashShell activeLabel="Appointments">
-   <section className="px-8 py-10">
+   <section className="px-4 lg:px-8 py-6 lg:py-10">
     <div className="max-w-7xl">
      <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div className="flex items-baseline gap-4">
