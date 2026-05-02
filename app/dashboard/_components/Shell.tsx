@@ -43,6 +43,13 @@ export function DashShell({
   ;(async () => {
    try {
     const res = await fetchWithAuth('/api/onboarding/state')
+    // Stale or invalid token — clear and bounce to login cleanly.
+    if (res.status === 401 || res.status === 403) {
+     try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
+     localStorage.removeItem('user'); localStorage.removeItem('business'); localStorage.removeItem('token')
+     if (!cancelled) router.replace('/login')
+     return
+    }
     if (!res.ok) return
     const json = await res.json()
     if (!json?.success || !json.business) return

@@ -100,8 +100,18 @@ export async function POST(request: NextRequest) {
  .select('id, business_name, business_type')
  .eq('id', user.business_id)
  .single()
- 
+
  business = businessData
+ }
+
+ // Non-admin users must have a real business attached. If their business was
+ // deleted (or was never set), refuse login here — issuing a token without a
+ // businessId guarantees an immediate redirect loop on the dashboard.
+ if (!user.is_admin && !business) {
+ return NextResponse.json(
+ { success: false, message: 'This account is not connected to a business. Contact support.' },
+ { status: 403 }
+ )
  }
 
  // Update last login
