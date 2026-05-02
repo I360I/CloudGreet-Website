@@ -204,21 +204,20 @@ export default function AdminClientsPage() {
 
  const deleteClient = async (clientId: string, businessName: string) => {
  if (!confirm(`Delete "${businessName}"? This permanently removes the business, owner login, and all calls/appointments. Cannot be undone.`)) return
+ const prev = clients
+ setClients((cs) => cs.filter((c) => c.id !== clientId))
+ if (selectedClient === clientId) {
+  setSelectedClient(null)
+  setClientDetail(null)
+ }
  try {
   const response = await fetchWithAuth(`/api/admin/clients/${clientId}`, { method: 'DELETE' })
   const data = await response.json().catch(() => ({}))
   if (!response.ok || !data.success) {
    throw new Error(data?.detail || data?.error || `Delete failed (${response.status})`)
   }
-  if (data.stepErrors?.length) {
-   alert(`Deleted, but some cleanup steps had issues:\n\n${data.stepErrors.join('\n')}`)
-  }
-  if (selectedClient === clientId) {
-   setSelectedClient(null)
-   setClientDetail(null)
-  }
-  fetchClients()
  } catch (err) {
+  setClients(prev)
   alert(err instanceof Error ? err.message : 'Delete failed')
  }
  }

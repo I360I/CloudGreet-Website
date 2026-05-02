@@ -37,17 +37,17 @@ export default function AdminHome() {
 
  const deleteClient = async (id: string, name: string) => {
   if (!confirm(`Delete "${name}"? This permanently removes the business, owner login, and all calls/appointments. Cannot be undone.`)) return
+  // Optimistically drop the row; restore if the API rejects.
+  const prev = clients
+  setClients((cs) => cs.filter((c) => c.id !== id))
   try {
    const res = await fetchWithAuth(`/api/admin/clients/${id}`, { method: 'DELETE' })
    const data = await res.json().catch(() => ({}))
    if (!res.ok || !data.success) {
     throw new Error(data?.detail || data?.error || `Delete failed (${res.status})`)
    }
-   if (data.stepErrors?.length) {
-    alert(`Deleted, but some cleanup steps had issues:\n\n${data.stepErrors.join('\n')}`)
-   }
-   loadClients()
   } catch (e) {
+   setClients(prev)
    alert(e instanceof Error ? e.message : 'Delete failed')
   }
  }
