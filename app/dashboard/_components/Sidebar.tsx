@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
- LayoutDashboard, PhoneCall, Calendar, Settings, CreditCard, LogOut,
+ LayoutDashboard, PhoneCall, Calendar, Settings, CreditCard, LogOut, Wand2,
 } from 'lucide-react'
 
 type Item = { icon: React.ElementType; label: string; href: string; match: (pathname: string) => boolean }
@@ -15,12 +15,13 @@ const items: Item[] = [
  { icon: Calendar, label: 'Appointments', href: '/dashboard/appointments', match: (p) => p.startsWith('/dashboard/appointments') },
  { icon: Settings, label: 'Settings', href: '/dashboard/settings', match: (p) => p.startsWith('/dashboard/settings') },
  { icon: CreditCard, label: 'Billing', href: '/dashboard/billing', match: (p) => p.startsWith('/dashboard/billing') },
+ { icon: Wand2, label: 'Setup', href: '/dashboard/onboarding', match: (p) => p.startsWith('/dashboard/onboarding') },
 ]
 
 export function Sidebar({ businessName, onSignOut, activeLabel }: {
  businessName: string
  onSignOut: () => void
- activeLabel?: 'Overview' | 'Calls' | 'Appointments' | 'Settings' | 'Billing'
+ activeLabel?: 'Overview' | 'Calls' | 'Appointments' | 'Settings' | 'Billing' | 'Setup'
 }) {
  const pathname = usePathname() || '/dashboard'
 

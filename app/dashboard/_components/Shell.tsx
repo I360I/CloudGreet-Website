@@ -13,7 +13,7 @@ export function DashShell({
  activeLabel,
  children,
 }: {
- activeLabel: 'Overview' | 'Calls' | 'Appointments' | 'Settings' | 'Billing'
+ activeLabel: 'Overview' | 'Calls' | 'Appointments' | 'Settings' | 'Billing' | 'Setup'
  children: React.ReactNode
 }) {
  const router = useRouter()

@@ -62,7 +62,7 @@ export default function OnboardingPage() {
 
  if (loading) {
   return (
-   <DashShell activeLabel="Overview">
+   <DashShell activeLabel="Setup">
     <div className="flex-1 flex items-center justify-center py-32">
      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
     </div>
@@ -72,7 +72,7 @@ export default function OnboardingPage() {
 
  if (error || !state) {
   return (
-   <DashShell activeLabel="Overview">
+   <DashShell activeLabel="Setup">
     <div className="px-8 py-10 max-w-2xl">
      <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-start gap-3">
       <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -84,7 +84,7 @@ export default function OnboardingPage() {
  }
 
  return (
-  <DashShell activeLabel="Overview">
+  <DashShell activeLabel="Setup">
    <section className="px-8 py-10">
     <div className="max-w-3xl">
      <Header step={step} />
