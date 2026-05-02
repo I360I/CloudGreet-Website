@@ -300,7 +300,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-all duration-300 ease-out disabled:opacity-50"
      >
       {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-      {success ? 'Connected' : 'Validate &amp; connect'}
+      {success ? 'Connected' : 'Validate & connect'}
      </button>
     </div>
 
