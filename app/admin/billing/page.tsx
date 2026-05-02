@@ -14,6 +14,7 @@ import {
 import Link from 'next/link'
 import { useToast } from '@/app/contexts/ToastContext'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { AdminShell } from '../_components/Shell'
 
 type BillingAlert = {
  id: string
@@ -191,19 +192,20 @@ export default function BillingDashboardPage() {
  }
 
  return (
- <div className="min-h-screen via-black text-white">
- <div className="mx-auto max-w-6xl space-y-12 px-4 py-12 sm:px-8">
- <header className="space-y-4">
- <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.4em] text-slate-300">
- Billing operations
- </span>
- <div className="space-y-3">
- <h1 className="text-3xl font-semibold sm:text-4xl">Revenue & reconciliation cockpit</h1>
- <p className="max-w-3xl text-base leading-relaxed text-slate-300">
- Track subscription revenue, per-booking fees, and failed invoices without leaving the product. Stripe
- retries, dunning steps, and alerts are wired up for proactive retention.
- </p>
+ <AdminShell activeLabel="Billing">
+ <section className="px-4 lg:px-8 py-6 lg:py-10">
+ <div className="max-w-7xl space-y-6">
+ <header className="space-y-2">
+ <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500">
+ billing operations
  </div>
+ <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight text-white">
+ Revenue & reconciliation
+ </h1>
+ <p className="text-sm text-gray-400 max-w-2xl">
+ Subscription revenue, per-booking fees, and failed invoices in one place. Stripe retries and
+ dunning are wired in.
+ </p>
  </header>
 
  <section className="rounded-3xl border border-white/10 bg-black/40 p-6 shadow-2xl shadow-blue-900/20">
@@ -366,7 +368,8 @@ export default function BillingDashboardPage() {
  </div>
  </section>
  </div>
- </div>
+ </section>
+ </AdminShell>
  )
 }
 
