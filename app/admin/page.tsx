@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
  Plus, ArrowUpRight, Loader2, Trash2, Search, AlertCircle,
@@ -8,8 +9,7 @@ import {
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from './_components/Shell'
 import {
- Panel, PanelHeader, Stat, StatusPill, PrimaryButton, GhostButton,
- Input, RisingFade, Sparkline,
+ Panel, StatusPill, Stat, Input, Sparkline,
 } from './_components/ui'
 
 type Client = {
@@ -51,7 +51,6 @@ export default function AdminHome() {
  const [data, setData] = useState<Overview | null>(null)
  const [loading, setLoading] = useState(true)
  const [error, setError] = useState('')
- const [showForm, setShowForm] = useState(false)
  const [search, setSearch] = useState('')
  const [sortKey, setSortKey] = useState<SortKey>('last_call')
 
@@ -140,10 +139,12 @@ export default function AdminHome() {
         Overview
        </h1>
       </div>
-      <PrimaryButton onClick={() => setShowForm(!showForm)}>
-       <Plus className="w-4 h-4" />
-       {showForm ? 'Close' : 'New client'}
-      </PrimaryButton>
+      <Link
+       href="/admin/clients/new"
+       className="inline-flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ease-out shadow-[0_0_30px_-12px_rgba(56,189,248,0.6)]"
+      >
+       <Plus className="w-4 h-4" /> New client
+      </Link>
      </div>
 
      {/* Hero KPI — cross-tenant calls this month with sparkline */}
@@ -181,19 +182,6 @@ export default function AdminHome() {
        </motion.div>
       ))}
      </motion.div>
-
-     {/* New-client form */}
-     {showForm && (
-      <RisingFade>
-       <Panel className="mb-3">
-        <PanelHeader title="New client" eyebrow="Onboard" />
-        <NewClientForm
-         onCreated={() => { setShowForm(false); load() }}
-         onCancel={() => setShowForm(false)}
-        />
-       </Panel>
-      </RisingFade>
-     )}
 
      {/* Clients table */}
      <Panel padding="none">
@@ -413,103 +401,4 @@ function relTime(iso: string): string {
  const days = Math.floor(hr / 24)
  if (days < 7) return `${days}d ago`
  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-/* ----------------------------- New-client form ---------------------------- */
-
-function NewClientForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
- const [submitting, setSubmitting] = useState(false)
- const [error, setError] = useState('')
-
- const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault()
-  const form = e.currentTarget
-  setSubmitting(true); setError('')
-  const fd = new FormData(form)
-  const body = Object.fromEntries(fd.entries())
-  try {
-   const res = await fetchWithAuth('/api/admin/clients', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-   })
-   const data = await res.json().catch(() => ({}))
-   if (!res.ok) {
-    setError(data.error || data.detail || 'Failed to create client')
-    return
-   }
-   form.reset()
-   onCreated()
-  } catch (err) {
-   setError(`Request failed: ${err instanceof Error ? err.message : String(err)}`)
-  } finally {
-   setSubmitting(false)
-  }
- }
-
- return (
-  <form onSubmit={onSubmit} className="grid sm:grid-cols-2 gap-3">
-   <FormField name="business_name" label="Business name" required />
-   <FormField
-    name="business_type" label="Business type" required type="select"
-    options={['HVAC', 'Roofing', 'Painting', 'Plumbing', 'Electrical', 'Other']}
-   />
-   <FormField name="first_name" label="Owner first name" placeholder="Mike" />
-   <FormField name="last_name" label="Owner last name" placeholder="Rodriguez" />
-   <FormField name="email" label="Owner email" type="email" required />
-   <FormField name="password" label="Temporary password" type="text" required />
-   <FormField name="phone_number" label="Business phone" placeholder="+1 (512) 555-1234" />
-   <div />
-   <FormField name="retell_phone_number" label="Retell phone number" placeholder="+15125551234" />
-   <FormField name="retell_agent_id" label="Retell agent ID" placeholder="agent_…" />
-
-   {error && (
-    <div className="sm:col-span-2 bg-rose-500/10 border border-rose-500/20 text-rose-200 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
-     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-     <span>{error}</span>
-    </div>
-   )}
-
-   <div className="sm:col-span-2 flex items-center justify-end gap-2 pt-2">
-    <GhostButton onClick={onCancel}>Cancel</GhostButton>
-    <PrimaryButton type="submit" loading={submitting}>
-     {submitting ? 'Creating…' : 'Create client'}
-    </PrimaryButton>
-   </div>
-  </form>
- )
-}
-
-function FormField({
- name, label, type = 'text', required = false, placeholder, options,
-}: {
- name: string
- label: string
- type?: string
- required?: boolean
- placeholder?: string
- options?: string[]
-}) {
- const id = `f-${name}`
- return (
-  <div>
-   <label htmlFor={id} className="text-xs font-medium text-gray-400 mb-1.5 block">
-    {label}{required && <span className="text-gray-600"> *</span>}
-   </label>
-   {type === 'select' && options ? (
-    <select
-     id={id} name={name} required={required} defaultValue=""
-     className="w-full px-4 py-2.5 bg-[#0c0c10] border border-white/[0.06] rounded-xl text-gray-100 focus:outline-none focus:border-sky-400/50 transition-colors text-sm"
-    >
-     <option value="" disabled>Select…</option>
-     {options.map((o) => <option key={o} value={o}>{o}</option>)}
-    </select>
-   ) : (
-    <input
-     id={id} name={name} type={type} required={required} placeholder={placeholder}
-     className="w-full px-4 py-2.5 bg-[#0c0c10] border border-white/[0.06] rounded-xl text-gray-100 placeholder-gray-600 focus:outline-none focus:border-sky-400/50 transition-colors text-sm"
-    />
-   )}
-  </div>
- )
 }
