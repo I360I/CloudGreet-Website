@@ -158,13 +158,17 @@ export function demoMonthDays(monthStart: Date) {
  return out
 }
 
+function localIso(d: Date) {
+ return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function demoWeekDays(weekStart: Date) {
  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
- const todayIso = new Date().toISOString().slice(0, 10)
+ const todayIso = localIso(new Date())
  const days: any[] = []
  for (let i = 0; i < 7; i++) {
   const d = new Date(weekStart); d.setDate(d.getDate() + i)
-  const iso = d.toISOString().slice(0, 10)
+  const iso = localIso(d)
   const appts: any[] = []
   if (i === 2) appts.push({ id: 'demo-w-1', time: '14:00', customer: 'Sarah Mitchell', serviceType: 'AC Tune-up' })
   if (i === 3) {

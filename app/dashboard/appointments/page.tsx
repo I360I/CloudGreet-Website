@@ -152,7 +152,14 @@ export default function AppointmentsPage() {
  // Substitute demo data when onboarding is incomplete and no real data exists.
  const realWeek = days?.reduce((s, d) => s + d.count, 0) ?? 0
  const isWeekDemo = needsSetup && realWeek === 0 && !!days
- const displayDays = isWeekDemo ? demoWeekDays(weekStart) : days
+ const rawDays = isWeekDemo ? demoWeekDays(weekStart) : days
+ // Server returns isToday based on UTC; recompute against the user's local
+ // clock so a Friday-evening user doesn't see Saturday flagged as today.
+ const localTodayIso = (() => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+ })()
+ const displayDays = rawDays?.map((d) => ({ ...d, isToday: d.date === localTodayIso }))
  const totalThisWeek = displayDays?.reduce((s, d) => s + d.count, 0) ?? 0
 
  const realMonthCount = monthDays?.reduce((s, d) => s + d.appointments.length, 0) ?? 0
