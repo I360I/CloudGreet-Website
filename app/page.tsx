@@ -35,7 +35,7 @@ export default function LandingPage() {
 function Nav() {
  return (
   <nav className="sticky top-0 z-50 bg-[#f6f5f1]/80 backdrop-blur-md border-b border-black/5">
-   <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+   <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
     <Link href="/" className="flex items-center" aria-label="CloudGreet">
      <Image
       src="/cloudgreet-logo.png"
@@ -66,20 +66,20 @@ function Nav() {
 
 function Hero() {
  return (
-  <section className="px-6 pt-32 md:pt-44 pb-32 md:pb-48">
+  <section className="px-5 sm:px-6 pt-20 sm:pt-32 md:pt-44 pb-20 sm:pb-32 md:pb-48">
    <div className="max-w-6xl mx-auto text-center">
-    <h1 className="font-display font-medium tracking-tight leading-[1.05] text-[44px] sm:text-[56px] md:text-[72px] lg:text-[80px] mb-8 text-gray-900">
+    <h1 className="font-display font-medium tracking-tight leading-[1.05] text-[34px] xs:text-[40px] sm:text-[56px] md:text-[72px] lg:text-[80px] mb-6 sm:mb-8 text-gray-900">
      Stop losing <span className="text-gray-400">profit</span>
      <br />
      to voicemail.
     </h1>
-    <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto mb-12 leading-relaxed">
+    <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto mb-8 sm:mb-12 leading-relaxed px-2">
      Answers calls, books jobs, organizes details and keeps customers happy.
     </p>
-    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center">
      <a
       href={DEMO_TEL}
-      className="group inline-flex items-center gap-3 bg-white text-gray-900 px-7 py-4 rounded-2xl text-base font-medium border border-gray-200 hover:border-gray-300 transition-all shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)] hover:shadow-[0_0_80px_-10px_rgba(56,189,248,0.55)]"
+      className="group inline-flex items-center justify-center gap-3 bg-white text-gray-900 px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium border border-gray-200 hover:border-gray-300 transition-all shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)] hover:shadow-[0_0_80px_-10px_rgba(56,189,248,0.55)]"
      >
       Call our AI
       <span className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center group-hover:border-gray-900 transition-colors">
@@ -88,7 +88,7 @@ function Hero() {
      </a>
      <Link
       href="/contact"
-      className="inline-flex items-center gap-3 bg-gray-900 text-white px-7 py-4 rounded-2xl text-base font-medium hover:bg-gray-800 transition-colors"
+      className="inline-flex items-center justify-center gap-3 bg-gray-900 text-white px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors"
      >
       Book Demo
       <ArrowUpRight className="w-5 h-5" strokeWidth={2} />
@@ -106,11 +106,11 @@ function Hero() {
 
 function ProductCard() {
  return (
-  <section className="px-6 pb-32 md:pb-40">
-   <div className="max-w-6xl mx-auto bg-white rounded-[32px] border border-gray-200/80 shadow-[0_0_80px_-20px_rgba(56,189,248,0.25)] p-8 md:p-16">
-    <div className="grid md:grid-cols-2 gap-10 md:gap-12 items-center">
+  <section className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
+   <div className="max-w-6xl mx-auto bg-white rounded-3xl sm:rounded-[32px] border border-gray-200/80 shadow-[0_0_80px_-20px_rgba(56,189,248,0.25)] p-5 sm:p-8 md:p-16">
+    <div className="grid md:grid-cols-2 gap-8 sm:gap-10 md:gap-12 items-center">
      <PhoneTranscript />
-     <div className="text-xl md:text-2xl lg:text-3xl leading-[1.4] text-gray-400 font-normal">
+     <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl leading-[1.4] text-gray-400 font-normal">
       Meet the <strong className="text-gray-900 font-semibold">AI agent</strong> that connects to your phone line,{' '}
       <strong className="text-gray-900 font-semibold">answers</strong> calls, handles{' '}
       <strong className="text-gray-900 font-semibold">questions</strong>, books{' '}
@@ -173,7 +173,7 @@ function PhoneTranscript() {
 function Platforms() {
  const items = ['Stripe', 'Telnyx', 'Retell', 'Google Calendar', 'Outlook', 'Twilio']
  return (
-  <section className="px-6 pb-32 md:pb-40">
+  <section className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto text-center">
     <p className="text-sm text-gray-500 mb-6">CloudGreet works with the tools you already use</p>
     <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-gray-400">
@@ -196,17 +196,17 @@ function Stats() {
   { icon: Star, value: '+1.2 stars', label: 'in average review ratings' },
  ]
  return (
-  <section className="px-6 pb-32 md:pb-40">
+  <section className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto">
     <p className="text-sm text-gray-500 text-center mb-6">Results on average per client</p>
     <div className="grid sm:grid-cols-2 gap-4 relative">
      <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
      {items.map(({ icon: Icon, value, label }) => (
-      <div key={value} className="relative bg-white border border-gray-200 rounded-2xl px-6 py-5 flex items-center justify-between">
-       <Icon className="w-5 h-5 text-gray-400" strokeWidth={1.5} />
-       <div className="text-right">
-        <span className="text-base md:text-lg font-semibold text-gray-900">{value}</span>
-        <span className="text-base md:text-lg text-gray-500"> {label}</span>
+      <div key={value} className="relative bg-white border border-gray-200 rounded-2xl px-5 sm:px-6 py-4 sm:py-5 flex items-center gap-4">
+       <Icon className="w-5 h-5 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
+       <div className="flex-1 text-right text-sm sm:text-base md:text-lg leading-snug">
+        <span className="font-semibold text-gray-900">{value}</span>{' '}
+        <span className="text-gray-500">{label}</span>
        </div>
       </div>
      ))}
@@ -227,10 +227,10 @@ function CallFlow() {
   { icon: PhoneForwarded, title: 'Ends or transfers.', body: 'Resolved calls end. Others are passed to your team.' },
  ]
  return (
-  <section id="how-it-works" className="px-6 pb-32 md:pb-40">
+  <section id="how-it-works" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto">
     <div className="text-center mb-10">
-     <h2 className="font-display text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
+     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
       How it <span className="text-gray-400">works.</span>
      </h2>
      <p className="text-base md:text-lg text-gray-500">Five simple steps. No setup on your end.</p>
@@ -272,9 +272,9 @@ function DashboardPreview() {
   { name: 'Lisa M.', when: 'Mon 1:00 PM', service: 'Interior painting estimate' },
  ]
  return (
-  <section className="px-6 pb-32 md:pb-40">
+  <section className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto text-center mb-8">
-    <h2 className="font-display text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
+    <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
      Every call. <span className="text-gray-400">Every appointment.</span>
     </h2>
     <p className="text-base md:text-lg text-gray-500">One screen.</p>
@@ -351,9 +351,9 @@ function RoiCalculator() {
  const fmt = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
 
  return (
-  <section id="pricing" className="px-6 pb-32 md:pb-40">
+  <section id="pricing" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto text-center mb-10">
-    <h2 className="font-display text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
+    <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
      See <span className="text-gray-400">your numbers.</span>
     </h2>
     <p className="text-base md:text-lg text-gray-500 max-w-md mx-auto">
@@ -364,7 +364,7 @@ function RoiCalculator() {
    <div className="max-w-5xl mx-auto relative">
     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
 
-    <div className="relative bg-white border border-gray-200 rounded-[32px] p-6 md:p-12 grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+    <div className="relative bg-white border border-gray-200 rounded-3xl sm:rounded-[32px] p-5 sm:p-6 md:p-12 grid md:grid-cols-2 gap-8 sm:gap-10 md:gap-16 items-center">
      {/* Sliders */}
      <div className="space-y-8">
       <Slider
@@ -493,10 +493,10 @@ function Row({ label, value, muted = false }: { label: string; value: string; mu
 function FinalCTA() {
  return (
   <section className="px-6 pb-12">
-   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-8 md:p-12 grid md:grid-cols-2 gap-6 items-center relative overflow-hidden">
+   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 md:p-12 grid md:grid-cols-2 gap-6 items-center relative overflow-hidden">
     <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-sky-100/60 blur-3xl rounded-full pointer-events-none" />
     <div className="relative">
-     <h2 className="font-display text-4xl md:text-5xl font-medium tracking-tight leading-[1.05]">
+     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05]">
       Stop losing calls.
       <br />
       <span className="text-gray-400">Start winning customers.</span>
@@ -524,7 +524,7 @@ function FinalCTA() {
 function FooterCard() {
  return (
   <section className="px-6 pb-12">
-   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-8 md:p-10">
+   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 md:p-10">
     <div className="grid md:grid-cols-4 gap-8">
      <div>
       <Link href="/" className="flex items-center mb-3" aria-label="CloudGreet">
