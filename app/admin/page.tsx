@@ -1,8 +1,13 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { Plus, ArrowUpRight, Loader2, Trash2 } from "lucide-react"
+import React, { useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
+import { Plus, ArrowUpRight, Loader2, Trash2, Search, AlertCircle } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { AdminShell } from './_components/Shell'
+import {
+ Panel, PanelHeader, Stat, StatusPill, PrimaryButton, GhostButton, Input, RisingFade,
+} from './_components/ui'
 
 type Client = {
  id: string
@@ -12,22 +17,28 @@ type Client = {
  business_type?: string | null
  subscription_status?: string | null
  account_status?: string | null
+ onboarding_completed?: boolean
  created_at?: string
 }
+
+const EASE = [0.22, 1, 0.36, 1] as const
 
 export default function AdminHome() {
  const [clients, setClients] = useState<Client[]>([])
  const [loading, setLoading] = useState(true)
+ const [error, setError] = useState('')
  const [showForm, setShowForm] = useState(false)
+ const [search, setSearch] = useState('')
 
  const loadClients = async () => {
-  setLoading(true)
+  setLoading(true); setError('')
   try {
-   const res = await fetchWithAuth('/api/admin/clients')
-   const data = await res.json()
+   const res = await fetchWithAuth('/api/admin/clients?limit=200')
+   const data = await res.json().catch(() => ({}))
+   if (!res.ok) throw new Error(data?.error || `Failed (${res.status})`)
    setClients(data.clients || data.data || [])
-  } catch {
-   setClients([])
+  } catch (e) {
+   setError(e instanceof Error ? e.message : 'Failed to load clients')
   } finally {
    setLoading(false)
   }
@@ -37,7 +48,6 @@ export default function AdminHome() {
 
  const deleteClient = async (id: string, name: string) => {
   if (!confirm(`Delete "${name}"? This permanently removes the business, owner login, and all calls/appointments. Cannot be undone.`)) return
-  // Optimistically drop the row; restore if the API rejects.
   const prev = clients
   setClients((cs) => cs.filter((c) => c.id !== id))
   try {
@@ -52,96 +62,199 @@ export default function AdminHome() {
   }
  }
 
+ const filtered = useMemo(() => {
+  const q = search.trim().toLowerCase()
+  if (!q) return clients
+  return clients.filter((c) =>
+   c.business_name?.toLowerCase().includes(q) ||
+   c.email?.toLowerCase().includes(q) ||
+   c.business_type?.toLowerCase().includes(q),
+  )
+ }, [clients, search])
+
+ const stats = useMemo(() => {
+  const total = clients.length
+  const active = clients.filter((c) => c.subscription_status === 'active').length
+  const trialing = clients.filter((c) => c.subscription_status === 'trialing').length
+  const onboarding = clients.filter((c) => !c.onboarding_completed).length
+  return { total, active, trialing, onboarding }
+ }, [clients])
+
  return (
-  <main className="px-6 pt-12 md:pt-16 pb-32">
-   <div className="max-w-6xl mx-auto">
-    <div className="flex items-end justify-between mb-10">
-     <div>
-      <h1 className="font-display text-4xl md:text-5xl font-medium tracking-tight text-gray-900">
-       Clients <span className="text-gray-400">/ {clients.length}</span>
-      </h1>
-      <p className="text-sm text-gray-500 mt-2">Onboard a contractor or manage existing accounts.</p>
+  <AdminShell activeLabel="Overview">
+   <section className="px-4 lg:px-8 py-6 lg:py-10">
+    <div className="max-w-7xl">
+     {/* Header */}
+     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
+      <div>
+       <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-1.5">
+        cloudgreet · admin
+       </div>
+       <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight text-white">
+        Overview
+       </h1>
+      </div>
+      <PrimaryButton onClick={() => setShowForm(!showForm)}>
+       <Plus className="w-4 h-4" />
+       {showForm ? 'Close' : 'New client'}
+      </PrimaryButton>
      </div>
-     <button
-      onClick={() => setShowForm(!showForm)}
-      className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors"
+
+     {/* KPI strip */}
+     <motion.div
+      initial="hidden" animate="show"
+      variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
+      className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
      >
-      <Plus className="w-4 h-4" />
-      {showForm ? 'Close' : 'New client'}
-     </button>
-    </div>
+      {[
+       { label: 'Total clients', value: String(stats.total), accent: false },
+       { label: 'Active', value: String(stats.active), accent: true, sub: stats.total ? `${Math.round((stats.active / stats.total) * 100)}% of total` : '—' },
+       { label: 'Trialing', value: String(stats.trialing), accent: false },
+       { label: 'In onboarding', value: String(stats.onboarding), accent: false, sub: 'Cal.com or forwarding incomplete' },
+      ].map((k) => (
+       <motion.div
+        key={k.label}
+        variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } } }}
+       >
+        <Stat label={k.label} value={k.value} sub={k.sub} accent={k.accent} />
+       </motion.div>
+      ))}
+     </motion.div>
 
-    {showForm && (
-     <NewClientForm
-      onCreated={() => { setShowForm(false); loadClients() }}
-     />
-    )}
-
-    <div className="bg-white border border-gray-200 rounded-[28px] overflow-hidden">
-     {loading ? (
-      <div className="p-12 flex items-center justify-center text-gray-400">
-       <Loader2 className="w-5 h-5 animate-spin" />
-      </div>
-     ) : clients.length === 0 ? (
-      <div className="p-12 text-center text-gray-500 text-sm">
-       No clients yet. Click <strong>New client</strong> to onboard your first one.
-      </div>
-     ) : (
-      <table className="w-full text-sm">
-       <thead className="bg-gray-50 border-b border-gray-200">
-        <tr className="text-left text-gray-500">
-         <th className="px-5 py-3 font-medium">Business</th>
-         <th className="px-5 py-3 font-medium">Email</th>
-         <th className="px-5 py-3 font-medium">Type</th>
-         <th className="px-5 py-3 font-medium">Status</th>
-         <th className="px-5 py-3"></th>
-        </tr>
-       </thead>
-       <tbody>
-        {clients.map((c) => (
-         <tr key={c.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/60">
-          <td className="px-5 py-4 font-medium text-gray-900">{c.business_name}</td>
-          <td className="px-5 py-4 text-gray-600">{c.email}</td>
-          <td className="px-5 py-4 text-gray-600">{c.business_type || '—'}</td>
-          <td className="px-5 py-4">
-           <span className={`text-xs px-2 py-1 rounded-full ${c.subscription_status === 'active' ? 'bg-sky-50 text-sky-700' : 'bg-gray-100 text-gray-600'}`}>
-            {c.subscription_status || c.account_status || 'pending'}
-           </span>
-          </td>
-          <td className="px-5 py-4 text-right">
-           <div className="inline-flex items-center gap-3">
-            <button
-             onClick={() => deleteClient(c.id, c.business_name)}
-             className="text-gray-400 hover:text-red-600 transition-colors"
-             aria-label={`Delete ${c.business_name}`}
-            >
-             <Trash2 className="w-4 h-4 inline" />
-            </button>
-            <a href={`/admin/clients/${c.id}`} className="text-gray-400 hover:text-gray-900 transition-colors">
-             <ArrowUpRight className="w-4 h-4 inline" />
-            </a>
-           </div>
-          </td>
-         </tr>
-        ))}
-       </tbody>
-      </table>
+     {/* New client form */}
+     {showForm && (
+      <RisingFade>
+       <Panel className="mb-3">
+        <PanelHeader title="New client" eyebrow="Onboard" />
+        <NewClientForm
+         onCreated={() => { setShowForm(false); loadClients() }}
+         onCancel={() => setShowForm(false)}
+        />
+       </Panel>
+      </RisingFade>
      )}
+
+     {/* Clients table */}
+     <Panel padding="none">
+      <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-white/[0.06] flex items-center justify-between gap-3 flex-wrap">
+       <div className="flex items-baseline gap-3">
+        <h2 className="text-sm font-medium text-white">Clients</h2>
+        <span className="text-xs font-mono text-gray-500">{filtered.length}{search && ` / ${clients.length}`}</span>
+       </div>
+       <div className="relative w-full sm:w-72">
+        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+        <Input
+         type="search"
+         placeholder="Search by name, email, or type…"
+         value={search}
+         onChange={(e) => setSearch(e.target.value)}
+         className="pl-9"
+        />
+       </div>
+      </div>
+
+      {loading ? (
+       <div className="px-6 py-16 flex items-center justify-center">
+        <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+       </div>
+      ) : error ? (
+       <div className="px-6 py-12 flex items-start gap-3">
+        <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+        <div>
+         <h3 className="text-sm font-medium text-white">Couldn&apos;t load clients</h3>
+         <p className="text-sm text-gray-500 mt-1">{error}</p>
+        </div>
+       </div>
+      ) : filtered.length === 0 ? (
+       <div className="px-6 py-16 text-center text-sm text-gray-500">
+        {search ? 'No clients match your search.' : 'No clients yet. Tap "New client" to onboard your first one.'}
+       </div>
+      ) : (
+       <motion.ul
+        initial="hidden" animate="show"
+        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.02, delayChildren: 0.05 } } }}
+        className="divide-y divide-white/[0.04]"
+       >
+        {filtered.map((c) => (
+         <ClientRow
+          key={c.id}
+          client={c}
+          onDelete={() => deleteClient(c.id, c.business_name)}
+         />
+        ))}
+       </motion.ul>
+      )}
+     </Panel>
     </div>
-   </div>
-  </main>
+   </section>
+  </AdminShell>
  )
 }
 
-function NewClientForm({ onCreated }: { onCreated: () => void }) {
+/* ----------------------------- Client row ----------------------------- */
+
+function ClientRow({ client, onDelete }: { client: Client; onDelete: () => void }) {
+ return (
+  <motion.li
+   variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: EASE } } }}
+   className="group"
+  >
+   <a
+    href={`/admin/clients/${client.id}`}
+    className="block px-5 sm:px-6 py-4 hover:bg-white/[0.02] transition-all duration-300 ease-out"
+   >
+    <div className="flex items-center gap-4">
+     <div className="flex-1 min-w-0 lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center">
+      <div className="lg:col-span-4 min-w-0">
+       <div className="text-sm font-medium text-white truncate">{client.business_name}</div>
+       <div className="text-xs text-gray-500 truncate mt-0.5">{client.email}</div>
+      </div>
+      <div className="lg:col-span-3 mt-1.5 lg:mt-0 flex items-center gap-2 flex-wrap">
+       <StatusPill status={client.subscription_status || client.account_status || 'pending'} />
+       {!client.onboarding_completed && (
+        <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-full px-2 py-0.5">
+         setup
+        </span>
+       )}
+      </div>
+      <div className="hidden lg:block lg:col-span-3 text-xs text-gray-500 truncate">
+       {client.business_type || '—'}
+      </div>
+      <div className="hidden lg:flex lg:col-span-2 items-center justify-end gap-3">
+       <button
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete() }}
+        className="p-1.5 rounded-md text-gray-500 hover:text-rose-300 hover:bg-rose-400/10 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out"
+        aria-label="Delete client"
+       >
+        <Trash2 className="w-4 h-4" />
+       </button>
+       <ArrowUpRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all duration-300 ease-out" />
+      </div>
+     </div>
+     {/* Mobile-only delete — visible without hover */}
+     <button
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete() }}
+      className="lg:hidden p-1.5 rounded-md text-gray-500 hover:text-rose-300"
+      aria-label="Delete client"
+     >
+      <Trash2 className="w-4 h-4" />
+     </button>
+    </div>
+   </a>
+  </motion.li>
+ )
+}
+
+/* ---------------------------- New client form ---------------------------- */
+
+function NewClientForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
  const [submitting, setSubmitting] = useState(false)
  const [error, setError] = useState('')
 
  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault()
-  const form = e.currentTarget // capture before any await — React reuses synthetic events
-  setSubmitting(true)
-  setError('')
+  const form = e.currentTarget
+  setSubmitting(true); setError('')
   const fd = new FormData(form)
   const body = Object.fromEntries(fd.entries())
   try {
@@ -150,7 +263,7 @@ function NewClientForm({ onCreated }: { onCreated: () => void }) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
    })
-   const data = await res.json()
+   const data = await res.json().catch(() => ({}))
    if (!res.ok) {
     setError(data.error || data.detail || 'Failed to create client')
     return
@@ -159,76 +272,78 @@ function NewClientForm({ onCreated }: { onCreated: () => void }) {
    onCreated()
   } catch (err) {
    setError(`Request failed: ${err instanceof Error ? err.message : String(err)}`)
-   console.error('Create client error:', err)
   } finally {
    setSubmitting(false)
   }
  }
 
  return (
-  <form onSubmit={onSubmit} className="bg-white border border-gray-200 rounded-[28px] p-6 md:p-8 mb-6 grid sm:grid-cols-2 gap-4">
-   <Field name="business_name" label="Business name" required />
-   <div>
-    <label htmlFor="business_type" className="text-sm text-gray-700 mb-2 block">
-     Business type<span className="text-gray-400"> *</span>
-    </label>
-    <select
-     id="business_type" name="business_type" required
-     className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-gray-900 transition-colors"
-    >
-     <option value="">Select type…</option>
-     <option value="HVAC">HVAC</option>
-     <option value="Roofing">Roofing</option>
-     <option value="Painting">Painting</option>
-     <option value="Plumbing">Plumbing</option>
-     <option value="Electrical">Electrical</option>
-     <option value="Other">Other</option>
-    </select>
-   </div>
-   <Field name="first_name" label="Owner first name" placeholder="Mike" />
-   <Field name="last_name" label="Owner last name" placeholder="Rodriguez" />
-   <Field name="email" label="Owner email" type="email" required />
-   <Field name="password" label="Temporary password" type="text" required />
-   <Field name="phone_number" label="Business phone" placeholder="+1 (512) 555-1234" />
+  <form onSubmit={onSubmit} className="grid sm:grid-cols-2 gap-3">
+   <FormField name="business_name" label="Business name" required />
+   <FormField
+    name="business_type"
+    label="Business type"
+    required
+    type="select"
+    options={['HVAC', 'Roofing', 'Painting', 'Plumbing', 'Electrical', 'Other']}
+   />
+   <FormField name="first_name" label="Owner first name" placeholder="Mike" />
+   <FormField name="last_name" label="Owner last name" placeholder="Rodriguez" />
+   <FormField name="email" label="Owner email" type="email" required />
+   <FormField name="password" label="Temporary password" type="text" required />
+   <FormField name="phone_number" label="Business phone" placeholder="+1 (512) 555-1234" />
    <div />
-   <Field name="retell_phone_number" label="Retell phone number" placeholder="+15125551234" />
-   <Field name="retell_agent_id" label="Retell agent ID" placeholder="agent_xxxx…" />
+   <FormField name="retell_phone_number" label="Retell phone number" placeholder="+15125551234" />
+   <FormField name="retell_agent_id" label="Retell agent ID" placeholder="agent_…" />
 
    {error && (
-    <div className="sm:col-span-2 bg-red-50 border border-red-200 text-red-900 rounded-xl p-3 text-sm">
-     {error}
+    <div className="sm:col-span-2 bg-rose-500/10 border border-rose-500/20 text-rose-200 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
+     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+     <span>{error}</span>
     </div>
    )}
 
-   <div className="sm:col-span-2 flex justify-end">
-    <button
-     type="submit"
-     disabled={submitting}
-     className="inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
-    >
+   <div className="sm:col-span-2 flex items-center justify-end gap-2 pt-2">
+    <GhostButton onClick={onCancel}>Cancel</GhostButton>
+    <PrimaryButton type="submit" loading={submitting}>
      {submitting ? 'Creating…' : 'Create client'}
-    </button>
+    </PrimaryButton>
    </div>
   </form>
  )
 }
 
-function Field({
- name, label, type = 'text', required = false, placeholder,
-}: { name: string; label: string; type?: string; required?: boolean; placeholder?: string }) {
+function FormField({
+ name, label, type = 'text', required = false, placeholder, options,
+}: {
+ name: string
+ label: string
+ type?: string
+ required?: boolean
+ placeholder?: string
+ options?: string[]
+}) {
+ const id = `f-${name}`
  return (
   <div>
-   <label htmlFor={name} className="text-sm text-gray-700 mb-2 block">
-    {label}{required && <span className="text-gray-400"> *</span>}
+   <label htmlFor={id} className="text-xs font-medium text-gray-400 mb-1.5 block">
+    {label}{required && <span className="text-gray-600"> *</span>}
    </label>
-   <input
-    id={name}
-    name={name}
-    type={type}
-    required={required}
-    placeholder={placeholder}
-    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors"
-   />
+   {type === 'select' && options ? (
+    <select
+     id={id} name={name} required={required}
+     defaultValue=""
+     className="w-full px-4 py-2.5 bg-[#0c0c10] border border-white/[0.06] rounded-xl text-gray-100 focus:outline-none focus:border-sky-400/50 transition-colors text-sm"
+    >
+     <option value="" disabled>Select…</option>
+     {options.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+   ) : (
+    <input
+     id={id} name={name} type={type} required={required} placeholder={placeholder}
+     className="w-full px-4 py-2.5 bg-[#0c0c10] border border-white/[0.06] rounded-xl text-gray-100 placeholder-gray-600 focus:outline-none focus:border-sky-400/50 transition-colors text-sm"
+    />
+   )}
   </div>
  )
 }

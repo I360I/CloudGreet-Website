@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import Image from 'next/image'
-import { Loader2 } from "lucide-react"
-import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { Loader2 } from 'lucide-react'
 
+/**
+ * Admin auth gate. Pages handle their own chrome via <AdminShell>; this
+ * layout only enforces the admin role and routes unauth'd users to login.
+ */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
  const pathname = usePathname()
  const router = useRouter()
@@ -22,7 +23,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
   ;(async () => {
    try {
-    // Read user from localStorage (set on login). Cheap client check.
     const raw = localStorage.getItem('user')
     if (!raw) {
      router.replace('/admin/login')
@@ -46,36 +46,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
  if (checking) {
   return (
-   <div className="min-h-screen bg-[#f6f5f1] flex items-center justify-center">
-    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+   <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center">
+    <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
    </div>
   )
  }
 
  if (!authed) return null
 
- const handleSignOut = async () => {
-  try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
-  localStorage.removeItem('user')
-  localStorage.removeItem('business')
-  router.replace('/admin/login')
- }
-
- return (
-  <div className="min-h-screen bg-[#f6f5f1] text-gray-900">
-   <nav className="sticky top-0 z-50 bg-[#f6f5f1]/80 backdrop-blur-md border-b border-black/5">
-    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-     <Link href="/admin" className="flex items-center" aria-label="CloudGreet Admin">
-      <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={160} height={48} priority className="h-9 w-auto" />
-      <span className="ml-3 text-xs font-medium text-gray-400 uppercase tracking-widest">Admin</span>
-     </Link>
-     <div className="flex items-center gap-6 text-sm">
-      <Link href="/admin" className={`hover:text-gray-900 transition-colors ${pathname === '/admin' ? 'text-gray-900' : 'text-gray-600'}`}>Clients</Link>
-      <button onClick={handleSignOut} className="text-gray-600 hover:text-gray-900 transition-colors">Sign out</button>
-     </div>
-    </div>
-   </nav>
-   {children}
-  </div>
- )
+ return <>{children}</>
 }
