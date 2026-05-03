@@ -84,9 +84,9 @@ export default function DashboardPage() {
     const json = await res.json().catch(() => ({}))
     if (res.status === 401) {
      // Don't redirect — middleware is the single source of truth for
-     // unauthenticated /dashboard access. If we got here, the cookie
-     // exists; an inline error is easier to debug than a redirect loop.
-     setError('Session not recognized. Try signing out and back in.')
+     // unauthenticated /dashboard access. Surface the real reason from
+     // the API so the next loop has a fingerprint to chase.
+     setError(json?.error || 'Session not recognized. Try signing out and back in.')
      return
     }
     if (!res.ok) { setError(json.error || 'Failed to load dashboard'); return }
