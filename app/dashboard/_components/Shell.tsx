@@ -24,39 +24,39 @@ export function DashShell({
  const [businessName, setBusinessName] = useState<string | null>(null)
  const [redirecting, setRedirecting] = useState(false)
 
- useEffect(() => {
-  try {
-   const raw = localStorage.getItem('business')
-   if (raw) {
-    const b = JSON.parse(raw)
-    setBusinessName(b.business_name || b.name || 'Account')
-   } else {
-    setBusinessName('Account')
-   }
-  } catch {
-   setBusinessName('Account')
-  }
- }, [])
-
  const [needsSetup, setNeedsSetup] = useState(false)
 
- // Probe onboarding state. We do NOT force-redirect on 401/403 because
- // doing so creates a sign-in → API 401 → /login → sign-in loop whenever
- // the API trips on something other than auth (missing column, missing
- // businessId in JWT, etc). The middleware already handles real
- // unauthenticated access; trusting it as the single source of truth
- // means the dashboard fails open with an inline message instead of
- // looping users out.
+ // Source the business name from the API (which is JWT-scoped) rather
+ // than localStorage. Reading from localStorage was a cross-tenant leak
+ // vector: if a previous user had logged in on the same browser and
+ // their entry wasn't fully cleared, the next signed-in user would see
+ // the previous tenant's business name in the sidebar. Plus we also
+ // need needsSetup, so a single fetch covers both.
+ //
+ // We do NOT force-redirect on 401/403 because doing so creates a
+ // sign-in → API 401 → /login → sign-in loop whenever the API trips
+ // on something other than missing-cookie. The middleware already
+ // handles real unauthenticated access.
  useEffect(() => {
   let cancelled = false
   ;(async () => {
    try {
     const res = await fetchWithAuth('/api/onboarding/state')
-    if (!res.ok) return
+    if (!res.ok) {
+     if (!cancelled) setBusinessName('Account')
+     return
+    }
     const json = await res.json()
-    if (!json?.success || !json.business || cancelled) return
-    setNeedsSetup(!json.business.onboarding_completed)
-   } catch { /* non-fatal */ }
+    if (cancelled) return
+    if (json?.success && json.business) {
+     setBusinessName(json.business.business_name || 'Account')
+     setNeedsSetup(!json.business.onboarding_completed)
+    } else {
+     setBusinessName('Account')
+    }
+   } catch {
+    if (!cancelled) setBusinessName('Account')
+   }
   })()
   return () => { cancelled = true }
  }, [pathname, router])

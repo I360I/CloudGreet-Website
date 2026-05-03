@@ -20,13 +20,22 @@ export async function GET(request: NextRequest) {
  }
 
  const userId = authResult.userId
- const businessId = authResult.businessId || request.nextUrl.searchParams.get('businessId')
+ // Always trust only the JWT's businessId. Never read it from query
+ // params or body — that's a cross-tenant leak vector.
+ const businessId = authResult.businessId
 
- // Get business profile
+ if (!businessId) {
+ return NextResponse.json(
+ { success: false, message: 'No business attached to this account' },
+ { status: 400 }
+ )
+ }
+
+ // Get business profile (owner_id check stays as defense in depth)
  const { data: business, error } = await supabaseAdmin
  .from('businesses')
  .select('*')
- .eq('id', businessId || authResult.businessId)
+ .eq('id', businessId)
  .eq('owner_id', userId)
  .single()
 

@@ -19,11 +19,14 @@ export async function GET(request: NextRequest) {
  )
  }
 
- const businessId = request.nextUrl.searchParams.get('businessId') || authResult.businessId
+ // Always use the JWT's businessId — never trust a client-supplied
+ // query parameter. Previously this fell back to ?businessId=, letting
+ // any signed-in user read or update another tenant's hours.
+ const businessId = authResult.businessId
 
  if (!businessId) {
  return NextResponse.json(
- { success: false, message: 'Business ID is required' },
+ { success: false, message: 'No business attached to this account' },
  { status: 400 }
  )
  }
@@ -74,11 +77,14 @@ export async function PUT(request: NextRequest) {
 
  const body = await request.json()
  const { hours } = body
- const businessId = request.nextUrl.searchParams.get('businessId') || authResult.businessId
+ // Always use the JWT's businessId — never trust a client-supplied
+ // query parameter. Previously this fell back to ?businessId=, letting
+ // any signed-in user read or update another tenant's hours.
+ const businessId = authResult.businessId
 
  if (!businessId) {
  return NextResponse.json(
- { success: false, message: 'Business ID is required' },
+ { success: false, message: 'No business attached to this account' },
  { status: 400 }
  )
  }

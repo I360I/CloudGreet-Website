@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { verifyJWT } from '@/lib/auth-middleware'
+import { requireAuth } from '@/lib/auth-middleware'
 import { CONFIG } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
@@ -9,43 +9,15 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
  try {
- // Verify authentication
- const authResult = await verifyJWT(request)
- if (!authResult.user) {
+ // Auth: businessId from JWT only — never accept from query string.
+ const authResult = await requireAuth(request)
+ if (!authResult.success || !authResult.businessId) {
  return NextResponse.json(
  { error: 'Unauthorized' },
  { status: 401 }
  )
  }
-
- const { searchParams } = new URL(request.url)
- const businessId = searchParams.get('businessId')
-
- if (!businessId) {
- return NextResponse.json({ error: 'businessId required' }, { status: 400 })
- }
-
- // Verify business ownership
- const { data: business, error: businessError } = await supabaseAdmin
- .from('businesses')
- .select('id, owner_id')
- .eq('id', businessId)
- .single()
-
- if (businessError || !business) {
- logger.error('Business not found', { businessId, error: businessError?.message || JSON.stringify(businessError) })
- return NextResponse.json(
- { error: 'Business not found' },
- { status: 404 }
- )
- }
-
- if (business.owner_id !== authResult.user.id) {
- return NextResponse.json(
- { error: 'Unauthorized: You do not have access to this business' },
- { status: 403 }
- )
- }
+ const businessId = authResult.businessId
 
  // Fetch totals - optimized queries
  const callsCount = await supabaseAdmin

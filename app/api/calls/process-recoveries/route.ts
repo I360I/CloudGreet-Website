@@ -17,6 +17,24 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
  try {
+ // Cron-only endpoint. Without a secret check anyone could POST here
+ // and trigger missed-call SMS dispatches for every tenant in one
+ // request. Locked down by CRON_SECRET; if the env var isn't set the
+ // endpoint refuses to run.
+ const expected = process.env.CRON_SECRET
+ if (!expected) {
+  logger.warn('CRON_SECRET not set; process-recoveries refusing to run')
+  return NextResponse.json({
+   success: false,
+   error: 'CRON_SECRET not configured. Set it in env to enable this endpoint.',
+  }, { status: 503 })
+ }
+ const authHeader = request.headers.get('authorization') || ''
+ const got = authHeader.replace(/^Bearer\s+/i, '').trim()
+ if (got !== expected) {
+  return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+ }
+
  const now = new Date().toISOString()
 
  // Get all pending recoveries that are ready to be sent

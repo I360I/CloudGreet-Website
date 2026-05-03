@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { verifyJWT } from '@/lib/auth-middleware'
+import { requireAuth } from '@/lib/auth-middleware'
 
 /**
  * GET /api/calls/recording
@@ -34,45 +34,25 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
  try {
- // Verify authentication
- const authResult = await verifyJWT(request)
- if (!authResult.user) {
+ // BusinessId is sourced ONLY from the JWT — accepting it from the
+ // query string was the cross-tenant leak vector. Any client could
+ // pass another business's UUID and pull recordings/transcripts.
+ const authResult = await requireAuth(request)
+ if (!authResult.success || !authResult.businessId) {
  return NextResponse.json(
  { error: 'Unauthorized' },
  { status: 401 }
  )
  }
+ const businessId = authResult.businessId
 
  const { searchParams } = new URL(request.url)
  const callId = searchParams.get('callId')
- const businessId = searchParams.get('businessId')
 
- if (!callId || !businessId) {
+ if (!callId) {
  return NextResponse.json(
- { error: 'Missing required parameters: callId and businessId' },
+ { error: 'Missing required parameter: callId' },
  { status: 400 }
- )
- }
-
- // Verify business ownership (user must own the business)
- const { data: business, error: businessError } = await supabaseAdmin
- .from('businesses')
- .select('id, owner_id')
- .eq('id', businessId)
- .single()
-
- if (businessError || !business) {
- logger.error('Business not found', { businessId, error: businessError?.message || JSON.stringify(businessError) })
- return NextResponse.json(
- { error: 'Business not found' },
- { status: 404 }
- )
- }
-
- if (business.owner_id !== authResult.user.id) {
- return NextResponse.json(
- { error: 'Unauthorized: You do not have access to this business' },
- { status: 403 }
  )
  }
 

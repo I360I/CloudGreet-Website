@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { verifyJWT } from '@/lib/auth-middleware'
+import { requireAuth } from '@/lib/auth-middleware'
 import { CONFIG } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
@@ -9,41 +9,20 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
  try {
- // Verify authentication
- const authResult = await verifyJWT(request)
- if (!authResult.user) {
+ // Auth: source businessId from the JWT only. Previously this accepted
+ // ?businessId= and only verified ownership 60 lines later, leaving a
+ // window where the value was used implicitly.
+ const authResult = await requireAuth(request)
+ if (!authResult.success || !authResult.businessId) {
  return NextResponse.json(
  { error: 'Unauthorized' },
  { status: 401 }
  )
  }
+ const businessId = authResult.businessId
 
  const { searchParams } = new URL(request.url)
  const timeframe = searchParams.get('timeframe') || '30d'
- let businessId = searchParams.get('businessId')
-
- // If businessId not provided, default to user's business
- if (!businessId) {
- const { data: userBusiness, error: businessError } = await supabaseAdmin
- .from('businesses')
- .select('id')
- .eq('owner_id', authResult.user.id)
- .single()
-
- if (businessError || !userBusiness) {
- // Return empty charts data instead of 404 for users without businesses
- return NextResponse.json({
- success: true,
- charts: {
- callVolume: [],
- bookingRate: [],
- revenueTrend: [],
- conversionFunnel: []
- }
- })
- }
- businessId = userBusiness.id
- }
 
  // Calculate date range
  const now = new Date()
@@ -68,26 +47,7 @@ export async function GET(request: NextRequest) {
  days = 30
  }
 
- // Verify business ownership
- const { data: business, error: businessError } = await supabaseAdmin
- .from('businesses')
- .select('id, owner_id')
- .eq('id', businessId)
- .single()
-
- if (businessError || !business) {
- return NextResponse.json(
- { error: 'Business not found' },
- { status: 404 }
- )
- }
-
- if (business.owner_id !== authResult.user.id) {
- return NextResponse.json(
- { error: 'Unauthorized' },
- { status: 403 }
- )
- }
+ // businessId already comes from the JWT — no extra ownership check needed.
 
  // Fetch calls for timeframe - only select needed fields
  const { data: calls, error: callsError } = await supabaseAdmin

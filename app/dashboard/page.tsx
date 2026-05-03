@@ -103,9 +103,18 @@ export default function DashboardPage() {
 
  // If onboarding isn't done and there's no real data yet, swap in demo data
  // so the contractor can see what a populated dashboard looks like.
+ // IMPORTANT: keep the real business name + id from the API — only the
+ // calls/appointments/charts get faked. Otherwise a logged-in client sees
+ // "Sample Heating & Cooling" as their own business, which looks like a
+ // cross-tenant leak even when it's just a placeholder.
  const isEmpty = !data || (data.kpis.totalCalls === 0 && (data.recentCalls?.length ?? 0) === 0)
  const isDemo = needsSetup && isEmpty
- const displayData: Overview | null = isDemo ? (demoOverview(range) as Overview) : data
+ const displayData: Overview | null = isDemo
+  ? {
+   ...(demoOverview(range) as Overview),
+   business: data?.business || { id: 'pending', business_name: 'Your Business' },
+  }
+  : data
 
  const filteredCalls = useMemo(() => {
   if (!displayData) return []
