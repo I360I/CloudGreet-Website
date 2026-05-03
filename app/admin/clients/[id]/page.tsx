@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
  ArrowLeft, Loader2, AlertCircle, Trash2, Mail, Phone as PhoneIcon,
  MapPin, Globe, ExternalLink, Bot, X, Play, ChevronRight, Save,
- KeyRound, CheckCircle2, Pencil, Pause, RotateCcw, Unlink,
+ KeyRound, CheckCircle2, Pencil, Pause, RotateCcw, Unlink, CreditCard, Copy,
 } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
@@ -100,6 +100,7 @@ export default function ClientDetailPage() {
  const [error, setError] = useState('')
  const [openCall, setOpenCall] = useState<ClientDetail['activity']['calls']['recent'][number] | null>(null)
  const [tempPassword, setTempPassword] = useState<string | null>(null)
+ const [checkoutOpen, setCheckoutOpen] = useState(false)
 
  const load = async () => {
   if (!id) return
@@ -283,6 +284,7 @@ export default function ClientDetailPage() {
        client={client}
        onPatch={patch}
        onResetPassword={resetPassword}
+       onSendCheckout={() => setCheckoutOpen(true)}
       />
      </RisingFade>
 
@@ -329,6 +331,13 @@ export default function ClientDetailPage() {
       password={tempPassword}
       ownerEmail={data.client.owner?.email || null}
       onClose={() => setTempPassword(null)}
+     />
+    )}
+    {checkoutOpen && (
+     <CheckoutLinkModal
+      clientId={id!}
+      businessName={data.client.business_name}
+      onClose={() => setCheckoutOpen(false)}
      />
     )}
    </AnimatePresence>
@@ -615,11 +624,12 @@ const SUBSCRIPTION_OPTIONS = ['active', 'trialing', 'past_due', 'paused', 'cance
 const ACCOUNT_OPTIONS = ['active', 'paused', 'cancelled', 'pending'] as const
 
 function AdminActions({
- client, onPatch, onResetPassword,
+ client, onPatch, onResetPassword, onSendCheckout,
 }: {
  client: ClientDetail['client']
  onPatch: (updates: Record<string, any>) => Promise<any>
  onResetPassword: () => Promise<void>
+ onSendCheckout: () => void
 }) {
  const [busy, setBusy] = useState<string | null>(null)
  const [error, setError] = useState('')
@@ -729,6 +739,9 @@ function AdminActions({
 
     {/* Other actions */}
     <div className="border-t border-white/[0.06] pt-4 flex flex-wrap items-center gap-2">
+     <GhostButton onClick={onSendCheckout}>
+      <CreditCard className="w-4 h-4" /> Send checkout link
+     </GhostButton>
      <GhostButton onClick={onResetPassword} disabled={!client.owner}>
       <KeyRound className="w-4 h-4" /> Reset password
      </GhostButton>
@@ -819,6 +832,180 @@ function TempPasswordModal({
        <CheckCircle2 className="w-4 h-4" /> {copied ? 'Copied' : 'Copy'}
       </PrimaryButton>
      </div>
+    </div>
+   </motion.div>
+  </motion.div>
+ )
+}
+
+/* --------------------------- Checkout link modal --------------------------- */
+
+const CHECKOUT_PLANS: { id: 'starter' | 'full'; label: string; sub: string; amount: string }[] = [
+ { id: 'starter', label: 'Starter', sub: 'After-hours coverage', amount: '$499/mo' },
+ { id: 'full', label: 'Full 24/7', sub: 'Round-the-clock', amount: '$899/mo' },
+]
+
+function CheckoutLinkModal({
+ clientId, businessName, onClose,
+}: {
+ clientId: string
+ businessName: string
+ onClose: () => void
+}) {
+ const [plan, setPlan] = useState<'starter' | 'full'>('starter')
+ const [busy, setBusy] = useState(false)
+ const [error, setError] = useState('')
+ const [result, setResult] = useState<{
+  url: string; plan_label: string; amount: string
+ } | null>(null)
+ const [copied, setCopied] = useState<'url' | 'sms' | null>(null)
+
+ useEffect(() => {
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+  window.addEventListener('keydown', onKey)
+  return () => window.removeEventListener('keydown', onKey)
+ }, [onClose])
+
+ const generate = async () => {
+  setBusy(true); setError('')
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${clientId}/checkout-link`, {
+    method: 'POST',
+    body: JSON.stringify({ plan }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
+   setResult({ url: j.url, plan_label: j.plan_label, amount: j.amount })
+  } catch (e) {
+   setError(e instanceof Error ? e.message : 'Failed')
+  } finally {
+   setBusy(false)
+  }
+ }
+
+ const copy = async (kind: 'url' | 'sms', text: string) => {
+  try {
+   await navigator.clipboard?.writeText(text)
+   setCopied(kind)
+   setTimeout(() => setCopied(null), 1500)
+  } catch {}
+ }
+
+ const sampleSms = result
+  ? `Hey, this is the CloudGreet checkout link for ${businessName} — ${result.plan_label}, ${result.amount}. ${result.url}`
+  : ''
+
+ return (
+  <motion.div
+   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+   transition={{ duration: 0.25, ease: EASE }}
+   className="fixed inset-0 z-50 flex items-center justify-center px-4"
+  >
+   <button onClick={onClose} aria-label="Close" className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+   <motion.div
+    initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }}
+    transition={{ duration: 0.3, ease: EASE }}
+    className="relative bg-[#0c0c10] border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+   >
+    <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+     <div className="text-sm font-semibold text-white inline-flex items-center gap-2">
+      <CreditCard className="w-4 h-4 text-sky-400" /> Checkout link
+     </div>
+     <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-white/[0.06] transition-colors">
+      <X className="w-4 h-4 text-gray-400" />
+     </button>
+    </div>
+
+    <div className="px-6 py-5 space-y-4">
+     {!result ? (
+      <>
+       <p className="text-sm text-gray-400">
+        Generate a Stripe Checkout URL for{' '}
+        <span className="font-medium text-gray-200">{businessName}</span>. They land on
+        a hosted Stripe page, pay, and the subscription activates automatically via webhook.
+       </p>
+
+       <div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">Plan</div>
+        <div className="grid sm:grid-cols-2 gap-2">
+         {CHECKOUT_PLANS.map((p) => (
+          <button
+           key={p.id}
+           onClick={() => setPlan(p.id)}
+           className={`text-left p-3 rounded-xl border transition-all duration-300 ease-out ${
+            plan === p.id
+             ? 'border-sky-400/40 bg-sky-400/5'
+             : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]'
+           }`}
+          >
+           <div className="flex items-baseline justify-between">
+            <div className="text-sm font-medium text-white">{p.label}</div>
+            <div className="text-sm font-mono text-sky-300">{p.amount}</div>
+           </div>
+           <div className="text-xs text-gray-500 mt-1">{p.sub}</div>
+          </button>
+         ))}
+        </div>
+       </div>
+
+       {error && (
+        <div className="bg-rose-500/10 border border-rose-500/20 text-rose-200 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
+         <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+         <span>{error}</span>
+        </div>
+       )}
+
+       <div className="flex items-center justify-end gap-2 pt-1">
+        <GhostButton onClick={onClose}>Cancel</GhostButton>
+        <PrimaryButton onClick={generate} loading={busy}>
+         Generate link
+        </PrimaryButton>
+       </div>
+      </>
+     ) : (
+      <>
+       <div className="bg-emerald-500/10 border border-emerald-400/20 rounded-xl px-3 py-2 text-sm text-emerald-200 flex items-start gap-2">
+        <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <span>
+         Live link for <strong>{result.plan_label}</strong> · {result.amount}. Pasted into a message, the client clicks and pays.
+        </span>
+       </div>
+
+       <div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">Checkout URL</div>
+        <div className="flex items-center gap-2">
+         <div className="flex-1 bg-[#0a0a0c] border border-white/[0.08] rounded-xl px-3 py-2.5 font-mono text-xs text-gray-200 truncate">
+          {result.url}
+         </div>
+         <PrimaryButton onClick={() => copy('url', result.url)}>
+          <Copy className="w-4 h-4" /> {copied === 'url' ? 'Copied' : 'Copy'}
+         </PrimaryButton>
+        </div>
+       </div>
+
+       <div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">Sample SMS</div>
+        <div className="bg-[#0a0a0c] border border-white/[0.08] rounded-xl px-3 py-2.5 text-xs text-gray-300 leading-relaxed">
+         {sampleSms}
+        </div>
+        <div className="flex justify-end mt-2">
+         <GhostButton onClick={() => copy('sms', sampleSms)}>
+          <Copy className="w-4 h-4" /> {copied === 'sms' ? 'Copied' : 'Copy SMS'}
+         </GhostButton>
+        </div>
+       </div>
+
+       <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
+        <GhostButton onClick={onClose}>Done</GhostButton>
+        <a
+         href={result.url} target="_blank" rel="noreferrer"
+         className="inline-flex items-center justify-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 hover:text-white px-4 py-2 rounded-xl text-sm font-medium border border-white/[0.06] transition-all duration-300 ease-out"
+        >
+         <ExternalLink className="w-4 h-4" /> Preview
+        </a>
+       </div>
+      </>
+     )}
     </div>
    </motion.div>
   </motion.div>
