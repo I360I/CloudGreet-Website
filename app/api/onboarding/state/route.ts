@@ -14,7 +14,12 @@ export async function GET(request: NextRequest) {
  try {
   const authResult = await requireAuth(request)
   if (!authResult.success || !authResult.businessId) {
-   return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+   return NextResponse.json({
+    success: false,
+    error: !authResult.success
+     ? `Auth failed: ${authResult.error || 'unknown'}`
+     : 'No businessId in token',
+   }, { status: 401 })
   }
 
   const { data: business, error } = await supabaseAdmin

@@ -40,20 +40,18 @@ export function DashShell({
 
  const [needsSetup, setNeedsSetup] = useState(false)
 
- // Probe onboarding state. We do NOT force-redirect — contractors can look
- // around in demo mode while incomplete. We just surface a banner via
- // needsSetup. 401/403 still mean "stale token, send to /login."
+ // Probe onboarding state. We do NOT force-redirect on 401/403 because
+ // doing so creates a sign-in → API 401 → /login → sign-in loop whenever
+ // the API trips on something other than auth (missing column, missing
+ // businessId in JWT, etc). The middleware already handles real
+ // unauthenticated access; trusting it as the single source of truth
+ // means the dashboard fails open with an inline message instead of
+ // looping users out.
  useEffect(() => {
   let cancelled = false
   ;(async () => {
    try {
     const res = await fetchWithAuth('/api/onboarding/state')
-    if (res.status === 401 || res.status === 403) {
-     try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
-     localStorage.removeItem('user'); localStorage.removeItem('business'); localStorage.removeItem('token')
-     if (!cancelled) router.replace('/login')
-     return
-    }
     if (!res.ok) return
     const json = await res.json()
     if (!json?.success || !json.business || cancelled) return
