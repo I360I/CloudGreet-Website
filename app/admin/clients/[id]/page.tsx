@@ -6,12 +6,14 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
  ArrowLeft, Loader2, AlertCircle, Trash2, Mail, Phone as PhoneIcon,
- MapPin, Globe, ExternalLink, Bot, X, Play, ChevronRight,
+ MapPin, Globe, ExternalLink, Bot, X, Play, ChevronRight, Save,
+ KeyRound, CheckCircle2, Pencil, Pause, RotateCcw, Unlink,
 } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import {
- Panel, PanelHeader, Stat, StatusPill, GhostButton, DangerButton, Sparkline, RisingFade,
+ Panel, PanelHeader, Stat, StatusPill, GhostButton, DangerButton, PrimaryButton,
+ Input, Select, Sparkline, RisingFade,
 } from '../../_components/ui'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -93,9 +95,11 @@ export default function ClientDetailPage() {
  const id = params?.id
 
  const [data, setData] = useState<ClientDetail | null>(null)
+ const [warnings, setWarnings] = useState<string[]>([])
  const [loading, setLoading] = useState(true)
  const [error, setError] = useState('')
  const [openCall, setOpenCall] = useState<ClientDetail['activity']['calls']['recent'][number] | null>(null)
+ const [tempPassword, setTempPassword] = useState<string | null>(null)
 
  const load = async () => {
   if (!id) return
@@ -105,10 +109,35 @@ export default function ClientDetailPage() {
    const json = await res.json().catch(() => ({}))
    if (!res.ok || !json.success) throw new Error(json?.error || `Failed (${res.status})`)
    setData(json)
+   setWarnings(Array.isArray(json.warnings) ? json.warnings : [])
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to load client')
   } finally {
    setLoading(false)
+  }
+ }
+
+ const patch = async (updates: Record<string, any>) => {
+  const res = await fetchWithAuth(`/api/admin/clients/${id}`, {
+   method: 'PATCH',
+   body: JSON.stringify(updates),
+  })
+  const j = await res.json().catch(() => ({}))
+  if (!res.ok || !j.success) throw new Error(j?.error || 'Update failed')
+  // Refresh from the server so all derived UI is consistent.
+  await load()
+  return j.client
+ }
+
+ const resetPassword = async () => {
+  if (!confirm('Generate a new temporary password for this client? The current one becomes invalid immediately.')) return
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${id}/reset-password`, { method: 'POST' })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Reset failed')
+   setTempPassword(j.password)
+  } catch (e) {
+   alert(e instanceof Error ? e.message : 'Reset failed')
   }
  }
 
@@ -234,8 +263,31 @@ export default function ClientDetailPage() {
       ))}
      </motion.div>
 
+     {warnings.length > 0 && (
+      <RisingFade>
+       <div className="mb-3 bg-amber-500/10 border border-amber-400/20 rounded-2xl px-4 py-3 text-sm text-amber-200 flex items-start gap-3">
+        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+         <span className="font-medium">Loaded with warnings.</span>
+         <ul className="mt-1 space-y-0.5 text-xs text-amber-200/80 font-mono">
+          {warnings.map((w, i) => <li key={i}>· {w}</li>)}
+         </ul>
+        </div>
+       </div>
+      </RisingFade>
+     )}
+
+     {/* Admin actions */}
+     <RisingFade>
+      <AdminActions
+       client={client}
+       onPatch={patch}
+       onResetPassword={resetPassword}
+      />
+     </RisingFade>
+
      {/* Two-column: calls + appointments */}
-     <div className="grid lg:grid-cols-2 gap-3 mb-3">
+     <div className="grid lg:grid-cols-2 gap-3 mb-3 mt-3">
       <RisingFade>
        <RecentCalls calls={activity.calls.recent} onOpen={(c) => setOpenCall(c)} />
       </RisingFade>
@@ -272,6 +324,13 @@ export default function ClientDetailPage() {
    {/* Call detail drawer */}
    <AnimatePresence>
     {openCall && <CallDrawer call={openCall} onClose={() => setOpenCall(null)} />}
+    {tempPassword && (
+     <TempPasswordModal
+      password={tempPassword}
+      ownerEmail={data.client.owner?.email || null}
+      onClose={() => setTempPassword(null)}
+     />
+    )}
    </AnimatePresence>
   </AdminShell>
  )
@@ -548,4 +607,220 @@ function fmtDateTime(iso: string): string {
   month: 'short', day: 'numeric',
   hour: 'numeric', minute: '2-digit',
  })
+}
+
+/* --------------------------- Admin actions --------------------------- */
+
+const SUBSCRIPTION_OPTIONS = ['active', 'trialing', 'past_due', 'paused', 'cancelled', 'inactive'] as const
+const ACCOUNT_OPTIONS = ['active', 'paused', 'cancelled', 'pending'] as const
+
+function AdminActions({
+ client, onPatch, onResetPassword,
+}: {
+ client: ClientDetail['client']
+ onPatch: (updates: Record<string, any>) => Promise<any>
+ onResetPassword: () => Promise<void>
+}) {
+ const [busy, setBusy] = useState<string | null>(null)
+ const [error, setError] = useState('')
+ const [savedFlag, setSavedFlag] = useState<string | null>(null)
+
+ // local edit state for inline name field
+ const [name, setName] = useState(client.business_name)
+ const [editName, setEditName] = useState(false)
+
+ useEffect(() => { setName(client.business_name); setEditName(false) }, [client.business_name])
+
+ const run = async (key: string, fn: () => Promise<void>) => {
+  setBusy(key); setError(''); setSavedFlag(null)
+  try {
+   await fn()
+   setSavedFlag(key)
+   setTimeout(() => setSavedFlag(null), 2000)
+  } catch (e) {
+   setError(e instanceof Error ? e.message : 'Failed')
+  } finally {
+   setBusy(null)
+  }
+ }
+
+ const setSubscription = (status: string) =>
+  run(`sub:${status}`, async () => { await onPatch({ subscription_status: status }) })
+
+ const toggleOnboarding = () =>
+  run('onboarding', async () => { await onPatch({ onboarding_completed: !client.onboarding_completed }) })
+
+ const disconnectCalcom = () =>
+  run('calcom', async () => {
+   if (!confirm('Disconnect Cal.com? This clears the API key + webhook from this client; they\'ll need to reconnect to take bookings.')) {
+    throw new Error('cancelled')
+   }
+   const res = await fetchWithAuth('/api/onboarding/calcom', { method: 'DELETE' })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
+   await onPatch({}) // triggers a fresh load via the parent
+  })
+
+ const saveName = () =>
+  run('name', async () => {
+   const trimmed = name.trim()
+   if (!trimmed || trimmed === client.business_name) return
+   await onPatch({ business_name: trimmed })
+   setEditName(false)
+  })
+
+ return (
+  <Panel>
+   <PanelHeader title="Admin actions" eyebrow="Manage" />
+   <div className="space-y-4">
+    {/* Business name inline edit */}
+    <div className="flex items-center gap-3 flex-wrap">
+     <div className="flex-1 min-w-0">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">Business name</div>
+      {editName ? (
+       <div className="flex items-center gap-2">
+        <Input value={name} onChange={(e) => setName(e.target.value)} />
+        <PrimaryButton onClick={saveName} loading={busy === 'name'}>
+         <Save className="w-4 h-4" /> Save
+        </PrimaryButton>
+        <GhostButton onClick={() => { setName(client.business_name); setEditName(false) }}>
+         Cancel
+        </GhostButton>
+       </div>
+      ) : (
+       <div className="flex items-center gap-2">
+        <span className="text-sm text-white font-medium">{client.business_name}</span>
+        <button
+         onClick={() => setEditName(true)}
+         className="text-gray-500 hover:text-white transition-colors"
+         aria-label="Edit business name"
+        >
+         <Pencil className="w-3.5 h-3.5" />
+        </button>
+       </div>
+      )}
+     </div>
+    </div>
+
+    {/* Subscription status row */}
+    <div>
+     <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">Subscription status</div>
+     <div className="flex flex-wrap gap-2">
+      {SUBSCRIPTION_OPTIONS.map((s) => {
+       const active = (client.subscription_status || 'inactive') === s
+       return (
+        <button
+         key={s}
+         onClick={() => setSubscription(s)}
+         disabled={busy === `sub:${s}` || active}
+         className={`text-xs px-2.5 py-1 rounded-full border transition-all duration-300 ease-out ${
+          active
+           ? 'bg-sky-400/10 text-sky-300 border-sky-400/20'
+           : 'bg-white/[0.03] text-gray-400 border-white/[0.06] hover:text-white hover:bg-white/[0.06]'
+         }`}
+        >
+         {s === 'paused' ? <Pause className="w-3 h-3 inline mr-1" /> : null}
+         {s}
+        </button>
+       )
+      })}
+     </div>
+    </div>
+
+    {/* Other actions */}
+    <div className="border-t border-white/[0.06] pt-4 flex flex-wrap items-center gap-2">
+     <GhostButton onClick={onResetPassword} disabled={!client.owner}>
+      <KeyRound className="w-4 h-4" /> Reset password
+     </GhostButton>
+     <GhostButton onClick={toggleOnboarding} disabled={busy === 'onboarding'}>
+      <RotateCcw className="w-4 h-4" />
+      {client.onboarding_completed ? 'Re-open onboarding' : 'Mark onboarding done'}
+     </GhostButton>
+     {client.calcom_connected && (
+      <GhostButton onClick={disconnectCalcom} disabled={busy === 'calcom'}>
+       <Unlink className="w-4 h-4" /> Disconnect Cal.com
+      </GhostButton>
+     )}
+    </div>
+
+    {savedFlag && (
+     <div className="text-xs text-emerald-400 flex items-center gap-1.5">
+      <CheckCircle2 className="w-3.5 h-3.5" /> Saved.
+     </div>
+    )}
+    {error && error !== 'cancelled' && (
+     <div className="text-xs text-rose-400 flex items-center gap-1.5">
+      <AlertCircle className="w-3.5 h-3.5" /> {error}
+     </div>
+    )}
+   </div>
+  </Panel>
+ )
+}
+
+/* --------------------------- Temp password modal --------------------------- */
+
+function TempPasswordModal({
+ password, ownerEmail, onClose,
+}: {
+ password: string
+ ownerEmail: string | null
+ onClose: () => void
+}) {
+ const [copied, setCopied] = useState(false)
+
+ useEffect(() => {
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+  window.addEventListener('keydown', onKey)
+  return () => window.removeEventListener('keydown', onKey)
+ }, [onClose])
+
+ const copy = async () => {
+  try {
+   await navigator.clipboard?.writeText(password)
+   setCopied(true)
+   setTimeout(() => setCopied(false), 1500)
+  } catch {}
+ }
+
+ return (
+  <motion.div
+   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+   transition={{ duration: 0.25, ease: EASE }}
+   className="fixed inset-0 z-50 flex items-center justify-center px-4"
+  >
+   <button onClick={onClose} aria-label="Close" className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+   <motion.div
+    initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }}
+    transition={{ duration: 0.3, ease: EASE }}
+    className="relative bg-[#0c0c10] border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-md"
+   >
+    <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+     <div className="text-sm font-semibold text-white inline-flex items-center gap-2">
+      <KeyRound className="w-4 h-4 text-sky-400" /> Temporary password
+     </div>
+     <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-white/[0.06] transition-colors">
+      <X className="w-4 h-4 text-gray-400" />
+     </button>
+    </div>
+    <div className="px-6 py-5 space-y-4">
+     <p className="text-sm text-gray-400">
+      Shown <span className="font-medium text-amber-300">once</span>. Copy it now and send it to the client securely (Signal, in-person). The hash is stored on the user; the plaintext is not.
+     </p>
+     {ownerEmail && (
+      <div className="text-xs font-mono text-gray-500">For: <span className="text-gray-300">{ownerEmail}</span></div>
+     )}
+     <div className="bg-[#0a0a0c] border border-white/[0.08] rounded-xl px-4 py-3 font-mono text-lg text-white tracking-wide select-all break-all">
+      {password}
+     </div>
+     <div className="flex items-center justify-end gap-2">
+      <GhostButton onClick={onClose}>Done</GhostButton>
+      <PrimaryButton onClick={copy}>
+       <CheckCircle2 className="w-4 h-4" /> {copied ? 'Copied' : 'Copy'}
+      </PrimaryButton>
+     </div>
+    </div>
+   </motion.div>
+  </motion.div>
+ )
 }

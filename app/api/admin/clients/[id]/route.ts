@@ -8,175 +8,221 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * Admin Client Detail API
- * 
- * GET /api/admin/clients/:id - Get detailed client information with full activity
+ * Admin Client Detail
+ *
+ * Per-query try/catch so one missing table or schema mismatch never
+ * blanks the whole detail page. Anything that fails contributes to a
+ * `warnings` array but the response stays 200/success: true with
+ * whatever data we did manage to fetch.
  */
 export async function GET(
  request: NextRequest,
- { params }: { params: { id: string } }
+ { params }: { params: { id: string } },
 ) {
  try {
- // Verify admin authentication
- const adminAuth = await requireAdmin(request)
- if (!adminAuth.success) {
- return NextResponse.json(
- { error: 'Unauthorized - Admin access required' },
- { status: 401 }
- )
- }
+  const adminAuth = await requireAdmin(request)
+  if (!adminAuth.success) {
+   return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 401 })
+  }
 
- const clientId = params.id
+  const clientId = params.id
+  const warnings: string[] = []
 
- // Get business details
- const { data: business, error: businessError } = await supabaseAdmin
- .from('businesses')
- .select('*')
- .eq('id', clientId)
- .single()
+  // Business is required — without it there's nothing to show.
+  const { data: business, error: businessError } = await supabaseAdmin
+   .from('businesses')
+   .select('*')
+   .eq('id', clientId)
+   .maybeSingle()
 
- if (businessError || !business) {
- return NextResponse.json(
- { error: 'Client not found' },
- { status: 404 }
- )
- }
+  if (businessError || !business) {
+   logger.error('Admin detail: business missing', {
+    clientId, error: businessError?.message,
+   })
+   return NextResponse.json(
+    { error: businessError?.message || 'Client not found' },
+    { status: businessError ? 500 : 404 },
+   )
+  }
 
- // Get owner/user details. Auth lives in custom_users; the legacy
- // 'users' table may not have a matching row.
- const { data: ownerRow } = await supabaseAdmin
- .from('custom_users')
- .select('id, email, first_name, last_name, phone, created_at, last_login')
- .eq('id', business.owner_id)
- .maybeSingle()
- const owner = ownerRow ? {
-  id: ownerRow.id,
-  email: ownerRow.email,
-  name: [ownerRow.first_name, ownerRow.last_name].filter(Boolean).join(' ') || null,
-  phone: ownerRow.phone || null,
-  created_at: ownerRow.created_at,
-  last_login: ownerRow.last_login,
- } : null
+  // Owner — auth lives in custom_users.
+  let owner: any = null
+  try {
+   const { data: ownerRow } = await supabaseAdmin
+    .from('custom_users')
+    .select('id, email, first_name, last_name, phone, created_at, last_login')
+    .eq('id', business.owner_id)
+    .maybeSingle()
+   if (ownerRow) {
+    owner = {
+     id: ownerRow.id,
+     email: ownerRow.email,
+     name: [ownerRow.first_name, ownerRow.last_name].filter(Boolean).join(' ') || null,
+     phone: ownerRow.phone || null,
+     created_at: ownerRow.created_at,
+     last_login: ownerRow.last_login,
+    }
+   }
+  } catch (e) {
+   warnings.push(`owner: ${e instanceof Error ? e.message : 'Unknown'}`)
+  }
 
- // Get recent calls (last 20)
- const { data: recentCalls } = await supabaseAdmin
- .from('calls')
- .select('id, call_id, from_number, to_number, duration, status, recording_url, transcript, created_at, caller_name')
- .eq('business_id', clientId)
- .order('created_at', { ascending: false })
- .limit(20)
+  // Recent calls
+  let recentCalls: any[] = []
+  let totalCalls = 0
+  let answeredCalls = 0
+  let missedCalls = 0
+  try {
+   const { data } = await supabaseAdmin
+    .from('calls')
+    .select('id, call_id, from_number, to_number, duration, status, recording_url, transcript, created_at, caller_name')
+    .eq('business_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(20)
+   recentCalls = data || []
 
- // Get recent appointments (last 20)
- const { data: recentAppointments } = await supabaseAdmin
- .from('appointments')
- .select('id, customer_name, customer_phone, service_type, scheduled_date, status, estimated_value, actual_value')
- .eq('business_id', clientId)
- .order('scheduled_date', { ascending: false })
- .limit(20)
+   const counts = await Promise.all([
+    supabaseAdmin.from('calls').select('id', { count: 'exact', head: true }).eq('business_id', clientId),
+    supabaseAdmin.from('calls').select('id', { count: 'exact', head: true }).eq('business_id', clientId).eq('status', 'answered'),
+    supabaseAdmin.from('calls').select('id', { count: 'exact', head: true }).eq('business_id', clientId).eq('status', 'missed'),
+   ])
+   totalCalls = counts[0].count || 0
+   answeredCalls = counts[1].count || 0
+   missedCalls = counts[2].count || 0
+  } catch (e) {
+   warnings.push(`calls: ${e instanceof Error ? e.message : 'Unknown'}`)
+  }
 
- // Get call statistics
- const { count: totalCalls } = await supabaseAdmin
- .from('calls')
- .select('id', { count: 'exact', head: true })
- .eq('business_id', clientId)
+  // Recent appointments
+  let recentAppointments: any[] = []
+  let totalAppointments = 0
+  let completedAppointments = 0
+  let totalRevenue = 0
+  try {
+   const { data } = await supabaseAdmin
+    .from('appointments')
+    .select('id, customer_name, customer_phone, service_type, scheduled_date, status, estimated_value, actual_value')
+    .eq('business_id', clientId)
+    .order('scheduled_date', { ascending: false })
+    .limit(20)
+   recentAppointments = data || []
 
- const { count: answeredCalls } = await supabaseAdmin
- .from('calls')
- .select('id', { count: 'exact', head: true })
- .eq('business_id', clientId)
- .eq('status', 'answered')
+   const apptCounts = await Promise.all([
+    supabaseAdmin.from('appointments').select('id', { count: 'exact', head: true }).eq('business_id', clientId),
+    supabaseAdmin.from('appointments').select('id', { count: 'exact', head: true }).eq('business_id', clientId).eq('status', 'completed'),
+   ])
+   totalAppointments = apptCounts[0].count || 0
+   completedAppointments = apptCounts[1].count || 0
 
- const { count: missedCalls } = await supabaseAdmin
- .from('calls')
- .select('id', { count: 'exact', head: true })
- .eq('business_id', clientId)
- .eq('status', 'missed')
+   const { data: rev } = await supabaseAdmin
+    .from('appointments')
+    .select('estimated_value, actual_value')
+    .eq('business_id', clientId)
+   totalRevenue = (rev || []).reduce((sum, apt) => {
+    const v = parseFloat(apt.actual_value?.toString() || '0') || parseFloat(apt.estimated_value?.toString() || '0') || 0
+    return sum + v
+   }, 0)
+  } catch (e) {
+   warnings.push(`appointments: ${e instanceof Error ? e.message : 'Unknown'}`)
+  }
 
- // Get appointment statistics
- const { count: totalAppointments } = await supabaseAdmin
- .from('appointments')
- .select('id', { count: 'exact', head: true })
- .eq('business_id', clientId)
+  // AI agent (optional table — may not exist)
+  let aiAgent: any = null
+  try {
+   const { data } = await supabaseAdmin
+    .from('ai_agents')
+    .select('id, agent_name, status, retell_agent_id, phone_number, created_at')
+    .eq('business_id', clientId)
+    .maybeSingle()
+   aiAgent = data || null
+  } catch (e) {
+   // ai_agents may not exist; this is fine.
+  }
 
- const { count: completedAppointments } = await supabaseAdmin
- .from('appointments')
- .select('id', { count: 'exact', head: true })
- .eq('business_id', clientId)
- .eq('status', 'completed')
-
- // Calculate revenue using SQL aggregation (much more efficient)
- const { data: revenueData } = await supabaseAdmin.rpc('calculate_business_revenue', {
- p_business_id: clientId
- }).catch(async () => {
- // Fallback: If RPC doesn't exist, use optimized SQL query with SUM
- const { data } = await supabaseAdmin
- .from('appointments')
- .select('estimated_value, actual_value')
- .eq('business_id', clientId)
- 
- const total = data?.reduce((sum, apt) => {
- return sum + (parseFloat(apt.actual_value?.toString() || '0') || parseFloat(apt.estimated_value?.toString() || '0'))
- }, 0) || 0
- 
- return { data: [{ total_revenue: total }] }
- })
-
- const totalRevenue = revenueData?.[0]?.total_revenue || 0
-
- // Get AI agent info
- const { data: aiAgent } = await supabaseAdmin
- .from('ai_agents')
- .select('id, agent_name, status, retell_agent_id, phone_number, created_at')
- .eq('business_id', clientId)
- .single()
-
- return NextResponse.json({
- success: true,
- client: {
- ...business,
- owner
- },
- activity: {
- calls: {
- total: totalCalls || 0,
- answered: answeredCalls || 0,
- missed: missedCalls || 0,
- recent: recentCalls || []
- },
- appointments: {
- total: totalAppointments || 0,
- completed: completedAppointments || 0,
- recent: recentAppointments || []
- },
- revenue: {
- total: Math.round(totalRevenue * 100) / 100
- }
- },
- aiAgent: aiAgent || null
- })
-
+  return NextResponse.json({
+   success: true,
+   client: { ...business, owner },
+   activity: {
+    calls: { total: totalCalls, answered: answeredCalls, missed: missedCalls, recent: recentCalls },
+    appointments: { total: totalAppointments, completed: completedAppointments, recent: recentAppointments },
+    revenue: { total: Math.round(totalRevenue * 100) / 100 },
+   },
+   aiAgent,
+   warnings: warnings.length ? warnings : undefined,
+  })
  } catch (error) {
- logger.error('Failed to fetch client detail', {
- error: error instanceof Error ? error.message : 'Unknown error',
- clientId: params.id
- })
- return NextResponse.json(
- { error: 'Failed to fetch client details' },
- { status: 500 }
- )
+  logger.error('Failed to fetch client detail', {
+   error: error instanceof Error ? error.message : 'Unknown error',
+   clientId: params.id,
+  })
+  return NextResponse.json(
+   { error: error instanceof Error ? error.message : 'Failed to fetch client details' },
+   { status: 500 },
+  )
  }
 }
 
+/**
+ * PATCH — admin can edit business profile + status fields without
+ * routing through the client-side update flow. Whitelist for safety.
+ */
+export async function PATCH(
+ request: NextRequest,
+ { params }: { params: { id: string } },
+) {
+ try {
+  const adminAuth = await requireAdmin(request)
+  if (!adminAuth.success) {
+   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const body = await request.json().catch(() => null)
+  if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+
+  const ALLOWED: Record<string, true> = {
+   business_name: true,
+   business_type: true,
+   email: true,
+   phone_number: true,
+   subscription_status: true,
+   account_status: true,
+   onboarding_completed: true,
+   greeting_message: true,
+   ai_tone: true,
+   services: true,
+  }
+  const update: Record<string, any> = {}
+  for (const k of Object.keys(body)) {
+   if (ALLOWED[k]) update[k] = body[k]
+  }
+  if (Object.keys(update).length === 0) {
+   return NextResponse.json({ error: 'No editable fields' }, { status: 400 })
+  }
+  update.updated_at = new Date().toISOString()
+
+  const { data, error } = await supabaseAdmin
+   .from('businesses')
+   .update(update)
+   .eq('id', params.id)
+   .select('*')
+   .maybeSingle()
+
+  if (error) {
+   return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+  return NextResponse.json({ success: true, client: data })
+ } catch (e) {
+  logger.error('Admin client PATCH failed', { error: e instanceof Error ? e.message : 'Unknown' })
+  return NextResponse.json({ error: 'Failed to update client' }, { status: 500 })
+ }
+}
 
 /**
  * Admin Delete Client - hard delete a business + owner user.
- * Sequentially clears child tables (best-effort), drops Cal.com webhook,
- * then removes the business and the owner. Reports any failed step in
- * the response so admin can clean up manually if needed.
  */
 export async function DELETE(
  request: NextRequest,
- { params }: { params: { id: string } }
+ { params }: { params: { id: string } },
 ) {
  try {
   const adminAuth = await requireAdmin(request)
@@ -196,13 +242,10 @@ export async function DELETE(
    return NextResponse.json({ error: "Client not found" }, { status: 404 })
   }
 
-  // Best-effort Cal.com webhook teardown
   if (business.cal_com_api_key && business.cal_com_webhook_id) {
    await deleteWebhook(business.cal_com_api_key, business.cal_com_webhook_id)
   }
 
-  // Sequentially clear child rows. We dont fail the delete if a table
-  // doesnt exist or has zero rows; we collect errors and report them.
   const childTables = [
    "calls", "appointments", "phone_numbers", "sms_messages",
    "messages", "notes", "tags", "notifications",
@@ -221,8 +264,6 @@ export async function DELETE(
    }
   }
 
-  // Delete owner + any user rows still pointing at this business BEFORE the
-  // business row, otherwise custom_users.business_id FK blocks the delete.
   const { error: uByBizErr } = await supabaseAdmin
    .from("custom_users").delete().eq("business_id", clientId)
   if (uByBizErr && !isMissingTable(uByBizErr)) {
@@ -236,7 +277,6 @@ export async function DELETE(
    }
   }
 
-  // Delete the business itself.
   const { error: bDelErr } = await supabaseAdmin
    .from("businesses").delete().eq("id", clientId)
   if (bDelErr) {
@@ -267,4 +307,3 @@ export async function DELETE(
   return NextResponse.json({ error: "Failed to delete client" }, { status: 500 })
  }
 }
-
