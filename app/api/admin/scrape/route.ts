@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import { SCRAPER_SOURCES, getSource } from '@/lib/scrapers/registry'
 import { runScrapeJob } from '@/lib/scrapers/runner'
+import { isGooglePlacesConfigured } from '@/lib/scrapers/google-places'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -42,6 +43,9 @@ export async function GET(request: NextRequest) {
     description: s.description,
     trade: s.trade,
    })),
+   enrichment: {
+    google_places: isGooglePlacesConfigured(),
+   },
   })
  } catch (e) {
   logger.error('scrape GET failed', { error: e instanceof Error ? e.message : 'Unknown' })

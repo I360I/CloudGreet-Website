@@ -58,6 +58,7 @@ export default function ScraperPage() {
  const [error, setError] = useState('')
  const [migrationRequired, setMigrationRequired] = useState(false)
  const [openJob, setOpenJob] = useState<Job | null>(null)
+ const [googleConfigured, setGoogleConfigured] = useState(true)
 
  // New-job form state
  const [running, setRunning] = useState(false)
@@ -76,6 +77,7 @@ export default function ScraperPage() {
    }
    setSources(json.sources || [])
    setJobs(json.jobs || [])
+   setGoogleConfigured(json.enrichment?.google_places ?? false)
    if (!sourceId && json.sources?.length) setSourceId(json.sources[0].id)
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to load')
@@ -167,7 +169,27 @@ export default function ScraperPage() {
         Pull verified Texas contractors from public licensing databases. Results land in a staging table — review them, then promote selected records into the leads pipeline.
        </p>
       </div>
+      <div className={`text-[10px] font-mono uppercase tracking-wider px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 self-start ${
+       googleConfigured
+        ? 'bg-emerald-400/10 text-emerald-300 border-emerald-400/20'
+        : 'bg-amber-400/10 text-amber-300 border-amber-400/20'
+      }`}>
+       <span className={`w-1.5 h-1.5 rounded-full ${googleConfigured ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+       google places · {googleConfigured ? 'connected' : 'missing'}
+      </div>
      </div>
+
+     {!googleConfigured && (
+      <div className="mb-3 bg-amber-500/10 border border-amber-400/20 rounded-2xl px-4 py-3 text-sm text-amber-200 flex items-start gap-3">
+       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+       <div>
+        <span className="font-medium">Phone &amp; website enrichment is off.</span>{' '}
+        <span className="text-amber-200/80">
+         GOOGLE_PLACES_API_KEY isn&apos;t reaching the runtime. Check it&apos;s enabled for the Production environment in Vercel and redeploy. Scrapes will still run but won&apos;t fill in phones.
+        </span>
+       </div>
+      </div>
+     )}
 
      {/* Run job */}
      <Panel className="mb-3">
