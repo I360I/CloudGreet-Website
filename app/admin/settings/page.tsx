@@ -20,6 +20,7 @@ import { useToast } from '@/app/contexts/ToastContext'
 import { Modal } from '@/app/components/ui/Modal'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { IntegrationConfig, IntegrationSlug } from '@/lib/integrations/config'
+import { AdminShell } from '@/app/admin/_components/Shell'
 
 interface FieldState {
  key: string
@@ -585,7 +586,7 @@ export default function OwnerSettingsPage() {
  }
 
  return (
- <div className="min-h-screen via-black text-white">
+ <AdminShell activeLabel="Tools">
  <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12 space-y-10">
  <header className="max-w-4xl space-y-5">
  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.4em] text-slate-300">
@@ -1112,7 +1113,7 @@ export default function OwnerSettingsPage() {
  </div>
  )}
  </Modal>
- </div>
+ </AdminShell>
  )
 }
 

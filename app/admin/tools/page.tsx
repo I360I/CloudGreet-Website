@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Database, Wand2, ArrowUpRight } from 'lucide-react'
+import { Database, Wand2, ArrowUpRight, Plug } from 'lucide-react'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
 
@@ -9,8 +9,14 @@ const TOOLS: { href: string; label: string; description: string; icon: React.Ele
  {
   href: '/admin/tools/scraper',
   label: 'Lead scraper',
-  description: 'Pull verified Texas contractors from public licensing databases. HVAC, electrical, plumbing, pest control.',
+  description: 'Pull verified Texas contractors from public licensing databases. HVAC, electrical, plumbing, pest control, plus Google Places for roofing/painting/handyman/landscaping.',
   icon: Database,
+ },
+ {
+  href: '/admin/settings',
+  label: 'Integrations',
+  description: 'Connect Stripe, Twilio, Retell, OpenAI, and other providers. Credential health is checked live.',
+  icon: Plug,
  },
 ]
 
