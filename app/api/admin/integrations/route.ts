@@ -118,17 +118,23 @@ export async function GET(request: NextRequest) {
  .select('*')
 
  if (error) {
- logger.error('Failed to load integration credentials', { 
+ logger.warn('Failed to load integration credentials', {
  error: error.message,
  code: error.code,
  details: error.details,
- hint: error.hint
+ hint: error.hint,
  })
- // If table doesn't exist, return empty array instead of error
- if (error.code === '42P01' || error.message?.includes('does not exist')) {
+ // Treat any "table missing / schema cache miss" as "no creds yet" — the
+ // page renders the integration list with empty values and lets the admin
+ // enter them. Real DB outages still 500.
+ const missingTable =
+ error.code === '42P01' ||
+ error.code === 'PGRST205' ||
+ /Could not find the table|does not exist|schema cache/i.test(error.message || '')
+ if (missingTable) {
  return NextResponse.json({
  success: true,
- integrations: []
+ integrations: mapIntegrationsResponse([]),
  })
  }
  return NextResponse.json({ error: 'Failed to load integration credentials' }, { status: 500 })

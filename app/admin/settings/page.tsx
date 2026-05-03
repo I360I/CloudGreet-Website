@@ -237,8 +237,9 @@ export default function OwnerSettingsPage() {
  })
  setProspectingLastSync(data.lastSync ?? null)
  } catch (err) {
+ // Prospecting filters API isn't built yet — fail quietly instead of toasting on every load.
  const message = err instanceof Error ? err.message : 'Failed to load filters'
- showError('Failed to load prospecting filters', message)
+ console.warn('Prospecting filters unavailable:', message)
  } finally {
  setProspectingFiltersLoading(false)
  }
@@ -287,8 +288,11 @@ export default function OwnerSettingsPage() {
  additionalInstructions: data.settings.additionalInstructions ?? ''
  })
  } catch (err) {
+ // Per-business AI tuning lives on the client detail page now — admin
+ // accounts have no businessId so this endpoint legitimately 401s.
+ // Quiet warning instead of a toast.
  const message = err instanceof Error ? err.message : 'Failed to load AI settings'
- showError('Failed to load AI tuning controls', message)
+ console.warn('AI tuning unavailable at admin scope:', message)
  } finally {
  setAiSettingsLoading(false)
  }
