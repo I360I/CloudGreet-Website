@@ -48,9 +48,18 @@ export async function GET(request: NextRequest) {
  let currentPeriodStart: string | null = null
  let cancelAtPeriodEnd = false
  let mrrCents = 0
+ let listPriceCents = 0
  let nextInvoiceDate: string | null = null
  let nextInvoiceAmountCents = 0
  let portalUrl: string | null = null
+ let discount: {
+   percentOff: number | null
+   amountOffCents: number | null
+   durationLabel: string | null
+   endsAt: string | null
+   promotionCode: string | null
+ } | null = null
+ let trialEndsAt: string | null = null
 
  if (business.stripe_customer_id && process.env.STRIPE_SECRET_KEY) {
  try {
@@ -74,11 +83,37 @@ export async function GET(request: NextRequest) {
  currentPeriodEnd = new Date(activeSubscription.current_period_end * 1000).toISOString()
  currentPeriodStart = new Date(activeSubscription.current_period_start * 1000).toISOString()
  cancelAtPeriodEnd = activeSubscription.cancel_at_period_end || false
+ trialEndsAt = activeSubscription.trial_end
+   ? new Date(activeSubscription.trial_end * 1000).toISOString()
+   : null
 
- // Calculate MRR
+ // Plan list price (what they'll pay once any discount/trial expires)
  const price = activeSubscription.items.data[0]?.price
  if (price) {
+ listPriceCents = price.unit_amount || 0
  mrrCents = price.unit_amount || 0
+ }
+
+ // Active discount (e.g. 100% off promo) — shape it for the UI so we
+ // can show "Free for the first month" or similar in plain English.
+ const subDiscount = (activeSubscription as any).discount
+ if (subDiscount?.coupon) {
+   const c = subDiscount.coupon
+   const dur =
+     c.duration === 'forever' ? 'Forever'
+     : c.duration === 'once' ? 'For the first month'
+     : c.duration === 'repeating' && c.duration_in_months
+       ? `For the first ${c.duration_in_months} month${c.duration_in_months === 1 ? '' : 's'}`
+       : null
+   discount = {
+     percentOff: c.percent_off ?? null,
+     amountOffCents: c.amount_off ?? null,
+     durationLabel: dur,
+     endsAt: subDiscount.end ? new Date(subDiscount.end * 1000).toISOString() : null,
+     promotionCode: subDiscount.promotion_code
+       ? (typeof subDiscount.promotion_code === 'string' ? subDiscount.promotion_code : null)
+       : null,
+   }
  }
 
  // Get upcoming invoice
@@ -134,9 +169,12 @@ export async function GET(request: NextRequest) {
  billing: {
  subscriptionStatus,
  mrrCents,
+ listPriceCents,
  currentPeriodStart,
  currentPeriodEnd,
  cancelAtPeriodEnd,
+ trialEndsAt,
+ discount,
  nextInvoiceDate,
  nextInvoiceAmountCents,
  bookingFeesLast30DaysCents,

@@ -10,9 +10,18 @@ import { DashShell } from '../_components/Shell'
 type BillingData = {
  subscriptionStatus: string
  mrrCents: number
+ listPriceCents?: number
  currentPeriodStart: string | null
  currentPeriodEnd: string | null
  cancelAtPeriodEnd: boolean
+ trialEndsAt?: string | null
+ discount?: {
+  percentOff: number | null
+  amountOffCents: number | null
+  durationLabel: string | null
+  endsAt: string | null
+  promotionCode: string | null
+ } | null
  nextInvoiceDate: string | null
  nextInvoiceAmountCents: number
  portalUrl: string | null
@@ -90,15 +99,14 @@ export default function BillingPage() {
        <StatusCard billing={billing} openingPortal={openingPortal} onOpenPortal={openPortal} />
 
        <div className="grid sm:grid-cols-2 gap-3 mt-3">
-        <SummaryCard
-         label="Monthly subscription"
-         value={formatCurrency(billing.mrrCents)}
-         hint="per month, flat — no per-booking fees"
-         icon={CreditCard}
-        />
+        <SubscriptionCard billing={billing} />
         <SummaryCard
          label="Next invoice"
-         value={billing.nextInvoiceAmountCents > 0 ? formatCurrency(billing.nextInvoiceAmountCents) : '—'}
+         value={
+          billing.nextInvoiceAmountCents > 0
+           ? formatCurrency(billing.nextInvoiceAmountCents)
+           : (billing.discount || billing.subscriptionStatus === 'trialing' ? formatCurrency(0) : '—')
+         }
          hint={billing.nextInvoiceDate ? formatDate(billing.nextInvoiceDate) : 'No upcoming invoice'}
          icon={Calendar}
         />
@@ -162,6 +170,50 @@ function StatusCard({
      <span className="text-xs text-gray-400">Contact support to manage subscription</span>
     )}
    </div>
+  </div>
+ )
+}
+
+function SubscriptionCard({ billing }: { billing: BillingData }) {
+ const list = billing.listPriceCents ?? billing.mrrCents
+ const hasDiscount = !!billing.discount && (billing.discount.percentOff || billing.discount.amountOffCents)
+ const isFree100 = billing.discount?.percentOff === 100
+ const trialing = billing.subscriptionStatus === 'trialing'
+
+ // What the customer is effectively paying right now this period
+ const effectiveCents = isFree100 ? 0 : (hasDiscount && billing.discount?.percentOff
+  ? Math.max(0, Math.round(list * (1 - billing.discount.percentOff / 100)))
+  : (hasDiscount && billing.discount?.amountOffCents
+   ? Math.max(0, list - billing.discount.amountOffCents)
+   : list))
+
+ const showStrikethrough = (hasDiscount || trialing) && list > 0 && effectiveCents !== list
+
+ const subline =
+  hasDiscount && billing.discount?.durationLabel
+   ? `${billing.discount.durationLabel}${billing.discount?.promotionCode ? ` · code ${billing.discount.promotionCode}` : ''}`
+   : trialing && billing.trialEndsAt
+    ? `Free until ${formatDate(billing.trialEndsAt)}`
+    : 'per month, flat — no per-booking fees'
+
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl p-6">
+   <div className="flex items-center gap-2 mb-2">
+    <CreditCard className="w-4 h-4 text-sky-500" strokeWidth={1.75} />
+    <h3 className="text-sm font-medium text-gray-700">Monthly subscription</h3>
+   </div>
+   <div className="flex items-baseline gap-2">
+    <p className="text-2xl font-medium text-gray-900 leading-tight">{formatCurrency(effectiveCents)}</p>
+    {showStrikethrough && (
+     <p className="text-base text-gray-400 line-through leading-tight">{formatCurrency(list)}</p>
+    )}
+   </div>
+   <p className="text-xs text-gray-500 mt-1">{subline}</p>
+   {(hasDiscount || trialing) && list > 0 && (
+    <p className="text-[11px] text-gray-400 mt-2">
+     Standard rate {formatCurrency(list)}/mo resumes after the {trialing ? 'trial' : 'discount'} ends.
+    </p>
+   )}
   </div>
  )
 }

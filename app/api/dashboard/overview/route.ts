@@ -37,6 +37,19 @@ export async function GET(request: NextRequest) {
    .eq('id', businessId)
    .maybeSingle()
 
+  // Pull the live Retell number provisioned for this business (if any) so
+  // the dashboard top bar shows the real number to call instead of the
+  // hardcoded demo number that used to leak across tenants.
+  const { data: retellPhoneRow } = await supabaseAdmin
+   .from('phone_numbers')
+   .select('phone_number, status')
+   .eq('business_id', businessId)
+   .eq('provider', 'retell')
+   .order('created_at', { ascending: false })
+   .limit(1)
+   .maybeSingle()
+  const retellPhone: string | null = retellPhoneRow?.phone_number || null
+
   // Two windows: current period (range days) and previous period (range days before that) for delta calcs
   const now = Date.now()
   const startCurrent = new Date(now - range * 24 * 60 * 60 * 1000).toISOString()
@@ -132,6 +145,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
    business: business || { id: businessId, business_name: 'Your Business' },
+   retellPhone,
    range,
    kpis: {
     totalCalls,

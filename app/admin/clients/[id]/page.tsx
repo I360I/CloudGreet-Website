@@ -89,6 +89,7 @@ type ClientDetail = {
   retell_agent_id?: string | null
   phone_number?: string | null
  } | null
+ retellPhone?: string | null
 }
 
 export default function ClientDetailPage() {
@@ -306,7 +307,13 @@ export default function ClientDetailPage() {
        <OwnerCard client={client} />
       </RisingFade>
       <RisingFade delay={0.15}>
-       <AgentCard aiAgent={aiAgent} client={client} />
+       <AgentCard
+        aiAgent={aiAgent}
+        client={client}
+        retellPhone={(data?.retellPhone as string | null) ?? aiAgent?.phone_number ?? null}
+        clientId={id}
+        onPhoneSaved={load}
+       />
       </RisingFade>
      </div>
 
@@ -542,41 +549,116 @@ function OwnerCard({ client }: { client: ClientDetail['client'] }) {
 /* --------------------------------- Agent ------------------------------- */
 
 function AgentCard({
- aiAgent, client,
+ aiAgent, client, retellPhone, clientId, onPhoneSaved,
 }: {
  aiAgent: ClientDetail['aiAgent']
  client: ClientDetail['client']
+ retellPhone: string | null
+ clientId: string
+ onPhoneSaved: () => void
 }) {
+ const [editingPhone, setEditingPhone] = useState(false)
+ const [phoneInput, setPhoneInput] = useState(retellPhone || '')
+ const [saving, setSaving] = useState(false)
+ const [phoneErr, setPhoneErr] = useState('')
+
+ useEffect(() => { setPhoneInput(retellPhone || '') }, [retellPhone])
+
+ const savePhone = async () => {
+  setSaving(true); setPhoneErr('')
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${clientId}/retell-phone`, {
+    method: 'PUT',
+    body: JSON.stringify({ phone: phoneInput.trim() || null }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
+   setEditingPhone(false)
+   onPhoneSaved()
+  } catch (e) {
+   setPhoneErr(e instanceof Error ? e.message : 'Save failed')
+  } finally {
+   setSaving(false)
+  }
+ }
+
  return (
   <Panel>
    <PanelHeader title="AI agent" eyebrow="Retell" />
-   {aiAgent ? (
-    <div className="space-y-3 text-sm">
+   <div className="space-y-3 text-sm">
+    {aiAgent ? (
      <div className="inline-flex items-center gap-2 text-gray-300">
       <Bot className="w-4 h-4 text-sky-400" />
       <span className="font-medium">{aiAgent.agent_name || 'Agent'}</span>
       {aiAgent.status && <StatusPill status={aiAgent.status} />}
      </div>
-     {aiAgent.phone_number && (
-      <div className="text-gray-300 inline-flex items-center gap-2">
-       <PhoneIcon className="w-4 h-4 text-gray-500" />
-       <span className="font-mono">{aiAgent.phone_number}</span>
+    ) : (
+     <p className="text-sm text-amber-300/90">No Retell agent provisioned for this client yet.</p>
+    )}
+
+    {/* Retell phone — always shown, editable. The client dashboard
+        reads this to display "listening on <number>"; without it the
+        client sees a "no number provisioned" warning. */}
+    <div className="pt-3 border-t border-white/[0.06]">
+     <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+      Retell phone number
+     </div>
+     {!editingPhone ? (
+      <div className="flex items-center gap-3 flex-wrap">
+       {retellPhone ? (
+        <span className="inline-flex items-center gap-2 text-gray-200 font-mono text-sm">
+         <PhoneIcon className="w-4 h-4 text-gray-500" />
+         {retellPhone}
+        </span>
+       ) : (
+        <span className="inline-flex items-center gap-2 text-amber-300/90 text-xs">
+         <PhoneIcon className="w-4 h-4" />
+         Not provisioned · client dashboard will show a warning
+        </span>
+       )}
+       <button
+        type="button"
+        onClick={() => setEditingPhone(true)}
+        className="text-[10px] font-mono uppercase tracking-wider text-sky-400 hover:text-sky-300"
+       >
+        {retellPhone ? 'edit' : 'set number'}
+       </button>
       </div>
-     )}
-     {aiAgent.retell_agent_id && (
-      <div className="text-xs text-gray-500 font-mono break-all">retell agent: {aiAgent.retell_agent_id}</div>
-     )}
-     {client.cal_com_username && (
-      <div className="pt-3 border-t border-white/[0.06] text-xs text-gray-500">
-       Cal.com: <a href={`https://cal.com/${client.cal_com_username}/${client.cal_com_event_type_slug || ''}`} target="_blank" rel="noreferrer" className="text-sky-400 hover:text-sky-300 inline-flex items-center gap-1">
-        @{client.cal_com_username}{client.cal_com_event_type_slug ? `/${client.cal_com_event_type_slug}` : ''} <ExternalLink className="w-3 h-3" />
-       </a>
+     ) : (
+      <div className="space-y-2">
+       <Input
+        value={phoneInput}
+        onChange={(e) => setPhoneInput(e.target.value)}
+        placeholder="+1 (737) 555-0123"
+       />
+       <div className="flex items-center gap-2">
+        <PrimaryButton onClick={savePhone} disabled={saving}>
+         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+         Save
+        </PrimaryButton>
+        <GhostButton onClick={() => { setEditingPhone(false); setPhoneInput(retellPhone || ''); setPhoneErr('') }}>
+         Cancel
+        </GhostButton>
+        {phoneErr && <span className="text-xs text-rose-300">{phoneErr}</span>}
+       </div>
+       <p className="text-[10px] text-gray-500">
+        Stored as the active Retell number for this business. Leave blank to clear.
+       </p>
       </div>
      )}
     </div>
-   ) : (
-    <p className="text-sm text-gray-500">No agent provisioned for this client yet.</p>
-   )}
+
+    {aiAgent?.retell_agent_id && (
+     <div className="text-xs text-gray-500 font-mono break-all">retell agent: {aiAgent.retell_agent_id}</div>
+    )}
+    {client.cal_com_username && (
+     <div className="pt-3 border-t border-white/[0.06] text-xs text-gray-500">
+      Cal.com: <a href={`https://cal.com/${client.cal_com_username}/${client.cal_com_event_type_slug || ''}`} target="_blank" rel="noreferrer" className="text-sky-400 hover:text-sky-300 inline-flex items-center gap-1">
+       @{client.cal_com_username}{client.cal_com_event_type_slug ? `/${client.cal_com_event_type_slug}` : ''} <ExternalLink className="w-3 h-3" />
+      </a>
+     </div>
+    )}
+   </div>
   </Panel>
  )
 }

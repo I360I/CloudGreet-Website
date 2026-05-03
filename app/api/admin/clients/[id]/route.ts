@@ -140,6 +140,28 @@ export async function GET(
    // ai_agents may not exist; this is fine.
   }
 
+  // The provisioned Retell phone is stored in phone_numbers (provider='retell').
+  // ai_agents.phone_number is the legacy location and isn't always populated,
+  // so phone_numbers is the authoritative source. We surface both so the UI
+  // can offer a single editable field.
+  let retellPhone: string | null = null
+  try {
+   const { data } = await supabaseAdmin
+    .from('phone_numbers')
+    .select('phone_number')
+    .eq('business_id', clientId)
+    .eq('provider', 'retell')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+   retellPhone = data?.phone_number || aiAgent?.phone_number || null
+  } catch (e) {
+   retellPhone = aiAgent?.phone_number || null
+  }
+  if (aiAgent && !aiAgent.phone_number && retellPhone) {
+   aiAgent.phone_number = retellPhone
+  }
+
   return NextResponse.json({
    success: true,
    client: { ...business, owner },
@@ -149,6 +171,7 @@ export async function GET(
     revenue: { total: Math.round(totalRevenue * 100) / 100 },
    },
    aiAgent,
+   retellPhone,
    warnings: warnings.length ? warnings : undefined,
   })
  } catch (error) {

@@ -25,8 +25,6 @@ import { Line, Doughnut } from 'react-chartjs-2'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, ArcElement)
 
-const DEMO_NUMBER = '+1 (737) 937-0084'
-
 type Appt = {
  id: string; customer_name: string; customer_phone: string | null
  service_type: string | null; scheduled_date: string; start_time: string | null
@@ -161,10 +159,22 @@ export default function DashboardPage() {
    <Sidebar businessName={displayData.business.business_name} onSignOut={handleSignOut} />
 
    <div className="flex-1 min-w-0 pb-20 lg:pb-0">
-    <TopBar />
+    <TopBar phone={isDemo ? null : (data as any)?.retellPhone ?? null} />
 
     <section className="px-4 lg:px-8 py-6 lg:py-10">
      <div className="max-w-7xl">
+      {isDemo && (
+       <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-3">
+        <span className="w-2 h-2 mt-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+        <div className="flex-1">
+         <p className="text-sm text-amber-900 font-medium">Showing demo data</p>
+         <p className="text-xs text-amber-800/80 mt-0.5">
+          Finish onboarding (or take your first real call) and this page swaps to your live numbers.
+         </p>
+        </div>
+       </div>
+      )}
+
       {/* Header strip */}
       <motion.div
        initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
@@ -533,13 +543,7 @@ function CallsEmpty({ hasAnyData }: { hasAnyData: boolean }) {
  return (
   <div className="px-6 py-6">
    <p className="text-sm text-gray-700">
-    Nothing yet. Try the demo line:{' '}
-    <a
-     href={`tel:${DEMO_NUMBER.replace(/[^0-9+]/g, '')}`}
-     className="font-mono text-sky-600 hover:underline"
-    >
-     {DEMO_NUMBER}
-    </a>
+    No calls yet. Once your Retell number is forwarded to from your business line, calls will show up here.
    </p>
   </div>
  )
