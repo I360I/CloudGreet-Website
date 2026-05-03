@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
  Plus, Loader2, AlertCircle, Search, Trash2, X, Upload, Phone as PhoneIcon, Mail,
- ChevronRight,
+ ChevronRight, PhoneCall, SkipForward, ArrowRight, Copy,
 } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
@@ -67,6 +67,7 @@ export default function AdminLeadsPage() {
  const [showAdd, setShowAdd] = useState(false)
  const [openLead, setOpenLead] = useState<Lead | null>(null)
  const [tableMissing, setTableMissing] = useState(false)
+ const [callMode, setCallMode] = useState<{ ids: string[]; idx: number } | null>(null)
  const fileRef = useRef<HTMLInputElement>(null)
 
  const load = async () => {
@@ -234,6 +235,18 @@ create index if not exists leads_next_action_idx on public.leads (next_action_at
        <GhostButton onClick={() => fileRef.current?.click()}>
         <Upload className="w-4 h-4" /> Import CSV
        </GhostButton>
+       <GhostButton
+        onClick={() => {
+         const callable = filtered.filter((l) => l.phone)
+         if (callable.length === 0) {
+          alert('No leads with phone numbers in the current filter.')
+          return
+         }
+         setCallMode({ ids: callable.map((l) => l.id), idx: 0 })
+        }}
+       >
+        <PhoneCall className="w-4 h-4" /> Start calling
+       </GhostButton>
        <PrimaryButton onClick={() => setShowAdd(!showAdd)}>
         <Plus className="w-4 h-4" /> {showAdd ? 'Close' : 'Add lead'}
        </PrimaryButton>
@@ -320,18 +333,22 @@ create index if not exists leads_next_action_idx on public.leads (next_action_at
           key={l.id}
           variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: EASE } } }}
          >
-          <button
-           onClick={() => setOpenLead(l)}
-           className="w-full text-left px-4 sm:px-6 py-3.5 hover:bg-white/[0.02] flex items-center gap-3 group transition-all duration-300 ease-out"
-          >
+          <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 hover:bg-white/[0.02] group transition-all duration-300 ease-out">
            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${TONE_CLASSES[STATUS_FLOW.find((s) => s.id === l.status)?.tone || 'gray'].dot}`} />
-           <div className="flex-1 min-w-0 lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center">
+           <button
+            onClick={() => setOpenLead(l)}
+            className="flex-1 min-w-0 text-left lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center"
+           >
             <div className="lg:col-span-3 min-w-0">
              <div className="text-sm font-medium text-white truncate">{l.business_name}</div>
              <div className="text-xs text-gray-500 truncate mt-0.5">{l.contact_name || '—'}</div>
             </div>
-            <div className="lg:col-span-3 min-w-0 mt-1.5 lg:mt-0 flex items-center gap-2 text-xs text-gray-400 font-mono">
-             {l.phone ? <span className="truncate">{l.phone}</span> : <span className="text-gray-600">no phone</span>}
+            <div className="lg:col-span-3 min-w-0 mt-1.5 lg:mt-0">
+             {l.phone ? (
+              <span className="text-sm font-mono text-gray-200 truncate block">{prettyPhone(l.phone)}</span>
+             ) : (
+              <span className="text-xs font-mono text-gray-600">no phone</span>
+             )}
             </div>
             <div className="hidden lg:block lg:col-span-2"><LeadStatusPill status={l.status} /></div>
             <div className="hidden lg:block lg:col-span-2 text-[10px] font-mono uppercase tracking-wider text-gray-500">
@@ -340,9 +357,20 @@ create index if not exists leads_next_action_idx on public.leads (next_action_at
             <div className="lg:col-span-2 text-right text-xs text-gray-500 mt-1.5 lg:mt-0 font-mono">
              {l.last_contacted_at ? relTime(l.last_contacted_at) : `added ${relTime(l.created_at)}`}
             </div>
-           </div>
+           </button>
+           {l.phone && (
+            <a
+             href={`tel:${digitsOnly(l.phone)}`}
+             onClick={(e) => e.stopPropagation()}
+             className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/20 text-sky-300 hover:text-sky-200 transition-all duration-300 ease-out"
+             aria-label={`Call ${l.business_name}`}
+             title="Tap to call (Continuity from Mac)"
+            >
+             <PhoneCall className="w-4 h-4" />
+            </a>
+           )}
            <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all duration-300 ease-out flex-shrink-0" />
-          </button>
+          </div>
          </motion.li>
         ))}
        </motion.ul>
@@ -365,6 +393,20 @@ create index if not exists leads_next_action_idx on public.leads (next_action_at
        setLeads((cs) => cs.filter((c) => c.id !== id))
        setOpenLead(null)
       }}
+     />
+    )}
+    {callMode && (
+     <CallMode
+      ids={callMode.ids}
+      idx={callMode.idx}
+      leads={leads}
+      onClose={() => setCallMode(null)}
+      onLeadUpdated={(l) => setLeads((cs) => cs.map((c) => c.id === l.id ? l : c))}
+      onAdvance={() => setCallMode((m) => m ? {
+       ...m,
+       idx: m.idx + 1 >= m.ids.length ? m.idx : m.idx + 1,
+      } : m)}
+      onBack={() => setCallMode((m) => m ? { ...m, idx: Math.max(0, m.idx - 1) } : m)}
      />
     )}
    </AnimatePresence>
@@ -745,4 +787,248 @@ function parseCsv(text: string): Record<string, string>[] {
   headers.forEach((h, i) => { row[h] = cells[i] || '' })
   return row
  })
+}
+
+/* --------------------------- phone helpers --------------------------- */
+
+function digitsOnly(p: string): string {
+ return (p || '').replace(/[^0-9]/g, '')
+}
+
+function prettyPhone(p: string): string {
+ const d = digitsOnly(p)
+ if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
+ if (d.length === 11 && d.startsWith('1')) return `(${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`
+ return p
+}
+
+/* ----------------------------- Call mode ----------------------------- */
+
+function CallMode({
+ ids, idx, leads, onClose, onLeadUpdated, onAdvance, onBack,
+}: {
+ ids: string[]
+ idx: number
+ leads: Lead[]
+ onClose: () => void
+ onLeadUpdated: (l: Lead) => void
+ onAdvance: () => void
+ onBack: () => void
+}) {
+ const lead = useMemo(() => leads.find((l) => l.id === ids[idx]) || null, [ids, idx, leads])
+ const [notes, setNotes] = useState(lead?.notes || '')
+ const [busy, setBusy] = useState(false)
+ const [error, setError] = useState('')
+ const [savedFlag, setSavedFlag] = useState(false)
+ const [copied, setCopied] = useState(false)
+
+ useEffect(() => {
+  setNotes(lead?.notes || '')
+  setSavedFlag(false)
+  setError('')
+ }, [lead?.id, lead?.notes])
+
+ useEffect(() => {
+  const onKey = (e: KeyboardEvent) => {
+   if (e.key === 'Escape') onClose()
+   else if (e.key === 'ArrowRight' || e.key === 'j') onAdvance()
+   else if (e.key === 'ArrowLeft' || e.key === 'k') onBack()
+  }
+  window.addEventListener('keydown', onKey)
+  return () => window.removeEventListener('keydown', onKey)
+ }, [onClose, onAdvance, onBack])
+
+ const patch = async (update: Partial<Lead>): Promise<Lead | null> => {
+  if (!lead) return null
+  setBusy(true); setError('')
+  try {
+   const res = await fetchWithAuth(`/api/admin/leads/${lead.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(update),
+   })
+   const json = await res.json().catch(() => ({}))
+   if (!res.ok || !json.success) throw new Error(json?.error || 'Failed')
+   onLeadUpdated(json.lead)
+   return json.lead as Lead
+  } catch (e) {
+   setError(e instanceof Error ? e.message : 'Failed')
+   return null
+  } finally {
+   setBusy(false)
+  }
+ }
+
+ const setStatusAndAdvance = async (status: LeadStatus) => {
+  await patch({ status })
+  setTimeout(onAdvance, 200)
+ }
+
+ const saveNotes = async () => {
+  await patch({ notes })
+  setSavedFlag(true)
+  setTimeout(() => setSavedFlag(false), 2000)
+ }
+
+ const copyPhone = async () => {
+  if (!lead?.phone) return
+  try {
+   await navigator.clipboard?.writeText(digitsOnly(lead.phone))
+   setCopied(true)
+   setTimeout(() => setCopied(false), 1500)
+  } catch {}
+ }
+
+ if (!lead) {
+  // Filter changed under us — bail out cleanly.
+  return null
+ }
+
+ const meta = STATUS_FLOW.find((s) => s.id === lead.status)
+
+ return (
+  <motion.div
+   initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+   transition={{ duration: 0.25, ease: EASE }}
+   className="fixed inset-0 z-50 bg-[#0a0a0c]/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-8"
+  >
+   {/* Top bar */}
+   <div className="absolute top-0 inset-x-0 px-4 sm:px-8 py-3 flex items-center justify-between gap-3 border-b border-white/[0.06]">
+    <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500">
+     Call mode · {idx + 1} of {ids.length}
+    </div>
+    <button
+     onClick={onClose}
+     className="p-2 -mr-2 rounded-full hover:bg-white/[0.06] transition-colors"
+     aria-label="Exit call mode"
+    >
+     <X className="w-4 h-4 text-gray-400" />
+    </button>
+   </div>
+
+   {/* Card */}
+   <motion.div
+    key={lead.id}
+    initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3, ease: EASE }}
+    className="w-full max-w-2xl bg-[#101015] border border-white/[0.08] rounded-3xl shadow-2xl p-6 sm:p-10 mt-12"
+   >
+    {/* Header */}
+    <div className="flex items-center gap-2 flex-wrap mb-3">
+     <LeadStatusPill status={lead.status} />
+     <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
+      from {SOURCE_LABELS[lead.source]}
+     </span>
+    </div>
+    <h2 className="font-display text-3xl sm:text-4xl font-medium tracking-tight text-white">
+     {lead.business_name}
+    </h2>
+    {lead.contact_name && (
+     <div className="text-base text-gray-400 mt-1">{lead.contact_name}</div>
+    )}
+
+    {/* Phone — the main affordance */}
+    {lead.phone ? (
+     <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
+      <a
+       href={`tel:${digitsOnly(lead.phone)}`}
+       className="flex-1 inline-flex items-center justify-center gap-3 bg-sky-500 hover:bg-sky-400 text-white px-6 py-5 rounded-2xl font-mono text-2xl sm:text-3xl tracking-tight transition-all duration-300 ease-out shadow-[0_0_50px_-15px_rgba(56,189,248,0.6)]"
+      >
+       <PhoneCall className="w-6 h-6" />
+       {prettyPhone(lead.phone)}
+      </a>
+      <button
+       onClick={copyPhone}
+       className="inline-flex items-center justify-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] text-gray-300 px-4 py-3 rounded-2xl text-sm font-medium border border-white/[0.06] transition-all duration-300 ease-out"
+      >
+       <Copy className="w-4 h-4" />
+       {copied ? 'Copied' : 'Copy'}
+      </button>
+     </div>
+    ) : (
+     <div className="mt-6 bg-amber-500/10 border border-amber-400/20 text-amber-200 rounded-xl px-4 py-3 text-sm">
+      No phone number on this lead. Skip or add a number first.
+     </div>
+    )}
+
+    {lead.email && (
+     <a href={`mailto:${lead.email}`} className="mt-3 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white">
+      <Mail className="w-4 h-4" /> {lead.email}
+     </a>
+    )}
+
+    {/* Status flow */}
+    <div className="mt-6 border-t border-white/[0.06] pt-5">
+     <h4 className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">
+      Set status (auto-advances)
+     </h4>
+     <div className="flex flex-wrap gap-2">
+      {STATUS_FLOW.map((s) => (
+       <button
+        key={s.id}
+        onClick={() => setStatusAndAdvance(s.id)}
+        disabled={busy}
+        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider transition-all duration-300 ease-out border disabled:opacity-50 ${
+         s.id === lead.status
+          ? `${TONE_CLASSES[s.tone].bg} ${TONE_CLASSES[s.tone].text} ${TONE_CLASSES[s.tone].border}`
+          : 'bg-white/[0.03] text-gray-400 border-white/[0.06] hover:text-white hover:bg-white/[0.08]'
+        }`}
+       >
+        <span className={`w-1.5 h-1.5 rounded-full ${TONE_CLASSES[s.tone].dot}`} />
+        {s.label}
+       </button>
+      ))}
+     </div>
+    </div>
+
+    {/* Notes */}
+    <div className="mt-5">
+     <h4 className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">
+      Notes for this call
+     </h4>
+     <textarea
+      value={notes}
+      onChange={(e) => setNotes(e.target.value)}
+      placeholder="What did they say? Next step?"
+      rows={3}
+      className="w-full px-4 py-3 bg-[#0c0c10] border border-white/[0.06] rounded-xl text-gray-100 placeholder-gray-600 focus:outline-none focus:border-sky-400/50 transition-colors text-sm resize-none"
+     />
+     <div className="flex items-center justify-between mt-2">
+      <div className="text-xs text-gray-500">
+       {savedFlag && <span className="text-emerald-400">Saved.</span>}
+       {error && <span className="text-rose-400">{error}</span>}
+      </div>
+      <GhostButton onClick={saveNotes} disabled={busy || notes === (lead.notes || '')}>
+       Save notes
+      </GhostButton>
+     </div>
+    </div>
+
+    {/* Footer nav */}
+    <div className="mt-6 border-t border-white/[0.06] pt-5 flex items-center justify-between gap-3">
+     <button
+      onClick={onBack}
+      disabled={idx === 0}
+      className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+     >
+      ← Back
+     </button>
+     <div className="flex items-center gap-2">
+      <GhostButton onClick={onAdvance} disabled={idx >= ids.length - 1}>
+       <SkipForward className="w-4 h-4" /> Skip
+      </GhostButton>
+      <PrimaryButton
+       onClick={onAdvance}
+       disabled={idx >= ids.length - 1}
+      >
+       Next <ArrowRight className="w-4 h-4" />
+      </PrimaryButton>
+     </div>
+    </div>
+
+    <div className="mt-4 text-[10px] font-mono uppercase tracking-wider text-gray-600 text-center">
+     ← / → to navigate · Esc to exit
+    </div>
+   </motion.div>
+  </motion.div>
+ )
 }
