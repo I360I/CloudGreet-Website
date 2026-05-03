@@ -26,15 +26,19 @@ export class CalcomError extends Error {
 async function calFetch<T = any>(
  apiKey: string,
  path: string,
- init: RequestInit = {},
+ init: RequestInit & { version?: string } = {},
 ): Promise<T> {
+ const { version, ...rest } = init
  const res = await fetch(`${CAL_API_BASE}${path}`, {
-  ...init,
+  ...rest,
   headers: {
    Authorization: `Bearer ${apiKey}`,
-   'cal-api-version': CAL_API_VERSION,
+   // Cal.com routes endpoints by header version. The default we use
+   // for bookings (2026-02-25) doesn't expose GET /event-types — that
+   // listing only exists on 2024-06-14. Each call can override.
+   'cal-api-version': version || CAL_API_VERSION,
    'Content-Type': 'application/json',
-   ...(init.headers || {}),
+   ...(rest.headers || {}),
   },
  })
  const text = await res.text()
@@ -107,7 +111,6 @@ export async function listEventTypes(apiKey: string): Promise<CalcomEventType[]>
  */
 export async function listEventTypesDetailed(apiKey: string): Promise<ListEventTypesResult> {
  const attempts: string[] = []
- const v1Base = (process.env.CAL_API_V1_BASE || 'https://api.cal.com/v1').replace(/\/$/, '')
 
  // 1) /me
  let username: string | null = null
@@ -120,63 +123,41 @@ export async function listEventTypesDetailed(apiKey: string): Promise<ListEventT
   attempts.push(`v2 /me → ${msg}`)
  }
 
- // 2) v2 /event-types?username=…
+ // The GET /event-types listing requires cal-api-version=2024-06-14;
+ // newer versions don't expose it. We pin that version on each call.
+ const LIST_VERSION = '2024-06-14'
+
+ // 2) v2 /event-types?username=… with the listing-version header
  if (username) {
   try {
    const res = await calFetch<{ status: string; data: any }>(
     apiKey, `/event-types?username=${encodeURIComponent(username)}`,
+    { version: LIST_VERSION },
    )
    const flat = flattenEventTypes(res.data)
-   attempts.push(`v2 /event-types?username=${username} → ${flat.length} returned`)
+   attempts.push(`v2(${LIST_VERSION}) /event-types?username=${username} → ${flat.length} returned`)
    if (flat.length > 0) return { eventTypes: flat, attempts }
   } catch (e) {
    const msg = e instanceof CalcomError ? `${e.status} ${e.message}` : 'unknown'
-   attempts.push(`v2 /event-types?username=${username} → ${msg}`)
+   attempts.push(`v2(${LIST_VERSION}) /event-types?username=${username} → ${msg}`)
    if (e instanceof CalcomError && (e.status === 401 || e.status === 403)) throw e
   }
  }
 
- // 3) v2 /event-types (no params, returns own types on some accounts)
+ // 3) v2 /event-types (no params), same listing version
  try {
-  const res = await calFetch<{ status: string; data: any }>(apiKey, '/event-types')
+  const res = await calFetch<{ status: string; data: any }>(
+   apiKey, '/event-types', { version: LIST_VERSION },
+  )
   const flat = flattenEventTypes(res.data)
-  attempts.push(`v2 /event-types → ${flat.length} returned`)
+  attempts.push(`v2(${LIST_VERSION}) /event-types → ${flat.length} returned`)
   if (flat.length > 0) return { eventTypes: flat, attempts }
  } catch (e) {
   const msg = e instanceof CalcomError ? `${e.status} ${e.message}` : 'unknown'
-  attempts.push(`v2 /event-types → ${msg}`)
+  attempts.push(`v2(${LIST_VERSION}) /event-types → ${msg}`)
  }
 
- // 4) v1 /event-types?apiKey=
- try {
-  const v1Res = await fetch(`${v1Base}/event-types?apiKey=${encodeURIComponent(apiKey)}`, {
-   headers: { 'Content-Type': 'application/json' },
-  })
-  const text = await v1Res.text()
-  const j = text ? safeJson(text) : null
-  if (v1Res.ok) {
-   const types = ((j as any)?.event_types || (j as any)?.eventTypes || []) as any[]
-   attempts.push(`v1 /event-types?apiKey=… → ${types.length} returned`)
-   if (types.length > 0) {
-    return {
-     eventTypes: types.map((et) => ({
-      id: et.id,
-      title: et.title,
-      slug: et.slug,
-      lengthInMinutes: et.length || et.lengthInMinutes || 30,
-      hidden: !!et.hidden,
-     })),
-     attempts,
-    }
-   }
-  } else {
-   const errMsg = (j as any)?.message || (typeof j === 'string' ? j : 'no body')
-   attempts.push(`v1 /event-types → ${v1Res.status} ${errMsg}`)
-  }
- } catch (e) {
-  attempts.push(`v1 /event-types → ${e instanceof Error ? e.message : 'unknown'}`)
- }
-
+ // v1 was decommissioned in early 2025 — no fallback there.
  return { eventTypes: [], attempts }
 }
 
