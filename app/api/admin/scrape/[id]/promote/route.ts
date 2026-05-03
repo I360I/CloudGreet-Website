@@ -64,6 +64,8 @@ export async function POST(
    const { data: lead, error: insertErr } = await supabaseAdmin
     .from('leads')
     .insert({
+     // legacy NOT-NULL column from an earlier schema; mirror business_name into it.
+     name: r.business_name || 'Unknown',
      business_name: r.business_name || 'Unknown',
      contact_name: r.owner_name || null,
      phone: r.phone || null,

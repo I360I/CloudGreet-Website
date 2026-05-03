@@ -55,15 +55,20 @@ export async function POST(request: NextRequest) {
   // Bulk insert path — `bulk: true, leads: [...]` for CSV import.
   if (body.bulk && Array.isArray(body.leads)) {
    const sanitized = body.leads
-    .map((l: any) => ({
-     business_name: String(l.business_name || '').trim().slice(0, 200),
-     contact_name: l.contact_name ? String(l.contact_name).trim().slice(0, 200) : null,
-     phone: l.phone ? String(l.phone).trim().slice(0, 50) : null,
-     email: l.email ? String(l.email).trim().slice(0, 200) : null,
-     source: VALID_SOURCES.includes(l.source) ? l.source : 'cold_call',
-     status: VALID_STATUSES.includes(l.status) ? l.status : 'cold',
-     notes: l.notes ? String(l.notes).slice(0, 2000) : null,
-    }))
+    .map((l: any) => {
+     const businessName = String(l.business_name || '').trim().slice(0, 200)
+     return {
+      // legacy NOT-NULL `name` column on leads — mirror from business_name.
+      name: businessName,
+      business_name: businessName,
+      contact_name: l.contact_name ? String(l.contact_name).trim().slice(0, 200) : null,
+      phone: l.phone ? String(l.phone).trim().slice(0, 50) : null,
+      email: l.email ? String(l.email).trim().slice(0, 200) : null,
+      source: VALID_SOURCES.includes(l.source) ? l.source : 'cold_call',
+      status: VALID_STATUSES.includes(l.status) ? l.status : 'cold',
+      notes: l.notes ? String(l.notes).slice(0, 2000) : null,
+     }
+    })
     .filter((l: any) => l.business_name)
 
    if (sanitized.length === 0) {
@@ -79,8 +84,11 @@ export async function POST(request: NextRequest) {
   }
 
   // Single-record path
+  const businessName = String(body.business_name || '').trim().slice(0, 200)
   const sanitized = {
-   business_name: String(body.business_name || '').trim().slice(0, 200),
+   // legacy NOT-NULL `name` column on leads — mirror from business_name.
+   name: businessName,
+   business_name: businessName,
    contact_name: body.contact_name ? String(body.contact_name).trim().slice(0, 200) : null,
    phone: body.phone ? String(body.phone).trim().slice(0, 50) : null,
    email: body.email ? String(body.email).trim().slice(0, 200) : null,
