@@ -194,8 +194,25 @@ export async function POST(request: NextRequest) {
    return NextResponse.json({ error: 'Failed to create business', detail: bErr?.message }, { status: 500 })
   }
 
-  // 3) link
-  await supabaseAdmin.from('custom_users').update({ business_id: business.id }).eq('id', user.id)
+  // 3) link — if this fails the business exists with no usable owner,
+  // and that owner can't log in (their JWT will have businessId='').
+  // Roll the whole creation back so the admin doesn't end up with a
+  // half-built tenant they have to clean up by hand.
+  const { error: linkErr } = await supabaseAdmin
+   .from('custom_users')
+   .update({ business_id: business.id })
+   .eq('id', user.id)
+  if (linkErr) {
+   await supabaseAdmin.from('businesses').delete().eq('id', business.id)
+   await supabaseAdmin.from('custom_users').delete().eq('id', user.id)
+   logger.error('Failed to link user to business — rolled back', {
+    error: linkErr.message, businessId: business.id, userId: user.id,
+   })
+   return NextResponse.json({
+    error: 'Failed to finalize client creation. Try again.',
+    detail: linkErr.message,
+   }, { status: 500 })
+  }
 
   // 4) Retell phone number → phone_numbers table
   if (retell_phone_number) {

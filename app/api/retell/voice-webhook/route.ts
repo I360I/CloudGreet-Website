@@ -58,14 +58,50 @@ export async function POST(request: NextRequest) {
  const tool: RetellToolCall | null = body.tool_call || null
  const tenantId: string | undefined = body.tenant_id || body.metadata?.tenant_id
 
+ // Resolve the calling tenant from the Retell agent_id, NOT from the
+ // tool arguments. The tool args (`business_id`) come from whatever the
+ // agent's prompt was configured to send; trusting them lets a
+ // misconfigured/malicious agent target any tenant. The agent_id in the
+ // webhook envelope is the trustworthy identifier — Retell signs the
+ // body and the agent → business mapping is in our DB.
+ const callingAgentId: string | undefined =
+  body.call?.agent_id || body.agent_id || body.metadata?.agent_id
+ let resolvedBusinessId: string | null = null
+ if (callingAgentId) {
+  const { data: agentRow } = await supabaseAdmin
+   .from('ai_agents')
+   .select('business_id')
+   .eq('retell_agent_id', callingAgentId)
+   .maybeSingle()
+  if (agentRow?.business_id) {
+   resolvedBusinessId = agentRow.business_id
+  } else {
+   const { data: bizRow } = await supabaseAdmin
+    .from('businesses')
+    .select('id')
+    .eq('retell_agent_id', callingAgentId)
+    .maybeSingle()
+   if (bizRow?.id) resolvedBusinessId = bizRow.id
+  }
+ }
+
  if (tool) {
  switch (tool.name) {
  case 'book_appointment': {
- const { name, phone, service, datetime, business_id } = tool.arguments || {}
- 
- if (!business_id) {
- return NextResponse.json({ success: false, error: 'business_id required' }, { status: 400 })
+ const { name, phone, service, datetime, business_id: toolBusinessId } = tool.arguments || {}
+
+ // Reject if we couldn't resolve a business from the agent. Falling
+ // back to tool args would re-introduce the spoofing risk.
+ if (!resolvedBusinessId) {
+ logger.warn('Retell book_appointment with unresolvable agent', { callingAgentId })
+ return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
  }
+ if (toolBusinessId && toolBusinessId !== resolvedBusinessId) {
+ logger.warn('Retell tool args business_id mismatch — ignoring tool value', {
+  toolBusinessId, resolvedBusinessId, callingAgentId,
+ })
+ }
+ const business_id = resolvedBusinessId
 
  // Get business info to check subscription and get Stripe customer ID
  const { data: business, error: businessError } = await supabaseAdmin
@@ -292,11 +328,14 @@ export async function POST(request: NextRequest) {
  }
  }
  case 'lookup_availability': {
- const { business_id, date, duration = 60 } = tool.arguments || {}
- 
- if (!business_id) {
- return NextResponse.json({ success: false, error: 'business_id required' }, { status: 400 })
+ const { date, duration = 60 } = tool.arguments || {}
+
+ // Same trust model as book_appointment: ignore any business_id from
+ // the tool arguments and resolve from the calling agent.
+ if (!resolvedBusinessId) {
+ return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
  }
+ const business_id = resolvedBusinessId
 
  try {
  // Use real calendar availability logic
