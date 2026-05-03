@@ -127,7 +127,10 @@ export async function GET(
    warnings.push(`appointments: ${e instanceof Error ? e.message : 'Unknown'}`)
   }
 
-  // AI agent (optional table — may not exist)
+  // AI agent. The ai_agents table is the canonical home, but the admin
+  // create-client flow stores retell_agent_id on businesses directly and
+  // doesn't always seed an ai_agents row. Fall back to businesses so a
+  // client with a Retell agent attached doesn't show as "not connected".
   let aiAgent: any = null
   try {
    const { data } = await supabaseAdmin
@@ -138,6 +141,16 @@ export async function GET(
    aiAgent = data || null
   } catch (e) {
    // ai_agents may not exist; this is fine.
+  }
+  if (!aiAgent && (business as any).retell_agent_id) {
+   aiAgent = {
+    id: `business:${clientId}`,
+    agent_name: 'Retell agent',
+    status: 'connected',
+    retell_agent_id: (business as any).retell_agent_id,
+    phone_number: null,
+    created_at: business.created_at ?? null,
+   }
   }
 
   // The provisioned Retell phone is stored in phone_numbers (provider='retell').
