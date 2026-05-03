@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { getReconciliationSummary, retryInvoicePayment } from '@/lib/billing/reconciliation'
+import { getStripeMrrSummary } from '@/lib/billing/stripe-mrr'
 
 const retrySchema = z.object({
  invoiceId: z.string().min(3)
@@ -17,22 +18,33 @@ export async function GET(request: NextRequest) {
  }
 
  try {
- // For admin users without businessId, return empty summary
+ // Admin (no businessId): aggregate MRR live from Stripe across every
+ // subscription. Trials are counted into MRR but tracked separately so
+ // the UI can show paid/trialing/past_due breakdown.
  if (!auth.businessId) {
- return NextResponse.json({
- success: true,
- summary: {
- mrrCents: 0,
- bookingFeesCents: 0,
- creditsCents: 0,
- totalBilledCents: 0,
- openAlerts: [],
- pastDueInvoices: []
- }
- })
+  const stripeSummary = await getStripeMrrSummary()
+  return NextResponse.json({
+   success: true,
+   summary: {
+    mrrCents: stripeSummary.totalMrrCents,
+    paidMrrCents: stripeSummary.paidMrrCents,
+    trialingMrrCents: stripeSummary.trialingMrrCents,
+    pastDueMrrCents: stripeSummary.pastDueMrrCents,
+    paidCount: stripeSummary.paidCount,
+    trialingCount: stripeSummary.trialingCount,
+    pastDueCount: stripeSummary.pastDueCount,
+    bookingFeesCents: 0,
+    creditsCents: 0,
+    totalBilledCents: stripeSummary.totalMrrCents,
+    openAlerts: [],
+    pastDueInvoices: [],
+    subscriptions: stripeSummary.subscriptions,
+    source: 'stripe-live',
+   },
+  })
  }
  const summary = await getReconciliationSummary(auth.businessId)
- return NextResponse.json({ success: true, summary })
+ return NextResponse.json({ success: true, summary: { ...summary, source: 'ledger' } })
  } catch (error) {
  return NextResponse.json(
  { error: error instanceof Error ? error.message : 'Failed to load billing summary' },

@@ -32,11 +32,18 @@ type PastDueInvoice = {
 
 type BillingSummary = {
  mrrCents: number
+ paidMrrCents?: number
+ trialingMrrCents?: number
+ pastDueMrrCents?: number
+ paidCount?: number
+ trialingCount?: number
+ pastDueCount?: number
  bookingFeesCents: number
  creditsCents: number
  totalBilledCents: number
  openAlerts: BillingAlert[]
  pastDueInvoices: PastDueInvoice[]
+ source?: 'stripe-live' | 'ledger'
  nextInvoice?: {
  servicePeriodEnd: string | null
  estimatedTotalCents: number
@@ -94,12 +101,21 @@ export default function BillingDashboardPage() {
  return []
  }
 
+ const trialBlurb =
+  summary.trialingCount && summary.trialingCount > 0
+   ? `Includes $${((summary.trialingMrrCents ?? 0) / 100).toFixed(0)} from ${summary.trialingCount} trial${summary.trialingCount === 1 ? '' : 's'}`
+   : null
+ const mrrDescription =
+  summary.source === 'stripe-live'
+   ? `Live from Stripe — active + trialing + past_due. ${summary.paidCount ?? 0} paid${trialBlurb ? `. ${trialBlurb}` : ''}.`
+   : 'Subscription charges captured in the last 30 days.'
+
  return [
  {
  label: 'Monthly recurring revenue',
  value: `$${(summary.mrrCents / 100).toFixed(2)}`,
  icon: DollarSign,
- description: 'Subscription charges captured in the last 30 days.'
+ description: mrrDescription,
  },
  {
  label: 'Per-booking fees',

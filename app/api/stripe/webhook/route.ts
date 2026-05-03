@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import Stripe from 'stripe'
 import { Resend } from 'resend'
+import { getStripeClient } from '@/lib/billing/stripe-client'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -180,19 +181,42 @@ export async function POST(request: NextRequest) {
  */
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
  try {
- const businessId = session.metadata?.business_id
+ // Admin-generated links use `cloudgreet_business_id`; the older signup
+ // flow used plain `business_id`. Accept either so historical and current
+ // sessions both resolve.
+ const businessId =
+  (session.metadata?.cloudgreet_business_id as string | undefined) ||
+  (session.metadata?.business_id as string | undefined)
  const customerId = session.customer as string
 
  if (!businessId) {
- logger.warn('Checkout session missing business_id', { sessionId: session.id })
+ logger.warn('Checkout session missing business id metadata', { sessionId: session.id })
  return
+ }
+
+ // Pull the live subscription so we use Stripe's actual status (so a
+ // trialing sub stays "trialing" instead of being force-flipped to
+ // "active"). If we can't fetch it, fall back to "active" — the next
+ // customer.subscription.updated event will reconcile.
+ let resolvedStatus: string = 'active'
+ if (session.subscription) {
+  try {
+   const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id
+   const stripe = getStripeClient()
+   const sub = await stripe.subscriptions.retrieve(subId)
+   resolvedStatus = sub.status
+  } catch (e) {
+   logger.warn('Failed to retrieve subscription on checkout completion', {
+    sessionId: session.id, error: e instanceof Error ? e.message : 'Unknown',
+   })
+  }
  }
 
  // Update business with subscription status
  const { error: updateError } = await supabaseAdmin
  .from('businesses')
  .update({
- subscription_status: 'active',
+ subscription_status: resolvedStatus,
  stripe_customer_id: customerId,
  updated_at: new Date().toISOString()
  })
