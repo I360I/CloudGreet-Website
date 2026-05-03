@@ -201,20 +201,54 @@ function StuckBanner({ step }: { step: Step }) {
 /* ------------------------------ Cal.com step ----------------------------- */
 
 function CalcomStep({ onConnected }: { onConnected: () => void }) {
+ type EventTypeOption = { id: number; title: string; slug: string; lengthInMinutes: number }
  const [apiKey, setApiKey] = useState('')
- const [eventTypeId, setEventTypeId] = useState('')
+ const [eventTypeId, setEventTypeId] = useState<number | null>(null)
+ const [eventTypeOptions, setEventTypeOptions] = useState<EventTypeOption[] | null>(null)
  const [submitting, setSubmitting] = useState(false)
  const [error, setError] = useState('')
  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
  const [success, setSuccess] = useState<{ username: string | null; eventTypeTitle: string } | null>(null)
 
+ const fetchEventTypes = async (e?: React.FormEvent) => {
+  if (e) e.preventDefault()
+  setSubmitting(true); setError(''); setFieldErrors({})
+  try {
+   // First call sends API key only — server lists event types and we
+   // pick from the dropdown. This avoids the "guess the numeric ID"
+   // friction in the original flow.
+   const res = await fetchWithAuth('/api/onboarding/calcom', {
+    method: 'POST',
+    body: JSON.stringify({ apiKey }),
+   })
+   const json = await res.json().catch(() => ({}))
+   if (json.needsEventType && Array.isArray(json.eventTypes)) {
+    setEventTypeOptions(json.eventTypes)
+    if (json.errors) setFieldErrors(json.errors)
+    if (json.eventTypes.length === 0) {
+     setError('No event types found on this Cal.com account. Create one in Cal.com first, then come back.')
+    }
+    return
+   }
+   if (!res.ok || !json.success) {
+    if (json.errors) setFieldErrors(json.errors)
+    throw new Error(json.error || 'Connect failed')
+   }
+  } catch (err) {
+   setError(err instanceof Error ? err.message : 'Failed')
+  } finally {
+   setSubmitting(false)
+  }
+ }
+
  const submit = async (e: React.FormEvent) => {
   e.preventDefault()
+  if (eventTypeId == null) { setError('Pick an event type first'); return }
   setSubmitting(true); setError(''); setFieldErrors({})
   try {
    const res = await fetchWithAuth('/api/onboarding/calcom', {
     method: 'POST',
-    body: JSON.stringify({ apiKey, eventTypeId: parseInt(eventTypeId, 10) }),
+    body: JSON.stringify({ apiKey, eventTypeId }),
    })
    const json = await res.json().catch(() => ({}))
    if (!res.ok || !json.success) {
@@ -223,8 +257,8 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
    }
    setSuccess({ username: json.account.username, eventTypeTitle: json.eventType.title })
    setTimeout(onConnected, 800)
-  } catch (e) {
-   setError(e instanceof Error ? e.message : 'Failed')
+  } catch (err) {
+   setError(err instanceof Error ? err.message : 'Failed')
   } finally {
    setSubmitting(false)
   }
@@ -248,9 +282,9 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
       </a> and click <span className="font-medium">+ Add</span>. Copy the key — it starts with <code className="font-mono text-xs bg-white border border-gray-200 px-1 rounded">cal_live_</code>.
      </li>
      <li>
-      Open <a href="https://app.cal.com/event-types" target="_blank" rel="noreferrer" className="text-sky-600 hover:underline inline-flex items-center gap-0.5">
+      Make sure you have at least one event type at <a href="https://app.cal.com/event-types" target="_blank" rel="noreferrer" className="text-sky-600 hover:underline inline-flex items-center gap-0.5">
        Cal.com → Event Types <ExternalLink className="w-3 h-3" />
-      </a>, click the event type you want CloudGreet to book into. The number at the end of the URL is your Event Type ID.
+      </a> (we&apos;ll list them for you below).
      </li>
      <li>
       No Cal.com yet? <a href="https://app.cal.com/signup" target="_blank" rel="noreferrer" className="text-sky-600 hover:underline inline-flex items-center gap-0.5">
@@ -260,25 +294,44 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
     </ol>
    </div>
 
-   <form onSubmit={submit} className="px-6 py-5 space-y-4">
+   <form onSubmit={eventTypeOptions ? submit : fetchEventTypes} className="px-6 py-5 space-y-4">
     <div>
      <label className="block text-xs font-medium text-gray-700 mb-1.5">Cal.com API key</label>
      <input
-      type="password" required value={apiKey} onChange={(e) => setApiKey(e.target.value)}
+      type="password" required value={apiKey}
+      onChange={(e) => { setApiKey(e.target.value); setEventTypeOptions(null); setEventTypeId(null) }}
       placeholder="cal_live_…"
       className="form-input font-mono"
+      disabled={!!success}
      />
      {fieldErrors.apiKey && <p className="text-xs text-red-600 mt-1">{fieldErrors.apiKey}</p>}
     </div>
-    <div>
-     <label className="block text-xs font-medium text-gray-700 mb-1.5">Event Type ID</label>
-     <input
-      type="text" required inputMode="numeric" value={eventTypeId} onChange={(e) => setEventTypeId(e.target.value.replace(/[^0-9]/g, ''))}
-      placeholder="123456"
-      className="form-input font-mono"
-     />
-     {fieldErrors.eventTypeId && <p className="text-xs text-red-600 mt-1">{fieldErrors.eventTypeId}</p>}
-    </div>
+    {eventTypeOptions && eventTypeOptions.length > 0 && (
+     <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1.5">Event type</label>
+      <div className="space-y-1.5">
+       {eventTypeOptions.map((et) => (
+        <label
+         key={et.id}
+         className={`flex items-center gap-3 px-3 py-2.5 border rounded-lg cursor-pointer transition-colors ${
+          eventTypeId === et.id ? 'border-sky-400 bg-sky-50' : 'border-gray-200 hover:border-gray-300 bg-white'
+         }`}
+        >
+         <input
+          type="radio" name="eventType" checked={eventTypeId === et.id}
+          onChange={() => setEventTypeId(et.id)}
+          className="text-sky-600"
+         />
+         <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-gray-900 truncate">{et.title}</div>
+          <div className="text-xs text-gray-500 font-mono">/{et.slug} · {et.lengthInMinutes}min · id {et.id}</div>
+         </div>
+        </label>
+       ))}
+      </div>
+      {fieldErrors.eventTypeId && <p className="text-xs text-red-600 mt-1">{fieldErrors.eventTypeId}</p>}
+     </div>
+    )}
 
     {error && (
      <div className="bg-red-50 border border-red-200 text-red-900 rounded-lg px-3 py-2 text-sm flex items-start gap-2">
@@ -296,11 +349,12 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
 
     <div className="flex justify-end pt-1">
      <button
-      type="submit" disabled={submitting || !!success}
+      type="submit"
+      disabled={submitting || !!success || (!!eventTypeOptions && eventTypeOptions.length > 0 && eventTypeId == null)}
       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-all duration-300 ease-out disabled:opacity-50"
      >
       {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-      {success ? 'Connected' : 'Validate & connect'}
+      {success ? 'Connected' : eventTypeOptions ? 'Connect this event type' : 'Load my event types'}
      </button>
     </div>
 

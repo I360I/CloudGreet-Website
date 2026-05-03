@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { validateConnection, registerWebhook, deleteWebhook, CalcomError } from '@/lib/calcom'
+import { validateConnection, registerWebhook, deleteWebhook, listEventTypes, getMe, CalcomError } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -28,10 +28,36 @@ export async function POST(request: NextRequest) {
     { success: false, errors: { apiKey: 'API key is required' } }, { status: 400 },
    )
   }
-  if (!Number.isFinite(eventTypeId) || eventTypeId <= 0) {
-   return NextResponse.json(
-    { success: false, errors: { eventTypeId: 'Event Type ID must be a number' } }, { status: 400 },
-   )
+
+  // If the user hasn't picked an event type yet (or typed a wrong ID),
+  // we list everything the API key can see and return it so the UI can
+  // show a dropdown. Cal.com's event-type IDs are buried — making the
+  // contractor guess the number was the friction in the original flow.
+  const noEventTypeProvided = !Number.isFinite(eventTypeId) || eventTypeId <= 0
+
+  if (noEventTypeProvided) {
+   try {
+    const me = await getMe(apiKey)
+    const eventTypes = await listEventTypes(apiKey)
+    return NextResponse.json({
+     success: false,
+     needsEventType: true,
+     account: { username: me.username, email: me.email, timeZone: me.timeZone },
+     eventTypes: eventTypes.map((et) => ({
+      id: et.id, title: et.title, slug: et.slug, lengthInMinutes: et.lengthInMinutes,
+     })),
+    })
+   } catch (e) {
+    if (e instanceof CalcomError && (e.status === 401 || e.status === 403)) {
+     return NextResponse.json(
+      { success: false, errors: { apiKey: 'Cal.com rejected this key' } }, { status: 400 },
+     )
+    }
+    return NextResponse.json(
+     { success: false, error: e instanceof Error ? e.message : 'Cal.com unreachable' },
+     { status: 400 },
+    )
+   }
   }
 
   // Validate against Cal.com.
@@ -47,9 +73,26 @@ export async function POST(request: NextRequest) {
      )
     }
     if (e.status === 404) {
-     return NextResponse.json(
-      { success: false, errors: { eventTypeId: 'Event type not found on this account' } }, { status: 400 },
-     )
+     // Event type ID didn't match — return the list so the UI can show
+     // a picker rather than just yelling "not found".
+     try {
+      const me2 = await getMe(apiKey)
+      const eventTypes = await listEventTypes(apiKey)
+      return NextResponse.json({
+       success: false,
+       needsEventType: true,
+       errors: { eventTypeId: `Event type ${eventTypeId} isn't on this account — pick one below.` },
+       account: { username: me2.username, email: me2.email, timeZone: me2.timeZone },
+       eventTypes: eventTypes.map((et) => ({
+        id: et.id, title: et.title, slug: et.slug, lengthInMinutes: et.lengthInMinutes,
+       })),
+      })
+     } catch {
+      return NextResponse.json(
+       { success: false, errors: { eventTypeId: 'Event type not found on this account' } },
+       { status: 400 },
+      )
+     }
     }
     return NextResponse.json(
      { success: false, error: `Cal.com error: ${e.message}` }, { status: 400 },

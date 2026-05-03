@@ -84,6 +84,32 @@ export async function getEventType(apiKey: string, eventTypeId: number): Promise
 }
 
 /**
+ * Lists every event type the API key can see — personal + team — so the
+ * onboarding UI can offer a dropdown when the contractor enters the
+ * wrong numeric ID. Cal.com hides event type IDs deep in their settings,
+ * so most contractors will fat-finger this on their first try.
+ */
+export async function listEventTypes(apiKey: string): Promise<CalcomEventType[]> {
+ try {
+  const res = await calFetch<{ status: string; data: { eventTypeGroups: Array<{ eventTypes: CalcomEventType[] }> } | CalcomEventType[] }>(
+   apiKey, '/event-types',
+  )
+  // v2 returns either { data: { eventTypeGroups: [...] } } or { data: [...] }
+  // depending on account type. Flatten both shapes.
+  const data = res.data as any
+  if (Array.isArray(data)) return data as CalcomEventType[]
+  if (data?.eventTypeGroups) {
+   return (data.eventTypeGroups as Array<{ eventTypes: CalcomEventType[] }>)
+    .flatMap((g) => g.eventTypes || [])
+  }
+  return []
+ } catch (e) {
+  if (e instanceof CalcomError) throw e
+  return []
+ }
+}
+
+/**
  * Verifies an API key + event type ID pair belongs to the same Cal.com user
  * and returns useful metadata for storing on the business row.
  */
