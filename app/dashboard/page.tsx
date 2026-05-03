@@ -101,14 +101,18 @@ export default function DashboardPage() {
   return () => { cancelled = true }
  }, [router, range])
 
- // If onboarding isn't done and there's no real data yet, swap in demo data
- // so the contractor can see what a populated dashboard looks like.
- // IMPORTANT: keep the real business name + id from the API — only the
- // calls/appointments/charts get faked. Otherwise a logged-in client sees
- // "Sample Heating & Cooling" as their own business, which looks like a
- // cross-tenant leak even when it's just a placeholder.
+ // Demo data is a "what your dashboard will look like" preview for
+ // contractors who haven't finished onboarding AND have no real activity
+ // yet. As soon as a real Retell number is provisioned (admin set it OR
+ // they completed onboarding's number step), the demo goes away — even
+ // if no calls have come in yet — because at that point this is a real
+ // tenant and showing fake calls would be misleading.
+ //
+ // We also keep the real business name + id from the API; only the
+ // calls/appointments/charts get faked.
  const isEmpty = !data || (data.kpis.totalCalls === 0 && (data.recentCalls?.length ?? 0) === 0)
- const isDemo = needsSetup && isEmpty
+ const hasRealPhone = !!(data as any)?.retellPhone
+ const isDemo = needsSetup && isEmpty && !hasRealPhone
  const displayData: Overview | null = isDemo
   ? {
    ...(demoOverview(range) as Overview),
@@ -174,7 +178,7 @@ export default function DashboardPage() {
    <Sidebar businessName={displayData.business.business_name} onSignOut={handleSignOut} />
 
    <div className="flex-1 min-w-0 pb-20 lg:pb-0">
-    <TopBar phone={isDemo ? null : (data as any)?.retellPhone ?? null} />
+    <TopBar phone={(data as any)?.retellPhone ?? null} />
 
     <section className="px-4 lg:px-8 py-6 lg:py-10">
      <div className="max-w-7xl">
