@@ -249,10 +249,7 @@ function Empty({ hasAny }: { hasAny: boolean }) {
  return (
   <div className="px-6 py-6">
    <p className="text-sm text-gray-700">
-    Nothing yet. Try the demo line:{' '}
-    <a href="tel:+17379370084" className="font-mono text-sky-600 hover:underline">
-     +1 (737) 937-0084
-    </a>
+    No calls yet. Once your Retell number is live and forwarded to from your business line, calls will show up here.
    </p>
   </div>
  )
