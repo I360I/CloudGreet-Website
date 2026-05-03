@@ -358,7 +358,8 @@ function JobDrawer({
    })
    const json = await res.json().catch(() => ({}))
    if (!res.ok || !json.success) throw new Error(json?.error || 'Failed')
-   setPromoteMsg(`Promoted ${json.promoted}, skipped ${json.skipped}.`)
+   const errSuffix = json.error_sample ? ` — first error: ${json.error_sample}` : ''
+   setPromoteMsg(`Promoted ${json.promoted}, skipped ${json.skipped}.${errSuffix}`)
    setSelected(new Set())
    await load()
    onPromoted()

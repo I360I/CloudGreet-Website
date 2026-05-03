@@ -56,6 +56,7 @@ export async function POST(
 
   let promoted = 0
   let skipped = 0
+  let firstInsertError: string | null = null
   for (const r of pending) {
    const phone = normalizePhone(r.phone)
    if (phone && existingPhones.has(phone)) { skipped++; continue }
@@ -81,6 +82,7 @@ export async function POST(
     .single()
 
    if (insertErr || !lead) {
+    if (!firstInsertError) firstInsertError = insertErr?.message || 'Unknown insert error'
     logger.warn('Promote: lead insert failed', { error: insertErr?.message, scrapeResultId: r.id })
     skipped++
     continue
@@ -108,7 +110,12 @@ export async function POST(
     .eq('id', params.id)
   }
 
-  return NextResponse.json({ success: true, promoted, skipped })
+  return NextResponse.json({
+   success: true,
+   promoted,
+   skipped,
+   ...(firstInsertError ? { error_sample: firstInsertError } : {}),
+  })
  } catch (e) {
   logger.error('Promote failed', { error: e instanceof Error ? e.message : 'Unknown' })
   return NextResponse.json({ error: 'Failed to promote results' }, { status: 500 })
