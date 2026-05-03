@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
  process.env.NEXT_PUBLIC_BASE_URL ||
  'https://cloudgreet.com'
 
- const successRedirect = `${redirectBase.replace(/\/$/, '')}/onboarding?calendar=success`
- const errorRedirect = `${redirectBase.replace(/\/$/, '')}/onboarding?calendar=error`
+ const successRedirect = `${redirectBase.replace(/\/$/, '')}/dashboard/onboarding?calendar=success`
+ const errorRedirect = `${redirectBase.replace(/\/$/, '')}/dashboard/onboarding?calendar=error`
 
  if (errorParam) {
  logger.warn('Google calendar auth error', { error: errorParam })
