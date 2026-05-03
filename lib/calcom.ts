@@ -84,29 +84,67 @@ export async function getEventType(apiKey: string, eventTypeId: number): Promise
 }
 
 /**
- * Lists every event type the API key can see — personal + team — so the
- * onboarding UI can offer a dropdown when the contractor enters the
- * wrong numeric ID. Cal.com hides event type IDs deep in their settings,
- * so most contractors will fat-finger this on their first try.
+ * Lists every event type the API key can see so the onboarding UI can
+ * offer a dropdown. Cal.com v2 requires `?username=` on /event-types,
+ * so we fetch /me first to get it. Falls back to v1 (`/v1/event-types`)
+ * if v2 doesn't return anything — some older personal API keys still
+ * route via v1.
  */
 export async function listEventTypes(apiKey: string): Promise<CalcomEventType[]> {
+ // 1) Get the user's username for the v2 query.
+ let username: string | null = null
  try {
-  const res = await calFetch<{ status: string; data: { eventTypeGroups: Array<{ eventTypes: CalcomEventType[] }> } | CalcomEventType[] }>(
-   apiKey, '/event-types',
-  )
-  // v2 returns either { data: { eventTypeGroups: [...] } } or { data: [...] }
-  // depending on account type. Flatten both shapes.
-  const data = res.data as any
-  if (Array.isArray(data)) return data as CalcomEventType[]
-  if (data?.eventTypeGroups) {
-   return (data.eventTypeGroups as Array<{ eventTypes: CalcomEventType[] }>)
-    .flatMap((g) => g.eventTypes || [])
-  }
-  return []
- } catch (e) {
-  if (e instanceof CalcomError) throw e
-  return []
+  const me = await getMe(apiKey)
+  username = me.username
+ } catch {
+  // fall through to v1
  }
+
+ // 2) Try v2 /event-types?username=…
+ if (username) {
+  try {
+   const res = await calFetch<{ status: string; data: any }>(
+    apiKey, `/event-types?username=${encodeURIComponent(username)}`,
+   )
+   const flat = flattenEventTypes(res.data)
+   if (flat.length > 0) return flat
+  } catch (e) {
+   if (e instanceof CalcomError && (e.status === 401 || e.status === 403)) throw e
+  }
+ }
+
+ // 3) Last-ditch: hit v1 directly. Personal API keys originally
+ //    minted on v1 still work there even when v2 rejects them.
+ try {
+  const v1Base = (process.env.CAL_API_V1_BASE || 'https://api.cal.com/v1').replace(/\/$/, '')
+  const v1Res = await fetch(`${v1Base}/event-types?apiKey=${encodeURIComponent(apiKey)}`, {
+   headers: { 'Content-Type': 'application/json' },
+  })
+  if (v1Res.ok) {
+   const j = await v1Res.json().catch(() => ({}))
+   const types = (j?.event_types || j?.eventTypes || []) as any[]
+   return types.map((et) => ({
+    id: et.id,
+    title: et.title,
+    slug: et.slug,
+    lengthInMinutes: et.length || et.lengthInMinutes || 30,
+    hidden: !!et.hidden,
+   }))
+  }
+ } catch {
+  // Final fallback: nothing.
+ }
+ return []
+}
+
+function flattenEventTypes(data: any): CalcomEventType[] {
+ if (!data) return []
+ if (Array.isArray(data)) return data as CalcomEventType[]
+ if (Array.isArray(data?.eventTypeGroups)) {
+  return data.eventTypeGroups.flatMap((g: any) => g.eventTypes || [])
+ }
+ if (Array.isArray(data?.eventTypes)) return data.eventTypes
+ return []
 }
 
 /**
