@@ -99,25 +99,33 @@ async function* runTdlr(
 
    if (enrichEnabled) {
     try {
-     const enrich = await enrichWithGooglePlaces(
+     const attempt = await enrichWithGooglePlaces(
       record.business_name,
       record.city,
      )
-     if (enrich) {
+     if (attempt.ok) {
       record = {
        ...record,
-       phone: enrich.phone || null,
-       website: enrich.website || null,
-       address: enrich.matched_address || record.address,
-       raw: { ...row, google_places: enrich },
+       phone: attempt.data.phone || null,
+       website: attempt.data.website || null,
+       address: attempt.data.matched_address || record.address,
+       raw: { ...row, google_places: attempt.data },
+      }
+     } else {
+      // Persist the error onto the row so the operator can see why a
+      // record didn't get enriched, instead of guessing why phone is empty.
+      record = {
+       ...record,
+       raw: { ...row, google_places_error: attempt.error },
       }
      }
      await sleep(ENRICH_DELAY_MS)
     } catch (e) {
+     const msg = e instanceof Error ? e.message : 'Unknown'
      logger.warn('TDLR enrich failed for row', {
-      error: e instanceof Error ? e.message : 'Unknown',
-      business: record.business_name,
+      error: msg, business: record.business_name,
      })
+     record = { ...record, raw: { ...row, google_places_error: msg } }
     }
    }
 

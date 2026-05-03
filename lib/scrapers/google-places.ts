@@ -34,6 +34,10 @@ export type PlacesEnrichment = {
  place_id: string | null
 }
 
+export type PlacesAttempt =
+ | { ok: true; data: PlacesEnrichment }
+ | { ok: false; error: string }
+
 export function isGooglePlacesConfigured(): boolean {
  return !!process.env.GOOGLE_PLACES_API_KEY
 }
@@ -41,10 +45,10 @@ export function isGooglePlacesConfigured(): boolean {
 export async function enrichWithGooglePlaces(
  businessName: string,
  city: string | null | undefined,
-): Promise<PlacesEnrichment | null> {
+): Promise<PlacesAttempt> {
  const key = process.env.GOOGLE_PLACES_API_KEY
- if (!key) return null
- if (!businessName) return null
+ if (!key) return { ok: false, error: 'GOOGLE_PLACES_API_KEY missing at runtime' }
+ if (!businessName) return { ok: false, error: 'no business name' }
 
  const query = city ? `${businessName} ${city} TX` : `${businessName} Texas`
 
@@ -66,28 +70,37 @@ export async function enrichWithGooglePlaces(
 
   if (!res.ok) {
    const body = await res.text().catch(() => '')
+   const trimmed = body.slice(0, 300)
    logger.warn('Google Places search failed', {
-    status: res.status, body: body.slice(0, 500), query,
+    status: res.status, body: trimmed, query,
    })
-   return null
+   // Try to parse Google's error envelope so the message is user-friendly.
+   let msg = `${res.status} ${res.statusText}`
+   try {
+    const j = JSON.parse(body)
+    msg = j?.error?.message || j?.error?.status || msg
+   } catch {}
+   return { ok: false, error: `${res.status}: ${msg}` }
   }
 
   const data = await res.json()
   const place = data?.places?.[0]
-  if (!place) return null
+  if (!place) return { ok: false, error: 'no match' }
 
   return {
-   phone: place.internationalPhoneNumber || place.nationalPhoneNumber || null,
-   website: place.websiteUri || null,
-   google_types: Array.isArray(place.types) ? place.types : [],
-   matched_name: place.displayName?.text || null,
-   matched_address: place.formattedAddress || null,
-   place_id: place.id || null,
+   ok: true,
+   data: {
+    phone: place.internationalPhoneNumber || place.nationalPhoneNumber || null,
+    website: place.websiteUri || null,
+    google_types: Array.isArray(place.types) ? place.types : [],
+    matched_name: place.displayName?.text || null,
+    matched_address: place.formattedAddress || null,
+    place_id: place.id || null,
+   },
   }
  } catch (e) {
-  logger.warn('Google Places call threw', {
-   error: e instanceof Error ? e.message : 'Unknown', query,
-  })
-  return null
+  const msg = e instanceof Error ? e.message : 'Unknown'
+  logger.warn('Google Places call threw', { error: msg, query })
+  return { ok: false, error: `network: ${msg}` }
  }
 }
