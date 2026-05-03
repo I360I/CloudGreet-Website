@@ -87,6 +87,13 @@ export async function enrichWithGooglePlaces(
   const place = data?.places?.[0]
   if (!place) return { ok: false, error: 'no match' }
 
+  // Reject results outside Texas — common business names like "Allied
+  // Mechanical" otherwise match the wrong state's listing.
+  const addr: string = place.formattedAddress || ''
+  if (!isTexasAddress(addr)) {
+   return { ok: false, error: `match outside TX (${addr.slice(0, 80) || 'no address'})` }
+  }
+
   return {
    ok: true,
    data: {
@@ -103,4 +110,18 @@ export async function enrichWithGooglePlaces(
   logger.warn('Google Places call threw', { error: msg, query })
   return { ok: false, error: `network: ${msg}` }
  }
+}
+
+/**
+ * True if a Google formattedAddress sits in Texas. We accept the explicit
+ * "TX" two-letter abbreviation in any segment and the spelled-out "Texas"
+ * — Google sometimes returns one or the other depending on the locality.
+ */
+function isTexasAddress(addr: string): boolean {
+ if (!addr) return false
+ const upper = addr.toUpperCase()
+ // Match ", TX" with optional zip following, or ", Texas"
+ if (/,\s*TX(\s+\d{5})?(\s*,|\s*$)/i.test(addr)) return true
+ if (upper.includes(', TEXAS')) return true
+ return false
 }
