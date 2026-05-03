@@ -104,7 +104,7 @@ function CookiesPageContent() {
 
  <h2 className="text-2xl font-bold text-white mb-6">7. Contact Us</h2>
  <p className="text-gray-300 leading-relaxed mb-6">
- If you have questions about our use of cookies, please contact us at privacy@cloudgreet.ai or through our contact page.
+ If you have questions about our use of cookies, please contact us at privacy@cloudgreet.com or through our contact page.
  </p>
  </div>
  </motion.div>

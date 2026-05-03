@@ -113,7 +113,7 @@ function TCPAA2PPageContent() {
  <li>Replying &quot;UNSUBSCRIBE&quot; to any message</li>
  <li>Calling our support number</li>
  <li>Contacting us through our website</li>
- <li>Emailing us at support@cloudgreet.ai</li>
+ <li>Emailing us at support@cloudgreet.com</li>
  </ul>
 
  <h2 className="text-2xl font-bold text-white mb-6">6. Message Content Standards</h2>
@@ -162,7 +162,7 @@ function TCPAA2PPageContent() {
 
  <h2 className="text-2xl font-bold text-white mb-6">12. Contact Information</h2>
  <p className="text-gray-300 leading-relaxed mb-6">
- For questions about TCPA/A2P compliance or to report violations, contact us at compliance@cloudgreet.ai or through our contact page.
+ For questions about TCPA/A2P compliance or to report violations, contact us at compliance@cloudgreet.com or through our contact page.
  </p>
 
  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 mt-8">

@@ -7,7 +7,7 @@ import { Phone, Mail, MapPin, Check } from "lucide-react"
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
-const SUPPORT_EMAIL = 'hello@cloudgreet.ai'
+const SUPPORT_EMAIL = 'hello@cloudgreet.com'
 const CAL_LINK = 'cloudgreet'
 
 export default function ContactPage() {

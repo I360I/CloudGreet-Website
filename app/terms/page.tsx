@@ -114,7 +114,7 @@ function TermsPageContent() {
 
  <h2 className="text-2xl font-bold text-white mb-6">10. Contact Information</h2>
  <p className="text-gray-300 leading-relaxed mb-6">
- For questions about these terms, please contact us at legal@cloudgreet.ai or through our contact page.
+ For questions about these terms, please contact us at legal@cloudgreet.com or through our contact page.
  </p>
  </div>
  </motion.div>
