@@ -81,8 +81,10 @@ export type CalcomEventType = {
 }
 
 export async function getEventType(apiKey: string, eventTypeId: number): Promise<CalcomEventType> {
+ // Same version-routing issue as listEventTypes — the GET single endpoint
+ // is exposed under 2024-06-14, not the bookings version we default to.
  const res = await calFetch<{ status: string; data: CalcomEventType }>(
-  apiKey, `/event-types/${eventTypeId}`,
+  apiKey, `/event-types/${eventTypeId}`, { version: '2024-06-14' },
  )
  return res.data
 }
