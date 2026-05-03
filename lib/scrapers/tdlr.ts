@@ -84,36 +84,46 @@ async function* runTdlr(
   for (const row of rows) {
    if (yielded >= limit) break
 
+   // Some TDLR list pages (electrical) include phone + city + zip directly;
+   // others (HVAC) leave them blank. Use whatever the list gave us and
+   // fall through to Google Places only for the missing pieces.
+   const cityClean = stripTrailingState(row.city)
+
    let record: ScrapeRecord = {
     source: sourceId,
     business_name: row.business_name || row.owner_name || 'Unknown',
     owner_name: row.owner_name || null,
     business_type: trade,
     license_no: row.license_no || null,
-    city: row.city || null,
+    phone: normalizePhone(row.phone),
+    city: cityClean,
     state: 'TX',
     zip: row.zip || null,
     address: row.county ? `${row.county} County` : null,
     raw: row,
    }
 
-   if (enrichEnabled) {
+   // Skip enrichment entirely if we already have what we'd ask Google for —
+   // saves API spend and avoids cross-state mismatches on common names.
+   const needsEnrichment = !record.phone || !record.website
+   if (enrichEnabled && needsEnrichment) {
     try {
      const attempt = await enrichWithGooglePlaces(
       record.business_name,
       record.city,
      )
      if (attempt.ok) {
+      // Fill-in-only: never overwrite a value we already had.
       record = {
        ...record,
-       phone: attempt.data.phone || null,
-       website: attempt.data.website || null,
-       address: attempt.data.matched_address || record.address,
+       phone: record.phone || attempt.data.phone || null,
+       website: record.website || attempt.data.website || null,
+       address: record.address && !record.address.endsWith(' County')
+        ? record.address
+        : (attempt.data.matched_address || record.address),
        raw: { ...row, google_places: attempt.data },
       }
      } else {
-      // Persist the error onto the row so the operator can see why a
-      // record didn't get enriched, instead of guessing why phone is empty.
       record = {
        ...record,
        raw: { ...row, google_places_error: attempt.error },
@@ -231,7 +241,14 @@ function parseTdlrListHtml(html: string): TdlrRow[] {
  return out
 }
 
-/** "ANDERSON, ORIN RAE (MLN COMPANY)" → owner / business split. */
+/**
+ * HVAC list rows show "LASTNAME, FIRST (BUSINESS NAME)" — owner outside,
+ * business in parens.
+ *
+ * Electrical list rows show only the business name with no parens. There's
+ * no owner exposed publicly for electrical contractors, so owner_name is
+ * left null and the operator can decide whether to enrich another way.
+ */
 function splitNameAndBusiness(raw: string): { owner_name: string | null; business_name: string | null } {
  const t = raw.trim()
  if (!t) return { owner_name: null, business_name: null }
@@ -244,8 +261,8 @@ function splitNameAndBusiness(raw: string): { owner_name: string | null; busines
   }
   return { owner_name: owner, business_name: biz || owner }
  }
- // No parens — treat whole thing as owner.
- return { owner_name: t, business_name: t }
+ // No parens — TDLR didn't expose an owner name for this row.
+ return { owner_name: null, business_name: t }
 }
 
 function textFromHtml(html: string): string {
@@ -274,6 +291,24 @@ function stripWhitespace(s: string): string {
 
 function sleep(ms: number) {
  return new Promise((r) => setTimeout(r, ms))
+}
+
+/** TDLR's electrical list cells append the state, e.g. "AUSTIN TX". */
+function stripTrailingState(city: string | null): string | null {
+ if (!city) return null
+ const t = city.trim()
+ if (!t) return null
+ return t.replace(/\s+TX$/i, '').trim() || null
+}
+
+/** Normalize "(512) 454-0550" or "5124540550" to "+15124540550". */
+function normalizePhone(p: string | null | undefined): string | null {
+ if (!p) return null
+ const digits = p.replace(/[^0-9]/g, '')
+ if (!digits) return null
+ if (digits.length === 10) return `+1${digits}`
+ if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
+ return null
 }
 
 /* ------------------------ Source definitions ------------------------ */
