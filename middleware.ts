@@ -132,7 +132,7 @@ export async function middleware(request: NextRequest) {
   
   // If no token and trying to access protected route, redirect to login
   if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin'))) {
-    return NextResponse.redirect(new URL('/login-simple', request.url))
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // If token exists, set headers for API routes (let API routes handle JWT verification)

@@ -37,6 +37,8 @@ type ClientDetail = {
   forwarding_verified_at?: string | null
   cal_com_username?: string | null
   cal_com_event_type_slug?: string | null
+  greeting_message?: string | null
+  voice_id?: string | null
   created_at?: string
   owner?: {
    id: string
@@ -308,6 +310,11 @@ export default function ClientDetailPage() {
       </RisingFade>
      </div>
 
+     {/* AI tuning */}
+     <RisingFade delay={0.18}>
+      <AgentTuning client={client} hasAgent={!!aiAgent?.retell_agent_id} onPatch={patch} />
+     </RisingFade>
+
      {/* Address row */}
      <RisingFade delay={0.2}>
       <Panel>
@@ -570,6 +577,154 @@ function AgentCard({
    ) : (
     <p className="text-sm text-gray-500">No agent provisioned for this client yet.</p>
    )}
+  </Panel>
+ )
+}
+
+function AgentTuning({
+ client, hasAgent, onPatch,
+}: {
+ client: ClientDetail['client']
+ hasAgent: boolean
+ onPatch: (updates: Record<string, any>) => Promise<any>
+}) {
+ type Voice = {
+  voice_id: string
+  voice_name: string
+  provider: string | null
+  accent: string | null
+  gender: string | null
+  preview_audio_url: string | null
+ }
+ const [voices, setVoices] = useState<Voice[]>([])
+ const [voicesError, setVoicesError] = useState('')
+ const [voicesLoading, setVoicesLoading] = useState(true)
+ const [greeting, setGreeting] = useState(client.greeting_message || '')
+ const [voiceId, setVoiceId] = useState(client.voice_id || '')
+ const [saving, setSaving] = useState(false)
+ const [savedAt, setSavedAt] = useState<number | null>(null)
+ const [saveError, setSaveError] = useState('')
+
+ useEffect(() => {
+  setGreeting(client.greeting_message || '')
+  setVoiceId(client.voice_id || '')
+ }, [client.id, client.greeting_message, client.voice_id])
+
+ useEffect(() => {
+  let cancelled = false
+  ;(async () => {
+   setVoicesLoading(true); setVoicesError('')
+   try {
+    const res = await fetchWithAuth('/api/admin/retell/voices')
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok || !j.success) throw new Error(j?.error || `Failed (${res.status})`)
+    if (!cancelled) setVoices(j.voices || [])
+   } catch (e) {
+    if (!cancelled) setVoicesError(e instanceof Error ? e.message : 'Failed to load voices')
+   } finally {
+    if (!cancelled) setVoicesLoading(false)
+   }
+  })()
+  return () => { cancelled = true }
+ }, [])
+
+ const dirty =
+  (greeting || '') !== (client.greeting_message || '') ||
+  (voiceId || '') !== (client.voice_id || '')
+
+ const selectedVoice = useMemo(() => voices.find((v) => v.voice_id === voiceId), [voices, voiceId])
+
+ const onSave = async () => {
+  setSaving(true); setSaveError('')
+  try {
+   await onPatch({
+    greeting_message: greeting,
+    voice_id: voiceId || null,
+   })
+   setSavedAt(Date.now())
+  } catch (e) {
+   setSaveError(e instanceof Error ? e.message : 'Save failed')
+  } finally {
+   setSaving(false)
+  }
+ }
+
+ return (
+  <Panel>
+   <PanelHeader title="AI tuning" eyebrow="Live agent" />
+   {!hasAgent && (
+    <div className="text-xs text-amber-300/90 bg-amber-400/5 border border-amber-400/20 rounded-lg px-3 py-2 mb-3">
+     No Retell agent is provisioned for this client. Saving here will store
+     values, but they won&apos;t take effect until an agent is created.
+    </div>
+   )}
+   <div className="space-y-4">
+    <div>
+     <label className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5 block">
+      Greeting
+     </label>
+     <Input
+      value={greeting}
+      onChange={(e) => setGreeting(e.target.value)}
+      placeholder="Hi, thanks for calling Acme Plumbing — how can I help?"
+      maxLength={240}
+     />
+     <div className="text-[10px] text-gray-600 mt-1">
+      First sentence the AI says when answering. {greeting.length}/240.
+     </div>
+    </div>
+
+    <div>
+     <label className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5 block">
+      Voice
+     </label>
+     {voicesError ? (
+      <div className="text-xs text-rose-300/90 bg-rose-400/5 border border-rose-400/20 rounded-lg px-3 py-2">
+       Couldn&apos;t load Retell voices: {voicesError}
+      </div>
+     ) : (
+      <Select
+       value={voiceId}
+       onChange={(e) => setVoiceId(e.target.value)}
+       disabled={voicesLoading}
+      >
+       <option value="">{voicesLoading ? 'Loading voices…' : 'Auto (based on business type)'}</option>
+       {voices.map((v) => (
+        <option key={v.voice_id} value={v.voice_id}>
+         {v.voice_name}
+         {v.gender ? ` · ${v.gender}` : ''}
+         {v.accent ? ` · ${v.accent}` : ''}
+         {v.provider ? ` · ${v.provider}` : ''}
+        </option>
+       ))}
+      </Select>
+     )}
+     {selectedVoice?.preview_audio_url && (
+      <a
+       href={selectedVoice.preview_audio_url}
+       target="_blank" rel="noreferrer"
+       className="inline-flex items-center gap-1.5 mt-2 text-[10px] font-mono uppercase tracking-wider text-sky-400 hover:text-sky-300"
+      >
+       <Play className="w-3 h-3" /> preview
+      </a>
+     )}
+    </div>
+
+    <div className="flex items-center gap-3 pt-2 border-t border-white/[0.06]">
+     <PrimaryButton onClick={onSave} disabled={!dirty || saving}>
+      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+      {saving ? 'Pushing to Retell…' : 'Save & push to Retell'}
+     </PrimaryButton>
+     {savedAt && !dirty && !saveError && (
+      <span className="text-xs text-emerald-400 inline-flex items-center gap-1">
+       <CheckCircle2 className="w-3.5 h-3.5" /> Synced
+      </span>
+     )}
+     {saveError && (
+      <span className="text-xs text-rose-300">{saveError}</span>
+     )}
+    </div>
+   </div>
   </Panel>
  )
 }

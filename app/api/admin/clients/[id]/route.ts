@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import { deleteWebhook } from '@/lib/calcom'
+import { retellAgentManager } from '@/lib/retell-agent-manager'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -190,7 +191,9 @@ export async function PATCH(
    greeting_message: true,
    ai_tone: true,
    services: true,
+   voice_id: true,
   }
+  const AGENT_TUNING_FIELDS = new Set(['greeting_message', 'voice_id'])
   const update: Record<string, any> = {}
   for (const k of Object.keys(body)) {
    if (ALLOWED[k]) update[k] = body[k]
@@ -210,7 +213,32 @@ export async function PATCH(
   if (error) {
    return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  return NextResponse.json({ success: true, client: data })
+
+  // If anything that affects the live Retell agent changed, push it to Retell.
+  // We swallow the error onto a warning so the DB save isn't lost — admin
+  // sees the warning and can retry the agent push.
+  let agentSyncWarning: string | null = null
+  const tunedFields = Object.keys(update).filter((k) => AGENT_TUNING_FIELDS.has(k))
+  if (tunedFields.length > 0) {
+   try {
+    await retellAgentManager().updateBusinessAgent(params.id, {
+     greetingMessage: typeof update.greeting_message === 'string' ? update.greeting_message : undefined,
+     voiceId: typeof update.voice_id === 'string' ? update.voice_id : undefined,
+    })
+   } catch (syncErr) {
+    agentSyncWarning = syncErr instanceof Error ? syncErr.message : 'Failed to sync to Retell'
+    logger.warn('Retell agent sync after PATCH failed', {
+     businessId: params.id, error: agentSyncWarning,
+    })
+   }
+  }
+
+  return NextResponse.json({
+   success: true,
+   client: data,
+   agent_synced: tunedFields.length > 0 && !agentSyncWarning,
+   agent_sync_warning: agentSyncWarning,
+  })
  } catch (e) {
   logger.error('Admin client PATCH failed', { error: e instanceof Error ? e.message : 'Unknown' })
   return NextResponse.json({ error: 'Failed to update client' }, { status: 500 })

@@ -27,6 +27,7 @@ export interface BusinessAgentConfig {
   aiMaxSilenceSeconds?: number;
   aiEscalationMessage?: string;
   aiAdditionalInstructions?: string | null;
+  voiceId?: string | null;
 }
 
 export interface RetellAgent {
@@ -241,11 +242,14 @@ class RetellAgentManager {
       );
       
       // Update agent via Retell API
+      const resolvedVoice =
+        mergedConfig.voiceId ||
+        (mergedConfig.businessType ? this.selectOptimalVoice(mergedConfig.businessType) : undefined)
       const updateData = {
         name: config.businessName ? `${config.businessName} AI Receptionist` : undefined,
-        greeting: config.greetingMessage,
+        greeting: mergedConfig.greetingMessage,
         system_prompt: systemPrompt,
-        voice: config.businessType ? this.selectOptimalVoice(config.businessType) : undefined
+        voice_id: resolvedVoice
       };
 
       // Remove undefined values
@@ -628,7 +632,7 @@ class RetellAgentManager {
     const { data, error } = await supabaseAdmin
       .from('businesses')
       .select(
-        'business_name, business_type, business_hours, services, service_areas, greeting_message, tone, phone_number, phone, address, city, state, zip_code, website, owner_id, ai_confidence_threshold, ai_max_silence_seconds, ai_escalation_message, ai_additional_instructions'
+        'business_name, business_type, business_hours, services, service_areas, greeting_message, tone, phone_number, phone, address, city, state, zip_code, website, owner_id, ai_confidence_threshold, ai_max_silence_seconds, ai_escalation_message, ai_additional_instructions, voice_id'
       )
       .eq('id', businessId)
       .maybeSingle()
@@ -667,7 +671,8 @@ class RetellAgentManager {
         (data.ai_escalation_message as string | null) ??
         "I'm going to connect you with a teammate who can help further.",
       aiAdditionalInstructions:
-        incoming.aiAdditionalInstructions ?? (data.ai_additional_instructions as string | null) ?? null
+        incoming.aiAdditionalInstructions ?? (data.ai_additional_instructions as string | null) ?? null,
+      voiceId: incoming.voiceId ?? (data.voice_id as string | null) ?? null
     }
   }
 
