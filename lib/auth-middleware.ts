@@ -14,12 +14,21 @@ export interface AuthResult {
 
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   try {
+    // Accept either the Authorization: Bearer header (used by fetchWithAuth)
+    // or the httpOnly `token` cookie set by /api/auth/set-token. Falling back
+    // to the cookie matters because client-side token retrieval has a brief
+    // race after login where the cache hasn't refreshed yet — without the
+    // fallback, the dashboard 401s and bounces back to /login.
     const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return { success: false, error: 'Missing auth header' }
+    let token: string | null = null
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.replace('Bearer ', '')
+    } else {
+      token = request.cookies.get('token')?.value || null
     }
-
-    const token = authHeader.replace('Bearer ', '')
+    if (!token) {
+      return { success: false, error: 'Missing auth token' }
+    }
     
     // Check if JWT_SECRET is configured
     if (!process.env.JWT_SECRET) {

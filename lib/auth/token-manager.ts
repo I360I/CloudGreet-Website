@@ -5,6 +5,10 @@
 
 'use client'
 
+// Token cache to avoid multiple API calls
+let tokenCache: { token: string | null; timestamp: number } | null = null
+const TOKEN_CACHE_TTL = 60000 // 1 minute cache
+
 /**
  * Set authentication token in httpOnly cookie
  * This must be done server-side via API route
@@ -19,11 +23,11 @@ export async function setAuthToken(token: string): Promise<void> {
     body: JSON.stringify({ token }),
     credentials: 'include',
   })
+  // Prime the cache so any fetchWithAuth call between now and the next
+  // page reload sees the fresh token instead of a stale null reading
+  // (which used to send users straight back to /login after sign-in).
+  tokenCache = { token, timestamp: Date.now() }
 }
-
-// Token cache to avoid multiple API calls
-let tokenCache: { token: string | null; timestamp: number } | null = null
-const TOKEN_CACHE_TTL = 60000 // 1 minute cache
 
 /**
  * Get authentication token
