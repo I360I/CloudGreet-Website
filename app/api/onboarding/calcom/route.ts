@@ -145,8 +145,17 @@ export async function POST(request: NextRequest) {
    .eq('id', authResult.businessId)
 
   if (updateError) {
+   logger.error('Cal.com DB save failed', {
+    code: updateError.code, message: updateError.message,
+    details: updateError.details, hint: updateError.hint,
+   })
    return NextResponse.json(
-    { success: false, error: 'Failed to save Cal.com connection' }, { status: 500 },
+    {
+     success: false,
+     error: `Failed to save Cal.com connection: ${updateError.message}`,
+     detail: updateError.details || updateError.hint || updateError.code,
+    },
+    { status: 500 },
    )
   }
 
