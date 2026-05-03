@@ -90,51 +90,94 @@ export async function getEventType(apiKey: string, eventTypeId: number): Promise
  * if v2 doesn't return anything — some older personal API keys still
  * route via v1.
  */
+export type ListEventTypesResult = {
+ eventTypes: CalcomEventType[]
+ attempts: string[]
+}
+
 export async function listEventTypes(apiKey: string): Promise<CalcomEventType[]> {
- // 1) Get the user's username for the v2 query.
+ const r = await listEventTypesDetailed(apiKey)
+ return r.eventTypes
+}
+
+/**
+ * Same as listEventTypes but also returns the trace of what was tried,
+ * so the onboarding UI can show the operator exactly which Cal.com
+ * endpoints came back empty when nothing's listed.
+ */
+export async function listEventTypesDetailed(apiKey: string): Promise<ListEventTypesResult> {
+ const attempts: string[] = []
+ const v1Base = (process.env.CAL_API_V1_BASE || 'https://api.cal.com/v1').replace(/\/$/, '')
+
+ // 1) /me
  let username: string | null = null
  try {
   const me = await getMe(apiKey)
   username = me.username
- } catch {
-  // fall through to v1
+  attempts.push(`v2 /me → username=${username ?? '∅'}`)
+ } catch (e) {
+  const msg = e instanceof CalcomError ? `${e.status} ${e.message}` : 'unknown'
+  attempts.push(`v2 /me → ${msg}`)
  }
 
- // 2) Try v2 /event-types?username=…
+ // 2) v2 /event-types?username=…
  if (username) {
   try {
    const res = await calFetch<{ status: string; data: any }>(
     apiKey, `/event-types?username=${encodeURIComponent(username)}`,
    )
    const flat = flattenEventTypes(res.data)
-   if (flat.length > 0) return flat
+   attempts.push(`v2 /event-types?username=${username} → ${flat.length} returned`)
+   if (flat.length > 0) return { eventTypes: flat, attempts }
   } catch (e) {
+   const msg = e instanceof CalcomError ? `${e.status} ${e.message}` : 'unknown'
+   attempts.push(`v2 /event-types?username=${username} → ${msg}`)
    if (e instanceof CalcomError && (e.status === 401 || e.status === 403)) throw e
   }
  }
 
- // 3) Last-ditch: hit v1 directly. Personal API keys originally
- //    minted on v1 still work there even when v2 rejects them.
+ // 3) v2 /event-types (no params, returns own types on some accounts)
  try {
-  const v1Base = (process.env.CAL_API_V1_BASE || 'https://api.cal.com/v1').replace(/\/$/, '')
+  const res = await calFetch<{ status: string; data: any }>(apiKey, '/event-types')
+  const flat = flattenEventTypes(res.data)
+  attempts.push(`v2 /event-types → ${flat.length} returned`)
+  if (flat.length > 0) return { eventTypes: flat, attempts }
+ } catch (e) {
+  const msg = e instanceof CalcomError ? `${e.status} ${e.message}` : 'unknown'
+  attempts.push(`v2 /event-types → ${msg}`)
+ }
+
+ // 4) v1 /event-types?apiKey=
+ try {
   const v1Res = await fetch(`${v1Base}/event-types?apiKey=${encodeURIComponent(apiKey)}`, {
    headers: { 'Content-Type': 'application/json' },
   })
+  const text = await v1Res.text()
+  const j = text ? safeJson(text) : null
   if (v1Res.ok) {
-   const j = await v1Res.json().catch(() => ({}))
-   const types = (j?.event_types || j?.eventTypes || []) as any[]
-   return types.map((et) => ({
-    id: et.id,
-    title: et.title,
-    slug: et.slug,
-    lengthInMinutes: et.length || et.lengthInMinutes || 30,
-    hidden: !!et.hidden,
-   }))
+   const types = ((j as any)?.event_types || (j as any)?.eventTypes || []) as any[]
+   attempts.push(`v1 /event-types?apiKey=… → ${types.length} returned`)
+   if (types.length > 0) {
+    return {
+     eventTypes: types.map((et) => ({
+      id: et.id,
+      title: et.title,
+      slug: et.slug,
+      lengthInMinutes: et.length || et.lengthInMinutes || 30,
+      hidden: !!et.hidden,
+     })),
+     attempts,
+    }
+   }
+  } else {
+   const errMsg = (j as any)?.message || (typeof j === 'string' ? j : 'no body')
+   attempts.push(`v1 /event-types → ${v1Res.status} ${errMsg}`)
   }
- } catch {
-  // Final fallback: nothing.
+ } catch (e) {
+  attempts.push(`v1 /event-types → ${e instanceof Error ? e.message : 'unknown'}`)
  }
- return []
+
+ return { eventTypes: [], attempts }
 }
 
 function flattenEventTypes(data: any): CalcomEventType[] {

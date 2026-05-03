@@ -205,6 +205,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  const [apiKey, setApiKey] = useState('')
  const [eventTypeId, setEventTypeId] = useState<number | null>(null)
  const [eventTypeOptions, setEventTypeOptions] = useState<EventTypeOption[] | null>(null)
+ const [debugTrace, setDebugTrace] = useState<string[] | null>(null)
  const [submitting, setSubmitting] = useState(false)
  const [error, setError] = useState('')
  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -226,7 +227,10 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
     setEventTypeOptions(json.eventTypes)
     if (json.errors) setFieldErrors(json.errors)
     if (json.eventTypes.length === 0) {
-     setError('No event types found on this Cal.com account. Create one in Cal.com first, then come back.')
+     setError('No event types returned. See trace below — paste it to support if it looks wrong.')
+     setDebugTrace(Array.isArray(json.debug) ? json.debug : null)
+    } else {
+     setDebugTrace(null)
     }
     return
    }
@@ -338,6 +342,15 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
       <span>{error}</span>
      </div>
+    )}
+
+    {debugTrace && debugTrace.length > 0 && (
+     <details className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs">
+      <summary className="cursor-pointer text-gray-700 font-medium">Cal.com trace ({debugTrace.length} attempts)</summary>
+      <ul className="mt-2 space-y-1 font-mono text-gray-600">
+       {debugTrace.map((line, i) => <li key={i}>· {line}</li>)}
+      </ul>
+     </details>
     )}
 
     {success && (

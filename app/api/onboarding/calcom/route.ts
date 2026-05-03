@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { validateConnection, registerWebhook, deleteWebhook, listEventTypes, getMe, CalcomError } from '@/lib/calcom'
+import { validateConnection, registerWebhook, deleteWebhook, listEventTypesDetailed, getMe, CalcomError } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -38,14 +38,18 @@ export async function POST(request: NextRequest) {
   if (noEventTypeProvided) {
    try {
     const me = await getMe(apiKey)
-    const eventTypes = await listEventTypes(apiKey)
+    const detail = await listEventTypesDetailed(apiKey)
     return NextResponse.json({
      success: false,
      needsEventType: true,
      account: { username: me.username, email: me.email, timeZone: me.timeZone },
-     eventTypes: eventTypes.map((et) => ({
+     eventTypes: detail.eventTypes.map((et) => ({
       id: et.id, title: et.title, slug: et.slug, lengthInMinutes: et.lengthInMinutes,
      })),
+     // Surfaced when the list is empty so the operator can see which
+     // Cal.com endpoint was hit and what came back, instead of the
+     // unhelpful "No event types found" dead end.
+     debug: detail.eventTypes.length === 0 ? detail.attempts : undefined,
     })
    } catch (e) {
     if (e instanceof CalcomError && (e.status === 401 || e.status === 403)) {
@@ -73,19 +77,18 @@ export async function POST(request: NextRequest) {
      )
     }
     if (e.status === 404) {
-     // Event type ID didn't match — return the list so the UI can show
-     // a picker rather than just yelling "not found".
      try {
       const me2 = await getMe(apiKey)
-      const eventTypes = await listEventTypes(apiKey)
+      const detail = await listEventTypesDetailed(apiKey)
       return NextResponse.json({
        success: false,
        needsEventType: true,
        errors: { eventTypeId: `Event type ${eventTypeId} isn't on this account — pick one below.` },
        account: { username: me2.username, email: me2.email, timeZone: me2.timeZone },
-       eventTypes: eventTypes.map((et) => ({
+       eventTypes: detail.eventTypes.map((et) => ({
         id: et.id, title: et.title, slug: et.slug, lengthInMinutes: et.lengthInMinutes,
        })),
+       debug: detail.eventTypes.length === 0 ? detail.attempts : undefined,
       })
      } catch {
       return NextResponse.json(
