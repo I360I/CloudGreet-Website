@@ -85,20 +85,28 @@ export default function DashboardPage() {
 
     // Specific recovery: if the only problem is a stale JWT missing
     // businessId, ask the server to reissue a token from the current
-    // user record (which may have been healed) and retry once. Avoids
-    // forcing a sign-out/in when the data on the server is fine.
+    // user record (which may have been healed) and retry once.
     if (res.status === 401 && /businessId/i.test(json?.error || '')) {
      try {
       const refresh = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
-      if (refresh.ok) {
+      const refreshJson = await refresh.json().catch(() => ({}))
+      if (refresh.ok && refreshJson?.success) {
        res = await fetchWithAuth(`/api/dashboard/overview?range=${range}`)
        json = await res.json().catch(() => ({}))
+      } else if (refreshJson?.error) {
+       // Refresh told us the underlying problem (typically: no
+       // business linked to this user). Surface that verbatim.
+       setError(refreshJson.error)
+       return
       }
      } catch { /* fall through to error display */ }
     }
 
     if (res.status === 401) {
-     setError(json?.error || 'Session not recognized. Try signing out and back in.')
+     setError(
+      (json?.error || 'Session not recognized.') +
+      ' If this keeps happening, your user record may not be linked to a business in the database — admin needs to re-link it.',
+     )
      return
     }
     if (!res.ok) { setError(json.error || 'Failed to load dashboard'); return }
