@@ -83,11 +83,18 @@ export async function getStripeMrrSummary(): Promise<StripeMrrSummary> {
       metadataPlan: (sub.metadata?.plan as string) || null,
     })
 
-    if (sub.status === 'active') {
+    // A 100%-off coupon makes Stripe report status='active' even though
+    // the customer is paying nothing this period — counting that as
+    // "Paid" makes the dashboard lie. Recategorize as trialing so the
+    // headline still gets the MRR (committed value) but the breakdown
+    // honestly distinguishes paid from comped/trial.
+    const effectivelyFree = isCurrentlyDiscountedToZero(sub)
+
+    if (sub.status === 'active' && !effectivelyFree) {
       summary.totalMrrCents += monthlyCents
       summary.paidMrrCents += monthlyCents
       summary.paidCount += 1
-    } else if (sub.status === 'trialing') {
+    } else if (sub.status === 'trialing' || (sub.status === 'active' && effectivelyFree)) {
       summary.totalMrrCents += monthlyCents
       summary.trialingMrrCents += monthlyCents
       summary.trialingCount += 1
@@ -105,6 +112,32 @@ export async function getStripeMrrSummary(): Promise<StripeMrrSummary> {
   }
 
   return summary
+}
+
+/**
+ * Is this subscription currently being charged $0 because of a discount?
+ * A 100%-off coupon makes Stripe keep the subscription in 'active', so
+ * relying on status alone misclassifies comped accounts as paid.
+ *
+ * We treat the sub as "effectively free" when:
+ *   - there's a discount currently applied (sub.discount is not null), AND
+ *   - the coupon is 100% off OR amount_off ≥ the recurring price, AND
+ *   - the discount hasn't expired (end is null = forever, or end > now).
+ */
+function isCurrentlyDiscountedToZero(sub: Stripe.Subscription): boolean {
+  const discount = (sub as any).discount as Stripe.Discount | null | undefined
+  if (!discount?.coupon) return false
+  // Expired? (end is unix seconds; null means forever / no expiry)
+  if (discount.end && discount.end < Math.floor(Date.now() / 1000)) return false
+  const coupon = discount.coupon
+  if (coupon.percent_off === 100) return true
+  if (coupon.amount_off && coupon.amount_off > 0) {
+    // Compare against this period's monthly price. If the dollar discount
+    // is ≥ the line total, the customer pays nothing.
+    const monthly = monthlyRevenueCents(sub)
+    if (monthly > 0 && coupon.amount_off >= monthly) return true
+  }
+  return false
 }
 
 /**
