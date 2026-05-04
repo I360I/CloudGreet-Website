@@ -565,13 +565,20 @@ function AgentCard({
 }) {
  const [editingPhone, setEditingPhone] = useState(false)
  const [phoneInput, setPhoneInput] = useState(retellPhone || '')
- const [saving, setSaving] = useState(false)
+ const [savingPhone, setSavingPhone] = useState(false)
  const [phoneErr, setPhoneErr] = useState('')
 
+ const currentAgentId = aiAgent?.retell_agent_id || ''
+ const [editingAgent, setEditingAgent] = useState(false)
+ const [agentInput, setAgentInput] = useState(currentAgentId)
+ const [savingAgent, setSavingAgent] = useState(false)
+ const [agentErr, setAgentErr] = useState('')
+
  useEffect(() => { setPhoneInput(retellPhone || '') }, [retellPhone])
+ useEffect(() => { setAgentInput(currentAgentId) }, [currentAgentId])
 
  const savePhone = async () => {
-  setSaving(true); setPhoneErr('')
+  setSavingPhone(true); setPhoneErr('')
   try {
    const res = await fetchWithAuth(`/api/admin/clients/${clientId}/retell-phone`, {
     method: 'PUT',
@@ -584,7 +591,25 @@ function AgentCard({
   } catch (e) {
    setPhoneErr(e instanceof Error ? e.message : 'Save failed')
   } finally {
-   setSaving(false)
+   setSavingPhone(false)
+  }
+ }
+
+ const saveAgent = async () => {
+  setSavingAgent(true); setAgentErr('')
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${clientId}/retell-agent`, {
+    method: 'PUT',
+    body: JSON.stringify({ agentId: agentInput.trim() || null }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
+   setEditingAgent(false)
+   onPhoneSaved() // re-fetches everything including the agent block
+  } catch (e) {
+   setAgentErr(e instanceof Error ? e.message : 'Save failed')
+  } finally {
+   setSavingAgent(false)
   }
  }
 
@@ -638,8 +663,8 @@ function AgentCard({
         placeholder="+1 (737) 555-0123"
        />
        <div className="flex items-center gap-2">
-        <PrimaryButton onClick={savePhone} disabled={saving}>
-         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+        <PrimaryButton onClick={savePhone} disabled={savingPhone}>
+         {savingPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
          Save
         </PrimaryButton>
         <GhostButton onClick={() => { setEditingPhone(false); setPhoneInput(retellPhone || ''); setPhoneErr('') }}>
@@ -654,9 +679,56 @@ function AgentCard({
      )}
     </div>
 
-    {aiAgent?.retell_agent_id && (
-     <div className="text-xs text-gray-500 font-mono break-all">retell agent: {aiAgent.retell_agent_id}</div>
-    )}
+    {/* Retell agent ID — the canonical link between this client and
+        the agent that answers their calls. Without this, settings the
+        client edits go nowhere. We verify with Retell on save so a
+        typo can't be persisted. */}
+    <div className="pt-3 border-t border-white/[0.06]">
+     <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+      Retell agent ID
+     </div>
+     {!editingAgent ? (
+      <div className="flex items-center gap-3 flex-wrap">
+       {currentAgentId ? (
+        <span className="font-mono text-xs text-gray-300 break-all">{currentAgentId}</span>
+       ) : (
+        <span className="inline-flex items-center gap-2 text-amber-300/90 text-xs">
+         <Bot className="w-4 h-4" />
+         Not linked · client&apos;s settings won&apos;t reach Retell
+        </span>
+       )}
+       <button
+        type="button"
+        onClick={() => setEditingAgent(true)}
+        className="text-[10px] font-mono uppercase tracking-wider text-sky-400 hover:text-sky-300"
+       >
+        {currentAgentId ? 'edit' : 'link agent'}
+       </button>
+      </div>
+     ) : (
+      <div className="space-y-2">
+       <Input
+        value={agentInput}
+        onChange={(e) => setAgentInput(e.target.value)}
+        placeholder="agent_xxxxxxxxxxxxxxx"
+       />
+       <div className="flex items-center gap-2">
+        <PrimaryButton onClick={saveAgent} disabled={savingAgent}>
+         {savingAgent ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+         Save
+        </PrimaryButton>
+        <GhostButton onClick={() => { setEditingAgent(false); setAgentInput(currentAgentId); setAgentErr('') }}>
+         Cancel
+        </GhostButton>
+        {agentErr && <span className="text-xs text-rose-300">{agentErr}</span>}
+       </div>
+       <p className="text-[10px] text-gray-500">
+        Copy from <a href="https://dashboard.retellai.com/agents" target="_blank" rel="noreferrer" className="text-sky-400 hover:text-sky-300">Retell dashboard → Agents</a>.
+        We verify it exists before saving. Leave blank to unlink.
+       </p>
+      </div>
+     )}
+    </div>
     {client.cal_com_username && (
      <div className="pt-3 border-t border-white/[0.06] text-xs text-gray-500">
       Cal.com: <a href={`https://cal.com/${client.cal_com_username}/${client.cal_com_event_type_slug || ''}`} target="_blank" rel="noreferrer" className="text-sky-400 hover:text-sky-300 inline-flex items-center gap-1">
