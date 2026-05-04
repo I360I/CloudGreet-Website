@@ -22,14 +22,12 @@ export async function GET(request: NextRequest) {
    }, { status: 401 })
   }
 
+  // Pull * so missing migration columns (calcom_connected, etc) don't
+  // make the entire query fail. We derive calcom_connected from
+  // cal_com_api_key presence below for the same reason.
   const { data: business, error } = await supabaseAdmin
    .from('businesses')
-   .select(`
-    id, business_name, business_type, phone_number, services, timezone,
-    onboarding_step, onboarding_completed,
-    calcom_connected, cal_com_event_type_slug, cal_com_username,
-    forwarding_carrier, forwarding_line_type, forwarding_mode, forwarding_verified_at
-   `)
+   .select('*')
    .eq('id', authResult.businessId)
    .single()
 
@@ -37,7 +35,14 @@ export async function GET(request: NextRequest) {
    return NextResponse.json({ success: false, error: 'Business not found' }, { status: 404 })
   }
 
-  return NextResponse.json({ success: true, business })
+  // Derive: if there's an API key on file, the integration is connected.
+  // The dedicated column may be missing in older deployments.
+  const calcomConnected = !!(business as any).cal_com_api_key
+
+  return NextResponse.json({
+   success: true,
+   business: { ...business, calcom_connected: calcomConnected },
+  })
  } catch (e) {
   logger.error('Onboarding state error', { error: e instanceof Error ? e.message : 'Unknown' })
   return NextResponse.json({ success: false, error: 'Failed to load' }, { status: 500 })
