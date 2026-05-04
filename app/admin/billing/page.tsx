@@ -187,30 +187,15 @@ export default function BillingDashboardPage() {
  }
  }
 
- const openPortal = async () => {
- try {
- setPortalLoading(true)
- const response = await fetchWithAuth('/api/admin/billing/portal', {
- method: 'POST',
- headers: {
- 'Content-Type': 'application/json',
- },
- body: JSON.stringify({ action: 'portal' })
- })
- const data = await response.json()
- if (!response.ok || !data.success) {
- throw new Error(data?.error || 'Unable to open portal')
- }
- window.open(data.url, '_blank', 'noopener')
- } catch (error) {
- const message = error instanceof Error ? error.message : 'Unable to open Stripe portal'
- showError('Portal unavailable', message)
- } finally {
- setPortalLoading(false)
- }
+ // The previous button hit a per-tenant customer portal endpoint, which
+ // requires a businessId that admins don't carry. Going straight to the
+ // Stripe dashboard is what the operator actually wants.
+ const openStripeDashboard = () => {
+  window.open('https://dashboard.stripe.com/subscriptions', '_blank', 'noopener')
  }
 
  const mrrCents = summary?.mrrCents ?? 0
+ const animatedMrrDollars = useCountUp(Math.floor(mrrCents / 100), 1100)
  const paidCount = summary?.paidCount ?? 0
  const trialingCount = summary?.trialingCount ?? 0
  const pastDueCount = summary?.pastDueCount ?? 0
@@ -267,7 +252,7 @@ export default function BillingDashboardPage() {
     </div>
     <div className="flex items-baseline gap-2 flex-wrap">
      <span className="font-display text-6xl md:text-8xl font-medium tracking-tight text-white tabular-nums leading-none">
-      ${mrrDollars.toLocaleString()}
+      ${animatedMrrDollars.toLocaleString()}
      </span>
      <span className="font-display text-2xl md:text-3xl font-medium tracking-tight text-gray-500 tabular-nums">
       .{String(mrrCentsRemainder).padStart(2, '0')}
@@ -315,17 +300,16 @@ export default function BillingDashboardPage() {
   <div className="relative mt-8 flex flex-wrap items-center gap-3">
    <button
     type="button"
-    onClick={openPortal}
-    disabled={portalLoading}
-    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] hover:bg-white/[0.12] px-4 py-2 text-sm font-medium text-white transition disabled:opacity-60"
+    onClick={openStripeDashboard}
+    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] hover:bg-white/[0.12] hover:border-white/25 px-4 py-2 text-sm font-medium text-white transition-all duration-300"
    >
-    {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />}
-    Open Stripe portal
+    <ArrowUpRight className="h-4 w-4" />
+    Open Stripe dashboard
    </button>
    <button
     type="button"
     onClick={downloadCsv}
-    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] px-4 py-2 text-sm font-medium text-gray-300 transition"
+    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] px-4 py-2 text-sm font-medium text-gray-300 transition-all duration-300"
    >
     <DownloadCloud className="h-4 w-4" />
     Export CSV
@@ -333,11 +317,31 @@ export default function BillingDashboardPage() {
   </div>
  </section>
 
- {/* Secondary metrics — tighter, less competitive with the hero */}
+ {/* Secondary metrics — the numbers that actually matter at this stage */}
  <section className="grid gap-3 sm:grid-cols-3">
-  <SecondaryStat label="Per-booking fees" amountCents={summary?.bookingFeesCents ?? 0} hint="Usage-based, AI appointments" icon={CreditCard} />
-  <SecondaryStat label="Credits & adjustments" amountCents={summary?.creditsCents ?? 0} hint="Manual adjustments this period" icon={Wallet} />
-  <SecondaryStat label="Total billed (30d)" amountCents={summary?.totalBilledCents ?? 0} hint="Aggregate across all sources" icon={ShieldAlert} />
+  <SecondaryStat
+   label="Annualized run rate"
+   value={`$${(mrrCents * 12 / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+   hint="MRR × 12 — what this pace earns over a year"
+   icon={TrendingUp}
+   delay={0}
+  />
+  <SecondaryStat
+   label="Avg per client"
+   value={totalCount > 0 ? `$${Math.round(mrrCents / totalCount / 100).toLocaleString()}` : '—'}
+   hint={`Across ${totalCount} active client${totalCount === 1 ? '' : 's'}`}
+   icon={DollarSign}
+   delay={0.05}
+  />
+  <SecondaryStat
+   label="Conversion potential"
+   value={trialingCount > 0 ? `+$${Math.round(trialingMrrCents / 100).toLocaleString()}` : '—'}
+   hint={trialingCount > 0
+    ? `If all ${trialingCount} trial${trialingCount === 1 ? '' : 's'} convert to paid`
+    : 'No trials right now'}
+   icon={Sparkles}
+   delay={0.1}
+  />
  </section>
  </>
  )}
@@ -464,6 +468,30 @@ export default function BillingDashboardPage() {
  )
 }
 
+/**
+ * Counts up to `target` over `durationMs`, easing out so the headline
+ * MRR animates in instead of just snapping. Re-targets if the value
+ * changes (e.g., new sub lands while the page is open).
+ */
+function useCountUp(target: number, durationMs: number): number {
+ const [value, setValue] = useState(0)
+ useEffect(() => {
+  if (target === 0) { setValue(0); return }
+  const start = performance.now()
+  const startValue = 0
+  let raf = 0
+  const tick = (now: number) => {
+   const t = Math.min(1, (now - start) / durationMs)
+   const eased = 1 - Math.pow(1 - t, 3)
+   setValue(Math.round(startValue + (target - startValue) * eased))
+   if (t < 1) raf = requestAnimationFrame(tick)
+  }
+  raf = requestAnimationFrame(tick)
+  return () => cancelAnimationFrame(raf)
+ }, [target, durationMs])
+ return value
+}
+
 function BreakdownPill({
  label, count, amountCents, tone,
 }: {
@@ -497,23 +525,35 @@ function BreakdownPill({
 }
 
 function SecondaryStat({
- label, amountCents, hint, icon: Icon,
+ label, value, hint, icon: Icon, delay = 0,
 }: {
  label: string
- amountCents: number
+ value: string
  hint: string
  icon: React.ElementType
+ delay?: number
 }) {
  return (
-  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+  <div
+   className="rounded-2xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.10] p-5 transition-all duration-500 ease-out"
+   style={{
+    animation: `riseIn 0.6s cubic-bezier(0.22,1,0.36,1) ${delay}s both`,
+   }}
+  >
    <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">
     <Icon className="w-3.5 h-3.5" />
     {label}
    </div>
    <div className="text-2xl font-medium text-white tabular-nums">
-    ${(amountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+    {value}
    </div>
    <div className="text-xs text-gray-500 mt-1">{hint}</div>
+   <style jsx>{`
+    @keyframes riseIn {
+     from { opacity: 0; transform: translateY(6px); }
+     to { opacity: 1; transform: translateY(0); }
+    }
+   `}</style>
   </div>
  )
 }
