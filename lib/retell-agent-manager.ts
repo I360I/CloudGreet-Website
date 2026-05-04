@@ -198,8 +198,14 @@ class RetellAgentManager {
    * Update an existing agent with new business information
    */
   /**
-   * Publishes the agent so changes go live to the bound phone number.
-   * Retell keeps API edits as a draft until publish is called.
+   * Makes the latest agent edits live on every bound phone number.
+   * Retell keeps API edits as a new agent version; phone numbers
+   * pinned to a specific version stay on the old one until re-bound.
+   * We do both:
+   *   1. POST /publish-agent/{id} (best-effort — may be a no-op)
+   *   2. For each phone bound to this agent, PATCH the phone with
+   *      inbound_agent_id set to the same id and version cleared.
+   *      That nudges Retell to point at the latest version.
    */
   private async maybePublish(retellAgentId: string, t: (m: string) => void): Promise<void> {
     try {
@@ -218,10 +224,70 @@ class RetellAgentManager {
         t(`publish-agent ok${pub?.version != null ? `: version ${pub.version}` : ''}`)
       } else {
         const text = await pubRes.text().catch(() => pubRes.statusText)
-        t(`publish-agent ${pubRes.status}: ${text.slice(0, 120)} — changes may stay in draft`)
+        t(`publish-agent ${pubRes.status}: ${text.slice(0, 80)}`)
       }
     } catch (pubErr) {
       t(`publish-agent failed: ${pubErr instanceof Error ? pubErr.message : 'unknown'}`)
+    }
+
+    // Re-bind any phones serving this agent so they pick up the latest
+    // version. Without this, phones pinned to a specific version_id
+    // keep playing the old config no matter how many times we PATCH.
+    try {
+      const phonesRes = await fetch('https://api.retellai.com/list-phone-numbers', {
+        headers: { Authorization: `Bearer ${this.apiKey}` },
+        cache: 'no-store',
+      })
+      if (!phonesRes.ok) {
+        t(`list-phone-numbers ${phonesRes.status} — couldn't refresh phone bindings`)
+        return
+      }
+      const phones = (await phonesRes.json().catch(() => [])) as any[]
+      const bound = (Array.isArray(phones) ? phones : []).filter(
+        (p) =>
+          p?.inbound_agent_id === retellAgentId ||
+          p?.outbound_agent_id === retellAgentId ||
+          p?.agent_id === retellAgentId,
+      )
+      if (bound.length === 0) {
+        t('no phone numbers route to this agent — re-bind skipped')
+        return
+      }
+      for (const p of bound) {
+        const phoneNumber = p.phone_number || p.phone_number_pretty
+        if (!phoneNumber) continue
+        const patch: Record<string, unknown> = {}
+        // Send the agent id back unchanged with version cleared so Retell
+        // re-resolves to the latest published version.
+        if (p.inbound_agent_id === retellAgentId) {
+          patch.inbound_agent_id = retellAgentId
+          patch.inbound_agent_version = null
+        }
+        if (p.outbound_agent_id === retellAgentId) {
+          patch.outbound_agent_id = retellAgentId
+          patch.outbound_agent_version = null
+        }
+        if (Object.keys(patch).length === 0) continue
+        const rebindRes = await fetch(
+          `https://api.retellai.com/update-phone-number/${encodeURIComponent(phoneNumber)}`,
+          {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(patch),
+          },
+        )
+        if (rebindRes.ok) {
+          t(`rebind ${phoneNumber} → latest version: ok`)
+        } else {
+          const text = await rebindRes.text().catch(() => rebindRes.statusText)
+          t(`rebind ${phoneNumber}: ${rebindRes.status} ${text.slice(0, 80)}`)
+        }
+      }
+    } catch (e) {
+      t(`phone rebind failed: ${e instanceof Error ? e.message : 'unknown'}`)
     }
   }
 
