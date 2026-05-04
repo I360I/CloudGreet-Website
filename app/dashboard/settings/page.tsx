@@ -173,16 +173,23 @@ function GreetingSection({ profile, onSaved }: { profile: Profile; onSaved: () =
  const [saving, setSaving] = useState(false)
  const [error, setError] = useState('')
  const [savedFlag, setSavedFlag] = useState(false)
+ const [trace, setTrace] = useState<string[] | null>(null)
 
  const dirty = value !== profile.greetingMessage
 
  const onSave = async () => {
-  setSaving(true); setError(''); setSavedFlag(false)
+  setSaving(true); setError(''); setSavedFlag(false); setTrace(null)
   try {
-   await patchBusiness({ greeting_message: value, greeting: value })
+   const r = await patchBusiness({ greeting_message: value, greeting: value })
    setSavedFlag(true)
    setTimeout(() => setSavedFlag(false), 2500)
    onSaved()
+   if (r.agentSyncError) {
+    setError(`Saved, but Retell didn't sync: ${r.agentSyncError}`)
+    setTrace(Array.isArray(r.retellTrace) ? r.retellTrace : null)
+   } else if (Array.isArray(r.retellTrace)) {
+    setTrace(r.retellTrace)
+   }
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to save')
   } finally {
@@ -206,6 +213,14 @@ function GreetingSection({ profile, onSaved }: { profile: Profile; onSaved: () =
    </div>
    {savedFlag && <SavedHint />}
    {error && <ErrorHint message={error} />}
+   {trace && trace.length > 0 && (
+    <details className="mt-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs">
+     <summary className="cursor-pointer text-gray-700 font-medium">Retell trace ({trace.length} steps)</summary>
+     <ul className="mt-2 space-y-1 font-mono text-gray-600">
+      {trace.map((line, i) => <li key={i}>· {line}</li>)}
+     </ul>
+    </details>
+   )}
   </div>
  )
 }

@@ -81,56 +81,57 @@ export async function PATCH(request: NextRequest) {
  .eq('id', businessId)
  .single()
 
- // 3. Automatically update Retell agent if agent exists
+ // 3. Always attempt the Retell sync — let the agent manager decide
+ //    whether there's an agent to update. The previous gate
+ //    (`business.retell_agent_id`) skipped clients whose agent id
+ //    lives only in ai_agents, returning success without ever calling
+ //    Retell. We also collect a per-step trace so the UI can show
+ //    exactly which step failed instead of a generic message.
  let agentSynced = false
  let agentSyncError: string | null = null
- if (business.retell_agent_id && updatedBusiness) {
+ const trace: string[] = []
  try {
- const agentManager = retellAgentManager()
+  const agentManager = retellAgentManager()
 
- // Prepare agent config from updated business data
- const agentConfig = {
- businessId: businessId,
- businessName: updatedBusiness.business_name || business.business_name,
- businessType: updatedBusiness.business_type || business.business_type,
- services: updatedBusiness.services || [],
- serviceAreas: updatedBusiness.service_areas || [],
- businessHours: updatedBusiness.business_hours || {},
- greetingMessage: updatedBusiness.greeting_message || updatedBusiness.greeting || '',
- tone: (updatedBusiness.ai_tone || updatedBusiness.tone || 'professional') as 'professional' | 'friendly' | 'casual',
- phoneNumber: updatedBusiness.phone_number || updatedBusiness.phone || '',
- website: updatedBusiness.website,
- address: `${updatedBusiness.address || ''}, ${updatedBusiness.city || ''}, ${updatedBusiness.state || ''} ${updatedBusiness.zip_code || ''}`.trim(),
- voiceId: updatedBusiness.voice_id || null,
- voiceSpeed: updatedBusiness.voice_speed != null ? Number(updatedBusiness.voice_speed) : null,
- }
+  const agentConfig = {
+   businessId,
+   businessName: updatedBusiness?.business_name || business.business_name,
+   businessType: updatedBusiness?.business_type || business.business_type,
+   services: updatedBusiness?.services || [],
+   serviceAreas: updatedBusiness?.service_areas || [],
+   businessHours: updatedBusiness?.business_hours || {},
+   greetingMessage: updatedBusiness?.greeting_message || updatedBusiness?.greeting || '',
+   tone: (updatedBusiness?.ai_tone || updatedBusiness?.tone || 'professional') as 'professional' | 'friendly' | 'casual',
+   phoneNumber: updatedBusiness?.phone_number || updatedBusiness?.phone || '',
+   website: updatedBusiness?.website,
+   address: `${updatedBusiness?.address || ''}, ${updatedBusiness?.city || ''}, ${updatedBusiness?.state || ''} ${updatedBusiness?.zip_code || ''}`.trim(),
+   voiceId: updatedBusiness?.voice_id || null,
+   voiceSpeed: updatedBusiness?.voice_speed != null ? Number(updatedBusiness.voice_speed) : null,
+  }
 
- await agentManager.updateBusinessAgent(businessId, agentConfig)
- agentSynced = true
- logger.info('Retell agent updated automatically', {
- businessId,
- agentId: business.retell_agent_id,
- updatedFields: Object.keys(updates).join(', '),
- })
+  await agentManager.updateBusinessAgent(businessId, agentConfig, trace)
+  agentSynced = true
+  logger.info('Retell agent updated automatically', {
+   businessId, updatedFields: Object.keys(updates).join(', '), trace: trace.join(' | '),
+  })
  } catch (agentError) {
- agentSyncError = agentError instanceof Error ? agentError.message : 'Unknown error'
- logger.error('Agent update failed', {
- error: agentSyncError, businessId,
- })
- // Continue - business update succeeded even if agent update failed
- }
+  agentSyncError = agentError instanceof Error ? agentError.message : 'Unknown error'
+  logger.error('Agent update failed', {
+   error: agentSyncError, businessId, trace: trace.join(' | '),
+  })
  }
 
  return NextResponse.json({
- success: true,
- businessId,
- message: agentSynced
-  ? 'Business settings updated. AI agent synced.'
-  : business.retell_agent_id
-   ? `Settings saved, but the AI agent didn't sync${agentSyncError ? `: ${agentSyncError}` : ''}.`
-   : 'Settings saved. No AI agent provisioned yet.',
- agentSynced,
- agentSyncError,
+  success: true,
+  businessId,
+  message: agentSynced
+   ? 'Business settings updated. AI agent synced.'
+   : `Settings saved, but the AI agent didn't sync: ${agentSyncError || 'unknown reason'}`,
+  agentSynced,
+  agentSyncError,
+  // Step-by-step Retell trace so the UI can show where the chain
+  // broke (no agent id found, agent not in Retell, LLM patch 404, etc).
+  retellTrace: trace,
  })
 
  } catch (error) {

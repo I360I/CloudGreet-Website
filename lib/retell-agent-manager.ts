@@ -197,7 +197,12 @@ class RetellAgentManager {
   /**
    * Update an existing agent with new business information
    */
-  async updateBusinessAgent(businessId: string, config: Partial<BusinessAgentConfig>): Promise<void> {
+  async updateBusinessAgent(
+    businessId: string,
+    config: Partial<BusinessAgentConfig>,
+    trace: string[] = [],
+  ): Promise<void> {
+    const t = (msg: string) => { trace.push(msg) }
     try {
       // Get existing agent ID. Try ai_agents first; fall back to
       // businesses.retell_agent_id for clients created via the admin
@@ -208,13 +213,16 @@ class RetellAgentManager {
         .eq('business_id', businessId)
         .maybeSingle();
       let retellAgentId = aiAgentRow?.retell_agent_id as string | null
-      if (!retellAgentId) {
+      if (retellAgentId) {
+        t(`agent id from ai_agents: ${retellAgentId}`)
+      } else {
         const { data: bizRow } = await supabaseAdmin
           .from('businesses')
           .select('retell_agent_id')
           .eq('id', businessId)
           .maybeSingle()
         retellAgentId = (bizRow as any)?.retell_agent_id || null
+        if (retellAgentId) t(`agent id from businesses: ${retellAgentId}`)
       }
       const agentData = retellAgentId ? { retell_agent_id: retellAgentId } : null
 
@@ -255,7 +263,8 @@ class RetellAgentManager {
 
 
       if (!agentData?.retell_agent_id) {
-        throw new Error('No existing agent found for business');
+        t('no agent id in ai_agents or businesses — nothing to update')
+        throw new Error('No Retell agent linked to this business. Set the agent in /admin/clients/[id] first.')
       }
 
       // Generate updated system prompt
@@ -290,6 +299,11 @@ class RetellAgentManager {
         if (responseEngineType === 'retell-llm') {
           llmId = agent?.response_engine?.llm_id ?? null
         }
+        t(`get-agent ok: response_engine.type=${responseEngineType ?? '∅'} llm_id=${llmId ?? '∅'}`)
+      } else {
+        const txt = await getAgentRes.text().catch(() => getAgentRes.statusText)
+        t(`get-agent ${getAgentRes.status}: ${txt.slice(0, 120)}`)
+        throw new Error(`Retell get-agent ${getAgentRes.status}: ${txt.slice(0, 120)}`)
       }
 
       // 2a) Auto-migrate agents that were created with custom-llm and a
@@ -299,6 +313,7 @@ class RetellAgentManager {
       //     point the agent at it. One-time per agent — subsequent saves
       //     hit the regular update path.
       if (!llmId && responseEngineType !== 'retell-llm') {
+        t(`migrating from ${responseEngineType ?? 'unknown'} → retell-llm`)
         try {
           const createLlmRes = await fetch('https://api.retellai.com/create-retell-llm', {
             method: 'POST',
@@ -340,6 +355,7 @@ class RetellAgentManager {
           }
 
           llmId = newLlmId
+          t(`migrated → llm_id=${newLlmId}`)
           logger.info('Auto-migrated agent from custom-llm to retell-llm', {
             businessId, agentId: agentData.retell_agent_id, llmId: newLlmId,
           })
@@ -369,8 +385,10 @@ class RetellAgentManager {
           })
           if (!llmRes.ok) {
             const text = await llmRes.text().catch(() => llmRes.statusText)
+            t(`update-retell-llm ${llmRes.status}: ${text.slice(0, 120)}`)
             throw new Error(`Failed to update Retell LLM: ${llmRes.status} ${text.slice(0, 200)}`)
           }
+          t(`update-retell-llm ok: ${Object.keys(llmPatch).join(', ')}`)
         }
       }
 
@@ -436,8 +454,10 @@ class RetellAgentManager {
 
       if (!response.ok) {
         const text = await response.text().catch(() => response.statusText)
+        t(`update-agent ${response.status}: ${text.slice(0, 120)}`)
         throw new Error(`Failed to update agent: ${response.status} ${text.slice(0, 200)}`);
       }
+      t(`update-agent ok: ${Object.keys(cleanAgentPatch).join(', ') || '(no fields)'}`)
 
       // Update database
       await supabaseAdmin
