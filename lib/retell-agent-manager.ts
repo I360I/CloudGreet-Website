@@ -187,12 +187,24 @@ class RetellAgentManager {
    */
   async updateBusinessAgent(businessId: string, config: Partial<BusinessAgentConfig>): Promise<void> {
     try {
-      // Get existing agent ID
-      const { data: agentData } = await supabaseAdmin
+      // Get existing agent ID. Try ai_agents first; fall back to
+      // businesses.retell_agent_id for clients created via the admin
+      // path (which doesn't always seed ai_agents).
+      const { data: aiAgentRow } = await supabaseAdmin
         .from('ai_agents')
         .select('retell_agent_id')
         .eq('business_id', businessId)
-        .single();
+        .maybeSingle();
+      let retellAgentId = aiAgentRow?.retell_agent_id as string | null
+      if (!retellAgentId) {
+        const { data: bizRow } = await supabaseAdmin
+          .from('businesses')
+          .select('retell_agent_id')
+          .eq('id', businessId)
+          .maybeSingle()
+        retellAgentId = (bizRow as any)?.retell_agent_id || null
+      }
+      const agentData = retellAgentId ? { retell_agent_id: retellAgentId } : null
 
       /**
 
@@ -242,35 +254,82 @@ class RetellAgentManager {
         promptConfig
       );
       
-      // Update agent via Retell API
       const resolvedVoice =
         mergedConfig.voiceId ||
         (mergedConfig.businessType ? this.selectOptimalVoice(mergedConfig.businessType) : undefined)
-      const updateData: Record<string, unknown> = {
-        name: config.businessName ? `${config.businessName} AI Receptionist` : undefined,
-        greeting: mergedConfig.greetingMessage,
-        system_prompt: systemPrompt,
-        voice_id: resolvedVoice,
-      };
-      // Retell's voice_speed; clamp to their accepted range.
-      if (mergedConfig.voiceSpeed != null) {
-        updateData.voice_speed = Math.max(0.5, Math.min(2.0, mergedConfig.voiceSpeed))
+
+      // Retell v2 splits configuration: voice/name/speed live on the
+      // *agent*, while greeting (begin_message) + system prompt
+      // (general_prompt) live on the *retell-llm* resource the agent
+      // references. Updating only the agent (the previous behavior)
+      // silently ignored greeting + prompt — that's why callers kept
+      // hearing the old greeting after a save.
+
+      // 1) Inspect the agent so we can find its LLM id.
+      const getAgentRes = await fetch(
+        `https://api.retellai.com/get-agent/${agentData.retell_agent_id}`,
+        { headers: { Authorization: `Bearer ${this.apiKey}` } },
+      )
+      let llmId: string | null = null
+      let responseEngineType: string | null = null
+      if (getAgentRes.ok) {
+        const agent = await getAgentRes.json().catch(() => ({}))
+        responseEngineType = agent?.response_engine?.type ?? null
+        if (responseEngineType === 'retell-llm') {
+          llmId = agent?.response_engine?.llm_id ?? null
+        }
       }
 
-      // Remove undefined values
-      const cleanUpdateData = Object.fromEntries(
-        Object.entries(updateData).filter(([_, value]) => value !== undefined)
-      );
+      // 2) Patch the LLM (greeting + prompt) when there is one. Custom
+      //    LLMs handle their own greetings on their websocket — we just
+      //    log so the operator can see why nothing happened.
+      if (llmId) {
+        const llmPatch: Record<string, unknown> = {}
+        if (mergedConfig.greetingMessage) llmPatch.begin_message = mergedConfig.greetingMessage
+        if (systemPrompt) llmPatch.general_prompt = systemPrompt
+        if (Object.keys(llmPatch).length > 0) {
+          const llmRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(llmPatch),
+          })
+          if (!llmRes.ok) {
+            const text = await llmRes.text().catch(() => llmRes.statusText)
+            throw new Error(`Failed to update Retell LLM: ${llmRes.status} ${text.slice(0, 200)}`)
+          }
+        }
+      } else if (responseEngineType && responseEngineType !== 'retell-llm') {
+        logger.warn('Skipping greeting/prompt update — agent uses non-Retell LLM', {
+          businessId, responseEngineType,
+        })
+      }
 
-      // Retell AI API v2 endpoint
-      const response = await fetch(`https://api.retellai.com/v2/update-agent/${agentData.retell_agent_id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
+      // 3) Patch the agent for voice/voice_speed/name.
+      const agentPatch: Record<string, unknown> = {
+        agent_name: config.businessName ? `${config.businessName} AI Receptionist` : undefined,
+        voice_id: resolvedVoice,
+      }
+      if (mergedConfig.voiceSpeed != null) {
+        agentPatch.voice_speed = Math.max(0.5, Math.min(2.0, mergedConfig.voiceSpeed))
+      }
+      const cleanAgentPatch = Object.fromEntries(
+        Object.entries(agentPatch).filter(([_, v]) => v !== undefined),
+      )
+
+      const response = await fetch(
+        `https://api.retellai.com/update-agent/${agentData.retell_agent_id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(cleanAgentPatch),
         },
-        body: JSON.stringify(cleanUpdateData)
-      });
+      );
 
       /**
 
@@ -309,7 +368,8 @@ class RetellAgentManager {
 
 
       if (!response.ok) {
-        throw new Error(`Failed to update agent: ${response.statusText}`);
+        const text = await response.text().catch(() => response.statusText)
+        throw new Error(`Failed to update agent: ${response.status} ${text.slice(0, 200)}`);
       }
 
       // Update database
