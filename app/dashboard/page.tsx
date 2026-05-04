@@ -79,13 +79,25 @@ export default function DashboardPage() {
   ;(async () => {
    setLoading(true)
    try {
-    const res = await fetchWithAuth(`/api/dashboard/overview?range=${range}`)
+    let res = await fetchWithAuth(`/api/dashboard/overview?range=${range}`)
     if (cancelled) return
-    const json = await res.json().catch(() => ({}))
+    let json = await res.json().catch(() => ({}))
+
+    // Specific recovery: if the only problem is a stale JWT missing
+    // businessId, ask the server to reissue a token from the current
+    // user record (which may have been healed) and retry once. Avoids
+    // forcing a sign-out/in when the data on the server is fine.
+    if (res.status === 401 && /businessId/i.test(json?.error || '')) {
+     try {
+      const refresh = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
+      if (refresh.ok) {
+       res = await fetchWithAuth(`/api/dashboard/overview?range=${range}`)
+       json = await res.json().catch(() => ({}))
+      }
+     } catch { /* fall through to error display */ }
+    }
+
     if (res.status === 401) {
-     // Don't redirect — middleware is the single source of truth for
-     // unauthenticated /dashboard access. Surface the real reason from
-     // the API so the next loop has a fingerprint to chase.
      setError(json?.error || 'Session not recognized. Try signing out and back in.')
      return
     }
