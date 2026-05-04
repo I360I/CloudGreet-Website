@@ -36,6 +36,7 @@ type ClientDetail = {
   calcom_connected?: boolean
   forwarding_verified_at?: string | null
   cal_com_username?: string | null
+  cal_com_webhook_id?: string | null
   cal_com_event_type_slug?: string | null
   greeting_message?: string | null
   voice_id?: string | null
@@ -862,14 +863,72 @@ function AgentCard({
      )}
     </div>
     {client.cal_com_username && (
-     <div className="pt-3 border-t border-white/[0.06] text-xs text-gray-500">
-      Cal.com: <a href={`https://cal.com/${client.cal_com_username}/${client.cal_com_event_type_slug || ''}`} target="_blank" rel="noreferrer" className="text-sky-400 hover:text-sky-300 inline-flex items-center gap-1">
-       @{client.cal_com_username}{client.cal_com_event_type_slug ? `/${client.cal_com_event_type_slug}` : ''} <ExternalLink className="w-3 h-3" />
-      </a>
+     <div className="pt-3 border-t border-white/[0.06] text-xs text-gray-500 space-y-2">
+      <div>
+       Cal.com: <a href={`https://cal.com/${client.cal_com_username}/${client.cal_com_event_type_slug || ''}`} target="_blank" rel="noreferrer" className="text-sky-400 hover:text-sky-300 inline-flex items-center gap-1">
+        @{client.cal_com_username}{client.cal_com_event_type_slug ? `/${client.cal_com_event_type_slug}` : ''} <ExternalLink className="w-3 h-3" />
+       </a>
+      </div>
+      <CalcomWebhookStatus
+       clientId={clientId}
+       webhookId={(client as any).cal_com_webhook_id || null}
+      />
      </div>
     )}
    </div>
   </Panel>
+ )
+}
+
+function CalcomWebhookStatus({ clientId, webhookId }: { clientId: string; webhookId: string | null }) {
+ const [registering, setRegistering] = useState(false)
+ const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+ const wired = !!webhookId
+
+ const rewire = async () => {
+  setRegistering(true); setResult(null)
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${clientId}/calcom-rewire`, { method: 'POST' })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) {
+    setResult({ ok: false, msg: j?.error || `Failed (${res.status})` })
+    return
+   }
+   setResult({ ok: true, msg: `Webhook ${j.webhookId} registered.` })
+   // Force a hard refresh so the parent re-fetches the new state.
+   setTimeout(() => location.reload(), 1200)
+  } catch (e) {
+   setResult({ ok: false, msg: e instanceof Error ? e.message : 'Unknown' })
+  } finally {
+   setRegistering(false)
+  }
+ }
+
+ return (
+  <div className="flex items-center gap-3 flex-wrap">
+   {wired ? (
+    <span className="inline-flex items-center gap-1.5 text-emerald-300/90 text-[11px]">
+     <CheckCircle2 className="w-3 h-3" /> Booking webhook wired — bookings flow to dashboard
+    </span>
+   ) : (
+    <>
+     <span className="inline-flex items-center gap-1.5 text-amber-300/90 text-[11px]">
+      <AlertCircle className="w-3 h-3" /> Booking webhook not registered — Cal.com bookings won&apos;t hit the dashboard
+     </span>
+     <button
+      onClick={rewire}
+      disabled={registering}
+      className="text-[10px] font-mono uppercase tracking-wider text-sky-400 hover:text-sky-300 disabled:opacity-50"
+     >
+      {registering ? 'registering…' : 'register now'}
+     </button>
+    </>
+   )}
+   {result && (
+    <span className={`text-[11px] ${result.ok ? 'text-emerald-300' : 'text-rose-300'}`}>{result.msg}</span>
+   )}
+  </div>
  )
 }
 
