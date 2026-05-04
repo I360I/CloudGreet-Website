@@ -381,9 +381,11 @@ function VoiceSection({ profile, state, onSaved }: { profile: Profile; state: Ag
         : 'border-gray-200 hover:border-gray-400'
       }`}
      >
-      <div className="text-sm font-medium text-gray-900">Auto</div>
+      <div className="text-sm font-medium text-gray-900">Currently selected</div>
       <div className="text-xs text-gray-500 mt-0.5">
-       Picks based on your business type.
+       {state?.voiceName
+        ? `${state.voiceName}${state.voiceMeta ? ` · ${state.voiceMeta}` : ''}`
+        : 'Auto-picked from your business type.'}
       </div>
      </button>
      {voices.map((v) => (
