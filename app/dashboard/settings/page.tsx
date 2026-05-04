@@ -102,7 +102,7 @@ export default function SettingsPage() {
        <VoiceSection profile={profile} state={agentState} onSaved={reload} />
        <SpeedSection profile={profile} state={agentState} onSaved={reload} />
        <PasswordSection />
-       <ProfileReadOnly profile={profile} />
+       <ProfileSection profile={profile} onSaved={reload} />
       </div>
      )}
     </div>
@@ -804,34 +804,153 @@ function PasswordField({
  )
 }
 
-function ProfileReadOnly({ profile }: { profile: Profile }) {
+const BUSINESS_TYPES = [
+ 'HVAC', 'Plumbing', 'Electrical', 'Roofing', 'Painting',
+ 'Landscaping', 'Cleaning', 'Pest control', 'Handyman', 'General',
+] as const
+
+function ProfileSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+ const [businessType, setBusinessType] = useState(profile.businessType || '')
+ const [phone, setPhone] = useState(profile.phoneNumber || '')
+ const [website, setWebsite] = useState(profile.website || '')
+ const [address, setAddress] = useState(profile.address || '')
+ const [city, setCity] = useState(profile.city || '')
+ const [state, setState] = useState(profile.state || '')
+ const [zipCode, setZipCode] = useState(profile.zipCode || '')
+ const [saving, setSaving] = useState(false)
+ const [error, setError] = useState('')
+ const [savedFlag, setSavedFlag] = useState(false)
+
+ useEffect(() => {
+  setBusinessType(profile.businessType || '')
+  setPhone(profile.phoneNumber || '')
+  setWebsite(profile.website || '')
+  setAddress(profile.address || '')
+  setCity(profile.city || '')
+  setState(profile.state || '')
+  setZipCode(profile.zipCode || '')
+ }, [profile])
+
+ const dirty =
+  businessType !== (profile.businessType || '') ||
+  phone !== (profile.phoneNumber || '') ||
+  website !== (profile.website || '') ||
+  address !== (profile.address || '') ||
+  city !== (profile.city || '') ||
+  state !== (profile.state || '') ||
+  zipCode !== (profile.zipCode || '')
+
+ const onSave = async () => {
+  setSaving(true); setError(''); setSavedFlag(false)
+  try {
+   await patchBusiness({
+    business_type: businessType.trim(),
+    phone_number: phone.trim() || null,
+    website: website.trim() || null,
+    address: address.trim() || null,
+    city: city.trim() || null,
+    state: state.trim() || null,
+    zip_code: zipCode.trim() || null,
+   })
+   setSavedFlag(true)
+   setTimeout(() => setSavedFlag(false), 2500)
+   onSaved()
+  } catch (e) {
+   setError(e instanceof Error ? e.message : 'Save failed')
+  } finally {
+   setSaving(false)
+  }
+ }
+
+ const inputCls =
+  'w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-900 transition-colors'
+
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
-   <h2 className="text-sm font-medium text-gray-700 mb-4">Profile</h2>
-   <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-    <Field label="Business type" value={profile.businessType} />
-    <Field label="Phone" value={profile.phoneNumber} mono />
-    <Field label="Email" value={profile.email} />
-    <Field label="Website" value={profile.website || '—'} />
-    <div className="sm:col-span-2">
-     <Field
-      label="Address"
-      value={[profile.address, profile.city, profile.state, profile.zipCode].filter(Boolean).join(', ') || '—'}
+   <h2 className="text-sm font-medium text-gray-700 mb-1">Profile</h2>
+   <p className="text-xs text-gray-500 mb-4">
+    The basics about your business. The AI uses this when callers ask where you&apos;re located, what you do, or how to reach you outside CloudGreet.
+   </p>
+
+   <div className="grid sm:grid-cols-2 gap-3">
+    <div>
+     <label className="block text-xs font-medium text-gray-700 mb-1.5">Business type</label>
+     <select
+      value={businessType}
+      onChange={(e) => setBusinessType(e.target.value)}
+      className={inputCls}
+     >
+      <option value="">Pick one…</option>
+      {BUSINESS_TYPES.map((t) => (
+       <option key={t} value={t}>{t}</option>
+      ))}
+      {/* keep an existing custom value selectable */}
+      {businessType && !BUSINESS_TYPES.includes(businessType as any) && (
+       <option value={businessType}>{businessType}</option>
+      )}
+     </select>
+    </div>
+    <div>
+     <label className="block text-xs font-medium text-gray-700 mb-1.5">Phone</label>
+     <input
+      type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+      placeholder="+1 (555) 123-4567" className={`${inputCls} font-mono`}
      />
     </div>
-   </dl>
-   <p className="text-xs text-gray-400 mt-6">
-    Address, phone, and email — contact support to update.
-   </p>
-  </div>
- )
-}
+    <div className="sm:col-span-2">
+     <label className="block text-xs font-medium text-gray-700 mb-1.5">Website</label>
+     <input
+      type="url" value={website} onChange={(e) => setWebsite(e.target.value)}
+      placeholder="https://yourbusiness.com" className={inputCls}
+     />
+    </div>
+    <div className="sm:col-span-2">
+     <label className="block text-xs font-medium text-gray-700 mb-1.5">Street address</label>
+     <input
+      type="text" value={address} onChange={(e) => setAddress(e.target.value)}
+      placeholder="123 Main St" className={inputCls}
+     />
+    </div>
+    <div>
+     <label className="block text-xs font-medium text-gray-700 mb-1.5">City</label>
+     <input
+      type="text" value={city} onChange={(e) => setCity(e.target.value)}
+      className={inputCls}
+     />
+    </div>
+    <div className="grid grid-cols-2 gap-3">
+     <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1.5">State</label>
+      <input
+       type="text" value={state} onChange={(e) => setState(e.target.value)}
+       placeholder="TX" maxLength={2} className={`${inputCls} uppercase`}
+      />
+     </div>
+     <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1.5">ZIP</label>
+      <input
+       type="text" value={zipCode} onChange={(e) => setZipCode(e.target.value)}
+       placeholder="78701" className={`${inputCls} font-mono`}
+      />
+     </div>
+    </div>
+   </div>
 
-function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
- return (
-  <div>
-   <dt className="text-xs text-gray-500 mb-1">{label}</dt>
-   <dd className={`text-gray-900 ${mono ? 'font-mono text-xs' : ''}`}>{value}</dd>
+   <div className="grid sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-100">
+    <div>
+     <label className="block text-xs font-medium text-gray-500 mb-1.5">Email</label>
+     <div className="text-sm text-gray-700">{profile.email || '—'}</div>
+    </div>
+   </div>
+
+   <div className="flex justify-end mt-5">
+    <SaveButton disabled={!dirty} saving={saving} onClick={onSave} />
+   </div>
+   {savedFlag && <SavedHint />}
+   {error && <ErrorHint message={error} />}
+   <p className="text-[11px] text-gray-400 mt-4">
+    Email is locked here — contact support to change it (we verify the new address before switching).
+   </p>
   </div>
  )
 }
