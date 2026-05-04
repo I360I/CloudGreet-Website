@@ -459,6 +459,41 @@ class RetellAgentManager {
       }
       t(`update-agent ok: ${Object.keys(cleanAgentPatch).join(', ') || '(no fields)'}`)
 
+      // Verification step: re-read the agent from Retell after our PATCH
+      // and look up which phone number(s) it's bound to. If our agent
+      // isn't actually attached to a phone number in Retell, the
+      // contractor's calls land on a *different* agent and our updates
+      // are invisible — the trace makes that mismatch obvious.
+      try {
+        const verifyAgentRes = await fetch(
+          `https://api.retellai.com/get-agent/${agentData.retell_agent_id}`,
+          { headers: { Authorization: `Bearer ${this.apiKey}` } },
+        )
+        if (verifyAgentRes.ok) {
+          const verified = await verifyAgentRes.json().catch(() => ({}))
+          t(`verify agent: voice_id=${verified?.voice_id ?? '∅'} voice_speed=${verified?.voice_speed ?? '∅'}`)
+        }
+        const phoneListRes = await fetch('https://api.retellai.com/list-phone-numbers', {
+          headers: { Authorization: `Bearer ${this.apiKey}` },
+        })
+        if (phoneListRes.ok) {
+          const phones = await phoneListRes.json().catch(() => []) as any[]
+          const bound = (Array.isArray(phones) ? phones : []).filter(
+            (p) =>
+              p?.inbound_agent_id === agentData.retell_agent_id ||
+              p?.outbound_agent_id === agentData.retell_agent_id ||
+              p?.agent_id === agentData.retell_agent_id,
+          )
+          if (bound.length === 0) {
+            t('⚠ no Retell phone numbers route to this agent — calls hit a different agent')
+          } else {
+            t(`bound to ${bound.length} number(s): ${bound.map((p) => p.phone_number || p.phone_number_pretty || '?').join(', ')}`)
+          }
+        }
+      } catch (verifyErr) {
+        t(`verify step failed: ${verifyErr instanceof Error ? verifyErr.message : 'unknown'}`)
+      }
+
       // Update database
       await supabaseAdmin
         .from('ai_agents')
