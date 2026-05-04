@@ -406,6 +406,32 @@ class RetellAgentManager {
       }
       t(`update-agent ok: ${Object.keys(cleanAgentPatch).join(', ') || '(no fields)'}`)
 
+      // Publish the agent so the changes go live to the bound phone
+      // number — by default Retell holds edits as a draft and the
+      // phone keeps serving the previous published version, which is
+      // why Anthony's saves "worked" in the API but didn't reach calls.
+      try {
+        const pubRes = await fetch(
+          `https://api.retellai.com/publish-agent/${agentData.retell_agent_id}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        )
+        if (pubRes.ok) {
+          const pub = await pubRes.json().catch(() => ({}))
+          t(`publish-agent ok${pub?.version != null ? `: version ${pub.version}` : ''}`)
+        } else {
+          const text = await pubRes.text().catch(() => pubRes.statusText)
+          t(`publish-agent ${pubRes.status}: ${text.slice(0, 120)} — changes may stay in draft`)
+        }
+      } catch (pubErr) {
+        t(`publish-agent failed: ${pubErr instanceof Error ? pubErr.message : 'unknown'}`)
+      }
+
       // Verification step: re-read the agent from Retell after our PATCH
       // and look up which phone number(s) it's bound to. If our agent
       // isn't actually attached to a phone number in Retell, the
