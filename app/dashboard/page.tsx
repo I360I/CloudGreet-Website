@@ -178,7 +178,11 @@ export default function DashboardPage() {
    <Sidebar businessName={displayData.business.business_name} onSignOut={handleSignOut} />
 
    <div className="flex-1 min-w-0 pb-20 lg:pb-0">
-    <TopBar phone={(data as any)?.retellPhone ?? null} />
+    {/* While `data` is still loading, leave the TopBar uncontrolled
+        (phone={undefined}) so it self-fetches once and shows a neutral
+        loading state instead of flashing the "no number" warning. Once
+        the overview response is in, we hand it the real value. */}
+    <TopBar phone={data ? ((data as any).retellPhone ?? null) : undefined} />
 
     <section className="px-4 lg:px-8 py-6 lg:py-10">
      <div className="max-w-7xl">

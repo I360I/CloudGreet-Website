@@ -11,9 +11,15 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
  * leaking a hardcoded demo number.
  */
 export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
+ // `undefined` = not resolved yet (show neutral skeleton)
+ // `null`      = resolved, no number provisioned (show amber warning)
+ // `string`    = resolved, real number (show "listening on …")
  const [phone, setPhone] = useState<string | null | undefined>(phoneProp)
 
  useEffect(() => {
+  // If parent is still loading (passed undefined), self-fetch — but
+  // keep `phone` as undefined (loading) until we actually have an
+  // answer so we don't flash the "no number" warning during boot.
   if (phoneProp !== undefined) { setPhone(phoneProp); return }
   let cancelled = false
   ;(async () => {
@@ -29,13 +35,22 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
   return () => { cancelled = true }
  }, [phoneProp])
 
- const display = phone ? formatPhone(phone) : null
+ const display = typeof phone === 'string' && phone ? formatPhone(phone) : null
+ const resolved = phone !== undefined
 
  return (
   <div className="border-b border-black/5 bg-[#f6f5f1]/80 backdrop-blur-md sticky top-0 z-30">
    <div className="px-4 lg:px-8 py-3 flex items-center justify-between gap-4 flex-wrap">
     <div className="inline-flex items-center gap-2.5">
-     {display ? (
+     {!resolved ? (
+      // Neutral loading state — no warning, no false positive.
+      <>
+       <span className="w-2 h-2 rounded-full bg-gray-300" />
+       <span className="text-xs font-mono text-gray-400 tracking-tight">
+        connecting…
+       </span>
+      </>
+     ) : display ? (
       <>
        <span className="relative flex h-2 w-2">
         <span className="absolute inline-flex h-full w-full rounded-full bg-sky-500 animate-breathe" />
