@@ -133,8 +133,24 @@ export async function POST(request: NextRequest) {
  // deleted (or was never set), refuse login here — issuing a token without a
  // businessId guarantees an immediate redirect loop on the dashboard.
  if (!user.is_admin && !business) {
+ // Surface enough state for a quick diagnosis instead of a generic
+ // "contact support". Most likely one of:
+ //  · custom_users.business_id is stale (points at a deleted business)
+ //  · businesses table has no row with owner_id = user.id
+ //  · the row exists but under a different owner_id (linkage broke)
+ const { count: ownedCount } = await supabaseAdmin
+   .from('businesses')
+   .select('id', { count: 'exact', head: true })
+   .eq('owner_id', user.id)
+ const detail =
+   user.business_id
+     ? `Your account points at business ${user.business_id} but no row exists there. ${ownedCount ?? 0} businesses are owned by your user id.`
+     : `Your user record has no business_id, and ${ownedCount ?? 0} businesses are owned by your user id. Admin needs to link one in /admin/clients.`
+ logger.warn('Login blocked: no business attached', {
+   userId: user.id, email: user.email, business_id: user.business_id, ownedCount,
+ })
  return NextResponse.json(
- { success: false, message: 'This account is not connected to a business. Contact support.' },
+ { success: false, message: detail },
  { status: 403 }
  )
  }
