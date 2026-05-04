@@ -272,6 +272,24 @@ export async function registerWebhook(
  return res.data
 }
 
+/**
+ * Lists every webhook on the Cal.com account this API key can see.
+ * Used to find an orphan registration whose id we lost (the rewire
+ * flow uses this to delete + recreate when 'subscriber url already
+ * exists for this user').
+ */
+export async function listWebhooks(apiKey: string): Promise<Array<{ id: string; subscriberUrl: string; active?: boolean }>> {
+ try {
+  const res = await calFetch<{ status: string; data: any }>(apiKey, '/webhooks')
+  const data: any = res.data
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.webhooks)) return data.webhooks
+  return []
+ } catch {
+  return []
+ }
+}
+
 export async function deleteWebhook(apiKey: string, webhookId: string): Promise<void> {
  try {
   await calFetch(apiKey, `/webhooks/${webhookId}`, { method: 'DELETE' })

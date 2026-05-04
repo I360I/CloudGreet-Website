@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
-import { registerWebhook, deleteWebhook } from '@/lib/calcom'
+import { registerWebhook, deleteWebhook, listWebhooks } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -43,18 +43,33 @@ export async function POST(
   )
  }
 
- // Drop any stale webhook before registering a new one.
- if (business.cal_com_webhook_id) {
-  try { await deleteWebhook(business.cal_com_api_key, business.cal_com_webhook_id) }
+ const subscriberUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/webhooks/cal/${business.id}`
+ const webhookSecret = crypto.randomBytes(32).toString('hex')
+
+ // Drop any stale webhook before registering a new one. We can't trust
+ // cal_com_webhook_id alone — Cal.com's "subscriber url already exists"
+ // error means there's a previous registration whose id we don't have.
+ // List + match by URL to find it.
+ const knownIds = new Set<string>()
+ if (business.cal_com_webhook_id) knownIds.add(business.cal_com_webhook_id)
+ try {
+  const allWebhooks = await listWebhooks(business.cal_com_api_key)
+  for (const w of allWebhooks) {
+   if (w.subscriberUrl === subscriberUrl) knownIds.add(w.id)
+  }
+ } catch (e) {
+  logger.warn('Cal.com listWebhooks failed (continuing)', {
+   clientId: params.id, error: e instanceof Error ? e.message : 'Unknown',
+  })
+ }
+ for (const id of Array.from(knownIds)) {
+  try { await deleteWebhook(business.cal_com_api_key, id) }
   catch (e) {
    logger.warn('Stale Cal.com webhook delete failed (continuing)', {
-    clientId: params.id, error: e instanceof Error ? e.message : 'Unknown',
+    clientId: params.id, webhookId: id, error: e instanceof Error ? e.message : 'Unknown',
    })
   }
  }
-
- const subscriberUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/webhooks/cal/${business.id}`
- const webhookSecret = crypto.randomBytes(32).toString('hex')
 
  try {
   const wh = await registerWebhook(business.cal_com_api_key, subscriberUrl, webhookSecret)
