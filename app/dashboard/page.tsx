@@ -176,11 +176,46 @@ export default function DashboardPage() {
  // If we have an error but onboarding is incomplete, fall through to demo data
  // rather than blocking the UI on an error screen.
  if ((error || !data) && !displayData) {
+  // Looks like an auth issue (no businessId, session not recognized,
+  // unauthorized) — usually a stale cookie from being signed in as the
+  // admin user. Offer a one-click hard reset that wipes cookies and
+  // localStorage then sends them back to /login.
+  const isAuthIssue = /businessId|session not recognized|unauthorized|no business linked/i.test(error)
+  const hardSignOut = async () => {
+   try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
+   try {
+    localStorage.removeItem('user')
+    localStorage.removeItem('business')
+    localStorage.removeItem('token')
+    localStorage.removeItem('auth_token')
+   } catch {}
+   location.href = '/login'
+  }
   return (
    <main className="min-h-screen bg-[#f6f5f1] flex items-center justify-center px-6">
     <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center max-w-md">
      <p className="text-gray-700 mb-4">{error || 'Dashboard unavailable'}</p>
-     <button onClick={() => location.reload()} className="text-sm text-sky-600 hover:underline">Reload</button>
+     <div className="flex items-center justify-center gap-3">
+      {isAuthIssue ? (
+       <button
+        onClick={hardSignOut}
+        className="bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors"
+       >
+        Sign out &amp; sign in fresh
+       </button>
+      ) : null}
+      <button
+       onClick={() => location.reload()}
+       className="text-sm text-sky-600 hover:underline"
+      >
+       Reload
+      </button>
+     </div>
+     {isAuthIssue && (
+      <p className="text-xs text-gray-400 mt-3">
+       Common cause: your browser still has an admin session from earlier. The button above clears it.
+      </p>
+     )}
     </div>
    </main>
   )
