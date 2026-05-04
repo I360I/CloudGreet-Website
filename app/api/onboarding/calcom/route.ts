@@ -139,8 +139,11 @@ export async function POST(request: NextRequest) {
     cal_com_webhook_secret: webhookSecret,
     calcom_connected: true,
     calcom_connected_at: new Date().toISOString(),
-    onboarding_step: 'forwarding',
     updated_at: new Date().toISOString(),
+    // Note: deliberately not writing onboarding_step here. The UI derives
+    // the step from calcom_connected + forwarding_verified_at flags, and
+    // the column type varies between deployments (text in newer migrations,
+    // integer in older). Skipping it sidesteps the type mismatch.
    })
    .eq('id', authResult.businessId)
 

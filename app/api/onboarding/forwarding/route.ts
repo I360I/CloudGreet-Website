@@ -74,7 +74,6 @@ export async function GET(request: NextRequest) {
     .from('businesses')
     .update({
      forwarding_verified_at: new Date().toISOString(),
-     onboarding_step: 'done',
      onboarding_completed: true,
      updated_at: new Date().toISOString(),
     })
