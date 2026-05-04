@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 /**
@@ -16,24 +17,49 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
  // `string`    = resolved, real number (show "listening on …")
  const [phone, setPhone] = useState<string | null | undefined>(phoneProp)
 
+ // Re-resolve the phone whenever the route changes — that way navigating
+ // between dashboard pages reflects any number that landed since first
+ // mount, instead of caching the boot-time result forever.
+ const pathname = usePathname() || ''
+
  useEffect(() => {
-  // If parent is still loading (passed undefined), self-fetch — but
-  // keep `phone` as undefined (loading) until we actually have an
-  // answer so we don't flash the "no number" warning during boot.
   if (phoneProp !== undefined) { setPhone(phoneProp); return }
   let cancelled = false
-  ;(async () => {
+
+  // Retry on null: the first fetch right after sign-in races with the
+  // token cookie / JWT setup; sometimes /api/dashboard/phone responds
+  // with `null` (no row visible yet) before the auth context settles.
+  // We retry a few times before locking in the empty state, so the
+  // amber "no number provisioned" warning doesn't get stuck on
+  // someone who's actually wired up.
+  const attempt = async (n: number): Promise<void> => {
    try {
     const res = await fetchWithAuth('/api/dashboard/phone')
-    if (!res.ok) { if (!cancelled) setPhone(null); return }
+    if (cancelled) return
+    if (res.status === 401) {
+     // Auth still warming up — retry up to 3 times.
+     if (n < 3) return new Promise((r) => setTimeout(() => attempt(n + 1).then(r), 400))
+     setPhone(null); return
+    }
+    if (!res.ok) {
+     setPhone(null); return
+    }
     const j = await res.json().catch(() => ({}))
-    if (!cancelled) setPhone(j?.phone || null)
+    if (j?.phone) { setPhone(j.phone); return }
+    // Got a successful response with no number. If we haven't checked
+    // a few times yet, give the DB a beat and try again — this is the
+    // window where admin just saved the number elsewhere.
+    if (n < 2) return new Promise((r) => setTimeout(() => attempt(n + 1).then(r), 600))
+    setPhone(null)
    } catch {
+    if (n < 2) return new Promise((r) => setTimeout(() => attempt(n + 1).then(r), 600))
     if (!cancelled) setPhone(null)
    }
-  })()
+  }
+
+  attempt(0)
   return () => { cancelled = true }
- }, [phoneProp])
+ }, [phoneProp, pathname])
 
  const display = typeof phone === 'string' && phone ? formatPhone(phone) : null
  const resolved = phone !== undefined
