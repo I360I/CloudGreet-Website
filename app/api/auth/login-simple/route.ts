@@ -104,6 +104,31 @@ export async function POST(request: NextRequest) {
  business = businessData
  }
 
+ // Auto-heal: if custom_users.business_id is missing/stale but a business
+ // exists with this user as owner_id, link it on the fly. This was a
+ // recurring foot-gun — admin-create flows that didn't complete the link
+ // step left users unable to log in. Better to recover than 403.
+ if (!business && !user.is_admin) {
+ const { data: ownedBusiness } = await supabaseAdmin
+  .from('businesses')
+  .select('id, business_name, business_type')
+  .eq('owner_id', user.id)
+  .order('created_at', { ascending: true })
+  .limit(1)
+  .maybeSingle()
+ if (ownedBusiness) {
+  business = ownedBusiness
+  user.business_id = ownedBusiness.id
+  await supabaseAdmin
+   .from('custom_users')
+   .update({ business_id: ownedBusiness.id, updated_at: new Date().toISOString() })
+   .eq('id', user.id)
+  logger.info('Auto-healed custom_users.business_id at login', {
+   userId: user.id, businessId: ownedBusiness.id,
+  })
+ }
+ }
+
  // Non-admin users must have a real business attached. If their business was
  // deleted (or was never set), refuse login here — issuing a token without a
  // businessId guarantees an immediate redirect loop on the dashboard.
