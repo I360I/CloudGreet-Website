@@ -22,17 +22,39 @@ type Profile = {
  retellAgentId?: string | null
 }
 
+type AgentState = {
+ linked: boolean
+ reason?: string
+ agentId?: string
+ llmId?: string | null
+ agentName?: string | null
+ voiceId?: string | null
+ voiceName?: string | null
+ voiceMeta?: string | null
+ voiceSpeed?: number | null
+ beginMessage?: string | null
+ boundNumbers?: string[]
+ responseEngineType?: string | null
+}
+
 export default function SettingsPage() {
  const [loading, setLoading] = useState(true)
  const [error, setError] = useState('')
  const [profile, setProfile] = useState<Profile | null>(null)
+ const [agentState, setAgentState] = useState<AgentState | null>(null)
 
  const reload = async () => {
   try {
-   const res = await fetchWithAuth('/api/business/profile')
-   const json = await res.json()
-   if (!res.ok || !json.success) throw new Error(json.message || 'Failed to load profile')
-   setProfile(json.data)
+   const [pRes, aRes] = await Promise.all([
+    fetchWithAuth('/api/business/profile'),
+    fetchWithAuth('/api/dashboard/agent-state'),
+   ])
+   const pJson = await pRes.json()
+   if (!pRes.ok || !pJson.success) throw new Error(pJson.message || 'Failed to load profile')
+   setProfile(pJson.data)
+   const aJson = await aRes.json().catch(() => ({}))
+   if (aRes.ok && aJson.success) setAgentState(aJson)
+   else setAgentState({ linked: false, reason: aJson?.error || 'Could not read live agent state' })
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to load profile')
   } finally {
@@ -68,10 +90,11 @@ export default function SettingsPage() {
 
      {!loading && profile && (
       <div className="space-y-3">
+       <LiveAgentBanner state={agentState} />
        <NameSection profile={profile} onSaved={reload} />
-       <GreetingSection profile={profile} onSaved={reload} />
-       <VoiceSection profile={profile} onSaved={reload} />
-       <SpeedSection profile={profile} onSaved={reload} />
+       <GreetingSection profile={profile} state={agentState} onSaved={reload} />
+       <VoiceSection profile={profile} state={agentState} onSaved={reload} />
+       <SpeedSection profile={profile} state={agentState} onSaved={reload} />
        <PasswordSection />
        <ProfileReadOnly profile={profile} />
       </div>
@@ -168,7 +191,51 @@ function NameSection({ profile, onSaved }: { profile: Profile; onSaved: () => vo
 
 /* ---------------------------- Greeting ---------------------------- */
 
-function GreetingSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+function LiveAgentBanner({ state }: { state: AgentState | null }) {
+ if (!state) return null
+ if (!state.linked) {
+  return (
+   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+    <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+    <div className="flex-1">
+     <p className="text-sm font-medium text-amber-900">No live AI agent linked yet</p>
+     <p className="text-xs text-amber-800 mt-0.5">
+      {state.reason || 'Saved settings won\'t reach Retell until an admin links your agent.'}
+     </p>
+    </div>
+   </div>
+  )
+ }
+ const noPhone = !state.boundNumbers || state.boundNumbers.length === 0
+ return (
+  <div className={`rounded-2xl p-4 ${noPhone ? 'bg-amber-50 border border-amber-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+   <div className="flex items-start gap-3">
+    <div className={`w-2 h-2 rounded-full mt-1.5 ${noPhone ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+    <div className="flex-1 text-xs">
+     <div className={`font-medium ${noPhone ? 'text-amber-900' : 'text-emerald-900'}`}>
+      {noPhone
+       ? 'Agent linked, but no Retell phone number routes to it yet'
+       : `Live · answers calls on ${(state.boundNumbers || []).join(', ')}`}
+     </div>
+     <div className={`mt-1 font-mono ${noPhone ? 'text-amber-800/80' : 'text-emerald-800/80'}`}>
+      {state.agentId}
+     </div>
+    </div>
+   </div>
+  </div>
+ )
+}
+
+function CurrentLine({ label, value }: { label: string; value: string | null | undefined }) {
+ return (
+  <div className="text-[11px] font-mono text-gray-500 mt-2">
+   <span className="uppercase tracking-wider">{label}:</span>{' '}
+   <span className="text-gray-700">{value || '—'}</span>
+  </div>
+ )
+}
+
+function GreetingSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: () => void }) {
  const [value, setValue] = useState(profile.greetingMessage)
  const [saving, setSaving] = useState(false)
  const [error, setError] = useState('')
@@ -199,6 +266,8 @@ function GreetingSection({ profile, onSaved }: { profile: Profile; onSaved: () =
 
  const placeholder = `Hi, thanks for calling ${profile.businessName}. This is the virtual receptionist. How can I help today?`
 
+ const liveBegin = state?.beginMessage ?? null
+
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
    <h2 className="text-sm font-medium text-gray-700 mb-1">AI greeting</h2>
@@ -208,6 +277,7 @@ function GreetingSection({ profile, onSaved }: { profile: Profile; onSaved: () =
     placeholder={placeholder} rows={3}
     className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-gray-900 transition-colors text-sm resize-none"
    />
+   {state?.linked && <CurrentLine label="Currently saying" value={liveBegin} />}
    <div className="flex justify-end mt-3">
     <SaveButton disabled={!dirty} saving={saving} onClick={onSave} />
    </div>
@@ -236,7 +306,7 @@ type Voice = {
  preview_audio_url: string | null
 }
 
-function VoiceSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+function VoiceSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: () => void }) {
  const [voices, setVoices] = useState<Voice[]>([])
  const [voicesError, setVoicesError] = useState('')
  const [voicesLoading, setVoicesLoading] = useState(true)
@@ -327,12 +397,11 @@ function VoiceSection({ profile, onSaved }: { profile: Profile; onSaved: () => v
     </div>
    )}
 
-   {selected && (
-    <p className="text-[11px] text-gray-500 mt-3">
-     Currently selected: <span className="font-mono text-gray-800">{selected.voice_name}</span>
-     {selected.gender ? ` · ${selected.gender}` : ''}
-     {selected.accent ? ` · ${selected.accent}` : ''}
-    </p>
+   {state?.linked && (
+    <CurrentLine
+     label="Currently using"
+     value={state.voiceName ? `${state.voiceName}${state.voiceMeta ? ` · ${state.voiceMeta}` : ''}` : null}
+    />
    )}
 
    <div className="flex justify-end mt-4">
@@ -407,7 +476,7 @@ const SPEED_PRESETS: { value: number; label: string }[] = [
  { value: 1.2, label: 'Faster' },
 ]
 
-function SpeedSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+function SpeedSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: () => void }) {
  const initial = profile.voiceSpeed ?? 1.0
  const [value, setValue] = useState<number>(initial)
  const [saving, setSaving] = useState(false)
@@ -454,6 +523,13 @@ function SpeedSection({ profile, onSaved }: { profile: Profile; onSaved: () => v
      {value.toFixed(2)}×
     </div>
    </div>
+
+   {state?.linked && (
+    <CurrentLine
+     label="Currently set to"
+     value={typeof state.voiceSpeed === 'number' ? `${state.voiceSpeed.toFixed(2)}×` : null}
+    />
+   )}
 
    <div className="flex gap-2 mt-3">
     {SPEED_PRESETS.map((p) => (
