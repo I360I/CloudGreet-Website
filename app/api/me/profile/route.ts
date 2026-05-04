@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
-import { syncBusinessKnowledgeBase } from '@/lib/retell-knowledge-base'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -59,11 +58,6 @@ export async function PATCH(request: NextRequest) {
  if (error) {
   logger.error('Self profile update failed', { userId: auth.userId, error: error.message })
   return NextResponse.json({ error: error.message }, { status: 500 })
- }
-
- // Refresh KB so the agent has the new owner name on the next call.
- if (auth.businessId) {
-  try { await syncBusinessKnowledgeBase(auth.businessId) } catch { /* non-fatal */ }
  }
 
  return NextResponse.json({ success: true })

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
-import { syncBusinessKnowledgeBase } from '@/lib/retell-knowledge-base'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -59,9 +58,5 @@ export async function PATCH(
   return NextResponse.json({ error: error.message }, { status: 500 })
  }
 
- // Refresh the KB so Retell's facts are current (owner name, etc).
- let kb: Awaited<ReturnType<typeof syncBusinessKnowledgeBase>> | null = null
- try { kb = await syncBusinessKnowledgeBase(params.id) } catch { /* non-fatal */ }
-
- return NextResponse.json({ success: true, kb })
+ return NextResponse.json({ success: true })
 }

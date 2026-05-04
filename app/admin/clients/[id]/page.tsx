@@ -332,6 +332,12 @@ export default function ClientDetailPage() {
       <AgentTuning client={client} hasAgent={!!aiAgent?.retell_agent_id} onPatch={patch} />
      </RisingFade>
 
+     {/* Knowledge base view — read-only mirror of whatever the
+         operator has curated in Retell for this client's agent. */}
+     <RisingFade delay={0.19}>
+      <KnowledgeBaseCard clientId={id} hasAgent={!!aiAgent?.retell_agent_id} />
+     </RisingFade>
+
 
      {/* Address row */}
      <RisingFade delay={0.2}>
@@ -1021,6 +1027,128 @@ function ExtractionFieldsSection({ clientId, hasAgent }: { clientId: string; has
       )}
       {error && <span className="text-xs text-rose-300">{error}</span>}
      </div>
+    </div>
+   )}
+  </Panel>
+ )
+}
+
+function KnowledgeBaseCard({ clientId, hasAgent }: { clientId: string; hasAgent: boolean }) {
+ type KB = {
+  kbId: string
+  name: string | null
+  status: string | null
+  sources: Array<{
+   type: 'text' | 'document' | 'url' | 'unknown'
+   title: string | null
+   preview: string | null
+   url: string | null
+  }>
+ }
+ const [bases, setBases] = useState<KB[] | null>(null)
+ const [reason, setReason] = useState<string | null>(null)
+ const [loading, setLoading] = useState(true)
+ const [linked, setLinked] = useState(hasAgent)
+
+ const load = async () => {
+  setLoading(true); setReason(null)
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${clientId}/knowledge`)
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Failed to load')
+   setLinked(!!j.linked)
+   setBases(Array.isArray(j.bases) ? j.bases : [])
+   if (j.reason) setReason(j.reason)
+  } catch (e) {
+   setReason(e instanceof Error ? e.message : 'Failed to load')
+  } finally {
+   setLoading(false)
+  }
+ }
+ useEffect(() => { load() /* eslint-disable-line */ }, [clientId])
+
+ return (
+  <Panel>
+   <PanelHeader
+    title="Knowledge base"
+    eyebrow="Retell · read-only"
+    trailing={
+     <button
+      onClick={load}
+      className="text-[10px] font-mono uppercase tracking-wider text-sky-400 hover:text-sky-300"
+     >
+      refresh
+     </button>
+    }
+   />
+   {!linked ? (
+    <div className="bg-amber-400/5 border border-amber-400/20 rounded-lg px-3 py-2 text-xs text-amber-300/90">
+     Link a Retell agent above first — once linked, the agent&apos;s knowledge base shows up here.
+    </div>
+   ) : loading ? (
+    <div className="flex items-center gap-2 text-xs text-gray-500">
+     <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+    </div>
+   ) : bases && bases.length > 0 ? (
+    <div className="space-y-3">
+     {bases.map((kb) => (
+      <div key={kb.kbId} className="bg-white/[0.02] border border-white/[0.06] rounded-xl">
+       <div className="px-4 py-3 border-b border-white/[0.04] flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+         <div className="text-sm font-medium text-white truncate">{kb.name || kb.kbId}</div>
+         <div className="text-[10px] font-mono text-gray-500 mt-0.5 break-all">{kb.kbId}</div>
+        </div>
+        {kb.status && (
+         <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400 bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5">
+          {kb.status}
+         </span>
+        )}
+       </div>
+       {kb.sources.length === 0 ? (
+        <div className="px-4 py-3 text-xs text-gray-500">No sources yet — add some in the Retell dashboard.</div>
+       ) : (
+        <ul className="divide-y divide-white/[0.04]">
+         {kb.sources.map((s, i) => (
+          <li key={i} className="px-4 py-3">
+           <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-sky-300 bg-sky-400/5 border border-sky-400/20 rounded px-1.5 py-0.5">
+             {s.type}
+            </span>
+            <span className="text-sm text-gray-200 truncate">{s.title || 'Untitled'}</span>
+            {s.url && (
+             <a
+              href={s.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] font-mono text-sky-400 hover:text-sky-300 inline-flex items-center gap-1"
+             >
+              open <ExternalLink className="w-3 h-3" />
+             </a>
+            )}
+           </div>
+           {s.preview && (
+            <p className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">
+             {s.preview}
+            </p>
+           )}
+          </li>
+         ))}
+        </ul>
+       )}
+      </div>
+     ))}
+    </div>
+   ) : (
+    <div className="text-xs text-gray-500">
+     {reason || 'No knowledge bases attached to this agent yet.'}{' '}
+     <a
+      href="https://dashboard.retellai.com/knowledge-base"
+      target="_blank"
+      rel="noreferrer"
+      className="text-sky-400 hover:text-sky-300"
+     >
+      Open Retell &rarr;
+     </a>
     </div>
    )}
   </Panel>
