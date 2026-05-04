@@ -36,11 +36,27 @@ export async function POST(
    return NextResponse.json({ error: 'Client or owner not found' }, { status: 404 })
   }
 
-  // 12-char readable password (no l/1, O/0 to avoid copy mistakes).
-  const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-  const newPassword = Array.from(crypto.randomBytes(12))
-   .map((b) => ALPHA[b % ALPHA.length])
-   .join('')
+  // Optional custom password from the body. Useful when the admin is
+  // on the phone with the client and wants to set something memorable.
+  // Falls back to a generated 12-char readable string when omitted.
+  const body = await request.json().catch(() => ({})) as { password?: string }
+  const customPassword = typeof body.password === 'string' ? body.password.trim() : ''
+
+  let newPassword: string
+  if (customPassword) {
+   if (customPassword.length < 8) {
+    return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
+   }
+   if (customPassword.length > 128) {
+    return NextResponse.json({ error: 'Password too long (max 128)' }, { status: 400 })
+   }
+   newPassword = customPassword
+  } else {
+   const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+   newPassword = Array.from(crypto.randomBytes(12))
+    .map((b) => ALPHA[b % ALPHA.length])
+    .join('')
+  }
 
   const hash = await bcrypt.hash(newPassword, 10)
 

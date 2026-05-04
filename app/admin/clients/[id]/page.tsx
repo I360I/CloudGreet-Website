@@ -133,10 +133,16 @@ export default function ClientDetailPage() {
   return j.client
  }
 
- const resetPassword = async () => {
-  if (!confirm('Generate a new temporary password for this client? The current one becomes invalid immediately.')) return
+ const resetPassword = async (customPassword?: string) => {
+  // No confirm() prompt when a custom password is supplied — the user
+  // already typed it and pressed save. Random-generate path keeps the
+  // confirm so a misclick doesn't invalidate the live password.
+  if (!customPassword && !confirm('Generate a new random password for this client? The current one becomes invalid immediately.')) return
   try {
-   const res = await fetchWithAuth(`/api/admin/clients/${id}/reset-password`, { method: 'POST' })
+   const res = await fetchWithAuth(`/api/admin/clients/${id}/reset-password`, {
+    method: 'POST',
+    body: customPassword ? JSON.stringify({ password: customPassword }) : undefined,
+   })
    const j = await res.json().catch(() => ({}))
    if (!res.ok || !j.success) throw new Error(j?.error || 'Reset failed')
    setTempPassword(j.password)
@@ -865,12 +871,14 @@ function AdminActions({
 }: {
  client: ClientDetail['client']
  onPatch: (updates: Record<string, any>) => Promise<any>
- onResetPassword: () => Promise<void>
+ onResetPassword: (customPassword?: string) => Promise<void>
  onSendCheckout: () => void
 }) {
  const [busy, setBusy] = useState<string | null>(null)
  const [error, setError] = useState('')
  const [savedFlag, setSavedFlag] = useState<string | null>(null)
+ const [customPwOpen, setCustomPwOpen] = useState(false)
+ const [customPw, setCustomPw] = useState('')
 
  // local edit state for inline name field
  const [name, setName] = useState(client.business_name)
@@ -979,8 +987,11 @@ function AdminActions({
      <GhostButton onClick={onSendCheckout}>
       <CreditCard className="w-4 h-4" /> Send checkout link
      </GhostButton>
-     <GhostButton onClick={onResetPassword} disabled={!client.owner}>
-      <KeyRound className="w-4 h-4" /> Reset password
+     <GhostButton onClick={() => onResetPassword()} disabled={!client.owner}>
+      <KeyRound className="w-4 h-4" /> Random password
+     </GhostButton>
+     <GhostButton onClick={() => setCustomPwOpen((v) => !v)} disabled={!client.owner}>
+      <Pencil className="w-4 h-4" /> Set password
      </GhostButton>
      <GhostButton onClick={toggleOnboarding} disabled={busy === 'onboarding'}>
       <RotateCcw className="w-4 h-4" />
@@ -992,6 +1003,38 @@ function AdminActions({
       </GhostButton>
      )}
     </div>
+
+    {customPwOpen && (
+     <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl px-3 py-3 space-y-2">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
+       Set custom password
+      </div>
+      <Input
+       value={customPw}
+       onChange={(e) => setCustomPw(e.target.value)}
+       placeholder="Min 8 characters"
+       autoFocus
+      />
+      <div className="flex items-center gap-2">
+       <PrimaryButton
+        onClick={async () => {
+         if (customPw.length < 8) { alert('Password must be at least 8 characters'); return }
+         await onResetPassword(customPw)
+         setCustomPwOpen(false); setCustomPw('')
+        }}
+        disabled={customPw.length < 8 || !client.owner}
+       >
+        <KeyRound className="w-4 h-4" /> Set password
+       </PrimaryButton>
+       <GhostButton onClick={() => { setCustomPwOpen(false); setCustomPw('') }}>
+        Cancel
+       </GhostButton>
+      </div>
+      <p className="text-[10px] text-gray-500">
+       Replaces the current password immediately. The plaintext only shows once after save — copy it before closing.
+      </p>
+     </div>
+    )}
 
     {savedFlag && (
      <div className="text-xs text-emerald-400 flex items-center gap-1.5">

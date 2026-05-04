@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Save, AlertCircle, CheckCircle2, X, Plus } from 'lucide-react'
+import { Loader2, Save, AlertCircle, CheckCircle2, X, Plus, KeyRound, Eye, EyeOff } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 
@@ -72,6 +72,7 @@ export default function SettingsPage() {
        <GreetingSection profile={profile} onSaved={reload} />
        <ToneSection profile={profile} onSaved={reload} />
        <ServicesSection profile={profile} onSaved={reload} />
+       <PasswordSection />
        <ProfileReadOnly profile={profile} />
       </div>
      )}
@@ -355,6 +356,130 @@ function ServicesSection({ profile, onSaved }: { profile: Profile; onSaved: () =
 }
 
 /* ---------------------------- Read-only --------------------------- */
+
+function PasswordSection() {
+ const [current, setCurrent] = useState('')
+ const [next, setNext] = useState('')
+ const [confirm, setConfirm] = useState('')
+ const [showCurrent, setShowCurrent] = useState(false)
+ const [showNext, setShowNext] = useState(false)
+ const [saving, setSaving] = useState(false)
+ const [error, setError] = useState('')
+ const [saved, setSaved] = useState(false)
+
+ const reset = () => {
+  setCurrent(''); setNext(''); setConfirm(''); setError(''); setSaved(false)
+ }
+
+ const onSave = async () => {
+  setSaving(true); setError(''); setSaved(false)
+  try {
+   if (next.length < 8) throw new Error('New password must be at least 8 characters')
+   if (next !== confirm) throw new Error('New passwords don\'t match')
+   const res = await fetchWithAuth('/api/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword: current, newPassword: next }),
+   })
+   const json = await res.json().catch(() => ({}))
+   if (!res.ok || !json.success) throw new Error(json?.error || 'Failed to change password')
+   setSaved(true)
+   setCurrent(''); setNext(''); setConfirm('')
+  } catch (e) {
+   setError(e instanceof Error ? e.message : 'Failed')
+  } finally {
+   setSaving(false)
+  }
+ }
+
+ const canSave = current.length > 0 && next.length >= 8 && next === confirm
+
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl p-6">
+   <div className="flex items-center gap-2 mb-1">
+    <KeyRound className="w-4 h-4 text-sky-500" />
+    <h2 className="text-base font-medium text-gray-900">Change password</h2>
+   </div>
+   <p className="text-sm text-gray-500 mb-4">
+    You&apos;ll stay signed in on this device. Other sessions keep working until they expire.
+   </p>
+
+   <div className="space-y-3">
+    <PasswordField
+     label="Current password" value={current} onChange={setCurrent}
+     show={showCurrent} onToggle={() => setShowCurrent((v) => !v)}
+    />
+    <PasswordField
+     label="New password" value={next} onChange={setNext}
+     show={showNext} onToggle={() => setShowNext((v) => !v)}
+     hint={next.length > 0 && next.length < 8 ? `${8 - next.length} more characters` : undefined}
+    />
+    <PasswordField
+     label="Confirm new password" value={confirm} onChange={setConfirm}
+     show={showNext} onToggle={() => setShowNext((v) => !v)}
+     hint={confirm.length > 0 && next !== confirm ? 'Doesn\'t match' : undefined}
+     hintTone={confirm.length > 0 && next !== confirm ? 'error' : 'neutral'}
+    />
+   </div>
+
+   <div className="mt-4 flex items-center gap-3">
+    <SaveButton
+     disabled={!canSave} saving={saving}
+     onClick={onSave} label="Update password"
+    />
+    {(current || next || confirm) && !saving && (
+     <button
+      onClick={reset}
+      className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+     >
+      Clear
+     </button>
+    )}
+   </div>
+
+   {saved && <SavedHint />}
+   {error && <ErrorHint message={error} />}
+  </div>
+ )
+}
+
+function PasswordField({
+ label, value, onChange, show, onToggle, hint, hintTone = 'neutral',
+}: {
+ label: string
+ value: string
+ onChange: (v: string) => void
+ show: boolean
+ onToggle: () => void
+ hint?: string
+ hintTone?: 'neutral' | 'error'
+}) {
+ return (
+  <div>
+   <label className="block text-xs font-medium text-gray-700 mb-1.5">{label}</label>
+   <div className="relative">
+    <input
+     type={show ? 'text' : 'password'}
+     value={value}
+     onChange={(e) => onChange(e.target.value)}
+     autoComplete="new-password"
+     className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 transition-colors focus:outline-none focus:border-gray-900 pr-10"
+    />
+    <button
+     type="button"
+     onClick={onToggle}
+     tabIndex={-1}
+     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+     aria-label={show ? 'Hide password' : 'Show password'}
+    >
+     {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+    </button>
+   </div>
+   {hint && (
+    <p className={`text-[11px] mt-1 ${hintTone === 'error' ? 'text-red-600' : 'text-gray-500'}`}>{hint}</p>
+   )}
+  </div>
+ )
+}
 
 function ProfileReadOnly({ profile }: { profile: Profile }) {
  return (
