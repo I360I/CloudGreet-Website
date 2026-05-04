@@ -103,10 +103,10 @@ export async function POST(request: NextRequest) {
  }
  const business_id = resolvedBusinessId
 
- // Get business info to check subscription and get Stripe customer ID
+ // Get business info — need cal.com config for the booking too.
  const { data: business, error: businessError } = await supabaseAdmin
  .from('businesses')
- .select('id, stripe_customer_id, subscription_status, timezone')
+ .select('id, stripe_customer_id, subscription_status, timezone, cal_com_api_key, cal_com_event_type_id, business_name, email')
  .eq('id', business_id)
  .single()
 
@@ -145,8 +145,56 @@ export async function POST(request: NextRequest) {
 
  const apptId = appointmentId
 
- // Sync to Google Calendar if calendar is connected (appointment already created above)
- if (business_id) {
+ // Cal.com booking — this is the path that lands on the contractor's
+ // calendar (Google/Apple/Outlook via Cal.com). Without this, the
+ // appointment exists in our DB but never appears on their actual
+ // calendar feed.
+ if ((business as any)?.cal_com_api_key && (business as any)?.cal_com_event_type_id) {
+ try {
+  const { createBooking } = await import('@/lib/calcom')
+  const booking = await createBooking((business as any).cal_com_api_key, {
+   startIso: startTime.toISOString(),
+   eventTypeId: Number((business as any).cal_com_event_type_id),
+   attendee: {
+    name: name || 'Caller',
+    email: `noemail+${apptId}@cloudgreet.com`,
+    timeZone: (business as any).timezone || 'America/Chicago',
+    phoneNumber: phone || undefined,
+   },
+   metadata: {
+    cloudgreet_business_id: String(business_id),
+    cloudgreet_appointment_id: String(apptId),
+    customer_phone: phone || '',
+   },
+   notes: `Booked by CloudGreet AI receptionist. Service requested: ${service || 'unspecified'}. Caller phone: ${phone || 'unknown'}.`,
+  })
+  // Persist Cal.com booking ids on the appointment so cancel/reschedule
+  // flows can find it later.
+  await supabaseAdmin
+   .from('appointments')
+   .update({
+    cal_com_booking_uid: booking.uid,
+    cal_com_booking_id: booking.id,
+    updated_at: new Date().toISOString(),
+   })
+   .eq('id', apptId)
+  logger.info('Cal.com booking created', {
+   business_id, apptId, calBookingUid: booking.uid,
+  })
+ } catch (calErr) {
+  logger.error('Cal.com booking failed (DB appointment kept)', {
+   business_id, apptId,
+   error: calErr instanceof Error ? calErr.message : 'Unknown',
+  })
+ }
+ } else {
+ logger.warn('Skipping Cal.com booking — no cal.com config on business', { business_id })
+ }
+
+ // Legacy Google Calendar sync — kept for backward compatibility but
+ // skipped on businesses that have a Cal.com config (Cal.com routes
+ // to the same calendar via the contractor's own integration).
+ if (business_id && !((business as any)?.cal_com_api_key)) {
  try {
  const { getCalendarConfig, getValidAccessToken, refreshGoogleToken } = await import('@/lib/calendar')
  const config = await getCalendarConfig(business_id)
