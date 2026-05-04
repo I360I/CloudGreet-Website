@@ -781,16 +781,20 @@ class RetellAgentManager {
     businessId: string,
     incoming: Partial<BusinessAgentConfig>
   ): Promise<BusinessAgentConfig> {
+    // Use select('*') so a missing optional column (voice_id, voice_speed,
+    // ai_* — all from later migrations the operator may not have applied
+    // yet) doesn't blow up the entire merge. Any field below that's
+    // absent simply reads as undefined and falls through to defaults.
     const { data, error } = await supabaseAdmin
       .from('businesses')
-      .select(
-        'business_name, business_type, business_hours, services, service_areas, greeting_message, tone, phone_number, phone, address, city, state, zip_code, website, owner_id, ai_confidence_threshold, ai_max_silence_seconds, ai_escalation_message, ai_additional_instructions, voice_id, voice_speed'
-      )
+      .select('*')
       .eq('id', businessId)
       .maybeSingle()
 
     if (error || !data) {
-      throw new Error('Unable to load business configuration for prompt generation')
+      throw new Error(
+        `Unable to load business configuration for prompt generation${error ? `: ${error.message}` : ''}`,
+      )
     }
 
     const address =
