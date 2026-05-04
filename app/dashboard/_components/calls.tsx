@@ -17,9 +17,18 @@ export type Call = {
  transcript: string | null
  recording_url: string | null
  outcome: string | null
+ call_extractions?: Record<string, any> | null
 }
 
 export type Outcome = 'booked' | 'message' | 'dropped'
+
+function formatExtraction(v: any): string {
+ if (v === null || v === undefined || v === '') return '—'
+ if (typeof v === 'boolean') return v ? 'Yes' : 'No'
+ if (typeof v === 'number') return v.toLocaleString()
+ if (typeof v === 'string') return v
+ try { return JSON.stringify(v) } catch { return String(v) }
+}
 
 export function tagOutcome(c: Pick<Call, 'outcome' | 'status' | 'duration'>): Outcome {
  const o = (c.outcome || '').toLowerCase()
@@ -119,6 +128,26 @@ export function CallDrawer({ call, onClose }: { call: Call; onClose: () => void 
        <audio controls src={call.recording_url} className="w-full">
         Your browser does not support audio playback.
        </audio>
+      </div>
+     )}
+
+     {call.call_extractions && Object.keys(call.call_extractions).length > 0 && (
+      <div>
+       <h4 className="text-xs uppercase tracking-wider text-gray-400 mb-2">Captured from call</h4>
+       <div className="bg-gray-50 border border-gray-200 rounded-xl divide-y divide-gray-200">
+        {Object.entries(call.call_extractions)
+         .filter(([k]) => k && !k.startsWith('_'))
+         .map(([k, v]) => (
+          <div key={k} className="flex items-start justify-between gap-4 px-4 py-2.5">
+           <span className="text-[11px] font-medium uppercase tracking-wider text-gray-500 mt-0.5">
+            {k.replace(/_/g, ' ')}
+           </span>
+           <span className="text-sm text-gray-800 text-right break-words flex-1">
+            {formatExtraction(v)}
+           </span>
+          </div>
+         ))}
+       </div>
       </div>
      )}
 

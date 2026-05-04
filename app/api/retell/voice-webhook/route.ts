@@ -384,9 +384,106 @@ export async function POST(request: NextRequest) {
  }
  }
 
+ // Lifecycle events (no tool_call). The most important is
+ // call_analyzed — that's where Retell's post-call extraction lands.
+ if (eventType === 'call_analyzed' || eventType === 'call_ended') {
+  await handleCallEvent(eventType, body, resolvedBusinessId)
+ }
+
  return NextResponse.json({ received: true })
  } catch (error) {
  logger.error('Retell voice webhook error', { error: (error as Error).message })
  return NextResponse.json({ success: false }, { status: 500 })
+ }
+}
+
+/**
+ * Stores call metadata + post-call extraction on the matching calls
+ * row. Retell fires call_ended first (transcript, duration), then
+ * call_analyzed once the post-call analysis pass completes (extracted
+ * fields per the agent's post_call_analysis_data definition).
+ */
+async function handleCallEvent(
+ eventType: string,
+ body: any,
+ resolvedBusinessId: string | null,
+): Promise<void> {
+ try {
+  const call = body.call || body
+  const retellCallId: string | undefined = call?.call_id || call?.id || body?.call_id
+  if (!retellCallId) {
+   logger.warn('Retell call event missing call_id', { eventType })
+   return
+  }
+
+  // Build the patch from whatever fields are present on the event.
+  const patch: Record<string, any> = {}
+  if (typeof call?.transcript === 'string') patch.transcript = call.transcript
+  if (typeof call?.recording_url === 'string') patch.recording_url = call.recording_url
+  if (typeof call?.from_number === 'string') patch.from_number = call.from_number
+  if (typeof call?.to_number === 'string') patch.to_number = call.to_number
+  if (typeof call?.duration_ms === 'number') patch.duration = Math.round(call.duration_ms / 1000)
+  if (typeof call?.disconnection_reason === 'string') patch.status = call.disconnection_reason
+
+  // post_call_analysis_data is the headline feature. Retell returns
+  // it as either an object keyed by field name or an array of
+  // { name, value } entries depending on agent config — we normalize
+  // to a flat object before storing.
+  const analysis =
+   call?.call_analysis?.custom_analysis_data ??
+   call?.post_call_analysis_data ??
+   call?.analysis ??
+   null
+  if (analysis) {
+   const flat: Record<string, any> = {}
+   if (Array.isArray(analysis)) {
+    for (const entry of analysis) {
+     if (entry?.name) flat[String(entry.name)] = entry.value ?? entry.result ?? null
+    }
+   } else if (typeof analysis === 'object') {
+    Object.assign(flat, analysis)
+   }
+   if (Object.keys(flat).length > 0) patch.call_extractions = flat
+  }
+
+  // Retell's general analysis (sentiment, summary, success indicator).
+  if (call?.call_analysis?.call_summary && !patch.call_summary) {
+   patch.call_summary = call.call_analysis.call_summary
+  }
+  if (call?.call_analysis?.user_sentiment && !patch.sentiment) {
+   patch.sentiment = call.call_analysis.user_sentiment
+  }
+
+  if (Object.keys(patch).length === 0) return
+
+  // Try matching on retell_call_id first; fall back to inserting if
+  // we never saw call_started (Retell can fire analyzed without it).
+  const { data: existing } = await supabaseAdmin
+   .from('calls')
+   .select('id')
+   .eq('retell_call_id', retellCallId)
+   .maybeSingle()
+
+  if (existing?.id) {
+   await supabaseAdmin
+    .from('calls')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', existing.id)
+  } else if (resolvedBusinessId) {
+   await supabaseAdmin
+    .from('calls')
+    .insert({
+     business_id: resolvedBusinessId,
+     retell_call_id: retellCallId,
+     ...patch,
+     created_at: new Date().toISOString(),
+    })
+  } else {
+   logger.warn('Call event with no business id and no existing row', { retellCallId, eventType })
+  }
+ } catch (e) {
+  logger.error('handleCallEvent failed', {
+   error: e instanceof Error ? e.message : 'Unknown', eventType,
+  })
  }
 }

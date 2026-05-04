@@ -76,7 +76,7 @@ export async function GET(
   try {
    const { data } = await supabaseAdmin
     .from('calls')
-    .select('id, call_id, from_number, to_number, duration, status, recording_url, transcript, created_at, caller_name')
+    .select('id, call_id, from_number, to_number, duration, status, recording_url, transcript, created_at, caller_name, call_extractions, call_summary')
     .eq('business_id', clientId)
     .order('created_at', { ascending: false })
     .limit(20)

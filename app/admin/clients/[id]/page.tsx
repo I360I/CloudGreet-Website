@@ -62,6 +62,8 @@ type ClientDetail = {
     status: string
     transcript?: string | null
     recording_url?: string | null
+    call_extractions?: Record<string, any> | null
+    call_summary?: string | null
     created_at: string
     caller_name?: string | null
    }>
@@ -328,6 +330,11 @@ export default function ClientDetailPage() {
       <AgentTuning client={client} hasAgent={!!aiAgent?.retell_agent_id} onPatch={patch} />
      </RisingFade>
 
+     {/* What to capture from calls (post-call extraction) */}
+     <RisingFade delay={0.19}>
+      <ExtractionFieldsSection clientId={id} hasAgent={!!aiAgent?.retell_agent_id} />
+     </RisingFade>
+
      {/* Address row */}
      <RisingFade delay={0.2}>
       <Panel>
@@ -465,6 +472,19 @@ function CallDrawer({
       </div>
      )}
 
+     {call.call_extractions && Object.keys(call.call_extractions).length > 0 && (
+      <ExtractionsPanel data={call.call_extractions} />
+     )}
+
+     {call.call_summary && (
+      <div>
+       <h4 className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Summary</h4>
+       <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-sm text-gray-300 leading-relaxed">
+        {call.call_summary}
+       </div>
+      </div>
+     )}
+
      {call.transcript ? (
       <div>
        <h4 className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Transcript</h4>
@@ -479,6 +499,36 @@ function CallDrawer({
    </motion.aside>
   </motion.div>
  )
+}
+
+function ExtractionsPanel({ data }: { data: Record<string, any> }) {
+ const entries = Object.entries(data).filter(([k]) => k && !k.startsWith('_'))
+ if (entries.length === 0) return null
+ return (
+  <div>
+   <h4 className="text-[10px] uppercase tracking-wider text-gray-500 mb-2">Captured from call</h4>
+   <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl divide-y divide-white/[0.04]">
+    {entries.map(([k, v]) => (
+     <div key={k} className="flex items-start justify-between gap-4 px-4 py-2.5">
+      <span className="text-[11px] font-mono uppercase tracking-wider text-gray-500 mt-0.5">
+       {k.replace(/_/g, ' ')}
+      </span>
+      <span className="text-sm text-gray-200 text-right break-words flex-1">
+       {formatExtractionValue(v)}
+      </span>
+     </div>
+    ))}
+   </div>
+  </div>
+ )
+}
+
+function formatExtractionValue(v: any): string {
+ if (v === null || v === undefined || v === '') return '—'
+ if (typeof v === 'boolean') return v ? 'Yes' : 'No'
+ if (typeof v === 'number') return v.toLocaleString()
+ if (typeof v === 'string') return v
+ try { return JSON.stringify(v) } catch { return String(v) }
 }
 
 /* -------------------------- Recent appointments ------------------------- */
@@ -737,6 +787,166 @@ function AgentCard({
      </div>
     )}
    </div>
+  </Panel>
+ )
+}
+
+type ExtractionField = {
+ name: string
+ type: 'string' | 'number' | 'boolean'
+ description: string
+}
+
+const PRESET_FIELDS: { label: string; field: ExtractionField }[] = [
+ { label: 'Service requested', field: { name: 'service_requested', type: 'string', description: 'What service the caller asked about (e.g. AC tune-up, drain clear, roof inspection).' } },
+ { label: 'Budget mentioned ($)', field: { name: 'budget_cents', type: 'number', description: 'Any dollar amount the caller mentioned, in dollars (no cents). Null if not mentioned.' } },
+ { label: 'Urgency / emergency', field: { name: 'is_emergency', type: 'boolean', description: 'True if the caller said urgent, asap, today, or emergency.' } },
+ { label: 'Customer name', field: { name: 'customer_name', type: 'string', description: 'The caller\'s name as stated.' } },
+ { label: 'Service address', field: { name: 'service_address', type: 'string', description: 'The address where work would be done.' } },
+ { label: 'Preferred callback time', field: { name: 'preferred_callback', type: 'string', description: 'When the caller asked to be reached back, free-text (e.g. "Tuesday morning").' } },
+ { label: 'Booked appointment?', field: { name: 'booked_appointment', type: 'boolean', description: 'True if the AI confirmed an appointment on this call.' } },
+]
+
+function ExtractionFieldsSection({ clientId, hasAgent }: { clientId: string; hasAgent: boolean }) {
+ const [fields, setFields] = useState<ExtractionField[]>([])
+ const [loading, setLoading] = useState(true)
+ const [saving, setSaving] = useState(false)
+ const [error, setError] = useState('')
+ const [savedFlag, setSavedFlag] = useState(false)
+
+ useEffect(() => {
+  let cancelled = false
+  ;(async () => {
+   try {
+    const res = await fetchWithAuth(`/api/admin/clients/${clientId}/extractions`)
+    const j = await res.json().catch(() => ({}))
+    if (!cancelled && j.success) setFields(j.fields || [])
+   } catch { /* non-fatal */ }
+   finally { if (!cancelled) setLoading(false) }
+  })()
+  return () => { cancelled = true }
+ }, [clientId])
+
+ const updateField = (i: number, patch: Partial<ExtractionField>) => {
+  setFields((cur) => cur.map((f, idx) => idx === i ? { ...f, ...patch } : f))
+ }
+ const removeField = (i: number) => setFields((cur) => cur.filter((_, idx) => idx !== i))
+ const addPreset = (preset: ExtractionField) => {
+  if (fields.some((f) => f.name === preset.name)) return
+  setFields((cur) => [...cur, preset])
+ }
+ const addCustom = () => {
+  setFields((cur) => [...cur, { name: '', type: 'string', description: '' }])
+ }
+
+ const onSave = async () => {
+  setSaving(true); setError(''); setSavedFlag(false)
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${clientId}/extractions`, {
+    method: 'PUT',
+    body: JSON.stringify({ fields }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
+   setFields(j.fields || [])
+   setSavedFlag(true)
+   setTimeout(() => setSavedFlag(false), 2500)
+   if (j.syncError) setError(`Saved, but Retell didn't sync: ${j.syncError}`)
+  } catch (e) {
+   setError(e instanceof Error ? e.message : 'Save failed')
+  } finally {
+   setSaving(false)
+  }
+ }
+
+ return (
+  <Panel>
+   <PanelHeader title="What to capture from calls" eyebrow="Post-call extraction" />
+   <p className="text-xs text-gray-500 mb-4">
+    After every call, Retell extracts these fields from the transcript automatically.
+    They show up on the call detail panel so the contractor sees the structured ask
+    without scrubbing the transcript. Tune the prompt separately so the agent actually asks.
+   </p>
+
+   {!hasAgent && (
+    <div className="text-xs text-amber-300/90 bg-amber-400/5 border border-amber-400/20 rounded-lg px-3 py-2 mb-3">
+     No Retell agent linked yet. Saving stores the schema, but it won&apos;t take effect on calls until an agent is wired.
+    </div>
+   )}
+
+   {loading ? (
+    <div className="flex items-center gap-2 text-xs text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+   ) : (
+    <div className="space-y-3">
+     {fields.length === 0 && (
+      <p className="text-xs text-gray-500">No fields configured yet. Add some below.</p>
+     )}
+     {fields.map((f, i) => (
+      <div key={i} className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3 space-y-2">
+       <div className="flex items-center gap-2 flex-wrap">
+        <Input
+         value={f.name}
+         onChange={(e) => updateField(i, { name: e.target.value })}
+         placeholder="field_name"
+        />
+        <Select
+         value={f.type}
+         onChange={(e) => updateField(i, { type: e.target.value as ExtractionField['type'] })}
+        >
+         <option value="string">text</option>
+         <option value="number">number</option>
+         <option value="boolean">true / false</option>
+        </Select>
+        <button
+         onClick={() => removeField(i)}
+         className="text-[10px] font-mono uppercase tracking-wider text-rose-300 hover:text-rose-200"
+        >
+         remove
+        </button>
+       </div>
+       <Input
+        value={f.description}
+        onChange={(e) => updateField(i, { description: e.target.value })}
+        placeholder="What to extract — Retell uses this as the LLM prompt"
+       />
+      </div>
+     ))}
+
+     <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
+      <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 self-center mr-1">
+       quick add:
+      </span>
+      {PRESET_FIELDS.filter((p) => !fields.some((f) => f.name === p.field.name)).map((p) => (
+       <button
+        key={p.field.name}
+        onClick={() => addPreset(p.field)}
+        className="text-[10px] font-mono uppercase tracking-wider text-sky-400 hover:text-sky-300 bg-sky-400/5 border border-sky-400/20 rounded-full px-2.5 py-1"
+       >
+        + {p.label}
+       </button>
+      ))}
+      <button
+       onClick={addCustom}
+       className="text-[10px] font-mono uppercase tracking-wider text-gray-400 hover:text-gray-200 border border-white/[0.08] rounded-full px-2.5 py-1"
+      >
+       + custom field
+      </button>
+     </div>
+
+     <div className="flex items-center gap-3 pt-2 border-t border-white/[0.06]">
+      <PrimaryButton onClick={onSave} disabled={saving}>
+       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+       Save & push to Retell
+      </PrimaryButton>
+      {savedFlag && (
+       <span className="text-xs text-emerald-400 inline-flex items-center gap-1">
+        <CheckCircle2 className="w-3.5 h-3.5" /> Synced
+       </span>
+      )}
+      {error && <span className="text-xs text-rose-300">{error}</span>}
+     </div>
+    </div>
+   )}
   </Panel>
  )
 }

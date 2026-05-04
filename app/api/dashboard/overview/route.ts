@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
   // Pull 2x range so we can compute deltas without a second round-trip
   const { data: callsAll } = await supabaseAdmin
    .from('calls')
-   .select('id, retell_call_id, from_number, to_number, status, duration, transcript, recording_url, sentiment, call_summary, outcome, caller_name, created_at')
+   .select('id, retell_call_id, from_number, to_number, status, duration, transcript, recording_url, sentiment, call_summary, outcome, caller_name, created_at, call_extractions')
    .eq('business_id', businessId)
    .gte('created_at', startPrevious)
    .order('created_at', { ascending: false })
