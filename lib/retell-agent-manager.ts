@@ -69,34 +69,42 @@ class RetellAgentManager {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
       const webhookUrl = `${appUrl}/api/retell/voice-webhook`
 
-      // Create agent via Retell API
+      // Step 1: create a Retell-managed LLM with the prompt + greeting.
+      // This was previously a custom-llm pointed at a placeholder URL
+      // — which meant Retell had no LLM to update and every greeting
+      // change silently failed. Using retell-llm from creation lets
+      // /dashboard/settings actually drive the live agent.
+      const createLlmRes = await fetch('https://api.retellai.com/create-retell-llm', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          general_prompt: systemPrompt,
+          begin_message: mergedConfig.greetingMessage || 'Hello, how can I help you today?',
+          model: 'gpt-4o-mini',
+        }),
+      })
+      if (!createLlmRes.ok) {
+        const text = await createLlmRes.text().catch(() => createLlmRes.statusText)
+        throw new Error(`Failed to create Retell LLM: ${createLlmRes.status} ${text.slice(0, 200)}`)
+      }
+      const llm = await createLlmRes.json()
+      const llmId = llm?.llm_id
+      if (!llmId) throw new Error('create-retell-llm returned no llm_id')
+
+      // Step 2: create the agent that points at the LLM.
       const agentData = {
-        name: `${mergedConfig.businessName} AI Receptionist`,
+        agent_name: `${mergedConfig.businessName} AI Receptionist`,
         voice_id: this.selectOptimalVoice(mergedConfig.businessType),
         language: 'en-US',
-        greeting: mergedConfig.greetingMessage,
-        system_prompt: systemPrompt,
-        response_engine: {
-          type: 'custom-llm',
-          llm_websocket_url: 'wss://api.retellai.com/llm-websocket'
-        }, // Required by Retell API
+        response_engine: { type: 'retell-llm', llm_id: llmId },
         max_call_duration_ms: 900000, // 15 minutes
-        ambient_sound: 'coffee-shop',
-        stt_mode: 'accurate',
-        webhook_url: webhookUrl, // Configure webhook for receiving events
-        webhook_url_method: 'POST',
-        metadata: {
-          business_id: mergedConfig.businessId,
-          business_type: mergedConfig.businessType,
-          created_at: new Date().toISOString(),
-          ai_confidence_threshold: mergedConfig.aiConfidenceThreshold ?? null,
-          ai_max_silence_seconds: mergedConfig.aiMaxSilenceSeconds ?? null,
-          ai_escalation_message: mergedConfig.aiEscalationMessage ?? null
-        }
+        webhook_url: webhookUrl,
       };
 
-      // Retell AI API v2 endpoint
-      const response = await fetch('https://api.retellai.com/v2/create-agent', {
+      const response = await fetch('https://api.retellai.com/create-agent', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -162,15 +170,19 @@ class RetellAgentManager {
 
       // Store agent info in database with phone number
       await this.storeAgentInfo(
-        mergedConfig.businessId, 
-        agentId, 
+        mergedConfig.businessId,
+        agentId,
         {
-          ...agentData,
+          name: agentData.agent_name,
+          voice_id: agentData.voice_id,
+          language: agentData.language,
+          greeting: mergedConfig.greetingMessage,
+          system_prompt: systemPrompt,
           agent_id: agentId,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        mergedConfig.phoneNumber // Include phone number in storage
+          updated_at: new Date().toISOString(),
+        } as any,
+        mergedConfig.phoneNumber,
       );
 
       
@@ -280,9 +292,68 @@ class RetellAgentManager {
         }
       }
 
-      // 2) Patch the LLM (greeting + prompt) when there is one. Custom
-      //    LLMs handle their own greetings on their websocket — we just
-      //    log so the operator can see why nothing happened.
+      // 2a) Auto-migrate agents that were created with custom-llm and a
+      //     placeholder websocket URL. Those agents have no LLM resource
+      //     for us to patch, so greeting/prompt edits silently failed.
+      //     We create a fresh retell-llm with the desired settings and
+      //     point the agent at it. One-time per agent — subsequent saves
+      //     hit the regular update path.
+      if (!llmId && responseEngineType !== 'retell-llm') {
+        try {
+          const createLlmRes = await fetch('https://api.retellai.com/create-retell-llm', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              general_prompt: systemPrompt,
+              begin_message: mergedConfig.greetingMessage || 'Hello, how can I help you today?',
+              model: 'gpt-4o-mini',
+            }),
+          })
+          if (!createLlmRes.ok) {
+            const text = await createLlmRes.text().catch(() => createLlmRes.statusText)
+            throw new Error(`create-retell-llm ${createLlmRes.status}: ${text.slice(0, 200)}`)
+          }
+          const newLlm = await createLlmRes.json()
+          const newLlmId = newLlm?.llm_id
+          if (!newLlmId) throw new Error('create-retell-llm returned no llm_id')
+
+          // Repoint the agent at the new Retell-managed LLM.
+          const repointRes = await fetch(
+            `https://api.retellai.com/update-agent/${agentData.retell_agent_id}`,
+            {
+              method: 'PATCH',
+              headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                response_engine: { type: 'retell-llm', llm_id: newLlmId },
+              }),
+            },
+          )
+          if (!repointRes.ok) {
+            const text = await repointRes.text().catch(() => repointRes.statusText)
+            throw new Error(`repoint agent to new LLM ${repointRes.status}: ${text.slice(0, 200)}`)
+          }
+
+          llmId = newLlmId
+          logger.info('Auto-migrated agent from custom-llm to retell-llm', {
+            businessId, agentId: agentData.retell_agent_id, llmId: newLlmId,
+          })
+        } catch (migrateErr) {
+          logger.error('Auto-migration to retell-llm failed', {
+            businessId, error: migrateErr instanceof Error ? migrateErr.message : 'Unknown',
+          })
+          throw new Error(
+            `Couldn't migrate agent to a Retell LLM: ${migrateErr instanceof Error ? migrateErr.message : 'Unknown'}`,
+          )
+        }
+      }
+
+      // 2b) Patch the LLM (greeting + prompt) once we have one.
       if (llmId) {
         const llmPatch: Record<string, unknown> = {}
         if (mergedConfig.greetingMessage) llmPatch.begin_message = mergedConfig.greetingMessage
@@ -301,10 +372,6 @@ class RetellAgentManager {
             throw new Error(`Failed to update Retell LLM: ${llmRes.status} ${text.slice(0, 200)}`)
           }
         }
-      } else if (responseEngineType && responseEngineType !== 'retell-llm') {
-        logger.warn('Skipping greeting/prompt update — agent uses non-Retell LLM', {
-          businessId, responseEngineType,
-        })
       }
 
       // 3) Patch the agent for voice/voice_speed/name.
