@@ -267,13 +267,11 @@ class RetellAgentManager {
         throw new Error('No Retell agent linked to this business. Set the agent in /admin/clients/[id] first.')
       }
 
-      // Generate updated system prompt
       const mergedConfig = await this.mergeBusinessConfig(businessId, config)
-      const promptConfig = await this.buildPromptConfig(mergedConfig)
-      const systemPrompt = SmartAIPrompts.generateIndustrySpecificPrompt(
-        mergedConfig.businessType,
-        promptConfig
-      );
+      // NOTE: We deliberately do NOT regenerate or push general_prompt
+      // here. The contractor's prompt is hand-tuned in Retell and a
+      // settings save (greeting/voice/speed) must never overwrite it.
+      // Only begin_message + agent-level fields get touched below.
       
       const resolvedVoice =
         mergedConfig.voiceId ||
@@ -306,89 +304,38 @@ class RetellAgentManager {
         throw new Error(`Retell get-agent ${getAgentRes.status}: ${txt.slice(0, 120)}`)
       }
 
-      // 2a) Auto-migrate agents that were created with custom-llm and a
-      //     placeholder websocket URL. Those agents have no LLM resource
-      //     for us to patch, so greeting/prompt edits silently failed.
-      //     We create a fresh retell-llm with the desired settings and
-      //     point the agent at it. One-time per agent — subsequent saves
-      //     hit the regular update path.
+      // No auto-migration. If the agent has no Retell-managed LLM, the
+      // contractor's prompt must already live in their custom backend —
+      // we wouldn't be able to safely create one without overwriting
+      // their tuning. Skip the LLM patch with a clear message.
       if (!llmId && responseEngineType !== 'retell-llm') {
-        t(`migrating from ${responseEngineType ?? 'unknown'} → retell-llm`)
-        try {
-          const createLlmRes = await fetch('https://api.retellai.com/create-retell-llm', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${this.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              general_prompt: systemPrompt,
-              begin_message: mergedConfig.greetingMessage || 'Hello, how can I help you today?',
-              model: 'gpt-4o-mini',
-            }),
-          })
-          if (!createLlmRes.ok) {
-            const text = await createLlmRes.text().catch(() => createLlmRes.statusText)
-            throw new Error(`create-retell-llm ${createLlmRes.status}: ${text.slice(0, 200)}`)
-          }
-          const newLlm = await createLlmRes.json()
-          const newLlmId = newLlm?.llm_id
-          if (!newLlmId) throw new Error('create-retell-llm returned no llm_id')
-
-          // Repoint the agent at the new Retell-managed LLM.
-          const repointRes = await fetch(
-            `https://api.retellai.com/update-agent/${agentData.retell_agent_id}`,
-            {
-              method: 'PATCH',
-              headers: {
-                Authorization: `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                response_engine: { type: 'retell-llm', llm_id: newLlmId },
-              }),
-            },
-          )
-          if (!repointRes.ok) {
-            const text = await repointRes.text().catch(() => repointRes.statusText)
-            throw new Error(`repoint agent to new LLM ${repointRes.status}: ${text.slice(0, 200)}`)
-          }
-
-          llmId = newLlmId
-          t(`migrated → llm_id=${newLlmId}`)
-          logger.info('Auto-migrated agent from custom-llm to retell-llm', {
-            businessId, agentId: agentData.retell_agent_id, llmId: newLlmId,
-          })
-        } catch (migrateErr) {
-          logger.error('Auto-migration to retell-llm failed', {
-            businessId, error: migrateErr instanceof Error ? migrateErr.message : 'Unknown',
-          })
-          throw new Error(
-            `Couldn't migrate agent to a Retell LLM: ${migrateErr instanceof Error ? migrateErr.message : 'Unknown'}`,
-          )
-        }
+        t(`agent uses ${responseEngineType ?? 'unknown'} engine — greeting can't be updated via Retell API`)
       }
 
-      // 2b) Patch the LLM (greeting + prompt) once we have one.
+      // 2) Patch ONLY begin_message on the LLM. We never touch
+      //    general_prompt — it's hand-tuned per business and we won't
+      //    risk clobbering it. If the contractor cleared the greeting
+      //    we still send the empty string (Retell accepts it) so they
+      //    can reset to default through the UI.
       if (llmId) {
-        const llmPatch: Record<string, unknown> = {}
-        if (mergedConfig.greetingMessage) llmPatch.begin_message = mergedConfig.greetingMessage
-        if (systemPrompt) llmPatch.general_prompt = systemPrompt
-        if (Object.keys(llmPatch).length > 0) {
+        const newGreeting = mergedConfig.greetingMessage ?? ''
+        // Skip the patch entirely if there's nothing meaningful to set.
+        // (Empty string IS meaningful — it lets a user clear a greeting.)
+        if (typeof newGreeting === 'string') {
           const llmRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
             method: 'PATCH',
             headers: {
               Authorization: `Bearer ${this.apiKey}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(llmPatch),
+            body: JSON.stringify({ begin_message: newGreeting }),
           })
           if (!llmRes.ok) {
             const text = await llmRes.text().catch(() => llmRes.statusText)
             t(`update-retell-llm ${llmRes.status}: ${text.slice(0, 120)}`)
             throw new Error(`Failed to update Retell LLM: ${llmRes.status} ${text.slice(0, 200)}`)
           }
-          t(`update-retell-llm ok: ${Object.keys(llmPatch).join(', ')}`)
+          t(`update-retell-llm ok: begin_message="${newGreeting.slice(0, 40)}${newGreeting.length > 40 ? '…' : ''}"`)
         }
       }
 
