@@ -93,21 +93,30 @@ export async function PATCH(request: NextRequest) {
  try {
   const agentManager = retellAgentManager()
 
-  const agentConfig = {
+  // Only thread fields the user actually changed in this request into
+  // the agent config. Otherwise we'd send (e.g.) an empty greeting on
+  // a voice-only save — Retell interprets begin_message="" as 'switch
+  // to dynamic mode' and clobbers the static greeting.
+  const greetingChanged = 'greeting_message' in updates
+  const voiceChanged = 'voice_id' in updates
+  const speedChanged = 'voice_speed' in updates
+  const nameChanged = 'business_name' in updates
+
+  const agentConfig: any = {
    businessId,
-   businessName: updatedBusiness?.business_name || business.business_name,
    businessType: updatedBusiness?.business_type || business.business_type,
+   phoneNumber: updatedBusiness?.phone_number || updatedBusiness?.phone || '',
+   address: `${updatedBusiness?.address || ''}, ${updatedBusiness?.city || ''}, ${updatedBusiness?.state || ''} ${updatedBusiness?.zip_code || ''}`.trim(),
+   tone: (updatedBusiness?.ai_tone || updatedBusiness?.tone || 'professional') as 'professional' | 'friendly' | 'casual',
    services: updatedBusiness?.services || [],
    serviceAreas: updatedBusiness?.service_areas || [],
    businessHours: updatedBusiness?.business_hours || {},
-   greetingMessage: updatedBusiness?.greeting_message || updatedBusiness?.greeting || '',
-   tone: (updatedBusiness?.ai_tone || updatedBusiness?.tone || 'professional') as 'professional' | 'friendly' | 'casual',
-   phoneNumber: updatedBusiness?.phone_number || updatedBusiness?.phone || '',
    website: updatedBusiness?.website,
-   address: `${updatedBusiness?.address || ''}, ${updatedBusiness?.city || ''}, ${updatedBusiness?.state || ''} ${updatedBusiness?.zip_code || ''}`.trim(),
-   voiceId: updatedBusiness?.voice_id || null,
-   voiceSpeed: updatedBusiness?.voice_speed != null ? Number(updatedBusiness.voice_speed) : null,
   }
+  if (nameChanged) agentConfig.businessName = updatedBusiness?.business_name || business.business_name
+  if (greetingChanged) agentConfig.greetingMessage = updatedBusiness?.greeting_message || ''
+  if (voiceChanged) agentConfig.voiceId = updatedBusiness?.voice_id || null
+  if (speedChanged) agentConfig.voiceSpeed = updatedBusiness?.voice_speed != null ? Number(updatedBusiness.voice_speed) : null
 
   await agentManager.updateBusinessAgent(businessId, agentConfig, trace)
   agentSynced = true

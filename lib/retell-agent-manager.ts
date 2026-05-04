@@ -197,6 +197,34 @@ class RetellAgentManager {
   /**
    * Update an existing agent with new business information
    */
+  /**
+   * Publishes the agent so changes go live to the bound phone number.
+   * Retell keeps API edits as a draft until publish is called.
+   */
+  private async maybePublish(retellAgentId: string, t: (m: string) => void): Promise<void> {
+    try {
+      const pubRes = await fetch(
+        `https://api.retellai.com/publish-agent/${retellAgentId}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+      if (pubRes.ok) {
+        const pub = await pubRes.json().catch(() => ({}))
+        t(`publish-agent ok${pub?.version != null ? `: version ${pub.version}` : ''}`)
+      } else {
+        const text = await pubRes.text().catch(() => pubRes.statusText)
+        t(`publish-agent ${pubRes.status}: ${text.slice(0, 120)} — changes may stay in draft`)
+      }
+    } catch (pubErr) {
+      t(`publish-agent failed: ${pubErr instanceof Error ? pubErr.message : 'unknown'}`)
+    }
+  }
+
   async updateBusinessAgent(
     businessId: string,
     config: Partial<BusinessAgentConfig>,
@@ -312,16 +340,17 @@ class RetellAgentManager {
         t(`agent uses ${responseEngineType ?? 'unknown'} engine — greeting can't be updated via Retell API`)
       }
 
-      // 2) Patch ONLY begin_message on the LLM. We never touch
-      //    general_prompt — it's hand-tuned per business and we won't
-      //    risk clobbering it. If the contractor cleared the greeting
-      //    we still send the empty string (Retell accepts it) so they
-      //    can reset to default through the UI.
-      if (llmId) {
-        const newGreeting = mergedConfig.greetingMessage ?? ''
-        // Skip the patch entirely if there's nothing meaningful to set.
-        // (Empty string IS meaningful — it lets a user clear a greeting.)
-        if (typeof newGreeting === 'string') {
+      // 2) Only patch begin_message when the caller explicitly provided
+      //    a new greeting. Sending begin_message="" on every save (e.g.
+      //    a voice-only save where the DB greeting is null) flips
+      //    Retell into dynamic-greeting mode and wipes the static one
+      //    we set previously.
+      const greetingProvided = Object.prototype.hasOwnProperty.call(config, 'greetingMessage')
+      if (llmId && greetingProvided) {
+        const newGreeting = (config.greetingMessage ?? '').toString()
+        if (newGreeting.length === 0) {
+          t('skipping LLM patch: greeting is empty (would switch agent to dynamic mode)')
+        } else {
           const llmRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
             method: 'PATCH',
             headers: {
@@ -339,17 +368,36 @@ class RetellAgentManager {
         }
       }
 
-      // 3) Patch the agent for voice/voice_speed/name.
-      const agentPatch: Record<string, unknown> = {
-        agent_name: config.businessName ? `${config.businessName} AI Receptionist` : undefined,
-        voice_id: resolvedVoice,
+      // 3) Patch the agent only with fields the caller explicitly
+      //    passed. Same reasoning as begin_message: we never want a
+      //    voice-only save to also reset agent_name, or a name-only
+      //    save to overwrite voice_id with our auto-pick. Each edit
+      //    touches its own field, period.
+      const agentPatch: Record<string, unknown> = {}
+      if (Object.prototype.hasOwnProperty.call(config, 'businessName') && config.businessName) {
+        agentPatch.agent_name = `${config.businessName} AI Receptionist`
       }
-      if (mergedConfig.voiceSpeed != null) {
-        agentPatch.voice_speed = Math.max(0.5, Math.min(2.0, mergedConfig.voiceSpeed))
+      if (Object.prototype.hasOwnProperty.call(config, 'voiceId')) {
+        // voiceId === null means "use the auto-picked default"
+        agentPatch.voice_id = config.voiceId || this.selectOptimalVoice(mergedConfig.businessType)
       }
-      const cleanAgentPatch = Object.fromEntries(
-        Object.entries(agentPatch).filter(([_, v]) => v !== undefined),
-      )
+      if (Object.prototype.hasOwnProperty.call(config, 'voiceSpeed') && config.voiceSpeed != null) {
+        agentPatch.voice_speed = Math.max(0.5, Math.min(2.0, config.voiceSpeed))
+      }
+
+      // If nothing's to patch, skip the call entirely.
+      if (Object.keys(agentPatch).length === 0) {
+        t('update-agent: skipped (no agent fields in this save)')
+        // Still attempt publish so prior edits go live.
+        await this.maybePublish(agentData.retell_agent_id, t)
+        await supabaseAdmin
+          .from('ai_agents')
+          .update({ configuration: config, updated_at: new Date().toISOString() })
+          .eq('business_id', businessId)
+        return
+      }
+
+      const cleanAgentPatch = agentPatch
 
       const response = await fetch(
         `https://api.retellai.com/update-agent/${agentData.retell_agent_id}`,
@@ -406,31 +454,7 @@ class RetellAgentManager {
       }
       t(`update-agent ok: ${Object.keys(cleanAgentPatch).join(', ') || '(no fields)'}`)
 
-      // Publish the agent so the changes go live to the bound phone
-      // number — by default Retell holds edits as a draft and the
-      // phone keeps serving the previous published version, which is
-      // why Anthony's saves "worked" in the API but didn't reach calls.
-      try {
-        const pubRes = await fetch(
-          `https://api.retellai.com/publish-agent/${agentData.retell_agent_id}`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${this.apiKey}`,
-              'Content-Type': 'application/json',
-            },
-          },
-        )
-        if (pubRes.ok) {
-          const pub = await pubRes.json().catch(() => ({}))
-          t(`publish-agent ok${pub?.version != null ? `: version ${pub.version}` : ''}`)
-        } else {
-          const text = await pubRes.text().catch(() => pubRes.statusText)
-          t(`publish-agent ${pubRes.status}: ${text.slice(0, 120)} — changes may stay in draft`)
-        }
-      } catch (pubErr) {
-        t(`publish-agent failed: ${pubErr instanceof Error ? pubErr.message : 'unknown'}`)
-      }
+      await this.maybePublish(agentData.retell_agent_id, t)
 
       // Verification step: re-read the agent from Retell after our PATCH
       // and look up which phone number(s) it's bound to. If our agent
