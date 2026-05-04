@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from 'react'
 import {
  AlertTriangle,
  ArrowRight,
+ ArrowUpRight,
  CreditCard,
  DollarSign,
  DownloadCloud,
  Loader2,
  ShieldAlert,
- Wallet
+ Sparkles,
+ TrendingUp,
+ Wallet,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/app/contexts/ToastContext'
@@ -207,6 +210,27 @@ export default function BillingDashboardPage() {
  }
  }
 
+ const mrrCents = summary?.mrrCents ?? 0
+ const paidCount = summary?.paidCount ?? 0
+ const trialingCount = summary?.trialingCount ?? 0
+ const pastDueCount = summary?.pastDueCount ?? 0
+ const totalCount = paidCount + trialingCount + pastDueCount
+ const paidMrrCents = summary?.paidMrrCents ?? 0
+ const trialingMrrCents = summary?.trialingMrrCents ?? 0
+ const pastDueMrrCents = summary?.pastDueMrrCents ?? 0
+
+ const mrrDollars = Math.floor(mrrCents / 100)
+ const mrrCentsRemainder = mrrCents % 100
+
+ // Next milestone — keeps the climb visible. Steps up by $500 once we
+ // pass $1k, then $1k once we pass $5k.
+ const milestone = mrrDollars < 500 ? 500
+  : mrrDollars < 1000 ? 1000
+  : mrrDollars < 2500 ? 2500
+  : mrrDollars < 5000 ? 5000
+  : Math.ceil((mrrDollars + 1) / 1000) * 1000
+ const milestoneDelta = milestone - mrrDollars
+
  return (
  <AdminShell activeLabel="Billing">
  <section className="px-4 lg:px-8 py-6 lg:py-10">
@@ -216,56 +240,107 @@ export default function BillingDashboardPage() {
  billing operations
  </div>
  <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight text-white">
- Revenue & reconciliation
+ Revenue
  </h1>
- <p className="text-sm text-gray-400 max-w-2xl">
- Subscription revenue, per-booking fees, and failed invoices in one place. Stripe retries and
- dunning are wired in.
- </p>
  </header>
 
- <section className="rounded-3xl border border-white/10 bg-black/40 p-6 shadow-2xl shadow-blue-900/20">
  {loading ? (
- <div className="flex h-48 items-center justify-center">
+ <section className="rounded-3xl border border-white/10 bg-black/40 p-12 flex items-center justify-center">
  <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
- </div>
+ </section>
  ) : (
  <>
- <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
- {stats.map((stat) => (
- <article key={stat.label} className="rounded-2xl border border-white/10 bg-white/5 p-5">
- <div className="flex items-center justify-between">
- <h2 className="text-xs uppercase tracking-[0.3em] text-slate-400">{stat.label}</h2>
- <stat.icon className="h-5 w-5 text-blue-300" />
- </div>
- <p className="mt-3 text-3xl font-semibold text-white">{stat.value}</p>
- <p className="mt-2 text-sm text-slate-300">{stat.description}</p>
- </article>
- ))}
- </div>
+ {/* Hero — the trophy */}
+ <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-950/40 via-black/40 to-emerald-950/30 p-8 lg:p-12 shadow-2xl shadow-blue-900/20">
+  {/* glow */}
+  <div className="absolute -top-32 -right-24 w-96 h-96 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
+  <div className="absolute -bottom-32 -left-24 w-96 h-96 bg-sky-500/10 blur-[120px] rounded-full pointer-events-none" />
 
- <div className="mt-6 flex flex-wrap items-center gap-3">
- <button
- type="button"
- onClick={downloadCsv}
- className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
- >
- <DownloadCloud className="h-4 w-4" />
- Export CSV
- </button>
- <button
- type="button"
- onClick={openPortal}
- disabled={portalLoading}
- className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
- >
- {portalLoading && <Loader2 className="h-4 w-4 animate-spin" />}
- Open Stripe portal
- </button>
- </div>
+  <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
+   <div className="flex-1 min-w-0">
+    <div className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.3em] text-emerald-300/80 mb-3">
+     <span className="relative flex h-1.5 w-1.5">
+      <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 animate-breathe" />
+      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+     </span>
+     monthly recurring revenue · live from stripe
+    </div>
+    <div className="flex items-baseline gap-2 flex-wrap">
+     <span className="font-display text-6xl md:text-8xl font-medium tracking-tight text-white tabular-nums leading-none">
+      ${mrrDollars.toLocaleString()}
+     </span>
+     <span className="font-display text-2xl md:text-3xl font-medium tracking-tight text-gray-500 tabular-nums">
+      .{String(mrrCentsRemainder).padStart(2, '0')}
+     </span>
+     <span className="text-sm text-gray-500 ml-2">/mo</span>
+    </div>
+    <div className="mt-4 flex items-center gap-4 flex-wrap text-sm">
+     <span className="text-gray-300">
+      <span className="font-mono text-white">{totalCount}</span> active client{totalCount === 1 ? '' : 's'}
+     </span>
+     {milestoneDelta > 0 && (
+      <span className="inline-flex items-center gap-1.5 text-emerald-300/90">
+       <TrendingUp className="w-3.5 h-3.5" />
+       <span className="font-mono">${milestoneDelta.toLocaleString()}</span> to ${milestone.toLocaleString()}/mo
+      </span>
+     )}
+    </div>
+   </div>
+
+   {/* Breakdown pills */}
+   <div className="flex flex-col sm:flex-row gap-2 lg:flex-col lg:min-w-[260px]">
+    <BreakdownPill
+     label="Paid"
+     count={paidCount}
+     amountCents={paidMrrCents}
+     tone="emerald"
+    />
+    <BreakdownPill
+     label="Trialing"
+     count={trialingCount}
+     amountCents={trialingMrrCents}
+     tone="sky"
+    />
+    {pastDueCount > 0 && (
+     <BreakdownPill
+      label="Past due"
+      count={pastDueCount}
+      amountCents={pastDueMrrCents}
+      tone="amber"
+     />
+    )}
+   </div>
+  </div>
+
+  <div className="relative mt-8 flex flex-wrap items-center gap-3">
+   <button
+    type="button"
+    onClick={openPortal}
+    disabled={portalLoading}
+    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] hover:bg-white/[0.12] px-4 py-2 text-sm font-medium text-white transition disabled:opacity-60"
+   >
+    {portalLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />}
+    Open Stripe portal
+   </button>
+   <button
+    type="button"
+    onClick={downloadCsv}
+    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] px-4 py-2 text-sm font-medium text-gray-300 transition"
+   >
+    <DownloadCloud className="h-4 w-4" />
+    Export CSV
+   </button>
+  </div>
+ </section>
+
+ {/* Secondary metrics — tighter, less competitive with the hero */}
+ <section className="grid gap-3 sm:grid-cols-3">
+  <SecondaryStat label="Per-booking fees" amountCents={summary?.bookingFeesCents ?? 0} hint="Usage-based, AI appointments" icon={CreditCard} />
+  <SecondaryStat label="Credits & adjustments" amountCents={summary?.creditsCents ?? 0} hint="Manual adjustments this period" icon={Wallet} />
+  <SecondaryStat label="Total billed (30d)" amountCents={summary?.totalBilledCents ?? 0} hint="Aggregate across all sources" icon={ShieldAlert} />
+ </section>
  </>
  )}
- </section>
 
  <section className="grid gap-6 lg:grid-cols-2">
  <article className="rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -389,4 +464,56 @@ export default function BillingDashboardPage() {
  )
 }
 
+function BreakdownPill({
+ label, count, amountCents, tone,
+}: {
+ label: string
+ count: number
+ amountCents: number
+ tone: 'emerald' | 'sky' | 'amber'
+}) {
+ const toneClasses = {
+  emerald: 'border-emerald-400/20 bg-emerald-400/5 text-emerald-200',
+  sky: 'border-sky-400/20 bg-sky-400/5 text-sky-200',
+  amber: 'border-amber-400/20 bg-amber-400/5 text-amber-200',
+ }[tone]
+ const dotClass = {
+  emerald: 'bg-emerald-400',
+  sky: 'bg-sky-400',
+  amber: 'bg-amber-400',
+ }[tone]
+ return (
+  <div className={`flex items-center justify-between gap-4 rounded-xl border ${toneClasses} px-3.5 py-2.5`}>
+   <div className="flex items-center gap-2 min-w-0">
+    <span className={`w-1.5 h-1.5 rounded-full ${dotClass} flex-shrink-0`} />
+    <span className="text-[10px] font-mono uppercase tracking-wider opacity-80">{label}</span>
+    <span className="text-xs tabular-nums opacity-70">· {count}</span>
+   </div>
+   <span className="text-sm font-mono tabular-nums">
+    ${(amountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+   </span>
+  </div>
+ )
+}
 
+function SecondaryStat({
+ label, amountCents, hint, icon: Icon,
+}: {
+ label: string
+ amountCents: number
+ hint: string
+ icon: React.ElementType
+}) {
+ return (
+  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+   <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">
+    <Icon className="w-3.5 h-3.5" />
+    {label}
+   </div>
+   <div className="text-2xl font-medium text-white tabular-nums">
+    ${(amountCents / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+   </div>
+   <div className="text-xs text-gray-500 mt-1">{hint}</div>
+  </div>
+ )
+}
