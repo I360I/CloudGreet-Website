@@ -74,12 +74,23 @@ export async function PATCH(request: NextRequest) {
  return NextResponse.json({ error: `Failed to update business: ${updateError.message}` }, { status: 500 })
  }
 
- // 2. Get updated business data for agent update
- const { data: updatedBusiness } = await supabaseAdmin
+ // 2. Get updated business data for agent update.
+ //    Use select('*') so a missing optional column (voice_id /
+ //    voice_speed from later migrations the operator may not have
+ //    applied) doesn't blow up the entire query. With the explicit
+ //    list, missing voice_speed → whole select returns null → every
+ //    field downstream reads as undefined → greeting goes to Retell
+ //    as '' and gets dropped as 'switch to dynamic mode'.
+ const { data: updatedBusiness, error: refetchErr } = await supabaseAdmin
  .from('businesses')
- .select('business_name, business_type, services, service_areas, business_hours, greeting_message, greeting, ai_tone, tone, phone_number, phone, website, address, city, state, zip_code, voice_id, voice_speed')
+ .select('*')
  .eq('id', businessId)
  .single()
+ if (refetchErr || !updatedBusiness) {
+  return NextResponse.json({
+   error: `Saved, but couldn't reload business: ${refetchErr?.message || 'no row'}`,
+  }, { status: 500 })
+ }
 
  // 3. Always attempt the Retell sync — let the agent manager decide
  //    whether there's an agent to update. The previous gate
