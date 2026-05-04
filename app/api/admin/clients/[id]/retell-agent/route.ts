@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { DEFAULT_POST_CALL_FIELDS } from '@/lib/retell-default-extractions'
+import { syncBusinessKnowledgeBase } from '@/lib/retell-knowledge-base'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -66,6 +68,24 @@ export async function PUT(
   const agentName = (agent?.agent_name as string) || 'Retell agent'
   const llmId = agent?.response_engine?.llm_id || null
 
+  // Push the default extraction schema onto the agent so every call
+  // gets the same structured capture (summary, booking_type, etc).
+  // Best-effort: if Retell rejects the patch we still save the link.
+  try {
+   await fetch(`https://api.retellai.com/update-agent/${encodeURIComponent(raw)}`, {
+    method: 'PATCH',
+    headers: {
+     Authorization: `Bearer ${apiKey}`,
+     'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ post_call_analysis_data: DEFAULT_POST_CALL_FIELDS }),
+   })
+  } catch (e) {
+   logger.warn('Default extraction schema push failed (non-fatal)', {
+    clientId: params.id, error: e instanceof Error ? e.message : 'Unknown',
+   })
+  }
+
   // Save canonical column on businesses.
   const { error: bizErr } = await supabaseAdmin
    .from('businesses')
@@ -97,11 +117,23 @@ export async function PUT(
    })
   }
 
+  // Sync this business's facts (owner, services, hours, etc) into a
+  // Retell knowledge base linked to the agent. Best-effort.
+  let kbResult: Awaited<ReturnType<typeof syncBusinessKnowledgeBase>> | null = null
+  try {
+   kbResult = await syncBusinessKnowledgeBase(params.id)
+  } catch (kbErr) {
+   logger.warn('KB sync failed during agent link (non-fatal)', {
+    clientId: params.id, error: kbErr instanceof Error ? kbErr.message : 'Unknown',
+   })
+  }
+
   return NextResponse.json({
    success: true,
    agentId: raw,
    agentName,
    llmId,
+   kb: kbResult,
   })
  } catch (e) {
   logger.error('Retell agent save failed', { error: e instanceof Error ? e.message : 'Unknown' })

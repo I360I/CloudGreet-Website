@@ -44,6 +44,8 @@ type ClientDetail = {
    id: string
    email: string
    name?: string | null
+   first_name?: string | null
+   last_name?: string | null
    phone?: string | null
    created_at?: string
    last_login?: string | null
@@ -312,7 +314,7 @@ export default function ClientDetailPage() {
      {/* Two-column: owner + agent */}
      <div className="grid lg:grid-cols-2 gap-3 mb-3">
       <RisingFade delay={0.1}>
-       <OwnerCard client={client} />
+       <OwnerCard client={client} clientId={id} onSaved={load} />
       </RisingFade>
       <RisingFade delay={0.15}>
        <AgentCard
@@ -330,10 +332,6 @@ export default function ClientDetailPage() {
       <AgentTuning client={client} hasAgent={!!aiAgent?.retell_agent_id} onPatch={patch} />
      </RisingFade>
 
-     {/* What to capture from calls (post-call extraction) */}
-     <RisingFade delay={0.19}>
-      <ExtractionFieldsSection clientId={id} hasAgent={!!aiAgent?.retell_agent_id} />
-     </RisingFade>
 
      {/* Address row */}
      <RisingFade delay={0.2}>
@@ -566,13 +564,93 @@ function RecentAppointments({ appts }: { appts: ClientDetail['activity']['appoin
 
 /* --------------------------------- Owner -------------------------------- */
 
-function OwnerCard({ client }: { client: ClientDetail['client'] }) {
+function OwnerCard({
+ client, clientId, onSaved,
+}: {
+ client: ClientDetail['client']
+ clientId: string
+ onSaved: () => void
+}) {
  const o = client.owner
+ const [editing, setEditing] = useState(false)
+ const [first, setFirst] = useState('')
+ const [last, setLast] = useState('')
+ const [phone, setPhone] = useState('')
+ const [saving, setSaving] = useState(false)
+ const [err, setErr] = useState('')
+
+ useEffect(() => {
+  // Try to split o.name back into first/last when first_name fields
+  // aren't returned (older API shapes). Best-effort.
+  const name = (o as any)?.name || ''
+  const parts = name ? name.split(/\s+/) : []
+  setFirst((o as any)?.first_name ?? parts[0] ?? '')
+  setLast((o as any)?.last_name ?? parts.slice(1).join(' ') ?? '')
+  setPhone(o?.phone ?? '')
+ }, [o])
+
+ const save = async () => {
+  setSaving(true); setErr('')
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${clientId}/owner`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+     first_name: first.trim(),
+     last_name: last.trim(),
+     phone: phone.trim() || null,
+    }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
+   setEditing(false)
+   onSaved()
+  } catch (e) {
+   setErr(e instanceof Error ? e.message : 'Save failed')
+  } finally {
+   setSaving(false)
+  }
+ }
+
  return (
   <Panel>
-   <PanelHeader title="Owner" eyebrow="Account contact" />
-   {o ? (
+   <PanelHeader
+    title="Owner"
+    eyebrow="Account contact"
+    trailing={o && !editing ? (
+     <button
+      onClick={() => setEditing(true)}
+      className="text-[10px] font-mono uppercase tracking-wider text-sky-400 hover:text-sky-300"
+     >
+      edit
+     </button>
+    ) : null}
+   />
+   {!o ? (
+    <p className="text-sm text-gray-500">No owner record found.</p>
+   ) : editing ? (
+    <div className="space-y-2">
+     <div className="grid grid-cols-2 gap-2">
+      <Input value={first} onChange={(e) => setFirst(e.target.value)} placeholder="First name" />
+      <Input value={last} onChange={(e) => setLast(e.target.value)} placeholder="Last name" />
+     </div>
+     <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" />
+     <div className="flex items-center gap-2">
+      <PrimaryButton onClick={save} disabled={saving}>
+       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+       Save
+      </PrimaryButton>
+      <GhostButton onClick={() => { setEditing(false); setErr('') }}>Cancel</GhostButton>
+      {err && <span className="text-xs text-rose-300">{err}</span>}
+     </div>
+     <p className="text-[10px] text-gray-500">
+      Email is read-only. Updates also refresh the agent&apos;s knowledge base so the AI knows the owner.
+     </p>
+    </div>
+   ) : (
     <ul className="space-y-3 text-sm">
+     {(o as any)?.name && (
+      <li className="text-sm font-medium text-gray-200">{(o as any).name}</li>
+     )}
      <li className="flex items-start gap-2.5 text-gray-300">
       <Mail className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
       <a href={`mailto:${o.email}`} className="hover:text-white truncate">{o.email}</a>
@@ -595,8 +673,6 @@ function OwnerCard({ client }: { client: ClientDetail['client'] }) {
       <li className="text-xs text-gray-500">Last login {relTime(o.last_login)}</li>
      )}
     </ul>
-   ) : (
-    <p className="text-sm text-gray-500">No owner record found.</p>
    )}
   </Panel>
  )

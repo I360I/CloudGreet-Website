@@ -13,7 +13,7 @@ import { Sidebar, SidebarSkeleton } from './_components/Sidebar'
 import { TopBar } from './_components/TopBar'
 import { demoOverview } from './_components/demo-data'
 import {
- type Call, CallDrawer, OutcomeBadge, OutcomeDot, tagOutcome,
+ type Call, CallDrawer, OutcomeBadge, OutcomeDot, BookingTypeTag, tagOutcome,
  fmtDur, relTime, fmtDateTime,
 } from './_components/calls'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -316,10 +316,11 @@ export default function DashboardPage() {
                 </span>
                 <span className="text-xs text-gray-400 flex-shrink-0">{relTime(c.created_at)}</span>
                </div>
-               <div className="flex items-center gap-2 mt-0.5">
+               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <BookingTypeTag call={c} />
                 <OutcomeBadge outcome={tagOutcome(c)} />
                 <p className="text-xs text-gray-500 truncate">
-                 {c.summary || `${fmtDur(c.duration || 0)}`}
+                 {(c.call_extractions as any)?.summary || c.summary || fmtDur(c.duration || 0)}
                 </p>
                </div>
               </div>

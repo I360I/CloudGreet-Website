@@ -9,7 +9,7 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 import { demoCalls } from '../_components/demo-data'
 import {
- type Call, CallDrawer, OutcomeBadge, OutcomeDot, tagOutcome,
+ type Call, CallDrawer, OutcomeBadge, OutcomeDot, BookingTypeTag, tagOutcome,
  fmtDur, relTime,
 } from '../_components/calls'
 
@@ -177,9 +177,12 @@ export default function CallsPage() {
               <span className="lg:hidden text-xs text-gray-400">{relTime(c.created_at)}</span>
              </div>
             </div>
-            <div className="lg:col-span-2 mt-1.5 lg:mt-0"><OutcomeBadge outcome={tagOutcome(c)} /></div>
+            <div className="lg:col-span-2 mt-1.5 lg:mt-0 flex flex-wrap items-center gap-1">
+             <BookingTypeTag call={c} />
+             <OutcomeBadge outcome={tagOutcome(c)} />
+            </div>
             <div className="hidden lg:block lg:col-span-4 text-xs text-gray-500 truncate">
-             {c.summary || '—'}
+             {(c.call_extractions as any)?.summary || c.summary || '—'}
             </div>
             <div className="hidden lg:block lg:col-span-2 text-right text-xs text-gray-500">
              <div>{relTime(c.created_at)}</div>

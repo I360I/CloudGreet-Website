@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { retellAgentManager } from '@/lib/retell-agent-manager'
+import { syncBusinessKnowledgeBase } from '@/lib/retell-knowledge-base'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 
@@ -151,6 +152,10 @@ export async function PATCH(request: NextRequest) {
    error: agentSyncError, businessId, trace: trace.join(' | '),
   })
  }
+
+ // Sync the KB whenever business facts change (services, hours,
+ // address, name) so the AI's reference doc stays current.
+ try { await syncBusinessKnowledgeBase(businessId) } catch { /* non-fatal */ }
 
  return NextResponse.json({
   success: true,

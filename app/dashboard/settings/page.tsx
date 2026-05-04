@@ -97,6 +97,7 @@ export default function SettingsPage() {
       <div className="space-y-3">
        <LiveAgentBanner state={agentState} />
        <NameSection profile={profile} onSaved={reload} />
+       <OwnerNameSection />
        <GreetingSection profile={profile} state={agentState} onSaved={reload} />
        <VoiceSection profile={profile} state={agentState} onSaved={reload} />
        <SpeedSection profile={profile} state={agentState} onSaved={reload} />
@@ -583,6 +584,101 @@ function SpeedSection({ profile, state, onSaved }: { profile: Profile; state: Ag
 }
 
 /* ---------------------------- Read-only --------------------------- */
+
+function OwnerNameSection() {
+ const [first, setFirst] = useState('')
+ const [last, setLast] = useState('')
+ const [phone, setPhone] = useState('')
+ const [loading, setLoading] = useState(true)
+ const [saving, setSaving] = useState(false)
+ const [error, setError] = useState('')
+ const [savedFlag, setSavedFlag] = useState(false)
+ const [initial, setInitial] = useState({ first: '', last: '', phone: '' })
+
+ useEffect(() => {
+  let cancelled = false
+  ;(async () => {
+   try {
+    const res = await fetchWithAuth('/api/me/profile')
+    const j = await res.json().catch(() => ({}))
+    if (!cancelled && j?.success) {
+     const p = j.profile || {}
+     const nameParts = (p.name || '').split(/\s+/).filter(Boolean)
+     const f = p.first_name || nameParts[0] || ''
+     const l = p.last_name || nameParts.slice(1).join(' ') || ''
+     setFirst(f); setLast(l); setPhone(p.phone || '')
+     setInitial({ first: f, last: l, phone: p.phone || '' })
+    }
+   } catch { /* non-fatal */ }
+   finally { if (!cancelled) setLoading(false) }
+  })()
+  return () => { cancelled = true }
+ }, [])
+
+ const dirty = first !== initial.first || last !== initial.last || phone !== initial.phone
+
+ const onSave = async () => {
+  setSaving(true); setError(''); setSavedFlag(false)
+  try {
+   const res = await fetchWithAuth('/api/me/profile', {
+    method: 'PATCH',
+    body: JSON.stringify({
+     first_name: first.trim(),
+     last_name: last.trim(),
+     phone: phone.trim() || null,
+    }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
+   setInitial({ first: first.trim(), last: last.trim(), phone: phone.trim() })
+   setSavedFlag(true)
+   setTimeout(() => setSavedFlag(false), 2500)
+  } catch (e) {
+   setError(e instanceof Error ? e.message : 'Save failed')
+  } finally {
+   setSaving(false)
+  }
+ }
+
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl p-6">
+   <h2 className="text-sm font-medium text-gray-700 mb-1">Your name</h2>
+   <p className="text-xs text-gray-500 mb-4">
+    Used in confirmations and shared with your AI receptionist so it can refer to you by name.
+   </p>
+   {loading ? (
+    <div className="flex items-center gap-2 text-xs text-gray-400">
+     <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+    </div>
+   ) : (
+    <>
+     <div className="grid sm:grid-cols-2 gap-3">
+      <input
+       type="text" value={first} onChange={(e) => setFirst(e.target.value)}
+       placeholder="First name"
+       className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-900"
+      />
+      <input
+       type="text" value={last} onChange={(e) => setLast(e.target.value)}
+       placeholder="Last name"
+       className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-900"
+      />
+     </div>
+     <input
+      type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+      placeholder="Phone (for the AI to reach you on)"
+      className="mt-3 w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-900"
+     />
+     <div className="flex justify-end mt-4">
+      <SaveButton disabled={!dirty} saving={saving} onClick={onSave} />
+     </div>
+     {savedFlag && <SavedHint />}
+     {error && <ErrorHint message={error} />}
+    </>
+   )}
+  </div>
+ )
+}
 
 function PasswordSection() {
  const [current, setCurrent] = useState('')

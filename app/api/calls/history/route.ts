@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
  // Build query
  let query = supabaseAdmin
  .from('calls')
- .select('id, call_id, from_number, to_number, status, duration, recording_url, transcript, created_at, caller_name', { count: 'exact' })
+ .select('id, call_id, from_number, to_number, status, duration, recording_url, transcript, created_at, caller_name, call_extractions, call_summary', { count: 'exact' })
  .eq('business_id', businessId)
  .order('created_at', { ascending: false })
  .range(offset, offset + limit - 1)

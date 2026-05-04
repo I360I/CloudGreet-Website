@@ -56,6 +56,41 @@ export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
  )
 }
 
+const BOOKING_TYPE_TONE: Record<string, string> = {
+ booked: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+ quote: 'bg-sky-50 text-sky-700 border-sky-200',
+ emergency: 'bg-rose-50 text-rose-700 border-rose-200',
+ callback: 'bg-amber-50 text-amber-700 border-amber-200',
+ info_only: 'bg-gray-100 text-gray-600 border-gray-200',
+ not_a_fit: 'bg-gray-100 text-gray-500 border-gray-200',
+}
+const BOOKING_TYPE_LABEL: Record<string, string> = {
+ booked: 'Booked',
+ quote: 'Quote',
+ emergency: 'Emergency',
+ callback: 'Callback',
+ info_only: 'Info only',
+ not_a_fit: 'Not a fit',
+}
+
+/**
+ * Renders the auto-extracted booking_type as a colored tag. Returns
+ * null if the call hasn't been analyzed yet or the value isn't a
+ * known label (forward-compat with future Retell-extracted values).
+ */
+export function BookingTypeTag({ call }: { call: Pick<Call, 'call_extractions'> }) {
+ const raw = (call.call_extractions as any)?.booking_type
+ if (!raw || typeof raw !== 'string') return null
+ const key = raw.toLowerCase().replace(/\s+/g, '_')
+ const label = BOOKING_TYPE_LABEL[key] || raw
+ const tone = BOOKING_TYPE_TONE[key] || 'bg-gray-100 text-gray-600 border-gray-200'
+ return (
+  <span className={`text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded border ${tone}`}>
+   {label}
+  </span>
+ )
+}
+
 export function fmtDur(sec: number): string {
  if (!sec) return '0s'
  const m = Math.floor(sec / 60)
@@ -115,6 +150,7 @@ export function CallDrawer({ call, onClose }: { call: Call; onClose: () => void 
 
     <div className="px-6 py-5 space-y-5">
      <div className="flex flex-wrap gap-1.5">
+      <BookingTypeTag call={call} />
       <OutcomeBadge outcome={tagOutcome(call)} />
       {call.sentiment && <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{call.sentiment}</span>}
      </div>
