@@ -102,6 +102,17 @@ export async function PATCH(request: NextRequest) {
   const speedChanged = 'voice_speed' in updates
   const nameChanged = 'business_name' in updates
 
+  // Echo what landed at the API so the UI trace can show whether the
+  // body actually contained the values the user typed/picked.
+  trace.push(
+   `received: ${[
+    greetingChanged ? `greeting_message="${(updates.greeting_message as string)?.slice(0, 40)}"` : null,
+    voiceChanged ? `voice_id=${updates.voice_id ?? '∅'}` : null,
+    speedChanged ? `voice_speed=${updates.voice_speed}` : null,
+    nameChanged ? `business_name="${updates.business_name}"` : null,
+   ].filter(Boolean).join(', ') || '(no editable fields)'}`,
+  )
+
   const agentConfig: any = {
    businessId,
    businessType: updatedBusiness?.business_type || business.business_type,

@@ -241,13 +241,23 @@ function CurrentLine({ label, value }: { label: string; value: string | null | u
 }
 
 function GreetingSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: (opts?: { delay?: number }) => void }) {
- const [value, setValue] = useState(profile.greetingMessage)
+ // Initialize from the live Retell value when available — that's the
+ // ground truth. Falling back to the DB greeting only if Retell has
+ // nothing yet. Without this the textarea stays empty even when Retell
+ // has a real greeting set, and a clean save sends '' which Retell
+ // interprets as 'flip to dynamic mode'.
+ const initialGreeting = state?.beginMessage ?? profile.greetingMessage ?? ''
+ const [value, setValue] = useState(initialGreeting)
  const [saving, setSaving] = useState(false)
  const [error, setError] = useState('')
  const [savedFlag, setSavedFlag] = useState(false)
  const [trace, setTrace] = useState<string[] | null>(null)
 
- const dirty = value !== profile.greetingMessage
+ // Re-sync when profile or live state changes (e.g. after a reload).
+ useEffect(() => { setValue(state?.beginMessage ?? profile.greetingMessage ?? '') },
+  [profile.greetingMessage, state?.beginMessage])
+
+ const dirty = value !== initialGreeting && value.trim().length > 0
 
  const onSave = async () => {
   setSaving(true); setError(''); setSavedFlag(false); setTrace(null)
@@ -484,15 +494,21 @@ const SPEED_PRESETS: { value: number; label: string }[] = [
 ]
 
 function SpeedSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: (opts?: { delay?: number }) => void }) {
- const initial = profile.voiceSpeed ?? 1.0
+ // Initialize from Retell's live voice_speed when available (it's the
+ // ground truth). Falling back to the DB value only if Retell has
+ // nothing yet. Without this the slider snaps to 1.0 on every load.
+ const initial = state?.voiceSpeed ?? profile.voiceSpeed ?? 1.0
  const [value, setValue] = useState<number>(initial)
  const [saving, setSaving] = useState(false)
  const [error, setError] = useState('')
  const [savedFlag, setSavedFlag] = useState(false)
 
- useEffect(() => { setValue(profile.voiceSpeed ?? 1.0) }, [profile.voiceSpeed])
+ useEffect(() => {
+  const live = state?.voiceSpeed ?? profile.voiceSpeed ?? 1.0
+  setValue(live)
+ }, [profile.voiceSpeed, state?.voiceSpeed])
 
- const dirty = Math.abs(value - (profile.voiceSpeed ?? 1.0)) > 0.001
+ const dirty = Math.abs(value - initial) > 0.001
 
  const onSave = async () => {
   setSaving(true); setError(''); setSavedFlag(false)
