@@ -1,11 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Save, AlertCircle, CheckCircle2, X, Plus, KeyRound, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Save, AlertCircle, CheckCircle2, KeyRound, Eye, EyeOff, Play, Bot, Gauge } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
-
-type Tone = 'professional' | 'friendly' | 'casual'
 
 type Profile = {
  businessName: string
@@ -19,7 +17,9 @@ type Profile = {
  zipCode: string
  website: string | null
  greetingMessage: string
- aiTone: Tone
+ voiceId: string | null
+ voiceSpeed: number | null
+ retellAgentId?: string | null
 }
 
 export default function SettingsPage() {
@@ -70,8 +70,8 @@ export default function SettingsPage() {
       <div className="space-y-3">
        <NameSection profile={profile} onSaved={reload} />
        <GreetingSection profile={profile} onSaved={reload} />
-       <ToneSection profile={profile} onSaved={reload} />
-       <ServicesSection profile={profile} onSaved={reload} />
+       <VoiceSection profile={profile} onSaved={reload} />
+       <SpeedSection profile={profile} onSaved={reload} />
        <PasswordSection />
        <ProfileReadOnly profile={profile} />
       </div>
@@ -85,12 +85,10 @@ export default function SettingsPage() {
 /* ----------------------------- shared ----------------------------- */
 
 async function patchBusiness(updates: Record<string, any>) {
- const businessRaw = localStorage.getItem('business')
- const businessId = businessRaw ? JSON.parse(businessRaw).id : null
- if (!businessId) throw new Error('Missing business id — sign in again.')
+ // Server scopes by JWT — no need to send businessId from the client.
  const res = await fetchWithAuth('/api/businesses/update', {
   method: 'PATCH',
-  body: JSON.stringify({ businessId, ...updates }),
+  body: JSON.stringify(updates),
  })
  const json = await res.json().catch(() => ({}))
  if (!res.ok || !json.success) throw new Error(json?.error || `Save failed (${res.status})`)
@@ -212,29 +210,56 @@ function GreetingSection({ profile, onSaved }: { profile: Profile; onSaved: () =
  )
 }
 
-/* ------------------------------- Tone ----------------------------- */
+/* ------------------------------ Voice ----------------------------- */
 
-const TONES: { id: Tone; label: string; sub: string }[] = [
- { id: 'professional', label: 'Professional', sub: 'Polished and concise.' },
- { id: 'friendly', label: 'Friendly', sub: 'Warm, conversational.' },
- { id: 'casual', label: 'Casual', sub: 'Loose and laid-back.' },
-]
+type Voice = {
+ voice_id: string
+ voice_name: string
+ provider: string | null
+ accent: string | null
+ gender: string | null
+ preview_audio_url: string | null
+}
 
-function ToneSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
- const [value, setValue] = useState<Tone>(profile.aiTone)
+function VoiceSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+ const [voices, setVoices] = useState<Voice[]>([])
+ const [voicesError, setVoicesError] = useState('')
+ const [voicesLoading, setVoicesLoading] = useState(true)
+ const [value, setValue] = useState<string | null>(profile.voiceId)
  const [saving, setSaving] = useState(false)
  const [error, setError] = useState('')
  const [savedFlag, setSavedFlag] = useState(false)
 
- const dirty = value !== profile.aiTone
+ useEffect(() => { setValue(profile.voiceId) }, [profile.voiceId])
+ useEffect(() => {
+  let cancelled = false
+  ;(async () => {
+   setVoicesLoading(true); setVoicesError('')
+   try {
+    const res = await fetchWithAuth('/api/dashboard/retell/voices')
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok || !j.success) throw new Error(j?.error || `Failed (${res.status})`)
+    if (!cancelled) setVoices(j.voices || [])
+   } catch (e) {
+    if (!cancelled) setVoicesError(e instanceof Error ? e.message : 'Failed to load voices')
+   } finally {
+    if (!cancelled) setVoicesLoading(false)
+   }
+  })()
+  return () => { cancelled = true }
+ }, [])
+
+ const dirty = (value || null) !== (profile.voiceId || null)
+ const selected = voices.find((v) => v.voice_id === value)
 
  const onSave = async () => {
   setSaving(true); setError(''); setSavedFlag(false)
   try {
-   await patchBusiness({ ai_tone: value, tone: value })
+   const r = await patchBusiness({ voice_id: value || null })
    setSavedFlag(true)
    setTimeout(() => setSavedFlag(false), 2500)
    onSaved()
+   if (r.agentSyncError) setError(`Saved, but Retell didn\'t sync: ${r.agentSyncError}`)
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to save')
   } finally {
@@ -244,25 +269,62 @@ function ToneSection({ profile, onSaved }: { profile: Profile; onSaved: () => vo
 
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
-   <h2 className="text-sm font-medium text-gray-700 mb-1">AI tone</h2>
-   <p className="text-xs text-gray-500 mb-4">How the AI sounds on a call.</p>
-   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-    {TONES.map((t) => (
+   <div className="flex items-center gap-2 mb-1">
+    <Bot className="w-4 h-4 text-sky-500" />
+    <h2 className="text-sm font-medium text-gray-700">AI voice</h2>
+   </div>
+   <p className="text-xs text-gray-500 mb-4">
+    Pick what your AI sounds like. Tap any voice to preview before saving.
+   </p>
+
+   {voicesError ? (
+    <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg px-3 py-2 text-xs">
+     Couldn&apos;t load voices: {voicesError}
+    </div>
+   ) : voicesLoading ? (
+    <div className="flex items-center gap-2 text-xs text-gray-400">
+     <Loader2 className="w-4 h-4 animate-spin" /> Loading voices…
+    </div>
+   ) : (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
      <button
-      key={t.id} onClick={() => setValue(t.id)}
+      type="button"
+      onClick={() => setValue(null)}
       className={`text-left p-3 rounded-xl border transition-all duration-300 ease-out ${
-       value === t.id
+       value === null
         ? 'border-gray-900 bg-gray-50'
         : 'border-gray-200 hover:border-gray-400'
       }`}
      >
-      <div className="text-sm font-medium text-gray-900">{t.label}</div>
-      <div className="text-xs text-gray-500 mt-0.5">{t.sub}</div>
+      <div className="text-sm font-medium text-gray-900">Auto</div>
+      <div className="text-xs text-gray-500 mt-0.5">
+       Picks based on your business type.
+      </div>
      </button>
-    ))}
-   </div>
+     {voices.map((v) => (
+      <VoiceCard
+       key={v.voice_id}
+       voice={v}
+       selected={value === v.voice_id}
+       onSelect={() => setValue(v.voice_id)}
+      />
+     ))}
+    </div>
+   )}
+
+   {selected && (
+    <p className="text-[11px] text-gray-500 mt-3">
+     Currently selected: <span className="font-mono text-gray-800">{selected.voice_name}</span>
+     {selected.gender ? ` · ${selected.gender}` : ''}
+     {selected.accent ? ` · ${selected.accent}` : ''}
+    </p>
+   )}
+
    <div className="flex justify-end mt-4">
-    <SaveButton disabled={!dirty} saving={saving} onClick={onSave} />
+    <SaveButton
+     disabled={!dirty} saving={saving} onClick={onSave}
+     label={profile.retellAgentId ? 'Save & push to Retell' : 'Save'}
+    />
    </div>
    {savedFlag && <SavedHint />}
    {error && <ErrorHint message={error} />}
@@ -270,33 +332,85 @@ function ToneSection({ profile, onSaved }: { profile: Profile; onSaved: () => vo
  )
 }
 
-/* ----------------------------- Services --------------------------- */
+function VoiceCard({
+ voice, selected, onSelect,
+}: { voice: Voice; selected: boolean; onSelect: () => void }) {
+ const [audio] = useState(() => typeof Audio !== 'undefined' ? new Audio() : null)
+ const [playing, setPlaying] = useState(false)
 
-function ServicesSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
- const [list, setList] = useState<string[]>(profile.services)
- const [draft, setDraft] = useState('')
+ const togglePreview = (e: React.MouseEvent) => {
+  e.stopPropagation()
+  if (!audio || !voice.preview_audio_url) return
+  if (playing) {
+   audio.pause(); audio.currentTime = 0; setPlaying(false); return
+  }
+  audio.src = voice.preview_audio_url
+  audio.onended = () => setPlaying(false)
+  audio.onerror = () => setPlaying(false)
+  audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
+ }
+
+ useEffect(() => () => { if (audio) { audio.pause(); audio.src = '' } }, [audio])
+
+ return (
+  <div
+   onClick={onSelect}
+   className={`text-left p-3 rounded-xl border transition-all duration-300 ease-out cursor-pointer flex items-center gap-3 ${
+    selected
+     ? 'border-gray-900 bg-gray-50'
+     : 'border-gray-200 hover:border-gray-400 bg-white'
+   }`}
+  >
+   {voice.preview_audio_url ? (
+    <button
+     type="button" onClick={togglePreview}
+     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+      playing ? 'bg-sky-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+     }`}
+     aria-label={playing ? 'Stop preview' : 'Play preview'}
+    >
+     <Play className="w-3.5 h-3.5" fill={playing ? 'currentColor' : 'none'} />
+    </button>
+   ) : (
+    <div className="w-8 h-8 rounded-full bg-gray-50 flex-shrink-0" />
+   )}
+   <div className="flex-1 min-w-0">
+    <div className="text-sm font-medium text-gray-900 truncate">{voice.voice_name}</div>
+    <div className="text-[10px] text-gray-500 mt-0.5 font-mono uppercase tracking-wider truncate">
+     {[voice.gender, voice.accent, voice.provider].filter(Boolean).join(' · ') || 'voice'}
+    </div>
+   </div>
+  </div>
+ )
+}
+
+/* ------------------------------ Speed ----------------------------- */
+
+const SPEED_PRESETS: { value: number; label: string }[] = [
+ { value: 0.8, label: 'Slower' },
+ { value: 1.0, label: 'Normal' },
+ { value: 1.2, label: 'Faster' },
+]
+
+function SpeedSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+ const initial = profile.voiceSpeed ?? 1.0
+ const [value, setValue] = useState<number>(initial)
  const [saving, setSaving] = useState(false)
  const [error, setError] = useState('')
  const [savedFlag, setSavedFlag] = useState(false)
 
- const dirty = JSON.stringify(list) !== JSON.stringify(profile.services)
+ useEffect(() => { setValue(profile.voiceSpeed ?? 1.0) }, [profile.voiceSpeed])
 
- const add = () => {
-  const v = draft.trim()
-  if (!v) return
-  if (list.some((s) => s.toLowerCase() === v.toLowerCase())) { setDraft(''); return }
-  setList([...list, v])
-  setDraft('')
- }
- const remove = (s: string) => setList(list.filter((x) => x !== s))
+ const dirty = Math.abs(value - (profile.voiceSpeed ?? 1.0)) > 0.001
 
  const onSave = async () => {
   setSaving(true); setError(''); setSavedFlag(false)
   try {
-   await patchBusiness({ services: list })
+   const r = await patchBusiness({ voice_speed: value })
    setSavedFlag(true)
    setTimeout(() => setSavedFlag(false), 2500)
    onSaved()
+   if (r.agentSyncError) setError(`Saved, but Retell didn\'t sync: ${r.agentSyncError}`)
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to save')
   } finally {
@@ -306,48 +420,47 @@ function ServicesSection({ profile, onSaved }: { profile: Profile; onSaved: () =
 
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
-   <h2 className="text-sm font-medium text-gray-700 mb-1">Services</h2>
+   <div className="flex items-center gap-2 mb-1">
+    <Gauge className="w-4 h-4 text-sky-500" />
+    <h2 className="text-sm font-medium text-gray-700">Speech speed</h2>
+   </div>
    <p className="text-xs text-gray-500 mb-4">
-    What you offer. Bookings can only be made for services on this list.
+    How fast the AI talks. 1.0 is Retell&apos;s default — drop it for older callers, raise it for impatient ones.
    </p>
 
-   {list.length > 0 && (
-    <div className="flex flex-wrap gap-2 mb-3">
-     {list.map((s) => (
-      <span
-       key={s}
-       className="inline-flex items-center gap-1.5 bg-sky-50 border border-sky-200 text-sky-800 rounded-full px-3 py-1 text-xs font-medium"
-      >
-       {s}
-       <button
-        onClick={() => remove(s)}
-        className="text-sky-600 hover:text-sky-900 transition-colors"
-        aria-label={`Remove ${s}`}
-       >
-        <X className="w-3 h-3" />
-       </button>
-      </span>
-     ))}
-    </div>
-   )}
-
-   <div className="flex flex-col sm:flex-row gap-2">
+   <div className="flex items-center gap-4">
     <input
-     type="text" value={draft} onChange={(e) => setDraft(e.target.value)}
-     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
-     placeholder="e.g. AC tune-up"
-     className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-gray-900 transition-colors text-sm"
+     type="range" min={0.5} max={2.0} step={0.05}
+     value={value}
+     onChange={(e) => setValue(parseFloat(e.target.value))}
+     className="flex-1 accent-gray-900"
     />
-    <button
-     onClick={add} disabled={!draft.trim()}
-     className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-900 transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed"
-    >
-     <Plus className="w-4 h-4" /> Add
-    </button>
+    <div className="text-2xl font-medium text-gray-900 tabular-nums w-16 text-right">
+     {value.toFixed(2)}×
+    </div>
+   </div>
+
+   <div className="flex gap-2 mt-3">
+    {SPEED_PRESETS.map((p) => (
+     <button
+      key={p.value} type="button"
+      onClick={() => setValue(p.value)}
+      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+       Math.abs(value - p.value) < 0.005
+        ? 'bg-gray-900 text-white'
+        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+      }`}
+     >
+      {p.label} · {p.value.toFixed(1)}×
+     </button>
+    ))}
    </div>
 
    <div className="flex justify-end mt-4">
-    <SaveButton disabled={!dirty} saving={saving} onClick={onSave} />
+    <SaveButton
+     disabled={!dirty} saving={saving} onClick={onSave}
+     label={profile.retellAgentId ? 'Save & push to Retell' : 'Save'}
+    />
    </div>
    {savedFlag && <SavedHint />}
    {error && <ErrorHint message={error} />}

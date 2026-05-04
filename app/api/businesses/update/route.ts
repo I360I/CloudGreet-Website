@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { retellAgentManager } from '@/lib/retell-agent-manager'
-import { verifyJWT } from '@/lib/auth-middleware'
+import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -17,28 +17,38 @@ export const runtime = 'nodejs'
  * 
  * All automated - agent updates immediately!
  */
+// Whitelist what the client may write. Anything not on this list is
+// silently dropped — keeps a malicious client from flipping
+// subscription_status, owner_id, etc.
+const ALLOWED_FIELDS = new Set([
+  'business_name', 'business_type', 'phone_number', 'website',
+  'address', 'city', 'state', 'zip_code', 'services', 'service_areas',
+  'business_hours', 'greeting_message', 'voice_id', 'voice_speed',
+])
+
 export async function PATCH(request: NextRequest) {
  try {
- // Verify authentication
- const authHeader = request.headers.get('authorization')
- if (!authHeader?.startsWith('Bearer ')) {
- return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+ const authResult = await requireAuth(request)
+ if (!authResult.success || !authResult.userId || !authResult.businessId) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+ }
+ const userId = authResult.userId
+ // BusinessId from JWT only — never trust a client-supplied id.
+ const businessId = authResult.businessId
+
+ const body = await request.json().catch(() => ({}))
+ // Drop the businessId field if the client included it, plus anything
+ // outside the whitelist.
+ const updates: Record<string, unknown> = {}
+ for (const [k, v] of Object.entries(body || {})) {
+  if (k === 'businessId') continue
+  if (ALLOWED_FIELDS.has(k)) updates[k] = v
+ }
+ if (Object.keys(updates).length === 0) {
+  return NextResponse.json({ error: 'No editable fields provided' }, { status: 400 })
  }
 
- const authResult = await verifyJWT(request)
- if (!authResult.user?.id) {
- return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
- }
-
- const userId = authResult.user.id
- const body = await request.json()
- const { businessId, ...updates } = body
-
- if (!businessId) {
- return NextResponse.json({ error: 'businessId required' }, { status: 400 })
- }
-
- // Verify business ownership
+ // Verify business ownership (defense in depth)
  const { data: business, error: businessError } = await supabaseAdmin
  .from('businesses')
  .select('id, owner_id, retell_agent_id, business_name, business_type')
@@ -61,17 +71,19 @@ export async function PATCH(request: NextRequest) {
 
  if (updateError) {
  logger.error('Business update failed', { error: updateError?.message || JSON.stringify(updateError), businessId })
- return NextResponse.json({ error: 'Failed to update business' }, { status: 500 })
+ return NextResponse.json({ error: `Failed to update business: ${updateError.message}` }, { status: 500 })
  }
 
  // 2. Get updated business data for agent update
  const { data: updatedBusiness } = await supabaseAdmin
  .from('businesses')
- .select('business_name, business_type, services, service_areas, business_hours, greeting_message, greeting, ai_tone, tone, phone_number, phone, website, address, city, state, zip_code')
+ .select('business_name, business_type, services, service_areas, business_hours, greeting_message, greeting, ai_tone, tone, phone_number, phone, website, address, city, state, zip_code, voice_id, voice_speed')
  .eq('id', businessId)
  .single()
 
  // 3. Automatically update Retell agent if agent exists
+ let agentSynced = false
+ let agentSyncError: string | null = null
  if (business.retell_agent_id && updatedBusiness) {
  try {
  const agentManager = retellAgentManager()
@@ -88,21 +100,22 @@ export async function PATCH(request: NextRequest) {
  tone: (updatedBusiness.ai_tone || updatedBusiness.tone || 'professional') as 'professional' | 'friendly' | 'casual',
  phoneNumber: updatedBusiness.phone_number || updatedBusiness.phone || '',
  website: updatedBusiness.website,
- address: `${updatedBusiness.address || ''}, ${updatedBusiness.city || ''}, ${updatedBusiness.state || ''} ${updatedBusiness.zip_code || ''}`.trim()
+ address: `${updatedBusiness.address || ''}, ${updatedBusiness.city || ''}, ${updatedBusiness.state || ''} ${updatedBusiness.zip_code || ''}`.trim(),
+ voiceId: updatedBusiness.voice_id || null,
+ voiceSpeed: updatedBusiness.voice_speed != null ? Number(updatedBusiness.voice_speed) : null,
  }
 
- // Update agent automatically
  await agentManager.updateBusinessAgent(businessId, agentConfig)
-
- logger.info('Retell agent updated automatically', { 
- businessId, 
+ agentSynced = true
+ logger.info('Retell agent updated automatically', {
+ businessId,
  agentId: business.retell_agent_id,
- updatedFields: Object.keys(updates).join(', ')
+ updatedFields: Object.keys(updates).join(', '),
  })
  } catch (agentError) {
- logger.error('Agent update failed', { 
- error: agentError instanceof Error ? agentError.message : 'Unknown error',
- businessId 
+ agentSyncError = agentError instanceof Error ? agentError.message : 'Unknown error'
+ logger.error('Agent update failed', {
+ error: agentSyncError, businessId,
  })
  // Continue - business update succeeded even if agent update failed
  }
@@ -110,9 +123,14 @@ export async function PATCH(request: NextRequest) {
 
  return NextResponse.json({
  success: true,
- businessId: businessId,
- message: 'Business settings updated. Agent updated automatically.',
- agentUpdated: !!business.retell_agent_id
+ businessId,
+ message: agentSynced
+  ? 'Business settings updated. AI agent synced.'
+  : business.retell_agent_id
+   ? `Settings saved, but the AI agent didn't sync${agentSyncError ? `: ${agentSyncError}` : ''}.`
+   : 'Settings saved. No AI agent provisioned yet.',
+ agentSynced,
+ agentSyncError,
  })
 
  } catch (error) {

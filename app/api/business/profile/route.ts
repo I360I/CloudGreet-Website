@@ -67,6 +67,9 @@ export async function GET(request: NextRequest) {
  website: business.website,
  greetingMessage: business.greeting_message || business.greeting || '',
  aiTone: business.ai_tone || business.tone || 'professional',
+ voiceId: business.voice_id || null,
+ voiceSpeed: business.voice_speed != null ? Number(business.voice_speed) : null,
+ retellAgentId: business.retell_agent_id || null,
  }
  })
  } catch (error) {
