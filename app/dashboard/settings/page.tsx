@@ -43,11 +43,16 @@ export default function SettingsPage() {
  const [profile, setProfile] = useState<Profile | null>(null)
  const [agentState, setAgentState] = useState<AgentState | null>(null)
 
- const reload = async () => {
+ const reload = async (opts: { delay?: number } = {}) => {
+  // Optional small delay so Retell's read-after-write is consistent —
+  // without it, an immediate post-save fetch sometimes returns the
+  // pre-publish state for a few hundred ms.
+  if (opts.delay) await new Promise((r) => setTimeout(r, opts.delay))
   try {
+   const stamp = Date.now()
    const [pRes, aRes] = await Promise.all([
     fetchWithAuth('/api/business/profile'),
-    fetchWithAuth('/api/dashboard/agent-state'),
+    fetchWithAuth(`/api/dashboard/agent-state?t=${stamp}`),
    ])
    const pJson = await pRes.json()
    if (!pRes.ok || !pJson.success) throw new Error(pJson.message || 'Failed to load profile')
@@ -146,7 +151,7 @@ function SaveButton({ disabled, saving, onClick, label = 'Save' }: {
 
 /* ------------------------------ Name ------------------------------ */
 
-function NameSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+function NameSection({ profile, onSaved }: { profile: Profile; onSaved: (opts?: { delay?: number }) => void }) {
  const [value, setValue] = useState(profile.businessName)
  const [saving, setSaving] = useState(false)
  const [error, setError] = useState('')
@@ -235,7 +240,7 @@ function CurrentLine({ label, value }: { label: string; value: string | null | u
  )
 }
 
-function GreetingSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: () => void }) {
+function GreetingSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: (opts?: { delay?: number }) => void }) {
  const [value, setValue] = useState(profile.greetingMessage)
  const [saving, setSaving] = useState(false)
  const [error, setError] = useState('')
@@ -250,13 +255,13 @@ function GreetingSection({ profile, state, onSaved }: { profile: Profile; state:
    const r = await patchBusiness({ greeting_message: value, greeting: value })
    setSavedFlag(true)
    setTimeout(() => setSavedFlag(false), 2500)
-   onSaved()
    if (r.agentSyncError) {
     setError(`Saved, but Retell didn't sync: ${r.agentSyncError}`)
     setTrace(Array.isArray(r.retellTrace) ? r.retellTrace : null)
    } else if (Array.isArray(r.retellTrace)) {
     setTrace(r.retellTrace)
    }
+   onSaved({ delay: 800 })
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to save')
   } finally {
@@ -306,7 +311,7 @@ type Voice = {
  preview_audio_url: string | null
 }
 
-function VoiceSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: () => void }) {
+function VoiceSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: (opts?: { delay?: number }) => void }) {
  const [voices, setVoices] = useState<Voice[]>([])
  const [voicesError, setVoicesError] = useState('')
  const [voicesLoading, setVoicesLoading] = useState(true)
@@ -343,8 +348,8 @@ function VoiceSection({ profile, state, onSaved }: { profile: Profile; state: Ag
    const r = await patchBusiness({ voice_id: value || null })
    setSavedFlag(true)
    setTimeout(() => setSavedFlag(false), 2500)
-   onSaved()
    if (r.agentSyncError) setError(`Saved, but Retell didn\'t sync: ${r.agentSyncError}`)
+   onSaved({ delay: 800 })
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to save')
   } finally {
@@ -478,7 +483,7 @@ const SPEED_PRESETS: { value: number; label: string }[] = [
  { value: 1.2, label: 'Faster' },
 ]
 
-function SpeedSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: () => void }) {
+function SpeedSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: (opts?: { delay?: number }) => void }) {
  const initial = profile.voiceSpeed ?? 1.0
  const [value, setValue] = useState<number>(initial)
  const [saving, setSaving] = useState(false)
@@ -495,8 +500,8 @@ function SpeedSection({ profile, state, onSaved }: { profile: Profile; state: Ag
    const r = await patchBusiness({ voice_speed: value })
    setSavedFlag(true)
    setTimeout(() => setSavedFlag(false), 2500)
-   onSaved()
    if (r.agentSyncError) setError(`Saved, but Retell didn\'t sync: ${r.agentSyncError}`)
+   onSaved({ delay: 800 })
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to save')
   } finally {

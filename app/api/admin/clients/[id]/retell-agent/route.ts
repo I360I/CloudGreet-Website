@@ -78,21 +78,19 @@ export async function PUT(
    return NextResponse.json({ error: bizErr.message }, { status: 500 })
   }
 
-  // Mirror onto ai_agents so legacy paths still resolve. Best-effort —
-  // if the table doesn't exist or upsert fails we don't block the save.
+  // Mirror onto ai_agents. Delete-then-insert so stale rows from a
+  // previous agent don't survive (upsert assumed a unique constraint
+  // on business_id that may not exist, so old agent_ids could linger
+  // and the detail GET would re-render them).
   try {
-   await supabaseAdmin
-    .from('ai_agents')
-    .upsert(
-     {
-      business_id: params.id,
-      retell_agent_id: raw,
-      agent_name: agentName,
-      status: 'connected',
-      updated_at: new Date().toISOString(),
-     },
-     { onConflict: 'business_id' },
-    )
+   await supabaseAdmin.from('ai_agents').delete().eq('business_id', params.id)
+   await supabaseAdmin.from('ai_agents').insert({
+    business_id: params.id,
+    retell_agent_id: raw,
+    agent_name: agentName,
+    status: 'connected',
+    updated_at: new Date().toISOString(),
+   })
   } catch (e) {
    logger.warn('ai_agents mirror failed (non-fatal)', {
     clientId: params.id, error: e instanceof Error ? e.message : 'Unknown',
