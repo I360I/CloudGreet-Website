@@ -18,7 +18,12 @@ export async function GET(request: NextRequest) {
  if (!auth.success || !auth.businessId) {
   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
  }
- const { data } = await supabaseAdmin
+ // Try the canonical source first (phone_numbers w/ provider='retell'),
+ // then fall back to ai_agents.phone_number for setups where the admin
+ // skipped the phone_numbers insert. Without the fallback the dashboard
+ // top bar keeps showing "no Retell number provisioned" even after a
+ // working agent is wired.
+ const { data: pnRow } = await supabaseAdmin
   .from('phone_numbers')
   .select('phone_number')
   .eq('business_id', auth.businessId)
@@ -26,5 +31,13 @@ export async function GET(request: NextRequest) {
   .order('created_at', { ascending: false })
   .limit(1)
   .maybeSingle()
- return NextResponse.json({ phone: data?.phone_number || null })
+ if (pnRow?.phone_number) {
+  return NextResponse.json({ phone: pnRow.phone_number })
+ }
+ const { data: agentRow } = await supabaseAdmin
+  .from('ai_agents')
+  .select('phone_number')
+  .eq('business_id', auth.businessId)
+  .maybeSingle()
+ return NextResponse.json({ phone: agentRow?.phone_number || null })
 }

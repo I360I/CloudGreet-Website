@@ -69,7 +69,23 @@ export async function GET(request: NextRequest) {
 
   const verified = !!(calls && calls.length > 0)
 
+  // Subscription gate: a contractor can technically complete the test
+  // call even without paying. Don't flip onboarding_completed (and don't
+  // tell them they're "live") until Stripe shows an active or trialing
+  // subscription. Otherwise we'd start routing real calls for a free
+  // account.
+  let subscriptionStatus: string | null = null
   if (verified) {
+   const { data: biz } = await supabaseAdmin
+    .from('businesses')
+    .select('subscription_status')
+    .eq('id', authResult.businessId)
+    .maybeSingle()
+   subscriptionStatus = biz?.subscription_status || null
+  }
+  const paid = subscriptionStatus === 'active' || subscriptionStatus === 'trialing'
+
+  if (verified && paid) {
    await supabaseAdmin
     .from('businesses')
     .update({
@@ -78,11 +94,23 @@ export async function GET(request: NextRequest) {
      updated_at: new Date().toISOString(),
     })
     .eq('id', authResult.businessId)
+  } else if (verified && !paid) {
+   // Save the verification timestamp so we don't re-test forever, but
+   // hold off on onboarding_completed until they pay.
+   await supabaseAdmin
+    .from('businesses')
+    .update({
+     forwarding_verified_at: new Date().toISOString(),
+     updated_at: new Date().toISOString(),
+    })
+    .eq('id', authResult.businessId)
   }
 
   return NextResponse.json({
    success: true,
    verified,
+   paid,
+   subscriptionStatus,
    call: calls?.[0] || null,
   })
  } catch (e) {
