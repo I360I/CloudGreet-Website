@@ -60,6 +60,43 @@ export default function AdminClosesPage() {
 
   const counts = useMemo(() => ({ [tab]: closes.length }), [tab, closes.length])
 
+  const convert = async (id: string) => {
+    if (!confirm(
+      `Convert to client?\n\n` +
+      `· Creates a custom_users + businesses row\n` +
+      `· Stamps rep_id + agreed pricing on the business\n` +
+      `· Links close → business and advances status to invoice_sent\n` +
+      `· Returns a temp password (you'll see it next)\n\n` +
+      `After this, the Stripe invoice.paid webhook will credit the rep automatically.`,
+    )) return
+    setWorking(id)
+    try {
+      const res = await fetchWithAuth(`/api/admin/sales/closes/${id}/convert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setErr(j?.error || 'Convert failed')
+      } else {
+        const pwd = j.temp_password
+        const url = `/admin/clients/${j.business.id}`
+        prompt(
+          `Client created.\n\n` +
+          `Email: ${j.user.email}\n` +
+          `Temp password (copy now — won't be shown again):`,
+          pwd,
+        )
+        await load()
+        // Open the client detail in a new tab so admin can finish onboarding.
+        window.open(url, '_blank')
+      }
+    } finally {
+      setWorking(null)
+    }
+  }
+
   const setStatus = async (id: string, status: Close['status']) => {
     setWorking(id)
     try {
@@ -215,11 +252,11 @@ export default function AdminClosesPage() {
                             <>
                               <button
                                 disabled={busy}
-                                onClick={() => setStatus(c.id, 'invoice_sent')}
-                                className="inline-flex items-center gap-1.5 text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 rounded-lg px-3 py-1.5 disabled:opacity-60"
+                                onClick={() => convert(c.id)}
+                                className="inline-flex items-center gap-1.5 text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/30 rounded-lg px-3 py-1.5 disabled:opacity-60 font-medium"
                               >
                                 {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
-                                Approve
+                                Convert to client
                               </button>
                               <button
                                 disabled={busy}

@@ -444,10 +444,12 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  const customerId = invoice.customer as string
  const amount = invoice.amount_paid / 100 // Convert from cents to dollars
 
- // Find business
+ // Find business + rep_id (rep_id is set when admin uses
+ // "Convert close to client", which is the path that flows
+ // commissions to the right rep).
  const { data: business, error: businessError } = await supabaseAdmin
  .from('businesses')
- .select('id')
+ .select('id, rep_id')
  .eq('stripe_customer_id', customerId)
  .single()
 
@@ -473,6 +475,13 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  created_at: new Date().toISOString()
  })
 
+ // Commission ledger — the source of truth for what we owe each rep.
+ // We split each invoice into MRR (recurring subscription line items)
+ // and setup_fee (one-off invoiceitem lines), credit 50% of each
+ // bucket to the rep, and rely on UNIQUE(invoice_id, source_type) to
+ // prevent double-credits on Stripe webhook retries.
+ await creditRepCommission(invoice, business)
+
  logger.info('Invoice payment succeeded', {
  businessId: business.id,
  invoiceId: invoice.id,
@@ -484,6 +493,132 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  error: error instanceof Error ? error.message : 'Unknown error',
  invoiceId: invoice.id
  })
+ }
+}
+
+const COMMISSION_PCT = 0.5
+
+/**
+ * Splits the invoice into MRR vs setup_fee buckets, credits 50% of
+ * each to the business's rep, and writes one ledger row per bucket.
+ * Idempotent via the (source_invoice_id, source_type) unique index.
+ *
+ * Classification rule:
+ *   line.type === 'subscription' OR line has a recurring price → MRR
+ *   anything else (proration, one-off invoiceitem)               → setup_fee
+ */
+async function creditRepCommission(
+ invoice: Stripe.Invoice,
+ business: { id: string; rep_id: string | null },
+): Promise<void> {
+ if (!business.rep_id) return // not a rep-sourced client
+ if (!invoice.id) return
+
+ // Mark the close as paid the first time we see its invoice. Match
+ // the close by business_id (set during convert-to-client). Doing
+ // this here keeps the rep's "In flight" → "Paid" transition tied
+ // to actual payment, not admin clicks.
+ try {
+  await supabaseAdmin
+   .from('closes')
+   .update({ status: 'paid', updated_at: new Date().toISOString() })
+   .eq('business_id', business.id)
+   .in('status', ['invoice_sent', 'pending'])
+ } catch (e) {
+  logger.warn('Failed to advance close.status=paid (non-fatal)', {
+   error: e instanceof Error ? e.message : 'Unknown',
+   businessId: business.id,
+  })
+ }
+
+ let mrrCents = 0
+ let setupCents = 0
+ const lines = invoice.lines?.data || []
+ for (const line of lines) {
+  const cents = line.amount || 0
+  if (cents <= 0) continue // skip $0 / credit lines
+  // Stripe: subscription line items have type='subscription' (legacy
+  // API) or a recurring price (new). One-off `invoiceitem` lines are
+  // setup-fees / overages.
+  const isRecurring =
+   (line as any).type === 'subscription' ||
+   !!(line.price as any)?.recurring
+  if (isRecurring) mrrCents += cents
+  else setupCents += cents
+ }
+
+ const earnedAt = invoice.status_transitions?.paid_at
+  ? new Date(invoice.status_transitions.paid_at * 1000).toISOString()
+  : new Date().toISOString()
+
+ const rows: Array<{
+  rep_id: string
+  business_id: string
+  source_type: 'mrr' | 'setup_fee'
+  source_invoice_id: string
+  gross_paid_cents: number
+  commission_cents: number
+  earned_at: string
+ }> = []
+
+ if (mrrCents > 0) {
+  rows.push({
+   rep_id: business.rep_id,
+   business_id: business.id,
+   source_type: 'mrr',
+   source_invoice_id: invoice.id,
+   gross_paid_cents: mrrCents,
+   commission_cents: Math.round(mrrCents * COMMISSION_PCT),
+   earned_at: earnedAt,
+  })
+ }
+ if (setupCents > 0) {
+  rows.push({
+   rep_id: business.rep_id,
+   business_id: business.id,
+   source_type: 'setup_fee',
+   source_invoice_id: invoice.id,
+   gross_paid_cents: setupCents,
+   commission_cents: Math.round(setupCents * COMMISSION_PCT),
+   earned_at: earnedAt,
+  })
+ }
+
+ if (rows.length === 0) return
+
+ // Try to attach the close_id when we can find one for this business.
+ // Best-effort; the ledger row is the source of truth so this is
+ // metadata only.
+ const { data: openClose } = await supabaseAdmin
+  .from('closes')
+  .select('id')
+  .eq('business_id', business.id)
+  .order('created_at', { ascending: false })
+  .limit(1)
+  .maybeSingle()
+
+ const enriched = rows.map((r) => openClose?.id ? { ...r, close_id: openClose.id } : r)
+
+ const { error } = await supabaseAdmin
+  .from('commission_ledger')
+  .upsert(enriched, {
+   onConflict: 'source_invoice_id,source_type',
+   ignoreDuplicates: true,
+  })
+ if (error) {
+  logger.error('Commission ledger insert failed', {
+   error: error.message,
+   invoiceId: invoice.id,
+   repId: business.rep_id,
+  })
+ } else {
+  logger.info('Commission credited', {
+   repId: business.rep_id,
+   businessId: business.id,
+   mrrCents,
+   setupCents,
+   commissionCents: rows.reduce((s, r) => s + r.commission_cents, 0),
+  })
  }
 }
 
