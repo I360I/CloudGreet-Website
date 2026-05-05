@@ -1,0 +1,442 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Phone, EnvelopeSimple, ArrowLeft, CircleNotch, WarningCircle, CheckCircle,
+  Trash, Calendar, ChatCircle, Trophy, Hash, MapPin, X,
+} from '@phosphor-icons/react'
+import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+
+const EASE = [0.22, 1, 0.36, 1] as const
+
+type Lead = {
+  id: string
+  business_name: string
+  contact_name: string | null
+  phone: string | null
+  email: string | null
+  source: string | null
+  notes: string | null
+  status: string
+  disposition: string | null
+  follow_up_at: string | null
+  last_touched_at: string | null
+  touch_count: number
+  claimed_at: string
+}
+
+type Note = { id: string; body: string; created_at: string }
+
+const STATUSES: Array<{ value: string; label: string; color: string }> = [
+  { value: 'new', label: 'New', color: 'bg-gray-100 text-gray-700' },
+  { value: 'called', label: 'Called', color: 'bg-sky-50 text-sky-700' },
+  { value: 'voicemail', label: 'Voicemail', color: 'bg-violet-50 text-violet-700' },
+  { value: 'interested', label: 'Interested', color: 'bg-amber-50 text-amber-700' },
+  { value: 'demo_scheduled', label: 'Demo set', color: 'bg-amber-100 text-amber-800' },
+  { value: 'proposal_sent', label: 'Proposal', color: 'bg-emerald-50 text-emerald-700' },
+  { value: 'closed', label: 'Closed', color: 'bg-emerald-100 text-emerald-800' },
+  { value: 'dead', label: 'Dead', color: 'bg-gray-100 text-gray-500' },
+  { value: 'do_not_call', label: 'DNC', color: 'bg-red-50 text-red-700' },
+]
+
+const formatPhone = (p: string | null) => {
+  if (!p) return ''
+  const d = p.replace(/\D/g, '')
+  if (d.length === 11 && d.startsWith('1')) return `(${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
+  return p
+}
+
+export default function LeadDetailPage() {
+  const router = useRouter()
+  const params = useParams<{ id: string }>()
+  const id = params?.id as string
+
+  const [lead, setLead] = useState<Lead | null>(null)
+  const [notes, setNotes] = useState<Note[]>([])
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState('')
+  const [working, setWorking] = useState<string | null>(null)
+  const [noteInput, setNoteInput] = useState('')
+  const [followUpInput, setFollowUpInput] = useState('')
+
+  const load = async () => {
+    setLoading(true); setErr('')
+    try {
+      const res = await fetchWithAuth(`/api/sales/leads/${id}`)
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setErr(j?.error || 'Failed to load')
+      } else {
+        setLead(j.lead)
+        setNotes(j.notes || [])
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { if (id) load() }, [id])  // eslint-disable-line
+
+  const patch = async (body: any) => {
+    setWorking('patch')
+    try {
+      const res = await fetchWithAuth(`/api/sales/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) setErr(j?.error || 'Update failed')
+      else await load()
+    } finally {
+      setWorking(null)
+    }
+  }
+
+  const setStatus = (status: string) => patch({ status })
+  const markTouched = () => patch({ touched: true })
+
+  const setFollowUp = async () => {
+    if (!followUpInput) return
+    await patch({ follow_up_at: new Date(followUpInput).toISOString() })
+    setFollowUpInput('')
+  }
+
+  const clearFollowUp = () => patch({ follow_up_at: null })
+
+  const addNote = async () => {
+    const body = noteInput.trim()
+    if (!body) return
+    setWorking('note')
+    try {
+      const res = await fetchWithAuth(`/api/sales/leads/${id}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) setErr(j?.error || 'Note failed')
+      else {
+        setNotes((prev) => [j.note, ...prev])
+        setNoteInput('')
+      }
+    } finally {
+      setWorking(null)
+    }
+  }
+
+  const deleteNote = async (noteId: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== noteId))
+    await fetchWithAuth(`/api/sales/leads/${id}/notes?note_id=${noteId}`, { method: 'DELETE' })
+  }
+
+  const removeLead = async () => {
+    if (!confirm('Remove this lead from your list? (The underlying record stays in the database.)')) return
+    setWorking('delete')
+    const res = await fetchWithAuth(`/api/sales/leads/${id}`, { method: 'DELETE' })
+    if (res.ok) router.push('/sales/leads')
+    else setWorking(null)
+  }
+
+  if (loading || !lead) {
+    return (
+      <SalesShell activeLabel="Leads">
+        <section className="max-w-3xl mx-auto px-6 py-10">
+          {err ? (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 flex items-start gap-2">
+              <WarningCircle weight="fill" className="w-4 h-4 mt-0.5" /> {err}
+            </div>
+          ) : (
+            <SalesLoadingState />
+          )}
+        </section>
+      </SalesShell>
+    )
+  }
+
+  const statusMeta = STATUSES.find((s) => s.value === lead.status) || STATUSES[0]
+
+  return (
+    <SalesShell activeLabel="Leads">
+      <section className="max-w-3xl mx-auto px-6 py-10">
+        <Link
+          href="/sales/leads"
+          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 mb-3"
+        >
+          <ArrowLeft className="w-3 h-3" /> Leads
+        </Link>
+
+        <SalesPageHeader
+          eyebrow="lead"
+          title={lead.business_name}
+          action={
+            <div className="flex items-center gap-2">
+              {lead.phone && (
+                <a
+                  href={`tel:${lead.phone}`}
+                  onClick={() => markTouched()}
+                  className="inline-flex items-center gap-1.5 bg-gray-900 text-white text-sm rounded-lg px-3.5 py-2 hover:bg-gray-800 shadow-sm"
+                >
+                  <Phone weight="fill" className="w-4 h-4" /> Call
+                </a>
+              )}
+              <Link
+                href={`/sales/closes/new?lead_id=${id}`}
+                className="inline-flex items-center gap-1.5 text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-3.5 py-2 transition-colors"
+              >
+                <Trophy weight="fill" className="w-4 h-4" /> Mark closed
+              </Link>
+            </div>
+          }
+        />
+
+        {err && (
+          <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-start gap-2">
+            <WarningCircle weight="fill" className="w-4 h-4 mt-0.5" /> {err}
+          </div>
+        )}
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: EASE }}
+          className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-5"
+        >
+          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            {lead.contact_name && (
+              <Field label="Contact">{lead.contact_name}</Field>
+            )}
+            {lead.phone && (
+              <Field label="Phone">
+                <a href={`tel:${lead.phone}`} className="text-gray-900 hover:underline">
+                  {formatPhone(lead.phone)}
+                </a>
+              </Field>
+            )}
+            {lead.email && (
+              <Field label="Email">
+                <a href={`mailto:${lead.email}`} className="text-gray-900 hover:underline">
+                  {lead.email}
+                </a>
+              </Field>
+            )}
+            {lead.source && <Field label="Source">{lead.source}</Field>}
+            <Field label="Touches">{lead.touch_count}{lead.last_touched_at ? ` · last ${new Date(lead.last_touched_at).toLocaleString()}` : ''}</Field>
+            <Field label="Claimed">{new Date(lead.claimed_at).toLocaleDateString()}</Field>
+          </div>
+          {lead.notes && (
+            <div className="px-5 pb-5 border-t border-gray-100 pt-3">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+                Lead notes
+              </div>
+              <p className="text-xs text-gray-600 whitespace-pre-wrap">{lead.notes}</p>
+            </div>
+          )}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: EASE, delay: 0.05 }}
+          className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mb-5"
+        >
+          <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">
+            Status
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {STATUSES.map((s) => (
+              <button
+                key={s.value}
+                onClick={() => setStatus(s.value)}
+                disabled={working === 'patch'}
+                className={`text-xs rounded-full px-3 py-1.5 border transition-all ${
+                  lead.status === s.value
+                    ? `${s.color} border-transparent font-medium ring-2 ring-gray-900/10`
+                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                Follow up
+              </div>
+              {lead.follow_up_at ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 text-sm bg-amber-50 text-amber-900 border border-amber-200 rounded-lg px-3 py-2 inline-flex items-center gap-2">
+                    <Calendar weight="fill" className="w-3.5 h-3.5" />
+                    {new Date(lead.follow_up_at).toLocaleString(undefined, {
+                      month: 'short', day: 'numeric',
+                      hour: 'numeric', minute: '2-digit',
+                    })}
+                  </div>
+                  <button
+                    onClick={clearFollowUp}
+                    className="text-xs text-gray-500 hover:text-gray-900"
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <input
+                    type="datetime-local"
+                    value={followUpInput}
+                    onChange={(e) => setFollowUpInput(e.target.value)}
+                    className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+                  />
+                  <button
+                    onClick={setFollowUp}
+                    disabled={!followUpInput || working === 'patch'}
+                    className="text-sm bg-gray-900 text-white rounded-lg px-3 py-2 hover:bg-gray-800 disabled:opacity-60"
+                  >
+                    Set
+                  </button>
+                </div>
+              )}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {[
+                  { label: '1h', hours: 1 },
+                  { label: 'Tmrw 9am', tomorrowAt: 9 },
+                  { label: 'Mon 9am', mondayAt: 9 },
+                  { label: 'Next wk', days: 7 },
+                ].map((preset, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      const d = new Date()
+                      if ('hours' in preset && preset.hours) {
+                        d.setHours(d.getHours() + preset.hours)
+                      } else if ('tomorrowAt' in preset && preset.tomorrowAt) {
+                        d.setDate(d.getDate() + 1)
+                        d.setHours(preset.tomorrowAt, 0, 0, 0)
+                      } else if ('mondayAt' in preset && preset.mondayAt) {
+                        const day = d.getDay()
+                        const delta = (1 - day + 7) % 7 || 7
+                        d.setDate(d.getDate() + delta)
+                        d.setHours(preset.mondayAt, 0, 0, 0)
+                      } else if ('days' in preset && preset.days) {
+                        d.setDate(d.getDate() + preset.days)
+                      }
+                      patch({ follow_up_at: d.toISOString() })
+                    }}
+                    className="text-[11px] text-gray-600 border border-gray-200 hover:border-gray-400 hover:text-gray-900 rounded-md px-2 py-0.5 transition-colors"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+                Quick actions
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={markTouched}
+                  className="inline-flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 rounded-lg px-3 py-2 transition-colors"
+                >
+                  <Phone weight="bold" className="w-3.5 h-3.5" /> Log a touch
+                </button>
+                <button
+                  onClick={removeLead}
+                  disabled={working === 'delete'}
+                  className="inline-flex items-center gap-1.5 text-sm text-red-700 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-lg px-3 py-2 transition-colors disabled:opacity-60"
+                >
+                  <Trash className="w-3.5 h-3.5" /> Remove from my list
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: EASE, delay: 0.1 }}
+          className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+        >
+          <div className="px-5 py-3 border-b border-gray-100">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Notes</div>
+            <div className="text-sm font-medium text-gray-900">
+              {notes.length ? `${notes.length} entr${notes.length === 1 ? 'y' : 'ies'}` : 'Log calls + objections here'}
+            </div>
+          </div>
+          <div className="px-5 pt-4">
+            <div className="flex gap-2">
+              <textarea
+                value={noteInput}
+                onChange={(e) => setNoteInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault()
+                    addNote()
+                  }
+                }}
+                rows={2}
+                placeholder="Logged a call, said timing's wrong, follow up Tuesday…"
+                className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 resize-none"
+              />
+              <button
+                onClick={addNote}
+                disabled={!noteInput.trim() || working === 'note'}
+                className="inline-flex items-center gap-1.5 self-end bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-800 disabled:opacity-60"
+              >
+                {working === 'note' ? <CircleNotch className="w-4 h-4 animate-spin" /> : <ChatCircle weight="fill" className="w-4 h-4" />}
+                Add
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1">⌘/Ctrl + Enter to add</p>
+          </div>
+          {notes.length > 0 && (
+            <ul className="divide-y divide-gray-100 mt-3">
+              <AnimatePresence initial={false}>
+                {notes.map((n) => (
+                  <motion.li
+                    key={n.id}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="px-5 py-3 group"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="text-sm text-gray-700 whitespace-pre-wrap flex-1">{n.body}</div>
+                      <button
+                        onClick={() => deleteNote(n.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+                        aria-label="Delete note"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div className="text-[11px] text-gray-400 font-mono mt-1">
+                      {new Date(n.created_at).toLocaleString()}
+                    </div>
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </ul>
+          )}
+        </motion.div>
+      </section>
+    </SalesShell>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-0.5">
+        {label}
+      </div>
+      <div className="text-gray-700">{children}</div>
+    </div>
+  )
+}
