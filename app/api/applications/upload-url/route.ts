@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const MAX_RESUME_BYTES = 15 * 1024 * 1024
-const MAX_VIDEO_BYTES = 200 * 1024 * 1024
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024
 
 const RESUME_TYPES = new Set([
   'application/pdf',
@@ -69,10 +69,7 @@ export async function POST(request: NextRequest) {
     // is cheap to call up front and avoids the unreliable
     // error-string matching dance.
     const { error: createErr } = await supabaseAdmin
-      .storage.createBucket('applications', {
-        public: false,
-        fileSizeLimit: 200 * 1024 * 1024,
-      })
+      .storage.createBucket('applications', { public: false })
     if (createErr && !/already exists|duplicate|resource already exists/i.test(createErr.message || '')) {
       logger.error('createBucket failed', { error: createErr.message })
       return NextResponse.json({

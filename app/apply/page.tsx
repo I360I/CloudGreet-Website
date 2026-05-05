@@ -374,7 +374,7 @@ export default function ApplyPage() {
               kind="video"
               label="90-second intro video (MP4, MOV, or WebM)"
               accept="video/mp4,video/quicktime,video/x-m4v,video/webm,.mp4,.mov,.m4v,.webm"
-              maxMB={200}
+              maxMB={50}
               currentName={form.video_filename}
               onUploaded={(path, filename) => {
                 set('video_path', path)
