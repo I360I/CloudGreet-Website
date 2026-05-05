@@ -75,11 +75,16 @@ export async function GET(request: NextRequest) {
     const owed = ledger.filter((r) => !r.paid).reduce((s, r) => s + (r.commission_cents || 0), 0)
     const paidOut = lifetime - owed
 
-    // MRR = sum of monthly across active deals (invoice_sent + paid).
-    // Drop closes whose linked business has been deactivated.
+    // MRR = sum of monthly across closes that have actually paid at
+    // least once (close.status === 'paid'), excluding any whose linked
+    // business has since been deactivated. Closes still in
+    // 'invoice_sent' (link sent, prospect hasn't paid yet) show up in
+    // the customer list flagged "awaiting first payment" — they don't
+    // count toward MRR until money lands.
     const mrr = (closeRows ?? []).reduce((sum: number, c: any) => {
-      const status = c.businesses?.account_status
-      if (status && status !== 'active' && status !== 'trial' && status !== null) return sum
+      if (c.status !== 'paid') return sum
+      const acctStatus = c.businesses?.account_status
+      if (acctStatus && acctStatus !== 'active' && acctStatus !== 'trial' && acctStatus !== null) return sum
       return sum + (c.agreed_monthly_cents || 0)
     }, 0)
 

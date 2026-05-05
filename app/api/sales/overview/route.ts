@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
         .from('closes')
         .select('agreed_monthly_cents, status, business_id, businesses:business_id(account_status)')
         .eq('rep_id', auth.userId)
-        .in('status', ['invoice_sent', 'paid'])
+        .eq('status', 'paid')
         .limit(500),
     ])
 
@@ -126,6 +126,10 @@ export async function GET(request: NextRequest) {
       .filter((r: any) => !r.payout_id)
       .reduce((s, r: any) => s + (r.commission_cents || 0), 0)
 
+    // MRR counts only closes that have actually been paid (the
+    // webhook flips close.status to 'paid' on first invoice payment).
+    // Pre-payment "invoice_sent" closes are tracked in the customer
+    // list as "awaiting first payment" but don't count toward MRR.
     const mrr = (activeClosesRes.data || []).reduce((s: number, c: any) => {
       const status = c.businesses?.account_status
       if (status && !['active', 'trial', null, undefined].includes(status)) return s
