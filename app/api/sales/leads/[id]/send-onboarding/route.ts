@@ -60,13 +60,20 @@ export async function POST(
     return NextResponse.json({ error: 'Email looks invalid' }, { status: 400 })
   }
 
-  const monthlyCents = Math.round(Number(body?.monthly_cents ?? 49900))
-  const setupCents = Math.round(Number(body?.setup_fee_cents ?? 89900))
-  if (!Number.isFinite(monthlyCents) || monthlyCents < 5000 || monthlyCents > 5_000_000) {
-    return NextResponse.json({ error: 'Monthly out of range' }, { status: 400 })
-  }
-  if (!Number.isFinite(setupCents) || setupCents < 0 || setupCents > 5_000_000) {
-    return NextResponse.json({ error: 'Setup fee out of range' }, { status: 400 })
+  // Pricing is no longer captured here — the rep negotiates it on the
+  // demo and sets it when sending the actual payment link. Default to
+  // 0 so the close row is valid; the payment-link flow updates it.
+  const monthlyCents = 0
+  const setupCents = 0
+
+  // Optional: rep already booked the demo themselves (or wants to
+  // tell the prospect a fixed time). When set, the email reads
+  // "Your demo is scheduled for X" instead of "pick a slot".
+  const scheduledAtRaw = body?.scheduled_at ? String(body.scheduled_at) : ''
+  let scheduledAt: Date | null = null
+  if (scheduledAtRaw) {
+    const d = new Date(scheduledAtRaw)
+    if (!isNaN(d.getTime())) scheduledAt = d
   }
 
   // 1. Create a close row tying this rep to this prospect's data.
@@ -144,31 +151,41 @@ export async function POST(
       const resend = new Resend(resendKey)
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
       const replyTo = rep?.email || process.env.RESEND_REPLY_TO || 'anthony@cloudgreet.com'
-      const contact = lead.contact_name?.split(/[, ]+/)[0] || ''
-      const greeting = contact ? `Hi ${contact},` : 'Hi,'
+
+      // Build the schedule line.
+      let scheduleLine = ''
+      if (scheduledAt) {
+        const when = scheduledAt.toLocaleString(undefined, {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          timeZoneName: 'short',
+        })
+        scheduleLine = bookingUrl
+          ? `Your demo is scheduled for ${when}:\n  ${bookingUrl}`
+          : `Your demo is scheduled for ${when}.`
+      } else if (bookingUrl) {
+        scheduleLine = `Pick a 15-minute slot that works for you:\n  ${bookingUrl}`
+      }
+
       const text =
-`${greeting}
-
-This is ${repName} from CloudGreet. I just set up your dashboard so we can walk through your AI receptionist live on our demo call.
-
-Login:
+`Login:
   URL:      ${loginUrl}
   Email:    ${email}
   Password: ${temp_password}
-  (You can change it once you're signed in.)
 
-${bookingUrl ? `Pick a 15-minute slot that works for you:\n  ${bookingUrl}\n\nOn the call we'll connect your calendar, set up call forwarding from your business line, and you'll hear the agent answering live for ${businessName}.` : `I'll reach back out with a time for the demo. On the call we'll connect your calendar, set up call forwarding, and you'll hear the agent answering live for ${businessName}.`}
-
-Reply to this email if anything's unclear — it goes straight to me.
-
-— ${repName}
-  CloudGreet
+${scheduleLine}
 `
+      const subject = scheduledAt
+        ? `Your CloudGreet account · demo ${scheduledAt.toLocaleDateString()}`
+        : `Your CloudGreet account`
       await resend.emails.send({
         from: `CloudGreet <${fromEmail}>`,
         to: email,
         replyTo,
-        subject: `Your CloudGreet account is ready — let's set it up`,
+        subject,
         text,
       })
       emailSent = true

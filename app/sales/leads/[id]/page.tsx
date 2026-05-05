@@ -77,8 +77,7 @@ export default function LeadDetailPage() {
   // Onboarding (account + booking-link email)
   const [showOnbForm, setShowOnbForm] = useState(false)
   const [onbEmail, setOnbEmail] = useState('')
-  const [onbMonthly, setOnbMonthly] = useState('499')
-  const [onbSetup, setOnbSetup] = useState('899')
+  const [onbScheduledAt, setOnbScheduledAt] = useState('')
   const [onbBusy, setOnbBusy] = useState(false)
   const [onbResult, setOnbResult] = useState<{
     login_url: string
@@ -86,6 +85,7 @@ export default function LeadDetailPage() {
     temp_password: string
     booking_url: string | null
     email_sent: boolean
+    email_error?: string | null
   } | null>(null)
   const [copiedPwd, setCopiedPwd] = useState(false)
 
@@ -170,8 +170,9 @@ export default function LeadDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: (onbEmail.trim() || lead.email || '').toLowerCase(),
-          monthly_cents: Math.round(parseFloat(onbMonthly || '0') * 100),
-          setup_fee_cents: Math.round(parseFloat(onbSetup || '0') * 100),
+          scheduled_at: onbScheduledAt
+            ? new Date(onbScheduledAt).toISOString()
+            : undefined,
         }),
       })
       const j = await res.json().catch(() => ({}))
@@ -184,6 +185,7 @@ export default function LeadDetailPage() {
           temp_password: j.temp_password,
           booking_url: j.booking_url,
           email_sent: !!j.email_sent,
+          email_error: j.email_error || null,
         })
         await load()
       }
@@ -412,8 +414,8 @@ export default function LeadDetailPage() {
                         Done
                       </button>
                       {!onbResult.email_sent && (
-                        <span className="text-[11px] text-amber-700 ml-auto">
-                          Email didn&apos;t go out — share manually.
+                        <span className="text-[11px] text-amber-700 ml-auto truncate max-w-[260px]">
+                          Email didn&apos;t go out{onbResult.email_error ? ` — ${onbResult.email_error}` : ''}. Copy + share manually.
                         </span>
                       )}
                     </div>
@@ -434,41 +436,21 @@ export default function LeadDetailPage() {
                         />
                       </div>
                     )}
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div>
-                        <label className="block text-[10px] font-mono uppercase tracking-wider text-violet-900 mb-1">
-                          Monthly $
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <input
-                            type="number" min="50" max="50000" step="1"
-                            value={onbMonthly}
-                            onChange={(e) => setOnbMonthly(e.target.value)}
-                            className="w-full bg-white border border-violet-200 rounded-lg pl-6 pr-3 py-2 text-sm tabular-nums focus:outline-none focus:border-violet-400"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-mono uppercase tracking-wider text-violet-900 mb-1">
-                          Setup $
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <input
-                            type="number" min="0" max="50000" step="1"
-                            value={onbSetup}
-                            onChange={(e) => setOnbSetup(e.target.value)}
-                            className="w-full bg-white border border-violet-200 rounded-lg pl-6 pr-3 py-2 text-sm tabular-nums focus:outline-none focus:border-violet-400"
-                          />
-                        </div>
-                      </div>
+                    <div className="mb-3">
+                      <label className="block text-[10px] font-mono uppercase tracking-wider text-violet-900 mb-1">
+                        Demo time (optional)
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={onbScheduledAt}
+                        onChange={(e) => setOnbScheduledAt(e.target.value)}
+                        className="w-full bg-white border border-violet-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400"
+                      />
+                      <p className="text-[11px] text-violet-700/80 mt-1">
+                        Leave blank to email a &quot;pick a slot&quot; link. Set a time to tell
+                        them their demo is already scheduled.
+                      </p>
                     </div>
-                    <p className="text-[11px] text-violet-700/80 mb-3">
-                      Creates their account with a random password and emails it to them
-                      with your booking link. They can log in during the demo to walk
-                      through Cal.com + call forwarding live with you.
-                    </p>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={sendOnboarding}
@@ -476,7 +458,7 @@ export default function LeadDetailPage() {
                         className="inline-flex items-center gap-1.5 bg-violet-600 text-white text-sm rounded-lg px-4 py-2 hover:bg-violet-700 disabled:opacity-60"
                       >
                         {onbBusy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <EnvelopeSimple weight="fill" className="w-4 h-4" />}
-                        Send onboarding email
+                        Send booking link
                       </button>
                       <button
                         onClick={() => setShowOnbForm(false)}

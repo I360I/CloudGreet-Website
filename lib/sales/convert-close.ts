@@ -128,12 +128,73 @@ export async function convertCloseToClient(
       ? input.password
       : crypto.randomBytes(12).toString('base64url')
 
-  const { data: existing } = await supabaseAdmin
+  // If a user already exists with this email, see if it's a client
+  // we already provisioned (typical when a rep ran "Send booking link"
+  // first, then "Send payment link" later — same prospect, same email).
+  // When the existing business is owned by the same rep, link the
+  // current close to it instead of failing with a 409.
+  const { data: existingUser } = await supabaseAdmin
     .from('custom_users')
-    .select('id')
+    .select('id, business_id, email')
     .eq('email', email)
     .maybeSingle()
-  if (existing) {
+  if (existingUser) {
+    if (existingUser.business_id) {
+      const { data: existingBiz } = await supabaseAdmin
+        .from('businesses')
+        .select('id, business_name, rep_id')
+        .eq('id', existingUser.business_id)
+        .maybeSingle()
+      if (existingBiz && existingBiz.rep_id === close.rep_id) {
+        // Same rep, same prospect — fold this close into the existing
+        // business and advance status.
+        if (input.stripeCustomerId) {
+          await supabaseAdmin
+            .from('businesses')
+            .update({
+              stripe_customer_id: input.stripeCustomerId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingBiz.id)
+        }
+        await supabaseAdmin
+          .from('closes')
+          .update({
+            business_id: existingBiz.id,
+            status: input.markPaid
+              ? 'paid'
+              : (close.status === 'pending' ? 'invoice_sent' : close.status),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', close.id)
+
+        // Persist the new pricing if the rep tweaked the close's
+        // amounts since the original provision. The webhook always
+        // honors what's on close.agreed_monthly_cents, but the
+        // business row carries the canonical "what they pay" so the
+        // admin/dashboard surfaces match.
+        if (close.agreed_monthly_cents) {
+          await supabaseAdmin
+            .from('businesses')
+            .update({
+              monthly_price_cents: close.agreed_monthly_cents,
+              setup_fee_cents: close.agreed_setup_fee_cents || 0,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingBiz.id)
+        }
+
+        return {
+          ok: true,
+          data: {
+            business: { id: existingBiz.id, business_name: existingBiz.business_name },
+            user: { id: existingUser.id, email: existingUser.email || email },
+            close_id: close.id,
+            temp_password: '',
+          },
+        }
+      }
+    }
     return {
       ok: false,
       error: `A user already exists with email ${email}.`,
