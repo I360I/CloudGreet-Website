@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Phone, EnvelopeSimple, ArrowLeft, CircleNotch, WarningCircle, CheckCircle,
   Trash, Calendar, ChatCircle, Trophy, Hash, MapPin, X, Copy,
+  CurrencyDollar, Link as LinkIcon,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -65,6 +66,13 @@ export default function LeadDetailPage() {
   const [noteInput, setNoteInput] = useState('')
   const [followUpInput, setFollowUpInput] = useState('')
   const [copiedDemo, setCopiedDemo] = useState(false)
+  const [showPayForm, setShowPayForm] = useState(false)
+  const [payMonthly, setPayMonthly] = useState('499')
+  const [paySetup, setPaySetup] = useState('899')
+  const [payOverrideEmail, setPayOverrideEmail] = useState('')
+  const [payBusy, setPayBusy] = useState(false)
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null)
+  const [copiedPay, setCopiedPay] = useState(false)
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -161,6 +169,47 @@ Pick any time that works: ${bookingUrl}
     }
   }
 
+  const generatePaymentLink = async () => {
+    if (!lead) return
+    setPayBusy(true); setErr('')
+    try {
+      const monthlyCents = Math.round(parseFloat(payMonthly || '0') * 100)
+      const setupCents = Math.round(parseFloat(paySetup || '0') * 100)
+      const res = await fetchWithAuth(`/api/sales/leads/${lead.id}/payment-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          monthly_cents: monthlyCents,
+          setup_fee_cents: setupCents,
+          email: payOverrideEmail.trim() || undefined,
+        }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setErr(j?.error || 'Failed to generate link')
+      } else {
+        setPaymentUrl(j.url)
+        try {
+          await navigator.clipboard.writeText(j.url)
+          setCopiedPay(true)
+          setTimeout(() => setCopiedPay(false), 2500)
+        } catch { /* clipboard may be denied */ }
+        await load() // refresh status (now proposal_sent)
+      }
+    } finally {
+      setPayBusy(false)
+    }
+  }
+
+  const copyPaymentUrl = async () => {
+    if (!paymentUrl) return
+    try {
+      await navigator.clipboard.writeText(paymentUrl)
+      setCopiedPay(true)
+      setTimeout(() => setCopiedPay(false), 2500)
+    } catch { /* noop */ }
+  }
+
   const removeLead = async () => {
     if (!confirm('Remove this lead from your list? (The underlying record stays in the database.)')) return
     setWorking('delete')
@@ -211,6 +260,12 @@ Pick any time that works: ${bookingUrl}
                   <Phone weight="fill" className="w-4 h-4" /> Call
                 </a>
               )}
+              <button
+                onClick={() => setShowPayForm((v) => !v)}
+                className="inline-flex items-center gap-1.5 bg-emerald-600 text-white text-sm rounded-lg px-3.5 py-2 hover:bg-emerald-700 shadow-sm"
+              >
+                <CurrencyDollar weight="fill" className="w-4 h-4" /> Send payment link
+              </button>
               {bookingUrl ? (
                 <button
                   onClick={copyDemoMessage}
@@ -231,12 +286,6 @@ Pick any time that works: ${bookingUrl}
                   <Calendar className="w-3.5 h-3.5" /> Add booking link
                 </Link>
               )}
-              <Link
-                href={`/sales/closes/new?lead_id=${id}`}
-                className="inline-flex items-center gap-1.5 text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-3.5 py-2 transition-colors"
-              >
-                <Trophy weight="fill" className="w-4 h-4" /> Mark closed
-              </Link>
             </div>
           }
         />
@@ -268,6 +317,139 @@ Pick any time that works: ${bookingUrl}
             </div>
           )}
         </motion.div>
+
+        <AnimatePresence>
+          {showPayForm && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: EASE }}
+              className="overflow-hidden mb-5"
+            >
+              <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <CurrencyDollar weight="duotone" className="w-5 h-5 text-emerald-600" />
+                  <div className="text-sm font-medium text-emerald-900">Send payment link</div>
+                </div>
+
+                {paymentUrl ? (
+                  <div className="space-y-2">
+                    <div className="text-xs text-emerald-800">
+                      Link generated. Send this URL to {lead.business_name} —
+                      payment auto-creates their account and credits your commission.
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={paymentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 text-xs font-mono text-emerald-700 hover:text-emerald-900 truncate border border-emerald-200 bg-white rounded-lg px-3 py-2"
+                      >
+                        {paymentUrl.replace(/^https?:\/\//, '')}
+                      </a>
+                      <button
+                        onClick={copyPaymentUrl}
+                        className="text-xs inline-flex items-center gap-1 border border-emerald-200 bg-white hover:bg-emerald-50 rounded-lg px-3 py-2 text-emerald-800"
+                      >
+                        {copiedPay ? <CheckCircle weight="fill" className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedPay ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <a
+                        href={`mailto:${lead.email || ''}?subject=${encodeURIComponent(`Payment link — CloudGreet for ${lead.business_name}`)}&body=${encodeURIComponent(`Here's the payment link to get started:\n\n${paymentUrl}\n\nLet me know if you have any questions.`)}`}
+                        className="text-xs text-emerald-800 hover:text-emerald-900"
+                      >
+                        Email it →
+                      </a>
+                      {lead.phone && (
+                        <a
+                          href={`sms:${lead.phone}?&body=${encodeURIComponent(`Payment link to get started with CloudGreet: ${paymentUrl}`)}`}
+                          className="text-xs text-emerald-800 hover:text-emerald-900"
+                        >
+                          Text it →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase tracking-wider text-emerald-800 mb-1">
+                          Monthly $
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                          <input
+                            type="number"
+                            min="50"
+                            max="50000"
+                            step="1"
+                            value={payMonthly}
+                            onChange={(e) => setPayMonthly(e.target.value)}
+                            className="w-full bg-white border border-emerald-200 rounded-lg pl-6 pr-3 py-2 text-sm tabular-nums focus:outline-none focus:border-emerald-400"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase tracking-wider text-emerald-800 mb-1">
+                          Setup $
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="50000"
+                            step="1"
+                            value={paySetup}
+                            onChange={(e) => setPaySetup(e.target.value)}
+                            className="w-full bg-white border border-emerald-200 rounded-lg pl-6 pr-3 py-2 text-sm tabular-nums focus:outline-none focus:border-emerald-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    {!lead.email && (
+                      <div className="mb-3">
+                        <label className="block text-[10px] font-mono uppercase tracking-wider text-emerald-800 mb-1">
+                          Email (lead has none)
+                        </label>
+                        <input
+                          type="email"
+                          value={payOverrideEmail}
+                          onChange={(e) => setPayOverrideEmail(e.target.value)}
+                          placeholder="prospect@example.com"
+                          className="w-full bg-white border border-emerald-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-400"
+                        />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={generatePaymentLink}
+                        disabled={payBusy || (!lead.email && !payOverrideEmail.trim())}
+                        className="inline-flex items-center gap-1.5 bg-emerald-600 text-white text-sm rounded-lg px-4 py-2 hover:bg-emerald-700 disabled:opacity-60"
+                      >
+                        {payBusy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <LinkIcon weight="bold" className="w-4 h-4" />}
+                        Generate
+                      </button>
+                      <button
+                        onClick={() => setShowPayForm(false)}
+                        className="text-xs text-emerald-800 hover:text-emerald-900"
+                      >
+                        Cancel
+                      </button>
+                      <div className="text-[11px] text-emerald-700/80 ml-auto">
+                        50% of every paid invoice → you, auto-deposited Friday
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
