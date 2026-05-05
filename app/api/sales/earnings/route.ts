@@ -128,35 +128,52 @@ export async function GET(request: NextRequest) {
       (a, b) => b.commission_total_cents - a.commission_total_cents,
     )
 
-    // Weekly cumulative chart: last 12 weeks. Bucket each ledger row by
-    // ISO week start (Sunday); accumulate forward so the line never dips.
-    const weeks: { label: string; iso: string; week_cents: number; cumulative_cents: number }[] = []
+    // Monthly buckets — last 12 months — with two series:
+    //   · mrr_cents      : the rep's MRR at the end of that month, computed
+    //                      as the sum of agreed_monthly_cents across closes
+    //                      that paid an MRR commission in that month.
+    //   · earned_cents   : commission earned that month (any source_type).
+    //   · cumulative_cents: running total of earned_cents (lifetime line).
     const now = new Date()
-    const startSunday = (d: Date) => {
-      const x = new Date(d)
-      x.setHours(0, 0, 0, 0)
-      x.setDate(x.getDate() - x.getDay())
-      return x
-    }
-    const buckets: { start: Date; sum: number }[] = []
+    const months: Array<{
+      label: string
+      iso: string
+      mrr_cents: number
+      earned_cents: number
+      cumulative_cents: number
+    }> = []
+    const buckets: Array<{ start: Date; end: Date; mrrBiz: Set<string>; earned: number }> = []
     for (let i = 11; i >= 0; i--) {
-      const s = startSunday(now)
-      s.setDate(s.getDate() - i * 7)
-      buckets.push({ start: s, sum: 0 })
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
+      buckets.push({ start, end, mrrBiz: new Set<string>(), earned: 0 })
     }
     for (const r of ledger) {
-      const d = new Date(r.earned_at)
-      const ws = startSunday(d).getTime()
-      const hit = buckets.find((b) => b.start.getTime() === ws)
-      if (hit) hit.sum += r.commission_cents || 0
+      const t = new Date(r.earned_at).getTime()
+      const hit = buckets.find((b) => t >= b.start.getTime() && t < b.end.getTime())
+      if (!hit) continue
+      hit.earned += r.commission_cents || 0
+      if (r.source_type === 'mrr' && r.business_id) hit.mrrBiz.add(r.business_id)
     }
+    // Build a quick lookup: business_id → agreed_monthly_cents (from
+    // the closes we already pulled above).
+    const monthlyByBiz = new Map<string, number>()
+    for (const c of (closeRows ?? []) as any[]) {
+      if (c.business_id) monthlyByBiz.set(c.business_id, c.agreed_monthly_cents || 0)
+    }
+
     let running = 0
     for (const b of buckets) {
-      running += b.sum
-      weeks.push({
-        label: b.start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      running += b.earned
+      let mrr = 0
+      Array.from(b.mrrBiz).forEach((bizId) => {
+        mrr += monthlyByBiz.get(bizId) || 0
+      })
+      months.push({
+        label: b.start.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
         iso: b.start.toISOString(),
-        week_cents: b.sum,
+        mrr_cents: mrr,
+        earned_cents: b.earned,
         cumulative_cents: running,
       })
     }
@@ -170,7 +187,7 @@ export async function GET(request: NextRequest) {
         paid_out_cents: paidOut,
       },
       customers,
-      chart: weeks,
+      chart: months,
       payouts: payoutRows ?? [],
       payouts_enabled: !!rep?.stripe_connect_payouts_enabled,
       has_connect_account: !!rep?.stripe_connect_account_id,

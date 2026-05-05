@@ -1,11 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { WarningCircle, ArrowRight } from '@phosphor-icons/react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { WarningCircle, ArrowRight, TrendUp } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { Line } from 'react-chartjs-2'
+import {
+  Chart as ChartJS,
+  CategoryScale, LinearScale, PointElement, LineElement,
+  Tooltip, Legend, Filler,
+} from 'chart.js'
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler)
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -25,6 +33,16 @@ type Customer = {
   commission_total_cents: number
   commission_owed_cents: number
 }
+
+type ChartPoint = {
+  label: string
+  iso: string
+  mrr_cents: number
+  earned_cents: number
+  cumulative_cents: number
+}
+
+type ChartTab = 'mrr' | 'lifetime' | 'both'
 
 const dollars = (cents: number) =>
   `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -55,6 +73,8 @@ function nextFriday(): string {
 export default function SalesEarningsPage() {
   const [totals, setTotals] = useState<Totals | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [chart, setChart] = useState<ChartPoint[]>([])
+  const [chartTab, setChartTab] = useState<ChartTab>('both')
   const [payoutsEnabled, setPayoutsEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -71,6 +91,7 @@ export default function SalesEarningsPage() {
         } else {
           setTotals(j.totals)
           setCustomers(j.customers || [])
+          setChart(j.chart || [])
           setPayoutsEnabled(!!j.payouts_enabled)
         }
       } finally {
@@ -137,17 +158,25 @@ export default function SalesEarningsPage() {
             <motion.div
               initial="hidden" animate="show"
               variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
-              className="grid grid-cols-3 gap-3 mb-6"
+              className="grid grid-cols-3 gap-3 mb-4"
             >
               <Stat label="MRR" value={dollars(totals?.mrr_cents ?? 0)} />
               <Stat label="Lifetime" value={dollars(totals?.lifetime_cents ?? 0)} />
               <Stat label="Paid out" value={dollars(totals?.paid_out_cents ?? 0)} />
             </motion.div>
 
+            <ChartCard
+              chart={chart}
+              tab={chartTab}
+              onTabChange={setChartTab}
+              lifetimeCents={totals?.lifetime_cents ?? 0}
+              mrrCents={totals?.mrr_cents ?? 0}
+            />
+
             <motion.div
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: EASE, delay: 0.1 }}
-              className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+              transition={{ duration: 0.4, ease: EASE, delay: 0.15 }}
+              className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mt-6"
             >
               <div className="px-5 py-3 border-b border-gray-100">
                 <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
@@ -224,6 +253,177 @@ function Stat({ label, value }: { label: string; value: string }) {
       </div>
       <div className="text-xl font-medium text-gray-900 tabular-nums mt-1">
         {value}
+      </div>
+    </motion.div>
+  )
+}
+
+const TABS: Array<{ key: ChartTab; label: string; hint: string }> = [
+  { key: 'mrr',      label: 'MRR',      hint: 'month-over-month' },
+  { key: 'lifetime', label: 'Lifetime', hint: 'cumulative commission' },
+  { key: 'both',     label: 'Both',     hint: 'overlay' },
+]
+
+const COLORS = {
+  mrr:      { stroke: '#10b981', fill: 'rgba(16, 185, 129, 0.18)' },     // emerald
+  lifetime: { stroke: '#0ea5e9', fill: 'rgba(14, 165, 233, 0.18)' },     // sky
+}
+
+function ChartCard({
+  chart, tab, onTabChange, lifetimeCents, mrrCents,
+}: {
+  chart: ChartPoint[]
+  tab: ChartTab
+  onTabChange: (t: ChartTab) => void
+  lifetimeCents: number
+  mrrCents: number
+}) {
+  const labels = useMemo(() => chart.map((p) => p.label), [chart])
+
+  const data = useMemo(() => {
+    const datasets: any[] = []
+    const showMrr = tab === 'mrr' || tab === 'both'
+    const showLifetime = tab === 'lifetime' || tab === 'both'
+
+    if (showMrr) {
+      datasets.push({
+        label: 'MRR',
+        data: chart.map((p) => p.mrr_cents / 100),
+        borderColor: COLORS.mrr.stroke,
+        backgroundColor: tab === 'mrr'
+          ? (ctx: any) => {
+              const c = ctx.chart.ctx
+              const g = c.createLinearGradient(0, 0, 0, 280)
+              g.addColorStop(0, COLORS.mrr.fill)
+              g.addColorStop(1, 'rgba(16, 185, 129, 0)')
+              return g
+            }
+          : 'transparent',
+        fill: tab === 'mrr',
+        tension: 0.35,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: COLORS.mrr.stroke,
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
+      })
+    }
+    if (showLifetime) {
+      datasets.push({
+        label: 'Lifetime',
+        data: chart.map((p) => p.cumulative_cents / 100),
+        borderColor: COLORS.lifetime.stroke,
+        backgroundColor: tab === 'lifetime'
+          ? (ctx: any) => {
+              const c = ctx.chart.ctx
+              const g = c.createLinearGradient(0, 0, 0, 280)
+              g.addColorStop(0, COLORS.lifetime.fill)
+              g.addColorStop(1, 'rgba(14, 165, 233, 0)')
+              return g
+            }
+          : 'transparent',
+        fill: tab === 'lifetime',
+        tension: 0.35,
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: COLORS.lifetime.stroke,
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
+      })
+    }
+    return { labels, datasets }
+  }, [labels, chart, tab])
+
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index' as const, intersect: false },
+    plugins: {
+      legend: { display: tab === 'both', position: 'top' as const, align: 'end' as const, labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, font: { size: 11 } } },
+      tooltip: {
+        backgroundColor: '#111827',
+        padding: 12,
+        cornerRadius: 8,
+        titleFont: { size: 11, weight: 600 as any },
+        bodyFont: { size: 13, weight: 600 as any },
+        callbacks: {
+          label: (ctx: any) => `${ctx.dataset.label}: $${Math.round(ctx.parsed.y).toLocaleString()}`,
+        },
+      },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 10 } } },
+      y: {
+        grid: { color: 'rgba(0,0,0,0.04)' },
+        ticks: {
+          color: '#9ca3af',
+          font: { size: 10 },
+          callback: (v: any) => `$${Number(v).toLocaleString()}`,
+        },
+        beginAtZero: true,
+      },
+    },
+  }), [tab])
+
+  const headlineLabel = tab === 'mrr' ? 'MRR right now' : tab === 'lifetime' ? 'Lifetime earned' : 'Trend'
+  const headlineValue = tab === 'mrr'
+    ? `$${(mrrCents / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    : tab === 'lifetime'
+    ? `$${(lifetimeCents / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+    : ''
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: EASE, delay: 0.1 }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5"
+    >
+      <div className="flex items-start justify-between mb-3 gap-3 flex-wrap">
+        <div>
+          <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
+            Last 12 months
+          </div>
+          <div className="text-base font-medium text-gray-900 inline-flex items-center gap-1.5">
+            {headlineLabel}
+            <TrendUp weight="bold" className="w-4 h-4 text-emerald-500" />
+          </div>
+        </div>
+        <div className="text-right">
+          {headlineValue && (
+            <div className="text-2xl font-medium text-gray-900 tabular-nums">{headlineValue}</div>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="inline-flex bg-gray-100 rounded-xl p-1 mb-4">
+        {TABS.map((t) => {
+          const active = tab === t.key
+          return (
+            <button
+              key={t.key}
+              onClick={() => onTabChange(t.key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                active
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle ${
+                t.key === 'mrr' ? 'bg-emerald-500'
+                : t.key === 'lifetime' ? 'bg-sky-500'
+                : 'bg-gradient-to-r from-emerald-500 to-sky-500'
+              }`} />
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="h-[260px]">
+        <Line data={data} options={options} />
       </div>
     </motion.div>
   )
