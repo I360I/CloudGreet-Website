@@ -90,6 +90,24 @@ export async function PATCH(
     }
     update.status = body.status
   }
+
+  // When a call is marked as voicemail, auto-schedule a follow-up
+  // in 2 days (9am) — unless the rep is also setting follow_up_at
+  // explicitly in this request, or one is already on the row.
+  if (update.status === 'voicemail' && body.follow_up_at === undefined) {
+    const { data: cur } = await supabaseAdmin
+      .from('lead_assignments')
+      .select('follow_up_at')
+      .eq('rep_id', auth.userId)
+      .eq('lead_id', params.id)
+      .maybeSingle()
+    if (!cur?.follow_up_at) {
+      const d = new Date()
+      d.setDate(d.getDate() + 2)
+      d.setHours(9, 0, 0, 0)
+      update.follow_up_at = d.toISOString()
+    }
+  }
   if (typeof body.disposition === 'string') {
     update.disposition = body.disposition.trim().slice(0, 200) || null
   } else if (body.disposition === null) {

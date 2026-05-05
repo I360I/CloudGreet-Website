@@ -146,51 +146,16 @@ export default function LeadDetailPage() {
     await fetchWithAuth(`/api/sales/leads/${id}/notes?note_id=${noteId}`, { method: 'DELETE' })
   }
 
-  const buildDemoMessage = () => {
-    if (!bookingUrl || !lead) return ''
-    const contact = lead.contact_name?.split(/[, ]+/)[0] || ''
-    const greeting = contact ? `Hi ${contact},` : 'Hi,'
-    return `${greeting}
-
-This is about your business — I work with CloudGreet, we build an AI receptionist that picks up missed calls and books jobs for service businesses like yours. 15 minutes to show you how it'd work for ${lead.business_name}?
-
-Pick any time that works: ${bookingUrl}
-
-— Looking forward.`
-  }
-
-  const copyDemoMessage = async () => {
-    const message = buildDemoMessage()
-    if (!message) return
+  const copyBookingLink = async () => {
+    if (!bookingUrl) return
     try {
-      await navigator.clipboard.writeText(message)
+      await navigator.clipboard.writeText(bookingUrl)
       setCopiedDemo(true)
       patch({ touched: true })
-      setTimeout(() => setCopiedDemo(false), 3000)
+      setTimeout(() => setCopiedDemo(false), 2500)
     } catch {
-      setErr('Clipboard blocked. Use the Email or Text buttons instead.')
+      setErr('Clipboard blocked. Copy manually: ' + bookingUrl)
     }
-  }
-
-  const openDemoEmail = () => {
-    if (!lead?.email) return
-    const message = buildDemoMessage()
-    const subject = `Quick demo for ${lead.business_name}`
-    window.open(
-      `mailto:${lead.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`,
-      '_blank',
-    )
-    patch({ touched: true })
-  }
-
-  const openDemoSms = () => {
-    if (!lead?.phone) return
-    const message = buildDemoMessage()
-    window.open(
-      `sms:${lead.phone}?&body=${encodeURIComponent(message)}`,
-      '_self',
-    )
-    patch({ touched: true })
   }
 
   const generatePaymentLink = async () => {
@@ -279,59 +244,34 @@ Pick any time that works: ${bookingUrl}
                 <a
                   href={`tel:${lead.phone}`}
                   onClick={() => markTouched()}
-                  className="inline-flex items-center gap-1.5 bg-gray-900 text-white text-sm rounded-lg px-3.5 py-2 hover:bg-gray-800 shadow-sm"
+                  className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 active:scale-[0.98] shadow-sm transition-all"
                 >
                   <Phone weight="fill" className="w-4 h-4" /> Call
                 </a>
               )}
               <button
                 onClick={() => setShowPayForm((v) => !v)}
-                className="inline-flex items-center gap-1.5 bg-emerald-600 text-white text-sm rounded-lg px-3.5 py-2 hover:bg-emerald-700 shadow-sm"
+                className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 active:scale-[0.98] shadow-sm shadow-emerald-600/10 transition-all"
               >
                 <CurrencyDollar weight="fill" className="w-4 h-4" /> Send payment link
               </button>
               {bookingUrl ? (
-                <div className="inline-flex items-stretch border border-gray-200 rounded-lg overflow-hidden text-sm">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-50 text-gray-600 border-r border-gray-200">
-                    <CalendarBlank weight="fill" className="w-4 h-4 text-violet-500" />
-                    Demo pitch
-                  </span>
-                  {lead.email && (
-                    <button
-                      onClick={openDemoEmail}
-                      className="px-3 py-2 text-gray-700 hover:bg-gray-50 border-r border-gray-200"
-                      title="Open email pre-filled"
-                    >
-                      Email
-                    </button>
-                  )}
-                  {lead.phone && (
-                    <button
-                      onClick={openDemoSms}
-                      className="px-3 py-2 text-gray-700 hover:bg-gray-50 border-r border-gray-200"
-                      title="Open SMS pre-filled (mobile)"
-                    >
-                      Text
-                    </button>
-                  )}
-                  <button
-                    onClick={copyDemoMessage}
-                    className="px-3 py-2 text-gray-700 hover:bg-gray-50 inline-flex items-center gap-1.5"
-                    title="Copy message to clipboard"
-                  >
-                    {copiedDemo
-                      ? <CheckCircle weight="fill" className="w-4 h-4 text-emerald-500" />
-                      : <Copy className="w-4 h-4" />}
-                    {copiedDemo ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
+                <button
+                  onClick={copyBookingLink}
+                  className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] transition-all"
+                  title="Copy your booking link to clipboard"
+                >
+                  {copiedDemo
+                    ? <><CheckCircle weight="fill" className="w-4 h-4 text-emerald-500" /> Copied</>
+                    : <><CalendarBlank weight="fill" className="w-4 h-4 text-violet-500" /> Copy booking link</>}
+                </button>
               ) : (
                 <Link
                   href="/sales/settings"
-                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 border border-dashed border-gray-300 rounded-lg px-3 py-2 transition-colors"
-                  title="Add your booking URL to enable demo pitch"
+                  className="inline-flex items-center justify-center gap-2 h-10 px-4 text-sm text-gray-500 hover:text-gray-900 border border-dashed border-gray-300 hover:border-gray-400 rounded-xl transition-all"
+                  title="Add your booking URL"
                 >
-                  <CalendarBlank className="w-3.5 h-3.5" /> Add booking link
+                  <CalendarBlank className="w-4 h-4" /> Add booking link
                 </Link>
               )}
             </div>
