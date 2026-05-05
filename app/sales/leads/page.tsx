@@ -59,6 +59,7 @@ export default function SalesLeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [migrationNeeded, setMigrationNeeded] = useState<string | null>(null)
   const [flash, setFlash] = useState('')
   const [importing, setImporting] = useState(false)
   const [search, setSearch] = useState('')
@@ -71,7 +72,10 @@ export default function SalesLeadsPage() {
       const res = await fetchWithAuth('/api/sales/leads')
       const j = await res.json().catch(() => ({}))
       if (!res.ok) setError(j?.error || 'Failed to load leads')
-      else setLeads(j.leads || [])
+      else {
+        setLeads(j.leads || [])
+        setMigrationNeeded(j.migration_needed || null)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load')
     } finally {
@@ -204,6 +208,19 @@ export default function SalesLeadsPage() {
         </div>
 
         <AnimatePresence>
+          {migrationNeeded && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-900 flex items-start gap-2"
+            >
+              <WarningCircle weight="fill" className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" />
+              <span>
+                Workflow features are off. Tell Anthony to run{' '}
+                <code className="font-mono text-xs bg-amber-100 px-1 rounded">sql/{migrationNeeded}.sql</code>{' '}
+                in Supabase so status pills, follow-ups and notes show up.
+              </span>
+            </motion.div>
+          )}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}

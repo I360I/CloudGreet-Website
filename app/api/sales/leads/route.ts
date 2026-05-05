@@ -9,10 +9,15 @@ export const runtime = 'nodejs'
 /**
  * GET /api/sales/leads
  *
- * Returns the calling rep's leads with workflow state (status,
- * disposition, follow-up time, touch count, last 3 notes inlined).
- * Reps build their own list via scrape or CSV import — both
- * auto-claim into lead_assignments.
+ * Returns the calling rep's leads. Reps build their own list via
+ * scrape (auto-promoted at end of job) or CSV import — both insert
+ * into lead_assignments under the rep's id.
+ *
+ * Tries the full workflow-aware query first (status, follow-up,
+ * touch count, etc — added by sql/sales-lead-workflow.sql). If
+ * those columns don't exist yet, falls back to the bare schema so
+ * leads still show up; surfaces a `migration_needed` flag the UI
+ * can display as a hint.
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)
@@ -21,7 +26,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { data: rows } = await supabaseAdmin
+    let migrationNeeded = false
+    let rows: any[] | null = null
+
+    const full = await supabaseAdmin
       .from('lead_assignments')
       .select(`
         lead_id, assigned_at, status, disposition,
@@ -31,6 +39,28 @@ export async function GET(request: NextRequest) {
       .eq('rep_id', auth.userId)
       .order('assigned_at', { ascending: false })
       .limit(2000)
+
+    if (full.error) {
+      // Workflow columns missing — fall back to bare schema so the
+      // rep at least sees their leads.
+      if (/column.*does not exist|could not find/i.test(full.error.message)) {
+        migrationNeeded = true
+        const fallback = await supabaseAdmin
+          .from('lead_assignments')
+          .select('lead_id, assigned_at, leads:lead_id(*)')
+          .eq('rep_id', auth.userId)
+          .order('assigned_at', { ascending: false })
+          .limit(2000)
+        if (fallback.error) {
+          throw fallback.error
+        }
+        rows = fallback.data
+      } else {
+        throw full.error
+      }
+    } else {
+      rows = full.data
+    }
 
     const leads = (rows ?? [])
       .map((r: any) => ({
@@ -45,29 +75,34 @@ export async function GET(request: NextRequest) {
       .filter((l: any) => l && l.id)
 
     // Inline last note per lead so the leads table can show a hint
-    // without a roundtrip per row. Cap at most-recent 1 to keep
-    // payload small; the detail view fetches the full thread.
+    // without a roundtrip per row. Only when notes table exists.
     const ids = leads.map((l: any) => l.id)
     if (ids.length > 0) {
-      const { data: notes } = await supabaseAdmin
+      const { data: notes, error: notesErr } = await supabaseAdmin
         .from('lead_notes')
         .select('lead_id, body, created_at')
         .in('lead_id', ids)
         .eq('rep_id', auth.userId)
         .order('created_at', { ascending: false })
-      const latestByLead = new Map<string, { body: string; created_at: string }>()
-      for (const n of notes || []) {
-        if (!latestByLead.has(n.lead_id)) {
-          latestByLead.set(n.lead_id, { body: n.body, created_at: n.created_at })
+      if (!notesErr && notes) {
+        const latestByLead = new Map<string, { body: string; created_at: string }>()
+        for (const n of notes) {
+          if (!latestByLead.has(n.lead_id)) {
+            latestByLead.set(n.lead_id, { body: n.body, created_at: n.created_at })
+          }
         }
-      }
-      for (const lead of leads) {
-        const note = latestByLead.get(lead.id)
-        ;(lead as any).latest_note = note || null
+        for (const lead of leads) {
+          const note = latestByLead.get(lead.id)
+          ;(lead as any).latest_note = note || null
+        }
       }
     }
 
-    return NextResponse.json({ success: true, leads })
+    return NextResponse.json({
+      success: true,
+      leads,
+      ...(migrationNeeded ? { migration_needed: 'sales-lead-workflow' } : {}),
+    })
   } catch (e) {
     logger.error('List sales leads failed', {
       userId: auth.userId,
