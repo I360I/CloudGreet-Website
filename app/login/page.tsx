@@ -1,12 +1,22 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Eye, EyeOff, ArrowUpRight } from "lucide-react"
+import { useSearchParams } from 'next/navigation'
+import { Eye, EyeOff, ArrowUpRight, CheckCircle2, X } from "lucide-react"
 import { setAuthToken } from '@/lib/auth/token-manager'
 
-export default function LoginPage() {
+function LoginInner() {
+ const search = useSearchParams()
+ const justPaid = search?.get('paid') === '1'
+ const [showPaidBanner, setShowPaidBanner] = useState(justPaid)
+ useEffect(() => {
+  if (!showPaidBanner) return
+  const t = setTimeout(() => setShowPaidBanner(false), 8000)
+  return () => clearTimeout(t)
+ }, [showPaidBanner])
+
  const [email, setEmail] = useState('')
  const [password, setPassword] = useState('')
  const [showPassword, setShowPassword] = useState(false)
@@ -66,6 +76,25 @@ export default function LoginPage() {
      <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
 
      <div className="relative bg-white border border-gray-200 rounded-[28px] p-8 md:p-10">
+      {showPaidBanner && (
+       <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3 transition-all">
+        <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+         <div className="text-sm font-medium text-emerald-900">Payment received</div>
+         <div className="text-xs text-emerald-800 mt-0.5">
+          We just emailed your login + receipt. Sign in below to access your dashboard.
+         </div>
+        </div>
+        <button
+         onClick={() => setShowPaidBanner(false)}
+         className="text-emerald-700 hover:text-emerald-900 flex-shrink-0"
+         aria-label="Dismiss"
+        >
+         <X className="w-4 h-4" />
+        </button>
+       </div>
+      )}
+
       <h1 className="font-display font-medium tracking-tight leading-[1.05] text-3xl md:text-4xl mb-2 text-gray-900">
        Welcome <span className="text-gray-400">back.</span>
       </h1>
@@ -142,5 +171,13 @@ export default function LoginPage() {
     </div>
    </section>
   </main>
+ )
+}
+
+export default function LoginPage() {
+ return (
+  <Suspense fallback={null}>
+   <LoginInner />
+  </Suspense>
  )
 }
