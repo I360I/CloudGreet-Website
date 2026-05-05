@@ -4,18 +4,24 @@ import React, { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Eye, EyeOff, ArrowUpRight, CheckCircle2, X } from "lucide-react"
+import { Eye, EyeOff, ArrowUpRight, X } from "lucide-react"
 import { setAuthToken } from '@/lib/auth/token-manager'
 
 function LoginInner() {
  const search = useSearchParams()
  const justPaid = search?.get('paid') === '1'
- const [showPaidBanner, setShowPaidBanner] = useState(justPaid)
+ const [showPaidModal, setShowPaidModal] = useState(justPaid)
  useEffect(() => {
-  if (!showPaidBanner) return
-  const t = setTimeout(() => setShowPaidBanner(false), 8000)
+  if (!showPaidModal) return
+  const t = setTimeout(() => setShowPaidModal(false), 5000)
   return () => clearTimeout(t)
- }, [showPaidBanner])
+ }, [showPaidModal])
+ useEffect(() => {
+  if (!showPaidModal) return
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowPaidModal(false) }
+  window.addEventListener('keydown', onKey)
+  return () => window.removeEventListener('keydown', onKey)
+ }, [showPaidModal])
 
  const [email, setEmail] = useState('')
  const [password, setPassword] = useState('')
@@ -58,6 +64,42 @@ function LoginInner() {
 
  return (
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
+   {/* Payment-success modal */}
+   {showPaidModal && (
+    <div
+     className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/50 backdrop-blur-sm animate-[fadeIn_0.25s_ease-out]"
+     onClick={() => setShowPaidModal(false)}
+    >
+     <div
+      className="relative bg-white border border-gray-200 rounded-[28px] p-8 md:p-10 w-full max-w-md shadow-2xl shadow-black/20 animate-[popIn_0.32s_cubic-bezier(0.22,1,0.36,1)]"
+      onClick={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-modal="true"
+     >
+      <button
+       onClick={() => setShowPaidModal(false)}
+       className="absolute top-4 right-4 w-8 h-8 inline-flex items-center justify-center rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+       aria-label="Close"
+      >
+       <X className="w-4 h-4" />
+      </button>
+      <h2 className="font-display font-medium tracking-tight leading-[1.05] text-3xl md:text-4xl mb-2 text-gray-900">
+       Payment <span className="text-gray-400">received.</span>
+      </h2>
+      <p className="text-sm text-gray-500">
+       We just emailed your login and receipt. Sign in below to access your dashboard.
+      </p>
+     </div>
+     <style jsx global>{`
+      @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+      @keyframes popIn  {
+       from { opacity: 0; transform: translateY(8px) scale(0.96) }
+       to   { opacity: 1; transform: translateY(0)   scale(1)    }
+      }
+     `}</style>
+    </div>
+   )}
+
    {/* Nav */}
    <nav className="border-b border-black/5">
     <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -76,25 +118,6 @@ function LoginInner() {
      <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
 
      <div className="relative bg-white border border-gray-200 rounded-[28px] p-8 md:p-10">
-      {showPaidBanner && (
-       <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3 transition-all">
-        <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-        <div className="flex-1 min-w-0">
-         <div className="text-sm font-medium text-emerald-900">Payment received</div>
-         <div className="text-xs text-emerald-800 mt-0.5">
-          We just emailed your login + receipt. Sign in below to access your dashboard.
-         </div>
-        </div>
-        <button
-         onClick={() => setShowPaidBanner(false)}
-         className="text-emerald-700 hover:text-emerald-900 flex-shrink-0"
-         aria-label="Dismiss"
-        >
-         <X className="w-4 h-4" />
-        </button>
-       </div>
-      )}
-
       <h1 className="font-display font-medium tracking-tight leading-[1.05] text-3xl md:text-4xl mb-2 text-gray-900">
        Welcome <span className="text-gray-400">back.</span>
       </h1>
