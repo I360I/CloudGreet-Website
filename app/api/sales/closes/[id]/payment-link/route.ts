@@ -46,29 +46,20 @@ export async function POST(
     return NextResponse.json({ error: `Close is ${close.status}; can't generate a link.` }, { status: 409 })
   }
 
-  // Cap check — looks up the rep's per-rep limits.
-  const { data: profile } = await supabaseAdmin
-    .from('sales_reps')
-    .select('max_monthly_cents, max_setup_cents')
-    .eq('id', auth.userId)
-    .maybeSingle()
-  const maxMonthly = profile?.max_monthly_cents ?? 150000
-  const maxSetup = profile?.max_setup_cents ?? 150000
-
+  // No upper cap — reps can generate payment links at any amount they
+  // negotiated. Stripe still requires a $50 minimum for monthly. The
+  // sales_reps.max_monthly_cents / max_setup_cents columns are kept
+  // in the schema for future use but are not enforced here.
   const monthlyCents = close.agreed_monthly_cents || 0
   const setupCents = close.agreed_setup_fee_cents || 0
   if (monthlyCents < 5000) {
     return NextResponse.json({ error: 'Monthly amount must be at least $50.' }, { status: 400 })
   }
-  if (monthlyCents > maxMonthly) {
-    return NextResponse.json({
-      error: `Monthly $${(monthlyCents / 100).toFixed(0)} is above your cap ($${(maxMonthly / 100).toFixed(0)}). Ask Anthony to raise it.`,
-    }, { status: 403 })
+  if (monthlyCents > 5_000_000) {
+    return NextResponse.json({ error: 'Monthly amount looks too high (>$50,000). Double-check the value.' }, { status: 400 })
   }
-  if (setupCents > maxSetup) {
-    return NextResponse.json({
-      error: `Setup fee $${(setupCents / 100).toFixed(0)} is above your cap ($${(maxSetup / 100).toFixed(0)}). Ask Anthony to raise it.`,
-    }, { status: 403 })
+  if (setupCents < 0 || setupCents > 5_000_000) {
+    return NextResponse.json({ error: 'Setup fee out of range.' }, { status: 400 })
   }
 
   // We require an email so Stripe can identify the customer + send

@@ -273,14 +273,6 @@ export default function RepDetailPage() {
        saving={busy === 'limit'}
        onSave={saveScrapeLimit}
       />
-      <div className="mt-6 pt-6 border-t border-white/[0.06]">
-       <PriceCapField
-        initialMonthly={rep.max_monthly_cents}
-        initialSetup={rep.max_setup_cents}
-        saving={busy === 'caps'}
-        onSave={savePriceCaps}
-       />
-      </div>
      </Panel>
 
      {/* Clients */}
