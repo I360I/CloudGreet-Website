@@ -74,6 +74,21 @@ export default function LeadDetailPage() {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null)
   const [copiedPay, setCopiedPay] = useState(false)
 
+  // Onboarding (account + booking-link email)
+  const [showOnbForm, setShowOnbForm] = useState(false)
+  const [onbEmail, setOnbEmail] = useState('')
+  const [onbMonthly, setOnbMonthly] = useState('499')
+  const [onbSetup, setOnbSetup] = useState('899')
+  const [onbBusy, setOnbBusy] = useState(false)
+  const [onbResult, setOnbResult] = useState<{
+    login_url: string
+    email: string
+    temp_password: string
+    booking_url: string | null
+    email_sent: boolean
+  } | null>(null)
+  const [copiedPwd, setCopiedPwd] = useState(false)
+
   const load = async () => {
     setLoading(true); setErr('')
     try {
@@ -144,6 +159,48 @@ export default function LeadDetailPage() {
   const deleteNote = async (noteId: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== noteId))
     await fetchWithAuth(`/api/sales/leads/${id}/notes?note_id=${noteId}`, { method: 'DELETE' })
+  }
+
+  const sendOnboarding = async () => {
+    if (!lead) return
+    setOnbBusy(true); setErr('')
+    try {
+      const res = await fetchWithAuth(`/api/sales/leads/${lead.id}/send-onboarding`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: (onbEmail.trim() || lead.email || '').toLowerCase(),
+          monthly_cents: Math.round(parseFloat(onbMonthly || '0') * 100),
+          setup_fee_cents: Math.round(parseFloat(onbSetup || '0') * 100),
+        }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setErr(j?.error || 'Failed to send onboarding')
+      } else {
+        setOnbResult({
+          login_url: j.login_url,
+          email: j.user.email,
+          temp_password: j.temp_password,
+          booking_url: j.booking_url,
+          email_sent: !!j.email_sent,
+        })
+        await load()
+      }
+    } finally {
+      setOnbBusy(false)
+    }
+  }
+
+  const copyTempPwd = async () => {
+    if (!onbResult) return
+    try {
+      await navigator.clipboard.writeText(
+        `Email: ${onbResult.email}\nPassword: ${onbResult.temp_password}\nLogin: ${onbResult.login_url}`,
+      )
+      setCopiedPwd(true)
+      setTimeout(() => setCopiedPwd(false), 2500)
+    } catch { /* noop */ }
   }
 
   const copyBookingLink = async () => {
@@ -250,7 +307,14 @@ export default function LeadDetailPage() {
                 </a>
               )}
               <button
-                onClick={() => setShowPayForm((v) => !v)}
+                onClick={() => { setShowOnbForm((v) => !v); setShowPayForm(false); setOnbEmail(lead.email || '') }}
+                className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 active:scale-[0.98] shadow-sm shadow-violet-600/10 transition-all"
+                title="Create their account + email login + your booking link"
+              >
+                <EnvelopeSimple weight="fill" className="w-4 h-4" /> Send booking link
+              </button>
+              <button
+                onClick={() => { setShowPayForm((v) => !v); setShowOnbForm(false) }}
                 className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 active:scale-[0.98] shadow-sm shadow-emerald-600/10 transition-all"
               >
                 <CurrencyDollar weight="fill" className="w-4 h-4" /> Send payment link
@@ -307,6 +371,125 @@ export default function LeadDetailPage() {
         </motion.div>
 
         <AnimatePresence>
+          {showOnbForm && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: EASE }}
+              className="overflow-hidden mb-5"
+            >
+              <div className="bg-violet-50/50 border border-violet-200 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <EnvelopeSimple weight="duotone" className="w-5 h-5 text-violet-600" />
+                  <div className="text-sm font-medium text-violet-900">Send booking link</div>
+                </div>
+
+                {onbResult ? (
+                  <div className="space-y-3">
+                    <div className="text-xs text-violet-900">
+                      Account created and {onbResult.email_sent ? 'email sent.' : 'ready to share.'} Save these credentials — the temp password won&apos;t be shown again.
+                    </div>
+                    <div className="bg-white border border-violet-200 rounded-lg p-3 font-mono text-xs space-y-1">
+                      <div><span className="text-violet-700">Email:</span> {onbResult.email}</div>
+                      <div><span className="text-violet-700">Password:</span> {onbResult.temp_password}</div>
+                      <div><span className="text-violet-700">Login:</span> <a href={onbResult.login_url} target="_blank" rel="noreferrer" className="text-violet-700 underline">{onbResult.login_url.replace(/^https?:\/\//, '')}</a></div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={copyTempPwd}
+                        className="inline-flex items-center gap-1.5 text-xs bg-white border border-violet-200 hover:bg-violet-50 rounded-lg px-3 py-2 text-violet-800"
+                      >
+                        {copiedPwd
+                          ? <CheckCircle weight="fill" className="w-3.5 h-3.5 text-emerald-500" />
+                          : <Copy className="w-3.5 h-3.5" />}
+                        {copiedPwd ? 'Copied' : 'Copy login'}
+                      </button>
+                      <button
+                        onClick={() => { setOnbResult(null); setShowOnbForm(false) }}
+                        className="text-xs text-violet-800 hover:text-violet-900 px-2 py-2"
+                      >
+                        Done
+                      </button>
+                      {!onbResult.email_sent && (
+                        <span className="text-[11px] text-amber-700 ml-auto">
+                          Email didn&apos;t go out — share manually.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {!lead.email && (
+                      <div className="mb-3">
+                        <label className="block text-[10px] font-mono uppercase tracking-wider text-violet-900 mb-1">
+                          Prospect email (lead has none)
+                        </label>
+                        <input
+                          type="email"
+                          value={onbEmail}
+                          onChange={(e) => setOnbEmail(e.target.value)}
+                          placeholder="prospect@example.com"
+                          className="w-full bg-white border border-violet-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-400"
+                        />
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase tracking-wider text-violet-900 mb-1">
+                          Monthly $
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                          <input
+                            type="number" min="50" max="50000" step="1"
+                            value={onbMonthly}
+                            onChange={(e) => setOnbMonthly(e.target.value)}
+                            className="w-full bg-white border border-violet-200 rounded-lg pl-6 pr-3 py-2 text-sm tabular-nums focus:outline-none focus:border-violet-400"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase tracking-wider text-violet-900 mb-1">
+                          Setup $
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                          <input
+                            type="number" min="0" max="50000" step="1"
+                            value={onbSetup}
+                            onChange={(e) => setOnbSetup(e.target.value)}
+                            className="w-full bg-white border border-violet-200 rounded-lg pl-6 pr-3 py-2 text-sm tabular-nums focus:outline-none focus:border-violet-400"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-violet-700/80 mb-3">
+                      Creates their account with a random password and emails it to them
+                      with your booking link. They can log in during the demo to walk
+                      through Cal.com + call forwarding live with you.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={sendOnboarding}
+                        disabled={onbBusy || (!lead.email && !onbEmail.trim())}
+                        className="inline-flex items-center gap-1.5 bg-violet-600 text-white text-sm rounded-lg px-4 py-2 hover:bg-violet-700 disabled:opacity-60"
+                      >
+                        {onbBusy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <EnvelopeSimple weight="fill" className="w-4 h-4" />}
+                        Send onboarding email
+                      </button>
+                      <button
+                        onClick={() => setShowOnbForm(false)}
+                        className="text-xs text-violet-800 hover:text-violet-900"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          )}
           {showPayForm && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
