@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, Plus, UserPlus, Mail, Copy, ExternalLink, AlertCircle, CheckCircle2, Trophy } from 'lucide-react'
+import { Loader2, Plus, UserPlus, Mail, Copy, ExternalLink, AlertCircle, CheckCircle2, Trophy, BadgeDollarSign } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, PrimaryButton, GhostButton, Input } from '../_components/ui'
@@ -36,6 +36,39 @@ export default function AdminSalesPage() {
  const [loading, setLoading] = useState(true)
  const [err, setErr] = useState('')
  const [showInvite, setShowInvite] = useState(false)
+ const [runningPayouts, setRunningPayouts] = useState(false)
+ const [payoutResult, setPayoutResult] = useState<string | null>(null)
+
+ const runPayouts = async () => {
+  if (!confirm(
+    'Run the weekly payout sweep now?\n\n' +
+    'Sums every rep\'s unpaid commission_ledger rows and fires a Stripe Connect transfer per rep. ' +
+    'Idempotent — safe to run more than once; reps already paid this week won\'t be paid again.',
+  )) return
+  setRunningPayouts(true)
+  setPayoutResult(null)
+  try {
+   const res = await fetchWithAuth('/api/admin/sales/payouts/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok) {
+    setPayoutResult(`Failed: ${j?.error || res.status}`)
+   } else {
+    const transferred = (j.results || []).filter((r: any) => r.status === 'transferred').length
+    setPayoutResult(
+     `Swept ${j.rep_count} rep${j.rep_count === 1 ? '' : 's'} · ${transferred} transferred · $${(j.total_paid_cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })} total`,
+    )
+    await load()
+   }
+  } catch (e) {
+   setPayoutResult(`Failed: ${e instanceof Error ? e.message : 'Unknown'}`)
+  } finally {
+   setRunningPayouts(false)
+  }
+ }
 
  const load = async () => {
   setLoading(true); setErr('')
@@ -74,7 +107,16 @@ export default function AdminSalesPage() {
         paid out automatically every Friday via Stripe Connect.
        </p>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+       <button
+        onClick={runPayouts}
+        disabled={runningPayouts}
+        title="Friday cron runs this automatically — manual trigger for off-cycle payouts"
+        className="inline-flex items-center gap-2 text-sm text-emerald-300 hover:text-emerald-200 border border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/10 rounded-lg px-3 py-2 disabled:opacity-60 transition-colors"
+       >
+        {runningPayouts ? <Loader2 className="w-4 h-4 animate-spin" /> : <BadgeDollarSign className="w-4 h-4" />}
+        Run payouts
+       </button>
        <Link
         href="/admin/sales/closes"
         className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-white border border-white/10 rounded-lg px-3 py-2"
@@ -85,6 +127,11 @@ export default function AdminSalesPage() {
         <UserPlus className="w-4 h-4" /> Invite rep
        </PrimaryButton>
       </div>
+      {payoutResult && (
+       <div className="w-full text-xs text-gray-300 bg-white/[0.04] border border-white/[0.06] rounded-lg px-3 py-2 mt-2">
+        {payoutResult}
+       </div>
+      )}
      </header>
 
      {/* KPI strip */}
