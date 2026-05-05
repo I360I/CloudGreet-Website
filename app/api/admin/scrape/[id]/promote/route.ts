@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 
 /**
  * POST /api/admin/scrape/[id]/promote
- * body: { result_ids?: string[] } — if omitted, promotes every not-yet-promoted result
+ * body: { result_ids?: string[] } - if omitted, promotes every not-yet-promoted result
  *
  * Inserts the selected scrape_results into public.leads, dedupes by phone
  * (within the leads table), and links the scrape_results row back to the
@@ -41,7 +41,7 @@ export async function POST(
    return NextResponse.json({ success: true, promoted: 0, skipped: 0 })
   }
 
-  // Existing phone numbers in leads — used for cross-table dedupe.
+  // Existing phone numbers in leads - used for cross-table dedupe.
   const phones = pending.map((r) => normalizePhone(r.phone)).filter(Boolean) as string[]
   const existingPhones = new Set<string>()
   if (phones.length > 0) {

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
  )
  }
 
- // Always use the JWT's businessId — never trust a client-supplied
+ // Always use the JWT's businessId - never trust a client-supplied
  // query parameter. Previously this fell back to ?businessId=, letting
  // any signed-in user read or update another tenant's hours.
  const businessId = authResult.businessId
@@ -77,7 +77,7 @@ export async function PUT(request: NextRequest) {
 
  const body = await request.json()
  const { hours } = body
- // Always use the JWT's businessId — never trust a client-supplied
+ // Always use the JWT's businessId - never trust a client-supplied
  // query parameter. Previously this fell back to ?businessId=, letting
  // any signed-in user read or update another tenant's hours.
  const businessId = authResult.businessId

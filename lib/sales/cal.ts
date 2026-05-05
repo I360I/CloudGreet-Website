@@ -17,7 +17,7 @@ const CAL_API = 'https://api.cal.com/v2'
 
 export type CalBooking = {
   id: string | number
-  /** Cal.com's URL-safe slug — used to deep-link to the booking on app.cal.com. */
+  /** Cal.com's URL-safe slug - used to deep-link to the booking on app.cal.com. */
   uid: string | null
   title: string
   start_iso: string
@@ -53,7 +53,7 @@ export async function fetchUpcomingCalBookings(
       return []
     }
     const json = await res.json().catch(() => ({} as any))
-    // v2 wraps payload in { status, data } — be defensive about shape.
+    // v2 wraps payload in { status, data } - be defensive about shape.
     const items: any[] =
       Array.isArray(json?.data) ? json.data
       : Array.isArray(json?.bookings) ? json.bookings

@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
  try {
- // Auth: businessId from JWT only — never accept from query string.
+ // Auth: businessId from JWT only - never accept from query string.
  const authResult = await requireAuth(request)
  if (!authResult.success || !authResult.businessId) {
  return NextResponse.json(

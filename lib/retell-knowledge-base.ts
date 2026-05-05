@@ -1,7 +1,7 @@
 /**
  * Read-only helpers for inspecting the Retell knowledge base attached
  * to a business's agent. The contractor (Anthony) curates KB content
- * directly in Retell — we just fetch + display so the admin panel can
+ * directly in Retell - we just fetch + display so the admin panel can
  * show what the AI has been given for each client.
  */
 

@@ -86,10 +86,10 @@ const STATUS_TONES: Record<string, {
  cancelled: { bg: 'bg-rose-400/10', text: 'text-rose-300', border: 'border-rose-400/20', dot: 'bg-rose-400', label: 'cancelled' },
  canceled:  { bg: 'bg-rose-400/10', text: 'text-rose-300', border: 'border-rose-400/20', dot: 'bg-rose-400', label: 'cancelled' },
  pending:   { bg: 'bg-gray-400/10', text: 'text-gray-300', border: 'border-gray-400/20', dot: 'bg-gray-400', label: 'pending' },
- unknown:   { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/20', dot: 'bg-gray-500', label: '—' },
+ unknown:   { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/20', dot: 'bg-gray-500', label: '-' },
 }
 
-/** Primary button — sky-accented, fills/loads with spinner. */
+/** Primary button - sky-accented, fills/loads with spinner. */
 export function PrimaryButton({
  children, onClick, type = 'button', disabled, loading, className = '',
 }: {
@@ -111,7 +111,7 @@ export function PrimaryButton({
  )
 }
 
-/** Secondary button — ghost on dark, fades in on hover. */
+/** Secondary button - ghost on dark, fades in on hover. */
 export function GhostButton({
  children, onClick, type = 'button', disabled, className = '',
 }: {
@@ -131,7 +131,7 @@ export function GhostButton({
  )
 }
 
-/** Danger button — red ghost. */
+/** Danger button - red ghost. */
 export function DangerButton({
  children, onClick, type = 'button', disabled, loading, className = '',
 }: {
@@ -153,7 +153,7 @@ export function DangerButton({
  )
 }
 
-/** Text input — dark variant. */
+/** Text input - dark variant. */
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
  const { className = '', ...rest } = props
  return (
@@ -200,7 +200,7 @@ export function Sparkline({ data, accent = false }: { data: number[]; accent?: b
  )
 }
 
-/** Tiny rising badge animation utility — used for new entries. */
+/** Tiny rising badge animation utility - used for new entries. */
 export function RisingFade({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
  return (
   <motion.div

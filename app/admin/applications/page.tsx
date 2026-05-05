@@ -131,14 +131,14 @@ export default function AdminApplicationsPage() {
                         </Link>
                       </td>
                       <td className="py-3 text-gray-400 text-xs">
-                        {[a.city, a.state].filter(Boolean).join(', ') || '—'}
+                        {[a.city, a.state].filter(Boolean).join(', ') || '-'}
                       </td>
                       <td className="py-3 text-gray-400 text-xs">
-                        {a.years_sales_experience != null ? `${a.years_sales_experience}y` : '—'}
+                        {a.years_sales_experience != null ? `${a.years_sales_experience}y` : '-'}
                         {a.biggest_deal_cents ? ` · $${(a.biggest_deal_cents / 100).toLocaleString()}` : ''}
                       </td>
                       <td className="py-3 text-gray-400 text-xs">
-                        {a.monthly_goal_deals != null ? `${a.monthly_goal_deals}/mo` : '—'}
+                        {a.monthly_goal_deals != null ? `${a.monthly_goal_deals}/mo` : '-'}
                       </td>
                       <td className="py-3 text-xs">
                         <div className="flex items-center gap-2">

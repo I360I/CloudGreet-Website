@@ -30,7 +30,7 @@ const FIELD_MASK = [
 
 /**
  * Hardcoded centers for the Texas metros we actually scrape. Avoids a
- * separate Geocoding API call. Add more as needed — keys are lowercased
+ * separate Geocoding API call. Add more as needed - keys are lowercased
  * for matching against user input. If a city isn't in the map, we fall
  * back to a Texas-wide rectangle for `locationBias`.
  */
@@ -152,7 +152,7 @@ export async function enrichWithGooglePlaces(
   const place = data?.places?.[0]
   if (!place) return { ok: false, error: 'no match' }
 
-  // Reject results outside Texas — common business names like "Allied
+  // Reject results outside Texas - common business names like "Allied
   // Mechanical" otherwise match the wrong state's listing.
   const addr: string = place.formattedAddress || ''
   if (!isTexasAddress(addr)) {
@@ -180,7 +180,7 @@ export async function enrichWithGooglePlaces(
 /**
  * True if a Google formattedAddress sits in Texas. We accept the explicit
  * "TX" two-letter abbreviation in any segment and the spelled-out "Texas"
- * — Google sometimes returns one or the other depending on the locality.
+ * - Google sometimes returns one or the other depending on the locality.
  */
 export function isTexasAddress(addr: string): boolean {
  if (!addr) return false
@@ -227,7 +227,7 @@ export async function* discoverPlaces(
   maxResults?: number
   /** Soft preference for results in this geographic area. */
   locationBias?: { lat: number; lng: number; radiusMeters?: number }
-  /** Hard restriction — results outside are excluded. Mutually exclusive with bias. */
+  /** Hard restriction - results outside are excluded. Mutually exclusive with bias. */
   locationRestriction?: { lat: number; lng: number; radiusMeters: number }
   /** Filter results by Google Place type (e.g. 'hvac_contractor'). */
   includedType?: string

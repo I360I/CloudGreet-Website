@@ -43,8 +43,8 @@ export async function POST(
   }
 
   // Body now accepts either:
-  //   { plan: 'starter' | 'full' }                  — legacy preset
-  //   { plan: 'custom', monthly_cents, setup_fee_cents } — variable pricing
+  //   { plan: 'starter' | 'full' }                  - legacy preset
+  //   { plan: 'custom', monthly_cents, setup_fee_cents } - variable pricing
   // The custom path lets a sales rep negotiate any monthly amount
   // (e.g., $2,000 for a law firm) plus an optional one-time setup
   // fee. We use Stripe's inline price_data so we don't have to
@@ -74,7 +74,7 @@ export async function POST(
     }, { status: 400 })
    }
    monthlyCents = m
-   label = `Custom — $${(m / 100).toFixed(0)}/mo`
+   label = `Custom - $${(m / 100).toFixed(0)}/mo`
    amountStr = `$${(m / 100).toFixed(0)}/mo`
   } else {
    priceId = process.env[PLAN_META[plan].priceEnv] ?? null

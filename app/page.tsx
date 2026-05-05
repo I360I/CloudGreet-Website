@@ -127,7 +127,7 @@ function PhoneTranscript() {
  const lines: { who: 'ai' | 'caller'; text: string }[] = [
   { who: 'ai', text: "Hi, thanks for calling Mike's HVAC, this is the virtual receptionist. How can I help?" },
   { who: 'caller', text: "My AC stopped blowing cold this morning." },
-  { who: 'ai', text: "Sorry to hear that. I can get a tech out — Tuesday at 9 AM works. Should I book it?" },
+  { who: 'ai', text: "Sorry to hear that. I can get a tech out - Tuesday at 9 AM works. Should I book it?" },
   { who: 'caller', text: "Yes please." },
   { who: 'ai', text: "Booked. You'll get a confirmation text. Anything else?" },
  ]
@@ -220,7 +220,7 @@ function Stats() {
 
 function CallFlow() {
  const steps = [
-  { icon: PhoneIncoming, title: 'Incoming call.', body: 'Customer dials your main number — no new lines needed.' },
+  { icon: PhoneIncoming, title: 'Incoming call.', body: 'Customer dials your main number - no new lines needed.' },
   { icon: Phone, title: 'AI agent answers.', body: 'Picks up instantly or after a set number of rings.' },
   { icon: MessageSquare, title: 'Call is handled.', body: 'AI talks naturally, answers questions, and books appointments.' },
   { icon: FileText, title: 'Summary sent.', body: 'Name, number, and reason for calling sent to you by SMS.' },

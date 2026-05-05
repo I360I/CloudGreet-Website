@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
  days = 30
  }
 
- // businessId already comes from the JWT — no extra ownership check needed.
+ // businessId already comes from the JWT - no extra ownership check needed.
 
  // Fetch calls for timeframe - only select needed fields
  const { data: calls, error: callsError } = await supabaseAdmin

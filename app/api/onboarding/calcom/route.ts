@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * Connect Cal.com — validates the contractor's API key + event type ID,
+ * Connect Cal.com - validates the contractor's API key + event type ID,
  * registers our webhook on their account, persists everything on businesses.
  */
 export async function POST(request: NextRequest) {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   // If the user hasn't picked an event type yet (or typed a wrong ID),
   // we list everything the API key can see and return it so the UI can
-  // show a dropdown. Cal.com's event-type IDs are buried — making the
+  // show a dropdown. Cal.com's event-type IDs are buried - making the
   // contractor guess the number was the friction in the original flow.
   const noEventTypeProvided = !Number.isFinite(eventTypeId) || eventTypeId <= 0
 
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
        success: false,
        needsEventType: true,
-       errors: { eventTypeId: `Event type ${eventTypeId} isn't on this account — pick one below.` },
+       errors: { eventTypeId: `Event type ${eventTypeId} isn't on this account - pick one below.` },
        account: { username: me2.username, email: me2.email, timeZone: me2.timeZone },
        eventTypes: detail.eventTypes.map((et) => ({
         id: et.id, title: et.title, slug: et.slug, lengthInMinutes: et.lengthInMinutes,
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Disconnect Cal.com — drops the stored key and removes the webhook.
+ * Disconnect Cal.com - drops the stored key and removes the webhook.
  */
 export async function DELETE(request: NextRequest) {
  try {

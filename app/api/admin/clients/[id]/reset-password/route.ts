@@ -79,7 +79,7 @@ export async function POST(
   return NextResponse.json({
    success: true,
    password: newPassword,
-   note: 'Shown once — copy now. The hash is stored on the user; the plaintext is not.',
+   note: 'Shown once - copy now. The hash is stored on the user; the plaintext is not.',
   })
  } catch (e) {
   logger.error('Admin reset-password failed', {

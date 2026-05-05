@@ -390,7 +390,7 @@ export default function LeadDetailPage() {
                 {onbResult ? (
                   <div className="space-y-3">
                     <div className="text-xs text-violet-900">
-                      Account created and {onbResult.email_sent ? 'email sent.' : 'ready to share.'} Save these credentials — the temp password won&apos;t be shown again.
+                      Account created and {onbResult.email_sent ? 'email sent.' : 'ready to share.'} Save these credentials - the temp password won&apos;t be shown again.
                     </div>
                     <div className="bg-white border border-violet-200 rounded-lg p-3 font-mono text-xs space-y-1">
                       <div><span className="text-violet-700">Email:</span> {onbResult.email}</div>
@@ -415,7 +415,7 @@ export default function LeadDetailPage() {
                       </button>
                       {!onbResult.email_sent && (
                         <span className="text-[11px] text-amber-700 ml-auto truncate max-w-[260px]">
-                          Email didn&apos;t go out{onbResult.email_error ? ` — ${onbResult.email_error}` : ''}. Copy + share manually.
+                          Email didn&apos;t go out{onbResult.email_error ? ` - ${onbResult.email_error}` : ''}. Copy + share manually.
                         </span>
                       )}
                     </div>
@@ -489,7 +489,7 @@ export default function LeadDetailPage() {
                 {paymentUrl ? (
                   <div className="space-y-2">
                     <div className="text-xs text-emerald-800">
-                      Link generated. Send this URL to {lead.business_name} —
+                      Link generated. Send this URL to {lead.business_name} -
                       payment auto-creates their account and credits your commission.
                     </div>
                     <div className="flex items-center gap-2">
@@ -511,7 +511,7 @@ export default function LeadDetailPage() {
                     </div>
                     <div className="flex gap-2 pt-1">
                       <a
-                        href={`mailto:${lead.email || ''}?subject=${encodeURIComponent(`Payment link — CloudGreet for ${lead.business_name}`)}&body=${encodeURIComponent(`Here's the payment link to get started:\n\n${paymentUrl}\n\nLet me know if you have any questions.`)}`}
+                        href={`mailto:${lead.email || ''}?subject=${encodeURIComponent(`Payment link - CloudGreet for ${lead.business_name}`)}&body=${encodeURIComponent(`Here's the payment link to get started:\n\n${paymentUrl}\n\nLet me know if you have any questions.`)}`}
                         className="text-xs text-emerald-800 hover:text-emerald-900"
                       >
                         Email it →

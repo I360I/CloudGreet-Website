@@ -188,7 +188,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
  // `cloudgreet_business_id` yet (we hadn't provisioned the business
  // when the link was created). Run the convert flow inline so the
  // rest of this handler can proceed as if a business existed all
- // along. Idempotent — safe to re-run on Stripe retries.
+ // along. Idempotent - safe to re-run on Stripe retries.
  const closeId = session.metadata?.cloudgreet_close_id as string | undefined
  let businessIdFromClose: string | null = null
  if (closeId) {
@@ -247,7 +247,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
  // Pull the live subscription so we use Stripe's actual status (so a
  // trialing sub stays "trialing" instead of being force-flipped to
- // "active"). If we can't fetch it, fall back to "active" — the next
+ // "active"). If we can't fetch it, fall back to "active" - the next
  // customer.subscription.updated event will reconcile.
  let resolvedStatus: string = 'active'
  if (session.subscription) {
@@ -545,7 +545,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  created_at: new Date().toISOString()
  })
 
- // Commission ledger — the source of truth for what we owe each rep.
+ // Commission ledger - the source of truth for what we owe each rep.
  // We split each invoice into MRR (recurring subscription line items)
  // and setup_fee (one-off invoiceitem lines), credit 50% of each
  // bucket to the rep, and rely on UNIQUE(invoice_id, source_type) to
@@ -871,7 +871,7 @@ Password: ${tempPassword}
             <tr><td style="padding:6px 0;color:#6b7280;">Password</td><td style="padding:6px 0;font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace;color:#111827;">${escape(tempPassword)}</td></tr>
           </table>
           <div style="font-size:13px;color:#374151;line-height:1.6;margin-top:18px;">
-            Welcome to CloudGreet, ${escape(businessName)}. Your AI receptionist is being set up — your sales rep will reach out shortly to wire up call forwarding + walk through the dashboard.
+            Welcome to CloudGreet, ${escape(businessName)}. Your AI receptionist is being set up - your sales rep will reach out shortly to wire up call forwarding + walk through the dashboard.
           </div>
         </td></tr>
         <tr><td style="padding:0 32px 32px;">

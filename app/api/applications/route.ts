@@ -53,23 +53,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Valid phone number is required' }, { status: 400 })
   }
 
-  const resume_url = url(body.resume_url)
-  const video_url = url(body.video_url)
-  if (!resume_url && !video_url) {
+  // Resume + video are stored as Supabase Storage paths (uploaded
+  // through /api/applications/upload-url). Legacy resume_url/video_url
+  // still accepted in case a future entry comes in via API.
+  const resume_path = str(body.resume_path, 500) || null
+  const resume_filename = str(body.resume_filename, 200) || null
+  const video_path = str(body.video_path, 500) || null
+  const video_filename = str(body.video_filename, 200) || null
+  const resume_url = resume_path ? null : url(body.resume_url)
+  const video_url = video_path ? null : url(body.video_url)
+  if (!resume_path && !video_path && !resume_url && !video_url) {
     return NextResponse.json({
-      error: 'Either a resume link or a 90-second video intro is required.',
+      error: 'Please upload at least one: resume or 90-second intro video.',
     }, { status: 400 })
   }
 
+  const about_yourself = str(body.about_yourself, 2000)
+  if (!about_yourself) {
+    return NextResponse.json({
+      error: 'Please answer "tell me about yourself".',
+    }, { status: 400 })
+  }
   const why_commission_only = str(body.why_commission_only, 2000)
   const why_cloudgreet = str(body.why_cloudgreet, 2000)
-  if (!why_commission_only || !why_cloudgreet) {
-    return NextResponse.json({
-      error: 'Please answer both "why commission-only sales" and "why CloudGreet" questions.',
-    }, { status: 400 })
-  }
 
-  // biggest deal — accept "$25,000" or "25000" or "25k"
+  // biggest deal - accept "$25,000" or "25000" or "25k"
   const dealRaw = str(body.biggest_deal, 30).toLowerCase().replace(/[$,\s]/g, '')
   let biggest_deal_cents: number | null = null
   const m = dealRaw.match(/^(\d+(?:\.\d+)?)(k|m)?$/)
@@ -104,8 +112,9 @@ export async function POST(request: NextRequest) {
     biggest_deal_cents,
     prior_commission_only: bool(body.prior_commission_only),
     prior_b2b: bool(body.prior_b2b),
-    why_commission_only,
-    why_cloudgreet,
+    about_yourself,
+    why_commission_only: why_commission_only || null,
+    why_cloudgreet: why_cloudgreet || null,
     monthly_goal_deals: num(body.monthly_goal_deals),
     why_can_hit_goal: str(body.why_can_hit_goal, 2000) || null,
     earliest_start_date,
@@ -113,6 +122,10 @@ export async function POST(request: NextRequest) {
     has_workspace: bool(body.has_workspace),
     resume_url,
     video_url,
+    resume_path,
+    resume_filename,
+    video_path,
+    video_filename,
     ip_address: ip,
     user_agent: ua ? ua.slice(0, 500) : null,
   }
@@ -126,7 +139,7 @@ export async function POST(request: NextRequest) {
   if (error) {
     if (/unique|duplicate/i.test(error.message)) {
       return NextResponse.json({
-        error: 'You already have an active application on file. We\'ll be in touch — feel free to email anthony@cloudgreet.com if you need to update something.',
+        error: 'You already have an active application on file. We\'ll be in touch - feel free to email anthony@cloudgreet.com if you need to update something.',
       }, { status: 409 })
     }
     logger.error('Application insert failed', { error: error.message })
@@ -144,22 +157,19 @@ export async function POST(request: NextRequest) {
         from: `CloudGreet <${fromEmail}>`,
         to: founderEmail,
         replyTo: email,
-        subject: `New rep application — ${first_name} ${last_name}`,
+        subject: `New rep application - ${first_name} ${last_name}`,
         text:
 `${first_name} ${last_name} just applied for the sales-rep role.
 
   Email:    ${email}
   Phone:    ${phone}
-  Location: ${insert.city || '—'}, ${insert.state || '—'}
+  Location: ${insert.city || '-'}, ${insert.state || '-'}
   ${insert.linkedin_url ? `LinkedIn: ${insert.linkedin_url}` : ''}
-  Resume:   ${resume_url || '—'}
-  Video:    ${video_url || '—'}
+  Resume:   ${resume_filename || resume_url || '-'}
+  Video:    ${video_filename || video_url || '-'}
 
-Why commission-only:
-${why_commission_only.slice(0, 600)}${why_commission_only.length > 600 ? '…' : ''}
-
-Why CloudGreet:
-${why_cloudgreet.slice(0, 600)}${why_cloudgreet.length > 600 ? '…' : ''}
+About:
+${about_yourself.slice(0, 600)}${about_yourself.length > 600 ? '...' : ''}
 
 Review: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/admin/applications/${data.id}
 `,
@@ -190,7 +200,7 @@ Review: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/admin/app
             Thanks for applying, ${first_name}. I read every application personally and respond within a few business days. If we move forward, you'll get an email with a Calendly link to pick an interview slot.
           </p>
           <p style="font-size:14px;color:#374151;line-height:1.6;margin-top:12px;">
-            — Anthony Edwards<br/>Founder, CloudGreet
+            - Anthony Edwards<br/>Founder, CloudGreet
           </p>
         </td></tr>
       </table>
@@ -203,7 +213,7 @@ Review: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/admin/app
         replyTo,
         subject: 'Your CloudGreet sales-rep application',
         html,
-        text: `Thanks for applying, ${first_name}. I read every application personally and respond within a few business days. — Anthony, CloudGreet`,
+        text: `Thanks for applying, ${first_name}. I read every application personally and respond within a few business days. - Anthony, CloudGreet`,
       })
     }
   } catch { /* non-fatal */ }

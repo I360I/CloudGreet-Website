@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 /**
  * GET /api/dashboard/retell/voices
  *
- * Client-facing voice list. Same shape as the admin equivalent — proxies
+ * Client-facing voice list. Same shape as the admin equivalent - proxies
  * Retell's /list-voices so the contractor settings page can show a real,
  * up-to-date dropdown instead of a hardcoded list that drifts.
  */
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   const apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY
   if (!apiKey) {
     return NextResponse.json(
-      { error: 'Voice picker is unavailable — RETELL_API_KEY is not configured.' },
+      { error: 'Voice picker is unavailable - RETELL_API_KEY is not configured.' },
       { status: 503 },
     )
   }

@@ -50,7 +50,7 @@ export default function CallsPage() {
    try {
     const businessRaw = localStorage.getItem('business')
     const businessId = businessRaw ? JSON.parse(businessRaw).id : null
-    if (!businessId) throw new Error('Missing business id — please sign in again.')
+    if (!businessId) throw new Error('Missing business id - please sign in again.')
 
     const params = new URLSearchParams({
      businessId,
@@ -182,7 +182,7 @@ export default function CallsPage() {
              <OutcomeBadge outcome={tagOutcome(c)} />
             </div>
             <div className="hidden lg:block lg:col-span-4 text-xs text-gray-500 truncate">
-             {(c.call_extractions as any)?.summary || c.summary || '—'}
+             {(c.call_extractions as any)?.summary || c.summary || '-'}
             </div>
             <div className="hidden lg:block lg:col-span-2 text-right text-xs text-gray-500">
              <div>{relTime(c.created_at)}</div>

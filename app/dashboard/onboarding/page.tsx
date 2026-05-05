@@ -186,7 +186,7 @@ function StuckBanner({ step }: { step: Step }) {
   >
    <Headphones className="w-4 h-4 text-sky-500 flex-shrink-0" />
    <div className="text-sm text-gray-700 flex-1">
-    Stuck? Call or text us — we&apos;ll walk through it together.
+    Stuck? Call or text us - we&apos;ll walk through it together.
    </div>
    <a
     href={`tel:${SUPPORT_PHONE_DIAL}`}
@@ -215,7 +215,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
   if (e) e.preventDefault()
   setSubmitting(true); setError(''); setFieldErrors({})
   try {
-   // First call sends API key only — server lists event types and we
+   // First call sends API key only - server lists event types and we
    // pick from the dropdown. This avoids the "guess the numeric ID"
    // friction in the original flow.
    const res = await fetchWithAuth('/api/onboarding/calcom', {
@@ -227,7 +227,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
     setEventTypeOptions(json.eventTypes)
     if (json.errors) setFieldErrors(json.errors)
     if (json.eventTypes.length === 0) {
-     setError('No event types returned. See trace below — paste it to support if it looks wrong.')
+     setError('No event types returned. See trace below - paste it to support if it looks wrong.')
      setDebugTrace(Array.isArray(json.debug) ? json.debug : null)
     } else {
      setDebugTrace(null)
@@ -283,7 +283,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
      <li>
       Open <a href="https://app.cal.com/settings/developer/api-keys" target="_blank" rel="noreferrer" className="text-sky-600 hover:underline inline-flex items-center gap-0.5">
        Cal.com → Settings → API Keys <ExternalLink className="w-3 h-3" />
-      </a> and click <span className="font-medium">+ Add</span>. Copy the key — it starts with <code className="font-mono text-xs bg-white border border-gray-200 px-1 rounded">cal_live_</code>.
+      </a> and click <span className="font-medium">+ Add</span>. Copy the key - it starts with <code className="font-mono text-xs bg-white border border-gray-200 px-1 rounded">cal_live_</code>.
      </li>
      <li>
       Make sure you have at least one event type at <a href="https://app.cal.com/event-types" target="_blank" rel="noreferrer" className="text-sky-600 hover:underline inline-flex items-center gap-0.5">
@@ -432,7 +432,7 @@ function ForwardingStep({
      <h2 className="text-xl font-medium text-gray-900">Forward your business line</h2>
     </div>
     <p className="text-sm text-gray-500 mb-4">
-     We&apos;ll show you the exact code to dial. Tap the button — your phone&apos;s dialer opens with the code already filled in.
+     We&apos;ll show you the exact code to dial. Tap the button - your phone&apos;s dialer opens with the code already filled in.
     </p>
 
     <div className="bg-sky-50/60 border border-sky-100 rounded-xl px-4 py-3 flex items-center gap-3">
@@ -490,11 +490,11 @@ function ForwardingStep({
         sub="Your phone rings first; AI catches what you don't" />
        <ModeBtn active={mode === 'always'} onClick={() => setMode('always')}
         title="Always send to AI"
-        sub="Your phone never rings — every call hits the AI" />
+        sub="Your phone never rings - every call hits the AI" />
       </div>
       {mode === 'always' && (
        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
-        Heads up — this forwards everyone (including family, your accountant, etc.) to the AI until you cancel it.
+        Heads up - this forwards everyone (including family, your accountant, etc.) to the AI until you cancel it.
        </p>
       )}
      </div>
@@ -643,7 +643,7 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
     <h2 className="text-xl font-medium text-gray-900">Make a test call</h2>
    </div>
    <p className="text-sm text-gray-500 mb-5">
-    Grab a different phone — your spouse&apos;s, a friend&apos;s, anything other than your business line — and call your business number. Let it ring. Don&apos;t pick up.
+    Grab a different phone - your spouse&apos;s, a friend&apos;s, anything other than your business line - and call your business number. Let it ring. Don&apos;t pick up.
    </p>
 
    <div className={`border rounded-xl px-4 py-4 transition-all duration-500 ease-out ${
@@ -663,7 +663,7 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
       </div>
       <div className="text-xs text-gray-500 mt-0.5">
        {verified
-        ? 'Wrapping up — taking you to your dashboard.'
+        ? 'Wrapping up - taking you to your dashboard.'
         : `Checking every 4 seconds. ${tries} checks so far.`}
       </div>
      </div>
@@ -678,7 +678,7 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
 
    {verified && !paid && (
     <div className="mt-4 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-     <div className="text-sm font-medium text-amber-900">Forwarding works — one more thing</div>
+     <div className="text-sm font-medium text-amber-900">Forwarding works - one more thing</div>
      <p className="text-xs text-amber-800 mt-1">
       We won&apos;t flip your account to live until your subscription is active.
       Head to billing to add a payment method or apply your trial code.

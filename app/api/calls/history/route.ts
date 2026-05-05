@@ -39,7 +39,7 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
  try {
- // Verify authentication. The businessId is sourced ONLY from the JWT —
+ // Verify authentication. The businessId is sourced ONLY from the JWT -
  // never from query params or the body. Trusting a client-supplied
  // businessId here was the cross-tenant leak vector.
  const authResult = await requireAuth(request)

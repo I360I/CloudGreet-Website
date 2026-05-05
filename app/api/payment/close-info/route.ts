@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 /**
  * GET /api/payment/close-info?close=<close_id>
  *
- * Public endpoint — used by /payment/success to personalize the
+ * Public endpoint - used by /payment/success to personalize the
  * confirmation card with the prospect's business name. We only
  * expose business_name + nothing else. Close IDs are UUIDs so
  * enumeration is impractical, and the prospect already knows the

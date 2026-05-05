@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
  const userId = authResult.userId
  // Always trust only the JWT's businessId. Never read it from query
- // params or body — that's a cross-tenant leak vector.
+ // params or body - that's a cross-tenant leak vector.
  const businessId = authResult.businessId
 
  if (!businessId) {

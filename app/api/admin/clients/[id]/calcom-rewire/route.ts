@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
  * POST /api/admin/clients/[id]/calcom-rewire
  *
  * Re-registers the Cal.com webhook for a business that already has
- * its API key + event type set but lost (or never got) a webhook —
+ * its API key + event type set but lost (or never got) a webhook -
  * usually because the original registration silently failed during
  * onboarding. Without a webhook, Cal.com bookings never appear on
  * the CloudGreet dashboard even though they hit the contractor's
@@ -47,7 +47,7 @@ export async function POST(
  const webhookSecret = crypto.randomBytes(32).toString('hex')
 
  // Drop any stale webhook before registering a new one. We can't trust
- // cal_com_webhook_id alone — Cal.com's "subscriber url already exists"
+ // cal_com_webhook_id alone - Cal.com's "subscriber url already exists"
  // error means there's a previous registration whose id we don't have.
  // List + match by URL to find it.
  const knownIds = new Set<string>()

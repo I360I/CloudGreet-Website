@@ -105,7 +105,7 @@ export default function BillingPage() {
          value={
           billing.nextInvoiceAmountCents > 0
            ? formatCurrency(billing.nextInvoiceAmountCents)
-           : (billing.discount || billing.subscriptionStatus === 'trialing' ? formatCurrency(0) : '—')
+           : (billing.discount || billing.subscriptionStatus === 'trialing' ? formatCurrency(0) : '-')
          }
          hint={billing.nextInvoiceDate ? formatDate(billing.nextInvoiceDate) : 'No upcoming invoice'}
          icon={Calendar}
@@ -194,7 +194,7 @@ function SubscriptionCard({ billing }: { billing: BillingData }) {
    ? `${billing.discount.durationLabel}${billing.discount?.promotionCode ? ` · code ${billing.discount.promotionCode}` : ''}`
    : trialing && billing.trialEndsAt
     ? `Free until ${formatDate(billing.trialEndsAt)}`
-    : 'per month, flat — no per-booking fees'
+    : 'per month, flat - no per-booking fees'
 
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">

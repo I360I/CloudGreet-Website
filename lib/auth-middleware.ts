@@ -17,7 +17,7 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     // Accept either the Authorization: Bearer header (used by fetchWithAuth)
     // or the httpOnly `token` cookie set by /api/auth/set-token. Falling back
     // to the cookie matters because client-side token retrieval has a brief
-    // race after login where the cache hasn't refreshed yet — without the
+    // race after login where the cache hasn't refreshed yet - without the
     // fallback, the dashboard 401s and bounces back to /login.
     const authHeader = request.headers.get('authorization')
     let token: string | null = null
@@ -76,7 +76,7 @@ export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
   const auth = await requireAuth(request)
   if (!auth.success) return auth
 
-  // Only the platform admin role passes — NOT business 'owner' (that's
+  // Only the platform admin role passes - NOT business 'owner' (that's
   // just a customer/contractor whose role got conflated with admin in
   // the legacy code path). Letting owners through would expose all
   // admin endpoints (sales-rep KYC, every client's data, payouts) to

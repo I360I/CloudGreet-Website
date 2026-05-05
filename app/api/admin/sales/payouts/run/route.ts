@@ -10,7 +10,7 @@ export const maxDuration = 300
 /**
  * POST /api/admin/sales/payouts/run
  *
- * Admin-triggered payout sweep — same logic as the Friday cron.
+ * Admin-triggered payout sweep - same logic as the Friday cron.
  * Use it for an off-cycle payout, to backfill after a cron miss,
  * or to test the wiring end-to-end before relying on the schedule.
  */

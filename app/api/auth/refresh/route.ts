@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   const role = user.role || (user.is_admin ? 'admin' : 'owner')
   const newToken = JWTManager.createUserToken(user.id, businessId, user.email, role)
 
-  // Re-set the cookie via /api/auth/set-token contract — same name,
+  // Re-set the cookie via /api/auth/set-token contract - same name,
   // same options. We can do it in-line here since we have NextResponse.
   const res = NextResponse.json({ success: true, businessId, refreshed: true })
   res.cookies.set('token', newToken, {

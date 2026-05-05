@@ -23,6 +23,7 @@ type App = {
   biggest_deal_cents: number | null
   prior_commission_only: boolean | null
   prior_b2b: boolean | null
+  about_yourself: string | null
   why_commission_only: string | null
   why_cloudgreet: string | null
   monthly_goal_deals: number | null
@@ -32,6 +33,12 @@ type App = {
   has_workspace: boolean | null
   resume_url: string | null
   video_url: string | null
+  resume_path: string | null
+  resume_filename: string | null
+  video_path: string | null
+  video_filename: string | null
+  resume_signed_url: string | null
+  video_signed_url: string | null
   status: string
   admin_notes: string | null
   reviewed_at: string | null
@@ -158,17 +165,40 @@ export default function AdminApplicationDetailPage() {
 
               <Panel>
                 <PanelHeader eyebrow="Materials" title="Resume + intro video" />
+                {(app.video_signed_url || app.video_url) && (
+                  <div className="mb-3">
+                    <video
+                      src={app.video_signed_url || app.video_url || undefined}
+                      controls
+                      preload="metadata"
+                      className="w-full max-h-[420px] bg-black rounded-xl"
+                    />
+                    {app.video_filename && (
+                      <div className="text-[11px] text-gray-500 mt-1.5 font-mono">
+                        {app.video_filename}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <MaterialLink icon={<FileText className="w-4 h-4" />} label="Resume" url={app.resume_url} />
-                  <MaterialLink icon={<Video className="w-4 h-4" />} label="90-second intro" url={app.video_url} />
+                  <MaterialLink
+                    icon={<FileText className="w-4 h-4" />}
+                    label={app.resume_filename || 'Resume'}
+                    url={app.resume_signed_url || app.resume_url}
+                  />
+                  <MaterialLink
+                    icon={<Video className="w-4 h-4" />}
+                    label={app.video_filename || '90-second intro'}
+                    url={app.video_signed_url || app.video_url}
+                  />
                 </div>
               </Panel>
 
               <Panel>
                 <PanelHeader eyebrow="Sales experience" title="Background" />
                 <Grid>
-                  <KV label="Years selling" value={app.years_sales_experience != null ? `${app.years_sales_experience}` : '—'} />
-                  <KV label="Biggest deal" value={app.biggest_deal_cents ? `$${(app.biggest_deal_cents / 100).toLocaleString()}` : '—'} />
+                  <KV label="Years selling" value={app.years_sales_experience != null ? `${app.years_sales_experience}` : '-'} />
+                  <KV label="Biggest deal" value={app.biggest_deal_cents ? `$${(app.biggest_deal_cents / 100).toLocaleString()}` : '-'} />
                   <KV label="Commission-only before" value={fmtBool(app.prior_commission_only)} />
                   <KV label="B2B before" value={fmtBool(app.prior_b2b)} />
                 </Grid>
@@ -176,18 +206,29 @@ export default function AdminApplicationDetailPage() {
                 <KVBlock label="Industries sold to" value={app.industries_sold} />
               </Panel>
 
-              <Panel>
-                <PanelHeader eyebrow="Why this role" title="Motivation" />
-                <KVBlock label="Why commission-only" value={app.why_commission_only} />
-                <KVBlock label="Why CloudGreet" value={app.why_cloudgreet} />
-              </Panel>
+              {app.about_yourself && (
+                <Panel>
+                  <PanelHeader eyebrow="About" title="Tell me about yourself" />
+                  <div className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
+                    {app.about_yourself}
+                  </div>
+                </Panel>
+              )}
+
+              {(app.why_commission_only || app.why_cloudgreet) && (
+                <Panel>
+                  <PanelHeader eyebrow="Why this role" title="Motivation" />
+                  <KVBlock label="Why commission-only" value={app.why_commission_only} />
+                  <KVBlock label="Why CloudGreet" value={app.why_cloudgreet} />
+                </Panel>
+              )}
 
               <Panel>
                 <PanelHeader eyebrow="Goals + setup" title="Plan + capacity" />
                 <Grid>
-                  <KV label="Monthly goal" value={app.monthly_goal_deals != null ? `${app.monthly_goal_deals} deals/mo` : '—'} />
-                  <KV label="Hours/week" value={app.hours_per_week != null ? `${app.hours_per_week}` : '—'} />
-                  <KV label="Earliest start" value={app.earliest_start_date || '—'} />
+                  <KV label="Monthly goal" value={app.monthly_goal_deals != null ? `${app.monthly_goal_deals} deals/mo` : '-'} />
+                  <KV label="Hours/week" value={app.hours_per_week != null ? `${app.hours_per_week}` : '-'} />
+                  <KV label="Earliest start" value={app.earliest_start_date || '-'} />
                   <KV label="Has workspace" value={fmtBool(app.has_workspace)} />
                 </Grid>
                 <KVBlock label="Why they can hit the goal" value={app.why_can_hit_goal} />
@@ -225,7 +266,7 @@ export default function AdminApplicationDetailPage() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={8}
-                  placeholder="Private notes — only admins see this."
+                  placeholder="Private notes - only admins see this."
                   className="w-full px-3 py-2.5 bg-[#0c0c10] border border-white/[0.06] rounded-xl text-gray-100 placeholder-gray-600 focus:outline-none focus:border-sky-400/50 transition-colors text-sm resize-y"
                 />
                 <div className="flex items-center justify-between mt-3">
@@ -262,7 +303,7 @@ export default function AdminApplicationDetailPage() {
 }
 
 function fmtBool(v: boolean | null) {
-  if (v === null || v === undefined) return '—'
+  if (v === null || v === undefined) return '-'
   return v ? 'Yes' : 'No'
 }
 
@@ -293,7 +334,7 @@ function MaterialLink({ icon, label, url }: { icon: React.ReactNode; label: stri
   if (!url) {
     return (
       <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-3 text-sm text-gray-500 flex items-center gap-2">
-        {icon} {label} — not provided
+        {icon} {label} - not provided
       </div>
     )
   }

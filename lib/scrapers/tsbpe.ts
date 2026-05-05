@@ -4,11 +4,11 @@ import { preFilterContractor, googleConfirmsTrade, phoneMatchesMetro } from './q
 import type { ScrapeParams, ScrapeRecord, SourceDefinition } from './types'
 
 /**
- * Texas State Board of Plumbing Examiners — Responsible Master Plumber CSV.
+ * Texas State Board of Plumbing Examiners - Responsible Master Plumber CSV.
  *
  * TSBPE publishes a daily CSV of every active master plumber that includes
  * owner name, business (PLUMB_COMPANY), phone, full address, and county.
- * No HTML scraping needed — we just fetch and parse the CSV directly.
+ * No HTML scraping needed - we just fetch and parse the CSV directly.
  *
  * Phone is already in the data, so Google Places enrichment is purely
  * for picking up the website.
@@ -54,11 +54,11 @@ async function* runTsbpe(params: ScrapeParams): AsyncGenerator<ScrapeRecord, voi
  for (const r of rows) {
   if (yielded >= limit) break
 
-  // Active licenses only — drop expired/inactive.
+  // Active licenses only - drop expired/inactive.
   const status = (r.LIC_STATUS || '').trim()
   if (status && !/current|active/i.test(status)) continue
 
-  // Location filter — match either city or county (uppercase, in CSV).
+  // Location filter - match either city or county (uppercase, in CSV).
   if (locationFilter) {
    const city = (r.CITY || '').toUpperCase()
    const county = (r.COUNTY || '').toUpperCase()
@@ -95,7 +95,7 @@ async function* runTsbpe(params: ScrapeParams): AsyncGenerator<ScrapeRecord, voi
    if (drop) { droppedPre++; continue }
   }
 
-  // Enrich for website only — phone is already in the CSV.
+  // Enrich for website only - phone is already in the CSV.
   let placesData: import('./google-places').PlacesEnrichment | null = null
   let placesError: string | null = null
   if (enrichEnabled) {
@@ -146,7 +146,7 @@ async function* runTsbpe(params: ScrapeParams): AsyncGenerator<ScrapeRecord, voi
 
 /* ------------------------------ CSV parser ------------------------------ */
 
-/** Tiny CSV parser — handles quoted cells with embedded commas + CRLF. */
+/** Tiny CSV parser - handles quoted cells with embedded commas + CRLF. */
 function parseCsv(text: string): Record<string, string>[] {
  // Split on newlines that aren't inside quotes
  const rows: string[][] = []
@@ -204,7 +204,7 @@ export const tsbpePlumbing: SourceDefinition = {
  id: 'tsbpe_plumbing',
  label: 'TSBPE · Plumbing contractors',
  description:
-  'Texas State Board of Plumbing Examiners — Responsible Master Plumbers. Owner name, business, phone, and full address come straight from TSBPE\'s public CSV. Google Places fills in websites.',
+  'Texas State Board of Plumbing Examiners - Responsible Master Plumbers. Owner name, business, phone, and full address come straight from TSBPE\'s public CSV. Google Places fills in websites.',
  trade: 'Plumbing',
  run: (params, _opts) => runTsbpe(params),
 }

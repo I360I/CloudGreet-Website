@@ -145,7 +145,7 @@ export default function RepDetailPage() {
  const hardDelete = async () => {
   if (!confirm(
    `Permanently delete this rep? This is only allowed if they have no commission history.\n\n` +
-   `If they have history, terminate them instead — that revokes their login but keeps the 1099 trail.`
+   `If they have history, terminate them instead - that revokes their login but keeps the 1099 trail.`
   )) return
   setBusy('delete')
   try {
@@ -305,7 +305,7 @@ export default function RepDetailPage() {
            </div>
           </div>
           <div className="text-right text-sm tabular-nums">
-           <div className="text-gray-200">{c.monthly_price_cents ? `${fmtMoney(c.monthly_price_cents)}/mo` : '—'}</div>
+           <div className="text-gray-200">{c.monthly_price_cents ? `${fmtMoney(c.monthly_price_cents)}/mo` : '-'}</div>
            {c.setup_fee_cents ? <div className="text-[11px] text-gray-500">+ {fmtMoney(c.setup_fee_cents)} setup</div> : null}
           </div>
          </li>
@@ -320,7 +320,7 @@ export default function RepDetailPage() {
        <PanelHeader title="Recent commissions" eyebrow={`${commissions.length} shown`} />
       </div>
       {commissions.length === 0 ? (
-       <div className="px-6 py-6 text-sm text-gray-500">No commissions yet — they appear after invoices pay.</div>
+       <div className="px-6 py-6 text-sm text-gray-500">No commissions yet - they appear after invoices pay.</div>
       ) : (
        <ul className="divide-y divide-white/[0.04]">
         {commissions.map((c) => (
@@ -390,7 +390,7 @@ function Field({ label, value, mono }: { label: string; value: string | null | u
  return (
   <div>
    <dt className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">{label}</dt>
-   <dd className={`text-gray-200 break-all ${mono ? 'font-mono text-xs' : ''}`}>{value || '—'}</dd>
+   <dd className={`text-gray-200 break-all ${mono ? 'font-mono text-xs' : ''}`}>{value || '-'}</dd>
   </div>
  )
 }

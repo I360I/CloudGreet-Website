@@ -160,7 +160,7 @@ export default function AdminCallsPage() {
             </div>
             <div className="hidden lg:block lg:col-span-2"><StatusPill status={c.status} /></div>
             <div className="hidden lg:block lg:col-span-2 text-xs text-gray-500 truncate">
-             {c.call_summary || '—'}
+             {c.call_summary || '-'}
             </div>
             <div className="lg:col-span-2 text-right text-xs text-gray-500 mt-1.5 lg:mt-0">
              <div className="font-mono">{relTime(c.created_at)}</div>

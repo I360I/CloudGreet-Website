@@ -32,7 +32,28 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  return NextResponse.json({ success: true, application: data })
+  // Mint short-lived signed URLs for the uploaded files so the admin
+  // page can render them without exposing the bucket publicly.
+  let resume_signed_url: string | null = null
+  let video_signed_url: string | null = null
+  const expiresIn = 60 * 60 // 1 hour
+  if (data.resume_path) {
+    const { data: s } = await supabaseAdmin.storage
+      .from('applications')
+      .createSignedUrl(data.resume_path, expiresIn)
+    resume_signed_url = s?.signedUrl || null
+  }
+  if (data.video_path) {
+    const { data: s } = await supabaseAdmin.storage
+      .from('applications')
+      .createSignedUrl(data.video_path, expiresIn)
+    video_signed_url = s?.signedUrl || null
+  }
+
+  return NextResponse.json({
+    success: true,
+    application: { ...data, resume_signed_url, video_signed_url },
+  })
 }
 
 export async function PATCH(

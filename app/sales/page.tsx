@@ -110,7 +110,7 @@ export default function SalesHome() {
     callList.push({ ...l, reason: 'hot' })
   }
 
-  // Filter cal bookings to today only — anything tomorrow+ shows in
+  // Filter cal bookings to today only - anything tomorrow+ shows in
   // a separate "Upcoming demos" section so today's view stays tight.
   const calToday = (data.cal_bookings || []).filter((b) => {
     const start = new Date(b.start_iso)
@@ -147,7 +147,7 @@ export default function SalesHome() {
           </motion.div>
         )}
 
-        {/* Owed banner — biggest number on the page, the thing reps care about */}
+        {/* Owed banner - biggest number on the page, the thing reps care about */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
@@ -174,7 +174,7 @@ export default function SalesHome() {
           </div>
         </motion.div>
 
-        {/* Call list — the actual workday */}
+        {/* Call list - the actual workday */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE, delay: 0.05 }}
@@ -260,7 +260,7 @@ export default function SalesHome() {
           )}
         </motion.div>
 
-        {/* Upcoming demos from Cal.com — only if rep has connected. */}
+        {/* Upcoming demos from Cal.com - only if rep has connected. */}
         {calLater.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -291,7 +291,7 @@ export default function SalesHome() {
           </motion.div>
         )}
 
-        {/* Active deals — only if any. Small, just a heads-up. */}
+        {/* Active deals - only if any. Small, just a heads-up. */}
         {data.deals.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}

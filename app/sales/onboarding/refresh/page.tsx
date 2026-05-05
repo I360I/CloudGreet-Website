@@ -22,7 +22,7 @@ export default function ConnectRefreshPage() {
      return
     }
    } catch { /* fall through */ }
-   // Couldn't refresh — send them back to /sales so they can retry.
+   // Couldn't refresh - send them back to /sales so they can retry.
    window.location.href = '/sales'
   })()
  }, [])

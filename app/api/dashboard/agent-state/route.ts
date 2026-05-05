@@ -8,8 +8,8 @@ export const runtime = 'nodejs'
 /**
  * GET /api/dashboard/agent-state
  *
- * Returns the *live* state of the business's Retell agent — voice id,
- * voice speed, begin_message, general_prompt — read straight from
+ * Returns the *live* state of the business's Retell agent - voice id,
+ * voice speed, begin_message, general_prompt - read straight from
  * Retell's API instead of the local DB. Used by /dashboard/settings
  * to display "this is what your agent is saying right now" instead
  * of "this is what we have in our DB" (which can drift if a save
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
  }
 
- // Resolve the agent id — businesses.retell_agent_id, falling back to ai_agents.
+ // Resolve the agent id - businesses.retell_agent_id, falling back to ai_agents.
  const { data: biz } = await supabaseAdmin
   .from('businesses')
   .select('retell_agent_id')

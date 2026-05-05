@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 /**
  * POST /api/sales/leads/[id]/notes  { body: string }
  *
- * Add a timestamped note to a lead's thread (rep's own notes —
+ * Add a timestamped note to a lead's thread (rep's own notes -
  * other reps don't see them). Authorization: caller must own the
  * lead_assignment.
  */

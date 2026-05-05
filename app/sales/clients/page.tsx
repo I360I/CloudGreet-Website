@@ -40,7 +40,7 @@ function subscriptionPill(status: string | null) {
 }
 
 const dollars = (cents: number | null | undefined) =>
-  cents == null ? '—' : `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+  cents == null ? '-' : `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 
 export default function SalesClientsPage() {
   const [clients, setClients] = useState<Client[]>([])
@@ -133,7 +133,7 @@ export default function SalesClientsPage() {
                             c.subscription_status === 'trial'
                           const priceLabel = c.monthly_price_cents != null
                             ? `${dollars(c.monthly_price_cents)}/mo`
-                            : '—/mo'
+                            : '-/mo'
                           if (onTrial && c.monthly_price_cents != null) {
                             return (
                               <span className="tabular-nums line-through text-gray-400">

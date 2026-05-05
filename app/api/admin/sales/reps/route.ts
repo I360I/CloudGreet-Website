@@ -9,11 +9,11 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * GET — list every sales rep with the headline numbers admin needs:
+ * GET - list every sales rep with the headline numbers admin needs:
  *   { id, email, name, status, mtd_closes, mtd_commission_cents,
  *     lifetime_commission_cents, stripe_connect_payouts_enabled }
  *
- * POST — invite a new rep by email. Creates a one-time token,
+ * POST - invite a new rep by email. Creates a one-time token,
  * sends them an email with the setup link. The rep account itself
  * doesn't exist until they accept the invite.
  */
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ error: `Auth failed: ${auth.error || 'unknown'}` }, { status: 401 })
  }
  if (!auth.userId) {
-  return NextResponse.json({ error: 'Token has no userId — sign out and back in.' }, { status: 401 })
+  return NextResponse.json({ error: 'Token has no userId - sign out and back in.' }, { status: 401 })
  }
 
  const body = await request.json().catch(() => ({})) as { email?: string; name?: string }
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
    { status: 409 },
   )
  }
- // Also block on an open invite for the same email — otherwise we
+ // Also block on an open invite for the same email - otherwise we
  // pile up multiple valid tokens and only the first one consumed
  // creates a user; subsequent ones become dead links.
  const { data: openInvite } = await supabaseAdmin
@@ -195,7 +195,7 @@ Once you're set up, you'll see your lead list, a close-submission form, and your
 
 Questions? Reply to this email.
 
-— CloudGreet`,
+- CloudGreet`,
    })
    emailSent = true
   } catch (e) {
@@ -210,6 +210,6 @@ Questions? Reply to this email.
   emailSent,
   message: emailSent
    ? `Invite sent to ${email}.`
-   : `Invite created — RESEND_API_KEY isn't set, so copy this link and send it manually: ${acceptUrl}`,
+   : `Invite created - RESEND_API_KEY isn't set, so copy this link and send it manually: ${acceptUrl}`,
  })
 }

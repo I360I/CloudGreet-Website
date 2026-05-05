@@ -47,15 +47,15 @@ export async function GET(request: NextRequest) {
  // signed-in user's businessId. Without this check an attacker could
  // craft a Google OAuth URL with state=<victim's-business-id>, complete
  // the flow under their own Google account, and have THEIR tokens saved
- // to the victim's business — granting them full calendar access to
+ // to the victim's business - granting them full calendar access to
  // someone else's tenant.
  const auth = await requireAuth(request)
  if (!auth.success || !auth.businessId) {
- logger.warn('Calendar callback rejected — no signed-in user', { businessId })
+ logger.warn('Calendar callback rejected - no signed-in user', { businessId })
  return NextResponse.redirect(`${errorRedirect}&reason=not_signed_in`)
  }
  if (auth.businessId !== businessId) {
- logger.warn('Calendar callback rejected — state businessId mismatch', {
+ logger.warn('Calendar callback rejected - state businessId mismatch', {
   state: businessId, jwt: auth.businessId,
  })
  return NextResponse.redirect(`${errorRedirect}&reason=tenant_mismatch`)

@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
  * POST /api/sales/scrape/[id]/promote  { result_ids?: string[] }
  *
  * Manual promote button. Most rep scrapes auto-promote at the end
- * of the runner — this endpoint exists as a fallback in case
+ * of the runner - this endpoint exists as a fallback in case
  * something failed mid-job, or for re-promote after admin tweaks.
  *
  * Auth: caller must own the scrape job (params.rep_id matches).

@@ -7,7 +7,7 @@ import type { ScrapeParams, ScrapeRecord, SourceDefinition } from './types'
  * starting point is a free-text query against Places API instead of a
  * public license CSV.
  *
- * Owner name is always null — Google Places doesn't expose it.
+ * Owner name is always null - Google Places doesn't expose it.
  *
  * Cost: each Text Search Pro call returns up to 20 places at ~$0.035.
  * A typical 100-result pull = 5 calls = ~$0.18. Well inside Google's

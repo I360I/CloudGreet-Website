@@ -42,7 +42,7 @@ export async function runScrapeJob(jobId: string): Promise<void> {
   .eq('id', jobId)
 
  // Build the dedupe sets up front. We accept that very-large workspaces
- // (>50k leads) may incur a few-second startup cost — fine for a job
+ // (>50k leads) may incur a few-second startup cost - fine for a job
  // that takes 30-90s to run.
  const seenPhones = new Set<string>()
  const seenPlaceIds = new Set<string>()
@@ -57,7 +57,7 @@ export async function runScrapeJob(jobId: string): Promise<void> {
    if (p) seenPhones.add(p)
   }
 
-  // Within scrape_results across the last 90d — catches "rescraping the
+  // Within scrape_results across the last 90d - catches "rescraping the
   // same listing" before it gets promoted, plus already-promoted ones.
   const ninetyAgo = new Date(Date.now() - 90 * 86_400_000).toISOString()
   const { data: recentResults } = await supabaseAdmin
@@ -130,7 +130,7 @@ export async function runScrapeJob(jobId: string): Promise<void> {
   await flush()
 
   // Auto-promote into leads when this scrape was run by a rep. This
-  // skips the manual "Promote" step — results go straight into their
+  // skips the manual "Promote" step - results go straight into their
   // /sales/leads list with auto-claim. Idempotent: results that
   // already have a promoted_lead_id are skipped.
   const repId = (params as any)?.rep_id as string | undefined

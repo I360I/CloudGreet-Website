@@ -39,7 +39,7 @@ export type ConvertCloseResult = {
   business: { id: string; business_name: string }
   user: { id: string; email: string }
   close_id: string
-  /** Plaintext password — only returned on the first conversion. Empty on idempotent re-call. */
+  /** Plaintext password - only returned on the first conversion. Empty on idempotent re-call. */
   temp_password: string
 }
 
@@ -130,7 +130,7 @@ export async function convertCloseToClient(
 
   // If a user already exists with this email, see if it's a client
   // we already provisioned (typical when a rep ran "Send booking link"
-  // first, then "Send payment link" later — same prospect, same email).
+  // first, then "Send payment link" later - same prospect, same email).
   // When the existing business is owned by the same rep, link the
   // current close to it instead of failing with a 409.
   const { data: existingUser } = await supabaseAdmin
@@ -146,7 +146,7 @@ export async function convertCloseToClient(
         .eq('id', existingUser.business_id)
         .maybeSingle()
       if (existingBiz && existingBiz.rep_id === close.rep_id) {
-        // Same rep, same prospect — fold this close into the existing
+        // Same rep, same prospect - fold this close into the existing
         // business and advance status.
         if (input.stripeCustomerId) {
           await supabaseAdmin

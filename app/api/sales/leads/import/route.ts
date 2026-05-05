@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 /**
  * POST /api/sales/leads/import
  *
- * Body: { csv: string } — comma-separated, header row required.
+ * Body: { csv: string } - comma-separated, header row required.
  * Recognized columns (case-insensitive): business_name, contact_name,
  * phone, email, notes. business_name is required per row.
  *

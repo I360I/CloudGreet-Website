@@ -4,7 +4,7 @@ import { preFilterContractor, googleConfirmsTrade } from './quality'
 import type { ScrapeParams, ScrapeRecord, SourceDefinition } from './types'
 
 /**
- * Texas Department of Agriculture — Structural Pest Control Service.
+ * Texas Department of Agriculture - Structural Pest Control Service.
  *
  * TDA publishes a CSV of every active commercial pest control business
  * with license #, legal business name, DBA, county, operator (owner),
@@ -66,12 +66,12 @@ async function* runTda(params: ScrapeParams): AsyncGenerator<ScrapeRecord, void,
  for (const r of rows) {
   if (yielded >= limit) break
 
-  // Skip licenses where the expiration date is in the past — we only want
+  // Skip licenses where the expiration date is in the past - we only want
   // active businesses to call.
   const licenseExpired = parseDate(r.LICENSE_EXPIRED)
   if (licenseExpired && licenseExpired.getTime() < Date.now()) continue
 
-  // Location filter — TDA only gives us county, not city.
+  // Location filter - TDA only gives us county, not city.
   if (locationFilter) {
    const county = (r.COUNTY || '').toUpperCase()
    if (!county.includes(locationFilter)) continue
@@ -218,7 +218,7 @@ export const tdaPestControl: SourceDefinition = {
  id: 'tda_pest',
  label: 'TDA · Pest control',
  description:
-  'Texas Department of Agriculture — Commercial Structural Pest Control Businesses. Owner / business / category come from TDA\'s public CSV. Google Places fills in phone, website, and full address.',
+  'Texas Department of Agriculture - Commercial Structural Pest Control Businesses. Owner / business / category come from TDA\'s public CSV. Google Places fills in phone, website, and full address.',
  trade: 'Pest Control',
  run: (params, _opts) => runTda(params),
 }

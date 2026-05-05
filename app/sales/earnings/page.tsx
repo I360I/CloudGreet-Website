@@ -146,7 +146,7 @@ export default function SalesEarningsPage() {
             <WarningCircle weight="fill" className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-medium text-amber-900">
-                Bank not connected — payouts are paused
+                Bank not connected - payouts are paused
               </p>
               <p className="text-xs text-amber-800 mt-1">
                 Commissions still accrue, but Friday transfers skip you until Stripe Connect is finished.
@@ -165,7 +165,7 @@ export default function SalesEarningsPage() {
           <SalesLoadingState />
         ) : (
           <>
-            {/* Owed — hero */}
+            {/* Owed - hero */}
             <motion.div
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, ease: EASE }}
@@ -270,7 +270,7 @@ export default function SalesEarningsPage() {
               )}
             </motion.div>
 
-            {/* Taxes — what's coming at year-end */}
+            {/* Taxes - what's coming at year-end */}
             <TaxCard
               ytdPaidCents={totals?.ytd_paid_cents ?? 0}
               taxYear={totals?.tax_year ?? new Date().getFullYear()}

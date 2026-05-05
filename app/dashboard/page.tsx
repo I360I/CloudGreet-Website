@@ -105,7 +105,7 @@ export default function DashboardPage() {
     if (res.status === 401) {
      setError(
       (json?.error || 'Session not recognized.') +
-      ' If this keeps happening, your user record may not be linked to a business in the database — admin needs to re-link it.',
+      ' If this keeps happening, your user record may not be linked to a business in the database - admin needs to re-link it.',
      )
      return
     }
@@ -124,8 +124,8 @@ export default function DashboardPage() {
  // Demo data is a "what your dashboard will look like" preview for
  // contractors who haven't finished onboarding AND have no real activity
  // yet. As soon as a real Retell number is provisioned (admin set it OR
- // they completed onboarding's number step), the demo goes away — even
- // if no calls have come in yet — because at that point this is a real
+ // they completed onboarding's number step), the demo goes away - even
+ // if no calls have come in yet - because at that point this is a real
  // tenant and showing fake calls would be misleading.
  //
  // We also keep the real business name + id from the API; only the
@@ -177,7 +177,7 @@ export default function DashboardPage() {
  // rather than blocking the UI on an error screen.
  if ((error || !data) && !displayData) {
   // Looks like an auth issue (no businessId, session not recognized,
-  // unauthorized) — usually a stale cookie from being signed in as the
+  // unauthorized) - usually a stale cookie from being signed in as the
   // admin user. Offer a one-click hard reset that wipes cookies and
   // localStorage then sends them back to /login.
   const isAuthIssue = /businessId|session not recognized|unauthorized|no business linked/i.test(error)
@@ -269,7 +269,7 @@ export default function DashboardPage() {
        <RangeSelector range={range} onChange={setRange} />
       </motion.div>
 
-      {/* KPI cards — Total calls is the hero */}
+      {/* KPI cards - Total calls is the hero */}
       <motion.div
        initial="hidden" animate="show"
        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
@@ -474,7 +474,7 @@ function Kpi({
    <div className={`flex items-center justify-between ${hero ? 'mt-3' : ''}`}>
     <div className="flex items-center gap-1 text-xs">
      {isFlat ? (
-      <span className="text-gray-400">— {deltaLabel}</span>
+      <span className="text-gray-400">- {deltaLabel}</span>
      ) : (
       <>
        <span className={`inline-flex items-center gap-0.5 font-medium font-mono ${isUp ? 'text-emerald-600' : 'text-rose-500'}`}>

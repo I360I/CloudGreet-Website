@@ -12,7 +12,7 @@ export const maxDuration = 300
 
 /**
  * Sales-rep proxy for the scraper. The rep's lead_scrape_limit
- * (default 200) is treated as a *daily* total — we sum results_count
+ * (default 200) is treated as a *daily* total - we sum results_count
  * across all of the rep's scrape_jobs created today and cap any new
  * scrape to whatever's left. When the cap is hit reps see a "Request
  * more" link that pings Anthony.
@@ -32,7 +32,7 @@ async function getRepLimit(userId: string): Promise<number> {
 
 async function getDailyUsed(userId: string): Promise<number> {
   // Sum results_count across today's jobs for this rep. We use
-  // params->>rep_id (jsonb) for the filter — same shape as how we
+  // params->>rep_id (jsonb) for the filter - same shape as how we
   // tag jobs on insert.
   const startOfDay = new Date()
   startOfDay.setHours(0, 0, 0, 0)
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     if (/Could not find the table|does not exist/.test(error.message)) {
       return NextResponse.json({
         success: false,
-        error: 'scrape_jobs table missing — run sql/scraper.sql in Supabase.',
+        error: 'scrape_jobs table missing - run sql/scraper.sql in Supabase.',
         migration_required: true,
       }, { status: 500 })
     }

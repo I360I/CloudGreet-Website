@@ -147,7 +147,7 @@ export default function ClientDetailPage() {
  }
 
  const resetPassword = async (customPassword?: string) => {
-  // No confirm() prompt when a custom password is supplied — the user
+  // No confirm() prompt when a custom password is supplied - the user
   // already typed it and pressed save. Random-generate path keeps the
   // confirm so a misclick doesn't invalidate the live password.
   if (!customPassword && !confirm('Generate a new random password for this client? The current one becomes invalid immediately.')) return
@@ -250,7 +250,7 @@ export default function ClientDetailPage() {
         {client.business_name}
        </h1>
        <div className="text-sm text-gray-500 mt-1.5 font-mono">
-        {client.business_type || '—'}
+        {client.business_type || '-'}
         {client.created_at && <> · created {fmtDate(client.created_at)}</>}
        </div>
       </div>
@@ -272,11 +272,11 @@ export default function ClientDetailPage() {
        { label: 'Total calls', value: callTotal.toLocaleString(),
         sub: callTotal > 0 ? `${callAnswerRate}% answered` : 'No call activity', accent: false },
        { label: 'Appointments', value: apptTotal.toLocaleString(),
-        sub: apptTotal > 0 ? `${apptCompleteRate}% completed` : '—', accent: true },
+        sub: apptTotal > 0 ? `${apptCompleteRate}% completed` : '-', accent: true },
        { label: 'Estimated revenue', value: fmtCurrency(activity.revenue.total),
         sub: 'From recorded values', accent: false },
        { label: 'Missed calls', value: activity.calls.missed.toLocaleString(),
-        sub: callTotal > 0 ? `${Math.round((activity.calls.missed / callTotal) * 100)}% of total` : '—', accent: false },
+        sub: callTotal > 0 ? `${Math.round((activity.calls.missed / callTotal) * 100)}% of total` : '-', accent: false },
       ].map((k) => (
        <motion.div
         key={k.label}
@@ -347,7 +347,7 @@ export default function ClientDetailPage() {
       <AgentTuning client={client} hasAgent={!!aiAgent?.retell_agent_id} onPatch={patch} />
      </RisingFade>
 
-     {/* Knowledge base view — read-only mirror of whatever the
+     {/* Knowledge base view - read-only mirror of whatever the
          operator has curated in Retell for this client's agent. */}
      <RisingFade delay={0.19}>
       <KnowledgeBaseCard clientId={id} hasAgent={!!aiAgent?.retell_agent_id} />
@@ -361,7 +361,7 @@ export default function ClientDetailPage() {
        <div className="text-sm text-gray-300 inline-flex items-start gap-2">
         <MapPin className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
         <span>
-         {[client.address, client.city, client.state, client.zip_code].filter(Boolean).join(', ') || '—'}
+         {[client.address, client.city, client.state, client.zip_code].filter(Boolean).join(', ') || '-'}
         </span>
        </div>
       </Panel>
@@ -543,7 +543,7 @@ function ExtractionsPanel({ data }: { data: Record<string, any> }) {
 }
 
 function formatExtractionValue(v: any): string {
- if (v === null || v === undefined || v === '') return '—'
+ if (v === null || v === undefined || v === '') return '-'
  if (typeof v === 'boolean') return v ? 'Yes' : 'No'
  if (typeof v === 'number') return v.toLocaleString()
  if (typeof v === 'string') return v
@@ -774,7 +774,7 @@ function AgentCard({
      <p className="text-sm text-amber-300/90">No Retell agent provisioned for this client yet.</p>
     )}
 
-    {/* Retell phone — always shown, editable. The client dashboard
+    {/* Retell phone - always shown, editable. The client dashboard
         reads this to display "listening on <number>"; without it the
         client sees a "no number provisioned" warning. */}
     <div className="pt-3 border-t border-white/[0.06]">
@@ -826,7 +826,7 @@ function AgentCard({
      )}
     </div>
 
-    {/* Retell agent ID — the canonical link between this client and
+    {/* Retell agent ID - the canonical link between this client and
         the agent that answers their calls. Without this, settings the
         client edits go nowhere. We verify with Retell on save so a
         typo can't be persisted. */}
@@ -923,12 +923,12 @@ function CalcomWebhookStatus({ clientId, webhookId }: { clientId: string; webhoo
   <div className="flex items-center gap-3 flex-wrap">
    {wired ? (
     <span className="inline-flex items-center gap-1.5 text-emerald-300/90 text-[11px]">
-     <CheckCircle2 className="w-3 h-3" /> Booking webhook wired — bookings flow to dashboard
+     <CheckCircle2 className="w-3 h-3" /> Booking webhook wired - bookings flow to dashboard
     </span>
    ) : (
     <>
      <span className="inline-flex items-center gap-1.5 text-amber-300/90 text-[11px]">
-      <AlertCircle className="w-3 h-3" /> Booking webhook not registered — Cal.com bookings won&apos;t hit the dashboard
+      <AlertCircle className="w-3 h-3" /> Booking webhook not registered - Cal.com bookings won&apos;t hit the dashboard
      </span>
      <button
       onClick={rewire}
@@ -1062,7 +1062,7 @@ function ExtractionFieldsSection({ clientId, hasAgent }: { clientId: string; has
        <Input
         value={f.description}
         onChange={(e) => updateField(i, { description: e.target.value })}
-        placeholder="What to extract — Retell uses this as the LLM prompt"
+        placeholder="What to extract - Retell uses this as the LLM prompt"
        />
       </div>
      ))}
@@ -1156,7 +1156,7 @@ function KnowledgeBaseCard({ clientId, hasAgent }: { clientId: string; hasAgent:
    />
    {!linked ? (
     <div className="bg-amber-400/5 border border-amber-400/20 rounded-lg px-3 py-2 text-xs text-amber-300/90">
-     Link a Retell agent above first — once linked, the agent&apos;s knowledge base shows up here.
+     Link a Retell agent above first - once linked, the agent&apos;s knowledge base shows up here.
     </div>
    ) : loading ? (
     <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -1178,7 +1178,7 @@ function KnowledgeBaseCard({ clientId, hasAgent }: { clientId: string; hasAgent:
         )}
        </div>
        {kb.sources.length === 0 ? (
-        <div className="px-4 py-3 text-xs text-gray-500">No sources yet — add some in the Retell dashboard.</div>
+        <div className="px-4 py-3 text-xs text-gray-500">No sources yet - add some in the Retell dashboard.</div>
        ) : (
         <ul className="divide-y divide-white/[0.04]">
          {kb.sources.map((s, i) => (
@@ -1313,7 +1313,7 @@ function AgentTuning({
      <Input
       value={greeting}
       onChange={(e) => setGreeting(e.target.value)}
-      placeholder="Hi, thanks for calling Acme Plumbing — how can I help?"
+      placeholder="Hi, thanks for calling Acme Plumbing - how can I help?"
       maxLength={240}
      />
      <div className="text-[10px] text-gray-600 mt-1">
@@ -1590,7 +1590,7 @@ function AdminActions({
        </GhostButton>
       </div>
       <p className="text-[10px] text-gray-500">
-       Replaces the current password immediately. The plaintext only shows once after save — copy it before closing.
+       Replaces the current password immediately. The plaintext only shows once after save - copy it before closing.
       </p>
      </div>
     )}
@@ -1748,7 +1748,7 @@ function CheckoutLinkModal({
  }
 
  const sampleSms = result
-  ? `Hey, this is the CloudGreet checkout link for ${businessName} — ${result.plan_label}, ${result.amount}. ${result.url}`
+  ? `Hey, this is the CloudGreet checkout link for ${businessName} - ${result.plan_label}, ${result.amount}. ${result.url}`
   : ''
 
  return (
@@ -1995,7 +1995,7 @@ function SalesRepAssignmentCard({
       Assign to
      </label>
      <Select value={selected} onChange={(e) => setSelected(e.target.value)} disabled={!reps}>
-      <option value="">— Unassigned —</option>
+      <option value="">- Unassigned -</option>
       {(reps || []).map((r) => (
        <option key={r.id} value={r.id}>
         {r.name}{r.email ? ` · ${r.email}` : ''}{r.status !== 'active' ? ` (${r.status})` : ''}

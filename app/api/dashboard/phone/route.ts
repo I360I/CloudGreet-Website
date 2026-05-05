@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
  * Returns the live Retell phone number for the signed-in business so
  * the dashboard top bar (and any other widget) can display the real
  * number to call instead of a hardcoded demo. Returns { phone: null }
- * when no Retell number is provisioned yet — UI must handle that.
+ * when no Retell number is provisioned yet - UI must handle that.
  */
 export async function GET(request: NextRequest) {
  const auth = await requireAuth(request)

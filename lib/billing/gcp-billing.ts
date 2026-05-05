@@ -4,16 +4,16 @@ import { logger } from '../monitoring'
 /**
  * Reads real Google Cloud billing data from the BigQuery billing
  * export the user enabled in GCP Console (Detailed usage cost). This
- * is the bit-perfect, post-credits cost — same numbers you'd see in
+ * is the bit-perfect, post-credits cost - same numbers you'd see in
  * the GCP Billing console.
  *
  * Required env:
- *   GCP_BILLING_PROJECT_ID — the project where the billing dataset lives
- *   GCP_BILLING_DATASET    — dataset name (e.g. "billing_export")
- *   GCP_BILLING_SA_JSON    — service account key JSON (raw string)
+ *   GCP_BILLING_PROJECT_ID - the project where the billing dataset lives
+ *   GCP_BILLING_DATASET    - dataset name (e.g. "billing_export")
+ *   GCP_BILLING_SA_JSON    - service account key JSON (raw string)
  *
  * Detailed-export tables are named gcp_billing_export_resource_v1_<billing_account_id>
- * — we don't ask the user to find the suffix, we auto-discover via
+ * - we don't ask the user to find the suffix, we auto-discover via
  * INFORMATION_SCHEMA.TABLES the first time and cache.
  */
 
@@ -87,7 +87,7 @@ export type PlacesSpendBreakdown = {
   end_iso: string
   /** Pre-credit list cost in USD. */
   list_cost_usd: number
-  /** Sum of credit lines (negative) — includes the $200/mo Maps free tier. */
+  /** Sum of credit lines (negative) - includes the $200/mo Maps free tier. */
   credit_usd: number
   /** What you'll actually be billed (list + credits). Always ≥ 0. */
   net_cost_usd: number
@@ -130,7 +130,7 @@ const RANGES = {
 /**
  * Pull Places API spend for a date range. Filters on the Maps Platform
  * service + Places sku descriptions. Credits are summed from the
- * `credits` repeated field (each row has 0..N credit entries — the
+ * `credits` repeated field (each row has 0..N credit entries - the
  * Maps $200 monthly credit, sustained-use discounts, etc).
  */
 export async function getPlacesSpend(

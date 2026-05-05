@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
  mrrCents = price.unit_amount || 0
  }
 
- // Active discount (e.g. 100% off promo) — shape it for the UI so we
+ // Active discount (e.g. 100% off promo) - shape it for the UI so we
  // can show "Free for the first month" or similar in plain English.
  const subDiscount = (activeSubscription as any).discount
  if (subDiscount?.coupon) {

@@ -584,11 +584,11 @@ export default function AdminPhoneInventoryPage() {
  )}
  </div>
  ) : (
- <span className="text-slate-500">—</span>
+ <span className="text-slate-500">-</span>
  )}
  </td>
  <td className="px-6 py-4 text-slate-300">
- {phone.assigned_at ? new Date(phone.assigned_at).toLocaleString() : '—'}
+ {phone.assigned_at ? new Date(phone.assigned_at).toLocaleString() : '-'}
  </td>
  <td className="px-6 py-4">
  {phone.status === 'assigned' && phone.assigned_to ? (
@@ -600,7 +600,7 @@ export default function AdminPhoneInventoryPage() {
  Retell Link
  </Button>
  ) : (
- <span className="text-slate-500">—</span>
+ <span className="text-slate-500">-</span>
  )}
  </td>
  </tr>

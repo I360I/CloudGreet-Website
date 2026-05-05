@@ -30,7 +30,7 @@ function PaymentCancelContent() {
           <p className="text-base text-gray-600 mb-7 leading-relaxed">
             You closed the checkout before completing payment. Nothing was charged
             to your card. If this was a mistake, the same payment link should still
-            work — just check your email or reach out to the rep who sent it.
+            work - just check your email or reach out to the rep who sent it.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">

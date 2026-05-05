@@ -17,7 +17,7 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
  // `string`    = resolved, real number (show "listening on …")
  const [phone, setPhone] = useState<string | null | undefined>(phoneProp)
 
- // Re-resolve the phone whenever the route changes — that way navigating
+ // Re-resolve the phone whenever the route changes - that way navigating
  // between dashboard pages reflects any number that landed since first
  // mount, instead of caching the boot-time result forever.
  const pathname = usePathname() || ''
@@ -37,7 +37,7 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
     const res = await fetchWithAuth('/api/dashboard/phone')
     if (cancelled) return
     if (res.status === 401) {
-     // Auth still warming up — retry up to 3 times.
+     // Auth still warming up - retry up to 3 times.
      if (n < 3) return new Promise((r) => setTimeout(() => attempt(n + 1).then(r), 400))
      setPhone(null); return
     }
@@ -47,7 +47,7 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
     const j = await res.json().catch(() => ({}))
     if (j?.phone) { setPhone(j.phone); return }
     // Got a successful response with no number. If we haven't checked
-    // a few times yet, give the DB a beat and try again — this is the
+    // a few times yet, give the DB a beat and try again - this is the
     // window where admin just saved the number elsewhere.
     if (n < 2) return new Promise((r) => setTimeout(() => attempt(n + 1).then(r), 600))
     setPhone(null)
@@ -69,7 +69,7 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
    <div className="px-4 lg:px-8 py-3 flex items-center justify-between gap-4 flex-wrap">
     <div className="inline-flex items-center gap-2.5">
      {!resolved ? (
-      // Neutral loading state — no warning, no false positive.
+      // Neutral loading state - no warning, no false positive.
       <>
        <span className="w-2 h-2 rounded-full bg-gray-300" />
        <span className="text-xs font-mono text-gray-400 tracking-tight">

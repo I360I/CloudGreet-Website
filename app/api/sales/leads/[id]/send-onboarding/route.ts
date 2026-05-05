@@ -21,7 +21,7 @@ export const runtime = 'nodejs'
  *
  * Defaults monthly=$499 / setup=$899 if not provided. Prospect can
  * still pay later via /api/sales/leads/[id]/payment-link or
- * /api/sales/closes/[id]/payment-link — we just leave the close
+ * /api/sales/closes/[id]/payment-link - we just leave the close
  * in 'pending' status until money lands.
  */
 export async function POST(
@@ -53,14 +53,14 @@ export async function POST(
   const email = String(body?.email || lead.email || '').trim().toLowerCase()
   if (!email) {
     return NextResponse.json({
-      error: "No email — add one to the lead first or pass it in the request.",
+      error: "No email - add one to the lead first or pass it in the request.",
     }, { status: 400 })
   }
   if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
     return NextResponse.json({ error: 'Email looks invalid' }, { status: 400 })
   }
 
-  // Pricing is no longer captured here — the rep negotiates it on the
+  // Pricing is no longer captured here - the rep negotiates it on the
   // demo and sets it when sending the actual payment link. Default to
   // 0 so the close row is valid; the payment-link flow updates it.
   const monthlyCents = 0
@@ -234,7 +234,7 @@ export async function POST(
     }
   } else {
     emailError = 'RESEND_API_KEY not configured'
-    logger.warn('send-onboarding: skipped email — no Resend key', { leadId: lead.id })
+    logger.warn('send-onboarding: skipped email - no Resend key', { leadId: lead.id })
   }
 
   logger.info('Rep sent onboarding email + provisioned client', {

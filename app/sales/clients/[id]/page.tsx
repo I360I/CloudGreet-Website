@@ -185,7 +185,7 @@ export default function SalesClientDetailPage() {
               <div className="font-medium text-amber-900">No AI agent linked yet</div>
               <p className="text-xs text-amber-800 mt-1">
                 Anthony needs to wire a Retell agent to this client before edits go live.
-                Edge cases below still save — they apply once the agent is linked.
+                Edge cases below still save - they apply once the agent is linked.
               </p>
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function SalesClientDetailPage() {
               <p className="text-xs text-gray-500 max-w-md">
                 Add specific situations the agent should handle in particular ways.
                 Each rule appends to the agent&apos;s prompt under a SPECIAL HANDLING
-                section — saved + pushed to Retell instantly.
+                section - saved + pushed to Retell instantly.
               </p>
             </div>
             {!showAdd && (
@@ -363,7 +363,7 @@ export default function SalesClientDetailPage() {
 
         <p className="text-[11px] text-gray-400 mt-4">
           Changes sync to the live agent within seconds. The base prompt + greeting
-          stay locked — these rules layer on top under a SPECIAL HANDLING section.
+          stay locked - these rules layer on top under a SPECIAL HANDLING section.
         </p>
       </section>
     </SalesShell>
@@ -482,7 +482,7 @@ function VoicePanel({
               onChange={(e) => setVoiceId(e.target.value)}
               className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
             >
-              <option value="">— Default —</option>
+              <option value="">- Default -</option>
               {voices.map((v) => (
                 <option key={v.voice_id} value={v.voice_id}>
                   {v.voice_name || v.voice_id}

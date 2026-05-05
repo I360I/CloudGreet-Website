@@ -37,14 +37,14 @@ export async function POST(
   }
 
   // Verify signature (Cal.com sends HMAC-SHA256 hex of the raw body).
-  // Refuse the request entirely when no secret is on file — without
+  // Refuse the request entirely when no secret is on file - without
   // that we'd be accepting unsigned payloads from anyone who can guess
   // a businessId. The only legitimate path is: admin runs Cal.com
   // connect or rewire, which always stores a secret.
   const signature = request.headers.get('x-cal-signature-256') || ''
   const secret = business.cal_com_webhook_secret
   if (!secret) {
-   logger.warn('Cal.com webhook rejected — no signing secret on business', { businessId })
+   logger.warn('Cal.com webhook rejected - no signing secret on business', { businessId })
    return NextResponse.json(
     { error: 'No signing secret configured for this tenant. Re-run Cal.com connect.' },
     { status: 401 },
@@ -110,7 +110,7 @@ async function upsertFromBooking(
  const uid: string | undefined = payload?.uid
  if (!uid) return
 
- // If we created this booking ourselves (metadata stamp), skip — DB row already exists.
+ // If we created this booking ourselves (metadata stamp), skip - DB row already exists.
  const cgId = payload?.metadata?.cloudgreetAppointmentId
  if (cgId) return
 

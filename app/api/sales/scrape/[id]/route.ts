@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * GET /api/sales/scrape/[id] — job + its scrape_results, scoped to
+ * GET /api/sales/scrape/[id] - job + its scrape_results, scoped to
  * the calling rep (the params.rep_id tag set on creation).
  */
 export async function GET(

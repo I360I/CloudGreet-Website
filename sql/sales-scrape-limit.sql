@@ -1,4 +1,4 @@
--- Per-rep cap on the lead scraper. Treated as a *daily* total — the
+-- Per-rep cap on the lead scraper. Treated as a *daily* total - the
 -- API sums results_count across the rep's scrape_jobs created today
 -- and caps any new scrape to the remaining budget.
 --

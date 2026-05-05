@@ -196,7 +196,7 @@ export async function DELETE(
  if (!auth.success) return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 })
 
  // Block hard-delete if the rep has any commission history. Audit
- // trail must survive — they got paid, we owe them a 1099 next year.
+ // trail must survive - they got paid, we owe them a 1099 next year.
  // Admin must terminate (status='terminated') instead.
  const { count: commissionCount } = await supabaseAdmin
   .from('commission_ledger')
@@ -205,7 +205,7 @@ export async function DELETE(
 
  if ((commissionCount ?? 0) > 0) {
   return NextResponse.json({
-   error: 'This rep has commission history — terminate them instead of deleting (keeps the 1099 trail intact).',
+   error: 'This rep has commission history - terminate them instead of deleting (keeps the 1099 trail intact).',
   }, { status: 409 })
  }
 

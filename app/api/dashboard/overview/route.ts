@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
    return NextResponse.json({
     error: !auth.success
      ? `Auth failed: ${auth.error || 'unknown'}`
-     : 'Auth succeeded but no businessId in token — try signing out and back in',
+     : 'Auth succeeded but no businessId in token - try signing out and back in',
    }, { status: 401 })
   }
   const businessId = auth.businessId

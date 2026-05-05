@@ -12,14 +12,14 @@ export const runtime = 'nodejs'
  *
  * Aggregates everything the rep's home dashboard needs in a single
  * round-trip:
- *   · me           — name + payouts_enabled
- *   · todays       — leads with follow_up_at within today
- *   · overdue      — leads with follow_up_at < today (missed)
- *   · interested   — status='interested'/'demo_scheduled'/'proposal_sent'
- *   · stale        — claimed >14d ago, never touched, status='new'
- *   · pipeline     — counts by status
- *   · deals        — closes in pending / invoice_sent
- *   · earnings     — totals card data (mtd / owed / mrr / lifetime)
+ *   · me           - name + payouts_enabled
+ *   · todays       - leads with follow_up_at within today
+ *   · overdue      - leads with follow_up_at < today (missed)
+ *   · interested   - status='interested'/'demo_scheduled'/'proposal_sent'
+ *   · stale        - claimed >14d ago, never touched, status='new'
+ *   · pipeline     - counts by status
+ *   · deals        - closes in pending / invoice_sent
+ *   · earnings     - totals card data (mtd / owed / mrr / lifetime)
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
     const me = meRes.data
     const repProfile = repProfileRes.data
 
-    // Cal.com upcoming bookings — best-effort, returns empty if no
+    // Cal.com upcoming bookings - best-effort, returns empty if no
     // key set or the API call fails.
     const calBookings = repProfile?.cal_api_key
       ? await fetchUpcomingCalBookings(repProfile.cal_api_key, { take: 10 })

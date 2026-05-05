@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
  * GET /api/me/profile  → current user's first/last/name/phone/email
  * PATCH /api/me/profile → edit your own profile (signed-in user)
  *
- * Email is read-only here — changes route through a separate verify
+ * Email is read-only here - changes route through a separate verify
  * flow (not built yet).
  */
 

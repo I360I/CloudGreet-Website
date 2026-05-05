@@ -84,7 +84,7 @@ export async function getStripeMrrSummary(): Promise<StripeMrrSummary> {
     })
 
     // A 100%-off coupon makes Stripe report status='active' even though
-    // the customer is paying nothing this period — counting that as
+    // the customer is paying nothing this period - counting that as
     // "Paid" makes the dashboard lie. Recategorize as trialing so the
     // headline still gets the MRR (committed value) but the breakdown
     // honestly distinguishes paid from comped/trial.
@@ -101,13 +101,13 @@ export async function getStripeMrrSummary(): Promise<StripeMrrSummary> {
     } else if (sub.status === 'past_due') {
       summary.pastDueCount += 1
       summary.pastDueMrrCents += monthlyCents
-      // past_due still counts toward MRR — the customer is on the hook,
+      // past_due still counts toward MRR - the customer is on the hook,
       // Stripe is just retrying. If we exclude these, MRR jitters down
       // every time a card fails and recovers.
       summary.totalMrrCents += monthlyCents
       summary.paidMrrCents += monthlyCents
     }
-    // Other statuses (paused, incomplete) deliberately skipped — they
+    // Other statuses (paused, incomplete) deliberately skipped - they
     // aren't generating revenue and shouldn't inflate the headline.
   }
 

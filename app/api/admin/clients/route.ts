@@ -109,7 +109,7 @@ async function getClientsList(request: NextRequest) {
 
 
 /**
- * POST /api/admin/clients — admin-only.
+ * POST /api/admin/clients - admin-only.
  * Creates: custom_users (owner) + businesses + phone_numbers (Retell, optional).
  *
  * Order matters because businesses.owner_id is NOT NULL:
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
    return NextResponse.json({ error: 'Failed to create business', detail: bErr?.message }, { status: 500 })
   }
 
-  // 3) link — if this fails the business exists with no usable owner,
+  // 3) link - if this fails the business exists with no usable owner,
   // and that owner can't log in (their JWT will have businessId='').
   // Roll the whole creation back so the admin doesn't end up with a
   // half-built tenant they have to clean up by hand.
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
   if (linkErr) {
    await supabaseAdmin.from('businesses').delete().eq('id', business.id)
    await supabaseAdmin.from('custom_users').delete().eq('id', user.id)
-   logger.error('Failed to link user to business — rolled back', {
+   logger.error('Failed to link user to business - rolled back', {
     error: linkErr.message, businessId: business.id, userId: user.id,
    })
    return NextResponse.json({

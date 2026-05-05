@@ -36,7 +36,7 @@ export function demoCalls(): Call[] {
    id: 'demo-3', call_id: 'demo-3', from_number: '+15125559912',
    caller_name: 'Priya Shah', duration: 198, created_at: hoursAgo(5),
    status: 'completed', sentiment: 'positive',
-   summary: 'Emergency — no AC, infant in house. Booked same-day for 4pm.',
+   summary: 'Emergency - no AC, infant in house. Booked same-day for 4pm.',
    transcript: null, recording_url: null, outcome: 'booked',
   },
   {

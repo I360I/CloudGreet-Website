@@ -23,7 +23,7 @@ export type Call = {
 export type Outcome = 'booked' | 'message' | 'dropped'
 
 function formatExtraction(v: any): string {
- if (v === null || v === undefined || v === '') return '—'
+ if (v === null || v === undefined || v === '') return '-'
  if (typeof v === 'boolean') return v ? 'Yes' : 'No'
  if (typeof v === 'number') return v.toLocaleString()
  if (typeof v === 'string') return v

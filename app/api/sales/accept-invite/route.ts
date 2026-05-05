@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
  if (!invite) return NextResponse.json({ error: 'Invite not found or already consumed' }, { status: 404 })
  if (invite.consumed_at) return NextResponse.json({ error: 'This invite has already been used' }, { status: 410 })
  if (new Date(invite.expires_at) < new Date()) {
-  return NextResponse.json({ error: 'This invite has expired — ask the admin for a new one' }, { status: 410 })
+  return NextResponse.json({ error: 'This invite has expired - ask the admin for a new one' }, { status: 410 })
  }
 
  // Block if (somehow) an account exists at this email already.

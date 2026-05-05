@@ -34,7 +34,7 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
  try {
- // BusinessId is sourced ONLY from the JWT — accepting it from the
+ // BusinessId is sourced ONLY from the JWT - accepting it from the
  // query string was the cross-tenant leak vector. Any client could
  // pass another business's UUID and pull recordings/transcripts.
  const authResult = await requireAuth(request)

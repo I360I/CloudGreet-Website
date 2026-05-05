@@ -1,4 +1,4 @@
--- Leads pipeline. Idempotent — safe to run on a fresh DB or one that
+-- Leads pipeline. Idempotent - safe to run on a fresh DB or one that
 -- already has a partial `leads` table from an earlier attempt.
 
 create table if not exists public.leads (

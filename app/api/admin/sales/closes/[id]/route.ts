@@ -69,7 +69,7 @@ export async function PATCH(
  * DELETE /api/admin/sales/closes/[id]
  *
  * Hard delete is only allowed if no commission rows are tied to
- * the close — otherwise we keep the row for audit. Use status =
+ * the close - otherwise we keep the row for audit. Use status =
  * 'cancelled' or 'rejected' for normal flow.
  */
 export async function DELETE(
@@ -88,7 +88,7 @@ export async function DELETE(
 
   if ((count ?? 0) > 0) {
     return NextResponse.json(
-      { error: 'Close has commission history — cancel it instead of deleting' },
+      { error: 'Close has commission history - cancel it instead of deleting' },
       { status: 409 },
     )
   }

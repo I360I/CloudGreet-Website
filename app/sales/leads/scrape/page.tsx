@@ -178,7 +178,7 @@ export default function SalesScrapePage() {
         />
 
         <p className="text-sm text-gray-500 mb-4 max-w-xl">
-          Pull verified contractors from public licensing databases. Results auto-land in your leads list as they finish — no extra click needed.
+          Pull verified contractors from public licensing databases. Results auto-land in your leads list as they finish - no extra click needed.
         </p>
 
         {!googleConfigured && (
@@ -187,7 +187,7 @@ export default function SalesScrapePage() {
             <div>
               <span className="font-medium">Phone numbers won&apos;t fill in.</span>{' '}
               <span className="text-amber-800">
-                Google Places enrichment is off — TDLR doesn&apos;t expose phones,
+                Google Places enrichment is off - TDLR doesn&apos;t expose phones,
                 so you&apos;ll get business names + license info but you&apos;ll
                 need to look up phones yourself. Tell Anthony to set
                 <code className="font-mono text-xs bg-amber-100 px-1 rounded mx-1">GOOGLE_PLACES_API_KEY</code>
@@ -595,7 +595,7 @@ function JobDrawer({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2 flex-wrap">
                         <div className="text-sm font-medium text-gray-900 truncate">
-                          {r.business_name || '—'}
+                          {r.business_name || '-'}
                         </div>
                         {promoted && (
                           <span className="text-[10px] font-mono uppercase text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-0.5">

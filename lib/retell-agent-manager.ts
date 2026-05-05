@@ -29,7 +29,7 @@ export interface BusinessAgentConfig {
   aiAdditionalInstructions?: string | null;
   voiceId?: string | null;
   voiceSpeed?: number | null;
-  /** Rep-managed edge cases — appended as SPECIAL HANDLING in the prompt. */
+  /** Rep-managed edge cases - appended as SPECIAL HANDLING in the prompt. */
   agentEdgeCases?: Array<{ label?: string; instruction: string }> | null;
 }
 
@@ -73,7 +73,7 @@ class RetellAgentManager {
 
       // Step 1: create a Retell-managed LLM with the prompt + greeting.
       // This was previously a custom-llm pointed at a placeholder URL
-      // — which meant Retell had no LLM to update and every greeting
+      // - which meant Retell had no LLM to update and every greeting
       // change silently failed. Using retell-llm from creation lets
       // /dashboard/settings actually drive the live agent.
       const createLlmRes = await fetch('https://api.retellai.com/create-retell-llm', {
@@ -204,7 +204,7 @@ class RetellAgentManager {
    * Retell keeps API edits as a new agent version; phone numbers
    * pinned to a specific version stay on the old one until re-bound.
    * We do both:
-   *   1. POST /publish-agent/{id} (best-effort — may be a no-op)
+   *   1. POST /publish-agent/{id} (best-effort - may be a no-op)
    *   2. For each phone bound to this agent, PATCH the phone with
    *      inbound_agent_id set to the same id and version cleared.
    *      That nudges Retell to point at the latest version.
@@ -241,7 +241,7 @@ class RetellAgentManager {
         cache: 'no-store',
       })
       if (!phonesRes.ok) {
-        t(`list-phone-numbers ${phonesRes.status} — couldn't refresh phone bindings`)
+        t(`list-phone-numbers ${phonesRes.status} - couldn't refresh phone bindings`)
         return
       }
       const phones = (await phonesRes.json().catch(() => [])) as any[]
@@ -252,7 +252,7 @@ class RetellAgentManager {
           p?.agent_id === retellAgentId,
       )
       if (bound.length === 0) {
-        t('no phone numbers route to this agent — re-bind skipped')
+        t('no phone numbers route to this agent - re-bind skipped')
         return
       }
       for (const p of bound) {
@@ -359,7 +359,7 @@ class RetellAgentManager {
 
 
       if (!agentData?.retell_agent_id) {
-        t('no agent id in ai_agents or businesses — nothing to update')
+        t('no agent id in ai_agents or businesses - nothing to update')
         throw new Error('No Retell agent linked to this business. Set the agent in /admin/clients/[id] first.')
       }
 
@@ -377,7 +377,7 @@ class RetellAgentManager {
       // *agent*, while greeting (begin_message) + system prompt
       // (general_prompt) live on the *retell-llm* resource the agent
       // references. Updating only the agent (the previous behavior)
-      // silently ignored greeting + prompt — that's why callers kept
+      // silently ignored greeting + prompt - that's why callers kept
       // hearing the old greeting after a save.
 
       // 1) Inspect the agent so we can find its LLM id.
@@ -401,16 +401,16 @@ class RetellAgentManager {
       }
 
       // No auto-migration. If the agent has no Retell-managed LLM, the
-      // contractor's prompt must already live in their custom backend —
+      // contractor's prompt must already live in their custom backend -
       // we wouldn't be able to safely create one without overwriting
       // their tuning. Skip the LLM patch with a clear message.
       if (!llmId && responseEngineType !== 'retell-llm') {
-        t(`agent uses ${responseEngineType ?? 'unknown'} engine — greeting can't be updated via Retell API`)
+        t(`agent uses ${responseEngineType ?? 'unknown'} engine - greeting can't be updated via Retell API`)
       }
 
       // 2a) Only patch general_prompt when the caller explicitly
       //     supplied edge cases. Reps editing the rep-portal edge-case
-      //     list passes agentEdgeCases — that's when we regenerate the
+      //     list passes agentEdgeCases - that's when we regenerate the
       //     prompt + push to Retell. Voice/greeting/name saves never
       //     trigger this branch, preserving any hand-tuning the
       //     contractor may have done in Retell directly.
@@ -437,7 +437,7 @@ class RetellAgentManager {
           t(`update-retell-llm prompt ok: ${(mergedConfig.agentEdgeCases || []).length} edge case(s)`)
         } catch (e) {
           // Surface the error but don't abort the rest of the agent
-          // sync — voice/greeting changes still apply.
+          // sync - voice/greeting changes still apply.
           t(`prompt push threw: ${e instanceof Error ? e.message : 'Unknown'}`)
         }
       }
@@ -562,7 +562,7 @@ class RetellAgentManager {
       // and look up which phone number(s) it's bound to. If our agent
       // isn't actually attached to a phone number in Retell, the
       // contractor's calls land on a *different* agent and our updates
-      // are invisible — the trace makes that mismatch obvious.
+      // are invisible - the trace makes that mismatch obvious.
       try {
         const verifyAgentRes = await fetch(
           `https://api.retellai.com/get-agent/${agentData.retell_agent_id}`,
@@ -584,7 +584,7 @@ class RetellAgentManager {
               p?.agent_id === agentData.retell_agent_id,
           )
           if (bound.length === 0) {
-            t('⚠ no Retell phone numbers route to this agent — calls hit a different agent')
+            t('⚠ no Retell phone numbers route to this agent - calls hit a different agent')
           } else {
             t(`bound to ${bound.length} number(s): ${bound.map((p) => p.phone_number || p.phone_number_pretty || '?').join(', ')}`)
           }
@@ -924,7 +924,7 @@ class RetellAgentManager {
     incoming: Partial<BusinessAgentConfig>
   ): Promise<BusinessAgentConfig> {
     // Use select('*') so a missing optional column (voice_id, voice_speed,
-    // ai_* — all from later migrations the operator may not have applied
+    // ai_* - all from later migrations the operator may not have applied
     // yet) doesn't blow up the entire merge. Any field below that's
     // absent simply reads as undefined and falls through to defaults.
     const { data, error } = await supabaseAdmin

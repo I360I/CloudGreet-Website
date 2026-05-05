@@ -29,7 +29,7 @@ export async function GET(
   const clientId = params.id
   const warnings: string[] = []
 
-  // Business is required — without it there's nothing to show.
+  // Business is required - without it there's nothing to show.
   const { data: business, error: businessError } = await supabaseAdmin
    .from('businesses')
    .select('*')
@@ -46,7 +46,7 @@ export async function GET(
    )
   }
 
-  // Owner — auth lives in custom_users.
+  // Owner - auth lives in custom_users.
   let owner: any = null
   try {
    const { data: ownerRow } = await supabaseAdmin
@@ -220,7 +220,7 @@ export async function GET(
 }
 
 /**
- * PATCH — admin can edit business profile + status fields without
+ * PATCH - admin can edit business profile + status fields without
  * routing through the client-side update flow. Whitelist for safety.
  */
 export async function PATCH(
@@ -291,7 +291,7 @@ export async function PATCH(
   }
 
   // If anything that affects the live Retell agent changed, push it to Retell.
-  // We swallow the error onto a warning so the DB save isn't lost — admin
+  // We swallow the error onto a warning so the DB save isn't lost - admin
   // sees the warning and can retry the agent push.
   let agentSyncWarning: string | null = null
   const tunedFields = Object.keys(update).filter((k) => AGENT_TUNING_FIELDS.has(k))

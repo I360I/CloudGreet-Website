@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
    if (/Could not find the table|does not exist/.test(error.message)) {
     return NextResponse.json({
      success: false,
-     error: 'scrape_jobs table missing — run sql/scraper.sql in Supabase.',
+     error: 'scrape_jobs table missing - run sql/scraper.sql in Supabase.',
      migration_required: true,
     }, { status: 500 })
    }

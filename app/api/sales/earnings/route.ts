@@ -19,7 +19,7 @@ export const runtime = 'nodejs'
  *
  * MRR is the sum of agreed_monthly_cents across the rep's active deals
  * (anything past pending). The actual commission ledger is still the
- * source of truth for what we owe — MRR is forward-looking signal.
+ * source of truth for what we owe - MRR is forward-looking signal.
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     const owed = ledger.filter((r) => !r.paid).reduce((s, r) => s + (r.commission_cents || 0), 0)
     const paidOut = lifetime - owed
 
-    // YTD payouts — what Stripe actually moved to the rep's bank in
+    // YTD payouts - what Stripe actually moved to the rep's bank in
     // the current calendar year. This is what matters for the
     // 1099-NEC threshold ($600+).
     const todayForYtd = new Date()
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     // least once (close.status === 'paid'), excluding any whose linked
     // business has since been deactivated. Closes still in
     // 'invoice_sent' (link sent, prospect hasn't paid yet) show up in
-    // the customer list flagged "awaiting first payment" — they don't
+    // the customer list flagged "awaiting first payment" - they don't
     // count toward MRR until money lands.
     const mrr = (closeRows ?? []).reduce((sum: number, c: any) => {
       if (c.status !== 'paid') return sum
@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
       (a, b) => b.commission_total_cents - a.commission_total_cents,
     )
 
-    // Monthly buckets — last 12 months — with two series:
+    // Monthly buckets - last 12 months - with two series:
     //   · mrr_cents      : the rep's MRR at the end of that month, computed
     //                      as the sum of agreed_monthly_cents across closes
     //                      that paid an MRR commission in that month.

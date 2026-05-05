@@ -18,7 +18,7 @@ export const runtime = 'nodejs'
  *
  * The rep clicks the URL, fills out KYC + bank on Stripe-hosted
  * pages, and is redirected back to /sales/onboarding/done. We mark
- * payouts_enabled as true once Stripe webhook confirms — until then,
+ * payouts_enabled as true once Stripe webhook confirms - until then,
  * commissions still accrue but Friday auto-payout skips them.
  */
 export async function POST(request: NextRequest) {
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
  try {
   if (!accountId) {
    // Recovery path: if a previous attempt created the Stripe account
-   // but our DB write failed, the account is "orphaned" — Stripe has
+   // but our DB write failed, the account is "orphaned" - Stripe has
    // it but we don't know about it. Look for one tagged with this
    // user's id in metadata before creating a fresh one to avoid
    // accumulating duplicates.
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const orphan = list.data.find((a) => a.metadata?.cloudgreet_user_id === user.id)
     if (orphan) accountId = orphan.id
    } catch {
-    // List can fail on very large platforms — fall back to creating fresh.
+    // List can fail on very large platforms - fall back to creating fresh.
    }
 
    if (!accountId) {
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET — refresh the rep's payouts_enabled flag from Stripe.
+ * GET - refresh the rep's payouts_enabled flag from Stripe.
  * Useful after they finish the onboarding flow without webhooks.
  */
 export async function GET(request: NextRequest) {

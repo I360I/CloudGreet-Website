@@ -12,7 +12,7 @@ const ALLOWED_STATUSES = new Set([
 ])
 
 /**
- * GET /api/sales/leads/[id] — full lead + workflow + note thread.
+ * GET /api/sales/leads/[id] - full lead + workflow + note thread.
  */
 export async function GET(
   request: NextRequest,
@@ -69,7 +69,7 @@ export async function GET(
  *   { status?, disposition?, follow_up_at?: string|null,
  *     touched?: boolean }
  *
- * `touched: true` bumps touch_count and stamps last_touched_at — call
+ * `touched: true` bumps touch_count and stamps last_touched_at - call
  * it whenever the rep dials or messages the lead.
  */
 export async function PATCH(
@@ -92,7 +92,7 @@ export async function PATCH(
   }
 
   // When a call is marked as voicemail, auto-schedule a follow-up
-  // in 2 days (9am) — unless the rep is also setting follow_up_at
+  // in 2 days (9am) - unless the rep is also setting follow_up_at
   // explicitly in this request, or one is already on the row.
   if (update.status === 'voicemail' && body.follow_up_at === undefined) {
     const { data: cur } = await supabaseAdmin
@@ -157,7 +157,7 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/sales/leads/[id] — drop the assignment so the lead
+ * DELETE /api/sales/leads/[id] - drop the assignment so the lead
  * disappears from the rep's list. Doesn't delete the underlying lead
  * row (other reps / admin views may reference it).
  */

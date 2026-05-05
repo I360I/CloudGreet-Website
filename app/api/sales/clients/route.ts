@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
  * GET /api/sales/clients
  *
  * Lists every business this rep brought in. Tolerant of the
- * agent_edge_cases column not existing yet — falls back to a
+ * agent_edge_cases column not existing yet - falls back to a
  * narrower select and reports migration_needed: 'agent-edge-cases'
  * so the UI can prompt for the migration.
  */
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
         ...b,
         // Use the business's stored price if set; otherwise pick up the
         // negotiated price from the most recent close so reps see the
-        // actual quoted amount instead of '—'.
+        // actual quoted amount instead of '-'.
         monthly_price_cents: b.monthly_price_cents ?? (fallback?.monthly || null),
         setup_fee_cents: b.setup_fee_cents ?? (fallback?.setup || null),
         agent_edge_cases: b.agent_edge_cases ?? [],

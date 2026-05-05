@@ -11,7 +11,7 @@ import { placesSources } from './google-places-discovery'
  * Single registry of every scraper source. Add new sources here once and
  * the API + UI pick them up.
  *
- * Order matters — the rep UI defaults to the first source. We put the
+ * Order matters - the rep UI defaults to the first source. We put the
  * Texas licensing databases first because they're effectively free
  * (no per-record Google Places cost beyond fill-in enrichment), they
  * include the owner's legal name (which Google Places doesn't expose),
@@ -20,17 +20,17 @@ import { placesSources } from './google-places-discovery'
  * for trades that don't have a public Texas license database.
  */
 export const SCRAPER_SOURCES: SourceDefinition[] = [
- // Preferred — Texas licensing databases (free, with owner name)
+ // Preferred - Texas licensing databases (free, with owner name)
  tdlrHvac,
  tdlrElectrical,
  tsbpePlumbing,
  tdaPestControl,
- // Trades without a Texas license database — Google Places only
+ // Trades without a Texas license database - Google Places only
  googleRoofing,
  googlePainting,
  googleHandyman,
  googleLandscaping,
- // Optional — Google Places type-filtered (higher precision, no owner name, costs more)
+ // Optional - Google Places type-filtered (higher precision, no owner name, costs more)
  ...placesSources,
 ]
 

@@ -4,7 +4,7 @@ import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react'
 
-// Force dynamic so Next doesn't try to prerender this — useSearchParams
+// Force dynamic so Next doesn't try to prerender this - useSearchParams
 // requires a request and the page is per-invite anyway.
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +15,7 @@ INDEPENDENT CONTRACTOR AGREEMENT (summary)
    tools, and approach.
 2. Compensation: 50% of every paid invoice from clients you sign,
    for as long as the client stays subscribed. If a client cancels,
-   commission stops at the last paid invoice — no clawbacks on past
+   commission stops at the last paid invoice - no clawbacks on past
    payments.
 3. Setup fees you negotiate get the same 50/50 split.
 4. Payouts every Friday via Stripe Connect direct deposit.

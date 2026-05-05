@@ -16,7 +16,7 @@ export interface RevenueOptimizedConfig {
   maxSilenceSeconds?: number
   escalationMessage?: string
   additionalInstructions?: string | null
-  /** Rep-managed structured snippets — appended as a SPECIAL HANDLING section. */
+  /** Rep-managed structured snippets - appended as a SPECIAL HANDLING section. */
   edgeCases?: Array<{ label: string; instruction: string }>
 }
 
@@ -238,7 +238,7 @@ CLEANING SPECIFIC REVENUE OPTIMIZATION:
     if (lines.length === 0) return ''
     return `
 
-SPECIAL HANDLING (situation-specific instructions from the business owner — follow these exactly when the listed situation comes up; otherwise behave normally):
+SPECIAL HANDLING (situation-specific instructions from the business owner - follow these exactly when the listed situation comes up; otherwise behave normally):
 ${lines.join('\n')}
 `;
   }

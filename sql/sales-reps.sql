@@ -1,13 +1,13 @@
 -- ============================================================
--- Phase 0 — Sales rep + commission schema
+-- Phase 0 - Sales rep + commission schema
 -- ============================================================
 -- New surface area for the commission-only sales team:
---   · sales_reps            — per-rep KYC, Stripe Connect, status
---   · closes                — rep-submitted deal pipeline
---   · commission_ledger     — one row per paid invoice; the source of
+--   · sales_reps            - per-rep KYC, Stripe Connect, status
+--   · closes                - rep-submitted deal pipeline
+--   · commission_ledger     - one row per paid invoice; the source of
 --                             truth for 'what we owe each rep'
---   · payouts               — Friday batch transfers via Stripe Connect
---   · lead_assignments      — link reps to leads (existing scraper rows)
+--   · payouts               - Friday batch transfers via Stripe Connect
+--   · lead_assignments      - link reps to leads (existing scraper rows)
 --
 -- Plus three columns on businesses:
 --   · rep_id, monthly_price_cents, setup_fee_cents
@@ -64,7 +64,7 @@ create index if not exists closes_rep_idx       on closes (rep_id, created_at de
 create index if not exists closes_business_idx  on closes (business_id);
 create index if not exists closes_status_idx    on closes (status);
 
--- 3. Commission ledger — the source of truth. One row per paid invoice
+-- 3. Commission ledger - the source of truth. One row per paid invoice
 --    item that earns a commission. UNIQUE(invoice_id, source_type)
 --    so the Stripe webhook can't double-credit on retries.
 create table if not exists commission_ledger (
@@ -89,7 +89,7 @@ create index if not exists commission_rep_earned_idx
 create index if not exists commission_business_idx
   on commission_ledger (business_id);
 
--- 4. Payouts — one row per Friday batch per rep.
+-- 4. Payouts - one row per Friday batch per rep.
 create table if not exists payouts (
   id                  uuid primary key default gen_random_uuid(),
   rep_id              uuid not null references custom_users(id) on delete restrict,

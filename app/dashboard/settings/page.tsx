@@ -44,7 +44,7 @@ export default function SettingsPage() {
  const [agentState, setAgentState] = useState<AgentState | null>(null)
 
  const reload = async (opts: { delay?: number } = {}) => {
-  // Optional small delay so Retell's read-after-write is consistent —
+  // Optional small delay so Retell's read-after-write is consistent -
   // without it, an immediate post-save fetch sometimes returns the
   // pre-publish state for a few hundred ms.
   if (opts.delay) await new Promise((r) => setTimeout(r, opts.delay))
@@ -114,7 +114,7 @@ export default function SettingsPage() {
 /* ----------------------------- shared ----------------------------- */
 
 async function patchBusiness(updates: Record<string, any>) {
- // Server scopes by JWT — no need to send businessId from the client.
+ // Server scopes by JWT - no need to send businessId from the client.
  const res = await fetchWithAuth('/api/businesses/update', {
   method: 'PATCH',
   body: JSON.stringify(updates),
@@ -236,13 +236,13 @@ function CurrentLine({ label, value }: { label: string; value: string | null | u
  return (
   <div className="text-[11px] font-mono text-gray-500 mt-2">
    <span className="uppercase tracking-wider">{label}:</span>{' '}
-   <span className="text-gray-700">{value || '—'}</span>
+   <span className="text-gray-700">{value || '-'}</span>
   </div>
  )
 }
 
 function GreetingSection({ profile, state, onSaved }: { profile: Profile; state: AgentState | null; onSaved: (opts?: { delay?: number }) => void }) {
- // Initialize from the live Retell value when available — that's the
+ // Initialize from the live Retell value when available - that's the
  // ground truth. Falling back to the DB greeting only if Retell has
  // nothing yet. Without this the textarea stays empty even when Retell
  // has a real greeting set, and a clean save sends '' which Retell
@@ -533,7 +533,7 @@ function SpeedSection({ profile, state, onSaved }: { profile: Profile; state: Ag
     <h2 className="text-sm font-medium text-gray-700">Speech speed</h2>
    </div>
    <p className="text-xs text-gray-500 mb-4">
-    How fast the AI talks. 1.0 is Retell&apos;s default — drop it for older callers, raise it for impatient ones.
+    How fast the AI talks. 1.0 is Retell&apos;s default - drop it for older callers, raise it for impatient ones.
    </p>
 
    <div className="flex items-center gap-4">
@@ -939,7 +939,7 @@ function ProfileSection({ profile, onSaved }: { profile: Profile; onSaved: () =>
    <div className="grid sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-100">
     <div>
      <label className="block text-xs font-medium text-gray-500 mb-1.5">Email</label>
-     <div className="text-sm text-gray-700">{profile.email || '—'}</div>
+     <div className="text-sm text-gray-700">{profile.email || '-'}</div>
     </div>
    </div>
 
@@ -949,7 +949,7 @@ function ProfileSection({ profile, onSaved }: { profile: Profile; onSaved: () =>
    {savedFlag && <SavedHint />}
    {error && <ErrorHint message={error} />}
    <p className="text-[11px] text-gray-400 mt-4">
-    Email is locked here — contact support to change it (we verify the new address before switching).
+    Email is locked here - contact support to change it (we verify the new address before switching).
    </p>
   </div>
  )

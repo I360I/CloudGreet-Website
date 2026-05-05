@@ -34,7 +34,7 @@ async function calFetch<T = any>(
   headers: {
    Authorization: `Bearer ${apiKey}`,
    // Cal.com routes endpoints by header version. The default we use
-   // for bookings (2026-02-25) doesn't expose GET /event-types — that
+   // for bookings (2026-02-25) doesn't expose GET /event-types - that
    // listing only exists on 2024-06-14. Each call can override.
    'cal-api-version': version || CAL_API_VERSION,
    'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ export type CalcomEventType = {
 }
 
 export async function getEventType(apiKey: string, eventTypeId: number): Promise<CalcomEventType> {
- // Same version-routing issue as listEventTypes — the GET single endpoint
+ // Same version-routing issue as listEventTypes - the GET single endpoint
  // is exposed under 2024-06-14, not the bookings version we default to.
  const res = await calFetch<{ status: string; data: CalcomEventType }>(
   apiKey, `/event-types/${eventTypeId}`, { version: '2024-06-14' },
@@ -93,7 +93,7 @@ export async function getEventType(apiKey: string, eventTypeId: number): Promise
  * Lists every event type the API key can see so the onboarding UI can
  * offer a dropdown. Cal.com v2 requires `?username=` on /event-types,
  * so we fetch /me first to get it. Falls back to v1 (`/v1/event-types`)
- * if v2 doesn't return anything — some older personal API keys still
+ * if v2 doesn't return anything - some older personal API keys still
  * route via v1.
  */
 export type ListEventTypesResult = {
@@ -159,7 +159,7 @@ export async function listEventTypesDetailed(apiKey: string): Promise<ListEventT
   attempts.push(`v2(${LIST_VERSION}) /event-types → ${msg}`)
  }
 
- // v1 was decommissioned in early 2025 — no fallback there.
+ // v1 was decommissioned in early 2025 - no fallback there.
  return { eventTypes: [], attempts }
 }
 
@@ -294,7 +294,7 @@ export async function deleteWebhook(apiKey: string, webhookId: string): Promise<
  try {
   await calFetch(apiKey, `/webhooks/${webhookId}`, { method: 'DELETE' })
  } catch (e) {
-  // Non-fatal — webhook may already be deleted.
+  // Non-fatal - webhook may already be deleted.
   logger.warn('Failed to delete Cal.com webhook', {
    webhookId, error: e instanceof Error ? e.message : 'Unknown',
   })

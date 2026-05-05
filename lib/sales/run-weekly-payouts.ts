@@ -26,10 +26,10 @@ import { getStripeClient } from '../billing/stripe-client'
  *   - Rep has no Stripe Connect account, or payouts not enabled.
  *   - Rep has $0 owed.
  *   - Rep is terminated.
- *   - Owed total below MIN_PAYOUT_CENTS — rolls over to next week.
+ *   - Owed total below MIN_PAYOUT_CENTS - rolls over to next week.
  */
 
-const MIN_PAYOUT_CENTS = 100 // $1.00 — Stripe's hard minimum
+const MIN_PAYOUT_CENTS = 100 // $1.00 - Stripe's hard minimum
 
 export type PayoutSummary = {
   rep_id: string
@@ -160,7 +160,7 @@ async function payoutOneRep({
     }
   }
 
-  // 2. Stripe transfer — keyed by payout.id so any retry hits the
+  // 2. Stripe transfer - keyed by payout.id so any retry hits the
   //    same idempotency record on Stripe's side.
   let transferId: string
   try {
@@ -192,7 +192,7 @@ async function payoutOneRep({
     }
   }
 
-  // 3. Backfill payout_id on every ledger row IMMEDIATELY — before we
+  // 3. Backfill payout_id on every ledger row IMMEDIATELY - before we
   //    stamp the payout row 'transferred'. If we crash here and re-run,
   //    the ledger rows are already marked paid so they won't be picked
   //    up again, even though the payouts row still says 'pending' (it
@@ -205,7 +205,7 @@ async function payoutOneRep({
     logger.error('Ledger backfill failed AFTER transfer succeeded', {
       repId, payoutId: payout.id, transferId, error: ledgerErr.message,
     })
-    // Continue anyway — money already moved. Surface to admin.
+    // Continue anyway - money already moved. Surface to admin.
   }
 
   // 4. Mark the payout row transferred.
@@ -278,7 +278,7 @@ Your weekly commission payout went out today.
 It hits your bank in 1–2 business days via Stripe. See the breakdown
 in your earnings page: https://cloudgreet.com/sales/earnings
 
-— CloudGreet`,
+- CloudGreet`,
     })
   } catch (e) {
     logger.warn('Payout email failed', {

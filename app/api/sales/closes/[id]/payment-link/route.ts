@@ -16,7 +16,7 @@ export const runtime = 'nodejs'
  * sales_reps.max_monthly_cents / max_setup_cents caps. Stamps
  * `metadata.cloudgreet_close_id` so the webhook's
  * `checkout.session.completed` handler can auto-convert the close
- * into a real client when payment lands — no admin step required.
+ * into a real client when payment lands - no admin step required.
  */
 export async function POST(
   request: NextRequest,
@@ -39,7 +39,7 @@ export async function POST(
   }
   if (close.status === 'paid') {
     return NextResponse.json({
-      error: "This close is already paid — nothing to generate.",
+      error: "This close is already paid - nothing to generate.",
     }, { status: 409 })
   }
   if (close.status === 'rejected' || close.status === 'cancelled') {
@@ -90,7 +90,7 @@ export async function POST(
     }
   }
 
-  // No upper cap — reps can generate payment links at any amount they
+  // No upper cap - reps can generate payment links at any amount they
   // negotiated. Stripe still requires a $50 minimum for monthly. The
   // sales_reps.max_monthly_cents / max_setup_cents columns are kept
   // in the schema for future use but are not enforced here.
@@ -213,7 +213,7 @@ export async function POST(
   Pricing:   ${monthlyDisp}${setupDisp}
 
 When the prospect pays, the close auto-converts to a client with
-rep_id=${close.rep_id} stamped — no action needed from you.
+rep_id=${close.rep_id} stamped - no action needed from you.
 
 Stripe session: ${session.id}
 `,

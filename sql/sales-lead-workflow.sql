@@ -4,7 +4,7 @@
 --   · follow-up scheduling
 --   · touch tracking (count + last-touched-at)
 --   · per-lead, per-rep notes (timestamped log)
--- All idempotent — safe to re-run.
+-- All idempotent - safe to re-run.
 -- ============================================================
 
 alter table public.lead_assignments

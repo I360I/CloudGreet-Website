@@ -17,7 +17,7 @@ export const runtime = 'nodejs'
  *   · Update bank account / payout schedule
  *   · Update KYC info / SSN
  *
- * Login links expire after a short window and one click — generate
+ * Login links expire after a short window and one click - generate
  * fresh on every request.
  */
 export async function POST(request: NextRequest) {

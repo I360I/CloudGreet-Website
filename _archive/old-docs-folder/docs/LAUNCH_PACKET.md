@@ -45,7 +45,7 @@ CloudGreet Team
 ```
 
 ### Paid media blurb (for ads / landing hero)
-> "Never miss a call again. CloudGreet’s AI receptionist books jobs for HVAC, roofing, and painting contractors—24/7."
+> "Never miss a call again. CloudGreet’s AI receptionist books jobs for HVAC, roofing, and painting contractors-24/7."
 
 ### Social teaser (T-24)
 > "Tomorrow we launch CloudGreet: the AI receptionist that answers, qualifies, and books your home-service leads while you’re on the job. Join the waitlist → https://cloudgreet.com/start"

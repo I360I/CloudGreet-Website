@@ -84,7 +84,7 @@ export default function OwnerSettingsPage() {
       </h1>
       <p className="text-sm text-gray-400 max-w-2xl">
        Read-only checklist of the environment variables this deployment depends on. Values stay
-       in Vercel — only presence is exposed here.
+       in Vercel - only presence is exposed here.
       </p>
      </header>
 
@@ -164,7 +164,7 @@ export default function OwnerSettingsPage() {
             <p className="text-xs text-gray-500 mt-1 leading-relaxed">{c.purpose}</p>
             {!c.configured && (
              <p className="text-[10px] font-mono uppercase tracking-wider text-amber-300 mt-1.5">
-              missing — add in vercel · settings · environment variables, then redeploy
+              missing - add in vercel · settings · environment variables, then redeploy
              </p>
             )}
            </div>
@@ -180,7 +180,7 @@ export default function OwnerSettingsPage() {
       <PanelHeader title="Where settings live" eyebrow="Quick links" />
       <p className="text-xs text-gray-500 mb-3">
        This page used to host integration credential editing, AI prompt tuning, and prospecting
-       filters — none of that is the source of truth anymore. Configuration lives in three places:
+       filters - none of that is the source of truth anymore. Configuration lives in three places:
       </p>
       <ul className="space-y-2">
        {SETTINGS_LINKS.map((l) => (

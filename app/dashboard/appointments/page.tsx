@@ -142,7 +142,7 @@ export default function AppointmentsPage() {
     const json = await res.json().catch(() => ({}))
     if (!res.ok || !json.success) return
     if (!cancelled) setMonthDays(json.days || [])
-   } catch { /* ignore — week view is the primary surface */ }
+   } catch { /* ignore - week view is the primary surface */ }
   })()
   return () => { cancelled = true }
  }, [monthStart, refreshTick])

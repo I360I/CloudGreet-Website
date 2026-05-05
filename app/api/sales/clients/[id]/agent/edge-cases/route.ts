@@ -58,7 +58,7 @@ async function saveAndSync(
   if (error) {
     return { ok: false, status: 500, error: error.message }
   }
-  // Sync to Retell — passing agentEdgeCases triggers a prompt push.
+  // Sync to Retell - passing agentEdgeCases triggers a prompt push.
   try {
     await retellAgentManager().updateBusinessAgent(businessId, {
       agentEdgeCases: cases.map((c) => ({ label: c.label, instruction: c.instruction })),
@@ -68,7 +68,7 @@ async function saveAndSync(
       businessId, repId, error: e instanceof Error ? e.message : 'Unknown',
     })
     // Surface a soft warning but treat the save itself as successful
-    // — the next agent sync will pick it up.
+    // - the next agent sync will pick it up.
   }
   return { ok: true }
 }

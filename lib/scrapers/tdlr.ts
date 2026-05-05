@@ -75,7 +75,7 @@ async function* runTdlr(
 
  const enrichEnabled = params.extra?.enrich !== false && isGooglePlacesConfigured()
  // `strict` (default) drops any row that doesn't survive the quality
- // gates — name-based pre-filter + Google Places trade confirmation.
+ // gates - name-based pre-filter + Google Places trade confirmation.
  // Set extra.quality = 'permissive' to opt out and dump everything.
  const strict = params.extra?.quality !== 'permissive'
  let yielded = 0
@@ -117,7 +117,7 @@ async function* runTdlr(
     if (drop) { droppedPre++; continue }
    }
 
-   // Skip enrichment entirely if we already have what we'd ask Google for —
+   // Skip enrichment entirely if we already have what we'd ask Google for -
    // saves API spend and avoids cross-state mismatches on common names.
    const needsEnrichment = !record.phone || !record.website
    let placesData: import('./google-places').PlacesEnrichment | null = null
@@ -159,7 +159,7 @@ async function* runTdlr(
    }
 
    // Post-filter: trade match via Google. Only enforced when we actually
-   // ran enrichment — if the row already had a phone we trust the license
+   // ran enrichment - if the row already had a phone we trust the license
    // database. If enrichment hit a hard error (rate limit, etc.) we keep
    // the row rather than wholesale dropping the page.
    if (strict && enrichEnabled && needsEnrichment && !placesError) {
@@ -167,7 +167,7 @@ async function* runTdlr(
     if (!verdict.ok) { droppedPost++; continue }
    }
 
-   // Metro filter — drops Houston/Dallas results when the rep
+   // Metro filter - drops Houston/Dallas results when the rep
    // searched "Austin". Only applies if the rep specified a location.
    if (strict && params.location && !phoneMatchesMetro(record.phone, params.location)) {
     droppedPost++
@@ -237,11 +237,11 @@ type TdlrRow = {
  * Each row exposes 7 cells in order:
  *   [0] license #
  *   [1] expiration date (sometimes followed by "Expired" or "Ren process")
- *   [2] name — "LASTNAME, FIRST (BUSINESS NAME)" or "(no company associated)"
+ *   [2] name - "LASTNAME, FIRST (BUSINESS NAME)" or "(no company associated)"
  *   [3] city  (often blank)
  *   [4] zip   (often blank)
  *   [5] county
- *   [6] phone (often blank — not exposed publicly by TDLR)
+ *   [6] phone (often blank - not exposed publicly by TDLR)
  */
 function parseTdlrListHtml(html: string): TdlrRow[] {
  const out: TdlrRow[] = []
@@ -284,7 +284,7 @@ function parseTdlrListHtml(html: string): TdlrRow[] {
 }
 
 /**
- * HVAC list rows show "LASTNAME, FIRST (BUSINESS NAME)" — owner outside,
+ * HVAC list rows show "LASTNAME, FIRST (BUSINESS NAME)" - owner outside,
  * business in parens.
  *
  * Electrical list rows show only the business name with no parens. There's
@@ -303,7 +303,7 @@ function splitNameAndBusiness(raw: string): { owner_name: string | null; busines
   }
   return { owner_name: owner, business_name: biz || owner }
  }
- // No parens — TDLR didn't expose an owner name for this row.
+ // No parens - TDLR didn't expose an owner name for this row.
  return { owner_name: null, business_name: t }
 }
 
@@ -359,7 +359,7 @@ export const tdlrHvac: SourceDefinition = {
  id: 'tdlr_hvac',
  label: 'TDLR · HVAC contractors',
  description:
-  'Texas Department of Licensing and Regulation — Air Conditioning Contractors. Owner name + business + license + city. Phone & website filled in via Google Places enrichment.',
+  'Texas Department of Licensing and Regulation - Air Conditioning Contractors. Owner name + business + license + city. Phone & website filled in via Google Places enrichment.',
  trade: 'HVAC',
  run: (params, _opts) => runTdlr('HVAC', params),
 }
@@ -368,7 +368,7 @@ export const tdlrElectrical: SourceDefinition = {
  id: 'tdlr_electrical',
  label: 'TDLR · Electrical contractors',
  description:
-  'Texas Department of Licensing and Regulation — Electricians. Owner name + business + license + city. Phone & website filled in via Google Places enrichment.',
+  'Texas Department of Licensing and Regulation - Electricians. Owner name + business + license + city. Phone & website filled in via Google Places enrichment.',
  trade: 'Electrical',
  run: (params, _opts) => runTdlr('Electrical', params),
 }

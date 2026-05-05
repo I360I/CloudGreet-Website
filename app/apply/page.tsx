@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 
@@ -14,6 +14,8 @@ type FormState = {
   city: string
   state: string
   linkedin_url: string
+
+  about_yourself: string
 
   years_sales_experience: string
   previous_role: string
@@ -32,33 +34,23 @@ type FormState = {
   hours_per_week: string
   has_workspace: boolean
 
-  resume_url: string
-  video_url: string
+  resume_path: string
+  resume_filename: string
+  video_path: string
+  video_filename: string
 }
 
 const INITIAL: FormState = {
-  first_name: '',
-  last_name: '',
-  email: '',
-  phone: '',
-  city: '',
-  state: '',
-  linkedin_url: '',
-  years_sales_experience: '',
-  previous_role: '',
-  industries_sold: '',
-  biggest_deal: '',
-  prior_commission_only: false,
-  prior_b2b: false,
-  why_commission_only: '',
-  why_cloudgreet: '',
-  monthly_goal_deals: '',
-  why_can_hit_goal: '',
-  earliest_start_date: '',
-  hours_per_week: '',
-  has_workspace: false,
-  resume_url: '',
-  video_url: '',
+  first_name: '', last_name: '', email: '', phone: '',
+  city: '', state: '', linkedin_url: '',
+  about_yourself: '',
+  years_sales_experience: '', previous_role: '', industries_sold: '',
+  biggest_deal: '', prior_commission_only: false, prior_b2b: false,
+  why_commission_only: '', why_cloudgreet: '',
+  monthly_goal_deals: '', why_can_hit_goal: '',
+  earliest_start_date: '', hours_per_week: '', has_workspace: false,
+  resume_path: '', resume_filename: '',
+  video_path: '', video_filename: '',
 }
 
 export default function ApplyPage() {
@@ -72,6 +64,10 @@ export default function ApplyPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!form.resume_path && !form.video_path) {
+      setError('Please upload at least one: resume or 90-second intro video.')
+      return
+    }
     setSubmitting(true); setError('')
     try {
       const res = await fetch('/api/applications', {
@@ -113,7 +109,7 @@ export default function ApplyPage() {
             email with a Calendly link to book the interview.
           </p>
           <p className="text-sm text-gray-600 leading-relaxed">
-            — Anthony Edwards, Founder
+            - Anthony Edwards, Founder
           </p>
           <Link
             href="/"
@@ -146,14 +142,9 @@ export default function ApplyPage() {
           <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-3">
             Sales rep · commission-only · remote
           </div>
-          <h1 className="font-display text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
-            Apply to sell <span className="text-gray-400">CloudGreet.</span>
+          <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight leading-[1.1]">
+            Application
           </h1>
-          <p className="text-base text-gray-600 leading-relaxed max-w-xl">
-            We&apos;re hiring contractors to sell CloudGreet — an AI receptionist for service
-            businesses. 50% of every paid invoice is yours, every week, paid via Stripe.
-            No quotas, no clawbacks, no caps. Apply below.
-          </p>
         </motion.div>
 
         <form onSubmit={submit} className="space-y-10">
@@ -224,6 +215,16 @@ export default function ApplyPage() {
                 className={inputCls}
               />
             </Field>
+            <Field label="Tell me about yourself" required hint="A few sentences. Background, what you're doing now, anything that gives me a feel for who you are.">
+              <textarea
+                required
+                rows={5}
+                value={form.about_yourself}
+                onChange={(e) => set('about_yourself', e.target.value)}
+                className={`${inputCls} resize-none`}
+                maxLength={2000}
+              />
+            </Field>
           </Section>
 
           {/* Experience */}
@@ -276,15 +277,10 @@ export default function ApplyPage() {
             </div>
           </Section>
 
-          {/* Why */}
-          <Section title="Why this role" eyebrow="03">
-            <Field
-              label="Why does commission-only sales appeal to you?"
-              required
-              hint="Be honest — most people fail at commission-only. We want people who understand why."
-            >
+          {/* Why (optional) */}
+          <Section title="Why this role" eyebrow="03" hint="Optional. Skip if you'd rather just talk on the call.">
+            <Field label="Why does commission-only sales appeal to you?">
               <textarea
-                required
                 rows={4}
                 value={form.why_commission_only}
                 onChange={(e) => set('why_commission_only', e.target.value)}
@@ -294,11 +290,9 @@ export default function ApplyPage() {
             </Field>
             <Field
               label="Why CloudGreet specifically?"
-              required
               hint="What about the product or the deal structure makes you want to sell it?"
             >
               <textarea
-                required
                 rows={4}
                 value={form.why_cloudgreet}
                 onChange={(e) => set('why_cloudgreet', e.target.value)}
@@ -355,39 +349,44 @@ export default function ApplyPage() {
             />
           </Section>
 
-          {/* Submissions */}
+          {/* Uploads */}
           <Section
             title="Resume + 90-second intro"
             eyebrow="05"
-            hint="Include at least one. Both is better. The intro video is more important than a polished resume — we want to hear how you talk."
+            hint="At least one is required. Both is better."
           >
-            <Field
-              label="Resume link"
-              hint="Google Drive, Dropbox, LinkedIn PDF export, or any public URL. Make sure it's set to anyone-with-the-link can view."
-            >
-              <input
-                type="url"
-                value={form.resume_url}
-                onChange={(e) => set('resume_url', e.target.value)}
-                placeholder="https://drive.google.com/..."
-                className={inputCls}
-              />
-            </Field>
-            <Field
-              label="90-second intro video link"
-              hint="Loom is easiest (free, takes 30 seconds to record). YouTube unlisted, Google Drive, or Vimeo also work."
-            >
-              <input
-                type="url"
-                value={form.video_url}
-                onChange={(e) => set('video_url', e.target.value)}
-                placeholder="https://www.loom.com/..."
-                className={inputCls}
-              />
-            </Field>
+            <FileUploader
+              kind="resume"
+              label="Resume (PDF or Word)"
+              accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              maxMB={15}
+              currentName={form.resume_filename}
+              onUploaded={(path, filename) => {
+                set('resume_path', path)
+                set('resume_filename', filename)
+              }}
+              onCleared={() => {
+                set('resume_path', '')
+                set('resume_filename', '')
+              }}
+            />
+            <FileUploader
+              kind="video"
+              label="90-second intro video (MP4, MOV, or WebM)"
+              accept="video/mp4,video/quicktime,video/x-m4v,video/webm,.mp4,.mov,.m4v,.webm"
+              maxMB={200}
+              currentName={form.video_filename}
+              onUploaded={(path, filename) => {
+                set('video_path', path)
+                set('video_filename', filename)
+              }}
+              onCleared={() => {
+                set('video_path', '')
+                set('video_filename', '')
+              }}
+            />
             <p className="text-xs text-gray-500 leading-relaxed">
-              In the video, tell me: who you are, the toughest deal you ever closed and how, and
-              why you&apos;d crush this. One take, no script.
+              In the video, tell me about yourself, the toughest deal you ever closed and how you closed it, and why you&apos;d crush this role.
             </p>
           </Section>
 
@@ -407,7 +406,7 @@ export default function ApplyPage() {
               disabled={submitting}
               className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-medium px-6 py-3 hover:bg-gray-800 active:scale-[0.98] disabled:opacity-60 transition-all"
             >
-              {submitting ? 'Submitting…' : 'Submit application →'}
+              {submitting ? 'Submitting...' : 'Submit application →'}
             </button>
           </div>
         </form>
@@ -424,6 +423,139 @@ export default function ApplyPage() {
 
 const inputCls =
   'w-full bg-white border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors'
+
+function FileUploader({
+  kind, label, accept, maxMB, currentName, onUploaded, onCleared,
+}: {
+  kind: 'resume' | 'video'
+  label: string
+  accept: string
+  maxMB: number
+  currentName: string
+  onUploaded: (path: string, filename: string) => void
+  onCleared: () => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [err, setErr] = useState('')
+
+  const pick = () => inputRef.current?.click()
+
+  const onChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setErr(''); setProgress(0); setUploading(true)
+    try {
+      if (file.size > maxMB * 1024 * 1024) {
+        throw new Error(`File too large. Max ${maxMB} MB.`)
+      }
+
+      const res = await fetch('/api/applications/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind,
+          filename: file.name,
+          content_type: file.type || (kind === 'resume' ? 'application/pdf' : 'video/mp4'),
+          size: file.size,
+        }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.success) throw new Error(j?.error || 'Could not start upload')
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        xhr.open('PUT', j.signed_url)
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            setProgress(Math.round((ev.loaded / ev.total) * 100))
+          }
+        }
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve()
+          else reject(new Error(`Upload failed (${xhr.status})`))
+        }
+        xhr.onerror = () => reject(new Error('Upload failed'))
+        xhr.send(file)
+      })
+
+      onUploaded(j.path, file.name)
+      setProgress(100)
+    } catch (e2) {
+      setErr(e2 instanceof Error ? e2.message : 'Upload failed')
+    } finally {
+      setUploading(false)
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  return (
+    <div>
+      <div className="text-[11px] font-medium text-gray-700 mb-1.5">{label}</div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        capture={kind === 'video' ? 'user' : undefined}
+        className="hidden"
+        onChange={onChange}
+      />
+      {!currentName && !uploading && (
+        <button
+          type="button"
+          onClick={pick}
+          className="w-full bg-white border border-dashed border-gray-300 hover:border-gray-900 hover:bg-gray-50 px-4 py-6 text-sm text-gray-600 hover:text-gray-900 transition-colors flex flex-col items-center gap-1"
+        >
+          <span className="font-medium">Choose file</span>
+          <span className="text-[11px] text-gray-400">
+            {kind === 'video' ? 'Record or pick from your device' : `Up to ${maxMB} MB`}
+          </span>
+        </button>
+      )}
+      {uploading && (
+        <div className="bg-white border border-gray-200 px-4 py-4">
+          <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+            <span>Uploading...</span>
+            <span className="font-mono">{progress}%</span>
+          </div>
+          <div className="h-1 bg-gray-100 overflow-hidden">
+            <div
+              className="h-full bg-gray-900 transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+      {currentName && !uploading && (
+        <div className="bg-white border border-gray-200 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-sm text-gray-900 truncate">{currentName}</div>
+            <div className="text-[11px] text-emerald-600">Uploaded</div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={pick}
+              className="text-xs text-gray-500 hover:text-gray-900 underline"
+            >
+              Replace
+            </button>
+            <button
+              type="button"
+              onClick={() => { onCleared(); setErr('') }}
+              className="text-xs text-gray-500 hover:text-red-700 underline"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
+      {err && <div className="text-xs text-red-700 mt-2">{err}</div>}
+    </div>
+  )
+}
 
 function Section({
   title, eyebrow, hint, children,

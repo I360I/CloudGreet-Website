@@ -110,7 +110,7 @@ export default function BillingDashboardPage() {
    : null
  const mrrDescription =
   summary.source === 'stripe-live'
-   ? `Live from Stripe — active + trialing + past_due. ${summary.paidCount ?? 0} paid${trialBlurb ? `. ${trialBlurb}` : ''}.`
+   ? `Live from Stripe - active + trialing + past_due. ${summary.paidCount ?? 0} paid${trialBlurb ? `. ${trialBlurb}` : ''}.`
    : 'Subscription charges captured in the last 30 days.'
 
  return [
@@ -207,7 +207,7 @@ export default function BillingDashboardPage() {
  const mrrDollars = Math.floor(mrrCents / 100)
  const mrrCentsRemainder = mrrCents % 100
 
- // Next milestone — keeps the climb visible. Steps up by $500 once we
+ // Next milestone - keeps the climb visible. Steps up by $500 once we
  // pass $1k, then $1k once we pass $5k.
  const milestone = mrrDollars < 500 ? 500
   : mrrDollars < 1000 ? 1000
@@ -243,7 +243,7 @@ export default function BillingDashboardPage() {
  </section>
  ) : (
  <>
- {/* Hero — the trophy */}
+ {/* Hero - the trophy */}
  <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-950/40 via-black/40 to-emerald-950/30 p-8 lg:p-12 shadow-2xl shadow-blue-900/20">
   {/* glow */}
   <div className="absolute -top-32 -right-24 w-96 h-96 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
@@ -325,25 +325,25 @@ export default function BillingDashboardPage() {
   </div>
  </section>
 
- {/* Secondary metrics — the numbers that actually matter at this stage */}
+ {/* Secondary metrics - the numbers that actually matter at this stage */}
  <section className="grid gap-3 sm:grid-cols-3">
   <SecondaryStat
    label="Annualized run rate"
    value={`$${(mrrCents * 12 / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-   hint="MRR × 12 — what this pace earns over a year"
+   hint="MRR × 12 - what this pace earns over a year"
    icon={TrendingUp}
    delay={0}
   />
   <SecondaryStat
    label="Avg per client"
-   value={totalCount > 0 ? `$${Math.round(mrrCents / totalCount / 100).toLocaleString()}` : '—'}
+   value={totalCount > 0 ? `$${Math.round(mrrCents / totalCount / 100).toLocaleString()}` : '-'}
    hint={`Across ${totalCount} active client${totalCount === 1 ? '' : 's'}`}
    icon={DollarSign}
    delay={0.05}
   />
   <SecondaryStat
    label="Conversion potential"
-   value={trialingCount > 0 ? `+$${Math.round(trialingMrrCents / 100).toLocaleString()}` : '—'}
+   value={trialingCount > 0 ? `+$${Math.round(trialingMrrCents / 100).toLocaleString()}` : '-'}
    hint={trialingCount > 0
     ? `If all ${trialingCount} trial${trialingCount === 1 ? '' : 's'} convert to paid`
     : 'No trials right now'}

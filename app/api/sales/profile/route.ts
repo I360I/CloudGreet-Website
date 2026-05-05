@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
  * GET / PATCH /api/sales/profile
  *
  * Rep-editable subset of their sales_reps row. Right now just the
- * booking_url field — extend here as we add more rep-controlled
+ * booking_url field - extend here as we add more rep-controlled
  * settings (notification prefs, email signature, etc).
  */
 export async function GET(request: NextRequest) {
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       email: user?.email || '',
       name: user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || '',
       booking_url: rep?.booking_url || '',
-      // Never return the raw API key — show a masked preview so the
+      // Never return the raw API key - show a masked preview so the
       // rep knows it's set without exposing the secret on every load.
       cal_api_key_set: !!rep?.cal_api_key,
       cal_api_key_preview: rep?.cal_api_key ? maskApiKey(rep.cal_api_key) : '',
@@ -64,7 +64,7 @@ export async function PATCH(request: NextRequest) {
       if (raw.length > 500) {
         return NextResponse.json({ error: 'URL too long' }, { status: 400 })
       }
-      // Lightweight URL validation — must be http(s) and parse cleanly.
+      // Lightweight URL validation - must be http(s) and parse cleanly.
       let normalized = raw
       if (!/^https?:\/\//i.test(normalized)) normalized = `https://${normalized}`
       try {

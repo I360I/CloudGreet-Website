@@ -656,11 +656,11 @@ interface SystemMetrics {
 
 The GitHub Actions workflow `.github/workflows/synthetic-monitors.yml` runs hourly and can be triggered manually. It now executes three checks:
 
-1. **Registration / login / dashboard health** — `scripts/monitor-registration.js`  
+1. **Registration / login / dashboard health** - `scripts/monitor-registration.js`  
    - Secret requirements: `SYNTHETIC_MONITOR_BASE_URL`
-2. **Outreach runner health** — `scripts/monitor-outreach.js`  
+2. **Outreach runner health** - `scripts/monitor-outreach.js`  
    - Secret requirements: `OUTREACH_RUNNER_URL`, `CRON_SECRET`
-3. **Sales workspace authentication** — `scripts/monitor-sales-dashboard.js`  
+3. **Sales workspace authentication** - `scripts/monitor-sales-dashboard.js`  
    - Secret requirements: `SYNTHETIC_MONITOR_BASE_URL`, `MONITOR_EMPLOYEE_EMAIL`, `MONITOR_EMPLOYEE_PASSWORD`
 
 ### Alert routing

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * GET /api/sales/closes — list the calling rep's submitted closes.
+ * GET /api/sales/closes - list the calling rep's submitted closes.
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
  * `pending` status and ping the founder so they can issue the
  * payment link / start onboarding the new client. The actual
  * commission ledger is written later by the Stripe `invoice.paid`
- * webhook — this endpoint just captures the deal.
+ * webhook - this endpoint just captures the deal.
  *
  * Body: {
  *   prospect_business_name, prospect_contact_name?, prospect_email?,
@@ -145,9 +145,9 @@ export async function POST(request: NextRequest) {
 `${repName} just submitted a close.
 
   Business:  ${name}
-  Contact:   ${contact || '—'}
-  Email:     ${email || '—'}
-  Phone:     ${phone || '—'}
+  Contact:   ${contact || '-'}
+  Email:     ${email || '-'}
+  Phone:     ${phone || '-'}
   Pricing:   ${monthlyDisp}${setupDisp}
 
 ${notes ? `Notes:\n${notes}\n\n` : ''}Review & approve in admin: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/admin/sales/closes

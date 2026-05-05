@@ -15,7 +15,7 @@ export default function ConnectDonePage() {
     const res = await fetch('/api/sales/connect-onboarding', { credentials: 'include' })
     if (cancelled) return
     if (res.status === 401) {
-     // Cookie didn't survive the Stripe redirect — happens rarely
+     // Cookie didn't survive the Stripe redirect - happens rarely
      // when sameSite/cross-site rules trip. Send them to login and
      // they'll land back on /sales after.
      router.replace('/login')

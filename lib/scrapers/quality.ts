@@ -3,14 +3,14 @@
  *
  * The licensing data is held by individuals, not businesses, so the raw
  * dump is full of noise: license-holders working as in-house HVAC techs
- * at Motorola, UT Austin, school districts, and so on — none of whom are
+ * at Motorola, UT Austin, school districts, and so on - none of whom are
  * real contractors we'd cold-call. A second class of noise is the
  * "no company associated" entries where business_name === owner_name.
  *
  * We apply two filters:
- *   1) preFilterContractor()  — cheap, name-based, runs BEFORE the
+ *   1) preFilterContractor()  - cheap, name-based, runs BEFORE the
  *      Google Places call so we don't burn $$ on garbage.
- *   2) googleConfirmsTrade()  — runs AFTER enrichment using Google's
+ *   2) googleConfirmsTrade()  - runs AFTER enrichment using Google's
  *      `types` array + name fuzzy-match to validate this is actually
  *      an HVAC / plumbing / pest-control / etc. contractor.
  *
@@ -25,7 +25,7 @@ export type Trade = 'HVAC' | 'Electrical' | 'Plumbing' | 'Pest Control'
 
 /**
  * Patterns in business_name that indicate the entity is NOT a contractor
- * — usually the license holder works there as an employee. Word boundary
+ * - usually the license holder works there as an employee. Word boundary
  * forced so "STARLIGHT POOL" doesn't get killed by " POOL".
  */
 const ENTERPRISE_PATTERNS: RegExp[] = [
@@ -55,7 +55,7 @@ const ENTERPRISE_PATTERNS: RegExp[] = [
   /\bMEDICAL CENTER\b/,
   /\bHEALTH SYSTEM\b/,
 
-  // Big-co campuses (limited list — the most common offenders)
+  // Big-co campuses (limited list - the most common offenders)
   /\bMOTOROLA\b/,
   /\bDELL\b/,
   /\bIBM\b/,
@@ -102,7 +102,7 @@ const TRADE_KEYWORDS: Record<Trade, RegExp> = {
 /**
  * Map a trade to the Google Places types we'll accept as proof this
  * is the right kind of business. `general_contractor` and
- * `establishment` are very loose — we keep them because Google often
+ * `establishment` are very loose - we keep them because Google often
  * tags small contractors that way, but we require the trade keyword
  * in the matched name as the real signal.
  */
@@ -136,7 +136,7 @@ export function preFilterContractor(record: ScrapeRecord): PreFilterReason {
   // owner's name with no trade keyword anywhere.
   if (owner && biz === owner) return 'no_business'
 
-  // "FREDY A RODRIGUEZ" — looks like a personal name, no LLC/INC/CO.
+  // "FREDY A RODRIGUEZ" - looks like a personal name, no LLC/INC/CO.
   // Person-name heuristic: 2-3 words, no entity suffix, no trade keyword.
   if (looksLikePersonalName(biz)) return 'no_business'
 
@@ -198,7 +198,7 @@ const STOP_WORDS = new Set([
 
 /**
  * Texas metros mapped to their NANP area codes. Used to drop results
- * whose phone number is in the wrong metro for the requested city —
+ * whose phone number is in the wrong metro for the requested city -
  * the licensing databases don't enforce a tight city filter, so a
  * search for "Austin" returns Houston/Dallas/SA contractors mixed in.
  */

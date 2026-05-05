@@ -2,7 +2,7 @@
  * Google Places-backed discovery sources.
  *
  * Unlike the licensing databases (TDLR, TDA, TSBPE), Google Places
- * returns actual *businesses* — type-classified, with phone, website,
+ * returns actual *businesses* - type-classified, with phone, website,
  * address, rating, and review count in one call. This is the highest-
  * precision source: results that survive the rating + review filters
  * are real, contactable HVAC / plumbing / etc. shops.
@@ -31,7 +31,7 @@ type TradeConfig = {
   description: string
   /** Trade tag persisted on records. */
   trade: TradeKey
-  /** Google `includedType` — see https://developers.google.com/maps/documentation/places/web-service/place-types */
+  /** Google `includedType` - see https://developers.google.com/maps/documentation/places/web-service/place-types */
   includedType: string
   /** Free-text query layered on top of the type. Helps when type is broad. */
   textQuery: string
@@ -41,7 +41,7 @@ const TRADES: TradeConfig[] = [
   {
     id: 'places_hvac',
     label: 'Google · HVAC contractors',
-    description: 'Google Places businesses tagged as HVAC contractors. Higher signal than license databases — only real listings with reviews and a phone show up.',
+    description: 'Google Places businesses tagged as HVAC contractors. Higher signal than license databases - only real listings with reviews and a phone show up.',
     trade: 'HVAC',
     includedType: 'hvac_contractor',
     textQuery: 'hvac contractors',
@@ -101,7 +101,7 @@ async function* runPlaces(
   params: ScrapeParams,
 ): AsyncGenerator<ScrapeRecord, void, void> {
   if (!isGooglePlacesConfigured()) {
-    logger.warn('places discovery skipped — GOOGLE_PLACES_API_KEY missing')
+    logger.warn('places discovery skipped - GOOGLE_PLACES_API_KEY missing')
     return
   }
 
@@ -116,7 +116,7 @@ async function* runPlaces(
   const minRating =
     typeof params.extra?.minRating === 'number' ? params.extra.minRating as number : 0
 
-  // We require a hard restriction when we know the city — Google's
+  // We require a hard restriction when we know the city - Google's
   // text-search will otherwise drift to higher-ranked metros (e.g.
   // typing "hvac contractors Austin TX" returns Houston SEOs because
   // they outrank). Restriction guarantees the result is in radius.
@@ -202,7 +202,7 @@ function isPlaceOnTrade(place: PlaceDiscoveryResult, cfg: TradeConfig): boolean 
   const typeHit = types.some((t) => allow.includes(t))
   if (typeHit) return true
 
-  // Type didn't match — accept if the business name implies the trade.
+  // Type didn't match - accept if the business name implies the trade.
   const rx = TRADE_KEYWORD_RE[cfg.trade]
   return rx.test(place.business_name || '')
 }

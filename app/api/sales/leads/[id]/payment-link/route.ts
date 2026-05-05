@@ -12,7 +12,7 @@ export const runtime = 'nodejs'
  * POST /api/sales/leads/[id]/payment-link
  *   { monthly_cents, setup_fee_cents? }
  *
- * One-click payment link for a lead — no manual close submission
+ * One-click payment link for a lead - no manual close submission
  * required. Creates a `closes` row in the background (status =
  * invoice_sent), generates a Stripe checkout session tagged with
  * metadata.cloudgreet_close_id, advances the lead's status to
@@ -77,7 +77,7 @@ export async function POST(
   }
 
   // Create the close in the background. status=invoice_sent because
-  // we're effectively shipping the payment link — once it lands,
+  // we're effectively shipping the payment link - once it lands,
   // the webhook flips it to paid.
   const businessName = lead.business_name || 'Unknown'
   const { data: close, error: closeErr } = await supabaseAdmin
@@ -168,7 +168,7 @@ export async function POST(
     return NextResponse.json({ error: 'Stripe did not return a URL' }, { status: 500 })
   }
 
-  // Advance the lead's workflow status — the rep effectively just
+  // Advance the lead's workflow status - the rep effectively just
   // sent the proposal.
   await supabaseAdmin
     .from('lead_assignments')
@@ -207,7 +207,7 @@ export async function POST(
   Pricing:   ${monthlyDisp}${setupDisp}
 
 When the prospect pays, the close auto-converts to a client with
-rep_id=${auth.userId} stamped — no action needed from you.
+rep_id=${auth.userId} stamped - no action needed from you.
 
 Stripe session: ${session.id}
 `,

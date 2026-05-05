@@ -148,7 +148,7 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Push to Retell. Best-effort — DB save already landed, surface the
+  // Push to Retell. Best-effort - DB save already landed, surface the
   // sync issue in the response so the rep can retry.
   let agentSynced = false
   let agentSyncError: string | null = null

@@ -143,7 +143,7 @@ export default function ScraperPage() {
          <code className="font-mono text-xs bg-white/[0.04] px-1 rounded">sql/scraper.sql</code>{' '}
          from the repo into the Supabase SQL editor, then reload.
         </p>
-        <div className="mt-3"><PrimaryButton onClick={load}>I ran it — reload</PrimaryButton></div>
+        <div className="mt-3"><PrimaryButton onClick={load}>I ran it - reload</PrimaryButton></div>
        </div>
       </div>
      </Panel>
@@ -166,7 +166,7 @@ export default function ScraperPage() {
         Scraper
        </h1>
        <p className="text-sm text-gray-400 mt-2 max-w-xl">
-        Pull verified Texas contractors from public licensing databases. Results land in a staging table — review them, then promote selected records into the leads pipeline.
+        Pull verified Texas contractors from public licensing databases. Results land in a staging table - review them, then promote selected records into the leads pipeline.
        </p>
       </div>
       <div className={`text-[10px] font-mono uppercase tracking-wider px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 self-start ${
@@ -456,7 +456,7 @@ function JobDrawer({
    })
    const json = await res.json().catch(() => ({}))
    if (!res.ok || !json.success) throw new Error(json?.error || 'Failed')
-   const errSuffix = json.error_sample ? ` — first error: ${json.error_sample}` : ''
+   const errSuffix = json.error_sample ? ` - first error: ${json.error_sample}` : ''
    setPromoteMsg(`Promoted ${json.promoted}, skipped ${json.skipped}.${errSuffix}`)
    setSelected(new Set())
    await load()
@@ -639,7 +639,7 @@ function ResultRow({
    />
    <div className="flex-1 min-w-0">
     <div className="flex items-baseline justify-between gap-2 flex-wrap">
-     <div className="text-sm font-medium text-white truncate">{r.business_name || '—'}</div>
+     <div className="text-sm font-medium text-white truncate">{r.business_name || '-'}</div>
      <div className="flex items-center gap-1 flex-shrink-0">
       {r.phone ? (
        <span className="text-[10px] font-mono uppercase text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 rounded-full px-1.5 py-0.5">📞</span>

@@ -1,8 +1,8 @@
 -- Lead scraper. Idempotent.
 --
--- scrape_jobs   — one row per scrape execution. Tracks source, params,
+-- scrape_jobs   - one row per scrape execution. Tracks source, params,
 --                 status, timing, and a top-level results_count snapshot.
--- scrape_results— one row per record discovered by a job. Stays in this
+-- scrape_results- one row per record discovered by a job. Stays in this
 --                 staging table until the operator promotes selected
 --                 records into public.leads.
 

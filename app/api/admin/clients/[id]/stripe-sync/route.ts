@@ -16,7 +16,7 @@ export const runtime = 'nodejs'
  *   · stripe_subscriptions  (upsert)
  *   · closes.status         (paid when sub is active/trialing)
  *
- * Use this whenever DB state drifts from Stripe — most commonly
+ * Use this whenever DB state drifts from Stripe - most commonly
  * when a webhook fired before the customer was linked, leaving
  * subscription_status stuck at 'pending'.
  */
@@ -37,7 +37,7 @@ export async function POST(
   if (!business) return NextResponse.json({ error: 'Client not found' }, { status: 404 })
   if (!business.stripe_customer_id) {
     return NextResponse.json({
-      error: 'No stripe_customer_id on this business yet — nothing to sync.',
+      error: 'No stripe_customer_id on this business yet - nothing to sync.',
     }, { status: 409 })
   }
 

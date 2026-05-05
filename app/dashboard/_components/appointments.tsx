@@ -86,7 +86,7 @@ export function MonthGrid({
          <span className="text-[9px] sm:text-[10px] font-mono text-sky-600">{cell.appointments.length}</span>
         )}
        </div>
-       {/* On mobile we collapse the chips into a single dot — there's no room
+       {/* On mobile we collapse the chips into a single dot - there's no room
            to render times. Tap the cell to see the day's bookings. */}
        <div className="sm:hidden">
         {cell.appointments.length > 0 && (
@@ -452,7 +452,7 @@ export function AppointmentDrawer({
  const setStatus = async (status: 'cancelled' | 'confirmed' | 'completed') => {
   if (!appt) return
   if (isDemoId) {
-   // Demo bookings live entirely client-side — just reflect the change.
+   // Demo bookings live entirely client-side - just reflect the change.
    setAppt({ ...appt, status })
    return
   }

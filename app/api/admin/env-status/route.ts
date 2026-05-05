@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
  * GET /api/admin/env-status
  *
  * Reports which operational env vars are wired in the running deployment.
- * Returns booleans only — never the values themselves. Used by the Owner
+ * Returns booleans only - never the values themselves. Used by the Owner
  * Console to show a green/amber checklist so the operator can see what's
  * configured without leaving the app.
  */
@@ -34,7 +34,7 @@ const CHECKS = (): EnvCheck[] => [
  {
   name: 'NEXT_PUBLIC_SUPABASE_URL',
   configured: !!process.env.NEXT_PUBLIC_SUPABASE_URL || !!process.env.SUPABASE_URL,
-  purpose: 'Supabase project URL — required for every database query.',
+  purpose: 'Supabase project URL - required for every database query.',
   group: 'auth',
  },
  {
@@ -62,14 +62,14 @@ const CHECKS = (): EnvCheck[] => [
  {
   name: 'STRIPE_PRICE_STARTER',
   configured: !!process.env.STRIPE_PRICE_STARTER,
-  purpose: 'Price ID for the $499/mo Starter plan — used by "Send checkout link".',
+  purpose: 'Price ID for the $499/mo Starter plan - used by "Send checkout link".',
   group: 'billing',
   doc: 'https://dashboard.stripe.com/products',
  },
  {
   name: 'STRIPE_PRICE_FULL',
   configured: !!process.env.STRIPE_PRICE_FULL,
-  purpose: 'Price ID for the $899/mo Full 24/7 plan — used by "Send checkout link".',
+  purpose: 'Price ID for the $899/mo Full 24/7 plan - used by "Send checkout link".',
   group: 'billing',
   doc: 'https://dashboard.stripe.com/products',
  },

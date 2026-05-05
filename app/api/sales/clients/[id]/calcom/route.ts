@@ -17,8 +17,8 @@ export const runtime = 'nodejs'
  * so they can wire it up live during the demo without waiting on
  * an admin to do it for them.
  *
- * POST   { apiKey, eventTypeId? }   — connect or list event types
- * DELETE                            — disconnect
+ * POST   { apiKey, eventTypeId? }   - connect or list event types
+ * DELETE                            - disconnect
  *
  * If `eventTypeId` is missing or invalid, returns the list so the UI
  * can render a dropdown.

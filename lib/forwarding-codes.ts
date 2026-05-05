@@ -2,7 +2,7 @@
  * Per-carrier conditional / unconditional call forwarding codes.
  *
  * Sources verified at research time (2026): each carrier's official support
- * page. Star codes change occasionally — flag mismatches in customer support
+ * page. Star codes change occasionally - flag mismatches in customer support
  * if a contractor reports they don't work.
  */
 
@@ -27,7 +27,7 @@ export type CarrierId =
 
 export type CarrierInstruction = {
  label: string                // "Forward when busy"
- dialString: string           // "*67*1XXXXXXXXXX#" — destination already substituted
+ dialString: string           // "*67*1XXXXXXXXXX#" - destination already substituted
  cancelString: string         // "##67#"
  note?: string
 }
@@ -75,7 +75,7 @@ export const CARRIERS: CarrierGuide[] = [
     label: 'Forward when missed (busy / no-answer / off)',
     dialString: `*71${n}`,
     cancelString: '*73',
-    note: 'iPhone users — turn off Live Voicemail (Settings → Phone) before dialing, or *71 won\'t stick.',
+    note: 'iPhone users - turn off Live Voicemail (Settings → Phone) before dialing, or *71 won\'t stick.',
    }]
   },
  },
@@ -156,7 +156,7 @@ export const CARRIERS: CarrierGuide[] = [
     label: 'Forward when missed',
     dialString: `*71${n}`,
     cancelString: '*73',
-    note: 'Default ring count before "no answer" is set by Verizon — typically 4 rings (~24s). Call Verizon to change.',
+    note: 'Default ring count before "no answer" is set by Verizon - typically 4 rings (~24s). Call Verizon to change.',
    }]
   },
  },

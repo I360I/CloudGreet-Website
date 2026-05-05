@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
  // tool arguments. The tool args (`business_id`) come from whatever the
  // agent's prompt was configured to send; trusting them lets a
  // misconfigured/malicious agent target any tenant. The agent_id in the
- // webhook envelope is the trustworthy identifier — Retell signs the
+ // webhook envelope is the trustworthy identifier - Retell signs the
  // body and the agent → business mapping is in our DB.
  const callingAgentId: string | undefined =
   body.call?.agent_id || body.agent_id || body.metadata?.agent_id
@@ -97,13 +97,13 @@ export async function POST(request: NextRequest) {
  return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
  }
  if (toolBusinessId && toolBusinessId !== resolvedBusinessId) {
- logger.warn('Retell tool args business_id mismatch — ignoring tool value', {
+ logger.warn('Retell tool args business_id mismatch - ignoring tool value', {
   toolBusinessId, resolvedBusinessId, callingAgentId,
  })
  }
  const business_id = resolvedBusinessId
 
- // Get business info — need cal.com config for the booking too.
+ // Get business info - need cal.com config for the booking too.
  const { data: business, error: businessError } = await supabaseAdmin
  .from('businesses')
  .select('id, stripe_customer_id, subscription_status, timezone, cal_com_api_key, cal_com_event_type_id, business_name, email')
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
 
  const apptId = appointmentId
 
- // Cal.com booking — this is the path that lands on the contractor's
+ // Cal.com booking - this is the path that lands on the contractor's
  // calendar (Google/Apple/Outlook via Cal.com). Without this, the
  // appointment exists in our DB but never appears on their actual
  // calendar feed.
@@ -188,10 +188,10 @@ export async function POST(request: NextRequest) {
   })
  }
  } else {
- logger.warn('Skipping Cal.com booking — no cal.com config on business', { business_id })
+ logger.warn('Skipping Cal.com booking - no cal.com config on business', { business_id })
  }
 
- // Legacy Google Calendar sync — kept for backward compatibility but
+ // Legacy Google Calendar sync - kept for backward compatibility but
  // skipped on businesses that have a Cal.com config (Cal.com routes
  // to the same calendar via the contractor's own integration).
  if (business_id && !((business as any)?.cal_com_api_key)) {
@@ -433,7 +433,7 @@ export async function POST(request: NextRequest) {
  }
 
  // Lifecycle events (no tool_call). The most important is
- // call_analyzed — that's where Retell's post-call extraction lands.
+ // call_analyzed - that's where Retell's post-call extraction lands.
  if (eventType === 'call_analyzed' || eventType === 'call_ended') {
   await handleCallEvent(eventType, body, resolvedBusinessId)
  }
@@ -475,7 +475,7 @@ async function handleCallEvent(
 
   // post_call_analysis_data is the headline feature. Retell returns
   // it as either an object keyed by field name or an array of
-  // { name, value } entries depending on agent config — we normalize
+  // { name, value } entries depending on agent config - we normalize
   // to a flat object before storing.
   const analysis =
    call?.call_analysis?.custom_analysis_data ??

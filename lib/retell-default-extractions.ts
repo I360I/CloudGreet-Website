@@ -1,6 +1,6 @@
 /**
  * Default post-call extraction schema applied to every CloudGreet
- * agent. The contractor doesn't configure this — it's the standard
+ * agent. The contractor doesn't configure this - it's the standard
  * "what every call gets captured" bundle. The dashboard renders the
  * tag (booking_type), the summary, and the structured fields on each
  * call's detail view.
@@ -18,7 +18,7 @@ export const DEFAULT_POST_CALL_FIELDS: RetellPostCallField[] = [
   type: 'string',
   name: 'summary',
   description:
-   'A one-line summary of the call in plain language — what the caller wanted and what happened. Max ~140 chars.',
+   'A one-line summary of the call in plain language - what the caller wanted and what happened. Max ~140 chars.',
   examples: [
    'Sarah called for an AC tune-up and booked Friday at 2pm.',
    'Caller wanted a quote for a furnace replacement; estimate to be emailed.',

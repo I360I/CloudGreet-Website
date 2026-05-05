@@ -199,7 +199,7 @@ export default function AdminLeadsPage() {
 create index if not exists leads_status_idx on public.leads (status);
 create index if not exists leads_next_action_idx on public.leads (next_action_at);`}</pre>
         <div className="mt-3">
-         <PrimaryButton onClick={load}>I ran it — reload</PrimaryButton>
+         <PrimaryButton onClick={load}>I ran it - reload</PrimaryButton>
         </div>
        </div>
       </div>
@@ -341,7 +341,7 @@ create index if not exists leads_next_action_idx on public.leads (next_action_at
            >
             <div className="lg:col-span-3 min-w-0">
              <div className="text-sm font-medium text-white truncate">{l.business_name}</div>
-             <div className="text-xs text-gray-500 truncate mt-0.5">{l.contact_name || '—'}</div>
+             <div className="text-xs text-gray-500 truncate mt-0.5">{l.contact_name || '-'}</div>
             </div>
             <div className="lg:col-span-3 min-w-0 mt-1.5 lg:mt-0">
              {l.phone ? (
@@ -552,7 +552,7 @@ function FormField({
    </label>
    {type === 'select' && options ? (
     <Select id={id} name={name} required={required} defaultValue="">
-     {!required && <option value="">—</option>}
+     {!required && <option value="">-</option>}
      {required && <option value="" disabled>Select…</option>}
      {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
     </Select>
@@ -651,7 +651,7 @@ function LeadDrawer({
        </span>
       </div>
       <h2 className="text-2xl font-medium text-white">{lead.business_name}</h2>
-      <div className="text-sm text-gray-400 mt-1">{lead.contact_name || '—'}</div>
+      <div className="text-sm text-gray-400 mt-1">{lead.contact_name || '-'}</div>
      </div>
 
      <div className="border-t border-white/[0.06] pt-4 space-y-3 text-sm">
@@ -758,7 +758,7 @@ function fmtDateTime(iso: string): string {
  })
 }
 
-/** Tiny CSV parser — handles quoted cells with embedded commas. */
+/** Tiny CSV parser - handles quoted cells with embedded commas. */
 function parseCsv(text: string): Record<string, string>[] {
  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0)
  if (lines.length < 2) return []
@@ -879,7 +879,7 @@ function CallMode({
  }
 
  if (!lead) {
-  // Filter changed under us — bail out cleanly.
+  // Filter changed under us - bail out cleanly.
   return null
  }
 
@@ -926,7 +926,7 @@ function CallMode({
      <div className="text-base text-gray-400 mt-1">{lead.contact_name}</div>
     )}
 
-    {/* Phone — the main affordance */}
+    {/* Phone - the main affordance */}
     {lead.phone ? (
      <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
       <a

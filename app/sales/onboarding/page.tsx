@@ -53,7 +53,7 @@ export default function SalesOnboardingPage() {
      </ul>
 
      <p className="text-xs text-gray-500">
-      Your information goes to Stripe directly — CloudGreet never sees your full SSN
+      Your information goes to Stripe directly - CloudGreet never sees your full SSN
       or bank account number. At year-end Stripe auto-files your 1099-NEC.
      </p>
 

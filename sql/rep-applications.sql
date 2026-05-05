@@ -21,7 +21,10 @@ create table if not exists public.rep_applications (
   prior_commission_only boolean,
   prior_b2b boolean,
 
-  -- Why
+  -- About
+  about_yourself text,
+
+  -- Why (optional)
   why_commission_only text,
   why_cloudgreet text,
 
@@ -34,7 +37,14 @@ create table if not exists public.rep_applications (
   hours_per_week integer,
   has_workspace boolean,
 
-  -- Submissions — one of resume_url / video_url required (enforced in API)
+  -- Submissions. Files live in the 'applications' Storage bucket;
+  -- resume_path / video_path are storage paths. resume_url / video_url
+  -- are kept around for any legacy/manual entry. At least one of the
+  -- four must be present (enforced in the API).
+  resume_path text,
+  resume_filename text,
+  video_path text,
+  video_filename text,
   resume_url text,
   video_url text,
 
@@ -59,3 +69,19 @@ create index if not exists rep_applications_created_idx on public.rep_applicatio
 create unique index if not exists rep_applications_email_active_idx
   on public.rep_applications (lower(email))
   where status not in ('rejected','withdrawn');
+
+-- Storage bucket for resume PDFs and intro MP4s.
+-- Private (no public reads); admin views with signed URLs from the
+-- service-role key.
+insert into storage.buckets (id, name, public)
+values ('applications', 'applications', false)
+on conflict (id) do nothing;
+
+-- ALTER paths for environments where the table already exists from a
+-- prior version of this migration.
+alter table public.rep_applications add column if not exists about_yourself text;
+alter table public.rep_applications add column if not exists resume_path text;
+alter table public.rep_applications add column if not exists resume_filename text;
+alter table public.rep_applications add column if not exists video_path text;
+alter table public.rep_applications add column if not exists video_filename text;
+

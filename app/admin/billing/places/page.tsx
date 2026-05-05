@@ -97,7 +97,7 @@ export default function PlacesBillingPage() {
               </h1>
               <p className="text-sm text-gray-400 mt-2 max-w-2xl">
                 Pulled directly from the BigQuery billing export. These are post-credit
-                numbers — same as what GCP will invoice. Detailed billing exports lag
+                numbers - same as what GCP will invoice. Detailed billing exports lag
                 actual usage by ~6–12 hours.
               </p>
             </div>
@@ -175,7 +175,7 @@ export default function PlacesBillingPage() {
                         {r.label}
                       </div>
                       <div className="text-2xl font-medium text-white tabular-nums">
-                        {v ? dollars(v.net_cost_usd) : '—'}
+                        {v ? dollars(v.net_cost_usd) : '-'}
                       </div>
                       <div className="text-[11px] text-gray-500 mt-1.5 flex flex-col gap-0.5">
                         <span>{r.hint}</span>

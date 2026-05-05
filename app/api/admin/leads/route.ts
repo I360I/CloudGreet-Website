@@ -52,13 +52,13 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
 
-  // Bulk insert path — `bulk: true, leads: [...]` for CSV import.
+  // Bulk insert path - `bulk: true, leads: [...]` for CSV import.
   if (body.bulk && Array.isArray(body.leads)) {
    const sanitized = body.leads
     .map((l: any) => {
      const businessName = String(l.business_name || '').trim().slice(0, 200)
      return {
-      // legacy NOT-NULL `name` column on leads — mirror from business_name.
+      // legacy NOT-NULL `name` column on leads - mirror from business_name.
       name: businessName,
       business_name: businessName,
       contact_name: l.contact_name ? String(l.contact_name).trim().slice(0, 200) : null,
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
   // Single-record path
   const businessName = String(body.business_name || '').trim().slice(0, 200)
   const sanitized = {
-   // legacy NOT-NULL `name` column on leads — mirror from business_name.
+   // legacy NOT-NULL `name` column on leads - mirror from business_name.
    name: businessName,
    business_name: businessName,
    contact_name: body.contact_name ? String(body.contact_name).trim().slice(0, 200) : null,

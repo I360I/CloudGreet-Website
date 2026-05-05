@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
  * POST /api/sales/scrape/request-more  { reason?: string }
  *
  * Pings the founder when a rep wants their daily scrape cap raised.
- * Best-effort email — we don't persist the request, just send the
+ * Best-effort email - we don't persist the request, just send the
  * note. If Resend isn't configured the endpoint still returns 200 so
  * the UI can show a confirmation; logs warn server-side.
  */

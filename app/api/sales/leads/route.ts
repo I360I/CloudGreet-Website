@@ -9,14 +9,14 @@ export const runtime = 'nodejs'
 /**
  * GET /api/sales/leads
  *
- * Three-stage manual join — avoids PostgREST's foreign-key auto-join
+ * Three-stage manual join - avoids PostgREST's foreign-key auto-join
  * because lead_assignments.lead_id has no declared FK to leads(id) in
  * the original schema. Doing the join in code is also more resilient
  * to optional columns.
  *
- *   1) lead_assignments      — required, must succeed
- *   2) leads                  — fetched by id list
- *   3) workflow + notes       — optional; if the migration isn't
+ *   1) lead_assignments      - required, must succeed
+ *   2) leads                  - fetched by id list
+ *   3) workflow + notes       - optional; if the migration isn't
  *      applied we just return defaults + migration_needed flag
  */
 export async function GET(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
   }
 
-  // Stage 1 — assignments
+  // Stage 1 - assignments
   const { data: assignments, error: aErr } = await supabaseAdmin
     .from('lead_assignments')
     .select('lead_id, assigned_at')
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, leads: [] })
   }
 
-  // Stage 2 — leads
+  // Stage 2 - leads
   const { data: leadRows, error: lErr } = await supabaseAdmin
     .from('leads')
     .select('*')
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
   const leadById = new Map<string, any>()
   for (const row of leadRows || []) leadById.set(row.id, row)
 
-  // Stage 3 — optional workflow fields
+  // Stage 3 - optional workflow fields
   let workflowMap = new Map<string, any>()
   let migrationNeeded: string | null = null
   try {
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     migrationNeeded = 'sales-lead-workflow'
   }
 
-  // Stage 3b — optional latest note per lead
+  // Stage 3b - optional latest note per lead
   let latestNoteByLead = new Map<string, { body: string; created_at: string }>()
   try {
     const { data: notes, error: nErr } = await supabaseAdmin
@@ -104,9 +104,9 @@ export async function GET(request: NextRequest) {
         }
       }
     }
-  } catch { /* notes table may not exist yet — fine */ }
+  } catch { /* notes table may not exist yet - fine */ }
 
-  // Merge — preserve assignments order (most-recent first)
+  // Merge - preserve assignments order (most-recent first)
   const leads = (assignments ?? [])
     .map((a) => {
       const lead = leadById.get(a.lead_id)

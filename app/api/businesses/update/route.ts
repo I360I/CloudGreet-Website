@@ -18,7 +18,7 @@ export const runtime = 'nodejs'
  * All automated - agent updates immediately!
  */
 // Whitelist what the client may write. Anything not on this list is
-// silently dropped — keeps a malicious client from flipping
+// silently dropped - keeps a malicious client from flipping
 // subscription_status, owner_id, etc.
 const ALLOWED_FIELDS = new Set([
   'business_name', 'business_type', 'phone_number', 'website',
@@ -33,7 +33,7 @@ export async function PATCH(request: NextRequest) {
   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
  }
  const userId = authResult.userId
- // BusinessId from JWT only — never trust a client-supplied id.
+ // BusinessId from JWT only - never trust a client-supplied id.
  const businessId = authResult.businessId
 
  const body = await request.json().catch(() => ({}))
@@ -92,7 +92,7 @@ export async function PATCH(request: NextRequest) {
   }, { status: 500 })
  }
 
- // 3. Always attempt the Retell sync — let the agent manager decide
+ // 3. Always attempt the Retell sync - let the agent manager decide
  //    whether there's an agent to update. The previous gate
  //    (`business.retell_agent_id`) skipped clients whose agent id
  //    lives only in ai_agents, returning success without ever calling
@@ -106,7 +106,7 @@ export async function PATCH(request: NextRequest) {
 
   // Only thread fields the user actually changed in this request into
   // the agent config. Otherwise we'd send (e.g.) an empty greeting on
-  // a voice-only save — Retell interprets begin_message="" as 'switch
+  // a voice-only save - Retell interprets begin_message="" as 'switch
   // to dynamic mode' and clobbers the static greeting.
   const greetingChanged = 'greeting_message' in updates
   const voiceChanged = 'voice_id' in updates

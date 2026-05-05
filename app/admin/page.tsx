@@ -147,7 +147,7 @@ export default function AdminHome() {
       </Link>
      </div>
 
-     {/* Hero KPI — cross-tenant calls this month with sparkline */}
+     {/* Hero KPI - cross-tenant calls this month with sparkline */}
      <motion.div
       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: EASE }}
@@ -169,7 +169,7 @@ export default function AdminHome() {
      >
       {[
        { label: 'Active', value: String(data?.kpis.activeClients ?? 0), accent: true,
-        sub: data && data.kpis.totalClients ? `${Math.round((data.kpis.activeClients / data.kpis.totalClients) * 100)}% of total` : '—' },
+        sub: data && data.kpis.totalClients ? `${Math.round((data.kpis.activeClients / data.kpis.totalClients) * 100)}% of total` : '-' },
        { label: 'Trialing', value: String(data?.kpis.trialingClients ?? 0), accent: false },
        { label: 'In onboarding', value: String(data?.kpis.inOnboarding ?? 0), accent: false,
         sub: 'Cal.com or forwarding incomplete' },
@@ -359,7 +359,7 @@ function ClientRow({ client, onDelete }: { client: Client; onDelete: () => void 
       </div>
       {/* Last call */}
       <div className="hidden lg:block lg:col-span-2 text-xs text-gray-500">
-       {client.last_call_at ? relTime(client.last_call_at) : '—'}
+       {client.last_call_at ? relTime(client.last_call_at) : '-'}
       </div>
       {/* Actions */}
       <div className="hidden lg:flex lg:col-span-2 items-center justify-end gap-3">
@@ -376,7 +376,7 @@ function ClientRow({ client, onDelete }: { client: Client; onDelete: () => void 
      {/* Mobile: small inline summary on the right */}
      <div className="lg:hidden flex flex-col items-end gap-1.5 text-xs text-gray-500 flex-shrink-0">
       <span className="font-mono tabular-nums text-gray-200">{client.calls_this_month}</span>
-      <span className="font-mono text-[10px]">{client.last_call_at ? relTime(client.last_call_at) : '—'}</span>
+      <span className="font-mono text-[10px]">{client.last_call_at ? relTime(client.last_call_at) : '-'}</span>
      </div>
      <button
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete() }}

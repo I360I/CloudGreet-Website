@@ -43,7 +43,7 @@ export default function AdminSalesPage() {
   if (!confirm(
     'Run the weekly payout sweep now?\n\n' +
     'Sums every rep\'s unpaid commission_ledger rows and fires a Stripe Connect transfer per rep. ' +
-    'Idempotent — safe to run more than once; reps already paid this week won\'t be paid again.',
+    'Idempotent - safe to run more than once; reps already paid this week won\'t be paid again.',
   )) return
   setRunningPayouts(true)
   setPayoutResult(null)
@@ -111,7 +111,7 @@ export default function AdminSalesPage() {
        <button
         onClick={runPayouts}
         disabled={runningPayouts}
-        title="Friday cron runs this automatically — manual trigger for off-cycle payouts"
+        title="Friday cron runs this automatically - manual trigger for off-cycle payouts"
         className="inline-flex items-center gap-2 text-sm text-emerald-300 hover:text-emerald-200 border border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/10 rounded-lg px-3 py-2 disabled:opacity-60 transition-colors"
        >
         {runningPayouts ? <Loader2 className="w-4 h-4 animate-spin" /> : <BadgeDollarSign className="w-4 h-4" />}
@@ -186,7 +186,7 @@ export default function AdminSalesPage() {
        </div>
       ) : reps.length === 0 ? (
        <div className="px-6 py-10 text-center text-sm text-gray-500">
-        No reps yet. Invite your first one with the button above — they&apos;ll get an email to set up
+        No reps yet. Invite your first one with the button above - they&apos;ll get an email to set up
         their account, sign the agreement, and connect their bank.
        </div>
       ) : (
@@ -310,7 +310,7 @@ function InviteModal({ onClose, onSent }: { onClose: () => void; onSent: () => v
         <span>
          {result.emailSent
           ? 'Invite email sent. Copy the link below if you also want to send via Signal/SMS.'
-          : "Invite created. RESEND_API_KEY isn't set, so no email was sent — copy this link and send it manually."}
+          : "Invite created. RESEND_API_KEY isn't set, so no email was sent - copy this link and send it manually."}
         </span>
        </div>
        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl p-3">

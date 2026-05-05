@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
   const enriched = (calls || []).map((c) => ({
    ...c,
-   business_name: nameByBiz[c.business_id] || '—',
+   business_name: nameByBiz[c.business_id] || '-',
   }))
 
   return NextResponse.json({

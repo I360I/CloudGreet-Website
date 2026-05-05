@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
  details: error.details,
  hint: error.hint,
  })
- // Treat any "table missing / schema cache miss" as "no creds yet" — the
+ // Treat any "table missing / schema cache miss" as "no creds yet" - the
  // page renders the integration list with empty values and lets the admin
  // enter them. Real DB outages still 500.
  const missingTable =

@@ -85,7 +85,7 @@ export default function AdminClosesPage() {
         prompt(
           `Client created.\n\n` +
           `Email: ${j.user.email}\n` +
-          `Temp password (copy now — won't be shown again):`,
+          `Temp password (copy now - won't be shown again):`,
           pwd,
         )
         await load()
@@ -117,7 +117,7 @@ export default function AdminClosesPage() {
   }
 
   const remove = async (id: string) => {
-    if (!confirm('Delete this close? This is only for spam — use Reject for normal cases.')) return
+    if (!confirm('Delete this close? This is only for spam - use Reject for normal cases.')) return
     setWorking(id)
     try {
       const res = await fetchWithAuth(`/api/admin/sales/closes/${id}`, { method: 'DELETE' })
@@ -204,7 +204,7 @@ export default function AdminClosesPage() {
                 {closes.map((c) => {
                   const repName = c.rep
                     ? [c.rep.first_name, c.rep.last_name].filter(Boolean).join(' ') || c.rep.email
-                    : '—'
+                    : '-'
                   const busy = working === c.id
                   return (
                     <li key={c.id} className="px-5 sm:px-6 py-4">

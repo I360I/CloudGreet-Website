@@ -97,7 +97,7 @@ export default function SalesLeadsPage() {
         body: JSON.stringify({ status, touched: true }),
       })
     } catch {
-      // Rollback on failure — refetch to be safe
+      // Rollback on failure - refetch to be safe
       load()
     } finally {
       setUpdatingStatusId(null)
@@ -367,7 +367,7 @@ export default function SalesLeadsPage() {
                           )}
                         </Link>
 
-                        {/* Middle: BIG phone — easy to read while typing into a phone */}
+                        {/* Middle: BIG phone - easy to read while typing into a phone */}
                         {l.phone && (
                           <a
                             href={`tel:${l.phone}`}
