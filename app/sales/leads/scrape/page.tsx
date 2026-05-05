@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Play, Loader2, AlertCircle, CheckCircle2, X, Trash2, ArrowLeft,
-  ChevronRight, Sparkles, MapPin, Phone, Globe,
-} from 'lucide-react'
+  Play, CircleNotch, WarningCircle, CheckCircle, X, Trash, ArrowLeft,
+  CaretRight, Sparkle, MapPin, Phone, Globe,
+} from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 
@@ -119,7 +119,7 @@ export default function SalesScrapePage() {
       <SalesShell activeLabel="Leads">
         <section className="max-w-2xl mx-auto px-6 py-12">
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <WarningCircle weight="fill" className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-sm font-medium text-amber-900">Scraper not set up</p>
               <p className="text-xs text-amber-800 mt-1">
@@ -153,7 +153,7 @@ export default function SalesScrapePage() {
         />
 
         <p className="text-sm text-gray-500 mb-6 max-w-xl">
-          Pull verified contractors from public licensing databases. Anything you promote auto-claims into your pool.
+          Pull verified contractors from public licensing databases. Anything you promote lands in your leads list.
         </p>
 
         <motion.div
@@ -210,7 +210,7 @@ export default function SalesScrapePage() {
 
           {err && (
             <div className="mt-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <WarningCircle weight="fill" className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>{err}</span>
             </div>
           )}
@@ -221,7 +221,7 @@ export default function SalesScrapePage() {
               disabled={!sourceId || running}
               className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-800 disabled:opacity-60"
             >
-              {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              {running ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
               {running ? 'Scraping…' : 'Run scrape'}
             </button>
           </div>
@@ -281,7 +281,7 @@ export default function SalesScrapePage() {
                         {j.error && <span className="text-red-500 truncate">· {j.error}</span>}
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-700 group-hover:translate-x-0.5 transition-all" />
+                    <CaretRight className="w-4 h-4 text-gray-300 group-hover:text-gray-700 group-hover:translate-x-0.5 transition-all" />
                   </button>
                 </motion.li>
               ))}
@@ -419,7 +419,7 @@ function JobDrawer({
               className="text-gray-400 hover:text-red-500 transition-colors p-1"
               aria-label="Delete"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash className="w-4 h-4" />
             </button>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-900 p-1" aria-label="Close">
               <X className="w-4 h-4" />
@@ -438,7 +438,7 @@ function JobDrawer({
                 disabled={promoting}
                 className="text-xs bg-gray-900 text-white rounded-lg px-3 py-1.5 hover:bg-gray-800 disabled:opacity-60 inline-flex items-center gap-1.5"
               >
-                {promoting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                {promoting ? <CircleNotch className="w-3 h-3 animate-spin" /> : <Sparkle weight="fill" className="w-3 h-3" />}
                 Promote {selected.size}
               </button>
             )}
@@ -456,14 +456,14 @@ function JobDrawer({
 
         {promoteMsg && (
           <div className="px-5 py-2 bg-emerald-50 text-emerald-800 text-xs flex items-center gap-2 border-b border-emerald-100">
-            <CheckCircle2 className="w-3.5 h-3.5" /> {promoteMsg}
+            <CheckCircle weight="fill" className="w-3.5 h-3.5" /> {promoteMsg}
           </div>
         )}
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="py-16 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+              <CircleNotch className="w-5 h-5 text-gray-400 animate-spin" />
             </div>
           ) : err ? (
             <div className="p-5 text-sm text-red-600">{err}</div>

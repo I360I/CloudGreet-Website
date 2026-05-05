@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { CircleNotch, WarningCircle, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -33,7 +33,7 @@ function NewCloseForm() {
         const res = await fetchWithAuth('/api/sales/leads')
         const j = await res.json().catch(() => ({}))
         if (cancelled) return
-        const lead = (j.claimed || []).find((l: any) => l.id === leadId)
+        const lead = (j.leads || []).find((l: any) => l.id === leadId)
         if (lead) {
           setBusinessName(lead.business_name || '')
           setContactName(lead.contact_name || '')
@@ -84,7 +84,7 @@ function NewCloseForm() {
     return (
       <SalesShell activeLabel="Closes">
         <section className="max-w-xl mx-auto px-6 py-16 text-center">
-          <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+          <CheckCircle weight="fill" className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
           <h1 className="text-xl font-medium text-gray-900 mb-1">Close submitted</h1>
           <p className="text-sm text-gray-500">
             Anthony will review and send the payment link. You&apos;ll see it move to &quot;Invoice sent&quot;.
@@ -111,7 +111,7 @@ function NewCloseForm() {
         >
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <WarningCircle weight="fill" className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
@@ -203,7 +203,7 @@ function NewCloseForm() {
               disabled={submitting}
               className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-800 disabled:opacity-60"
             >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {submitting && <CircleNotch className="w-4 h-4 animate-spin" />}
               Submit close
             </button>
           </div>

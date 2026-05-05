@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus, AlertCircle } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Plus, WarningCircle, Trophy } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -67,14 +68,14 @@ export default function SalesClosesPage() {
               href="/sales/closes/new"
               className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-800"
             >
-              <Plus className="w-4 h-4" /> Submit close
+              <Plus weight="bold" className="w-4 h-4" /> Submit close
             </Link>
           }
         />
 
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <WarningCircle weight="fill" className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -82,7 +83,14 @@ export default function SalesClosesPage() {
         {loading ? (
           <SalesLoadingState />
         ) : closes.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-white border border-gray-200 rounded-2xl p-10 text-center shadow-sm"
+          >
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 mb-3">
+              <Trophy weight="duotone" className="w-6 h-6" />
+            </div>
             <p className="text-sm text-gray-500 mb-4">
               No closes yet. Submit one when you sign someone.
             </p>
@@ -90,14 +98,25 @@ export default function SalesClosesPage() {
               href="/sales/closes/new"
               className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-800"
             >
-              <Plus className="w-4 h-4" /> Submit close
+              <Plus weight="bold" className="w-4 h-4" /> Submit close
             </Link>
-          </div>
+          </motion.div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-            <ul className="divide-y divide-gray-100">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm"
+          >
+            <motion.ul
+              initial="hidden" animate="show"
+              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.02 } } }}
+              className="divide-y divide-gray-100"
+            >
               {closes.map((c) => (
-                <li key={c.id} className="px-5 py-4">
+                <motion.li
+                  key={c.id}
+                  variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { duration: 0.25 } } }}
+                  className="px-5 py-4 hover:bg-gray-50/60 transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-gray-900 truncate">
@@ -123,10 +142,10 @@ export default function SalesClosesPage() {
                       {STATUS_LABEL[c.status]}
                     </span>
                   </div>
-                </li>
+                </motion.li>
               ))}
-            </ul>
-          </div>
+            </motion.ul>
+          </motion.div>
         )}
       </section>
     </SalesShell>

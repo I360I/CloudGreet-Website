@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  AlertCircle, ArrowRight, TrendingUp,
-} from 'lucide-react'
+  WarningCircle, ArrowRight, TrendUp,
+} from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { Line } from 'react-chartjs-2'
@@ -168,7 +168,7 @@ export default function SalesEarningsPage() {
 
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <WarningCircle weight="fill" className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -178,7 +178,7 @@ export default function SalesEarningsPage() {
             initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
             className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3"
           >
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <WarningCircle weight="fill" className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-medium text-amber-900">
                 Bank not connected — payouts are paused
@@ -226,7 +226,7 @@ export default function SalesEarningsPage() {
                   <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Last 12 weeks</div>
                   <div className="text-base font-medium text-gray-900 flex items-center gap-2">
                     Cumulative commission
-                    <TrendingUp className="w-4 h-4 text-emerald-500" />
+                    <TrendUp weight="bold" className="w-4 h-4 text-emerald-500" />
                   </div>
                 </div>
                 <div className="text-right">
