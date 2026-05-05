@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
- LayoutGrid, Phone, BadgeDollarSign, ListChecks, Wand2, LogOut,
+ LayoutGrid, Phone, BadgeDollarSign, ListChecks, Wand2, LogOut, Users,
 } from 'lucide-react'
 
 type Item = {
@@ -18,12 +18,13 @@ const items: Item[] = [
  { icon: LayoutGrid, label: 'Overview', href: '/admin', match: (p) => p === '/admin' || p.startsWith('/admin/clients') },
  { icon: Phone, label: 'Calls', href: '/admin/calls', match: (p) => p.startsWith('/admin/calls') },
  { icon: BadgeDollarSign, label: 'Billing', href: '/admin/billing', match: (p) => p.startsWith('/admin/billing') },
+ { icon: Users, label: 'Sales', href: '/admin/sales', match: (p) => p.startsWith('/admin/sales') },
  { icon: ListChecks, label: 'Leads', href: '/admin/leads', match: (p) => p.startsWith('/admin/leads') },
  { icon: Wand2, label: 'Tools', href: '/admin/tools', match: (p) => p.startsWith('/admin/tools') },
 ]
 
 export type AdminActiveLabel =
- | 'Overview' | 'Calls' | 'Billing' | 'Leads' | 'Tools'
+ | 'Overview' | 'Calls' | 'Billing' | 'Sales' | 'Leads' | 'Tools'
 
 export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
  adminEmail: string

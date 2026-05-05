@@ -122,6 +122,7 @@ export async function middleware(request: NextRequest) {
     pathname === '/register-simple' ||
     pathname === '/admin' ||
     pathname.startsWith('/admin/') ||
+    pathname === '/sales/accept-invite' ||
     pathname === '/'
   ) {
     return NextResponse.next()
@@ -129,9 +130,9 @@ export async function middleware(request: NextRequest) {
 
   // Get token from cookies or Authorization header
   const token = request.cookies.get('token')?.value || request.headers.get('authorization')?.replace('Bearer ', '')
-  
+
   // If no token and trying to access protected route, redirect to login
-  if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin'))) {
+  if (!token && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/sales'))) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

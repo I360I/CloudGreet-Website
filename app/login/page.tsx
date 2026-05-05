@@ -34,7 +34,11 @@ export default function LoginPage() {
    if (result.data.business) {
     localStorage.setItem('business', JSON.stringify(result.data.business))
    }
-   window.location.href = '/dashboard'
+   // Route by role: sales reps land on /sales, admins on /admin,
+   // owners on /dashboard. login-simple already resolves the role.
+   const role = result.data.user?.role
+   const dest = role === 'sales' ? '/sales' : role === 'admin' ? '/admin' : '/dashboard'
+   window.location.href = dest
   } catch {
    setError('Login failed. Please try again.')
   } finally {
