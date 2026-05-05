@@ -1,8 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react'
+
+// Force dynamic so Next doesn't try to prerender this — useSearchParams
+// requires a request and the page is per-invite anyway.
+export const dynamic = 'force-dynamic'
 
 const AGREEMENT_TEXT = `
 INDEPENDENT CONTRACTOR AGREEMENT (summary)
@@ -28,6 +32,20 @@ INDEPENDENT CONTRACTOR AGREEMENT (summary)
 `.trim()
 
 export default function AcceptInvitePage() {
+ return (
+  <Suspense
+   fallback={
+    <main className="min-h-screen bg-[#f6f5f1] flex items-center justify-center">
+     <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+    </main>
+   }
+  >
+   <AcceptInviteInner />
+  </Suspense>
+ )
+}
+
+function AcceptInviteInner() {
  const router = useRouter()
  const params = useSearchParams()
  const token = params?.get('token') || ''
