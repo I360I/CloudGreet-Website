@@ -31,6 +31,20 @@ const dollars = (cents: number) =>
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString()
 
+function ageLabel(iso: string): string {
+  const start = new Date(iso)
+  const now = new Date()
+  const months =
+    (now.getFullYear() - start.getFullYear()) * 12 +
+    (now.getMonth() - start.getMonth())
+  if (months < 1) {
+    const days = Math.max(0, Math.floor((now.getTime() - start.getTime()) / 86_400_000))
+    if (days <= 0) return 'new'
+    return `${days}d`
+  }
+  return months === 1 ? '1 mo' : `${months} mo`
+}
+
 function nextFriday(): string {
   const d = new Date()
   const delta = (5 - d.getDay() + 7) % 7 || 7
@@ -158,10 +172,13 @@ export default function SalesEarningsPage() {
                         <div className="text-sm font-medium text-gray-900 truncate">
                           {c.business_name}
                         </div>
-                        <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-2.5">
+                        <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap items-center gap-x-2.5">
                           <span className="tabular-nums">{dollars(c.monthly_cents)}/mo</span>
                           <span className="text-gray-300">·</span>
                           <span>since {fmtDate(c.started_at)}</span>
+                          <span className="text-[10px] font-mono uppercase tracking-wider bg-gray-100 text-gray-600 rounded-full px-1.5 py-0.5 tabular-nums">
+                            {ageLabel(c.started_at)}
+                          </span>
                           {c.status === 'invoice_sent' && (
                             <>
                               <span className="text-gray-300">·</span>
