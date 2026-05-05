@@ -154,9 +154,11 @@ export async function POST(request: NextRequest) {
   try {
    const resend = new Resend(resendKey)
    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
+   const replyTo = process.env.RESEND_REPLY_TO || 'anthony@cloudgreet.com'
    await resend.emails.send({
     from: `CloudGreet <${fromEmail}>`,
     to: email,
+    replyTo,
     subject: 'Your CloudGreet sales rep invite',
     text:
 `${name ? `Hi ${name},` : 'Hi,'}
