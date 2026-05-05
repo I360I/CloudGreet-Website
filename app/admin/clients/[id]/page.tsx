@@ -255,6 +255,7 @@ export default function ClientDetailPage() {
        </div>
       </div>
       <div className="flex items-center gap-2">
+       <StripeSyncButton clientId={id} onSynced={load} />
        <DangerButton onClick={onDelete}>
         <Trash2 className="w-4 h-4" /> Delete client
        </DangerButton>
@@ -2025,5 +2026,49 @@ function SalesRepAssignmentCard({
     the invoice was paid.
    </p>
   </Panel>
+ )
+}
+
+/* ------------------------- Stripe sync button -------------------------- */
+
+function StripeSyncButton({
+ clientId, onSynced,
+}: {
+ clientId: string | undefined
+ onSynced: () => void
+}) {
+ const [busy, setBusy] = useState(false)
+ const [flash, setFlash] = useState<string | null>(null)
+
+ const run = async () => {
+  if (!clientId) return
+  setBusy(true); setFlash(null)
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${clientId}/stripe-sync`, {
+    method: 'POST',
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok) {
+    setFlash(`Failed: ${j?.error || res.status}`)
+   } else {
+    setFlash(`Synced · status=${j.synced || 'unknown'}`)
+    onSynced()
+   }
+  } finally {
+   setBusy(false)
+   setTimeout(() => setFlash(null), 4000)
+  }
+ }
+
+ return (
+  <div className="flex flex-col items-end gap-1">
+   <GhostButton onClick={run} disabled={busy}>
+    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+    Sync from Stripe
+   </GhostButton>
+   {flash && (
+    <span className="text-[11px] text-gray-400 font-mono">{flash}</span>
+   )}
+  </div>
  )
 }
