@@ -1665,9 +1665,10 @@ function TempPasswordModal({
 
 /* --------------------------- Checkout link modal --------------------------- */
 
-const CHECKOUT_PLANS: { id: 'starter' | 'full'; label: string; sub: string; amount: string }[] = [
+const CHECKOUT_PLANS: { id: 'starter' | 'full' | 'custom'; label: string; sub: string; amount: string }[] = [
  { id: 'starter', label: 'Starter', sub: 'After-hours coverage', amount: '$499/mo' },
  { id: 'full', label: 'Full 24/7', sub: 'Round-the-clock', amount: '$899/mo' },
+ { id: 'custom', label: 'Custom', sub: 'Negotiated rate (e.g. law firm, multi-loc)', amount: '$ / mo' },
 ]
 
 function CheckoutLinkModal({
@@ -1677,7 +1678,9 @@ function CheckoutLinkModal({
  businessName: string
  onClose: () => void
 }) {
- const [plan, setPlan] = useState<'starter' | 'full'>('starter')
+ const [plan, setPlan] = useState<'starter' | 'full' | 'custom'>('starter')
+ const [customMonthly, setCustomMonthly] = useState<string>('')
+ const [setupFee, setSetupFee] = useState<string>('')
  const [busy, setBusy] = useState(false)
  const [error, setError] = useState('')
  const [result, setResult] = useState<{
@@ -1694,9 +1697,20 @@ function CheckoutLinkModal({
  const generate = async () => {
   setBusy(true); setError('')
   try {
+   const body: Record<string, any> = { plan }
+   if (plan === 'custom') {
+    const dollars = parseFloat(customMonthly)
+    if (!Number.isFinite(dollars) || dollars < 50) {
+     throw new Error('Enter a custom monthly amount (minimum $50).')
+    }
+    body.monthly_cents = Math.round(dollars * 100)
+   }
+   const fee = parseFloat(setupFee || '0')
+   if (Number.isFinite(fee) && fee > 0) body.setup_fee_cents = Math.round(fee * 100)
+
    const res = await fetchWithAuth(`/api/admin/clients/${clientId}/checkout-link`, {
     method: 'POST',
-    body: JSON.stringify({ plan }),
+    body: JSON.stringify(body),
    })
    const j = await res.json().catch(() => ({}))
    if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
@@ -1771,6 +1785,37 @@ function CheckoutLinkModal({
           </button>
          ))}
         </div>
+       </div>
+
+       {plan === 'custom' && (
+        <div>
+         <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">
+          Monthly amount (USD)
+         </div>
+         <Input
+          value={customMonthly}
+          onChange={(e) => setCustomMonthly(e.target.value.replace(/[^0-9.]/g, ''))}
+          placeholder="2000"
+         />
+         <p className="text-[10px] text-gray-500 mt-1">
+          Whole dollars, e.g. 2000 for $2,000/mo. Min $50.
+         </p>
+        </div>
+       )}
+
+       <div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">
+         Setup fee (one-time, optional)
+        </div>
+        <Input
+         value={setupFee}
+         onChange={(e) => setSetupFee(e.target.value.replace(/[^0-9.]/g, ''))}
+         placeholder="500"
+        />
+        <p className="text-[10px] text-gray-500 mt-1">
+         Whole dollars. Charged on the first invoice along with the first month.
+         Leave blank to skip. Reps can drop this to close.
+        </p>
        </div>
 
        {error && (
