@@ -1,0 +1,212 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { Resend } from 'resend'
+import { supabaseAdmin } from '@/lib/supabase'
+import { logger } from '@/lib/monitoring'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+/**
+ * POST /api/applications
+ *
+ * Public endpoint. Captures a rep job application and emails Anthony
+ * a heads-up. Validates basic shape; rate-limits via the unique
+ * email constraint (only one active application per email).
+ */
+export async function POST(request: NextRequest) {
+  let body: any
+  try { body = await request.json() } catch { body = null }
+  if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+
+  const str = (v: any, max = 1000) => typeof v === 'string' ? v.trim().slice(0, max) : ''
+  const num = (v: any) => {
+    const n = Number(v)
+    return Number.isFinite(n) ? Math.floor(n) : null
+  }
+  const bool = (v: any) => v === true || v === 'true' || v === 'on' || v === 1
+  const url = (v: any): string | null => {
+    const s = str(v, 500)
+    if (!s) return null
+    let u = s
+    if (!/^https?:\/\//i.test(u)) u = `https://${u}`
+    try {
+      const parsed = new URL(u)
+      if (!['http:', 'https:'].includes(parsed.protocol)) return null
+      return parsed.toString()
+    } catch {
+      return null
+    }
+  }
+
+  const first_name = str(body.first_name, 100)
+  const last_name = str(body.last_name, 100)
+  const email = str(body.email, 200).toLowerCase()
+  const phone = str(body.phone, 30)
+
+  if (!first_name || !last_name) {
+    return NextResponse.json({ error: 'First and last name are required' }, { status: 400 })
+  }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return NextResponse.json({ error: 'Valid email is required' }, { status: 400 })
+  }
+  if (!phone || phone.replace(/\D/g, '').length < 10) {
+    return NextResponse.json({ error: 'Valid phone number is required' }, { status: 400 })
+  }
+
+  const resume_url = url(body.resume_url)
+  const video_url = url(body.video_url)
+  if (!resume_url && !video_url) {
+    return NextResponse.json({
+      error: 'Either a resume link or a 90-second video intro is required.',
+    }, { status: 400 })
+  }
+
+  const why_commission_only = str(body.why_commission_only, 2000)
+  const why_cloudgreet = str(body.why_cloudgreet, 2000)
+  if (!why_commission_only || !why_cloudgreet) {
+    return NextResponse.json({
+      error: 'Please answer both "why commission-only sales" and "why CloudGreet" questions.',
+    }, { status: 400 })
+  }
+
+  // biggest deal — accept "$25,000" or "25000" or "25k"
+  const dealRaw = str(body.biggest_deal, 30).toLowerCase().replace(/[$,\s]/g, '')
+  let biggest_deal_cents: number | null = null
+  const m = dealRaw.match(/^(\d+(?:\.\d+)?)(k|m)?$/)
+  if (m) {
+    let dollars = parseFloat(m[1])
+    if (m[2] === 'k') dollars *= 1000
+    else if (m[2] === 'm') dollars *= 1_000_000
+    biggest_deal_cents = Math.round(dollars * 100)
+  }
+
+  const startDateRaw = str(body.earliest_start_date, 30)
+  let earliest_start_date: string | null = null
+  if (startDateRaw) {
+    const d = new Date(startDateRaw)
+    if (!isNaN(d.getTime())) earliest_start_date = d.toISOString().slice(0, 10)
+  }
+
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() || null
+  const ua = request.headers.get('user-agent') || null
+
+  const insert = {
+    first_name,
+    last_name,
+    email,
+    phone,
+    city: str(body.city, 100) || null,
+    state: str(body.state, 60) || null,
+    linkedin_url: url(body.linkedin_url),
+    years_sales_experience: num(body.years_sales_experience),
+    previous_role: str(body.previous_role, 200) || null,
+    industries_sold: str(body.industries_sold, 500) || null,
+    biggest_deal_cents,
+    prior_commission_only: bool(body.prior_commission_only),
+    prior_b2b: bool(body.prior_b2b),
+    why_commission_only,
+    why_cloudgreet,
+    monthly_goal_deals: num(body.monthly_goal_deals),
+    why_can_hit_goal: str(body.why_can_hit_goal, 2000) || null,
+    earliest_start_date,
+    hours_per_week: num(body.hours_per_week),
+    has_workspace: bool(body.has_workspace),
+    resume_url,
+    video_url,
+    ip_address: ip,
+    user_agent: ua ? ua.slice(0, 500) : null,
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('rep_applications')
+    .insert(insert)
+    .select('id, created_at')
+    .single()
+
+  if (error) {
+    if (/unique|duplicate/i.test(error.message)) {
+      return NextResponse.json({
+        error: 'You already have an active application on file. We\'ll be in touch — feel free to email anthony@cloudgreet.com if you need to update something.',
+      }, { status: 409 })
+    }
+    logger.error('Application insert failed', { error: error.message })
+    return NextResponse.json({ error: 'Could not submit application. Try again or email anthony@cloudgreet.com.' }, { status: 500 })
+  }
+
+  // Best-effort founder notification.
+  try {
+    const resendKey = process.env.RESEND_API_KEY
+    if (resendKey) {
+      const resend = new Resend(resendKey)
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
+      const founderEmail = process.env.FOUNDER_EMAIL || 'anthony@cloudgreet.com'
+      await resend.emails.send({
+        from: `CloudGreet <${fromEmail}>`,
+        to: founderEmail,
+        replyTo: email,
+        subject: `New rep application — ${first_name} ${last_name}`,
+        text:
+`${first_name} ${last_name} just applied for the sales-rep role.
+
+  Email:    ${email}
+  Phone:    ${phone}
+  Location: ${insert.city || '—'}, ${insert.state || '—'}
+  ${insert.linkedin_url ? `LinkedIn: ${insert.linkedin_url}` : ''}
+  Resume:   ${resume_url || '—'}
+  Video:    ${video_url || '—'}
+
+Why commission-only:
+${why_commission_only.slice(0, 600)}${why_commission_only.length > 600 ? '…' : ''}
+
+Why CloudGreet:
+${why_cloudgreet.slice(0, 600)}${why_cloudgreet.length > 600 ? '…' : ''}
+
+Review: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/admin/applications/${data.id}
+`,
+      })
+    }
+  } catch (e) {
+    logger.warn('Application founder email failed', {
+      error: e instanceof Error ? e.message : 'Unknown',
+    })
+  }
+
+  // Light auto-reply to the candidate.
+  try {
+    const resendKey = process.env.RESEND_API_KEY
+    if (resendKey) {
+      const resend = new Resend(resendKey)
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
+      const replyTo = process.env.FOUNDER_EMAIL || 'anthony@cloudgreet.com'
+      const html = `<!doctype html>
+<html><body style="margin:0;padding:0;background:#f6f5f1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#111827;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="520" style="max-width:520px;background:#ffffff;border:1px solid #e5e7eb;">
+        <tr><td style="padding:32px;">
+          <div style="font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#6b7280;">CloudGreet</div>
+          <div style="font-size:20px;font-weight:500;letter-spacing:-0.01em;margin-top:6px;">Application received.</div>
+          <p style="font-size:14px;color:#374151;line-height:1.6;margin-top:16px;">
+            Thanks for applying, ${first_name}. I read every application personally and respond within a few business days. If we move forward, you'll get an email with a Calendly link to pick an interview slot.
+          </p>
+          <p style="font-size:14px;color:#374151;line-height:1.6;margin-top:12px;">
+            — Anthony Edwards<br/>Founder, CloudGreet
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+      await resend.emails.send({
+        from: `CloudGreet <${fromEmail}>`,
+        to: email,
+        replyTo,
+        subject: 'Your CloudGreet sales-rep application',
+        html,
+        text: `Thanks for applying, ${first_name}. I read every application personally and respond within a few business days. — Anthony, CloudGreet`,
+      })
+    }
+  } catch { /* non-fatal */ }
+
+  return NextResponse.json({ success: true, application_id: data.id })
+}
