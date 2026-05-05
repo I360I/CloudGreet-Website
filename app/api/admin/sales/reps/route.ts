@@ -108,8 +108,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
  const auth = await requireAdmin(request)
- if (!auth.success || !auth.userId) {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+ if (!auth.success) {
+  return NextResponse.json({ error: `Auth failed: ${auth.error || 'unknown'}` }, { status: 401 })
+ }
+ if (!auth.userId) {
+  return NextResponse.json({ error: 'Token has no userId — sign out and back in.' }, { status: 401 })
  }
 
  const body = await request.json().catch(() => ({})) as { email?: string; name?: string }
