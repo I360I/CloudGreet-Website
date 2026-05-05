@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { fetchUpcomingCalBookings } from '@/lib/sales/cal'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
         .maybeSingle(),
       supabaseAdmin
         .from('sales_reps')
-        .select('stripe_connect_payouts_enabled')
+        .select('stripe_connect_payouts_enabled, cal_api_key')
         .eq('id', auth.userId)
         .maybeSingle(),
       supabaseAdmin
@@ -115,6 +116,12 @@ export async function GET(request: NextRequest) {
     const me = meRes.data
     const repProfile = repProfileRes.data
 
+    // Cal.com upcoming bookings — best-effort, returns empty if no
+    // key set or the API call fails.
+    const calBookings = repProfile?.cal_api_key
+      ? await fetchUpcomingCalBookings(repProfile.cal_api_key, { take: 10 })
+      : []
+
     const pipeline: Record<string, number> = {}
     for (const r of pipelineRes.data || []) {
       const s = r.status || 'new'
@@ -153,6 +160,7 @@ export async function GET(request: NextRequest) {
       me: {
         name: me?.name || [me?.first_name, me?.last_name].filter(Boolean).join(' ') || me?.email || 'Rep',
         payouts_enabled: !!repProfile?.stripe_connect_payouts_enabled,
+        cal_connected: !!repProfile?.cal_api_key,
       },
       todays: cleanLeads(todaysRes.data),
       overdue: cleanLeads(overdueRes.data),
@@ -165,6 +173,7 @@ export async function GET(request: NextRequest) {
         owed_cents: owed,
         mrr_cents: mrr,
       },
+      cal_bookings: calBookings,
     })
   } catch (e) {
     logger.error('Sales overview load failed', {

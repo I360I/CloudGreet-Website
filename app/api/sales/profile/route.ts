@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { maskApiKey } from '@/lib/sales/cal'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
       .maybeSingle(),
     supabaseAdmin
       .from('sales_reps')
-      .select('booking_url')
+      .select('booking_url, cal_api_key')
       .eq('id', auth.userId)
       .maybeSingle(),
   ])
@@ -38,6 +39,10 @@ export async function GET(request: NextRequest) {
       email: user?.email || '',
       name: user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ') || '',
       booking_url: rep?.booking_url || '',
+      // Never return the raw API key — show a masked preview so the
+      // rep knows it's set without exposing the secret on every load.
+      cal_api_key_set: !!rep?.cal_api_key,
+      cal_api_key_preview: rep?.cal_api_key ? maskApiKey(rep.cal_api_key) : '',
     },
   })
 }
@@ -69,6 +74,18 @@ export async function PATCH(request: NextRequest) {
       } catch {
         return NextResponse.json({ error: 'Booking URL must be a valid http(s) link' }, { status: 400 })
       }
+    }
+  }
+
+  if (body?.cal_api_key !== undefined) {
+    if (body.cal_api_key === null || body.cal_api_key === '') {
+      update.cal_api_key = null
+    } else {
+      const raw = String(body.cal_api_key).trim()
+      if (raw.length < 10 || raw.length > 200) {
+        return NextResponse.json({ error: 'Cal.com API key looks malformed' }, { status: 400 })
+      }
+      update.cal_api_key = raw
     }
   }
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee,
+  Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, Calendar,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from './_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -28,13 +28,23 @@ type Deal = {
   created_at: string
 }
 
+type CalBooking = {
+  id: string | number
+  title: string
+  start_iso: string
+  end_iso: string
+  status: string
+  attendees: Array<{ name: string | null; email: string | null }>
+}
+
 type Overview = {
-  me: { name: string; payouts_enabled: boolean }
+  me: { name: string; payouts_enabled: boolean; cal_connected?: boolean }
   todays: LeadCard[]
   overdue: LeadCard[]
   interested: LeadCard[]
   deals: Deal[]
   earnings: { owed_cents: number; mrr_cents: number }
+  cal_bookings?: CalBooking[]
 }
 
 const dollars = (cents: number) =>
@@ -98,6 +108,17 @@ export default function SalesHome() {
     seen.add(l.lead_id)
     callList.push({ ...l, reason: 'hot' })
   }
+
+  // Filter cal bookings to today only — anything tomorrow+ shows in
+  // a separate "Upcoming demos" section so today's view stays tight.
+  const calToday = (data.cal_bookings || []).filter((b) => {
+    const start = new Date(b.start_iso)
+    const today = new Date()
+    return start.getFullYear() === today.getFullYear() &&
+      start.getMonth() === today.getMonth() &&
+      start.getDate() === today.getDate()
+  })
+  const calLater = (data.cal_bookings || []).filter((b) => !calToday.includes(b))
 
   return (
     <SalesShell activeLabel="Overview">
@@ -175,7 +196,14 @@ export default function SalesHome() {
             </Link>
           </div>
 
-          {callList.length === 0 ? (
+          {calToday.length > 0 && (
+            <ul className="divide-y divide-gray-100 border-b border-gray-100">
+              {calToday.map((b) => (
+                <CalRow key={b.id} booking={b} />
+              ))}
+            </ul>
+          )}
+          {callList.length === 0 && calToday.length === 0 ? (
             <div className="px-5 py-10 text-center">
               <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-gray-100 text-gray-400 mb-3">
                 <Coffee weight="duotone" className="w-5 h-5" />
@@ -189,7 +217,7 @@ export default function SalesHome() {
                 Open my leads <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
-          ) : (
+          ) : callList.length === 0 ? null : (
             <ul className="divide-y divide-gray-100">
               {callList.slice(0, 12).map((l) => (
                 <li
@@ -230,6 +258,37 @@ export default function SalesHome() {
             </ul>
           )}
         </motion.div>
+
+        {/* Upcoming demos from Cal.com — only if rep has connected. */}
+        {calLater.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASE, delay: 0.08 }}
+            className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-5"
+          >
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
+                  Upcoming demos
+                </div>
+                <div className="text-sm font-medium text-gray-900">
+                  {calLater.length} on your calendar
+                </div>
+              </div>
+              <a
+                href="https://app.cal.com/bookings/upcoming"
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-gray-500 hover:text-gray-900 inline-flex items-center gap-1"
+              >
+                Cal.com <CaretRight className="w-3 h-3" />
+              </a>
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {calLater.slice(0, 8).map((b) => <CalRow key={b.id} booking={b} />)}
+            </ul>
+          </motion.div>
+        )}
 
         {/* Active deals — only if any. Small, just a heads-up. */}
         {data.deals.length > 0 && (
@@ -273,5 +332,37 @@ export default function SalesHome() {
         )}
       </section>
     </SalesShell>
+  )
+}
+
+function CalRow({ booking }: { booking: CalBooking }) {
+  const start = new Date(booking.start_iso)
+  const today = new Date()
+  const isToday = start.toDateString() === today.toDateString()
+  const time = start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  const dateLabel = isToday
+    ? time
+    : `${start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${time}`
+  const attendee = booking.attendees[0]
+  const display = attendee?.name || attendee?.email || booking.title
+  return (
+    <li className="px-5 py-3 flex items-center gap-3">
+      <div className="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center flex-shrink-0">
+        <Calendar weight="duotone" className="w-4 h-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-gray-900 truncate">{display}</div>
+        <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-2">
+          <span>{booking.title}</span>
+          {attendee?.email && display !== attendee.email && (
+            <>
+              <span className="text-gray-300">·</span>
+              <span>{attendee.email}</span>
+            </>
+          )}
+        </div>
+      </div>
+      <span className="text-xs text-violet-700 font-medium flex-shrink-0">{dateLabel}</span>
+    </li>
   )
 }
