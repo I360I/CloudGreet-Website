@@ -50,22 +50,42 @@ export async function POST(request: NextRequest) {
 
  try {
   if (!accountId) {
-   const account = await stripe.accounts.create({
-    type: 'express',
-    country: 'US',
-    email: user.email,
-    capabilities: { transfers: { requested: true } },
-    business_type: 'individual',
-    metadata: {
-     cloudgreet_user_id: user.id,
-     role: 'sales',
-    },
-   })
-   accountId = account.id
-   await supabaseAdmin
+   // Recovery path: if a previous attempt created the Stripe account
+   // but our DB write failed, the account is "orphaned" — Stripe has
+   // it but we don't know about it. Look for one tagged with this
+   // user's id in metadata before creating a fresh one to avoid
+   // accumulating duplicates.
+   try {
+    const list = await stripe.accounts.list({ limit: 100 })
+    const orphan = list.data.find((a) => a.metadata?.cloudgreet_user_id === user.id)
+    if (orphan) accountId = orphan.id
+   } catch {
+    // List can fail on very large platforms — fall back to creating fresh.
+   }
+
+   if (!accountId) {
+    const account = await stripe.accounts.create({
+     type: 'express',
+     country: 'US',
+     email: user.email,
+     capabilities: { transfers: { requested: true } },
+     business_type: 'individual',
+     metadata: {
+      cloudgreet_user_id: user.id,
+      role: 'sales',
+     },
+    })
+    accountId = account.id
+   }
+   const { error: persistErr } = await supabaseAdmin
     .from('sales_reps')
     .update({ stripe_connect_account_id: accountId, updated_at: new Date().toISOString() })
     .eq('id', user.id)
+   if (persistErr) {
+    logger.error('Failed to persist Stripe account id (orphan possible)', {
+     userId: user.id, accountId, error: persistErr.message,
+    })
+   }
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'

@@ -1706,7 +1706,10 @@ function CheckoutLinkModal({
     body.monthly_cents = Math.round(dollars * 100)
    }
    const fee = parseFloat(setupFee || '0')
-   if (Number.isFinite(fee) && fee > 0) body.setup_fee_cents = Math.round(fee * 100)
+   if (Number.isFinite(fee) && fee > 0) {
+    if (fee > 10000) throw new Error('Setup fee max is $10,000.')
+    body.setup_fee_cents = Math.round(fee * 100)
+   }
 
    const res = await fetchWithAuth(`/api/admin/clients/${clientId}/checkout-link`, {
     method: 'POST',

@@ -134,6 +134,22 @@ export async function POST(request: NextRequest) {
    { status: 409 },
   )
  }
+ // Also block on an open invite for the same email — otherwise we
+ // pile up multiple valid tokens and only the first one consumed
+ // creates a user; subsequent ones become dead links.
+ const { data: openInvite } = await supabaseAdmin
+  .from('sales_rep_invites')
+  .select('token, expires_at')
+  .eq('email', email)
+  .is('consumed_at', null)
+  .gt('expires_at', new Date().toISOString())
+  .maybeSingle()
+ if (openInvite) {
+  const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/sales/accept-invite?token=${encodeURIComponent(openInvite.token)}`
+  return NextResponse.json({
+   error: `An open invite already exists for ${email}. Send them this link instead: ${acceptUrl}`,
+  }, { status: 409 })
+ }
 
  const token = crypto.randomBytes(24).toString('base64url')
  const { error: insertErr } = await supabaseAdmin.from('sales_rep_invites').insert({

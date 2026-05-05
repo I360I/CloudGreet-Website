@@ -76,7 +76,12 @@ export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
   const auth = await requireAuth(request)
   if (!auth.success) return auth
 
-  if (auth.role === 'admin' || auth.role === 'owner') {
+  // Only the platform admin role passes — NOT business 'owner' (that's
+  // just a customer/contractor whose role got conflated with admin in
+  // the legacy code path). Letting owners through would expose all
+  // admin endpoints (sales-rep KYC, every client's data, payouts) to
+  // any signed-in customer.
+  if (auth.role === 'admin') {
     return auth
   }
 

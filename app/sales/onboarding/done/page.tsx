@@ -13,8 +13,15 @@ export default function ConnectDonePage() {
   ;(async () => {
    try {
     const res = await fetch('/api/sales/connect-onboarding', { credentials: 'include' })
-    const j = await res.json().catch(() => ({}))
     if (cancelled) return
+    if (res.status === 401) {
+     // Cookie didn't survive the Stripe redirect — happens rarely
+     // when sameSite/cross-site rules trip. Send them to login and
+     // they'll land back on /sales after.
+     router.replace('/login')
+     return
+    }
+    const j = await res.json().catch(() => ({}))
     setState(j?.payouts_enabled ? 'ready' : 'pending')
     setTimeout(() => router.push('/sales'), 2000)
    } catch {
