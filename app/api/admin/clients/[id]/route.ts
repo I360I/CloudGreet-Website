@@ -175,9 +175,29 @@ export async function GET(
    aiAgent.phone_number = retellPhone
   }
 
+  // Resolve the assigned rep (if any) so the admin UI can show their
+  // name + email next to the dropdown.
+  let assignedRep: { id: string; name: string | null; email: string | null } | null = null
+  if ((business as any).rep_id) {
+   try {
+    const { data: r } = await supabaseAdmin
+     .from('custom_users')
+     .select('id, name, first_name, last_name, email')
+     .eq('id', (business as any).rep_id)
+     .maybeSingle()
+    if (r) {
+     assignedRep = {
+      id: r.id,
+      name: r.name || [r.first_name, r.last_name].filter(Boolean).join(' ') || null,
+      email: r.email || null,
+     }
+    }
+   } catch { /* non-fatal */ }
+  }
+
   return NextResponse.json({
    success: true,
-   client: { ...business, owner },
+   client: { ...business, owner, assigned_rep: assignedRep },
    activity: {
     calls: { total: totalCalls, answered: answeredCalls, missed: missedCalls, recent: recentCalls },
     appointments: { total: totalAppointments, completed: completedAppointments, recent: recentAppointments },
@@ -228,12 +248,32 @@ export async function PATCH(
    ai_tone: true,
    services: true,
    voice_id: true,
+   rep_id: true,
+   monthly_price_cents: true,
+   setup_fee_cents: true,
   }
   const AGENT_TUNING_FIELDS = new Set(['greeting_message', 'voice_id'])
   const update: Record<string, any> = {}
   for (const k of Object.keys(body)) {
    if (ALLOWED[k]) update[k] = body[k]
   }
+
+  // Validate rep_id: must be null or a real sales rep id.
+  if ('rep_id' in update) {
+   if (update.rep_id === null || update.rep_id === '') {
+    update.rep_id = null
+   } else {
+    const { data: rep } = await supabaseAdmin
+     .from('sales_reps')
+     .select('id')
+     .eq('id', update.rep_id)
+     .maybeSingle()
+    if (!rep) {
+     return NextResponse.json({ error: 'rep_id is not a valid sales rep' }, { status: 400 })
+    }
+   }
+  }
+
   if (Object.keys(update).length === 0) {
    return NextResponse.json({ error: 'No editable fields' }, { status: 400 })
   }

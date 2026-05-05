@@ -37,13 +37,57 @@ export async function POST(
   if (close.rep_id !== auth.userId) {
     return NextResponse.json({ error: 'Not your close' }, { status: 403 })
   }
-  if (close.business_id) {
+  if (close.status === 'paid') {
     return NextResponse.json({
-      error: 'This close is already linked to a client. The payment link was already used or admin already converted it.',
+      error: "This close is already paid — nothing to generate.",
     }, { status: 409 })
   }
   if (close.status === 'rejected' || close.status === 'cancelled') {
     return NextResponse.json({ error: `Close is ${close.status}; can't generate a link.` }, { status: 409 })
+  }
+
+  // If a business already exists from a prior "Send booking link", reuse
+  // its Stripe customer (creating one if missing) so the payment lands
+  // on the same account instead of orphaning a brand-new Stripe customer.
+  let existingCustomerId: string | null = null
+  if (close.business_id) {
+    const { data: biz } = await supabaseAdmin
+      .from('businesses')
+      .select('id, business_name, email, phone_number, owner_id, stripe_customer_id')
+      .eq('id', close.business_id)
+      .maybeSingle()
+    if (biz?.stripe_customer_id) {
+      existingCustomerId = biz.stripe_customer_id
+    } else if (biz) {
+      // Create a Stripe customer for the existing business now and persist.
+      try {
+        const stripe = getStripeClient()
+        let ownerEmail = biz.email || close.prospect_email
+        if (!ownerEmail && biz.owner_id) {
+          const { data: owner } = await supabaseAdmin
+            .from('custom_users')
+            .select('email')
+            .eq('id', biz.owner_id)
+            .maybeSingle()
+          if (owner?.email) ownerEmail = owner.email
+        }
+        const customer = await stripe.customers.create({
+          name: biz.business_name || close.prospect_business_name || undefined,
+          email: ownerEmail || undefined,
+          phone: biz.phone_number || close.prospect_phone || undefined,
+          metadata: { cloudgreet_business_id: biz.id },
+        })
+        existingCustomerId = customer.id
+        await supabaseAdmin
+          .from('businesses')
+          .update({ stripe_customer_id: customer.id, updated_at: new Date().toISOString() })
+          .eq('id', biz.id)
+      } catch (e) {
+        logger.warn('Could not create Stripe customer for existing business', {
+          closeId: close.id, error: e instanceof Error ? e.message : 'Unknown',
+        })
+      }
+    }
   }
 
   // No upper cap — reps can generate payment links at any amount they
@@ -103,7 +147,9 @@ export async function POST(
   try {
     session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      customer_email: email,
+      ...(existingCustomerId
+        ? { customer: existingCustomerId }
+        : { customer_email: email }),
       line_items: lineItems,
       success_url: successUrl,
       cancel_url: cancelUrl,

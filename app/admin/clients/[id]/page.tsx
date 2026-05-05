@@ -41,6 +41,14 @@ type ClientDetail = {
   greeting_message?: string | null
   voice_id?: string | null
   created_at?: string
+  rep_id?: string | null
+  monthly_price_cents?: number | null
+  setup_fee_cents?: number | null
+  assigned_rep?: {
+   id: string
+   name: string | null
+   email: string | null
+  } | null
   owner?: {
    id: string
    email: string
@@ -327,6 +335,11 @@ export default function ClientDetailPage() {
        />
       </RisingFade>
      </div>
+
+     {/* Sales rep assignment */}
+     <RisingFade delay={0.17}>
+      <SalesRepAssignmentCard client={client} clientId={id} onSaved={load} />
+     </RisingFade>
 
      {/* AI tuning */}
      <RisingFade delay={0.18}>
@@ -1882,5 +1895,135 @@ function CheckoutLinkModal({
     </div>
    </motion.div>
   </motion.div>
+ )
+}
+
+/* ---------------------------- Sales rep card ---------------------------- */
+
+type RepOption = { id: string; name: string; email: string; status: string }
+
+function SalesRepAssignmentCard({
+ client, clientId, onSaved,
+}: {
+ client: ClientDetail['client']
+ clientId: string | undefined
+ onSaved: () => void
+}) {
+ const [reps, setReps] = useState<RepOption[] | null>(null)
+ const [selected, setSelected] = useState<string>('')
+ const [saving, setSaving] = useState(false)
+ const [err, setErr] = useState('')
+ const [saved, setSaved] = useState(false)
+
+ useEffect(() => {
+  setSelected(client.rep_id || '')
+ }, [client.rep_id])
+
+ useEffect(() => {
+  let cancelled = false
+  ;(async () => {
+   try {
+    const res = await fetchWithAuth('/api/admin/sales/reps')
+    const j = await res.json().catch(() => ({}))
+    if (cancelled) return
+    if (Array.isArray(j?.reps)) {
+     setReps(
+      j.reps
+       .filter((r: any) => r.status !== 'terminated')
+       .map((r: any) => ({
+        id: r.id,
+        name: r.name || r.email || 'Unnamed rep',
+        email: r.email || '',
+        status: r.status || 'active',
+       })),
+     )
+    } else {
+     setReps([])
+    }
+   } catch {
+    if (!cancelled) setReps([])
+   }
+  })()
+  return () => { cancelled = true }
+ }, [])
+
+ const dirty = (selected || null) !== (client.rep_id || null)
+
+ const save = async () => {
+  if (!clientId) return
+  setSaving(true); setErr(''); setSaved(false)
+  try {
+   const res = await fetchWithAuth(`/api/admin/clients/${clientId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ rep_id: selected || null }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok) {
+    setErr(j?.error || 'Save failed')
+   } else {
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
+    onSaved()
+   }
+  } finally {
+   setSaving(false)
+  }
+ }
+
+ return (
+  <Panel>
+   <PanelHeader title="Sales rep" eyebrow="commission attribution" />
+   {client.assigned_rep ? (
+    <div className="text-sm text-gray-300 mb-3">
+     Currently assigned to{' '}
+     <span className="text-white font-medium">{client.assigned_rep.name}</span>
+     {client.assigned_rep.email && (
+      <span className="text-gray-500"> · {client.assigned_rep.email}</span>
+     )}
+    </div>
+   ) : (
+    <div className="text-sm text-gray-500 mb-3">
+     No rep is currently attributed to this client. Commissions on
+     paid invoices won&apos;t credit anyone until you set this.
+    </div>
+   )}
+
+   <div className="flex items-end gap-2 flex-wrap">
+    <div className="flex-1 min-w-[240px]">
+     <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+      Assign to
+     </label>
+     <Select value={selected} onChange={(e) => setSelected(e.target.value)} disabled={!reps}>
+      <option value="">— Unassigned —</option>
+      {(reps || []).map((r) => (
+       <option key={r.id} value={r.id}>
+        {r.name}{r.email ? ` · ${r.email}` : ''}{r.status !== 'active' ? ` (${r.status})` : ''}
+       </option>
+      ))}
+     </Select>
+    </div>
+    <PrimaryButton onClick={save} disabled={!dirty || saving}>
+     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+     Save
+    </PrimaryButton>
+   </div>
+
+   {err && (
+    <div className="mt-3 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2">
+     {err}
+    </div>
+   )}
+   {saved && (
+    <div className="mt-3 text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 inline-flex items-center gap-1.5">
+     <CheckCircle2 className="w-3.5 h-3.5" /> Saved · future invoice payments credit this rep
+    </div>
+   )}
+
+   <p className="text-[11px] text-gray-500 mt-3">
+    Changes only affect future commissions. Already-credited ledger
+    rows stay attributed to whoever owned the rep_id at the time
+    the invoice was paid.
+   </p>
+  </Panel>
  )
 }

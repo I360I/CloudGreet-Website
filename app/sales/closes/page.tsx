@@ -169,7 +169,6 @@ export default function SalesClosesPage() {
             >
               {closes.map((c) => {
                 const canGenerate =
-                  !c.business_id &&
                   c.status !== 'rejected' &&
                   c.status !== 'cancelled' &&
                   c.status !== 'paid'
