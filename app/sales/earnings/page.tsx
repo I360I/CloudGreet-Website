@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { WarningCircle, ArrowRight, TrendUp } from '@phosphor-icons/react'
+import {
+  WarningCircle, ArrowRight, TrendUp, Receipt, ArrowSquareOut, CircleNotch,
+} from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { Line } from 'react-chartjs-2'
@@ -22,6 +24,8 @@ type Totals = {
   mrr_cents: number
   owed_cents: number
   paid_out_cents: number
+  ytd_paid_cents: number
+  tax_year: number
 }
 
 type Customer = {
@@ -63,6 +67,22 @@ function ageLabel(iso: string): string {
   return months === 1 ? '1 mo' : `${months} mo`
 }
 
+async function openStripeDashboard(setBusy: (b: boolean) => void) {
+  setBusy(true)
+  try {
+    const { fetchWithAuth } = await import('@/lib/auth/fetch-with-auth')
+    const res = await fetchWithAuth('/api/sales/stripe-dashboard', { method: 'POST' })
+    const j = await res.json().catch(() => ({}))
+    if (j?.url) {
+      window.open(j.url, '_blank', 'noopener,noreferrer')
+    } else {
+      alert(j?.error || 'Could not open Stripe dashboard')
+    }
+  } finally {
+    setBusy(false)
+  }
+}
+
 function nextFriday(): string {
   const d = new Date()
   const delta = (5 - d.getDay() + 7) % 7 || 7
@@ -76,8 +96,10 @@ export default function SalesEarningsPage() {
   const [chart, setChart] = useState<ChartPoint[]>([])
   const [chartTab, setChartTab] = useState<ChartTab>('both')
   const [payoutsEnabled, setPayoutsEnabled] = useState(true)
+  const [hasConnectAccount, setHasConnectAccount] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [openingDashboard, setOpeningDashboard] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -93,6 +115,7 @@ export default function SalesEarningsPage() {
           setCustomers(j.customers || [])
           setChart(j.chart || [])
           setPayoutsEnabled(!!j.payouts_enabled)
+          setHasConnectAccount(!!j.has_connect_account)
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -235,10 +258,107 @@ export default function SalesEarningsPage() {
                 </ul>
               )}
             </motion.div>
+
+            {/* Taxes — what's coming at year-end */}
+            <TaxCard
+              ytdPaidCents={totals?.ytd_paid_cents ?? 0}
+              taxYear={totals?.tax_year ?? new Date().getFullYear()}
+              hasConnectAccount={hasConnectAccount}
+              opening={openingDashboard}
+              onOpenStripe={() => openStripeDashboard(setOpeningDashboard)}
+            />
           </>
         )}
       </section>
     </SalesShell>
+  )
+}
+
+function TaxCard({
+  ytdPaidCents, taxYear, hasConnectAccount, opening, onOpenStripe,
+}: {
+  ytdPaidCents: number
+  taxYear: number
+  hasConnectAccount: boolean
+  opening: boolean
+  onOpenStripe: () => void
+}) {
+  const ytd = `$${(ytdPaidCents / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const threshold = 60_000 // $600 in cents
+  const overThreshold = ytdPaidCents >= threshold
+  const remainingToThreshold = Math.max(0, threshold - ytdPaidCents)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: EASE, delay: 0.2 }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mt-6"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <Receipt weight="duotone" className="w-5 h-5 text-amber-500" />
+        <div className="text-sm font-medium text-gray-900">Taxes · {taxYear}</div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
+            Paid out this year
+          </div>
+          <div className="text-2xl font-medium text-gray-900 tabular-nums mt-1">{ytd}</div>
+          <div className="text-xs text-gray-500 mt-1">
+            Sum of every Friday transfer in {taxYear}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
+            1099-NEC
+          </div>
+          {overThreshold ? (
+            <>
+              <div className="text-sm font-medium text-emerald-700 mt-1">Will be filed</div>
+              <div className="text-xs text-gray-500 mt-1">
+                Stripe issues + files your 1099 by Jan&nbsp;31, {taxYear + 1}.
+                You&apos;ll get it by mail or in your Stripe Express dashboard.
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-sm font-medium text-gray-900 mt-1">
+                Need {`$${(remainingToThreshold / 100).toFixed(2)}`} more
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                IRS requires a 1099-NEC for contractors paid $600+ per year. Stripe
+                will issue + file yours automatically once you cross.
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {hasConnectAccount ? (
+        <button
+          onClick={onOpenStripe}
+          disabled={opening}
+          className="inline-flex items-center gap-2 text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-3.5 py-2 transition-colors disabled:opacity-60"
+        >
+          {opening
+            ? <CircleNotch className="w-4 h-4 animate-spin" />
+            : <ArrowSquareOut className="w-4 h-4" />}
+          Open Stripe dashboard
+        </button>
+      ) : (
+        <Link
+          href="/sales/onboarding"
+          className="inline-flex items-center gap-2 text-sm border border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100 rounded-lg px-3.5 py-2 transition-colors"
+        >
+          Connect Stripe to enable payouts <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      )}
+      <p className="text-[11px] text-gray-500 mt-3">
+        Your Stripe Express dashboard has the full breakdown of every transfer plus
+        any tax forms once issued.
+      </p>
+    </motion.div>
   )
 }
 

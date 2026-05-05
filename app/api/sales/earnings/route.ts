@@ -75,6 +75,15 @@ export async function GET(request: NextRequest) {
     const owed = ledger.filter((r) => !r.paid).reduce((s, r) => s + (r.commission_cents || 0), 0)
     const paidOut = lifetime - owed
 
+    // YTD payouts — what Stripe actually moved to the rep's bank in
+    // the current calendar year. This is what matters for the
+    // 1099-NEC threshold ($600+).
+    const todayForYtd = new Date()
+    const yearStart = new Date(todayForYtd.getFullYear(), 0, 1).toISOString()
+    const ytdPaid = (payoutRows ?? [])
+      .filter((p: any) => p.status === 'transferred' && p.transferred_at && p.transferred_at >= yearStart)
+      .reduce((s: number, p: any) => s + (p.amount_cents || 0), 0)
+
     // MRR = sum of monthly across closes that have actually paid at
     // least once (close.status === 'paid'), excluding any whose linked
     // business has since been deactivated. Closes still in
@@ -185,6 +194,8 @@ export async function GET(request: NextRequest) {
         mrr_cents: mrr,
         owed_cents: owed,
         paid_out_cents: paidOut,
+        ytd_paid_cents: ytdPaid,
+        tax_year: now.getFullYear(),
       },
       customers,
       chart: months,

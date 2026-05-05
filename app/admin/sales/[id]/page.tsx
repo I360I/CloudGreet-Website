@@ -41,6 +41,9 @@ type RepDetail = {
   mtd_commission_cents: number
   lifetime_commission_cents: number
   outstanding_commission_cents: number
+  ytd_paid_cents: number
+  tax_year: number
+  ten99_required: boolean
   client_count: number
   close_count: number
  }
@@ -241,10 +244,17 @@ export default function RepDetailPage() {
       </div>
      </header>
 
-     <div className="grid sm:grid-cols-4 gap-3">
+     <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
       <Stat label="MTD" value={fmtMoney(kpis.mtd_commission_cents)} hint="This month's commission" />
       <Stat label="Lifetime" value={fmtMoney(kpis.lifetime_commission_cents)} hint="Total earned" />
       <Stat label="Owed" value={fmtMoney(kpis.outstanding_commission_cents)} hint="Pending Friday payout" />
+      <Stat
+       label={`YTD ${kpis.tax_year}`}
+       value={fmtMoney(kpis.ytd_paid_cents)}
+       hint={kpis.ten99_required
+        ? '1099-NEC required · Stripe files'
+        : `${fmtMoney(60_000 - kpis.ytd_paid_cents)} from $600`}
+      />
       <Stat label="Clients" value={String(kpis.client_count)} hint={`${kpis.close_count} closes total`} />
      </div>
 

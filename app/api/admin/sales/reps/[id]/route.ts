@@ -32,7 +32,7 @@ export async function GET(
   return NextResponse.json({ error: 'Sales rep not found' }, { status: 404 })
  }
 
- const [{ data: profile }, { data: clients }, { data: commissions }, { data: closes }] = await Promise.all([
+ const [{ data: profile }, { data: clients }, { data: commissions }, { data: closes }, { data: payouts }] = await Promise.all([
   supabaseAdmin.from('sales_reps').select('*').eq('id', repId).maybeSingle(),
   supabaseAdmin
    .from('businesses')
@@ -51,9 +51,15 @@ export async function GET(
    .eq('rep_id', repId)
    .order('created_at', { ascending: false })
    .limit(50),
+  supabaseAdmin
+   .from('payouts')
+   .select('amount_cents, status, transferred_at')
+   .eq('rep_id', repId),
  ])
 
- const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0, 0, 0, 0)
+ const now = new Date()
+ const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+ const yearStart = new Date(now.getFullYear(), 0, 1).toISOString()
  let mtdCommission = 0
  let lifetimeCommission = 0
  let outstanding = 0
@@ -62,6 +68,9 @@ export async function GET(
   if (new Date(c.earned_at) >= startOfMonth) mtdCommission += c.commission_cents
   if (!c.payout_id) outstanding += c.commission_cents
  }
+ const ytdPaid = (payouts || [])
+  .filter((p: any) => p.status === 'transferred' && p.transferred_at && p.transferred_at >= yearStart)
+  .reduce((s: number, p: any) => s + (p.amount_cents || 0), 0)
 
  return NextResponse.json({
   success: true,
@@ -93,6 +102,9 @@ export async function GET(
    mtd_commission_cents: mtdCommission,
    lifetime_commission_cents: lifetimeCommission,
    outstanding_commission_cents: outstanding,
+   ytd_paid_cents: ytdPaid,
+   tax_year: now.getFullYear(),
+   ten99_required: ytdPaid >= 60_000,
    client_count: (clients || []).length,
    close_count: (closes || []).length,
   },
