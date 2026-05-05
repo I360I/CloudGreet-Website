@@ -32,6 +32,7 @@ export default function SalesClientsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
+  const [migration, setMigration] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -41,7 +42,10 @@ export default function SalesClientsPage() {
         const j = await res.json().catch(() => ({}))
         if (cancelled) return
         if (!res.ok) setErr(j?.error || 'Failed to load clients')
-        else setClients(j.clients || [])
+        else {
+          setClients(j.clients || [])
+          setMigration(j.migration_needed || null)
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -56,6 +60,17 @@ export default function SalesClientsPage() {
           eyebrow="clients"
           title="Your accounts"
         />
+
+        {migration && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-900 flex items-start gap-2">
+            <WarningCircle weight="fill" className="w-4 h-4 mt-0.5 text-amber-600" />
+            <span>
+              Agent editing isn&apos;t fully on yet. Tell Anthony to run{' '}
+              <code className="font-mono text-xs bg-amber-100 px-1 rounded">sql/{migration}.sql</code>{' '}
+              in Supabase.
+            </span>
+          </div>
+        )}
 
         {err && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-start gap-2">
