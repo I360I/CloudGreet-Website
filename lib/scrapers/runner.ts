@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../supabase'
 import { logger } from '../monitoring'
 import { getSource } from './registry'
+import { promoteScrapeResults } from './promote'
 import type { ScrapeParams, ScrapeRecord } from './types'
 
 const RESULT_BATCH = 25
@@ -127,6 +128,25 @@ export async function runScrapeJob(jobId: string): Promise<void> {
    if (buffer.length >= RESULT_BATCH) await flush()
   }
   await flush()
+
+  // Auto-promote into leads when this scrape was run by a rep. This
+  // skips the manual "Promote" step — results go straight into their
+  // /sales/leads list with auto-claim. Idempotent: results that
+  // already have a promoted_lead_id are skipped.
+  const repId = (params as any)?.rep_id as string | undefined
+  if (repId && count > 0) {
+   try {
+    const promoteResult = await promoteScrapeResults({ jobId, repId })
+    logger.info('scrape auto-promote complete', {
+     jobId, repId,
+     ...promoteResult,
+    })
+   } catch (e) {
+    logger.warn('scrape auto-promote threw (non-fatal)', {
+     jobId, error: e instanceof Error ? e.message : 'Unknown',
+    })
+   }
+  }
 
   await supabaseAdmin
    .from('scrape_jobs')

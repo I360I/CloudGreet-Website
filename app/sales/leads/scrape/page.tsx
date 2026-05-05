@@ -43,6 +43,7 @@ export default function SalesScrapePage() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [dailyLimit, setDailyLimit] = useState(200)
   const [dailyUsed, setDailyUsed] = useState(0)
+  const [googleConfigured, setGoogleConfigured] = useState(true)
   const [loading, setLoading] = useState(true)
   const [migrationRequired, setMigrationRequired] = useState(false)
   const [err, setErr] = useState('')
@@ -71,6 +72,7 @@ export default function SalesScrapePage() {
       setJobs(j.jobs || [])
       setDailyLimit(j.daily_limit || 200)
       setDailyUsed(j.daily_used || 0)
+      setGoogleConfigured(j.enrichment?.google_places ?? false)
       if (!sourceId && j.sources?.length) setSourceId(j.sources[0].id)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load')
@@ -175,9 +177,25 @@ export default function SalesScrapePage() {
           }
         />
 
-        <p className="text-sm text-gray-500 mb-6 max-w-xl">
-          Pull verified contractors from public licensing databases. Anything you promote lands in your leads list.
+        <p className="text-sm text-gray-500 mb-4 max-w-xl">
+          Pull verified contractors from public licensing databases. Results auto-land in your leads list as they finish — no extra click needed.
         </p>
+
+        {!googleConfigured && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-900 flex items-start gap-2">
+            <WarningCircle weight="fill" className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" />
+            <div>
+              <span className="font-medium">Phone numbers won&apos;t fill in.</span>{' '}
+              <span className="text-amber-800">
+                Google Places enrichment is off — TDLR doesn&apos;t expose phones,
+                so you&apos;ll get business names + license info but you&apos;ll
+                need to look up phones yourself. Tell Anthony to set
+                <code className="font-mono text-xs bg-amber-100 px-1 rounded mx-1">GOOGLE_PLACES_API_KEY</code>
+                in Vercel.
+              </span>
+            </div>
+          </div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 8 }}
