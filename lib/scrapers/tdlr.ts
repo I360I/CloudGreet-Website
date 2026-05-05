@@ -1,6 +1,6 @@
 import { logger } from '../monitoring'
 import { enrichWithGooglePlaces, isGooglePlacesConfigured } from './google-places'
-import { preFilterContractor, googleConfirmsTrade } from './quality'
+import { preFilterContractor, googleConfirmsTrade, phoneMatchesMetro } from './quality'
 import type { ScrapeParams, ScrapeRecord, SourceDefinition } from './types'
 
 /**
@@ -165,6 +165,13 @@ async function* runTdlr(
    if (strict && enrichEnabled && needsEnrichment && !placesError) {
     const verdict = googleConfirmsTrade(record, trade, placesData)
     if (!verdict.ok) { droppedPost++; continue }
+   }
+
+   // Metro filter — drops Houston/Dallas results when the rep
+   // searched "Austin". Only applies if the rep specified a location.
+   if (strict && params.location && !phoneMatchesMetro(record.phone, params.location)) {
+    droppedPost++
+    continue
    }
 
    yield record

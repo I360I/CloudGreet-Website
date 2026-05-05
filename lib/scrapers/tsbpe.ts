@@ -1,6 +1,6 @@
 import { logger } from '../monitoring'
 import { enrichWithGooglePlaces, isGooglePlacesConfigured } from './google-places'
-import { preFilterContractor, googleConfirmsTrade } from './quality'
+import { preFilterContractor, googleConfirmsTrade, phoneMatchesMetro } from './quality'
 import type { ScrapeParams, ScrapeRecord, SourceDefinition } from './types'
 
 /**
@@ -125,6 +125,11 @@ async function* runTsbpe(params: ScrapeParams): AsyncGenerator<ScrapeRecord, voi
   if (strict && enrichEnabled && !placesError) {
    const verdict = googleConfirmsTrade(record, 'Plumbing', placesData)
    if (!verdict.ok) { droppedPost++; continue }
+  }
+
+  if (strict && params.location && !phoneMatchesMetro(record.phone, params.location)) {
+   droppedPost++
+   continue
   }
 
   yield record

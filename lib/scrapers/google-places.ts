@@ -23,7 +23,72 @@ const FIELD_MASK = [
  'places.types',
  'places.id',
  'places.location',
+ 'places.rating',
+ 'places.userRatingCount',
+ 'places.businessStatus',
 ].join(',')
+
+/**
+ * Hardcoded centers for the Texas metros we actually scrape. Avoids a
+ * separate Geocoding API call. Add more as needed — keys are lowercased
+ * for matching against user input. If a city isn't in the map, we fall
+ * back to a Texas-wide rectangle for `locationBias`.
+ */
+export const TX_CITY_COORDS: Record<string, { lat: number; lng: number }> = {
+ austin:        { lat: 30.2672, lng: -97.7431 },
+ houston:       { lat: 29.7604, lng: -95.3698 },
+ dallas:        { lat: 32.7767, lng: -96.7970 },
+ 'fort worth':  { lat: 32.7555, lng: -97.3308 },
+ 'san antonio': { lat: 29.4241, lng: -98.4936 },
+ 'el paso':     { lat: 31.7619, lng: -106.4850 },
+ arlington:     { lat: 32.7357, lng: -97.1081 },
+ plano:         { lat: 33.0198, lng: -96.6989 },
+ corpus:        { lat: 27.8006, lng: -97.3964 },
+ 'corpus christi': { lat: 27.8006, lng: -97.3964 },
+ lubbock:       { lat: 33.5779, lng: -101.8552 },
+ laredo:        { lat: 27.5306, lng: -99.4803 },
+ garland:       { lat: 32.9126, lng: -96.6389 },
+ irving:        { lat: 32.8140, lng: -96.9489 },
+ amarillo:      { lat: 35.2220, lng: -101.8313 },
+ frisco:        { lat: 33.1507, lng: -96.8236 },
+ mckinney:      { lat: 33.1972, lng: -96.6398 },
+ mesquite:      { lat: 32.7668, lng: -96.5992 },
+ killeen:       { lat: 31.1171, lng: -97.7278 },
+ waco:          { lat: 31.5493, lng: -97.1467 },
+ denton:        { lat: 33.2148, lng: -97.1331 },
+ midland:       { lat: 31.9974, lng: -102.0779 },
+ abilene:       { lat: 32.4487, lng: -99.7331 },
+ beaumont:      { lat: 30.0860, lng: -94.1018 },
+ 'round rock':  { lat: 30.5083, lng: -97.6789 },
+ tyler:         { lat: 32.3513, lng: -95.3011 },
+ 'college station': { lat: 30.6280, lng: -96.3344 },
+ pearland:      { lat: 29.5638, lng: -95.2861 },
+ 'sugar land':  { lat: 29.5994, lng: -95.6347 },
+ lewisville:    { lat: 33.0462, lng: -96.9942 },
+ league:        { lat: 29.5074, lng: -95.0949 },
+ longview:      { lat: 32.5007, lng: -94.7405 },
+ 'cedar park':  { lat: 30.5052, lng: -97.8203 },
+ conroe:        { lat: 30.3119, lng: -95.4561 },
+ georgetown:    { lat: 30.6333, lng: -97.6779 },
+ 'san marcos':  { lat: 29.8833, lng: -97.9414 },
+ pflugerville:  { lat: 30.4394, lng: -97.6200 },
+ 'new braunfels': { lat: 29.7030, lng: -98.1245 },
+}
+
+const TX_BOUNDS = {
+ low:  { latitude: 25.84, longitude: -106.65 },
+ high: { latitude: 36.50, longitude: -93.51 },
+}
+
+export function txCityCoords(city: string | null | undefined): { lat: number; lng: number } | null {
+ if (!city) return null
+ const k = city.trim().toLowerCase()
+ if (!k) return null
+ if (TX_CITY_COORDS[k]) return TX_CITY_COORDS[k]
+ // Loose match: drop trailing ", TX" or " texas"
+ const stripped = k.replace(/\s*,?\s*(tx|texas)\s*$/i, '').trim()
+ return TX_CITY_COORDS[stripped] ?? null
+}
 
 export type PlacesEnrichment = {
  phone: string | null
@@ -145,6 +210,9 @@ export type PlaceDiscoveryResult = {
  zip: string | null
  google_types: string[]
  place_id: string
+ rating: number | null
+ review_count: number | null
+ business_status: string | null
 }
 
 const DISCOVERY_FIELD_MASK = [
@@ -155,13 +223,30 @@ const DISCOVERY_FIELD_MASK = [
 
 export async function* discoverPlaces(
  query: string,
- opts?: { maxResults?: number },
+ opts?: {
+  maxResults?: number
+  /** Soft preference for results in this geographic area. */
+  locationBias?: { lat: number; lng: number; radiusMeters?: number }
+  /** Hard restriction — results outside are excluded. Mutually exclusive with bias. */
+  locationRestriction?: { lat: number; lng: number; radiusMeters: number }
+  /** Filter results by Google Place type (e.g. 'hvac_contractor'). */
+  includedType?: string
+  /** Drop results below this user-rating count (acts as a "ghost listing" filter). */
+  minReviewCount?: number
+  /** Drop results below this average star rating. */
+  minRating?: number
+  /** Drop results that are CLOSED_PERMANENTLY / CLOSED_TEMPORARILY (default true). */
+  excludeClosed?: boolean
+ },
 ): AsyncGenerator<PlaceDiscoveryResult, void, void> {
  const key = process.env.GOOGLE_PLACES_API_KEY
  if (!key) return
  if (!query) return
 
  const max = opts?.maxResults ?? 200
+ const minReviews = opts?.minReviewCount ?? 0
+ const minRating = opts?.minRating ?? 0
+ const excludeClosed = opts?.excludeClosed !== false
  let pageToken: string | null = null
  let yielded = 0
  const seenIds = new Set<string>()
@@ -172,6 +257,25 @@ export async function* discoverPlaces(
    maxResultCount: 20,
    regionCode: 'US',
    languageCode: 'en',
+  }
+  if (opts?.includedType) body.includedType = opts.includedType
+  if (opts?.locationRestriction) {
+   body.locationRestriction = {
+    circle: {
+     center: { latitude: opts.locationRestriction.lat, longitude: opts.locationRestriction.lng },
+     radius: opts.locationRestriction.radiusMeters,
+    },
+   }
+  } else if (opts?.locationBias) {
+   body.locationBias = {
+    circle: {
+     center: { latitude: opts.locationBias.lat, longitude: opts.locationBias.lng },
+     radius: opts.locationBias.radiusMeters ?? 50_000, // ~31 miles default
+    },
+   }
+  } else {
+   // Default to Texas rectangle so we never get out-of-state matches.
+   body.locationBias = { rectangle: TX_BOUNDS }
   }
   if (pageToken) body.pageToken = pageToken
 
@@ -210,6 +314,13 @@ export async function* discoverPlaces(
    if (!isTexasAddress(addr)) continue
 
    const components = extractAddressComponents(p.addressComponents)
+   const reviewCount: number = typeof p.userRatingCount === 'number' ? p.userRatingCount : 0
+   const rating: number = typeof p.rating === 'number' ? p.rating : 0
+   const status: string = p.businessStatus || ''
+
+   if (excludeClosed && /CLOSED/i.test(status)) continue
+   if (reviewCount < minReviews) continue
+   if (rating > 0 && rating < minRating) continue
 
    yield {
     business_name: p.displayName?.text || 'Unknown',
@@ -221,6 +332,9 @@ export async function* discoverPlaces(
     zip: components.zip,
     google_types: Array.isArray(p.types) ? p.types : [],
     place_id: p.id || '',
+    rating: rating || null,
+    review_count: reviewCount,
+    business_status: status || null,
    }
    yielded++
   }

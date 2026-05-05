@@ -196,6 +196,77 @@ const STOP_WORDS = new Set([
   'SOLUTIONS',
 ])
 
+/**
+ * Texas metros mapped to their NANP area codes. Used to drop results
+ * whose phone number is in the wrong metro for the requested city —
+ * the licensing databases don't enforce a tight city filter, so a
+ * search for "Austin" returns Houston/Dallas/SA contractors mixed in.
+ */
+const METRO_AREA_CODES: Record<string, string[]> = {
+  austin:           ['512', '737'],
+  'round rock':     ['512', '737'],
+  georgetown:       ['512', '737'],
+  pflugerville:     ['512', '737'],
+  'cedar park':     ['512', '737'],
+  'san marcos':     ['512', '737', '830'],
+  houston:          ['281', '713', '832', '346', '936'],
+  'sugar land':     ['281', '713', '832', '346'],
+  pearland:         ['281', '713', '832', '346'],
+  conroe:           ['936', '281', '832', '346'],
+  dallas:           ['214', '469', '972', '945'],
+  plano:            ['214', '469', '972', '945'],
+  frisco:           ['214', '469', '972', '945'],
+  mckinney:         ['214', '469', '972', '945'],
+  garland:          ['214', '469', '972', '945'],
+  irving:           ['214', '469', '972', '945'],
+  mesquite:         ['214', '469', '972', '945'],
+  lewisville:       ['214', '469', '972', '945'],
+  denton:           ['940', '214', '469', '972', '945'],
+  'fort worth':     ['817', '682'],
+  arlington:        ['817', '682', '972', '214'],
+  'san antonio':    ['210', '726', '830'],
+  'new braunfels':  ['830', '210', '726'],
+  'el paso':        ['915'],
+  amarillo:         ['806'],
+  lubbock:          ['806'],
+  midland:          ['432'],
+  abilene:          ['325'],
+  waco:             ['254'],
+  killeen:          ['254'],
+  'college station': ['979'],
+  beaumont:         ['409'],
+  'corpus christi': ['361'],
+  laredo:           ['956'],
+  tyler:            ['903', '430'],
+  longview:         ['903', '430'],
+}
+
+/**
+ * Returns true when `phone` is in one of the metro area codes for the
+ * requested city, OR when we don't have a mapping for that city
+ * (we don't want to wrongly drop results just because we're missing
+ * coverage). Returns false when we have a mapping AND the phone is
+ * clearly somewhere else.
+ */
+export function phoneMatchesMetro(
+  phone: string | null | undefined,
+  city: string | null | undefined,
+): boolean {
+  if (!phone || !city) return true
+  const ac = extractAreaCode(phone)
+  if (!ac) return true
+  const codes = METRO_AREA_CODES[city.trim().toLowerCase()]
+  if (!codes) return true
+  return codes.includes(ac)
+}
+
+function extractAreaCode(phone: string): string | null {
+  const digits = phone.replace(/[^0-9]/g, '')
+  if (digits.length === 11 && digits.startsWith('1')) return digits.slice(1, 4)
+  if (digits.length === 10) return digits.slice(0, 3)
+  return null
+}
+
 const PERSONAL_SUFFIX = /\b(JR|SR|II|III|IV)\b/
 const ENTITY_SUFFIX = /\b(LLC|INC|LTD|LP|LLP|CORP|CO\.?|COMPANY|GROUP|SERVICES?|ENTERPRISES?|INDUSTRIES|SOLUTIONS|HOLDINGS|PARTNERS|PROPERTIES)\b/
 
