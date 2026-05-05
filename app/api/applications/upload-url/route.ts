@@ -64,28 +64,25 @@ export async function POST(request: NextRequest) {
     const safeExt = (filename.match(/\.[A-Za-z0-9]{1,8}$/)?.[0] || '').toLowerCase()
     const path = `${kind}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${safeExt}`
 
-    const tryCreate = async () =>
-      supabaseAdmin.storage.from('applications').createSignedUploadUrl(path)
-
-    let { data, error } = await tryCreate()
-
-    // Self-heal: if the bucket isn't there, create it (private) and retry
-    // once. Avoids needing the SQL migration to land before the form
-    // works.
-    if (error && /bucket not found|not found/i.test(error.message || '')) {
-      const { error: createErr } = await supabaseAdmin
-        .storage.createBucket('applications', {
-          public: false,
-          fileSizeLimit: 200 * 1024 * 1024,
-        })
-      if (createErr && !/already exists|duplicate/i.test(createErr.message)) {
-        logger.error('createBucket failed', { error: createErr.message })
-        return NextResponse.json({
-          error: `Storage bucket setup failed: ${createErr.message}`,
-        }, { status: 500 })
-      }
-      ;({ data, error } = await tryCreate())
+    // Make sure the bucket exists every request. createBucket is a
+    // no-op (returns "already exists") if it's already there, so this
+    // is cheap to call up front and avoids the unreliable
+    // error-string matching dance.
+    const { error: createErr } = await supabaseAdmin
+      .storage.createBucket('applications', {
+        public: false,
+        fileSizeLimit: 200 * 1024 * 1024,
+      })
+    if (createErr && !/already exists|duplicate|resource already exists/i.test(createErr.message || '')) {
+      logger.error('createBucket failed', { error: createErr.message })
+      return NextResponse.json({
+        error: `Storage bucket setup failed: ${createErr.message}`,
+      }, { status: 500 })
     }
+
+    const { data, error } = await supabaseAdmin
+      .storage.from('applications')
+      .createSignedUploadUrl(path)
 
     if (error || !data) {
       logger.error('createSignedUploadUrl failed', {
