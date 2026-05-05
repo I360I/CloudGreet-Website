@@ -64,22 +64,36 @@ export async function POST(request: NextRequest) {
     const safeExt = (filename.match(/\.[A-Za-z0-9]{1,8}$/)?.[0] || '').toLowerCase()
     const path = `${kind}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${safeExt}`
 
-    const { data, error } = await supabaseAdmin
-      .storage
-      .from('applications')
-      .createSignedUploadUrl(path)
+    const tryCreate = async () =>
+      supabaseAdmin.storage.from('applications').createSignedUploadUrl(path)
+
+    let { data, error } = await tryCreate()
+
+    // Self-heal: if the bucket isn't there, create it (private) and retry
+    // once. Avoids needing the SQL migration to land before the form
+    // works.
+    if (error && /bucket not found|not found/i.test(error.message || '')) {
+      const { error: createErr } = await supabaseAdmin
+        .storage.createBucket('applications', {
+          public: false,
+          fileSizeLimit: 200 * 1024 * 1024,
+        })
+      if (createErr && !/already exists|duplicate/i.test(createErr.message)) {
+        logger.error('createBucket failed', { error: createErr.message })
+        return NextResponse.json({
+          error: `Storage bucket setup failed: ${createErr.message}`,
+        }, { status: 500 })
+      }
+      ;({ data, error } = await tryCreate())
+    }
 
     if (error || !data) {
       logger.error('createSignedUploadUrl failed', {
         kind, error: error?.message,
       })
-      const msg = error?.message || ''
-      if (/bucket not found|not found/i.test(msg)) {
-        return NextResponse.json({
-          error: 'Upload bucket not set up yet. Admin needs to create the "applications" bucket in Supabase Storage.',
-        }, { status: 500 })
-      }
-      return NextResponse.json({ error: 'Could not create upload URL' }, { status: 500 })
+      return NextResponse.json({
+        error: error?.message || 'Could not create upload URL',
+      }, { status: 500 })
     }
 
     return NextResponse.json({
