@@ -1,5 +1,6 @@
 import { logger } from '../monitoring'
 import { enrichWithGooglePlaces, isGooglePlacesConfigured } from './google-places'
+import { preFilterContractor, googleConfirmsTrade } from './quality'
 import type { ScrapeParams, ScrapeRecord, SourceDefinition } from './types'
 
 /**
@@ -73,8 +74,14 @@ async function* runTdlr(
  }
 
  const enrichEnabled = params.extra?.enrich !== false && isGooglePlacesConfigured()
+ // `strict` (default) drops any row that doesn't survive the quality
+ // gates — name-based pre-filter + Google Places trade confirmation.
+ // Set extra.quality = 'permissive' to opt out and dump everything.
+ const strict = params.extra?.quality !== 'permissive'
  let yielded = 0
  let pageNo = 1
+ let droppedPre = 0
+ let droppedPost = 0
 
  // Step 2: parse current page; iterate next pages until we run out or hit limit.
  while (yielded < limit) {
@@ -103,9 +110,18 @@ async function* runTdlr(
     raw: row,
    }
 
+   // Pre-filter: drop individual license-holders (no real business) and
+   // employees of universities / gov / big-co before we burn $$ on enrichment.
+   if (strict) {
+    const drop = preFilterContractor(record)
+    if (drop) { droppedPre++; continue }
+   }
+
    // Skip enrichment entirely if we already have what we'd ask Google for —
    // saves API spend and avoids cross-state mismatches on common names.
    const needsEnrichment = !record.phone || !record.website
+   let placesData: import('./google-places').PlacesEnrichment | null = null
+   let placesError: string | null = null
    if (enrichEnabled && needsEnrichment) {
     try {
      const attempt = await enrichWithGooglePlaces(
@@ -113,6 +129,7 @@ async function* runTdlr(
       record.city,
      )
      if (attempt.ok) {
+      placesData = attempt.data
       // Fill-in-only: never overwrite a value we already had.
       record = {
        ...record,
@@ -124,6 +141,7 @@ async function* runTdlr(
        raw: { ...row, google_places: attempt.data },
       }
      } else {
+      placesError = attempt.error
       record = {
        ...record,
        raw: { ...row, google_places_error: attempt.error },
@@ -132,11 +150,21 @@ async function* runTdlr(
      await sleep(ENRICH_DELAY_MS)
     } catch (e) {
      const msg = e instanceof Error ? e.message : 'Unknown'
+     placesError = msg
      logger.warn('TDLR enrich failed for row', {
       error: msg, business: record.business_name,
      })
      record = { ...record, raw: { ...row, google_places_error: msg } }
     }
+   }
+
+   // Post-filter: trade match via Google. Only enforced when we actually
+   // ran enrichment — if the row already had a phone we trust the license
+   // database. If enrichment hit a hard error (rate limit, etc.) we keep
+   // the row rather than wholesale dropping the page.
+   if (strict && enrichEnabled && needsEnrichment && !placesError) {
+    const verdict = googleConfirmsTrade(record, trade, placesData)
+    if (!verdict.ok) { droppedPost++; continue }
    }
 
    yield record
@@ -170,6 +198,13 @@ async function* runTdlr(
    })
    break
   }
+ }
+
+ if (strict && (droppedPre > 0 || droppedPost > 0)) {
+  logger.info('TDLR scrape quality filter', {
+   trade, yielded, droppedPre, droppedPost,
+   keepRate: yielded / Math.max(1, yielded + droppedPre + droppedPost),
+  })
  }
 }
 

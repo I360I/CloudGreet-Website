@@ -1,5 +1,6 @@
 import { logger } from '../monitoring'
 import { enrichWithGooglePlaces, isGooglePlacesConfigured } from './google-places'
+import { preFilterContractor, googleConfirmsTrade } from './quality'
 import type { ScrapeParams, ScrapeRecord, SourceDefinition } from './types'
 
 /**
@@ -57,6 +58,9 @@ async function* runTda(params: ScrapeParams): AsyncGenerator<ScrapeRecord, void,
  }
 
  const enrichEnabled = params.extra?.enrich !== false && isGooglePlacesConfigured()
+ const strict = params.extra?.quality !== 'permissive'
+ let droppedPre = 0
+ let droppedPost = 0
  let yielded = 0
 
  for (const r of rows) {
@@ -101,11 +105,20 @@ async function* runTda(params: ScrapeParams): AsyncGenerator<ScrapeRecord, void,
    raw: r,
   }
 
+  // Pre-filter: drop license-holders that aren't real contractor businesses.
+  if (strict) {
+   const drop = preFilterContractor(record)
+   if (drop) { droppedPre++; continue }
+  }
+
   // Google Places fills in phone, website, address, city.
+  let placesData: import('./google-places').PlacesEnrichment | null = null
+  let placesError: string | null = null
   if (enrichEnabled) {
    try {
     const attempt = await enrichWithGooglePlaces(record.business_name, r.COUNTY)
     if (attempt.ok) {
+     placesData = attempt.data
      record = {
       ...record,
       phone: attempt.data.phone || null,
@@ -114,19 +127,33 @@ async function* runTda(params: ScrapeParams): AsyncGenerator<ScrapeRecord, void,
       raw: { ...r, google_places: attempt.data },
      }
     } else {
+     placesError = attempt.error
      record = { ...record, raw: { ...r, google_places_error: attempt.error } }
     }
     await sleep(ENRICH_DELAY_MS)
    } catch (e) {
+    placesError = e instanceof Error ? e.message : 'Unknown'
     record = {
      ...record,
-     raw: { ...r, google_places_error: e instanceof Error ? e.message : 'Unknown' },
+     raw: { ...r, google_places_error: placesError },
     }
    }
   }
 
+  if (strict && enrichEnabled && !placesError) {
+   const verdict = googleConfirmsTrade(record, 'Pest Control', placesData)
+   if (!verdict.ok) { droppedPost++; continue }
+  }
+
   yield record
   yielded++
+ }
+
+ if (strict && (droppedPre > 0 || droppedPost > 0)) {
+  logger.info('TDA scrape quality filter', {
+   yielded, droppedPre, droppedPost,
+   keepRate: yielded / Math.max(1, yielded + droppedPre + droppedPost),
+  })
  }
 }
 

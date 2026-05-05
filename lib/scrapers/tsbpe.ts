@@ -1,5 +1,6 @@
 import { logger } from '../monitoring'
 import { enrichWithGooglePlaces, isGooglePlacesConfigured } from './google-places'
+import { preFilterContractor, googleConfirmsTrade } from './quality'
 import type { ScrapeParams, ScrapeRecord, SourceDefinition } from './types'
 
 /**
@@ -45,6 +46,9 @@ async function* runTsbpe(params: ScrapeParams): AsyncGenerator<ScrapeRecord, voi
  }
 
  const enrichEnabled = params.extra?.enrich !== false && isGooglePlacesConfigured()
+ const strict = params.extra?.quality !== 'permissive'
+ let droppedPre = 0
+ let droppedPost = 0
  let yielded = 0
 
  for (const r of rows) {
@@ -86,30 +90,52 @@ async function* runTsbpe(params: ScrapeParams): AsyncGenerator<ScrapeRecord, voi
    raw: r,
   }
 
+  if (strict) {
+   const drop = preFilterContractor(record)
+   if (drop) { droppedPre++; continue }
+  }
+
   // Enrich for website only — phone is already in the CSV.
+  let placesData: import('./google-places').PlacesEnrichment | null = null
+  let placesError: string | null = null
   if (enrichEnabled) {
    try {
     const attempt = await enrichWithGooglePlaces(record.business_name, record.city)
     if (attempt.ok) {
+     placesData = attempt.data
      record = {
       ...record,
       website: attempt.data.website || null,
       raw: { ...r, google_places: attempt.data },
      }
     } else {
+     placesError = attempt.error
      record = { ...record, raw: { ...r, google_places_error: attempt.error } }
     }
     await sleep(ENRICH_DELAY_MS)
    } catch (e) {
+    placesError = e instanceof Error ? e.message : 'Unknown'
     record = {
      ...record,
-     raw: { ...r, google_places_error: e instanceof Error ? e.message : 'Unknown' },
+     raw: { ...r, google_places_error: placesError },
     }
    }
   }
 
+  if (strict && enrichEnabled && !placesError) {
+   const verdict = googleConfirmsTrade(record, 'Plumbing', placesData)
+   if (!verdict.ok) { droppedPost++; continue }
+  }
+
   yield record
   yielded++
+ }
+
+ if (strict && (droppedPre > 0 || droppedPost > 0)) {
+  logger.info('TSBPE scrape quality filter', {
+   yielded, droppedPre, droppedPost,
+   keepRate: yielded / Math.max(1, yielded + droppedPre + droppedPost),
+  })
  }
 }
 
