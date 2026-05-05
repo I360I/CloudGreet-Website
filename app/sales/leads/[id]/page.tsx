@@ -204,36 +204,21 @@ export default function LeadDetailPage() {
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: EASE }}
-          className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-5"
+          className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mb-5 text-sm space-y-1.5"
         >
-          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-            {lead.contact_name && (
-              <Field label="Contact">{lead.contact_name}</Field>
-            )}
-            {lead.phone && (
-              <Field label="Phone">
-                <a href={`tel:${lead.phone}`} className="text-gray-900 hover:underline">
-                  {formatPhone(lead.phone)}
-                </a>
-              </Field>
-            )}
-            {lead.email && (
-              <Field label="Email">
-                <a href={`mailto:${lead.email}`} className="text-gray-900 hover:underline">
-                  {lead.email}
-                </a>
-              </Field>
-            )}
-            {lead.source && <Field label="Source">{lead.source}</Field>}
-            <Field label="Touches">{lead.touch_count}{lead.last_touched_at ? ` · last ${new Date(lead.last_touched_at).toLocaleString()}` : ''}</Field>
-            <Field label="Claimed">{new Date(lead.claimed_at).toLocaleDateString()}</Field>
-          </div>
-          {lead.notes && (
-            <div className="px-5 pb-5 border-t border-gray-100 pt-3">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
-                Lead notes
-              </div>
-              <p className="text-xs text-gray-600 whitespace-pre-wrap">{lead.notes}</p>
+          {lead.contact_name && <div className="text-gray-700">{lead.contact_name}</div>}
+          {lead.phone && (
+            <div>
+              <a href={`tel:${lead.phone}`} className="text-gray-900 hover:underline">
+                {formatPhone(lead.phone)}
+              </a>
+            </div>
+          )}
+          {lead.email && (
+            <div>
+              <a href={`mailto:${lead.email}`} className="text-gray-900 hover:underline">
+                {lead.email}
+              </a>
             </div>
           )}
         </motion.div>
@@ -263,97 +248,82 @@ export default function LeadDetailPage() {
             ))}
           </div>
 
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                Follow up
-              </div>
-              {lead.follow_up_at ? (
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 text-sm bg-amber-50 text-amber-900 border border-amber-200 rounded-lg px-3 py-2 inline-flex items-center gap-2">
-                    <Calendar weight="fill" className="w-3.5 h-3.5" />
-                    {new Date(lead.follow_up_at).toLocaleString(undefined, {
-                      month: 'short', day: 'numeric',
-                      hour: 'numeric', minute: '2-digit',
-                    })}
-                  </div>
-                  <button
-                    onClick={clearFollowUp}
-                    className="text-xs text-gray-500 hover:text-gray-900"
-                  >
-                    Clear
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <input
-                    type="datetime-local"
-                    value={followUpInput}
-                    onChange={(e) => setFollowUpInput(e.target.value)}
-                    className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
-                  />
-                  <button
-                    onClick={setFollowUp}
-                    disabled={!followUpInput || working === 'patch'}
-                    className="text-sm bg-gray-900 text-white rounded-lg px-3 py-2 hover:bg-gray-800 disabled:opacity-60"
-                  >
-                    Set
-                  </button>
-                </div>
-              )}
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {[
-                  { label: '1h', hours: 1 },
-                  { label: 'Tmrw 9am', tomorrowAt: 9 },
-                  { label: 'Mon 9am', mondayAt: 9 },
-                  { label: 'Next wk', days: 7 },
-                ].map((preset, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      const d = new Date()
-                      if ('hours' in preset && preset.hours) {
-                        d.setHours(d.getHours() + preset.hours)
-                      } else if ('tomorrowAt' in preset && preset.tomorrowAt) {
-                        d.setDate(d.getDate() + 1)
-                        d.setHours(preset.tomorrowAt, 0, 0, 0)
-                      } else if ('mondayAt' in preset && preset.mondayAt) {
-                        const day = d.getDay()
-                        const delta = (1 - day + 7) % 7 || 7
-                        d.setDate(d.getDate() + delta)
-                        d.setHours(preset.mondayAt, 0, 0, 0)
-                      } else if ('days' in preset && preset.days) {
-                        d.setDate(d.getDate() + preset.days)
-                      }
-                      patch({ follow_up_at: d.toISOString() })
-                    }}
-                    className="text-[11px] text-gray-600 border border-gray-200 hover:border-gray-400 hover:text-gray-900 rounded-md px-2 py-0.5 transition-colors"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
+          <div className="mt-5">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+              Follow up
             </div>
-            <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
-                Quick actions
-              </div>
-              <div className="flex flex-col gap-1.5">
+            {lead.follow_up_at ? (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 text-sm bg-amber-50 text-amber-900 border border-amber-200 rounded-lg px-3 py-2 inline-flex items-center gap-2">
+                  <Calendar weight="fill" className="w-3.5 h-3.5" />
+                  {new Date(lead.follow_up_at).toLocaleString(undefined, {
+                    month: 'short', day: 'numeric',
+                    hour: 'numeric', minute: '2-digit',
+                  })}
+                </div>
                 <button
-                  onClick={markTouched}
-                  className="inline-flex items-center gap-1.5 text-sm text-gray-700 hover:text-gray-900 border border-gray-200 hover:border-gray-300 rounded-lg px-3 py-2 transition-colors"
+                  onClick={clearFollowUp}
+                  className="text-xs text-gray-500 hover:text-gray-900"
                 >
-                  <Phone weight="bold" className="w-3.5 h-3.5" /> Log a touch
-                </button>
-                <button
-                  onClick={removeLead}
-                  disabled={working === 'delete'}
-                  className="inline-flex items-center gap-1.5 text-sm text-red-700 hover:text-white hover:bg-red-600 border border-red-200 hover:border-red-600 rounded-lg px-3 py-2 transition-colors disabled:opacity-60"
-                >
-                  <Trash className="w-3.5 h-3.5" /> Remove from my list
+                  Clear
                 </button>
               </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="datetime-local"
+                  value={followUpInput}
+                  onChange={(e) => setFollowUpInput(e.target.value)}
+                  className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+                />
+                <button
+                  onClick={setFollowUp}
+                  disabled={!followUpInput || working === 'patch'}
+                  className="text-sm bg-gray-900 text-white rounded-lg px-3 py-2 hover:bg-gray-800 disabled:opacity-60"
+                >
+                  Set
+                </button>
+              </div>
+            )}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {[
+                { label: 'Tmrw 9am', tomorrowAt: 9 },
+                { label: 'Mon 9am', mondayAt: 9 },
+                { label: 'Next wk', days: 7 },
+              ].map((preset, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    const d = new Date()
+                    if ('tomorrowAt' in preset && preset.tomorrowAt) {
+                      d.setDate(d.getDate() + 1)
+                      d.setHours(preset.tomorrowAt, 0, 0, 0)
+                    } else if ('mondayAt' in preset && preset.mondayAt) {
+                      const day = d.getDay()
+                      const delta = (1 - day + 7) % 7 || 7
+                      d.setDate(d.getDate() + delta)
+                      d.setHours(preset.mondayAt, 0, 0, 0)
+                    } else if ('days' in preset && preset.days) {
+                      d.setDate(d.getDate() + preset.days)
+                    }
+                    patch({ follow_up_at: d.toISOString() })
+                  }}
+                  className="text-[11px] text-gray-600 border border-gray-200 hover:border-gray-400 hover:text-gray-900 rounded-md px-2 py-0.5 transition-colors"
+                >
+                  {preset.label}
+                </button>
+              ))}
             </div>
+          </div>
+
+          <div className="mt-5 pt-5 border-t border-gray-100">
+            <button
+              onClick={removeLead}
+              disabled={working === 'delete'}
+              className="text-xs text-red-600 hover:text-red-700 inline-flex items-center gap-1.5 disabled:opacity-60"
+            >
+              <Trash className="w-3 h-3" /> Remove from my list
+            </button>
           </div>
         </motion.div>
 

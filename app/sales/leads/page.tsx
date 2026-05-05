@@ -312,9 +312,8 @@ export default function SalesLeadsPage() {
                     <motion.li
                       key={l.id}
                       variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: EASE } } }}
-                      className="px-5 py-3.5 flex items-start gap-3 hover:bg-gray-50/60 transition-colors group"
+                      className="px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50/60 transition-colors"
                     >
-                      <span className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${meta.dot}`} />
                       <Link
                         href={`/sales/leads/${l.id}`}
                         className="flex-1 min-w-0 block"
@@ -335,42 +334,21 @@ export default function SalesLeadsPage() {
                               <Calendar weight="fill" className="w-3 h-3" /> {fu.label}
                             </span>
                           )}
-                          {l.touch_count > 0 && (
-                            <span className="text-[10px] text-gray-400 inline-flex items-center gap-1">
-                              <Phone weight="bold" className="w-2.5 h-2.5" />
-                              {l.touch_count}
-                            </span>
-                          )}
                         </div>
                         <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
                           {l.contact_name && <span>{l.contact_name}</span>}
                           {l.phone && <span>{formatPhone(l.phone)}</span>}
-                          {l.email && <span>{l.email}</span>}
                         </div>
-                        {l.latest_note && (
-                          <div className="text-xs text-gray-500 mt-1 italic line-clamp-1">
-                            “{l.latest_note.body}”
-                          </div>
-                        )}
                       </Link>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        {l.phone && (
-                          <a
-                            href={`tel:${l.phone}`}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-900 hover:text-white transition-colors"
-                            aria-label="Call"
-                          >
-                            <Phone weight="bold" className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-                        <Link
-                          href={`/sales/leads/${l.id}`}
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-900 transition-colors"
-                          aria-label="Open"
+                      {l.phone && (
+                        <a
+                          href={`tel:${l.phone}`}
+                          className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-900 hover:text-white transition-colors flex-shrink-0"
+                          aria-label="Call"
                         >
-                          <CaretRight className="w-4 h-4" />
-                        </Link>
-                      </div>
+                          <Phone weight="bold" className="w-4 h-4" />
+                        </a>
+                      )}
                     </motion.li>
                   )
                 })}
