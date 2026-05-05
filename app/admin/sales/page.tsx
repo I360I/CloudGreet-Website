@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, Plus, UserPlus, Mail, Copy, ExternalLink, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Loader2, Plus, UserPlus, Mail, Copy, ExternalLink, AlertCircle, CheckCircle2, Trophy } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, PrimaryButton, GhostButton, Input } from '../_components/ui'
@@ -74,9 +74,17 @@ export default function AdminSalesPage() {
         paid out automatically every Friday via Stripe Connect.
        </p>
       </div>
-      <PrimaryButton onClick={() => setShowInvite(true)}>
-       <UserPlus className="w-4 h-4" /> Invite rep
-      </PrimaryButton>
+      <div className="flex items-center gap-2">
+       <Link
+        href="/admin/sales/closes"
+        className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-white border border-white/10 rounded-lg px-3 py-2"
+       >
+        <Trophy className="w-4 h-4" /> Review closes
+       </Link>
+       <PrimaryButton onClick={() => setShowInvite(true)}>
+        <UserPlus className="w-4 h-4" /> Invite rep
+       </PrimaryButton>
+      </div>
      </header>
 
      {/* KPI strip */}

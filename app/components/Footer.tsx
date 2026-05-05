@@ -51,9 +51,15 @@ export default function Footer() {
  <div className="border-t border-gray-700 mt-8 pt-8">
  <div className="flex flex-col md:flex-row justify-between items-center gap-4">
  <p className="text-gray-300">&copy; 2024 CloudGreet. All rights reserved.</p>
- <div className="flex items-center gap-4">
- <Link 
- href="/admin/login" 
+ <div className="flex items-center gap-3">
+ <Link
+ href="/login"
+ className="text-gray-300 hover:text-white font-medium transition-colors border border-gray-700 px-4 py-2 rounded-lg hover:border-gray-500"
+ >
+ Sales rep sign in
+ </Link>
+ <Link
+ href="/admin/login"
  className="text-sky-400 hover:text-sky-300 font-semibold transition-colors border border-sky-500/30 px-4 py-2 rounded-lg hover:border-sky-500 hover:bg-sky-500/10"
  >
  Admin
