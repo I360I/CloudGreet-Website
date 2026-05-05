@@ -67,33 +67,36 @@ function LoginInner() {
    {/* Payment-success modal */}
    {showPaidModal && (
     <div
-     className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/50 backdrop-blur-sm animate-[fadeIn_0.25s_ease-out]"
+     className="fixed inset-0 z-50 flex items-center justify-center px-6 bg-black/55 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
      onClick={() => setShowPaidModal(false)}
     >
      <div
-      className="relative bg-white border border-gray-200 rounded-[28px] p-8 md:p-10 w-full max-w-md shadow-2xl shadow-black/20 animate-[popIn_0.32s_cubic-bezier(0.22,1,0.36,1)]"
+      className="relative bg-white border border-gray-200 px-8 py-7 w-full max-w-md shadow-2xl shadow-black/25 animate-[popIn_0.28s_cubic-bezier(0.22,1,0.36,1)]"
       onClick={(e) => e.stopPropagation()}
       role="dialog"
       aria-modal="true"
      >
       <button
        onClick={() => setShowPaidModal(false)}
-       className="absolute top-4 right-4 w-8 h-8 inline-flex items-center justify-center rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+       className="absolute top-3.5 right-3.5 w-7 h-7 inline-flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors"
        aria-label="Close"
       >
        <X className="w-4 h-4" />
       </button>
-      <h2 className="font-display font-medium tracking-tight leading-[1.05] text-3xl md:text-4xl mb-2 text-gray-900">
-       Payment <span className="text-gray-400">received.</span>
+      <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-2">
+       Confirmed
+      </div>
+      <h2 className="text-xl font-medium tracking-tight text-gray-900 mb-1.5">
+       Payment received.
       </h2>
-      <p className="text-sm text-gray-500">
-       We just emailed your login and receipt. Sign in below to access your dashboard.
+      <p className="text-sm text-gray-600 leading-relaxed">
+       Thanks for signing up. Sign in below to access your dashboard.
       </p>
      </div>
      <style jsx global>{`
       @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
       @keyframes popIn  {
-       from { opacity: 0; transform: translateY(8px) scale(0.96) }
+       from { opacity: 0; transform: translateY(6px) scale(0.98) }
        to   { opacity: 1; transform: translateY(0)   scale(1)    }
       }
      `}</style>
