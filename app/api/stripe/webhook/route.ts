@@ -292,7 +292,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
  // Find business by Stripe customer ID
  const { data: business, error: businessError } = await supabaseAdmin
  .from('businesses')
- .select('id')
+ .select('id, rep_id')
  .eq('stripe_customer_id', customerId)
  .single()
 
@@ -302,6 +302,25 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
  subscriptionId: subscription.id
  })
  return
+ }
+
+ // Safety net: when the subscription becomes active or trialing, flip
+ // any matching close out of invoice_sent → paid. Normally the
+ // invoice.payment_succeeded handler does this, but \$0 trial subs
+ // (100% off coupons) don't always fire that event; subscription.created
+ // is more reliable for those.
+ if (business.rep_id && (subscription.status === 'active' || subscription.status === 'trialing')) {
+ try {
+ await supabaseAdmin
+  .from('closes')
+  .update({ status: 'paid', updated_at: new Date().toISOString() })
+  .eq('business_id', business.id)
+  .in('status', ['invoice_sent', 'pending'])
+ } catch (e) {
+ logger.warn('subscription.created → close.status flip failed', {
+  error: e instanceof Error ? e.message : 'Unknown', businessId: business.id,
+ })
+ }
  }
 
  // Create or update subscription record

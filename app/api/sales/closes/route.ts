@@ -17,14 +17,29 @@ export async function GET(request: NextRequest) {
   }
   const { data, error } = await supabaseAdmin
     .from('closes')
-    .select('*')
+    .select(`
+      *,
+      business:business_id (
+        id,
+        business_name,
+        subscription_status,
+        account_status
+      )
+    `)
     .eq('rep_id', auth.userId)
     .order('created_at', { ascending: false })
     .limit(200)
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  return NextResponse.json({ success: true, closes: data ?? [] })
+  // Inline subscription_status onto the close so the UI doesn't have
+  // to walk the join.
+  const closes = (data ?? []).map((c: any) => ({
+    ...c,
+    subscription_status: c.business?.subscription_status ?? null,
+    account_status: c.business?.account_status ?? null,
+  }))
+  return NextResponse.json({ success: true, closes })
 }
 
 /**

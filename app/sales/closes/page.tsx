@@ -19,6 +19,8 @@ type Close = {
   created_at: string
   notes: string | null
   business_id: string | null
+  subscription_status: string | null
+  account_status: string | null
 }
 
 const STATUS_STYLE: Record<Close['status'], string> = {
@@ -30,11 +32,29 @@ const STATUS_STYLE: Record<Close['status'], string> = {
 }
 
 const STATUS_LABEL: Record<Close['status'], string> = {
-  pending: 'Pending review',
+  pending: 'Pending',
   invoice_sent: 'Invoice sent',
-  paid: 'Paid',
+  paid: 'Signed',
   cancelled: 'Cancelled',
   rejected: 'Rejected',
+}
+
+function subscriptionPill(status: string | null): { label: string; cls: string } | null {
+  if (!status) return null
+  const s = status.toLowerCase()
+  if (s === 'trialing' || s === 'trial') {
+    return { label: 'trial', cls: 'bg-amber-50 text-amber-800 border-amber-200' }
+  }
+  if (s === 'active') {
+    return { label: 'active', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+  }
+  if (s === 'past_due') {
+    return { label: 'past due', cls: 'bg-rose-50 text-rose-700 border-rose-200' }
+  }
+  if (s === 'canceled' || s === 'cancelled') {
+    return { label: 'cancelled', cls: 'bg-gray-100 text-gray-600 border-gray-200' }
+  }
+  return { label: s, cls: 'bg-gray-100 text-gray-600 border-gray-200' }
 }
 
 export default function SalesClosesPage() {
@@ -178,11 +198,23 @@ export default function SalesClosesPage() {
                         {new Date(c.created_at).toLocaleDateString()}
                       </div>
                     </div>
-                    <span
-                      className={`text-[10px] font-mono uppercase tracking-wider rounded-full border px-2 py-0.5 whitespace-nowrap ${STATUS_STYLE[c.status]}`}
-                    >
-                      {STATUS_LABEL[c.status]}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span
+                        className={`text-[10px] font-mono uppercase tracking-wider rounded-full border px-2 py-0.5 whitespace-nowrap ${STATUS_STYLE[c.status]}`}
+                      >
+                        {STATUS_LABEL[c.status]}
+                      </span>
+                      {(() => {
+                        const sub = subscriptionPill(c.subscription_status)
+                        return sub ? (
+                          <span
+                            className={`text-[10px] font-mono uppercase tracking-wider rounded-full border px-2 py-0.5 whitespace-nowrap ${sub.cls}`}
+                          >
+                            {sub.label}
+                          </span>
+                        ) : null
+                      })()}
+                    </div>
                   </div>
 
                   {canGenerate && (
