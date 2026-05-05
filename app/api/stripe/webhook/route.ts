@@ -204,6 +204,21 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
        logger.info('Auto-converted close from rep checkout', {
          sessionId: session.id, closeId, businessId: businessIdFromClose,
        })
+       // If a brand-new user was created here (temp_password is non-
+       // empty), email them the login. When temp_password is '' the
+       // user already existed (rep ran "Send booking link" earlier
+       // and the prospect already has the login email).
+       if (result.data.temp_password && result.data.user.email) {
+         await sendPostPaymentLoginEmail({
+           email: result.data.user.email,
+           tempPassword: result.data.temp_password,
+           businessName: result.data.business.business_name,
+         }).catch((e) => {
+           logger.warn('Post-payment login email failed', {
+             error: e instanceof Error ? e.message : 'Unknown',
+           })
+         })
+       }
      } else if (result.ok === false) {
        logger.error('Auto-convert close failed', {
          sessionId: session.id, closeId, error: result.error,
@@ -810,3 +825,71 @@ The CloudGreet Team
 }
 
 
+
+/**
+ * After a Stripe checkout that auto-provisions a new client (rep
+ * went straight to "Send payment link" without a prior booking-link
+ * email), the prospect needs their login. Sends them the same
+ * branded HTML format reps see from /api/sales/leads/[id]/send-onboarding.
+ */
+async function sendPostPaymentLoginEmail({
+ email, tempPassword, businessName,
+}: {
+ email: string
+ tempPassword: string
+ businessName: string
+}): Promise<void> {
+ const resendKey = process.env.RESEND_API_KEY
+ if (!resendKey) return
+ const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
+ const replyTo = process.env.RESEND_REPLY_TO || 'anthony@cloudgreet.com'
+ const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'
+ const loginUrl = `${baseUrl}/login`
+ const escape = (s: string) => s
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+ const text =
+`Your CloudGreet account
+
+Sign in:  ${loginUrl}
+Email:    ${email}
+Password: ${tempPassword}
+`
+ const html = `<!doctype html>
+<html><body style="margin:0;padding:0;background:#f6f5f1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#111827;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="520" style="max-width:520px;background:#ffffff;border:1px solid #e5e7eb;">
+        <tr><td style="padding:32px 32px 8px;">
+          <div style="font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#6b7280;">CloudGreet</div>
+          <div style="font-size:20px;font-weight:500;letter-spacing:-0.01em;margin-top:6px;">Your account is ready.</div>
+        </td></tr>
+        <tr><td style="padding:8px 32px 28px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="font-size:14px;line-height:1.6;">
+            <tr><td style="padding:6px 0;color:#6b7280;width:90px;">Sign in</td><td style="padding:6px 0;"><a href="${loginUrl}" style="color:#111827;text-decoration:none;border-bottom:1px solid #d1d5db;">${loginUrl.replace(/^https?:\/\//, '')}</a></td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Email</td><td style="padding:6px 0;color:#111827;">${escape(email)}</td></tr>
+            <tr><td style="padding:6px 0;color:#6b7280;">Password</td><td style="padding:6px 0;font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace;color:#111827;">${escape(tempPassword)}</td></tr>
+          </table>
+          <div style="font-size:13px;color:#374151;line-height:1.6;margin-top:18px;">
+            Welcome to CloudGreet, ${escape(businessName)}. Your AI receptionist is being set up — your sales rep will reach out shortly to wire up call forwarding + walk through the dashboard.
+          </div>
+        </td></tr>
+        <tr><td style="padding:0 32px 32px;">
+          <div style="font-size:11px;color:#9ca3af;border-top:1px solid #f3f4f6;padding-top:16px;">
+            CloudGreet · AI receptionist for service businesses
+          </div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+ const resend = new Resend(resendKey)
+ await resend.emails.send({
+  from: `CloudGreet <${fromEmail}>`,
+  to: email,
+  replyTo,
+  subject: 'Your CloudGreet account',
+  text,
+  html,
+ })
+}
