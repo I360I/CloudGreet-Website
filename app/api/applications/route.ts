@@ -130,11 +130,33 @@ export async function POST(request: NextRequest) {
     user_agent: ua ? ua.slice(0, 500) : null,
   }
 
-  const { data, error } = await supabaseAdmin
-    .from('rep_applications')
-    .insert(insert)
-    .select('id, created_at')
-    .single()
+  // Attempt insert; if a column doesn't exist (migration hasn't run on
+  // this env), drop the offending column and retry. Loops at most a
+  // handful of times and only ever drops *new* fields the migration
+  // would have added, so we never silently lose required data.
+  const droppable = new Set([
+    'about_yourself', 'resume_path', 'resume_filename',
+    'video_path', 'video_filename',
+  ])
+  let payload: Record<string, any> = { ...insert }
+  let data: any = null
+  let error: any = null
+  for (let i = 0; i < 8; i++) {
+    const r = await supabaseAdmin
+      .from('rep_applications')
+      .insert(payload)
+      .select('id, created_at')
+      .single()
+    if (!r.error) { data = r.data; error = null; break }
+    error = r.error
+    const m = (r.error.message || '').match(/column "?([a-z_]+)"? .* does not exist|Could not find the '([a-z_]+)' column/i)
+    const col = m?.[1] || m?.[2]
+    if (col && droppable.has(col) && col in payload) {
+      delete payload[col]
+      continue
+    }
+    break
+  }
 
   if (error) {
     if (/unique|duplicate/i.test(error.message)) {
@@ -143,7 +165,9 @@ export async function POST(request: NextRequest) {
       }, { status: 409 })
     }
     logger.error('Application insert failed', { error: error.message })
-    return NextResponse.json({ error: 'Could not submit application. Try again or email anthony@cloudgreet.com.' }, { status: 500 })
+    return NextResponse.json({
+      error: `Could not submit application: ${error.message}`,
+    }, { status: 500 })
   }
 
   // Best-effort founder notification.
