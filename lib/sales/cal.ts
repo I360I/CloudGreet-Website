@@ -17,6 +17,8 @@ const CAL_API = 'https://api.cal.com/v2'
 
 export type CalBooking = {
   id: string | number
+  /** Cal.com's URL-safe slug — used to deep-link to the booking on app.cal.com. */
+  uid: string | null
   title: string
   start_iso: string
   end_iso: string
@@ -61,6 +63,7 @@ export async function fetchUpcomingCalBookings(
     return items
       .map((b: any): CalBooking => ({
         id: b.id ?? b.uid ?? '',
+        uid: typeof b.uid === 'string' ? b.uid : (typeof b.id === 'string' ? b.id : null),
         title: String(b.title || b.eventType?.title || 'Booking'),
         start_iso: String(b.start || b.startTime || ''),
         end_iso: String(b.end || b.endTime || ''),

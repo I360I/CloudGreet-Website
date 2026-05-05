@@ -30,6 +30,7 @@ type Deal = {
 
 type CalBooking = {
   id: string | number
+  uid: string | null
   title: string
   start_iso: string
   end_iso: string
@@ -345,24 +346,35 @@ function CalRow({ booking }: { booking: CalBooking }) {
     : `${start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · ${time}`
   const attendee = booking.attendees[0]
   const display = attendee?.name || attendee?.email || booking.title
+  const calUrl = booking.uid
+    ? `https://app.cal.com/booking/${booking.uid}`
+    : 'https://app.cal.com/bookings/upcoming'
   return (
-    <li className="px-5 py-3 flex items-center gap-3">
-      <div className="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center flex-shrink-0">
-        <CalendarBlank weight="duotone" className="w-4 h-4" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-gray-900 truncate">{display}</div>
-        <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-2">
-          <span>{booking.title}</span>
-          {attendee?.email && display !== attendee.email && (
-            <>
-              <span className="text-gray-300">·</span>
-              <span>{attendee.email}</span>
-            </>
-          )}
+    <li>
+      <a
+        href={calUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="px-5 py-3 flex items-center gap-3 hover:bg-gray-50/60 transition-colors"
+        title="Open this booking in Cal.com"
+      >
+        <div className="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center flex-shrink-0">
+          <CalendarBlank weight="duotone" className="w-4 h-4" />
         </div>
-      </div>
-      <span className="text-xs text-violet-700 font-medium flex-shrink-0">{dateLabel}</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-gray-900 truncate">{display}</div>
+          <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-2">
+            <span>{booking.title}</span>
+            {attendee?.email && display !== attendee.email && (
+              <>
+                <span className="text-gray-300">·</span>
+                <span>{attendee.email}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <span className="text-xs text-violet-700 font-medium flex-shrink-0">{dateLabel}</span>
+      </a>
     </li>
   )
 }
