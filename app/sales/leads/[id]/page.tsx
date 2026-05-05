@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Phone, EnvelopeSimple, ArrowLeft, CircleNotch, WarningCircle, CheckCircle,
-  Trash, Calendar, ChatCircle, Trophy, Hash, MapPin, X,
+  Trash, Calendar, ChatCircle, Trophy, Hash, MapPin, X, Copy,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -58,11 +58,13 @@ export default function LeadDetailPage() {
 
   const [lead, setLead] = useState<Lead | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
+  const [bookingUrl, setBookingUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
   const [working, setWorking] = useState<string | null>(null)
   const [noteInput, setNoteInput] = useState('')
   const [followUpInput, setFollowUpInput] = useState('')
+  const [copiedDemo, setCopiedDemo] = useState(false)
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -74,6 +76,7 @@ export default function LeadDetailPage() {
       } else {
         setLead(j.lead)
         setNotes(j.notes || [])
+        setBookingUrl(j.booking_url || null)
       }
     } finally {
       setLoading(false)
@@ -135,6 +138,29 @@ export default function LeadDetailPage() {
     await fetchWithAuth(`/api/sales/leads/${id}/notes?note_id=${noteId}`, { method: 'DELETE' })
   }
 
+  const copyDemoMessage = async () => {
+    if (!bookingUrl || !lead) return
+    const contact = lead.contact_name?.split(/[, ]+/)[0] || ''
+    const greeting = contact ? `Hi ${contact},` : 'Hi,'
+    const message =
+`${greeting}
+
+This is about your business — I work with CloudGreet, we build an AI receptionist that picks up missed calls and books jobs for service businesses like yours. 15 minutes to show you how it'd work for ${lead.business_name}?
+
+Pick any time that works: ${bookingUrl}
+
+— Looking forward.`
+    try {
+      await navigator.clipboard.writeText(message)
+      setCopiedDemo(true)
+      // Mark this as a touch since the rep is reaching out
+      patch({ touched: true })
+      setTimeout(() => setCopiedDemo(false), 3000)
+    } catch {
+      setErr('Clipboard blocked. Copy this manually:\n\n' + message)
+    }
+  }
+
   const removeLead = async () => {
     if (!confirm('Remove this lead from your list? (The underlying record stays in the database.)')) return
     setWorking('delete')
@@ -175,7 +201,7 @@ export default function LeadDetailPage() {
           eyebrow="lead"
           title={lead.business_name}
           action={
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {lead.phone && (
                 <a
                   href={`tel:${lead.phone}`}
@@ -184,6 +210,26 @@ export default function LeadDetailPage() {
                 >
                   <Phone weight="fill" className="w-4 h-4" /> Call
                 </a>
+              )}
+              {bookingUrl ? (
+                <button
+                  onClick={copyDemoMessage}
+                  className="inline-flex items-center gap-1.5 text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-3.5 py-2 transition-colors"
+                  title="Copy a demo-pitch message with your booking link"
+                >
+                  {copiedDemo
+                    ? <CheckCircle weight="fill" className="w-4 h-4 text-emerald-500" />
+                    : <Calendar weight="fill" className="w-4 h-4" />}
+                  {copiedDemo ? 'Copied' : 'Book demo'}
+                </button>
+              ) : (
+                <Link
+                  href="/sales/settings"
+                  className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 border border-dashed border-gray-300 rounded-lg px-3 py-2 transition-colors"
+                  title="Add your booking URL to enable Book demo"
+                >
+                  <Calendar className="w-3.5 h-3.5" /> Add booking link
+                </Link>
               )}
               <Link
                 href={`/sales/closes/new?lead_id=${id}`}

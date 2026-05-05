@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
   SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch,
-  Icon as PhosphorIcon,
+  Gear, Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -105,12 +105,20 @@ export function SalesShell({
               <div className="text-xs text-amber-900 mt-0.5">Finish bank setup to receive payouts</div>
             </Link>
           )}
-          <button
-            onClick={signOut}
-            className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            <SignOut className="w-3.5 h-3.5" /> Sign out
-          </button>
+          <div className="flex items-center gap-4 text-xs">
+            <Link
+              href="/sales/settings"
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              <Gear className="w-3.5 h-3.5" /> Settings
+            </Link>
+            <button
+              onClick={signOut}
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              <SignOut className="w-3.5 h-3.5" /> Sign out
+            </button>
+          </div>
         </div>
       </aside>
 

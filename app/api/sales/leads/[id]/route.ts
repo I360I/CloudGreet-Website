@@ -31,7 +31,7 @@ export async function GET(
     .maybeSingle()
   if (!assignment) return NextResponse.json({ error: 'Not your lead' }, { status: 404 })
 
-  const [{ data: lead }, { data: notes }] = await Promise.all([
+  const [{ data: lead }, { data: notes }, { data: rep }] = await Promise.all([
     supabaseAdmin.from('leads').select('*').eq('id', params.id).maybeSingle(),
     supabaseAdmin
       .from('lead_notes')
@@ -40,6 +40,11 @@ export async function GET(
       .eq('rep_id', auth.userId)
       .order('created_at', { ascending: false })
       .limit(50),
+    supabaseAdmin
+      .from('sales_reps')
+      .select('booking_url')
+      .eq('id', auth.userId)
+      .maybeSingle(),
   ])
   if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
 
@@ -55,6 +60,7 @@ export async function GET(
       touch_count: assignment.touch_count,
     },
     notes: notes ?? [],
+    booking_url: rep?.booking_url || null,
   })
 }
 
