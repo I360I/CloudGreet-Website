@@ -33,6 +33,7 @@ type RepDetail = {
   stripe_payouts_enabled: boolean
   stripe_details_submitted: boolean
   terminated_at: string | null
+  lead_scrape_limit: number
  }
  kpis: {
   mtd_commission_cents: number
@@ -97,6 +98,21 @@ export default function RepDetailPage() {
    const res = await fetchWithAuth(`/api/admin/sales/reps/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
+   await load()
+  } catch (e) {
+   alert(e instanceof Error ? e.message : 'Failed')
+  } finally { setBusy(null) }
+ }
+
+ const saveScrapeLimit = async (limit: number) => {
+  setBusy('limit')
+  try {
+   const res = await fetchWithAuth(`/api/admin/sales/reps/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ lead_scrape_limit: limit }),
    })
    const j = await res.json().catch(() => ({}))
    if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
@@ -232,6 +248,16 @@ export default function RepDetailPage() {
       </dl>
      </Panel>
 
+     {/* Permissions */}
+     <Panel>
+      <PanelHeader title="Permissions" eyebrow="rep limits" />
+      <ScrapeLimitField
+       initial={rep.lead_scrape_limit}
+       saving={busy === 'limit'}
+       onSave={saveScrapeLimit}
+      />
+     </Panel>
+
      {/* Clients */}
      <Panel padding="none">
       <div className="px-5 sm:px-6 pt-5 pb-3 border-b border-white/[0.06]">
@@ -358,4 +384,45 @@ function relTime(iso: string): string {
  const d = Math.floor(h / 24)
  if (d < 30) return `${d}d ago`
  return new Date(iso).toLocaleDateString()
+}
+
+function ScrapeLimitField({
+ initial, saving, onSave,
+}: {
+ initial: number
+ saving: boolean
+ onSave: (n: number) => void
+}) {
+ const [value, setValue] = useState(String(initial))
+ useEffect(() => { setValue(String(initial)) }, [initial])
+ const num = parseInt(value, 10)
+ const dirty = Number.isFinite(num) && num !== initial && num >= 1 && num <= 10000
+ return (
+  <div className="flex items-end gap-3 flex-wrap">
+   <div>
+    <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+     Scrape results per job
+    </label>
+    <input
+     type="number"
+     min={1}
+     max={10000}
+     value={value}
+     onChange={(e) => setValue(e.target.value.replace(/[^0-9]/g, ''))}
+     className="w-32 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white tabular-nums focus:outline-none focus:border-sky-400/50"
+    />
+    <p className="text-[11px] text-gray-500 mt-1.5">
+     Default 100. Raise for power reps; cap is 10,000.
+    </p>
+   </div>
+   <button
+    onClick={() => onSave(num)}
+    disabled={!dirty || saving}
+    className="text-xs bg-sky-500/15 text-sky-300 border border-sky-400/20 hover:bg-sky-500/25 rounded-lg px-3 py-2 disabled:opacity-40 transition-colors inline-flex items-center gap-1.5"
+   >
+    {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+    Save
+   </button>
+  </div>
+ )
 }

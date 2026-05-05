@@ -85,6 +85,7 @@ export async function GET(
    stripe_payouts_enabled: !!profile?.stripe_connect_payouts_enabled,
    stripe_details_submitted: !!profile?.stripe_connect_details_submitted,
    terminated_at: profile?.terminated_at || null,
+   lead_scrape_limit: profile?.lead_scrape_limit ?? 100,
   },
   kpis: {
    mtd_commission_cents: mtdCommission,
@@ -110,6 +111,7 @@ export async function PATCH(
   status?: 'active' | 'paused' | 'terminated'
   first_name?: string
   last_name?: string
+  lead_scrape_limit?: number
  }
 
  const userPatch: Record<string, any> = {}
@@ -127,6 +129,13 @@ export async function PATCH(
  if (body.status && ['active', 'paused', 'terminated'].includes(body.status)) {
   repPatch.status = body.status
   repPatch.terminated_at = body.status === 'terminated' ? new Date().toISOString() : null
+ }
+ if (typeof body.lead_scrape_limit === 'number') {
+  const n = Math.floor(body.lead_scrape_limit)
+  if (n < 1 || n > 10000) {
+   return NextResponse.json({ error: 'lead_scrape_limit must be between 1 and 10000' }, { status: 400 })
+  }
+  repPatch.lead_scrape_limit = n
  }
  if (Object.keys(repPatch).length > 0) {
   repPatch.updated_at = new Date().toISOString()
