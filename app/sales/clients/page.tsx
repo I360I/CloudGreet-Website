@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
   CaretRight, Robot, Phone, CircleNotch, Trophy, WarningCircle,
+  CalendarBlank, CheckCircle,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -23,6 +24,19 @@ type Client = {
   retell_agent_id: string | null
   edge_case_count: number
   created_at: string
+  calcom_connected?: boolean | null
+  cal_com_username?: string | null
+}
+
+function subscriptionPill(status: string | null) {
+  if (!status) return null
+  const s = status.toLowerCase()
+  if (s === 'trialing' || s === 'trial') return { label: 'trial', cls: 'bg-amber-50 text-amber-800 border-amber-200' }
+  if (s === 'active') return { label: 'active', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+  if (s === 'past_due') return { label: 'past due', cls: 'bg-rose-50 text-rose-700 border-rose-200' }
+  if (s === 'canceled' || s === 'cancelled') return { label: 'cancelled', cls: 'bg-gray-100 text-gray-600 border-gray-200' }
+  if (s === 'pending') return { label: 'pending', cls: 'bg-gray-100 text-gray-600 border-gray-200' }
+  return { label: s, cls: 'bg-gray-100 text-gray-600 border-gray-200' }
 }
 
 const dollars = (cents: number | null | undefined) =>
@@ -112,19 +126,47 @@ export default function SalesClientsPage() {
                       <div className="text-sm font-medium text-gray-900 truncate">
                         {c.business_name}
                       </div>
-                      <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-2.5">
-                        <span className="tabular-nums">{dollars(c.monthly_price_cents)}/mo</span>
+                      <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap items-center gap-x-2.5">
+                        {(() => {
+                          const onTrial =
+                            c.subscription_status === 'trialing' ||
+                            c.subscription_status === 'trial'
+                          const priceLabel = c.monthly_price_cents != null
+                            ? `${dollars(c.monthly_price_cents)}/mo`
+                            : '—/mo'
+                          if (onTrial && c.monthly_price_cents != null) {
+                            return (
+                              <span className="tabular-nums line-through text-gray-400">
+                                {priceLabel}
+                              </span>
+                            )
+                          }
+                          return <span className="tabular-nums">{priceLabel}</span>
+                        })()}
                         {c.business_type && <><span className="text-gray-300">·</span><span>{c.business_type}</span></>}
-                        {c.subscription_status && <><span className="text-gray-300">·</span><span className={c.subscription_status === 'active' || c.subscription_status === 'trialing' ? 'text-emerald-700' : 'text-amber-700'}>{c.subscription_status}</span></>}
+                        {(() => {
+                          const sub = subscriptionPill(c.subscription_status)
+                          return sub ? (
+                            <span className={`text-[10px] font-mono uppercase tracking-wider rounded-full border px-1.5 py-0.5 ${sub.cls}`}>
+                              {sub.label}
+                            </span>
+                          ) : null
+                        })()}
                       </div>
                     </div>
-                    <div className="text-right text-xs text-gray-500 flex flex-col items-end">
+                    <div className="text-right text-xs text-gray-500 flex flex-col items-end gap-0.5">
                       <span className="inline-flex items-center gap-1">
                         <Robot weight={c.retell_agent_id ? 'duotone' : 'regular'} className={`w-3.5 h-3.5 ${c.retell_agent_id ? 'text-violet-500' : 'text-gray-400'}`} />
                         {c.retell_agent_id ? 'Agent live' : 'No agent'}
                       </span>
+                      {c.calcom_connected && (
+                        <span className="inline-flex items-center gap-1 text-emerald-700">
+                          <CalendarBlank weight="duotone" className="w-3.5 h-3.5" />
+                          Cal connected
+                        </span>
+                      )}
                       {c.edge_case_count > 0 && (
-                        <span className="text-[10px] text-gray-400 mt-0.5">
+                        <span className="text-[10px] text-gray-400">
                           {c.edge_case_count} rule{c.edge_case_count === 1 ? '' : 's'}
                         </span>
                       )}

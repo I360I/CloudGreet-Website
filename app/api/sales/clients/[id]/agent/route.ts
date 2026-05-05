@@ -33,7 +33,7 @@ export async function GET(
       greeting_message, voice_id, voice_speed,
       retell_agent_id, agent_edge_cases,
       subscription_status, account_status,
-      cal_com_enabled, cal_com_event_type_uri,
+      calcom_connected, cal_com_username, cal_com_event_type_slug, cal_com_event_type_id,
       created_at
     `)
     .eq('id', params.id)
