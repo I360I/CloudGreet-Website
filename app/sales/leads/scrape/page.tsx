@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Play, CircleNotch, WarningCircle, CheckCircle, X, Trash, ArrowLeft,
-  CaretRight, Sparkle, MapPin, Phone, Globe,
+  CaretRight, MapPin, Phone, Globe, PaperPlaneTilt, Plus,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
@@ -41,16 +41,22 @@ type Result = {
 export default function SalesScrapePage() {
   const [sources, setSources] = useState<Source[]>([])
   const [jobs, setJobs] = useState<Job[]>([])
-  const [scrapeLimit, setScrapeLimit] = useState(100)
+  const [dailyLimit, setDailyLimit] = useState(200)
+  const [dailyUsed, setDailyUsed] = useState(0)
   const [loading, setLoading] = useState(true)
   const [migrationRequired, setMigrationRequired] = useState(false)
   const [err, setErr] = useState('')
   const [openJob, setOpenJob] = useState<Job | null>(null)
+  const [requesting, setRequesting] = useState(false)
+  const [requestSent, setRequestSent] = useState(false)
 
   const [running, setRunning] = useState(false)
   const [sourceId, setSourceId] = useState('')
   const [location, setLocation] = useState('Austin')
   const [limit, setLimit] = useState('50')
+
+  const dailyRemaining = Math.max(0, dailyLimit - dailyUsed)
+  const capReached = dailyRemaining <= 0
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -63,7 +69,8 @@ export default function SalesScrapePage() {
       }
       setSources(j.sources || [])
       setJobs(j.jobs || [])
-      setScrapeLimit(j.rep_scrape_limit || 100)
+      setDailyLimit(j.daily_limit || 200)
+      setDailyUsed(j.daily_used || 0)
       if (!sourceId && j.sources?.length) setSourceId(j.sources[0].id)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load')
@@ -78,7 +85,7 @@ export default function SalesScrapePage() {
     if (!sourceId) return
     setRunning(true); setErr('')
     try {
-      const requested = Math.max(1, Math.min(scrapeLimit, parseInt(limit, 10) || 50))
+      const requested = Math.max(1, Math.min(dailyRemaining, parseInt(limit, 10) || 50))
       const res = await fetchWithAuth('/api/sales/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -146,9 +153,25 @@ export default function SalesScrapePage() {
           eyebrow="lead generation"
           title="Scraper"
           action={
-            <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full">
-              cap · {scrapeLimit}/job
-            </span>
+            <DailyCap
+              used={dailyUsed}
+              limit={dailyLimit}
+              requesting={requesting}
+              requestSent={requestSent}
+              onRequestMore={async () => {
+                setRequesting(true)
+                try {
+                  await fetchWithAuth('/api/sales/scrape/request-more', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                  })
+                  setRequestSent(true)
+                } finally {
+                  setRequesting(false)
+                }
+              }}
+            />
           }
         />
 
@@ -189,15 +212,16 @@ export default function SalesScrapePage() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                Limit <span className="text-gray-400">(max {scrapeLimit})</span>
+                Limit <span className="text-gray-400">(left today: {dailyRemaining})</span>
               </label>
               <input
                 type="number"
                 min={1}
-                max={scrapeLimit}
+                max={dailyRemaining || 1}
                 value={limit}
+                disabled={capReached}
                 onChange={(e) => setLimit(e.target.value.replace(/[^0-9]/g, ''))}
-                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 disabled:opacity-60 disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -218,7 +242,7 @@ export default function SalesScrapePage() {
           <div className="flex justify-end mt-4">
             <button
               onClick={runJob}
-              disabled={!sourceId || running}
+              disabled={!sourceId || running || capReached}
               className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-800 disabled:opacity-60"
             >
               {running ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -318,6 +342,53 @@ function StatusBadge({ status }: { status: Job['status'] }) {
     <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-gray-500 flex-shrink-0">
       <span className={`w-1.5 h-1.5 rounded-full ${m.dot}`} /> {m.label}
     </span>
+  )
+}
+
+function DailyCap({
+  used, limit, requesting, requestSent, onRequestMore,
+}: {
+  used: number
+  limit: number
+  requesting: boolean
+  requestSent: boolean
+  onRequestMore: () => void
+}) {
+  const remaining = Math.max(0, limit - used)
+  const pct = Math.min(100, Math.round((used / Math.max(1, limit)) * 100))
+  const tone = remaining === 0
+    ? 'bg-rose-50 text-rose-700 border-rose-200'
+    : remaining < limit * 0.2
+      ? 'bg-amber-50 text-amber-700 border-amber-200'
+      : 'bg-gray-100 text-gray-700 border-gray-200'
+  return (
+    <div className="flex items-center gap-3">
+      <div className={`text-[10px] font-mono uppercase tracking-wider border rounded-full px-3 py-1.5 ${tone}`}>
+        <div className="flex items-center gap-2">
+          <span>{used} / {limit} today</span>
+          <span className="hidden sm:inline-block w-12 h-1 rounded-full bg-black/10 overflow-hidden">
+            <span
+              className="block h-full bg-current transition-all"
+              style={{ width: `${pct}%` }}
+            />
+          </span>
+        </div>
+      </div>
+      {requestSent ? (
+        <span className="text-[11px] text-emerald-700 inline-flex items-center gap-1">
+          <CheckCircle weight="fill" className="w-3.5 h-3.5" /> Sent
+        </span>
+      ) : (
+        <button
+          onClick={onRequestMore}
+          disabled={requesting}
+          className="text-[11px] text-gray-600 hover:text-gray-900 inline-flex items-center gap-1 disabled:opacity-60"
+        >
+          {requesting ? <CircleNotch className="w-3 h-3 animate-spin" /> : <PaperPlaneTilt weight="bold" className="w-3 h-3" />}
+          Request more
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -438,7 +509,7 @@ function JobDrawer({
                 disabled={promoting}
                 className="text-xs bg-gray-900 text-white rounded-lg px-3 py-1.5 hover:bg-gray-800 disabled:opacity-60 inline-flex items-center gap-1.5"
               >
-                {promoting ? <CircleNotch className="w-3 h-3 animate-spin" /> : <Sparkle weight="fill" className="w-3 h-3" />}
+                {promoting ? <CircleNotch className="w-3 h-3 animate-spin" /> : <Plus weight="bold" className="w-3 h-3" />}
                 Promote {selected.size}
               </button>
             )}

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Phone, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch,
-  Sparkle, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass,
+  Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass,
   CaretRight, Clock, Calendar,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
@@ -169,7 +169,7 @@ export default function SalesLeadsPage() {
                 href="/sales/leads/scrape"
                 className="inline-flex items-center gap-1.5 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg px-3.5 py-2 transition-colors shadow-sm"
               >
-                <Sparkle weight="fill" className="w-4 h-4" /> Scrape
+                <Target weight="fill" className="w-4 h-4" /> Scrape
               </Link>
               <button
                 onClick={onPickFile}
@@ -233,7 +233,7 @@ export default function SalesLeadsPage() {
             className="bg-white border border-gray-200 rounded-2xl p-10 text-center shadow-sm"
           >
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 mb-3">
-              <Sparkle weight="duotone" className="w-6 h-6" />
+              <Target weight="duotone" className="w-6 h-6" />
             </div>
             <h2 className="text-base font-medium text-gray-900 mb-1">No leads yet</h2>
             <p className="text-sm text-gray-500 max-w-md mx-auto">
@@ -244,7 +244,7 @@ export default function SalesLeadsPage() {
                 href="/sales/leads/scrape"
                 className="inline-flex items-center gap-1.5 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg px-4 py-2 transition-colors"
               >
-                <Sparkle weight="fill" className="w-4 h-4" /> Scrape leads
+                <Target weight="fill" className="w-4 h-4" /> Scrape leads
               </Link>
               <button
                 onClick={onPickFile}
