@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Plus, WarningCircle, Trophy } from '@phosphor-icons/react'
+import { Plus, WarningCircle, Trophy, Link as LinkIcon, Copy, CheckCircle, CircleNotch } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -18,6 +18,7 @@ type Close = {
   status: 'pending' | 'invoice_sent' | 'paid' | 'cancelled' | 'rejected'
   created_at: string
   notes: string | null
+  business_id: string | null
 }
 
 const STATUS_STYLE: Record<Close['status'], string> = {
@@ -40,22 +41,56 @@ export default function SalesClosesPage() {
   const [closes, setCloses] = useState<Close[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [linkBusy, setLinkBusy] = useState<string | null>(null)
+  const [linkUrls, setLinkUrls] = useState<Record<string, string>>({})
+  const [copied, setCopied] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetchWithAuth('/api/sales/closes')
-        const j = await res.json().catch(() => ({}))
-        if (cancelled) return
-        if (!res.ok) setError(j?.error || 'Failed to load closes')
-        else setCloses(j.closes || [])
-      } finally {
-        if (!cancelled) setLoading(false)
+  const load = async () => {
+    try {
+      const res = await fetchWithAuth('/api/sales/closes')
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) setError(j?.error || 'Failed to load closes')
+      else setCloses(j.closes || [])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const generateLink = async (id: string) => {
+    setLinkBusy(id); setError('')
+    try {
+      const res = await fetchWithAuth(`/api/sales/closes/${id}/payment-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(j?.error || 'Failed to generate payment link')
+      } else {
+        setLinkUrls((prev) => ({ ...prev, [id]: j.url }))
+        try {
+          await navigator.clipboard.writeText(j.url)
+          setCopied(id)
+          setTimeout(() => setCopied(null), 2500)
+        } catch { /* clipboard may be denied; the URL is still visible */ }
       }
-    })()
-    return () => { cancelled = true }
-  }, [])
+    } finally {
+      setLinkBusy(null)
+    }
+  }
+
+  const copyLink = async (id: string) => {
+    const url = linkUrls[id]
+    if (!url) return
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(id)
+      setTimeout(() => setCopied(null), 2500)
+    } catch { /* noop */ }
+  }
 
   return (
     <SalesShell activeLabel="Closes">
@@ -112,7 +147,14 @@ export default function SalesClosesPage() {
               variants={{ hidden: {}, show: { transition: { staggerChildren: 0.02 } } }}
               className="divide-y divide-gray-100"
             >
-              {closes.map((c) => (
+              {closes.map((c) => {
+                const canGenerate =
+                  !c.business_id &&
+                  c.status !== 'rejected' &&
+                  c.status !== 'cancelled' &&
+                  c.status !== 'paid'
+                const url = linkUrls[c.id]
+                return (
                 <motion.li
                   key={c.id}
                   variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { duration: 0.25 } } }}
@@ -142,8 +184,47 @@ export default function SalesClosesPage() {
                       {STATUS_LABEL[c.status]}
                     </span>
                   </div>
+
+                  {canGenerate && (
+                    <div className="mt-3 flex items-center gap-2 flex-wrap">
+                      {url ? (
+                        <>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-mono text-sky-700 hover:text-sky-900 truncate max-w-[260px] sm:max-w-md border border-sky-200 bg-sky-50 rounded-lg px-2.5 py-1.5"
+                          >
+                            {url.replace(/^https?:\/\//, '')}
+                          </a>
+                          <button
+                            onClick={() => copyLink(c.id)}
+                            className="text-xs inline-flex items-center gap-1 border border-gray-200 hover:bg-gray-50 rounded-lg px-2.5 py-1.5 text-gray-700"
+                          >
+                            {copied === c.id ? <CheckCircle weight="fill" className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                            {copied === c.id ? 'Copied' : 'Copy'}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => generateLink(c.id)}
+                          disabled={linkBusy === c.id || !c.prospect_email}
+                          className="text-xs inline-flex items-center gap-1.5 bg-gray-900 text-white hover:bg-gray-800 rounded-lg px-3 py-1.5 disabled:opacity-60"
+                          title={c.prospect_email ? 'Generate Stripe payment link' : 'Add a prospect email first'}
+                        >
+                          {linkBusy === c.id ? <CircleNotch className="w-3 h-3 animate-spin" /> : <LinkIcon weight="bold" className="w-3 h-3" />}
+                          Get payment link
+                        </button>
+                      )}
+                      {!c.prospect_email && !url && (
+                        <span className="text-[11px] text-gray-400">
+                          Add a prospect email on the close to enable
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </motion.li>
-              ))}
+              )})}
             </motion.ul>
           </motion.div>
         )}

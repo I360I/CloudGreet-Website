@@ -34,6 +34,8 @@ type RepDetail = {
   stripe_details_submitted: boolean
   terminated_at: string | null
   lead_scrape_limit: number
+  max_monthly_cents: number
+  max_setup_cents: number
  }
  kpis: {
   mtd_commission_cents: number
@@ -113,6 +115,21 @@ export default function RepDetailPage() {
    const res = await fetchWithAuth(`/api/admin/sales/reps/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ lead_scrape_limit: limit }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
+   await load()
+  } catch (e) {
+   alert(e instanceof Error ? e.message : 'Failed')
+  } finally { setBusy(null) }
+ }
+
+ const savePriceCaps = async (max_monthly_cents: number, max_setup_cents: number) => {
+  setBusy('caps')
+  try {
+   const res = await fetchWithAuth(`/api/admin/sales/reps/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ max_monthly_cents, max_setup_cents }),
    })
    const j = await res.json().catch(() => ({}))
    if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
@@ -256,6 +273,14 @@ export default function RepDetailPage() {
        saving={busy === 'limit'}
        onSave={saveScrapeLimit}
       />
+      <div className="mt-6 pt-6 border-t border-white/[0.06]">
+       <PriceCapField
+        initialMonthly={rep.max_monthly_cents}
+        initialSetup={rep.max_setup_cents}
+        saving={busy === 'caps'}
+        onSave={savePriceCaps}
+       />
+      </div>
      </Panel>
 
      {/* Clients */}
@@ -423,6 +448,70 @@ function ScrapeLimitField({
     {saving && <Loader2 className="w-3 h-3 animate-spin" />}
     Save
    </button>
+  </div>
+ )
+}
+
+function PriceCapField({
+ initialMonthly, initialSetup, saving, onSave,
+}: {
+ initialMonthly: number
+ initialSetup: number
+ saving: boolean
+ onSave: (monthly: number, setup: number) => void
+}) {
+ const [monthly, setMonthly] = useState(String(Math.round(initialMonthly / 100)))
+ const [setup, setSetup] = useState(String(Math.round(initialSetup / 100)))
+ useEffect(() => { setMonthly(String(Math.round(initialMonthly / 100))) }, [initialMonthly])
+ useEffect(() => { setSetup(String(Math.round(initialSetup / 100))) }, [initialSetup])
+ const m = parseInt(monthly, 10)
+ const s = parseInt(setup, 10)
+ const dirty =
+  Number.isFinite(m) && Number.isFinite(s) &&
+  (m * 100 !== initialMonthly || s * 100 !== initialSetup) &&
+  m >= 50 && m <= 50000 && s >= 0 && s <= 50000
+ return (
+  <div>
+   <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">
+    Self-serve payment-link caps
+   </div>
+   <div className="flex items-end gap-3 flex-wrap">
+    <div>
+     <label className="block text-[11px] text-gray-400 mb-1">Max monthly $</label>
+     <div className="flex items-center gap-1">
+      <span className="text-gray-500 text-sm">$</span>
+      <input
+       type="number" min={50} max={50000}
+       value={monthly}
+       onChange={(e) => setMonthly(e.target.value.replace(/[^0-9]/g, ''))}
+       className="w-28 bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-2 text-sm text-white tabular-nums focus:outline-none focus:border-sky-400/50"
+      />
+     </div>
+    </div>
+    <div>
+     <label className="block text-[11px] text-gray-400 mb-1">Max setup $</label>
+     <div className="flex items-center gap-1">
+      <span className="text-gray-500 text-sm">$</span>
+      <input
+       type="number" min={0} max={50000}
+       value={setup}
+       onChange={(e) => setSetup(e.target.value.replace(/[^0-9]/g, ''))}
+       className="w-28 bg-white/[0.04] border border-white/[0.08] rounded-lg px-2.5 py-2 text-sm text-white tabular-nums focus:outline-none focus:border-sky-400/50"
+      />
+     </div>
+    </div>
+    <button
+     onClick={() => onSave(m * 100, s * 100)}
+     disabled={!dirty || saving}
+     className="text-xs bg-sky-500/15 text-sky-300 border border-sky-400/20 hover:bg-sky-500/25 rounded-lg px-3 py-2 disabled:opacity-40 transition-colors inline-flex items-center gap-1.5"
+    >
+     {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+     Save
+    </button>
+   </div>
+   <p className="text-[11px] text-gray-500 mt-2">
+    Reps generating self-serve payment links can&apos;t go above these. Defaults: $1500 / $1500.
+   </p>
   </div>
  )
 }

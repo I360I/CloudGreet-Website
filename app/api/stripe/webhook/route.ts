@@ -181,13 +181,49 @@ export async function POST(request: NextRequest) {
  */
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
  try {
+ const customerId = session.customer as string
+
+ // Rep self-serve path: when a rep-generated payment link is paid,
+ // the session has `metadata.cloudgreet_close_id` set but no
+ // `cloudgreet_business_id` yet (we hadn't provisioned the business
+ // when the link was created). Run the convert flow inline so the
+ // rest of this handler can proceed as if a business existed all
+ // along. Idempotent — safe to re-run on Stripe retries.
+ const closeId = session.metadata?.cloudgreet_close_id as string | undefined
+ let businessIdFromClose: string | null = null
+ if (closeId) {
+   try {
+     const { convertCloseToClient } = await import('@/lib/sales/convert-close')
+     const result = await convertCloseToClient({
+       closeId,
+       stripeCustomerId: customerId,
+       markPaid: true,
+     })
+     if (result.ok === true) {
+       businessIdFromClose = result.data.business.id
+       logger.info('Auto-converted close from rep checkout', {
+         sessionId: session.id, closeId, businessId: businessIdFromClose,
+       })
+     } else if (result.ok === false) {
+       logger.error('Auto-convert close failed', {
+         sessionId: session.id, closeId, error: result.error,
+       })
+     }
+   } catch (e) {
+     logger.error('Auto-convert close threw', {
+       sessionId: session.id, closeId,
+       error: e instanceof Error ? e.message : 'Unknown',
+     })
+   }
+ }
+
  // Admin-generated links use `cloudgreet_business_id`; the older signup
  // flow used plain `business_id`. Accept either so historical and current
  // sessions both resolve.
  const businessId =
+  businessIdFromClose ||
   (session.metadata?.cloudgreet_business_id as string | undefined) ||
   (session.metadata?.business_id as string | undefined)
- const customerId = session.customer as string
 
  if (!businessId) {
  logger.warn('Checkout session missing business id metadata', { sessionId: session.id })

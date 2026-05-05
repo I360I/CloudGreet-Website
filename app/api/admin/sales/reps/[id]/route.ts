@@ -85,7 +85,9 @@ export async function GET(
    stripe_payouts_enabled: !!profile?.stripe_connect_payouts_enabled,
    stripe_details_submitted: !!profile?.stripe_connect_details_submitted,
    terminated_at: profile?.terminated_at || null,
-   lead_scrape_limit: profile?.lead_scrape_limit ?? 100,
+   lead_scrape_limit: profile?.lead_scrape_limit ?? 200,
+   max_monthly_cents: profile?.max_monthly_cents ?? 150000,
+   max_setup_cents: profile?.max_setup_cents ?? 150000,
   },
   kpis: {
    mtd_commission_cents: mtdCommission,
@@ -112,6 +114,8 @@ export async function PATCH(
   first_name?: string
   last_name?: string
   lead_scrape_limit?: number
+  max_monthly_cents?: number
+  max_setup_cents?: number
  }
 
  const userPatch: Record<string, any> = {}
@@ -136,6 +140,20 @@ export async function PATCH(
    return NextResponse.json({ error: 'lead_scrape_limit must be between 1 and 10000' }, { status: 400 })
   }
   repPatch.lead_scrape_limit = n
+ }
+ if (typeof body.max_monthly_cents === 'number') {
+  const n = Math.floor(body.max_monthly_cents)
+  if (n < 5000 || n > 5000000) {
+   return NextResponse.json({ error: 'max_monthly_cents must be between $50 and $50,000' }, { status: 400 })
+  }
+  repPatch.max_monthly_cents = n
+ }
+ if (typeof body.max_setup_cents === 'number') {
+  const n = Math.floor(body.max_setup_cents)
+  if (n < 0 || n > 5000000) {
+   return NextResponse.json({ error: 'max_setup_cents must be between $0 and $50,000' }, { status: 400 })
+  }
+  repPatch.max_setup_cents = n
  }
  if (Object.keys(repPatch).length > 0) {
   repPatch.updated_at = new Date().toISOString()
