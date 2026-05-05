@@ -47,6 +47,7 @@
     "pre-push": "npm run quality:check && npm run test:all"
   },
   "dependencies": {
+    "@google-cloud/bigquery": "^8.3.0",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-slot": "^1.2.3",
     "@react-email/render": "^1.4.0",

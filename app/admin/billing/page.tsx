@@ -220,13 +220,21 @@ export default function BillingDashboardPage() {
  <AdminShell activeLabel="Billing">
  <section className="px-4 lg:px-8 py-6 lg:py-10">
  <div className="max-w-7xl space-y-6">
- <header className="space-y-2">
+ <header className="flex items-end justify-between gap-4 flex-wrap">
+ <div className="space-y-2">
  <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500">
  billing operations
  </div>
  <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight text-white">
  Revenue
  </h1>
+ </div>
+ <Link
+ href="/admin/billing/places"
+ className="inline-flex items-center gap-1.5 text-xs text-gray-300 hover:text-white border border-white/10 rounded-lg px-3 py-2 transition-colors"
+ >
+ Places API spend →
+ </Link>
  </header>
 
  {loading ? (
