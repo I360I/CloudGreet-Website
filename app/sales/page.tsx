@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, Calendar,
+  Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, CalendarBlank,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from './_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -348,7 +348,7 @@ function CalRow({ booking }: { booking: CalBooking }) {
   return (
     <li className="px-5 py-3 flex items-center gap-3">
       <div className="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 inline-flex items-center justify-center flex-shrink-0">
-        <Calendar weight="duotone" className="w-4 h-4" />
+        <CalendarBlank weight="duotone" className="w-4 h-4" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium text-gray-900 truncate">{display}</div>

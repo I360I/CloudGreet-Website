@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  CircleNotch, CheckCircle, WarningCircle, Calendar, ArrowSquareOut,
+  CircleNotch, CheckCircle, WarningCircle, CalendarBlank, ArrowSquareOut,
   Key, X,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
@@ -120,7 +120,7 @@ export default function SalesSettingsPage() {
             <div className="border-t border-gray-100 pt-5">
               <label className="block">
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <Calendar weight="duotone" className="w-4 h-4 text-violet-500" />
+                  <CalendarBlank weight="duotone" className="w-4 h-4 text-violet-500" />
                   <span className="text-sm font-medium text-gray-900">Booking link</span>
                 </div>
                 <p className="text-xs text-gray-500 mb-2">

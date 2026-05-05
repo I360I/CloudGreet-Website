@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Phone, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch,
   Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass,
-  CaretRight, Clock, Calendar,
+  CaretRight, Clock, CalendarBlank,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -431,7 +431,7 @@ export default function SalesLeadsPage() {
                                 ? 'bg-rose-50 text-rose-700 border border-rose-200'
                                 : 'bg-amber-50 text-amber-700 border border-amber-200'
                             }`}>
-                              <Calendar weight="fill" className="w-3 h-3" /> {fu.label}
+                              <CalendarBlank weight="fill" className="w-3 h-3" /> {fu.label}
                             </span>
                           )}
                           {l.touch_count > 0 && (

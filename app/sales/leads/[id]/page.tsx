@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Phone, EnvelopeSimple, ArrowLeft, CircleNotch, WarningCircle, CheckCircle,
-  Trash, Calendar, ChatCircle, Trophy, Hash, MapPin, X, Copy,
+  Trash, CalendarBlank, ChatCircle, Trophy, Hash, MapPin, X, Copy,
   CurrencyDollar, Link as LinkIcon,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
@@ -146,27 +146,51 @@ export default function LeadDetailPage() {
     await fetchWithAuth(`/api/sales/leads/${id}/notes?note_id=${noteId}`, { method: 'DELETE' })
   }
 
-  const copyDemoMessage = async () => {
-    if (!bookingUrl || !lead) return
+  const buildDemoMessage = () => {
+    if (!bookingUrl || !lead) return ''
     const contact = lead.contact_name?.split(/[, ]+/)[0] || ''
     const greeting = contact ? `Hi ${contact},` : 'Hi,'
-    const message =
-`${greeting}
+    return `${greeting}
 
 This is about your business — I work with CloudGreet, we build an AI receptionist that picks up missed calls and books jobs for service businesses like yours. 15 minutes to show you how it'd work for ${lead.business_name}?
 
 Pick any time that works: ${bookingUrl}
 
 — Looking forward.`
+  }
+
+  const copyDemoMessage = async () => {
+    const message = buildDemoMessage()
+    if (!message) return
     try {
       await navigator.clipboard.writeText(message)
       setCopiedDemo(true)
-      // Mark this as a touch since the rep is reaching out
       patch({ touched: true })
       setTimeout(() => setCopiedDemo(false), 3000)
     } catch {
-      setErr('Clipboard blocked. Copy this manually:\n\n' + message)
+      setErr('Clipboard blocked. Use the Email or Text buttons instead.')
     }
+  }
+
+  const openDemoEmail = () => {
+    if (!lead?.email) return
+    const message = buildDemoMessage()
+    const subject = `Quick demo for ${lead.business_name}`
+    window.open(
+      `mailto:${lead.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`,
+      '_blank',
+    )
+    patch({ touched: true })
+  }
+
+  const openDemoSms = () => {
+    if (!lead?.phone) return
+    const message = buildDemoMessage()
+    window.open(
+      `sms:${lead.phone}?&body=${encodeURIComponent(message)}`,
+      '_self',
+    )
+    patch({ touched: true })
   }
 
   const generatePaymentLink = async () => {
@@ -267,23 +291,47 @@ Pick any time that works: ${bookingUrl}
                 <CurrencyDollar weight="fill" className="w-4 h-4" /> Send payment link
               </button>
               {bookingUrl ? (
-                <button
-                  onClick={copyDemoMessage}
-                  className="inline-flex items-center gap-1.5 text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-3.5 py-2 transition-colors"
-                  title="Copy a demo-pitch message with your booking link"
-                >
-                  {copiedDemo
-                    ? <CheckCircle weight="fill" className="w-4 h-4 text-emerald-500" />
-                    : <Calendar weight="fill" className="w-4 h-4" />}
-                  {copiedDemo ? 'Copied' : 'Book demo'}
-                </button>
+                <div className="inline-flex items-stretch border border-gray-200 rounded-lg overflow-hidden text-sm">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-50 text-gray-600 border-r border-gray-200">
+                    <CalendarBlank weight="fill" className="w-4 h-4 text-violet-500" />
+                    Demo pitch
+                  </span>
+                  {lead.email && (
+                    <button
+                      onClick={openDemoEmail}
+                      className="px-3 py-2 text-gray-700 hover:bg-gray-50 border-r border-gray-200"
+                      title="Open email pre-filled"
+                    >
+                      Email
+                    </button>
+                  )}
+                  {lead.phone && (
+                    <button
+                      onClick={openDemoSms}
+                      className="px-3 py-2 text-gray-700 hover:bg-gray-50 border-r border-gray-200"
+                      title="Open SMS pre-filled (mobile)"
+                    >
+                      Text
+                    </button>
+                  )}
+                  <button
+                    onClick={copyDemoMessage}
+                    className="px-3 py-2 text-gray-700 hover:bg-gray-50 inline-flex items-center gap-1.5"
+                    title="Copy message to clipboard"
+                  >
+                    {copiedDemo
+                      ? <CheckCircle weight="fill" className="w-4 h-4 text-emerald-500" />
+                      : <Copy className="w-4 h-4" />}
+                    {copiedDemo ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
               ) : (
                 <Link
                   href="/sales/settings"
                   className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 border border-dashed border-gray-300 rounded-lg px-3 py-2 transition-colors"
-                  title="Add your booking URL to enable Book demo"
+                  title="Add your booking URL to enable demo pitch"
                 >
-                  <Calendar className="w-3.5 h-3.5" /> Add booking link
+                  <CalendarBlank className="w-3.5 h-3.5" /> Add booking link
                 </Link>
               )}
             </div>
@@ -483,7 +531,7 @@ Pick any time that works: ${bookingUrl}
             {lead.follow_up_at ? (
               <div className="flex items-center gap-2">
                 <div className="flex-1 text-sm bg-amber-50 text-amber-900 border border-amber-200 rounded-lg px-3 py-2 inline-flex items-center gap-2">
-                  <Calendar weight="fill" className="w-3.5 h-3.5" />
+                  <CalendarBlank weight="fill" className="w-3.5 h-3.5" />
                   {new Date(lead.follow_up_at).toLocaleString(undefined, {
                     month: 'short', day: 'numeric',
                     hour: 'numeric', minute: '2-digit',
