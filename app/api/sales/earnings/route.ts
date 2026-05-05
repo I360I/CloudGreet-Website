@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         .maybeSingle(),
       supabaseAdmin
         .from('closes')
-        .select('id, business_id, prospect_business_name, agreed_monthly_cents, agreed_setup_fee_cents, status, created_at, businesses:business_id(business_name, account_status)')
+        .select('id, business_id, prospect_business_name, agreed_monthly_cents, agreed_setup_fee_cents, status, created_at, businesses:business_id(business_name, account_status, subscription_status)')
         .eq('rep_id', auth.userId)
         .in('status', ['invoice_sent', 'paid'])
         .order('created_at', { ascending: false })
@@ -105,6 +105,8 @@ export async function GET(request: NextRequest) {
       monthly_cents: number
       setup_fee_cents: number
       status: string
+      subscription_status: string | null
+      account_status: string | null
       started_at: string
       commission_total_cents: number
       commission_owed_cents: number
@@ -121,6 +123,8 @@ export async function GET(request: NextRequest) {
         monthly_cents: c.agreed_monthly_cents || 0,
         setup_fee_cents: c.agreed_setup_fee_cents || 0,
         status: c.status,
+        subscription_status: c.businesses?.subscription_status || null,
+        account_status: c.businesses?.account_status || null,
         started_at: c.created_at,
         commission_total_cents: 0,
         commission_owed_cents: 0,

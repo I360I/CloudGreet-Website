@@ -33,6 +33,8 @@ type Customer = {
   business_name: string
   monthly_cents: number
   status: 'pending' | 'invoice_sent' | 'paid' | 'cancelled' | 'rejected'
+  subscription_status: string | null
+  account_status: string | null
   started_at: string
   commission_total_cents: number
   commission_owed_cents: number
@@ -225,7 +227,16 @@ export default function SalesEarningsPage() {
                           {c.business_name}
                         </div>
                         <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap items-center gap-x-2.5">
-                          <span className="tabular-nums">{dollars(c.monthly_cents)}/mo</span>
+                          {c.subscription_status === 'trialing' || c.subscription_status === 'trial' ? (
+                            <>
+                              <span className="tabular-nums line-through text-gray-400">{dollars(c.monthly_cents)}/mo</span>
+                              <span className="text-[10px] font-mono uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 rounded-full px-1.5 py-0.5">
+                                trial
+                              </span>
+                            </>
+                          ) : (
+                            <span className="tabular-nums">{dollars(c.monthly_cents)}/mo</span>
+                          )}
                           <span className="text-gray-300">·</span>
                           <span>since {fmtDate(c.started_at)}</span>
                           <span className="text-[10px] font-mono uppercase tracking-wider bg-gray-100 text-gray-600 rounded-full px-1.5 py-0.5 tabular-nums">

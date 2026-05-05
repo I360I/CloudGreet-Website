@@ -21,10 +21,19 @@ type Business = {
   email: string | null
   greeting_message: string | null
   voice_id: string | null
+  voice_speed?: number | null
   retell_agent_id: string | null
   subscription_status: string | null
-  cal_com_enabled?: boolean | null
-  cal_com_event_type_uri?: string | null
+  calcom_connected?: boolean | null
+  cal_com_username?: string | null
+  cal_com_event_type_slug?: string | null
+}
+
+type Voice = {
+  voice_id: string
+  voice_name?: string | null
+  gender?: string | null
+  accent?: string | null
 }
 
 type EdgeCase = {
@@ -202,18 +211,13 @@ export default function SalesClientDetailPage() {
               <Field label="Greeting" value={business.greeting_message} truncate />
             )}
           </div>
-          {business.cal_com_enabled === false && (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex items-start gap-2">
-              <CalendarBlank weight="duotone" className="w-4 h-4 text-violet-500 mt-0.5" />
-              <div className="text-xs text-gray-600">
-                <span className="font-medium text-gray-900">Cal.com not connected.</span>{' '}
-                The agent can still capture intake info and text it to the client, but
-                won&apos;t auto-book real appointments. Help your client connect their
-                calendar in their dashboard → Settings → Integrations.
-              </div>
-            </div>
-          )}
         </motion.div>
+
+        {/* Voice + greeting */}
+        <VoicePanel businessId={id} business={business} onSaved={load} />
+
+        {/* Cal.com */}
+        <CalcomPanel businessId={id} business={business} onSaved={load} />
 
         {/* Edge cases */}
         <motion.div
@@ -372,5 +376,318 @@ function Field({ label, value, truncate }: { label: string; value: string; trunc
       <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-0.5">{label}</div>
       <div className={`text-gray-900 ${truncate ? 'truncate' : ''}`}>{value}</div>
     </div>
+  )
+}
+
+/* ----------------------------- Voice + greeting ----------------------------- */
+
+function VoicePanel({
+  businessId, business, onSaved,
+}: {
+  businessId: string
+  business: Business
+  onSaved: () => void
+}) {
+  const [voices, setVoices] = useState<Voice[]>([])
+  const [greeting, setGreeting] = useState(business.greeting_message || '')
+  const [voiceId, setVoiceId] = useState(business.voice_id || '')
+  const [voiceSpeed, setVoiceSpeed] = useState<number>(business.voice_speed ?? 1.0)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => { setGreeting(business.greeting_message || '') }, [business.greeting_message])
+  useEffect(() => { setVoiceId(business.voice_id || '') }, [business.voice_id])
+  useEffect(() => { setVoiceSpeed(business.voice_speed ?? 1.0) }, [business.voice_speed])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetchWithAuth('/api/dashboard/retell/voices')
+        const j = await res.json().catch(() => ({}))
+        if (!cancelled && Array.isArray(j?.voices)) setVoices(j.voices)
+      } catch { /* non-fatal */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  const dirty =
+    (greeting || '') !== (business.greeting_message || '') ||
+    (voiceId || null) !== (business.voice_id || null) ||
+    voiceSpeed !== (business.voice_speed ?? 1.0)
+
+  const save = async () => {
+    setSaving(true); setErr(''); setSaved(false)
+    try {
+      const res = await fetchWithAuth(`/api/sales/clients/${businessId}/agent`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          greeting_message: greeting,
+          voice_id: voiceId || undefined,
+          voice_speed: voiceSpeed,
+        }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setErr(j?.error || 'Save failed')
+      } else {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2500)
+        if (j?.agent_sync_error) setErr(`Saved, but agent sync warning: ${j.agent_sync_error}`)
+        onSaved()
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: EASE }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mb-5"
+    >
+      <div className="flex items-center gap-1.5 mb-1">
+        <Robot weight="duotone" className="w-4 h-4 text-sky-500" />
+        <span className="text-sm font-medium text-gray-900">Voice &amp; greeting</span>
+      </div>
+      <p className="text-xs text-gray-500 mb-4">
+        Live tweaks. Saves push to the agent in seconds.
+      </p>
+
+      <label className="block mb-4">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+          Greeting (what the agent says first)
+        </div>
+        <textarea
+          value={greeting}
+          onChange={(e) => setGreeting(e.target.value)}
+          rows={2}
+          maxLength={500}
+          placeholder={`Hi, thanks for calling ${business.business_name}, how can I help?`}
+          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 resize-none"
+        />
+      </label>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+              Voice
+            </div>
+            <select
+              value={voiceId}
+              onChange={(e) => setVoiceId(e.target.value)}
+              className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+            >
+              <option value="">— Default —</option>
+              {voices.map((v) => (
+                <option key={v.voice_id} value={v.voice_id}>
+                  {v.voice_name || v.voice_id}
+                  {v.gender ? ` · ${v.gender}` : ''}
+                  {v.accent ? ` · ${v.accent}` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div>
+          <label className="block">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5 flex items-center justify-between">
+              <span>Voice speed</span>
+              <span className="tabular-nums text-gray-700">{voiceSpeed.toFixed(2)}×</span>
+            </div>
+            <input
+              type="range"
+              min={0.5}
+              max={2.0}
+              step={0.05}
+              value={voiceSpeed}
+              onChange={(e) => setVoiceSpeed(Number(e.target.value))}
+              className="w-full"
+            />
+            <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+              <span>0.5×</span><span>1.0×</span><span>2.0×</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 mt-4">
+        <button
+          onClick={save}
+          disabled={!dirty || saving}
+          className="inline-flex items-center gap-1.5 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-800 disabled:opacity-60"
+        >
+          {saving ? <CircleNotch className="w-4 h-4 animate-spin" /> : 'Save'}
+        </button>
+        {saved && <span className="text-xs text-emerald-700 inline-flex items-center gap-1"><CheckCircle weight="fill" className="w-3.5 h-3.5" /> Saved</span>}
+        {err && <span className="text-xs text-amber-700 truncate max-w-md">{err}</span>}
+      </div>
+    </motion.div>
+  )
+}
+
+/* --------------------------------- Cal.com --------------------------------- */
+
+type CalEventType = { id: number; title: string; slug: string; lengthInMinutes?: number }
+
+function CalcomPanel({
+  businessId, business, onSaved,
+}: {
+  businessId: string
+  business: Business
+  onSaved: () => void
+}) {
+  const [apiKey, setApiKey] = useState('')
+  const [step, setStep] = useState<'idle' | 'key' | 'event' | 'connected'>(
+    business.calcom_connected ? 'connected' : 'idle',
+  )
+  const [eventTypes, setEventTypes] = useState<CalEventType[]>([])
+  const [eventTypeId, setEventTypeId] = useState<number | ''>('')
+  const [account, setAccount] = useState<{ username: string; email?: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => {
+    setStep(business.calcom_connected ? 'connected' : 'idle')
+  }, [business.calcom_connected])
+
+  const submit = async (withEventType?: number) => {
+    setBusy(true); setErr('')
+    try {
+      const res = await fetchWithAuth(`/api/sales/clients/${businessId}/calcom`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: apiKey.trim(),
+          eventTypeId: withEventType ?? eventTypeId ?? undefined,
+        }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (j?.success) {
+        setStep('connected')
+        onSaved()
+      } else if (j?.needsEventType) {
+        setEventTypes(j.eventTypes || [])
+        setAccount(j.account || null)
+        setStep('event')
+      } else {
+        setErr(j?.errors?.apiKey || j?.error || 'Connection failed')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const disconnect = async () => {
+    if (!confirm('Disconnect Cal.com from this client? The agent will stop booking until reconnected.')) return
+    setBusy(true)
+    try {
+      await fetchWithAuth(`/api/sales/clients/${businessId}/calcom`, { method: 'DELETE' })
+      setStep('idle')
+      setApiKey('')
+      onSaved()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: EASE, delay: 0.05 }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mb-5"
+    >
+      <div className="flex items-center gap-1.5 mb-1">
+        <CalendarBlank weight="duotone" className="w-4 h-4 text-violet-500" />
+        <span className="text-sm font-medium text-gray-900">Cal.com integration</span>
+      </div>
+      <p className="text-xs text-gray-500 mb-4">
+        Paste your client&apos;s Cal.com personal API key, pick the event type to use,
+        and the agent starts booking real appointments on their calendar.{' '}
+        <a
+          href="https://app.cal.com/settings/developer/api-keys"
+          target="_blank"
+          rel="noreferrer"
+          className="text-gray-700 underline"
+        >
+          Where to find their key
+        </a>
+      </p>
+
+      {step === 'connected' && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm text-emerald-900">
+            <CheckCircle weight="fill" className="w-4 h-4 text-emerald-600" />
+            <span>
+              Connected
+              {business.cal_com_username ? ` to ${business.cal_com_username}` : ''}
+              {business.cal_com_event_type_slug ? ` · ${business.cal_com_event_type_slug}` : ''}
+            </span>
+          </div>
+          <button
+            onClick={disconnect}
+            disabled={busy}
+            className="text-xs text-emerald-800 hover:text-red-700 disabled:opacity-60"
+          >
+            Disconnect
+          </button>
+        </div>
+      )}
+
+      {step !== 'connected' && (
+        <>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="cal_live_..."
+              className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-gray-400"
+            />
+            <button
+              onClick={() => submit()}
+              disabled={busy || apiKey.trim().length < 10}
+              className="inline-flex items-center gap-1.5 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-800 disabled:opacity-60"
+            >
+              {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : 'Connect'}
+            </button>
+          </div>
+
+          {step === 'event' && eventTypes.length > 0 && (
+            <div className="mt-4 bg-violet-50 border border-violet-200 rounded-xl p-4">
+              <div className="text-xs text-violet-900 mb-2">
+                {account?.username ? `Found ${eventTypes.length} event type${eventTypes.length === 1 ? '' : 's'} on @${account.username}.` : `Found ${eventTypes.length} event types.`} Pick which one the agent should book on:
+              </div>
+              <div className="space-y-1.5">
+                {eventTypes.map((et) => (
+                  <button
+                    key={et.id}
+                    onClick={() => submit(et.id)}
+                    disabled={busy}
+                    className="w-full text-left bg-white hover:bg-gray-50 border border-violet-200 rounded-lg px-3 py-2.5 transition-colors disabled:opacity-60"
+                  >
+                    <div className="text-sm font-medium text-gray-900">{et.title}</div>
+                    <div className="text-xs text-gray-500 mt-0.5 font-mono">
+                      /{et.slug}
+                      {et.lengthInMinutes ? ` · ${et.lengthInMinutes}min` : ''}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {err && (
+            <div className="mt-3 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-start gap-2">
+              <WarningCircle weight="fill" className="w-4 h-4 mt-0.5" /> {err}
+            </div>
+          )}
+        </>
+      )}
+    </motion.div>
   )
 }
