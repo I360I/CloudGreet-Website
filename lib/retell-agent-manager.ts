@@ -29,6 +29,8 @@ export interface BusinessAgentConfig {
   aiAdditionalInstructions?: string | null;
   voiceId?: string | null;
   voiceSpeed?: number | null;
+  /** Rep-managed edge cases — appended as SPECIAL HANDLING in the prompt. */
+  agentEdgeCases?: Array<{ label?: string; instruction: string }> | null;
 }
 
 export interface RetellAgent {
@@ -406,11 +408,45 @@ class RetellAgentManager {
         t(`agent uses ${responseEngineType ?? 'unknown'} engine — greeting can't be updated via Retell API`)
       }
 
-      // 2) Only patch begin_message when the caller explicitly provided
-      //    a new greeting. Sending begin_message="" on every save (e.g.
-      //    a voice-only save where the DB greeting is null) flips
-      //    Retell into dynamic-greeting mode and wipes the static one
-      //    we set previously.
+      // 2a) Only patch general_prompt when the caller explicitly
+      //     supplied edge cases. Reps editing the rep-portal edge-case
+      //     list passes agentEdgeCases — that's when we regenerate the
+      //     prompt + push to Retell. Voice/greeting/name saves never
+      //     trigger this branch, preserving any hand-tuning the
+      //     contractor may have done in Retell directly.
+      const edgeCasesProvided = Object.prototype.hasOwnProperty.call(config, 'agentEdgeCases')
+      if (llmId && edgeCasesProvided) {
+        try {
+          const promptConfig = await this.buildPromptConfig(mergedConfig)
+          const newPrompt = SmartAIPrompts.generateIndustrySpecificPrompt(
+            mergedConfig.businessType, promptConfig,
+          )
+          const promptRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ general_prompt: newPrompt }),
+          })
+          if (!promptRes.ok) {
+            const text = await promptRes.text().catch(() => promptRes.statusText)
+            t(`update-retell-llm prompt ${promptRes.status}: ${text.slice(0, 120)}`)
+            throw new Error(`Failed to push prompt: ${promptRes.status} ${text.slice(0, 200)}`)
+          }
+          t(`update-retell-llm prompt ok: ${(mergedConfig.agentEdgeCases || []).length} edge case(s)`)
+        } catch (e) {
+          // Surface the error but don't abort the rest of the agent
+          // sync — voice/greeting changes still apply.
+          t(`prompt push threw: ${e instanceof Error ? e.message : 'Unknown'}`)
+        }
+      }
+
+      // 2b) Only patch begin_message when the caller explicitly provided
+      //     a new greeting. Sending begin_message="" on every save (e.g.
+      //     a voice-only save where the DB greeting is null) flips
+      //     Retell into dynamic-greeting mode and wipes the static one
+      //     we set previously.
       const greetingProvided = Object.prototype.hasOwnProperty.call(config, 'greetingMessage')
       if (llmId && greetingProvided) {
         const newGreeting = (config.greetingMessage ?? '').toString()
@@ -871,7 +907,15 @@ class RetellAgentManager {
       confidenceThreshold: config.aiConfidenceThreshold,
       maxSilenceSeconds: config.aiMaxSilenceSeconds,
       escalationMessage: config.aiEscalationMessage,
-      additionalInstructions: config.aiAdditionalInstructions ?? undefined
+      additionalInstructions: config.aiAdditionalInstructions ?? undefined,
+      edgeCases: Array.isArray(config.agentEdgeCases)
+        ? config.agentEdgeCases
+            .filter((e: any) => e && typeof e.instruction === 'string')
+            .map((e: any) => ({
+              label: typeof e.label === 'string' ? e.label : '',
+              instruction: e.instruction,
+            }))
+        : undefined,
     }
   }
 
@@ -927,7 +971,12 @@ class RetellAgentManager {
       aiAdditionalInstructions:
         incoming.aiAdditionalInstructions ?? (data.ai_additional_instructions as string | null) ?? null,
       voiceId: incoming.voiceId ?? (data.voice_id as string | null) ?? null,
-      voiceSpeed: incoming.voiceSpeed ?? (data.voice_speed as number | null) ?? null
+      voiceSpeed: incoming.voiceSpeed ?? (data.voice_speed as number | null) ?? null,
+      agentEdgeCases:
+        incoming.agentEdgeCases
+        ?? (Array.isArray((data as any).agent_edge_cases)
+          ? ((data as any).agent_edge_cases as Array<{ label?: string; instruction: string }>)
+          : null),
     }
   }
 

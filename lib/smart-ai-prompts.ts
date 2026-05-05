@@ -16,6 +16,8 @@ export interface RevenueOptimizedConfig {
   maxSilenceSeconds?: number
   escalationMessage?: string
   additionalInstructions?: string | null
+  /** Rep-managed structured snippets — appended as a SPECIAL HANDLING section. */
+  edgeCases?: Array<{ label: string; instruction: string }>
 }
 
 export interface PricingScripts {
@@ -210,7 +212,35 @@ CLEANING SPECIFIC REVENUE OPTIMIZATION:
 `
     };
 
-    return basePrompt + (industrySpecific[businessType as keyof typeof industrySpecific] || '');
+    return basePrompt
+      + (industrySpecific[businessType as keyof typeof industrySpecific] || '')
+      + this.buildEdgeCasesSection(config.edgeCases);
+  }
+
+  /**
+   * Append a SPECIAL HANDLING section listing rep-managed snippets.
+   * These come from the agent_edge_cases column on businesses; reps
+   * add them via the rep portal to shape behavior without prompt
+   * access. Each item is rendered as a bullet under a clearly-fenced
+   * section so it can't fight the rest of the prompt.
+   */
+  private static buildEdgeCasesSection(
+    edgeCases: Array<{ label: string; instruction: string }> | undefined,
+  ): string {
+    if (!edgeCases || edgeCases.length === 0) return ''
+    const lines = edgeCases
+      .filter((e) => e?.instruction && e.instruction.trim())
+      .map((e) => {
+        const label = (e.label || '').trim()
+        const instr = e.instruction.trim().replace(/\s+/g, ' ')
+        return label ? `- ${label}: ${instr}` : `- ${instr}`
+      })
+    if (lines.length === 0) return ''
+    return `
+
+SPECIAL HANDLING (situation-specific instructions from the business owner — follow these exactly when the listed situation comes up; otherwise behave normally):
+${lines.join('\n')}
+`;
   }
 
   /**

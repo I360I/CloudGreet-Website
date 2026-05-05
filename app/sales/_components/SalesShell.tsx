@@ -5,11 +5,11 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
   SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch,
-  Gear, Icon as PhosphorIcon,
+  Gear, Robot, Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
-type ActiveLabel = 'Overview' | 'Leads' | 'Closes' | 'Earnings'
+type ActiveLabel = 'Overview' | 'Leads' | 'Closes' | 'Clients' | 'Earnings'
 
 type NavItem = {
   label: ActiveLabel
@@ -22,6 +22,7 @@ const NAV: NavItem[] = [
   { label: 'Overview', href: '/sales',          icon: SquaresFour,   match: (p) => p === '/sales' },
   { label: 'Leads',    href: '/sales/leads',    icon: ListChecks,    match: (p) => p.startsWith('/sales/leads') },
   { label: 'Closes',   href: '/sales/closes',   icon: Trophy,        match: (p) => p.startsWith('/sales/closes') },
+  { label: 'Clients',  href: '/sales/clients',  icon: Robot,         match: (p) => p.startsWith('/sales/clients') },
   { label: 'Earnings', href: '/sales/earnings', icon: CurrencyDollar, match: (p) => p.startsWith('/sales/earnings') },
 ]
 
