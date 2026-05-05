@@ -9,15 +9,15 @@ export const runtime = 'nodejs'
 /**
  * GET /api/sales/leads
  *
- * Two-stage load so a missing migration can never block the rep
- * from seeing their leads:
- *   1) bare query — lead_assignments + leads(*) only. This is the
- *      original schema and must always work; if it errors, surface
- *      the actual DB message so we can diagnose.
- *   2) workflow query — status, follow-up, touch count etc, layered
- *      on top of (1) by lead_id. If sql/sales-lead-workflow.sql
- *      hasn't been applied this errors silently and we return
- *      sensible defaults + migration_needed: 'sales-lead-workflow'.
+ * Three-stage manual join — avoids PostgREST's foreign-key auto-join
+ * because lead_assignments.lead_id has no declared FK to leads(id) in
+ * the original schema. Doing the join in code is also more resilient
+ * to optional columns.
+ *
+ *   1) lead_assignments      — required, must succeed
+ *   2) leads                  — fetched by id list
+ *   3) workflow + notes       — optional; if the migration isn't
+ *      applied we just return defaults + migration_needed flag
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)
@@ -25,25 +25,46 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
   }
 
-  // Stage 1 — bare query
-  const { data: bareRows, error: bareErr } = await supabaseAdmin
+  // Stage 1 — assignments
+  const { data: assignments, error: aErr } = await supabaseAdmin
     .from('lead_assignments')
-    .select('lead_id, assigned_at, leads:lead_id(*)')
+    .select('lead_id, assigned_at')
     .eq('rep_id', auth.userId)
     .order('assigned_at', { ascending: false })
     .limit(2000)
 
-  if (bareErr) {
-    logger.error('Sales leads bare query failed', {
-      userId: auth.userId, error: bareErr.message,
+  if (aErr) {
+    logger.error('Sales leads assignments query failed', {
+      userId: auth.userId, error: aErr.message,
     })
     return NextResponse.json({
-      error: `Couldn't load leads: ${bareErr.message}`,
+      error: `Couldn't load leads: ${aErr.message}`,
     }, { status: 500 })
   }
 
-  // Stage 2 — workflow fields, optional. If the migration isn't
-  // applied this query errors and we just return defaults.
+  const ids = (assignments ?? []).map((a) => a.lead_id).filter(Boolean) as string[]
+  if (ids.length === 0) {
+    return NextResponse.json({ success: true, leads: [] })
+  }
+
+  // Stage 2 — leads
+  const { data: leadRows, error: lErr } = await supabaseAdmin
+    .from('leads')
+    .select('*')
+    .in('id', ids)
+  if (lErr) {
+    logger.error('Sales leads body query failed', {
+      userId: auth.userId, error: lErr.message,
+    })
+    return NextResponse.json({
+      error: `Couldn't load leads: ${lErr.message}`,
+    }, { status: 500 })
+  }
+
+  const leadById = new Map<string, any>()
+  for (const row of leadRows || []) leadById.set(row.id, row)
+
+  // Stage 3 — optional workflow fields
   let workflowMap = new Map<string, any>()
   let migrationNeeded: string | null = null
   try {
@@ -56,7 +77,7 @@ export async function GET(request: NextRequest) {
       if (/column.*does not exist|could not find/i.test(wErr.message)) {
         migrationNeeded = 'sales-lead-workflow'
       } else {
-        logger.warn('Sales leads workflow query failed (using defaults)', {
+        logger.warn('Sales leads workflow query failed', {
           userId: auth.userId, error: wErr.message,
         })
       }
@@ -67,45 +88,43 @@ export async function GET(request: NextRequest) {
     migrationNeeded = 'sales-lead-workflow'
   }
 
-  const leads = (bareRows ?? [])
-    .map((r: any) => {
-      const wf = workflowMap.get(r.lead_id) || {}
+  // Stage 3b — optional latest note per lead
+  let latestNoteByLead = new Map<string, { body: string; created_at: string }>()
+  try {
+    const { data: notes, error: nErr } = await supabaseAdmin
+      .from('lead_notes')
+      .select('lead_id, body, created_at')
+      .in('lead_id', ids)
+      .eq('rep_id', auth.userId)
+      .order('created_at', { ascending: false })
+    if (!nErr && notes) {
+      for (const n of notes) {
+        if (!latestNoteByLead.has(n.lead_id)) {
+          latestNoteByLead.set(n.lead_id, { body: n.body, created_at: n.created_at })
+        }
+      }
+    }
+  } catch { /* notes table may not exist yet — fine */ }
+
+  // Merge — preserve assignments order (most-recent first)
+  const leads = (assignments ?? [])
+    .map((a) => {
+      const lead = leadById.get(a.lead_id)
+      if (!lead) return null
+      const wf = workflowMap.get(a.lead_id) || {}
+      const note = latestNoteByLead.get(a.lead_id)
       return {
-        ...(r.leads || {}),
-        claimed_at: r.assigned_at,
+        ...lead,
+        claimed_at: a.assigned_at,
         status: wf.status || 'new',
         disposition: wf.disposition || null,
         follow_up_at: wf.follow_up_at || null,
         last_touched_at: wf.last_touched_at || null,
         touch_count: wf.touch_count || 0,
+        latest_note: note || null,
       }
     })
-    .filter((l: any) => l && l.id)
-
-  // Inline last note per lead (best-effort).
-  const ids = leads.map((l: any) => l.id)
-  if (ids.length > 0) {
-    try {
-      const { data: notes, error: nErr } = await supabaseAdmin
-        .from('lead_notes')
-        .select('lead_id, body, created_at')
-        .in('lead_id', ids)
-        .eq('rep_id', auth.userId)
-        .order('created_at', { ascending: false })
-      if (!nErr && notes) {
-        const latestByLead = new Map<string, { body: string; created_at: string }>()
-        for (const n of notes) {
-          if (!latestByLead.has(n.lead_id)) {
-            latestByLead.set(n.lead_id, { body: n.body, created_at: n.created_at })
-          }
-        }
-        for (const lead of leads) {
-          const note = latestByLead.get(lead.id)
-          ;(lead as any).latest_note = note || null
-        }
-      }
-    } catch { /* notes is optional */ }
-  }
+    .filter(Boolean)
 
   return NextResponse.json({
     success: true,
