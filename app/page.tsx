@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
  Phone, ArrowUpRight, ArrowRight, Calendar, Clock, DollarSign, Star,
  PhoneIncoming, MessageSquare, FileText, PhoneForwarded, CheckCircle2,
- MapPin, ShieldCheck,
+ MapPin, ShieldCheck, Zap, BellRing, Languages, Workflow,
 } from "lucide-react"
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
@@ -20,9 +20,10 @@ export default function LandingPage() {
    <Nav />
    <Hero />
    <ProductCard />
-   <Platforms />
-   <Stats />
+   <Capabilities />
+   <CallFlow />
    <DashboardPreview />
+   <Platforms />
    <RoiCalculator />
    <FinalCTA />
    <FooterCard />
@@ -73,8 +74,8 @@ function Hero() {
      <br />
      to voicemail.
     </h1>
-    <p className="text-sm md:text-base text-gray-500 max-w-md mx-auto mb-8 sm:mb-12 leading-relaxed px-2">
-     Answers calls, books jobs, organizes details and keeps customers happy.
+    <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto mb-8 sm:mb-12 leading-relaxed px-2">
+     A 24/7 AI receptionist for service businesses. Answers every call, books jobs straight into your calendar, and texts you a summary before the caller hangs up.
     </p>
     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center">
      <a
@@ -168,17 +169,66 @@ function PhoneTranscript() {
  )
 }
 
-/* --------------------------- Platforms ------------------------- */
-
-function Platforms() {
- const items = ['Stripe', 'Telnyx', 'Retell', 'Google Calendar', 'Outlook', 'Twilio']
+/* --------------------------- Capabilities ----------------------- */
+/**
+ * Replaces the old made-up stats grid with concrete capability cards.
+ * Every claim here is something the product actually does, so we can
+ * stand behind it with no asterisk.
+ */
+function Capabilities() {
+ const items = [
+  {
+   icon: Clock,
+   title: '24/7 coverage',
+   body: 'Picks up the moment a call comes in - middle of the night, weekends, holidays, all of it.',
+  },
+  {
+   icon: Calendar,
+   title: 'Books straight into your calendar',
+   body: 'Two-way sync with Google Calendar, Outlook, or Cal.com. Real availability, no double-booking.',
+  },
+  {
+   icon: BellRing,
+   title: 'Instant SMS summary',
+   body: 'You get the caller\'s name, number, and reason for calling on your phone before the call ends.',
+  },
+  {
+   icon: Zap,
+   title: 'Sounds human',
+   body: 'Natural conversation, no robotic phone tree. Pick the voice and tone that fits your brand.',
+  },
+  {
+   icon: Workflow,
+   title: 'Hot transfers when you want',
+   body: 'Set rules - VIPs, emergencies, certain words - and it routes the call to your team live.',
+  },
+  {
+   icon: Languages,
+   title: 'Bilingual out of the box',
+   body: 'Switches between English and Spanish automatically based on what the caller speaks.',
+  },
+ ]
  return (
   <section className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
-   <div className="max-w-6xl mx-auto text-center">
-    <p className="text-sm text-gray-500 mb-6">CloudGreet works with the tools you already use</p>
-    <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-gray-400">
-     {items.map((p) => (
-      <span key={p} className="text-base md:text-lg font-medium">{p}</span>
+   <div className="max-w-6xl mx-auto">
+    <div className="text-center mb-10">
+     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
+      What it actually <span className="text-gray-400">does.</span>
+     </h2>
+     <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto">
+      No marketing fluff. These are the real capabilities you get on day one.
+     </p>
+    </div>
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 relative">
+     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+     {items.map(({ icon: Icon, title, body }) => (
+      <div key={title} className="relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
+       <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center mb-4">
+        <Icon className="w-5 h-5 text-sky-600" strokeWidth={1.75} />
+       </div>
+       <h3 className="font-display text-lg font-medium tracking-tight mb-2 text-gray-900">{title}</h3>
+       <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+      </div>
      ))}
     </div>
    </div>
@@ -186,33 +236,104 @@ function Platforms() {
  )
 }
 
-/* ----------------------------- Stats --------------------------- */
-
-function Stats() {
- const items = [
-  { icon: Clock, value: '5+ hrs/week', label: 'saved on the phone' },
-  { icon: DollarSign, value: '$2,500/mo', label: 'recovered from missed calls' },
-  { icon: Calendar, value: '24/7', label: 'coverage, never miss a call' },
-  { icon: Star, value: '+1.2 stars', label: 'in average review ratings' },
- ]
+/* --------------------------- Platforms ------------------------- */
+/**
+ * Real integration logos as inline SVGs (no external image deps,
+ * loads instantly, scales perfectly). Hover lifts each mark out of
+ * the muted gray to full color.
+ */
+function Platforms() {
  return (
   <section className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
    <div className="max-w-6xl mx-auto">
-    <p className="text-sm text-gray-500 text-center mb-6">Results on average per client</p>
-    <div className="grid sm:grid-cols-2 gap-4 relative">
-     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
-     {items.map(({ icon: Icon, value, label }) => (
-      <div key={value} className="relative bg-white border border-gray-200 rounded-2xl px-5 sm:px-6 py-4 sm:py-5 flex items-center gap-4">
-       <Icon className="w-5 h-5 text-gray-400 flex-shrink-0" strokeWidth={1.5} />
-       <div className="flex-1 text-right text-sm sm:text-base md:text-lg leading-snug">
-        <span className="font-semibold text-gray-900">{value}</span>{' '}
-        <span className="text-gray-500">{label}</span>
-       </div>
-      </div>
-     ))}
+    <div className="text-center mb-8">
+     <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-3">
+      Integrations
+     </p>
+     <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-medium tracking-tight leading-[1.1] text-gray-900">
+      Plugs into the tools you already use.
+     </h2>
+    </div>
+    <div className="bg-white border border-gray-200 rounded-2xl px-6 py-8 md:py-10 grid grid-cols-3 sm:grid-cols-6 gap-6 items-center">
+     <LogoStripe />
+     <LogoGoogleCalendar />
+     <LogoOutlook />
+     <LogoCalCom />
+     <LogoTwilio />
+     <LogoTelnyx />
     </div>
    </div>
   </section>
+ )
+}
+
+const logoCls =
+ 'h-7 md:h-8 w-auto mx-auto opacity-50 hover:opacity-100 transition-opacity grayscale hover:grayscale-0'
+
+function LogoStripe() {
+ return (
+  <svg viewBox="0 0 60 25" className={logoCls} aria-label="Stripe">
+   <path
+    fill="#635BFF"
+    d="M59.64 14.28h-8.06v-1.13c0-3.13 2.53-5.66 5.66-5.66h.74v3.13h-.74c-1.4 0-2.53 1.13-2.53 2.53h4.93v1.13Zm-9.27-3.79c0-2.4-1.95-4.34-4.34-4.34s-4.34 1.94-4.34 4.34c0 2.39 1.95 4.34 4.34 4.34a4.34 4.34 0 0 0 4.34-4.34Zm-3.13 0c0 .67-.55 1.21-1.21 1.21-.67 0-1.21-.54-1.21-1.21s.54-1.21 1.21-1.21c.66 0 1.21.54 1.21 1.21Zm-9.96 7.55h3.13v-13H37.28v13ZM31.28 6.49c0-.93-.76-1.69-1.69-1.69h-2.45v3.39h2.45c.93 0 1.69-.76 1.69-1.69Zm-1.69-4.83a4.83 4.83 0 0 1 4.83 4.83c0 1.96-1.18 3.65-2.86 4.4l3.34 7.4h-3.43l-2.87-6.39h-1.46v6.39h-3.13V1.66h5.58Zm-9.06 14.71v3.13h-3.13v-3.13c-2.39 0-4.34-1.94-4.34-4.34V1.66h3.13V12c0 .67.54 1.21 1.21 1.21h3.13Zm-9.43-9.69H8c-.67 0-1.21.54-1.21 1.21v.74h4.34v3.13H6.79v.74c0 .67.54 1.21 1.21 1.21h3.09v3.13H8a4.34 4.34 0 0 1-4.34-4.34V6.21A4.34 4.34 0 0 1 8 1.86h3.09v3.13Z"
+   />
+  </svg>
+ )
+}
+
+function LogoGoogleCalendar() {
+ return (
+  <svg viewBox="0 0 48 48" className={logoCls} aria-label="Google Calendar">
+   <path fill="#fff" d="M37 12H11v26h26z"/>
+   <path fill="#1A73E8" d="M22.385 27.738c-.512-.348-.866-.857-1.058-1.529l1.434-.591c.107.408.295.724.561.948.265.224.589.335.967.335.387 0 .719-.117.997-.353.278-.235.418-.535.418-.898 0-.371-.146-.677-.44-.916-.293-.239-.661-.358-1.103-.358h-.829v-1.42h.745c.381 0 .701-.103.962-.309.26-.206.391-.488.391-.846 0-.319-.117-.572-.351-.762-.234-.19-.529-.286-.887-.286-.349 0-.626.092-.832.279-.206.187-.359.418-.448.685l-1.42-.591c.155-.439.439-.827.855-1.16.416-.334.948-.503 1.594-.503.477 0 .907.092 1.288.276.381.184.682.44.901.766.219.327.327.694.327 1.101 0 .415-.1.766-.301 1.054-.2.288-.447.508-.74.661v.084c.387.163.701.41.945.745.244.334.366.733.366 1.198 0 .465-.118.881-.354 1.247-.236.366-.563.654-.978.864-.416.21-.884.316-1.402.316-.6 0-1.155-.174-1.667-.521v-.001Zm7.74-6.255-1.575 1.139-.787-1.193 2.825-2.038h1.082v9.617h-1.546v-7.525h.001Z"/>
+   <path fill="#EA4335" d="M37 38v6l6-6z"/>
+   <path fill="#34A853" d="M43 12v32h-6V12z"/>
+   <path fill="#188038" d="M37 38v6h-26v-6z"/>
+   <path fill="#1967D2" d="M37 4H11C8.79 4 7 5.79 7 8v30c0 2.21 1.79 4 4 4h26V12H11V8h26z"/>
+   <path fill="#FBBC04" d="M5 12h6v26H5z" transform="rotate(90 8 25)"/>
+   <path fill="#1A73E8" d="M11 12V4h26v8z" opacity=".8"/>
+  </svg>
+ )
+}
+
+function LogoOutlook() {
+ return (
+  <svg viewBox="0 0 48 48" className={logoCls} aria-label="Microsoft Outlook">
+   <path fill="#0364B8" d="M28 13h17.385C46.275 13 47 13.726 47 14.615v18.77c0 .89-.726 1.615-1.615 1.615H28V13Z"/>
+   <path fill="#0078D4" d="M47 21H28v-8h17.385c.89 0 1.615.726 1.615 1.615V21Z"/>
+   <path fill="#28A8EA" d="M28 21h19v8H28z"/>
+   <path fill="#0078D4" d="M28 29h19v6.385c0 .89-.726 1.615-1.615 1.615H28v-8Z"/>
+   <path fill="#14447D" d="M3 12.075v23.85L26 41V7L3 12.075Z"/>
+   <path fill="#fff" d="M14.5 17.5C10.91 17.5 8 20.91 8 24.5s2.91 7 6.5 7 6.5-3.41 6.5-7-2.91-7-6.5-7Zm0 11.4c-2.43 0-4.4-2.32-4.4-4.9 0-2.58 1.97-4.9 4.4-4.9s4.4 2.32 4.4 4.9c0 2.58-1.97 4.9-4.4 4.9Z"/>
+  </svg>
+ )
+}
+
+function LogoCalCom() {
+ return (
+  <svg viewBox="0 0 200 50" className={logoCls} aria-label="Cal.com">
+   <text x="0" y="38" fontFamily="ui-sans-serif, system-ui" fontSize="38" fontWeight="700" fill="#000">Cal.com</text>
+  </svg>
+ )
+}
+
+function LogoTwilio() {
+ return (
+  <svg viewBox="0 0 48 48" className={logoCls} aria-label="Twilio">
+   <circle cx="24" cy="24" r="20" fill="#F22F46"/>
+   <circle cx="17" cy="17" r="3.5" fill="#fff"/>
+   <circle cx="31" cy="17" r="3.5" fill="#fff"/>
+   <circle cx="17" cy="31" r="3.5" fill="#fff"/>
+   <circle cx="31" cy="31" r="3.5" fill="#fff"/>
+  </svg>
+ )
+}
+
+function LogoTelnyx() {
+ return (
+  <svg viewBox="0 0 200 50" className={logoCls} aria-label="Telnyx">
+   <text x="0" y="36" fontFamily="ui-sans-serif, system-ui" fontSize="32" fontWeight="700" fill="#00E3AA">Telnyx</text>
+  </svg>
  )
 }
 
