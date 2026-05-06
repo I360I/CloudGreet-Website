@@ -4,6 +4,7 @@ import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { computeDecayState } from '@/lib/sales/decay'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
  const reps = users || []
  const repIds = reps.map((r) => r.id)
 
- const [{ data: profiles }, { data: ledger }, { data: invites }] = await Promise.all([
+ const [{ data: profiles }, { data: ledger }, { data: closes }, { data: invites }] = await Promise.all([
   repIds.length
    ? supabaseAdmin.from('sales_reps').select('*').in('id', repIds)
    : Promise.resolve({ data: [] as any[] }),
@@ -53,12 +54,29 @@ export async function GET(request: NextRequest) {
       .select('rep_id, commission_cents, payout_id, earned_at')
       .in('rep_id', repIds)
    : Promise.resolve({ data: [] as any[] }),
+  // Pull qualifying closes (any status except cancelled/rejected) so we
+  // can compute "days since last close" per rep for the decay column.
+  repIds.length
+   ? supabaseAdmin
+      .from('closes')
+      .select('rep_id, created_at, status')
+      .in('rep_id', repIds)
+      .not('status', 'in', '(cancelled,rejected)')
+   : Promise.resolve({ data: [] as any[] }),
   supabaseAdmin
    .from('sales_rep_invites')
    .select('token, email, invited_at, expires_at, consumed_at')
    .is('consumed_at', null)
    .order('invited_at', { ascending: false }),
  ])
+
+ const lastCloseByRep = new Map<string, string>()
+ for (const c of closes || []) {
+  const prev = lastCloseByRep.get(c.rep_id)
+  if (!prev || new Date(c.created_at) > new Date(prev)) {
+   lastCloseByRep.set(c.rep_id, c.created_at)
+  }
+ }
 
  const profileById = new Map<string, any>()
  for (const p of profiles || []) profileById.set(p.id, p)
@@ -81,6 +99,10 @@ export async function GET(request: NextRequest) {
   reps: reps.map((u) => {
    const p = profileById.get(u.id) || {}
    const s = stats.get(u.id) || { mtdCommission: 0, lifetimeCommission: 0, mtdClosesPaid: 0, outstanding: 0 }
+   const decay = computeDecayState({
+    lastCloseAt: lastCloseByRep.get(u.id) || p.last_close_at || null,
+    repStartedAt: u.created_at || new Date().toISOString(),
+   })
    return {
     id: u.id,
     email: u.email,
@@ -95,6 +117,13 @@ export async function GET(request: NextRequest) {
     lifetime_commission_cents: s.lifetimeCommission,
     mtd_closes_paid: s.mtdClosesPaid,
     outstanding_commission_cents: s.outstanding,
+    decay: {
+     tier: decay.tier,
+     multiplier: decay.multiplier,
+     days_since_last_close: decay.daysSinceLastClose,
+     days_until_next_drop: decay.daysUntilNextDrop,
+     last_close_at: lastCloseByRep.get(u.id) || null,
+    },
    }
   }),
   open_invites: (invites || []).map((i) => ({

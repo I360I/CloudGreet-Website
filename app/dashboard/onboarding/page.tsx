@@ -142,7 +142,15 @@ function Header({ step }: { step: Step }) {
  const idx = step === 'done' ? 3 : steps.findIndex((s) => s.id === step)
  return (
   <div className="mb-8">
-   <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Get set up</h1>
+   <div className="flex items-start justify-between gap-4 flex-wrap">
+    <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Get set up</h1>
+    <a
+     href="/dashboard/onboarding/videos"
+     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
+    >
+     ▶ Watch walkthrough videos
+    </a>
+   </div>
    <div className="mt-6 flex items-center gap-3 text-xs">
     {steps.map((s, i) => {
      const done = i < idx

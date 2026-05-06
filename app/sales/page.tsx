@@ -7,6 +7,7 @@ import {
   Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, CalendarBlank,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from './_components/SalesShell'
+import { DecayBanner } from './_components/DecayBanner'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -146,6 +147,12 @@ export default function SalesHome() {
             </div>
           </motion.div>
         )}
+
+        {/* Decay status - puts the 25%/transfer countdown in front of the rep
+            every time they open the dashboard, so it's never a surprise. */}
+        <div className="mb-5">
+          <DecayBanner />
+        </div>
 
         {/* Owed banner - biggest number on the page, the thing reps care about */}
         <motion.div

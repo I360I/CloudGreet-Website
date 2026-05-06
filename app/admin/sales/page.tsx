@@ -21,6 +21,13 @@ type Rep = {
  lifetime_commission_cents: number
  mtd_closes_paid: number
  outstanding_commission_cents: number
+ decay?: {
+  tier: 'full' | 'reduced' | 'transferred'
+  multiplier: number
+  days_since_last_close: number
+  days_until_next_drop: number | null
+  last_close_at: string | null
+ }
 }
 
 type OpenInvite = {
@@ -208,6 +215,20 @@ export default function AdminSalesPage() {
               <>
                <span>·</span>
                <span className="text-rose-300/90">{r.status}</span>
+              </>
+             )}
+             {r.decay && (
+              <>
+               <span>·</span>
+               <span className={
+                r.decay.tier === 'full' ? 'text-emerald-300/90'
+                : r.decay.tier === 'reduced' ? 'text-amber-300/90'
+                : 'text-rose-300/90'
+               }>
+                {r.decay.tier === 'full' && `${r.decay.days_since_last_close}d since close`}
+                {r.decay.tier === 'reduced' && `25% MRR · ${r.decay.days_until_next_drop ?? 0}d to transfer`}
+                {r.decay.tier === 'transferred' && 'Clients transferred'}
+               </span>
               </>
              )}
             </div>
