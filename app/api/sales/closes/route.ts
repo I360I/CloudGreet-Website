@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
         id,
         business_name,
         subscription_status,
-        account_status
+        account_status,
+        customization_status
       )
     `)
     .eq('rep_id', auth.userId)
@@ -32,12 +33,14 @@ export async function GET(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-  // Inline subscription_status onto the close so the UI doesn't have
-  // to walk the join.
+  // Inline subscription_status / customization_status onto the close so
+  // the UI doesn't have to walk the join. demo_agent_* fields come
+  // directly from the closes select(*).
   const closes = (data ?? []).map((c: any) => ({
     ...c,
     subscription_status: c.business?.subscription_status ?? null,
     account_status: c.business?.account_status ?? null,
+    customization_status: c.business?.customization_status ?? null,
   }))
   return NextResponse.json({ success: true, closes })
 }

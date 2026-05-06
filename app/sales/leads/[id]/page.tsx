@@ -321,6 +321,16 @@ export default function LeadDetailPage() {
               >
                 <CurrencyDollar weight="fill" className="w-4 h-4" /> Send payment link
               </button>
+              <SendCustomizationButton leadId={lead.id} />
+              <a
+                href="/sales/customization-template"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] transition-all"
+                title="Print-friendly version of all the questions on the customization form"
+              >
+                <Hash weight="fill" className="w-4 h-4 text-gray-400" /> Download form
+              </a>
               {bookingUrl ? (
                 <button
                   onClick={copyBookingLink}
@@ -788,6 +798,56 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         {label}
       </div>
       <div className="text-gray-700">{children}</div>
+    </div>
+  )
+}
+
+/**
+ * Tiny inline button that posts to /api/sales/leads/[id]/send-customization
+ * and surfaces a one-shot status. Living here (not as a separate panel)
+ * because the email itself is preformatted - no fields to fill in.
+ */
+function SendCustomizationButton({ leadId }: { leadId: string }) {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+  const send = async () => {
+    setBusy(true); setMsg(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/send-customization`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setMsg({ tone: 'err', text: j?.error || 'Failed' })
+      } else {
+        setMsg({
+          tone: 'ok',
+          text: j.email_sent ? 'Form emailed' : `Form ready: ${j.form_url}`,
+        })
+      }
+    } finally {
+      setBusy(false)
+      setTimeout(() => setMsg(null), 4000)
+    }
+  }
+  return (
+    <div className="inline-flex flex-col gap-1">
+      <button
+        onClick={send}
+        disabled={busy}
+        className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-violet-50 border border-violet-200 text-violet-800 text-sm font-medium rounded-xl hover:bg-violet-100 hover:border-violet-300 active:scale-[0.98] transition-all disabled:opacity-60"
+        title="Email the client a link to the customization form"
+      >
+        {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <EnvelopeSimple weight="fill" className="w-4 h-4" />}
+        Send onboarding form
+      </button>
+      {msg && (
+        <span className={`text-[11px] ${msg.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>
+          {msg.text}
+        </span>
+      )}
     </div>
   )
 }

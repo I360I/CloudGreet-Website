@@ -21,6 +21,9 @@ type Close = {
   business_id: string | null
   subscription_status: string | null
   account_status: string | null
+  demo_agent_status: 'pending' | 'building' | 'ready' | 'skipped' | null
+  demo_agent_test_phone: string | null
+  customization_status: 'not_sent' | 'sent' | 'submitted' | 'building' | 'ready' | 'live' | null
 }
 
 const STATUS_STYLE: Record<Close['status'], string> = {
@@ -196,6 +199,24 @@ export default function SalesClosesPage() {
                         <span className="text-gray-300 mx-2">·</span>
                         {new Date(c.created_at).toLocaleDateString()}
                       </div>
+                      {/* Demo agent test number - admin sets this in /admin/agents-due
+                          and it shows up here so the rep can call it during the demo. */}
+                      {c.demo_agent_status === 'ready' && c.demo_agent_test_phone && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-2.5 py-1">
+                          <Trophy className="w-3 h-3" weight="fill" />
+                          Demo agent ready · <span className="font-mono">{c.demo_agent_test_phone}</span>
+                        </div>
+                      )}
+                      {c.demo_agent_status === 'building' && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 text-xs bg-sky-50 border border-sky-200 text-sky-800 rounded-lg px-2.5 py-1">
+                          Demo agent · building
+                        </div>
+                      )}
+                      {c.customization_status === 'submitted' && (
+                        <div className="mt-2 ml-1 inline-flex items-center gap-1.5 text-xs bg-violet-50 border border-violet-200 text-violet-800 rounded-lg px-2.5 py-1">
+                          Customization form submitted
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       <span

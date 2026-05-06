@@ -1,0 +1,58 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase'
+import { requireAuth } from '@/lib/auth-middleware'
+import { logger } from '@/lib/monitoring'
+import { isComplete } from '@/lib/customization/form-config'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+/**
+ * POST /api/customize/submit
+ *   body: { answers: Record<fieldId, any> }
+ *
+ * Final submit. Validates required fields, replaces the saved blob,
+ * and flips customization_status to 'submitted' + stamps submitted_at.
+ * The admin then takes over from /admin/agents-due.
+ */
+export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request)
+  if (!auth.success || !auth.businessId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const body = await request.json().catch(() => ({})) as { answers?: Record<string, any> }
+  const answers = body.answers && typeof body.answers === 'object' ? body.answers : null
+  if (!answers) return NextResponse.json({ error: 'answers required' }, { status: 400 })
+
+  if (!isComplete(answers)) {
+    return NextResponse.json({
+      error: 'Some required fields are still empty - scroll up and finish them.',
+    }, { status: 400 })
+  }
+
+  try {
+    const nowIso = new Date().toISOString()
+    const { error } = await supabaseAdmin
+      .from('businesses')
+      .update({
+        customization: answers,
+        customization_status: 'submitted',
+        customization_submitted_at: nowIso,
+        updated_at: nowIso,
+      })
+      .eq('id', auth.businessId)
+    if (error) {
+      return NextResponse.json({
+        error: 'Could not submit - run sql/customization-and-demo-agents.sql',
+      }, { status: 500 })
+    }
+    return NextResponse.json({ success: true, submitted_at: nowIso })
+  } catch (e) {
+    logger.error('customize submit failed', {
+      businessId: auth.businessId,
+      error: e instanceof Error ? e.message : 'Unknown',
+    })
+    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  }
+}
