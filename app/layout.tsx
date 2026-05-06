@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { JetBrains_Mono } from 'next/font/google'
+import { JetBrains_Mono, Space_Grotesk } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from './contexts/ToastContext'
 import { RealtimeProvider } from './contexts/RealtimeProvider'
@@ -19,6 +19,12 @@ const mono = JetBrains_Mono({
  subsets: ['latin'],
  weight: ['400', '500'],
  variable: '--font-mono',
+})
+
+const display = Space_Grotesk({
+ subsets: ['latin'],
+ weight: ['400', '500', '600', '700'],
+ variable: '--font-display',
 })
 
 export const metadata: Metadata = {
@@ -95,11 +101,6 @@ export default function RootLayout({
  return (
  <html lang="en" className="overscroll-none">
  <head>
- <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
- <link
-  rel="stylesheet"
-  href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap"
- />
  <link rel="icon" href="/favicon.ico" />
  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
  <link rel="manifest" href="/manifest.json" />
@@ -127,7 +128,7 @@ export default function RootLayout({
  }}
  />
  </head>
- <body className={`${mono.variable} font-sans overscroll-none bg-[#f6f5f1] text-gray-900 antialiased`}>
+ <body className={`${mono.variable} ${display.variable} font-sans overscroll-none bg-[#f6f5f1] text-gray-900 antialiased`}>
  <ErrorBoundary>
  <ToastProvider>
  <RealtimeProvider>
