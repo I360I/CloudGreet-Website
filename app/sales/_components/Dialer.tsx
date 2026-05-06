@@ -66,42 +66,55 @@ export function Dialer() {
   const callRowIdRef = useRef<string | null>(null)
   const fromNumberRef = useRef<string | null>(null)
   const startedAtRef = useRef<number | null>(null)
-  const setupRef = useRef<(() => Promise<void>) | null>(null)
+  const setupRef = useRef<((opts?: { fromUserGesture?: boolean }) => Promise<void>) | null>(null)
 
   // ---- Connect once on mount, tear down on unmount.
   useEffect(() => {
     let cancelled = false
     let retryTimer: ReturnType<typeof setTimeout> | null = null
 
-    const setup = async () => {
+    const setup = async (opts?: { fromUserGesture?: boolean }) => {
       setError(null)
 
-      // Try to grab the mic directly. We used to gate on the Permissions
-      // API first, but Chrome's permissions.query for microphone returns
-      // stale 'denied' for several seconds after a fresh grant, which
-      // caused us to bounce the user back to the "blocked" screen even
-      // when they'd just fixed it. Skipping that check and letting
-      // getUserMedia decide is the source of truth.
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        stream.getTracks().forEach((t) => t.stop())
-      } catch (e: any) {
-        // eslint-disable-next-line no-console
-        console.error('getUserMedia on setup failed', e)
-        const name = e?.name || 'Error'
-        setMicErrName(`${name}${e?.message ? ` - ${e.message}` : ''}`)
-        if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
-          // First mount with no prior grant: browser auto-rejects without
-          // a user gesture. Show the "click to allow" UI.
+      // On mount we use the Permissions API as a *fast path only*: if it
+      // says 'granted', skip straight to connecting. Anything else (prompt,
+      // denied, or API missing), wait for the user to click "Allow
+      // microphone" - calling getUserMedia without a gesture both fails
+      // and pollutes the UI with a non-actionable NotAllowedError.
+      if (!opts?.fromUserGesture) {
+        let granted = false
+        try {
+          const perm = await navigator.permissions
+            ?.query?.({ name: 'microphone' as PermissionName })
+            .catch(() => null)
+          granted = perm?.state === 'granted'
+        } catch { /* fall through to require click */ }
+        if (!granted) {
           setStatus('mic_required')
-        } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-          setStatus('error')
-          setError('No microphone detected on this device.')
-        } else {
-          setStatus('error')
-          setError(e?.message || 'Could not access microphone')
+          return
         }
-        return
+      } else {
+        // We were invoked from a click handler. getUserMedia is the source
+        // of truth; do not gate on Permissions API (it can be stale).
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+          stream.getTracks().forEach((t) => t.stop())
+        } catch (e: any) {
+          // eslint-disable-next-line no-console
+          console.error('getUserMedia failed', e)
+          const name = e?.name || 'Error'
+          setMicErrName(`${name}${e?.message ? ` - ${e.message}` : ''}`)
+          if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
+            setStatus('mic_denied')
+          } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+            setStatus('error')
+            setError('No microphone detected on this device.')
+          } else {
+            setStatus('error')
+            setError(e?.message || 'Could not access microphone')
+          }
+          return
+        }
       }
 
       setStatus('loading_token')
@@ -219,7 +232,7 @@ export function Dialer() {
     // blocking, setup will land us in mic_required/error with micErrName
     // showing the actual reason.
     try {
-      if (setupRef.current) await setupRef.current()
+      if (setupRef.current) await setupRef.current({ fromUserGesture: true })
     } finally {
       setMicBusy(false)
     }
@@ -401,7 +414,12 @@ export function Dialer() {
                     {micBusy ? 'Requesting…' : 'Allow microphone'}
                   </button>
                   {micErrName && (
-                    <div className="text-[11px] text-rose-700 font-mono break-words">{micErrName}</div>
+                    <>
+                      <div className="text-[11px] text-rose-700 font-mono break-words">{micErrName}</div>
+                      <div className="text-[11px] text-gray-500">
+                        Browser auto-rejected without a prompt. Click the lock icon in the address bar → <strong>Reset permissions</strong>, refresh, then click Allow microphone again.
+                      </div>
+                    </>
                   )}
                 </div>
               ) : status === 'mic_denied' ? (
