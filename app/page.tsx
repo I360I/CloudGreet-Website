@@ -19,15 +19,8 @@ export default function LandingPage() {
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
    <Nav />
    <Hero />
-   <ProductCard />
-   <Capabilities />
-   <CallFlow />
-   <DashboardPreview />
    <Platforms />
    <RoiCalculator />
-   <Pricing />
-   <Faq />
-   <FounderNote />
    <FinalCTA />
    <FooterCard />
   </main>
@@ -51,9 +44,7 @@ function Nav() {
      />
     </Link>
     <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
-     <a href="#pricing-tiers" className="hover:text-gray-900 transition-colors">Pricing</a>
-     <a href="#faq" className="hover:text-gray-900 transition-colors">FAQ</a>
-     <a href="#pricing" className="hover:text-gray-900 transition-colors">ROI</a>
+     <a href="#roi" className="hover:text-gray-900 transition-colors">ROI</a>
      <Link href="/login" className="hover:text-gray-900 transition-colors">Sign in</Link>
     </div>
     <Link
@@ -72,7 +63,7 @@ function Nav() {
 
 function Hero() {
  return (
-  <section className="px-5 sm:px-6 pt-20 sm:pt-32 md:pt-44 pb-20 sm:pb-32 md:pb-48 relative overflow-hidden">
+  <section className="px-5 sm:px-6 pt-12 sm:pt-20 md:pt-24 pb-10 sm:pb-14 relative overflow-hidden">
    <div
     className="absolute inset-0 -z-10 pointer-events-none opacity-40"
     style={{
@@ -260,15 +251,12 @@ function Capabilities() {
  */
 function Platforms() {
  return (
-  <section className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
+  <section className="px-5 sm:px-6 pt-6 pb-8 sm:pb-12">
    <div className="max-w-6xl mx-auto">
-    <div className="text-center mb-8">
-     <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-3">
-      Integrations
+    <div className="text-center mb-6">
+     <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500">
+      Plugs into the tools you already use
      </p>
-     <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-medium tracking-tight leading-[1.1] text-gray-900">
-      Plugs into the tools you already use.
-     </h2>
     </div>
     <div className="bg-white border border-gray-200 rounded-2xl px-6 py-8 md:py-10 grid grid-cols-3 sm:grid-cols-6 gap-6 items-center">
      <LogoStripe />
@@ -488,7 +476,7 @@ function RoiCalculator() {
  const fmt = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
 
  return (
-  <section id="pricing" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
+  <section id="roi" className="px-5 sm:px-6 pt-6 pb-12 sm:pb-16">
    <div className="max-w-6xl mx-auto text-center mb-10">
     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
      See <span className="text-gray-400">your numbers.</span>
