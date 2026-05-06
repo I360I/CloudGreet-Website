@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
- Phone, ArrowUpRight, ArrowRight, Calendar, Clock, DollarSign, Star,
+ Phone, ArrowUpRight, ArrowRight, Calendar, Clock,
  PhoneIncoming, MessageSquare, FileText, PhoneForwarded, CheckCircle2,
  MapPin, ShieldCheck, Zap, BellRing, Languages, Workflow,
 } from "lucide-react"
@@ -72,8 +72,19 @@ function Nav() {
 
 function Hero() {
  return (
-  <section className="px-5 sm:px-6 pt-20 sm:pt-32 md:pt-44 pb-20 sm:pb-32 md:pb-48">
+  <section className="px-5 sm:px-6 pt-20 sm:pt-32 md:pt-44 pb-20 sm:pb-32 md:pb-48 relative overflow-hidden">
+   <div
+    className="absolute inset-0 -z-10 pointer-events-none opacity-40"
+    style={{
+     backgroundImage:
+      'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(56,189,248,0.18), transparent 70%)',
+    }}
+   />
    <div className="max-w-6xl mx-auto text-center">
+    <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-gray-600 mb-7">
+     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+     Live AI receptionist - call it now
+    </div>
     <h1 className="font-display font-medium tracking-tight leading-[1.05] text-[34px] xs:text-[40px] sm:text-[56px] md:text-[72px] lg:text-[80px] mb-6 sm:mb-8 text-gray-900">
      Stop losing <span className="text-gray-400">profit</span>
      <br />
@@ -87,7 +98,7 @@ function Hero() {
       href={DEMO_TEL}
       className="group inline-flex items-center justify-center gap-3 bg-white text-gray-900 px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium border border-gray-200 hover:border-gray-300 transition-all shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)] hover:shadow-[0_0_80px_-10px_rgba(56,189,248,0.55)]"
      >
-      Call our AI
+      Try a live demo call
       <span className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center group-hover:border-gray-900 transition-colors">
        <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} />
       </span>
@@ -96,12 +107,12 @@ function Hero() {
       href="/contact"
       className="inline-flex items-center justify-center gap-3 bg-gray-900 text-white px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors"
      >
-      Book Demo
+      Book a 15-min demo
       <ArrowUpRight className="w-5 h-5" strokeWidth={2} />
      </Link>
     </div>
     <p className="text-sm text-gray-400 mt-8">
-     Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a>
+     Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a> and ask it anything.
     </p>
    </div>
   </section>
@@ -602,15 +613,6 @@ function Slider({
  )
 }
 
-function Row({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) {
- return (
-  <div className="flex items-baseline justify-between text-sm">
-   <span className="text-gray-600">{label}</span>
-   <span className={muted ? 'text-gray-500' : 'text-gray-900 font-medium'}>{value}</span>
-  </div>
- )
-}
-
 /* ---------------------------- Pricing -------------------------- */
 /**
  * Two clear tiers. We highlight Full 24/7 as 'Most popular' because
@@ -913,25 +915,41 @@ function FounderNote() {
 
 function FinalCTA() {
  return (
-  <section className="px-6 pb-12">
-   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 md:p-12 grid md:grid-cols-2 gap-6 items-center relative overflow-hidden">
-    <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-sky-100/60 blur-3xl rounded-full pointer-events-none" />
-    <div className="relative">
-     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05]">
-      Stop losing calls.
-      <br />
-      <span className="text-gray-400">Start winning customers.</span>
+  <section className="px-5 sm:px-6 pb-12">
+   <div className="max-w-6xl mx-auto bg-gray-900 text-white rounded-3xl sm:rounded-[32px] p-8 sm:p-12 md:p-16 relative overflow-hidden">
+    <div className="absolute -top-24 -right-24 w-96 h-96 bg-sky-500/30 blur-3xl rounded-full pointer-events-none" />
+    <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-sky-500/20 blur-3xl rounded-full pointer-events-none" />
+    <div className="relative max-w-3xl">
+     <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-sky-300 mb-4">
+      Last thing
+     </p>
+     <h2 className="font-display text-3xl sm:text-4xl md:text-6xl font-medium tracking-tight leading-[1.05] mb-5">
+      Every call you miss is money you don't make.
      </h2>
-     <p className="text-gray-600 mt-4">Book a 15-min 1:1 demo to see if you&apos;re a fit.</p>
-    </div>
-    <div className="relative md:flex md:justify-end">
-     <Link
-      href="/contact"
-      className="flex items-center justify-center gap-2 bg-gray-900 text-white px-6 py-3.5 sm:py-4 rounded-2xl text-base font-medium hover:bg-gray-800 transition-colors w-full md:w-auto md:min-w-[220px] whitespace-nowrap"
-     >
-      Book Demo
-      <ArrowUpRight className="w-4 h-4" />
-     </Link>
+     <p className="text-base md:text-lg text-gray-300 leading-relaxed mb-8 max-w-2xl">
+      CloudGreet picks up the phone for you so you can stay on the job. Try the live demo line right now - it'll answer in two rings.
+     </p>
+     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center">
+      <a
+       href={DEMO_TEL}
+       className="group inline-flex items-center justify-center gap-3 bg-white text-gray-900 px-7 py-4 rounded-2xl text-sm sm:text-base font-medium hover:bg-gray-100 transition-colors"
+      >
+       Call {DEMO_NUMBER}
+       <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+      </a>
+      <Link
+       href="/contact"
+       className="inline-flex items-center justify-center gap-3 bg-white/10 hover:bg-white/15 text-white px-7 py-4 rounded-2xl text-sm sm:text-base font-medium border border-white/20 hover:border-white/30 backdrop-blur transition-colors"
+      >
+       Book a 15-min demo
+       <ArrowUpRight className="w-4 h-4" />
+      </Link>
+     </div>
+     <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-gray-400">
+      <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> 30-day money-back</span>
+      <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Keep your number</span>
+      <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> Live in 24-48 hours</span>
+     </div>
     </div>
    </div>
   </section>
@@ -942,11 +960,11 @@ function FinalCTA() {
 
 function FooterCard() {
  return (
-  <section className="px-6 pb-12">
-   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-6 sm:p-8 md:p-10">
-    <div className="grid md:grid-cols-4 gap-8">
-     <div>
-      <Link href="/" className="flex items-center mb-3" aria-label="CloudGreet">
+  <section className="px-5 sm:px-6 pb-10">
+   <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-7 sm:p-9 md:p-12">
+    <div className="grid md:grid-cols-12 gap-8 md:gap-12">
+     <div className="md:col-span-5">
+      <Link href="/" className="inline-flex items-center mb-4" aria-label="CloudGreet">
        <Image
         src="/cloudgreet-logo.png"
         alt="CloudGreet"
@@ -955,36 +973,49 @@ function FooterCard() {
         className="h-8 w-auto"
        />
       </Link>
-      <p className="text-sm text-gray-500 flex items-center gap-1.5">
-       <MapPin className="w-3.5 h-3.5" /> Built in Austin, TX
+      <p className="text-sm text-gray-600 leading-relaxed max-w-sm mb-4">
+       The 24/7 AI receptionist for service businesses. Answers calls, books jobs, never sleeps.
       </p>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-500">
+       <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> Austin, TX</span>
+       <a href={DEMO_TEL} className="flex items-center gap-1.5 hover:text-gray-900 transition-colors">
+        <Phone className="w-3.5 h-3.5" /> {DEMO_NUMBER}
+       </a>
+      </div>
      </div>
-     <div>
-      <h4 className="text-sm font-semibold text-gray-900 mb-3">Menu</h4>
-      <ul className="space-y-2 text-sm text-gray-600">
-       <li><Link href="/" className="hover:text-gray-900">Home</Link></li>
-       <li><Link href="/contact" className="hover:text-gray-900">Contact</Link></li>
-       <li><Link href="/login" className="hover:text-gray-900">Sign in</Link></li>
+
+     <div className="md:col-span-2">
+      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Product</h4>
+      <ul className="space-y-2 text-sm text-gray-700">
+       <li><a href="#pricing-tiers" className="hover:text-sky-600 transition-colors">Pricing</a></li>
+       <li><a href="#faq" className="hover:text-sky-600 transition-colors">FAQ</a></li>
+       <li><a href="#pricing" className="hover:text-sky-600 transition-colors">ROI calculator</a></li>
       </ul>
      </div>
-     <div>
-      <h4 className="text-sm font-semibold text-gray-900 mb-3">Legal</h4>
-      <ul className="space-y-2 text-sm text-gray-600">
-       <li><Link href="/privacy" className="hover:text-gray-900">Privacy</Link></li>
-       <li><Link href="/terms" className="hover:text-gray-900">Terms</Link></li>
-       <li><Link href="/tcpa-a2p" className="hover:text-gray-900">TCPA / A2P</Link></li>
+
+     <div className="md:col-span-2">
+      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Company</h4>
+      <ul className="space-y-2 text-sm text-gray-700">
+       <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Contact</Link></li>
+       <li><Link href="/login" className="hover:text-sky-600 transition-colors">Sign in</Link></li>
+       <li><Link href="/apply" className="hover:text-sky-600 transition-colors">Sales careers</Link></li>
       </ul>
      </div>
-     <div>
-      <h4 className="text-sm font-semibold text-gray-900 mb-3">Contact</h4>
-      <ul className="space-y-2 text-sm text-gray-600">
-       <li><a href={DEMO_TEL} className="hover:text-gray-900">{DEMO_NUMBER}</a></li>
-       <li className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> 30-day money-back</li>
+
+     <div className="md:col-span-3">
+      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Legal</h4>
+      <ul className="space-y-2 text-sm text-gray-700">
+       <li><Link href="/privacy" className="hover:text-sky-600 transition-colors">Privacy policy</Link></li>
+       <li><Link href="/terms" className="hover:text-sky-600 transition-colors">Terms of service</Link></li>
+       <li><Link href="/tcpa-a2p" className="hover:text-sky-600 transition-colors">TCPA / A2P compliance</Link></li>
       </ul>
      </div>
     </div>
-    <div className="mt-8 pt-6 border-t border-gray-200 text-xs text-gray-400">
-     © {new Date().getFullYear()} CloudGreet · Serving Texas contractors
+    <div className="mt-10 pt-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-400">
+     <div>© {new Date().getFullYear()} CloudGreet. All rights reserved.</div>
+     <div className="flex items-center gap-1.5">
+      <ShieldCheck className="w-3.5 h-3.5" /> 30-day money-back guarantee
+     </div>
     </div>
    </div>
   </section>
