@@ -91,23 +91,36 @@ export async function middleware(request: NextRequest) {
     }
   }
   
-  // Rate limiting
-  const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
-  const sanitizedIp = sanitizeString(ip)
-  const now = Date.now()
-  const windowMs = 15 * 60 * 1000 // 15 minutes
-  const maxRequests = 100 // Max requests per window
+  // Rate limiting - only for state-changing API calls. Page loads,
+  // _next chunks, and read-only GETs don't count, otherwise a single
+  // user navigating the dashboard burns through the cap in seconds.
+  // The in-memory Map is per-serverless-instance and resets on cold
+  // start - good enough as a brake against bursts; real abuse handled
+  // upstream by Vercel's edge.
+  const isApi = pathname.startsWith('/api/')
+  const isMutation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)
+  if (isApi && isMutation) {
+    const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+    const sanitizedIp = sanitizeString(ip)
+    const now = Date.now()
+    const windowMs = 60 * 1000 // 1 minute
+    const maxRequests = 120   // 120 mutating API calls / minute / IP
 
-  if (!rateLimitMap.has(sanitizedIp)) {
-    rateLimitMap.set(sanitizedIp, { count: 1, resetTime: now + windowMs })
-  } else {
-    const userLimit = rateLimitMap.get(sanitizedIp)
-    if (now > userLimit.resetTime) {
+    const entry = rateLimitMap.get(sanitizedIp)
+    if (!entry || now > entry.resetTime) {
       rateLimitMap.set(sanitizedIp, { count: 1, resetTime: now + windowMs })
-    } else if (userLimit.count >= maxRequests) {
+    } else if (entry.count >= maxRequests) {
       return new NextResponse('Too Many Requests', { status: 429 })
     } else {
-      userLimit.count++
+      entry.count++
+    }
+
+    // Trim the Map opportunistically so it doesn't grow unbounded on a
+    // long-lived warm instance. Cheap O(n) sweep, runs ~1% of requests.
+    if (Math.random() < 0.01) {
+      for (const [k, v] of rateLimitMap.entries()) {
+        if (now > v.resetTime) rateLimitMap.delete(k)
+      }
     }
   }
 
