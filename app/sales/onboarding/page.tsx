@@ -62,10 +62,14 @@ export default function RepOnboardingPage() {
       const j = await r.json().catch(() => ({}))
       if (!r.ok || !j?.success) {
         setError(j?.error || 'Could not advance')
-      } else {
-        await reload()
-        setOpenStep(j.current_step)
+        return
       }
+      // Optimistic: update local state in one render so the next step
+      // unlocks and auto-opens immediately. Otherwise there's a flash
+      // where setOpenStep fires before the reload's setState lands and
+      // the still-locked next step renders empty.
+      setState((prev) => prev ? { ...prev, current_step: j.current_step } : prev)
+      setOpenStep(j.current_step)
     } finally {
       setBusy(null)
     }

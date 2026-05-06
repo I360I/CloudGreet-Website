@@ -58,24 +58,27 @@ export async function POST(request: NextRequest) {
       }, { status: 409 })
     }
 
+    const nextStep = Math.min(completeStep + 1, ONBOARDING_STEPS.length)
+    const nowIso = new Date().toISOString()
     const update: Record<string, any> = {
-      current_onboarding_step: Math.min(completeStep + 1, ONBOARDING_STEPS.length),
-      updated_at: new Date().toISOString(),
+      current_onboarding_step: nextStep,
+      updated_at: nowIso,
     }
     if (!(rep as any)?.onboarding_started_at) {
-      update.onboarding_started_at = new Date().toISOString()
+      update.onboarding_started_at = nowIso
     }
 
-    const { error: updErr } = await supabaseAdmin
+    // Upsert so a missing sales_reps row doesn't silently no-op the
+    // update (which would return success but never advance the rep).
+    const { error: upErr } = await supabaseAdmin
       .from('sales_reps')
-      .update(update)
-      .eq('id', auth.userId)
-    if (updErr) {
+      .upsert({ id: auth.userId, ...update }, { onConflict: 'id' })
+    if (upErr) {
       return NextResponse.json({
         error: 'Could not save - run sql/sales-onboarding.sql',
       }, { status: 500 })
     }
-    return NextResponse.json({ success: true, current_step: update.current_onboarding_step })
+    return NextResponse.json({ success: true, current_step: nextStep })
   } catch (e) {
     logger.error('sales onboarding progress failed', {
       userId: auth.userId,
