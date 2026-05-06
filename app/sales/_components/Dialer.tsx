@@ -32,6 +32,8 @@ type CallState =
 
 type SessionStatus =
   | 'init'
+  | 'mic_required'      // user gesture needed to grant mic
+  | 'mic_denied'        // user explicitly blocked it
   | 'loading_token'
   | 'connecting'
   | 'ready'
@@ -62,6 +64,7 @@ export function Dialer() {
   const callRowIdRef = useRef<string | null>(null)
   const fromNumberRef = useRef<string | null>(null)
   const startedAtRef = useRef<number | null>(null)
+  const setupRef = useRef<(() => Promise<void>) | null>(null)
 
   // ---- Connect once on mount, tear down on unmount.
   useEffect(() => {
@@ -69,8 +72,31 @@ export function Dialer() {
     let retryTimer: ReturnType<typeof setTimeout> | null = null
 
     const setup = async () => {
-      setStatus('loading_token')
       setError(null)
+
+      // Mic permission gate. Browsers won't prompt without a user
+      // gesture, and Telnyx's SDK fails silently with "Microphone
+      // access denied" if we try to connect first. So we check the
+      // current state and either:
+      //  - already granted → proceed
+      //  - already denied → show "fix in browser settings" UI
+      //  - prompt unset → ask the user to click a button (handled by
+      //    grantMicrophone() below)
+      try {
+        const perm = await navigator.permissions
+          ?.query?.({ name: 'microphone' as PermissionName })
+          .catch(() => null)
+        if (perm?.state === 'denied') {
+          setStatus('mic_denied')
+          return
+        }
+        if (perm?.state !== 'granted') {
+          setStatus('mic_required')
+          return
+        }
+      } catch { /* permissions API missing - try to connect anyway */ }
+
+      setStatus('loading_token')
       try {
         const r = await fetchWithAuth('/api/sales/dialer/token', { method: 'POST' })
         if (cancelled) return
@@ -164,15 +190,46 @@ export function Dialer() {
     }
 
     void setup()
+    setupRef.current = setup
 
     return () => {
       cancelled = true
       if (retryTimer) clearTimeout(retryTimer)
       try { clientRef.current?.disconnect?.() } catch {}
       clientRef.current = null
+      setupRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const grantMicrophone = useCallback(async () => {
+    setError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // We don't need the stream ourselves - Telnyx grabs its own.
+      // Releasing this one keeps the mic light off until an actual call.
+      stream.getTracks().forEach((t) => t.stop())
+      // Re-run the full setup now that permission's granted.
+      if (setupRef.current) await setupRef.current()
+    } catch (e: any) {
+      // NotAllowedError = explicit deny; OtherError = no device, blocked by policy, etc.
+      if (e?.name === 'NotAllowedError' || e?.name === 'PermissionDeniedError') {
+        setStatus('mic_denied')
+      } else {
+        setStatus('error')
+        setError(e?.message || 'Could not access microphone')
+      }
+    }
+  }, [])
+
+  // ---- Auto-open the panel when something needs the user's attention
+  // (mic prompt, denied state, hard error). Reps shouldn't have to know
+  // the dialer button hides the actual problem.
+  useEffect(() => {
+    if (status === 'mic_required' || status === 'mic_denied' || status === 'error') {
+      setOpen(true)
+    }
+  }, [status])
 
   // ---- Active-call seconds counter for the live UI badge.
   useEffect(() => {
@@ -326,6 +383,38 @@ export function Dialer() {
                   <div className="font-medium text-gray-900 mb-1">Not set up yet</div>
                   Browser dialing needs Telnyx credentials. Anthony has to flip a couple of env vars before this works (TELNYX_TELEPHONY_CREDENTIAL_ID and TELNYX_OUTBOUND_FROM_NUMBER).
                 </div>
+              ) : status === 'mic_required' ? (
+                <div className="text-xs text-gray-700 space-y-3">
+                  <div>
+                    <div className="font-medium text-gray-900 mb-1">Microphone access needed</div>
+                    Browsers only grant mic permission after a click. Tap the button below and pick <strong>Allow</strong> in the prompt.
+                  </div>
+                  <button
+                    onClick={grantMicrophone}
+                    className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-gray-800 active:scale-[0.98] transition-all"
+                  >
+                    <Microphone className="w-4 h-4" weight="fill" />
+                    Allow microphone
+                  </button>
+                </div>
+              ) : status === 'mic_denied' ? (
+                <div className="text-xs text-gray-700 space-y-3">
+                  <div>
+                    <div className="font-medium text-rose-700 mb-1">Microphone is blocked</div>
+                    You denied (or your browser auto-denied) mic access for cloudgreet.com. Re-enable it from the browser:
+                  </div>
+                  <ol className="list-decimal list-inside space-y-0.5 text-gray-600">
+                    <li>Click the lock / site-settings icon in the address bar</li>
+                    <li>Find <strong>Microphone</strong> → switch to <strong>Allow</strong></li>
+                    <li>Refresh this page</li>
+                  </ol>
+                  <button
+                    onClick={grantMicrophone}
+                    className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-gray-800 transition-all"
+                  >
+                    Try again
+                  </button>
+                </div>
               ) : (
                 <>
                   <div className="mb-3">
@@ -435,6 +524,8 @@ export function Dialer() {
 function SessionPill({ status }: { status: SessionStatus }) {
   const m: Record<SessionStatus, { label: string; cls: string }> = {
     init:           { label: 'init',     cls: 'bg-gray-100 text-gray-500 border-gray-200' },
+    mic_required:   { label: 'mic',      cls: 'bg-amber-50 text-amber-800 border-amber-200' },
+    mic_denied:     { label: 'mic',      cls: 'bg-rose-50 text-rose-700 border-rose-200' },
     loading_token:  { label: 'auth',     cls: 'bg-gray-100 text-gray-500 border-gray-200' },
     connecting:     { label: 'connect',  cls: 'bg-amber-50 text-amber-800 border-amber-200' },
     ready:          { label: 'ready',    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
