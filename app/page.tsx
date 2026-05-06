@@ -19,7 +19,6 @@ export default function LandingPage() {
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
    <Nav />
    <Hero />
-   <Platforms />
    <RoiCalculator />
    <FinalCTA />
    <FooterCard />
