@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { postToSlack } from '@/lib/notifications/slack'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -70,6 +71,34 @@ export async function POST(
         error: 'Could not save - run sql/customization-and-demo-agents.sql',
       }, { status: 500 })
     }
+
+    // Slack ping when the demo agent flips to ready - the rep can now
+    // see the test number on their /sales/closes.
+    if (touchedReady) {
+      void (async () => {
+        const { data: c } = await supabaseAdmin
+          .from('closes')
+          .select('prospect_business_name, rep_id')
+          .eq('id', params.closeId)
+          .maybeSingle()
+        let repName: string | null = null
+        if ((c as any)?.rep_id) {
+          const { data: u } = await supabaseAdmin
+            .from('custom_users')
+            .select('name, first_name, last_name, email')
+            .eq('id', (c as any).rep_id)
+            .maybeSingle()
+          repName = (u as any)?.name
+            || [(u as any)?.first_name, (u as any)?.last_name].filter(Boolean).join(' ').trim()
+            || (u as any)?.email
+            || null
+        }
+        await postToSlack({
+          text: `:robot_face: Demo agent ready - ${(c as any)?.prospect_business_name || 'client'}${repName ? ` (rep: ${repName})` : ''} · test: ${update.demo_agent_test_phone}`,
+        })
+      })()
+    }
+
     return NextResponse.json({ success: true })
   } catch (e) {
     logger.error('admin agents-due submit failed', {

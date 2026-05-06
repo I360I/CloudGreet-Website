@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import { isComplete } from '@/lib/customization/form-config'
+import { postToSlack, fieldsBlock } from '@/lib/notifications/slack'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -47,6 +48,42 @@ export async function POST(request: NextRequest) {
         error: 'Could not submit - run sql/customization-and-demo-agents.sql',
       }, { status: 500 })
     }
+
+    // Best-effort Slack ping so the founder knows there's a new build
+    // sitting in the queue. Pulled lazily so a missing webhook doesn't
+    // ever block the success response.
+    void (async () => {
+      const { data: biz } = await supabaseAdmin
+        .from('businesses')
+        .select('business_name')
+        .eq('id', auth.businessId)
+        .maybeSingle()
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'
+      await postToSlack({
+        text: `:incoming_envelope: Customization form submitted - ${biz?.business_name || 'a client'}`,
+        blocks: [
+          {
+            type: 'section',
+            text: { type: 'mrkdwn', text: `*Customization form submitted*\n${biz?.business_name || 'A client'} just submitted their agent build form.` },
+          },
+          fieldsBlock([
+            { label: 'Business', value: biz?.business_name || null },
+            { label: 'Submitted', value: new Date(nowIso).toLocaleString() },
+          ]),
+          {
+            type: 'actions',
+            elements: [
+              {
+                type: 'button',
+                text: { type: 'plain_text', text: 'Open in admin' },
+                url: `${baseUrl}/admin/agents-due`,
+              },
+            ],
+          },
+        ],
+      })
+    })()
+
     return NextResponse.json({ success: true, submitted_at: nowIso })
   } catch (e) {
     logger.error('customize submit failed', {

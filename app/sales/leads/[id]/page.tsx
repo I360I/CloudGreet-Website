@@ -10,6 +10,7 @@ import {
   CurrencyDollar, Link as LinkIcon,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
+import { Modal } from '../../_components/Modal'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -383,20 +384,13 @@ export default function LeadDetailPage() {
         </motion.div>
 
         <AnimatePresence>
-          {showOnbForm && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25, ease: EASE }}
-              className="overflow-hidden mb-5"
-            >
-              <div className="bg-violet-50/50 border border-violet-200 rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <EnvelopeSimple weight="duotone" className="w-5 h-5 text-violet-600" />
-                  <div className="text-sm font-medium text-violet-900">Send booking link</div>
-                </div>
-
+          <Modal
+            open={showOnbForm}
+            onClose={() => setShowOnbForm(false)}
+            title="Send booking link"
+            icon={<EnvelopeSimple weight="duotone" className="w-5 h-5 text-violet-600" />}
+          >
+            <div>
                 {onbResult ? (
                   <div className="space-y-3">
                     <div className="text-xs text-violet-900">
@@ -479,9 +473,8 @@ export default function LeadDetailPage() {
                     </div>
                   </>
                 )}
-              </div>
-            </motion.div>
-          )}
+            </div>
+          </Modal>
           {showPayForm && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}

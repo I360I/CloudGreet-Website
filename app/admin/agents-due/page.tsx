@@ -137,6 +137,23 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
     }
   }
 
+  const flipCustomization = async (newStatus: 'building' | 'ready' | 'live') => {
+    if (!item.business?.id) return
+    setErr('')
+    try {
+      const r = await fetchWithAuth(`/api/admin/customization/${item.business.id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) setErr(j?.error || 'Failed')
+      else onChanged()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed')
+    }
+  }
+
   const submit = () => {
     if (!testPhone.trim()) { setErr('Paste the Retell test number first.'); return }
     return post({ test_phone: testPhone.trim(), notes: notes.trim() || undefined }, 'submit')
@@ -247,6 +264,34 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
           )}
         </div>
       </div>
+
+      {/* Customization pipeline - only meaningful once the client has submitted */}
+      {item.business && ['submitted', 'building', 'ready', 'live'].includes(item.business.customization_status) && (
+        <div className="border-t border-white/5 px-5 py-3 bg-violet-500/5">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="text-xs text-violet-300 inline-flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-violet-400">Customization</span>
+              <span className="font-medium">{item.business.customization_status}</span>
+              {item.business.customization_submitted_at && (
+                <span className="text-gray-500">· submitted {new Date(item.business.customization_submitted_at).toLocaleDateString()}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {item.business.customization_status === 'submitted' && (
+                <GhostButton onClick={() => flipCustomization('building')}>Mark building</GhostButton>
+              )}
+              {(item.business.customization_status === 'submitted' || item.business.customization_status === 'building') && (
+                <PrimaryButton onClick={() => flipCustomization('ready')}>
+                  Mark ready (emails client)
+                </PrimaryButton>
+              )}
+              {item.business.customization_status === 'ready' && (
+                <PrimaryButton onClick={() => flipCustomization('live')}>Mark live</PrimaryButton>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Submit row */}
       <div className="border-t border-white/5 px-5 py-4">
