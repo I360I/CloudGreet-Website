@@ -6,6 +6,7 @@ import { Loader2, AlertCircle, CheckCircle2, Clock, Phone, Mail, ExternalLink, B
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, PrimaryButton, GhostButton, Input } from '../_components/ui'
+import { DraftBuilder } from './_DraftBuilder'
 
 /**
  * /admin/agents-due
@@ -52,6 +53,10 @@ type Item = {
     customization_status: string
     customization_submitted_at: string | null
   } | null
+  agent_draft: {
+    status: 'none' | 'generating' | 'ready' | 'failed' | 'approved'
+    generated_at: string | null
+  }
 }
 
 export default function AgentsDuePage() {
@@ -264,6 +269,14 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
           )}
         </div>
       </div>
+
+      {/* AI agent draft builder - Phase 1 from the agent-builder doc */}
+      <DraftBuilder
+        closeId={item.close_id}
+        initialStatus={item.agent_draft.status}
+        hasWebsite={!!(item.business?.website)}
+        onChanged={onChanged}
+      />
 
       {/* Customization pipeline - only meaningful once the client has submitted */}
       {item.business && ['submitted', 'building', 'ready', 'live'].includes(item.business.customization_status) && (

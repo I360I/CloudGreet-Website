@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const { data: closes, error } = await supabaseAdmin
       .from('closes')
       .select(
-        'id, rep_id, business_id, prospect_business_name, prospect_contact_name, prospect_email, prospect_phone, status, demo_scheduled_at, demo_agent_status, demo_agent_test_phone, demo_agent_built_at, demo_agent_notes, created_at, updated_at',
+        'id, rep_id, business_id, prospect_business_name, prospect_contact_name, prospect_email, prospect_phone, status, demo_scheduled_at, demo_agent_status, demo_agent_test_phone, demo_agent_built_at, demo_agent_notes, agent_draft_status, agent_draft_generated_at, created_at, updated_at',
       )
       .not('business_id', 'is', null)
       .neq('demo_agent_status', 'ready')
@@ -124,6 +124,10 @@ export async function GET(request: NextRequest) {
         close_id: r.id,
         created_at: r.created_at,
         updated_at: r.updated_at,
+        agent_draft: {
+          status: (r as any).agent_draft_status || 'none',
+          generated_at: (r as any).agent_draft_generated_at || null,
+        },
         demo: {
           scheduled_at: scheduledAt,
           status: r.demo_agent_status || 'pending',
