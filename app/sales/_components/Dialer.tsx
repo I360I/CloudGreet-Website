@@ -76,27 +76,33 @@ export function Dialer() {
     const setup = async () => {
       setError(null)
 
-      // Mic permission gate. Browsers won't prompt without a user
-      // gesture, and Telnyx's SDK fails silently with "Microphone
-      // access denied" if we try to connect first. So we check the
-      // current state and either:
-      //  - already granted → proceed
-      //  - already denied → show "fix in browser settings" UI
-      //  - prompt unset → ask the user to click a button (handled by
-      //    grantMicrophone() below)
+      // Try to grab the mic directly. We used to gate on the Permissions
+      // API first, but Chrome's permissions.query for microphone returns
+      // stale 'denied' for several seconds after a fresh grant, which
+      // caused us to bounce the user back to the "blocked" screen even
+      // when they'd just fixed it. Skipping that check and letting
+      // getUserMedia decide is the source of truth.
       try {
-        const perm = await navigator.permissions
-          ?.query?.({ name: 'microphone' as PermissionName })
-          .catch(() => null)
-        if (perm?.state === 'denied') {
-          setStatus('mic_denied')
-          return
-        }
-        if (perm?.state !== 'granted') {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach((t) => t.stop())
+      } catch (e: any) {
+        // eslint-disable-next-line no-console
+        console.error('getUserMedia on setup failed', e)
+        const name = e?.name || 'Error'
+        setMicErrName(`${name}${e?.message ? ` - ${e.message}` : ''}`)
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
+          // First mount with no prior grant: browser auto-rejects without
+          // a user gesture. Show the "click to allow" UI.
           setStatus('mic_required')
-          return
+        } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+          setStatus('error')
+          setError('No microphone detected on this device.')
+        } else {
+          setStatus('error')
+          setError(e?.message || 'Could not access microphone')
         }
-      } catch { /* permissions API missing - try to connect anyway */ }
+        return
+      }
 
       setStatus('loading_token')
       try {
@@ -208,26 +214,14 @@ export function Dialer() {
     setError(null)
     setMicErrName(null)
     setMicBusy(true)
+    // setup() now does the getUserMedia call itself - this click provides
+    // the user gesture browsers require. If the OS/browser is still
+    // blocking, setup will land us in mic_required/error with micErrName
+    // showing the actual reason.
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      stream.getTracks().forEach((t) => t.stop())
-      setMicBusy(false)
       if (setupRef.current) await setupRef.current()
-    } catch (e: any) {
-      // eslint-disable-next-line no-console
-      console.error('getUserMedia failed', e)
+    } finally {
       setMicBusy(false)
-      const name = e?.name || 'Error'
-      setMicErrName(`${name}${e?.message ? ` - ${e.message}` : ''}`)
-      if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
-        setStatus('mic_denied')
-      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-        setStatus('error')
-        setError('No microphone detected on this device.')
-      } else {
-        setStatus('error')
-        setError(e?.message || 'Could not access microphone')
-      }
     }
   }, [])
 
