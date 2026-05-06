@@ -18,13 +18,13 @@ type Snapshot = {
 
 const COPY: Record<DecayTier, { title: string; sub: string; tone: 'good' | 'warn' | 'bad' }> = {
   full: {
-    title: 'Full commission',
-    sub: 'You earn 100% of MRR on every active client.',
+    title: 'Full commission · 50% MRR',
+    sub: 'You earn 50% of MRR on every active client. Keep closing to stay here.',
     tone: 'good',
   },
   reduced: {
     title: 'MRR reduced to 25%',
-    sub: 'Land one close to bump back to full commission.',
+    sub: 'Land one close to bump back to the full 50%.',
     tone: 'warn',
   },
   transferred: {

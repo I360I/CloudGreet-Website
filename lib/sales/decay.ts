@@ -1,10 +1,10 @@
 /**
  * Rep MRR decay model.
  *
- * Closes drive the rep's commission share. If a rep goes too long without
- * landing a new close, their share of existing-client MRR decays:
+ * Reps earn 50% of MRR on every active client by default. If a rep goes
+ * too long without landing a new close, that share decays:
  *
- *   0  - 89  days since last close → 'full'        (100% of MRR commission)
+ *   0  - 89  days since last close → 'full'        (50% MRR - the standard share)
  *   90 - 179 days                  → 'reduced'     (25%)
  *   180+ days                      → 'transferred' (0%; clients revert to CG)
  *
@@ -24,8 +24,9 @@ export const DECAY_THRESHOLDS = {
   transferAfterDays: 180,
 } as const
 
+/** Absolute share of MRR earned by the rep at each tier. */
 export const TIER_MULTIPLIER: Record<DecayTier, number> = {
-  full: 1,
+  full: 0.5,
   reduced: 0.25,
   transferred: 0,
 }
@@ -114,7 +115,7 @@ export function computeDecayState(input: {
 export function tierLabel(tier: DecayTier): string {
   switch (tier) {
     case 'full':
-      return 'Full commission'
+      return 'Full commission (50%)'
     case 'reduced':
       return 'Reduced (25%)'
     case 'transferred':
