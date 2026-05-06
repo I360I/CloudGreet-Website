@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
         .eq('rep_id', auth.userId),
       supabaseAdmin
         .from('closes')
-        .select('id, prospect_business_name, agreed_monthly_cents, agreed_setup_fee_cents, status, created_at, business_id')
+        .select('id, prospect_business_name, agreed_monthly_cents, agreed_setup_fee_cents, status, created_at, business_id, demo_agent_status, demo_agent_test_phone')
         .eq('rep_id', auth.userId)
         .in('status', ['pending', 'invoice_sent'])
         .order('created_at', { ascending: false })

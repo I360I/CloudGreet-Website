@@ -81,6 +81,30 @@ export default function SalesClosesPage() {
 
   useEffect(() => { load() }, [])
 
+  // Poll while the page is visible so admin-side flips (Mark building,
+  // Mark ready w/ test #, Customization status) reflect here within
+  // ~20s without a manual refresh. Pause when the tab is backgrounded
+  // so we don't burn requests.
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null
+    const start = () => {
+      stop()
+      timer = setInterval(() => { void load() }, 20_000)
+    }
+    const stop = () => { if (timer) { clearInterval(timer); timer = null } }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void load() // refetch immediately on refocus
+        start()
+      } else {
+        stop()
+      }
+    }
+    if (document.visibilityState === 'visible') start()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
+  }, [])
+
   const generateLink = async (id: string) => {
     setLinkBusy(id); setError('')
     try {

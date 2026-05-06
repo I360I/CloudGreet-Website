@@ -27,6 +27,8 @@ type Deal = {
   agreed_monthly_cents: number
   status: 'pending' | 'invoice_sent' | 'paid' | 'cancelled' | 'rejected'
   created_at: string
+  demo_agent_status?: 'pending' | 'building' | 'ready' | 'skipped' | null
+  demo_agent_test_phone?: string | null
 }
 
 type CalBooking = {
@@ -66,9 +68,15 @@ export default function SalesHome() {
   const [data, setData] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Initial load + lightweight polling so admin-side flips (demo agent
+  // building / ready, customization status) reflect on the rep's
+  // dashboard within ~20s without a manual refresh. Pauses while the
+  // tab is backgrounded; refetches immediately on refocus.
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
+    let timer: ReturnType<typeof setInterval> | null = null
+
+    const load = async () => {
       try {
         const res = await fetchWithAuth('/api/sales/overview')
         const j = await res.json().catch(() => ({}))
@@ -76,8 +84,29 @@ export default function SalesHome() {
       } finally {
         if (!cancelled) setLoading(false)
       }
-    })()
-    return () => { cancelled = true }
+    }
+    const start = () => {
+      stop()
+      timer = setInterval(() => { void load() }, 20_000)
+    }
+    const stop = () => { if (timer) { clearInterval(timer); timer = null } }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') { void load(); start() }
+      else { stop() }
+    }
+
+    void load()
+    if (typeof document !== 'undefined') {
+      if (document.visibilityState === 'visible') start()
+      document.addEventListener('visibilitychange', onVisibility)
+    }
+    return () => {
+      cancelled = true
+      stop()
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibility)
+      }
+    }
   }, [])
 
   if (loading || !data) {
@@ -332,6 +361,16 @@ export default function SalesHome() {
                       <span className="text-gray-300 mx-1.5">·</span>
                       {d.status === 'invoice_sent' ? 'invoice sent' : 'pending review'}
                     </div>
+                    {d.demo_agent_status === 'building' && (
+                      <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-sky-700 bg-sky-50 border border-sky-200 rounded-full px-2 py-0.5">
+                        Demo agent building
+                      </div>
+                    )}
+                    {d.demo_agent_status === 'ready' && d.demo_agent_test_phone && (
+                      <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                        Demo ready · <span className="font-mono">{d.demo_agent_test_phone}</span>
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
