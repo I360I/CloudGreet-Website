@@ -275,6 +275,7 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
         closeId={item.close_id}
         initialStatus={item.agent_draft.status}
         hasWebsite={!!(item.business?.website)}
+        currentWebsite={item.business?.website || null}
         onChanged={onChanged}
       />
 

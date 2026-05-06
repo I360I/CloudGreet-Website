@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Loader2, Sparkles, CheckCircle2, AlertCircle, Copy, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
+import { Loader2, Sparkles, CheckCircle2, AlertCircle, Copy, RefreshCw, ChevronDown, ChevronUp, Globe } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { PrimaryButton, GhostButton } from '../_components/ui'
+import { PrimaryButton, GhostButton, Input } from '../_components/ui'
 
 /**
  * Per-row "Build draft agent" panel for /admin/agents-due.
@@ -41,17 +41,25 @@ export function DraftBuilder({
   closeId,
   initialStatus,
   hasWebsite,
+  currentWebsite,
   onChanged,
 }: {
   closeId: string
   initialStatus: DraftStatus
   hasWebsite: boolean
+  currentWebsite: string | null
   onChanged: () => void
 }) {
-  const [open, setOpen] = useState(initialStatus !== 'none' && initialStatus !== 'approved')
+  // Open by default when there's work to do: an in-flight draft, or
+  // a missing website blocking the pipeline.
+  const [open, setOpen] = useState(
+    (initialStatus !== 'none' && initialStatus !== 'approved') || !hasWebsite,
+  )
   const [draft, setDraft] = useState<Draft | null>(null)
   const [loading, setLoading] = useState(false)
-  const [busy, setBusy] = useState<'generate' | 'save' | 'approve' | null>(null)
+  const [busy, setBusy] = useState<'generate' | 'save' | 'approve' | 'website' | null>(null)
+  const [websiteDraft, setWebsiteDraft] = useState(currentWebsite || '')
+  const [websiteEditing, setWebsiteEditing] = useState(!hasWebsite)
   const [edited, setEdited] = useState<string | null>(null)
   const [err, setErr] = useState('')
   const [showContext, setShowContext] = useState(false)
@@ -94,6 +102,26 @@ export function DraftBuilder({
     const t = setInterval(reload, 3000)
     return () => clearInterval(t)
   }, [draft?.status, reload])
+
+  const saveWebsite = async () => {
+    setBusy('website'); setErr('')
+    try {
+      const r = await fetchWithAuth(`/api/admin/agents-due/${closeId}/business`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ website: websiteDraft.trim() }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setErr(j?.error || 'Could not save website')
+      } else {
+        setWebsiteEditing(false)
+        onChanged()
+      }
+    } finally {
+      setBusy(null)
+    }
+  }
 
   const generate = async () => {
     setBusy('generate'); setErr('')
@@ -179,6 +207,55 @@ export function DraftBuilder({
 
       {open && (
         <div className="mt-3">
+          {/* Website on file - always editable. The pipeline scrapes
+              this URL, so getting it right is the highest-leverage knob. */}
+          <div className="mb-3 rounded-lg border border-white/[0.08] bg-black/20 p-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <Globe className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                {websiteEditing ? (
+                  <Input
+                    placeholder="example.com or https://example.com"
+                    value={websiteDraft}
+                    onChange={(e) => setWebsiteDraft(e.target.value)}
+                    className="flex-1 font-mono text-xs"
+                    onKeyDown={(e) => { if (e.key === 'Enter') void saveWebsite() }}
+                  />
+                ) : currentWebsite ? (
+                  <a
+                    href={currentWebsite}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-mono text-sky-300 hover:text-sky-200 truncate"
+                  >
+                    {currentWebsite.replace(/^https?:\/\//, '')}
+                  </a>
+                ) : (
+                  <span className="text-xs text-amber-300/80">No website on file - paste one to scrape</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {websiteEditing ? (
+                  <>
+                    <PrimaryButton onClick={saveWebsite} disabled={busy === 'website'}>
+                      {busy === 'website' && <Loader2 className="w-3 h-3 animate-spin" />}
+                      Save
+                    </PrimaryButton>
+                    {hasWebsite && (
+                      <GhostButton onClick={() => { setWebsiteEditing(false); setWebsiteDraft(currentWebsite || '') }}>
+                        Cancel
+                      </GhostButton>
+                    )}
+                  </>
+                ) : (
+                  <GhostButton onClick={() => setWebsiteEditing(true)}>
+                    Edit
+                  </GhostButton>
+                )}
+              </div>
+            </div>
+          </div>
+
           {loading && !draft && (
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading draft…
@@ -189,8 +266,13 @@ export function DraftBuilder({
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <p className="text-xs text-gray-400 max-w-md">
                 Scrape the website + Google Places, hand it to Claude, validate the output, store the prompt for review. ~30-60s, ~$1 in API cost.
+                {!hasWebsite && (
+                  <span className="block mt-1 text-amber-300/80">
+                    Add a website above first - the scraper has nothing to read otherwise.
+                  </span>
+                )}
               </p>
-              <PrimaryButton onClick={generate} disabled={busy !== null}>
+              <PrimaryButton onClick={generate} disabled={busy !== null || !hasWebsite}>
                 {busy === 'generate' && <Loader2 className="w-4 h-4 animate-spin" />}
                 Build draft
               </PrimaryButton>
