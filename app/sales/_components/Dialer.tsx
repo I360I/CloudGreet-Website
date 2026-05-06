@@ -56,6 +56,8 @@ export function Dialer() {
   const [activeLeadId, setActiveLeadId] = useState<string | null>(null)
   const [muted, setMuted] = useState(false)
   const [secondsActive, setSecondsActive] = useState(0)
+  const [micBusy, setMicBusy] = useState(false)
+  const [micErrName, setMicErrName] = useState<string | null>(null)
 
   // Refs to long-lived objects (Telnyx client, current Call, server-side
   // log row id, etc.) so re-renders don't recreate them.
@@ -204,17 +206,24 @@ export function Dialer() {
 
   const grantMicrophone = useCallback(async () => {
     setError(null)
+    setMicErrName(null)
+    setMicBusy(true)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      // We don't need the stream ourselves - Telnyx grabs its own.
-      // Releasing this one keeps the mic light off until an actual call.
       stream.getTracks().forEach((t) => t.stop())
-      // Re-run the full setup now that permission's granted.
+      setMicBusy(false)
       if (setupRef.current) await setupRef.current()
     } catch (e: any) {
-      // NotAllowedError = explicit deny; OtherError = no device, blocked by policy, etc.
-      if (e?.name === 'NotAllowedError' || e?.name === 'PermissionDeniedError') {
+      // eslint-disable-next-line no-console
+      console.error('getUserMedia failed', e)
+      setMicBusy(false)
+      const name = e?.name || 'Error'
+      setMicErrName(`${name}${e?.message ? ` - ${e.message}` : ''}`)
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
         setStatus('mic_denied')
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        setStatus('error')
+        setError('No microphone detected on this device.')
       } else {
         setStatus('error')
         setError(e?.message || 'Could not access microphone')
@@ -391,29 +400,51 @@ export function Dialer() {
                   </div>
                   <button
                     onClick={grantMicrophone}
-                    className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-gray-800 active:scale-[0.98] transition-all"
+                    disabled={micBusy}
+                    className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-gray-800 active:scale-[0.98] transition-all disabled:opacity-60"
                   >
-                    <Microphone className="w-4 h-4" weight="fill" />
-                    Allow microphone
+                    {micBusy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Microphone className="w-4 h-4" weight="fill" />}
+                    {micBusy ? 'Requesting…' : 'Allow microphone'}
                   </button>
+                  {micErrName && (
+                    <div className="text-[11px] text-rose-700 font-mono break-words">{micErrName}</div>
+                  )}
                 </div>
               ) : status === 'mic_denied' ? (
                 <div className="text-xs text-gray-700 space-y-3">
                   <div>
                     <div className="font-medium text-rose-700 mb-1">Microphone is blocked</div>
-                    You denied (or your browser auto-denied) mic access for cloudgreet.com. Re-enable it from the browser:
+                    Browser or OS is denying mic access for cloudgreet.com. Two places to check:
                   </div>
-                  <ol className="list-decimal list-inside space-y-0.5 text-gray-600">
-                    <li>Click the lock / site-settings icon in the address bar</li>
-                    <li>Find <strong>Microphone</strong> → switch to <strong>Allow</strong></li>
-                    <li>Refresh this page</li>
-                  </ol>
+                  <div className="text-gray-600">
+                    <div className="font-medium text-gray-800 mb-0.5">In the browser</div>
+                    <ol className="list-decimal list-inside space-y-0.5">
+                      <li>Click the lock icon in the address bar</li>
+                      <li><strong>Microphone</strong> → <strong>Allow</strong></li>
+                      <li>Refresh this page</li>
+                    </ol>
+                  </div>
+                  <div className="text-gray-600">
+                    <div className="font-medium text-gray-800 mb-0.5">On macOS</div>
+                    <ol className="list-decimal list-inside space-y-0.5">
+                      <li>System Settings → Privacy &amp; Security → Microphone</li>
+                      <li>Turn on <strong>Google Chrome</strong></li>
+                      <li>Quit Chrome fully (⌘Q) and reopen</li>
+                    </ol>
+                  </div>
                   <button
                     onClick={grantMicrophone}
-                    className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-gray-800 transition-all"
+                    disabled={micBusy}
+                    className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-gray-800 transition-all disabled:opacity-60"
                   >
-                    Try again
+                    {micBusy && <CircleNotch className="w-4 h-4 animate-spin" />}
+                    {micBusy ? 'Trying…' : 'Try again'}
                   </button>
+                  {micErrName && (
+                    <div className="text-[11px] text-rose-700 font-mono break-words">
+                      Browser said: {micErrName}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
