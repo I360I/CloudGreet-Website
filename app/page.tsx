@@ -26,6 +26,8 @@ export default function LandingPage() {
    <Platforms />
    <RoiCalculator />
    <Pricing />
+   <Faq />
+   <FounderNote />
    <FinalCTA />
    <FooterCard />
   </main>
@@ -50,6 +52,7 @@ function Nav() {
     </Link>
     <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
      <a href="#pricing-tiers" className="hover:text-gray-900 transition-colors">Pricing</a>
+     <a href="#faq" className="hover:text-gray-900 transition-colors">FAQ</a>
      <a href="#pricing" className="hover:text-gray-900 transition-colors">ROI</a>
      <Link href="/login" className="hover:text-gray-900 transition-colors">Sign in</Link>
     </div>
@@ -753,6 +756,156 @@ function PriceFootCard({
    </div>
    <p className="text-xs text-gray-600 leading-relaxed">{body}</p>
   </div>
+ )
+}
+
+/* ------------------------------ FAQ ---------------------------- */
+/**
+ * Accordion of objections we hear most on demo calls. No JS needed -
+ * the native <details> element handles the open/close, which keeps
+ * the page lean and works without hydration.
+ */
+function Faq() {
+ const items = [
+  {
+   q: 'Does it actually sound human?',
+   a: "Yes. It's a natural conversational AI, not a phone tree. You pick the voice and tone (warm, direct, formal, etc.) and we tune the greeting to your brand. Most callers don't realize they're not talking to a person - and the ones who do still get the help they called for.",
+  },
+  {
+   q: 'Do I need a new phone number?',
+   a: "No. You keep your existing business line. We give you a forwarding number to point your line at - same way you'd forward to an answering service. Your customers keep dialing the number they already know.",
+  },
+  {
+   q: 'How fast can you get me set up?',
+   a: "Most accounts go live within 24 to 48 hours of signup. We handle the call forwarding setup, the calendar sync, and the agent configuration. You spend about 15 minutes telling us how your business answers the phone today, and we take it from there.",
+  },
+  {
+   q: 'What happens when the AI can\'t help?',
+   a: "You set the rules. By default it takes a detailed message and texts you instantly. You can also configure hot transfers - certain keywords ('emergency', 'leak', 'fire'), specific callers (VIP list), or anything outside its scope routes the live call to whoever is on call.",
+  },
+  {
+   q: 'Can I customize what it says?',
+   a: "All of it. Greeting, services you offer, service area, business hours, FAQ answers, pricing rules, edge cases. There's a dashboard where you edit any of it in plain English and changes go live immediately. No 'submit a ticket and wait' nonsense.",
+  },
+  {
+   q: 'What about Spanish-speaking callers?',
+   a: "It detects the language automatically and switches. Bilingual is included on every plan, no extra config. Texas service businesses lose a lot of bookings because nobody on staff speaks Spanish - this fixes that.",
+  },
+  {
+   q: 'How are calls billed - per minute, per booking?',
+   a: "Neither. Flat monthly. We don't believe in per-call or per-booking fees because they punish you for being successful. Take 1,000 calls a month or 50 - the price is the same.",
+  },
+  {
+   q: 'What if it doesn\'t work for my business?',
+   a: "30-day money-back. If CloudGreet hasn't paid for itself in the first month, we refund every dollar. We'd rather give you your money back than have an unhappy customer.",
+  },
+ ]
+ return (
+  <section id="faq" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
+   <div className="max-w-3xl mx-auto">
+    <div className="text-center mb-10">
+     <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-3">
+      Frequently asked
+     </p>
+     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
+      Real questions, <span className="text-gray-400">real answers.</span>
+     </h2>
+    </div>
+
+    <div className="space-y-2">
+     {items.map((item) => (
+      <details
+       key={item.q}
+       className="group bg-white border border-gray-200 rounded-2xl px-5 py-4 sm:px-6 sm:py-5 [&_summary::-webkit-details-marker]:hidden"
+      >
+       <summary className="flex items-center justify-between gap-4 cursor-pointer list-none">
+        <span className="text-base font-medium text-gray-900 leading-snug">
+         {item.q}
+        </span>
+        <span className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 group-open:bg-gray-900 group-open:text-white transition-colors">
+         <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M8 3v10M3 8h10" className="group-open:opacity-0 transition-opacity" />
+          <path d="M3 8h10" className="opacity-0 group-open:opacity-100 transition-opacity" />
+         </svg>
+        </span>
+       </summary>
+       <div className="text-sm text-gray-600 leading-relaxed mt-3 pt-3 border-t border-gray-100">
+        {item.a}
+       </div>
+      </details>
+     ))}
+    </div>
+
+    <div className="text-center mt-8 text-sm text-gray-500">
+     Still have questions?{' '}
+     <Link href="/contact" className="text-gray-900 underline underline-offset-4 hover:text-sky-600">
+      Book a demo
+     </Link>{' '}
+     or call <a href={DEMO_TEL} className="text-gray-900 underline underline-offset-4 hover:text-sky-600">{DEMO_NUMBER}</a>.
+    </div>
+   </div>
+  </section>
+ )
+}
+
+/* ------------------------- Founder note ------------------------ */
+/**
+ * Honest founder beat in lieu of fake testimonials. Service-business
+ * owners are sharp and a "5 stars from John D." block with no real
+ * person behind it makes the whole site feel scammy. A real founder
+ * note from a real person with a real reason for building this is
+ * more credible.
+ */
+function FounderNote() {
+ return (
+  <section className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
+   <div className="max-w-3xl mx-auto">
+    <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 md:p-12 relative overflow-hidden">
+     <div className="absolute -top-20 -right-20 w-72 h-72 bg-sky-100/50 blur-3xl rounded-full pointer-events-none" />
+     <div className="relative">
+      <div className="flex items-center gap-3 mb-5">
+       <div className="w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center text-base font-medium">
+        AE
+       </div>
+       <div>
+        <div className="text-sm font-medium text-gray-900">Anthony Edwards</div>
+        <div className="text-xs text-gray-500">Founder, CloudGreet</div>
+       </div>
+      </div>
+      <div className="text-base md:text-lg text-gray-700 leading-relaxed space-y-4">
+       <p>
+        I started CloudGreet because I watched my own family's contractor business lose deals every week to voicemail. Five-star techs, ten-thousand-dollar jobs, gone because nobody picked up the phone at 6 PM on a Tuesday.
+       </p>
+       <p>
+        Hiring an answering service is expensive and they sound like an answering service. Hiring a receptionist is more expensive and they go home at 5. The math never worked.
+       </p>
+       <p>
+        CloudGreet is what I wish we'd had: a receptionist that sounds like one of your team, works every hour of every day, books straight into your calendar, and costs less than a single missed job per month.
+       </p>
+       <p className="text-gray-600">
+        If you're losing calls, give me 15 minutes on a demo. If it's not a fit, I'll tell you straight. No sales theatre.
+       </p>
+      </div>
+      <div className="mt-7 flex flex-col sm:flex-row sm:items-center gap-3">
+       <Link
+        href="/contact"
+        className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors"
+       >
+        Book 15 minutes
+        <ArrowUpRight className="w-4 h-4" />
+       </Link>
+       <a
+        href={DEMO_TEL}
+        className="inline-flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-900 px-6 py-3 rounded-2xl text-sm font-medium hover:border-gray-900 transition-colors"
+       >
+        Or call our AI yourself
+        <ArrowRight className="w-4 h-4" />
+       </a>
+      </div>
+     </div>
+    </div>
+   </div>
+  </section>
  )
 }
 
