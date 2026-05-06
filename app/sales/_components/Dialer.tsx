@@ -102,8 +102,27 @@ export function Dialer() {
         })
         client.on('telnyx.error', (e: any) => {
           if (cancelled) return
+          // Full payload to devtools so we can actually see the cause -
+          // Telnyx's SDK fires this with shape { code, cause, causeCode,
+          // error: { message } } depending on the failure mode.
+          // eslint-disable-next-line no-console
+          console.error('Telnyx error', e)
+          const msg =
+            e?.cause ||
+            e?.causeCode ||
+            e?.error?.message ||
+            e?.message ||
+            (typeof e === 'string' ? e : null) ||
+            (() => { try { return JSON.stringify(e).slice(0, 200) } catch { return 'WebRTC error' } })()
           setStatus('error')
-          setError(e?.cause || e?.message || 'WebRTC error')
+          setError(msg)
+        })
+        client.on('telnyx.socket.error', (e: any) => {
+          if (cancelled) return
+          // eslint-disable-next-line no-console
+          console.error('Telnyx socket error', e)
+          setStatus('error')
+          setError(e?.message || 'WebSocket failed - network/firewall blocking wss://rtc.telnyx.com?')
         })
         client.on('telnyx.notification', (note: any) => {
           if (cancelled) return
