@@ -2,20 +2,28 @@ import { supabaseAdmin } from '../supabase'
 import { logger } from '../monitoring'
 import { getSource } from './registry'
 import { promoteScrapeResults } from './promote'
-import type { ScrapeParams, ScrapeRecord } from './types'
+import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
+import type { ScrapeParams, ScrapeRecord, SeenSets } from './types'
 
 const RESULT_BATCH = 25
 
 /**
- * Runs a scrape job synchronously: marks the job running, iterates the
- * source's async generator, batches inserts into scrape_results, and
- * stamps the final job row. Returns the final results count.
+ * Runs a scrape job synchronously. Persists records as they arrive so
+ * partial results survive timeouts.
  *
- * Cross-run dedupe: at the start we snapshot every phone already in
- * the `leads` table (and recent `scrape_results`) into in-memory Sets,
- * and skip any record whose phone (normalized) or place_id (when the
- * source is Google Places) is already known. Prevents the rep portal
- * from showing the same contractor twice across separate scrape runs.
+ * Cross-run dedupe (the reason this file got rebuilt):
+ *
+ *   At job start we snapshot every known phone, website, place_id, and
+ *   business-name|city key from `leads` and the last 180 days of
+ *   `scrape_results`, then hand them to the source as `opts.seen`.
+ *
+ *   Sources that respect `opts.seen` (Google Places-backed ones) page
+ *   past records they'd lose to dedupe instead of stopping at the
+ *   first ~60 - so the rep actually gets the `limit` they asked for.
+ *
+ *   The runner re-applies the dedupe before persisting, so even sources
+ *   that ignore `opts.seen` (license databases) still don't write
+ *   duplicates.
  */
 export async function runScrapeJob(jobId: string): Promise<void> {
  const { data: job, error: loadErr } = await supabaseAdmin
@@ -41,41 +49,7 @@ export async function runScrapeJob(jobId: string): Promise<void> {
   })
   .eq('id', jobId)
 
- // Build the dedupe sets up front. We accept that very-large workspaces
- // (>50k leads) may incur a few-second startup cost - fine for a job
- // that takes 30-90s to run.
- const seenPhones = new Set<string>()
- const seenPlaceIds = new Set<string>()
- try {
-  const { data: existingLeads } = await supabaseAdmin
-   .from('leads')
-   .select('phone')
-   .not('phone', 'is', null)
-   .limit(50_000)
-  for (const row of existingLeads || []) {
-   const p = normalizePhone(row.phone)
-   if (p) seenPhones.add(p)
-  }
-
-  // Within scrape_results across the last 90d - catches "rescraping the
-  // same listing" before it gets promoted, plus already-promoted ones.
-  const ninetyAgo = new Date(Date.now() - 90 * 86_400_000).toISOString()
-  const { data: recentResults } = await supabaseAdmin
-   .from('scrape_results')
-   .select('phone, raw')
-   .gte('created_at', ninetyAgo)
-   .limit(50_000)
-  for (const row of recentResults || []) {
-   const p = normalizePhone(row.phone)
-   if (p) seenPhones.add(p)
-   const placeId = (row.raw as any)?.google_place_id || (row.raw as any)?.google_places?.place_id
-   if (placeId) seenPlaceIds.add(String(placeId))
-  }
- } catch (e) {
-  logger.warn('dedupe snapshot failed (continuing without it)', {
-   error: e instanceof Error ? e.message : 'Unknown', jobId,
-  })
- }
+ const seen = await loadSeenSets()
 
  const params: ScrapeParams = (job.params || {}) as ScrapeParams
  let buffer: ScrapeRecord[] = []
@@ -107,7 +81,7 @@ export async function runScrapeJob(jobId: string): Promise<void> {
   }
   count += rows.length
   buffer = []
-  // Lightweight progress update
+  // Lightweight progress update.
   await supabaseAdmin
    .from('scrape_jobs')
    .update({ results_count: count, updated_at: new Date().toISOString() })
@@ -115,32 +89,34 @@ export async function runScrapeJob(jobId: string): Promise<void> {
  }
 
  try {
-  for await (const record of source.run(params, {})) {
+  for await (const record of source.run(params, { seen })) {
    const phone = normalizePhone(record.phone)
+   const website = normalizeWebsite(record.website)
    const placeId = (record.raw as any)?.google_place_id
+   const nameKey = businessNameKey(record.business_name, record.city)
 
-   if (phone && seenPhones.has(phone)) { droppedDup++; continue }
-   if (placeId && seenPlaceIds.has(String(placeId))) { droppedDup++; continue }
-   if (phone) seenPhones.add(phone)
-   if (placeId) seenPlaceIds.add(String(placeId))
+   // Dedupe ladder: phone > placeId > website > name+city.
+   if (phone && seen.phones.has(phone)) { droppedDup++; continue }
+   if (placeId && seen.placeIds.has(String(placeId))) { droppedDup++; continue }
+   if (website && seen.websites.has(website)) { droppedDup++; continue }
+   if (nameKey && seen.nameKeys.has(nameKey)) { droppedDup++; continue }
+
+   if (phone) seen.phones.add(phone)
+   if (placeId) seen.placeIds.add(String(placeId))
+   if (website) seen.websites.add(website)
+   if (nameKey) seen.nameKeys.add(nameKey)
 
    buffer.push(record)
    if (buffer.length >= RESULT_BATCH) await flush()
   }
   await flush()
 
-  // Auto-promote into leads when this scrape was run by a rep. This
-  // skips the manual "Promote" step - results go straight into their
-  // /sales/leads list with auto-claim. Idempotent: results that
-  // already have a promoted_lead_id are skipped.
+  // Auto-promote into leads when this scrape was run by a rep.
   const repId = (params as any)?.rep_id as string | undefined
   if (repId && count > 0) {
    try {
     const promoteResult = await promoteScrapeResults({ jobId, repId })
-    logger.info('scrape auto-promote complete', {
-     jobId, repId,
-     ...promoteResult,
-    })
+    logger.info('scrape auto-promote complete', { jobId, repId, ...promoteResult })
    } catch (e) {
     logger.warn('scrape auto-promote threw (non-fatal)', {
      jobId, error: e instanceof Error ? e.message : 'Unknown',
@@ -183,11 +159,57 @@ async function markFailed(jobId: string, error: string, count = 0) {
   .eq('id', jobId)
 }
 
-function normalizePhone(p: string | null | undefined): string | null {
- if (!p) return null
- const digits = p.replace(/[^0-9]/g, '')
- if (!digits) return null
- if (digits.length === 10) return `+1${digits}`
- if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
- return null
+/**
+ * Build the seen-sets snapshot. Best-effort: if any one query fails we
+ * fall back to whatever we did manage to load. A degraded seen-set
+ * means more dupes get caught downstream by the in-loop check, so
+ * this is safe.
+ */
+async function loadSeenSets(): Promise<SeenSets> {
+ const sets: SeenSets = {
+  phones: new Set(),
+  websites: new Set(),
+  placeIds: new Set(),
+  nameKeys: new Set(),
+ }
+ // Leads - the canonical "already imported" list.
+ try {
+  const { data } = await supabaseAdmin
+   .from('leads')
+   .select('phone, website, business_name, city')
+   .limit(50_000)
+  for (const row of data || []) {
+   const p = normalizePhone(row.phone)
+   if (p) sets.phones.add(p)
+   const w = normalizeWebsite(row.website)
+   if (w) sets.websites.add(w)
+   const k = businessNameKey(row.business_name, row.city)
+   if (k) sets.nameKeys.add(k)
+  }
+ } catch (e) {
+  logger.warn('seen-set load: leads failed', { error: e instanceof Error ? e.message : 'Unknown' })
+ }
+ // Recent scrape_results - covers in-flight (not-yet-promoted) hits and
+ // older promoted ones so we don't re-show the same lead.
+ try {
+  const cutoff = new Date(Date.now() - 180 * 86_400_000).toISOString()
+  const { data } = await supabaseAdmin
+   .from('scrape_results')
+   .select('phone, website, business_name, city, raw')
+   .gte('created_at', cutoff)
+   .limit(50_000)
+  for (const row of data || []) {
+   const p = normalizePhone(row.phone)
+   if (p) sets.phones.add(p)
+   const w = normalizeWebsite(row.website)
+   if (w) sets.websites.add(w)
+   const k = businessNameKey(row.business_name, row.city)
+   if (k) sets.nameKeys.add(k)
+   const placeId = (row.raw as any)?.google_place_id || (row.raw as any)?.google_places?.place_id
+   if (placeId) sets.placeIds.add(String(placeId))
+  }
+ } catch (e) {
+  logger.warn('seen-set load: scrape_results failed', { error: e instanceof Error ? e.message : 'Unknown' })
+ }
+ return sets
 }

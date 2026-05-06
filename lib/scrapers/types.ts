@@ -31,10 +31,30 @@ export type ScrapeParams = {
  extra?: Record<string, unknown>
 }
 
+/**
+ * Optional dedupe context the runner hands to a source so it can keep
+ * paginating past records the runner would drop anyway. Without this,
+ * a Google text-search source happily yields its capped 60 results
+ * and the runner drops 50 of them as dupes - leaving 10 fresh leads
+ * out of a requested 50. Sources that respect this set ask Google for
+ * more pages / more cities until they find `limit` UNSEEN records.
+ */
+export type SeenSets = {
+  phones: Set<string>       // already-normalized via normalizePhone
+  websites: Set<string>     // already-normalized via normalizeWebsite
+  placeIds: Set<string>
+  nameKeys: Set<string>     // already-normalized via businessNameKey
+}
+
+export type SourceRunOpts = {
+  signal?: AbortSignal
+  seen?: SeenSets
+}
+
 export type SourceDefinition = {
  id: string
  label: string
  description: string
  trade: 'HVAC' | 'Electrical' | 'Plumbing' | 'Pest Control' | 'Roofing' | 'Painting' | 'Handyman' | 'Landscaping'
- run: (params: ScrapeParams, opts: { signal?: AbortSignal }) => AsyncGenerator<ScrapeRecord, void, void>
+ run: (params: ScrapeParams, opts: SourceRunOpts) => AsyncGenerator<ScrapeRecord, void, void>
 }

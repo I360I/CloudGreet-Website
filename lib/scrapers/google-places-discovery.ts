@@ -17,10 +17,12 @@ import { logger } from '../monitoring'
 import {
   discoverPlaces,
   txCityCoords,
+  TX_CITY_COORDS,
   isGooglePlacesConfigured,
   type PlaceDiscoveryResult,
 } from './google-places'
-import type { ScrapeParams, ScrapeRecord, SourceDefinition } from './types'
+import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
+import type { ScrapeParams, ScrapeRecord, SeenSets, SourceDefinition, SourceRunOpts } from './types'
 
 type TradeKey = 'HVAC' | 'Electrical' | 'Plumbing' | 'Pest Control' | 'Roofing' | 'Painting' | 'Handyman' | 'Landscaping'
 
@@ -96,17 +98,48 @@ const TRADES: TradeConfig[] = [
   },
 ]
 
+/**
+ * Top TX metros, ordered by population. When the rep doesn't pick a
+ * specific city (or types something like "Texas" / "TX" / leaves it
+ * empty), we fan out across these in order, peeling 60 fresh places
+ * per metro until the requested `limit` is satisfied.
+ *
+ * Population-ordered so even a small `limit` hits the densest pools
+ * first - Houston, Dallas-Fort Worth, San Antonio, Austin together
+ * cover most of the addressable HVAC / plumbing / electrical market
+ * in the state.
+ */
+const TX_FANOUT_CITIES = [
+  'houston', 'san antonio', 'dallas', 'fort worth', 'austin',
+  'el paso', 'arlington', 'plano', 'corpus christi', 'lubbock',
+  'laredo', 'garland', 'irving', 'frisco', 'amarillo',
+  'mckinney', 'mesquite', 'killeen', 'waco', 'denton',
+  'midland', 'abilene', 'beaumont', 'round rock', 'tyler',
+  'college station', 'pearland', 'sugar land', 'lewisville',
+  'longview', 'cedar park', 'conroe', 'georgetown', 'san marcos',
+  'pflugerville', 'new braunfels',
+]
+
+/** Returns true if the rep typed something that maps to a single city. */
+function isSpecificCity(raw: string): boolean {
+  if (!raw) return false
+  const cleaned = raw.trim().toLowerCase().replace(/\s*,?\s*(tx|texas)\s*$/i, '').trim()
+  if (!cleaned) return false
+  if (cleaned === 'tx' || cleaned === 'texas') return false
+  return !!TX_CITY_COORDS[cleaned]
+}
+
 async function* runPlaces(
   cfg: TradeConfig,
   params: ScrapeParams,
+  opts: SourceRunOpts,
 ): AsyncGenerator<ScrapeRecord, void, void> {
   if (!isGooglePlacesConfigured()) {
     logger.warn('places discovery skipped - GOOGLE_PLACES_API_KEY missing')
     return
   }
 
-  const cityRaw = (params.location || 'Austin').trim()
-  const center = txCityCoords(cityRaw)
+  const cityRaw = (params.location || '').trim()
   const limit = Math.max(1, Math.min(2000, params.limit ?? 100))
   const minReviewCount =
     typeof params.extra?.minReviewCount === 'number' ? params.extra.minReviewCount as number : 3
@@ -116,60 +149,111 @@ async function* runPlaces(
   const minRating =
     typeof params.extra?.minRating === 'number' ? params.extra.minRating as number : 0
 
-  // We require a hard restriction when we know the city - Google's
-  // text-search will otherwise drift to higher-ranked metros (e.g.
-  // typing "hvac contractors Austin TX" returns Houston SEOs because
-  // they outrank). Restriction guarantees the result is in radius.
-  const query = `${cfg.textQuery} near ${cityRaw} TX`
-  let yielded = 0
-  let dropped = 0
+  // Fan-out plan: if the rep typed a real city, scrape only that city.
+  // Otherwise (state-level or empty) walk every TX metro until we hit
+  // `limit` fresh records. Without this, "Texas HVAC" returns the same
+  // top-60 ranked across the whole state every run.
+  const cityList = isSpecificCity(cityRaw) ? [cityRaw] : TX_FANOUT_CITIES
 
-  for await (const place of discoverPlaces(query, {
-    maxResults: Math.min(60, limit * 3), // Text search caps at ~60 / call regardless
-    includedType: cfg.includedType,
-    minReviewCount,
-    minRating,
-    locationRestriction: center
-      ? { lat: center.lat, lng: center.lng, radiusMeters }
-      : undefined,
-    // No city center known → fall back to soft TX rectangle bias inside discoverPlaces
-  })) {
-    if (yielded >= limit) break
+  const seen = opts.seen
+  // Per-run dedupe across cities (independent of cross-run seen sets).
+  const localPhones = new Set<string>()
+  const localPlaceIds = new Set<string>()
 
-    // Final type/keyword sanity check: Google sometimes returns broader
-    // types for an HVAC includedType query (e.g. general_contractor).
-    // That's fine, but if we got a flat 'point_of_interest' with no
-    // contractor tag and no trade keyword in the name, drop it.
-    if (!isPlaceOnTrade(place, cfg)) { dropped++; continue }
+  let totalYielded = 0
+  let totalDropped = 0
 
-    const phone = normalizePhone(place.phone)
-    if (!phone) { dropped++; continue } // No phone = nothing to cold-call
+  for (const city of cityList) {
+    if (totalYielded >= limit) break
+    const center = txCityCoords(city)
+    if (!center) continue
+    const query = `${cfg.textQuery} near ${city} TX`
+    const remaining = limit - totalYielded
 
-    yield {
-      source: cfg.id,
-      business_name: place.business_name,
-      owner_name: null, // Google doesn't expose owner names
-      business_type: cfg.trade,
-      phone,
-      website: place.website,
-      address: place.address,
-      city: place.city,
-      state: place.state,
-      zip: place.zip,
-      raw: {
-        google_place_id: place.place_id,
-        google_types: place.google_types,
-        google_rating: place.rating,
-        google_review_count: place.review_count,
-        google_business_status: place.business_status,
-      },
+    let cityYielded = 0
+    let cityDropped = 0
+
+    // Ask for headroom so a city with high dupe rate still produces
+    // some fresh results - text search caps at ~60 across pages, but
+    // we cap our ask at 3x remaining so we stop paging early when we
+    // have enough.
+    const askPerCity = Math.min(60, Math.max(20, remaining * 3))
+
+    for await (const place of discoverPlaces(query, {
+      maxResults: askPerCity,
+      includedType: cfg.includedType,
+      minReviewCount,
+      minRating,
+      locationRestriction: { lat: center.lat, lng: center.lng, radiusMeters },
+    })) {
+      if (totalYielded >= limit) break
+      if (cityYielded >= remaining) break
+
+      // Trade sanity check - e.g. drop a 'general_contractor' that's not
+      // really HVAC by name.
+      if (!isPlaceOnTrade(place, cfg)) { cityDropped++; totalDropped++; continue }
+
+      const phone = normalizePhone(place.phone)
+      if (!phone) { cityDropped++; totalDropped++; continue } // can't cold-call without a phone
+
+      const website = normalizeWebsite(place.website)
+      const placeId = place.place_id || ''
+      const nameKey = businessNameKey(place.business_name, place.city)
+
+      // Skip dupes vs cross-run seen sets *inside* the source so we
+      // keep paging instead of yielding then losing them downstream.
+      if (seen) {
+        if (seen.phones.has(phone)) { cityDropped++; totalDropped++; continue }
+        if (placeId && seen.placeIds.has(placeId)) { cityDropped++; totalDropped++; continue }
+        if (website && seen.websites.has(website)) { cityDropped++; totalDropped++; continue }
+        if (nameKey && seen.nameKeys.has(nameKey)) { cityDropped++; totalDropped++; continue }
+      }
+      // Within-run dedupe across cities (e.g. an Austin business showing
+      // up again on the Round Rock query).
+      if (localPhones.has(phone)) { cityDropped++; totalDropped++; continue }
+      if (placeId && localPlaceIds.has(placeId)) { cityDropped++; totalDropped++; continue }
+
+      localPhones.add(phone)
+      if (placeId) localPlaceIds.add(placeId)
+
+      yield {
+        source: cfg.id,
+        business_name: place.business_name,
+        owner_name: null,
+        business_type: cfg.trade,
+        phone,
+        website: place.website,
+        address: place.address,
+        city: place.city,
+        state: place.state,
+        zip: place.zip,
+        raw: {
+          google_place_id: place.place_id,
+          google_types: place.google_types,
+          google_rating: place.rating,
+          google_review_count: place.review_count,
+          google_business_status: place.business_status,
+          fanout_city: city,
+        },
+      }
+      cityYielded++
+      totalYielded++
     }
-    yielded++
+
+    if (cityYielded > 0 || cityDropped > 0) {
+      logger.info('places discovery city pass', {
+        source: cfg.id, city, kept: cityYielded, dropped: cityDropped,
+      })
+    }
+    // If a single specific city was requested, don't fan out.
+    if (cityList.length === 1) break
   }
 
-  if (dropped > 0) {
+  if (totalDropped > 0) {
     logger.info('places discovery filter', {
-      source: cfg.id, city: cityRaw, yielded, dropped,
+      source: cfg.id, location: cityRaw || '(state-wide)',
+      kept: totalYielded, dropped: totalDropped,
+      cities_scanned: cityList.length,
     })
   }
 }
@@ -207,19 +291,10 @@ function isPlaceOnTrade(place: PlaceDiscoveryResult, cfg: TradeConfig): boolean 
   return rx.test(place.business_name || '')
 }
 
-function normalizePhone(p: string | null | undefined): string | null {
-  if (!p) return null
-  const digits = p.replace(/[^0-9]/g, '')
-  if (!digits) return null
-  if (digits.length === 10) return `+1${digits}`
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
-  return null
-}
-
 export const placesSources: SourceDefinition[] = TRADES.map((cfg) => ({
   id: cfg.id,
   label: cfg.label,
   description: cfg.description,
   trade: cfg.trade,
-  run: (params) => runPlaces(cfg, params),
+  run: (params, opts) => runPlaces(cfg, params, opts),
 }))
