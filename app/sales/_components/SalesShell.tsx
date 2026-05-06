@@ -1,8 +1,17 @@
 'use client'
 
 import Link from 'next/link'
+import dynamicImport from 'next/dynamic'
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+
+// Dialer uses @telnyx/webrtc which calls into `window` / `WebSocket` /
+// `MediaStream` at module load. Keep it client-only or Next.js SSR
+// will crash building these pages.
+const Dialer = dynamicImport(
+  () => import('./Dialer').then((m) => ({ default: m.Dialer })),
+  { ssr: false },
+)
 import {
   SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch,
   Gear, Users, GraduationCap, Icon as PhosphorIcon,
@@ -147,6 +156,8 @@ export function SalesShell({
       <div className="flex-1 min-w-0 pb-24 lg:pb-0">
         {children}
       </div>
+
+      <Dialer />
     </main>
   )
 }

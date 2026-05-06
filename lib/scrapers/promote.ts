@@ -69,6 +69,14 @@ export async function promoteScrapeResults(opts: {
       leadId = existingPhoneToLead.get(phone)!
       reused++
     } else {
+      const raw = (r.raw || {}) as any
+      const rating = numOrNull(raw.google_rating)
+      const reviewCount = intOrNull(raw.google_review_count)
+      const placeId = strOrNull(raw.google_place_id)
+      const businessStatus = strOrNull(raw.google_business_status)
+      const lastReviewAt = parseLastReviewTimestamp(raw)
+      const quality = computeQualityScore(rating, reviewCount)
+
       const { data: lead, error: insertErr } = await supabaseAdmin
         .from('leads')
         .insert({
@@ -77,13 +85,22 @@ export async function promoteScrapeResults(opts: {
           contact_name: r.owner_name || null,
           phone: r.phone || null,
           email: r.email || null,
+          website: r.website || null,
+          address: r.address || null,
+          city: r.city || null,
+          state: r.state || null,
+          zip: r.zip || null,
+          business_type: r.business_type || null,
+          google_rating: rating,
+          google_review_count: reviewCount,
+          google_place_id: placeId,
+          google_business_status: businessStatus,
+          google_last_activity_at: lastReviewAt,
+          quality_score: quality,
           source: 'scrape',
           status: 'cold',
           notes: [
-            r.business_type ? `Trade: ${r.business_type}` : null,
             r.license_no ? `License: ${r.license_no}` : null,
-            r.address || r.city ? `Address: ${[r.address, r.city, r.state, r.zip].filter(Boolean).join(', ')}` : null,
-            r.website ? `Web: ${r.website}` : null,
             `From scrape job ${opts.jobId}`,
           ].filter(Boolean).join('\n') || null,
         })
@@ -138,11 +155,49 @@ export async function promoteScrapeResults(opts: {
   return { promoted, reused, claimed, failed, first_error: firstError }
 }
 
+// Use the shared, more tolerant normalizer so leads.phone matches what
+// the runner's seenPhones set will see on subsequent scrapes.
+import { normalizePhone as sharedNormalizePhone } from './normalize'
 function normalizePhone(p: string | null | undefined): string | null {
-  if (!p) return null
-  const digits = p.replace(/[^0-9]/g, '')
-  if (!digits) return null
-  if (digits.length === 10) return `+1${digits}`
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
-  return p.trim()
+  return sharedNormalizePhone(p)
+}
+
+function numOrNull(v: any): number | null {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (typeof v === 'string' && v.trim()) {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+function intOrNull(v: any): number | null {
+  const n = numOrNull(v)
+  return n === null ? null : Math.round(n)
+}
+function strOrNull(v: any): string | null {
+  return typeof v === 'string' && v.trim() ? v.trim() : null
+}
+
+/**
+ * Quality score: log(reviews + 1) * rating, with a small recency bonus
+ * (we don't have per-review timestamps from Places yet, so this stays
+ * review-volume + rating for now). Returns null when both inputs are
+ * missing - lets the UI sort known-quality leads above unknowns.
+ */
+function computeQualityScore(rating: number | null, reviewCount: number | null): number | null {
+  if (rating === null && reviewCount === null) return null
+  const r = rating ?? 3.5
+  const c = reviewCount ?? 0
+  const score = Math.log(c + 1) * r
+  return Math.round(score * 100) / 100
+}
+
+/**
+ * Places (New) v1 doesn't return a single "last review" timestamp on the
+ * places.searchText payload; reviews carry relativePublishTimeDescription
+ * as a human string ("3 weeks ago"). We don't have that here yet, so
+ * leave null until the scraper layer surfaces it.
+ */
+function parseLastReviewTimestamp(_raw: any): string | null {
+  return null
 }

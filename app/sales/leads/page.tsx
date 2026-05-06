@@ -21,6 +21,14 @@ type Lead = {
   email?: string | null
   source?: string | null
   notes?: string | null
+  website?: string | null
+  city?: string | null
+  state?: string | null
+  business_type?: string | null
+  google_rating?: number | null
+  google_review_count?: number | null
+  google_business_status?: string | null
+  quality_score?: number | null
   created_at?: string
   claimed_at?: string
   status: string
@@ -65,6 +73,7 @@ export default function SalesLeadsPage() {
   const [importing, setImporting] = useState(false)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
+  const [sortBy, setSortBy] = useState<'quality' | 'newest' | 'untouched'>('quality')
   const fileRef = useRef<HTMLInputElement | null>(null)
 
   const load = async () => {
@@ -146,7 +155,7 @@ export default function SalesLeadsPage() {
   }
 
   const filtered = useMemo(() => {
-    let out = leads
+    let out = [...leads]
     if (filter !== 'all') out = out.filter((l) => l.status === filter)
     if (search.trim()) {
       const q = search.toLowerCase()
@@ -154,11 +163,33 @@ export default function SalesLeadsPage() {
         l.business_name?.toLowerCase().includes(q) ||
         l.contact_name?.toLowerCase().includes(q) ||
         l.phone?.toLowerCase().includes(q) ||
-        l.email?.toLowerCase().includes(q),
+        l.email?.toLowerCase().includes(q) ||
+        l.city?.toLowerCase().includes(q),
       )
     }
+    // Sort: quality (default) puts the most-reviewed, highest-rated
+    // shops at the top so the rep stops opening day with the dead
+    // listings. Tie-broken by newest claim so freshly-pulled leads
+    // get a small boost over stale ones.
+    if (sortBy === 'quality') {
+      out.sort((a, b) => {
+        const qa = a.quality_score ?? -1
+        const qb = b.quality_score ?? -1
+        if (qb !== qa) return qb - qa
+        return (b.claimed_at || '').localeCompare(a.claimed_at || '')
+      })
+    } else if (sortBy === 'newest') {
+      out.sort((a, b) => (b.claimed_at || '').localeCompare(a.claimed_at || ''))
+    } else if (sortBy === 'untouched') {
+      // Never-touched first, then oldest-touched.
+      out.sort((a, b) => {
+        const ta = a.last_touched_at ? new Date(a.last_touched_at).getTime() : 0
+        const tb = b.last_touched_at ? new Date(b.last_touched_at).getTime() : 0
+        return ta - tb
+      })
+    }
     return out
-  }, [leads, filter, search])
+  }, [leads, filter, search, sortBy])
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: leads.length }
@@ -320,6 +351,16 @@ export default function SalesLeadsPage() {
                   )
                 })}
               </div>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:border-gray-400 focus:outline-none focus:bg-white"
+                title="Sort"
+              >
+                <option value="quality">Best leads first</option>
+                <option value="newest">Newest claim</option>
+                <option value="untouched">Untouched longest</option>
+              </select>
               <div className="relative flex-shrink-0">
                 <MagnifyingGlass className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -357,20 +398,33 @@ export default function SalesLeadsPage() {
                           href={`/sales/leads/${l.id}`}
                           className="flex-1 min-w-0 block group"
                         >
-                          <div className="text-base font-medium text-gray-900 group-hover:text-gray-700 truncate leading-snug">
-                            {l.business_name}
-                          </div>
-                          {l.contact_name && (
-                            <div className="text-sm text-gray-500 mt-0.5 truncate">
-                              {l.contact_name}
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <div className="text-base font-medium text-gray-900 group-hover:text-gray-700 truncate leading-snug">
+                              {l.business_name}
                             </div>
-                          )}
+                            <QualityChip lead={l} />
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-2 flex-wrap">
+                            {l.contact_name && <span>{l.contact_name}</span>}
+                            {l.contact_name && (l.city || l.business_type) && <span className="text-gray-300">·</span>}
+                            {l.business_type && <span className="text-gray-600">{l.business_type}</span>}
+                            {l.business_type && l.city && <span className="text-gray-300">·</span>}
+                            {l.city && <span>{l.city}{l.state ? `, ${l.state}` : ''}</span>}
+                          </div>
                         </Link>
 
-                        {/* Middle: BIG phone - easy to read while typing into a phone */}
+                        {/* Middle: BIG phone - easy to read while typing into a phone.
+                            On desktop, the in-browser dialer handles the click. On mobile
+                            (no window.cgDial registered) the tel: link fires the OS dialer. */}
                         {l.phone && (
                           <a
                             href={`tel:${l.phone}`}
+                            onClick={(e) => {
+                              if (typeof window !== 'undefined' && window.cgDial && l.phone) {
+                                e.preventDefault()
+                                window.cgDial(l.phone, l.id)
+                              }
+                            }}
                             className="hidden sm:flex items-center gap-2 text-base font-mono tabular-nums text-gray-900 hover:text-gray-700 select-all"
                             aria-label="Call"
                           >
@@ -456,5 +510,37 @@ export default function SalesLeadsPage() {
         )}
       </section>
     </SalesShell>
+  )
+}
+
+/**
+ * Compact "★ 4.7 · 142" chip rendered next to the business name.
+ * Color-coded by quality_score band so a rep skimming the list can
+ * spot the gold without reading numbers. CLOSED listings get a rose
+ * pill so they're never accidentally called.
+ */
+function QualityChip({ lead }: { lead: Lead }) {
+  if (lead.google_business_status && /CLOSED/i.test(lead.google_business_status)) {
+    return (
+      <span className="inline-flex items-center text-[10px] font-mono uppercase tracking-[0.18em] text-rose-700 bg-rose-50 border border-rose-200 rounded-full px-1.5 py-0.5">
+        Closed
+      </span>
+    )
+  }
+  if (lead.google_rating === null || lead.google_rating === undefined) return null
+
+  const score = lead.quality_score ?? 0
+  const tone =
+    score >= 8 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
+    score >= 4 ? 'text-amber-700 bg-amber-50 border-amber-200' :
+                 'text-gray-600 bg-gray-50 border-gray-200'
+  return (
+    <span className={`inline-flex items-center gap-1 text-[11px] tabular-nums border rounded-full px-1.5 py-0.5 ${tone}`}>
+      <span aria-hidden>★</span>
+      <span>{Number(lead.google_rating).toFixed(1)}</span>
+      {typeof lead.google_review_count === 'number' && lead.google_review_count > 0 && (
+        <span className="opacity-70">· {lead.google_review_count}</span>
+      )}
+    </span>
   )
 }

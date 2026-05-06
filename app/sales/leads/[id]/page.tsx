@@ -303,7 +303,13 @@ export default function LeadDetailPage() {
               {lead.phone && (
                 <a
                   href={`tel:${lead.phone}`}
-                  onClick={() => markTouched()}
+                  onClick={(e) => {
+                    markTouched()
+                    if (typeof window !== 'undefined' && window.cgDial && lead.phone) {
+                      e.preventDefault()
+                      window.cgDial(lead.phone, lead.id)
+                    }
+                  }}
                   className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 active:scale-[0.98] shadow-sm transition-all"
                 >
                   <Phone weight="fill" className="w-4 h-4" /> Call
