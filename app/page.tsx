@@ -25,6 +25,7 @@ export default function LandingPage() {
    <DashboardPreview />
    <Platforms />
    <RoiCalculator />
+   <Pricing />
    <FinalCTA />
    <FooterCard />
   </main>
@@ -48,7 +49,8 @@ function Nav() {
      />
     </Link>
     <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
-          <a href="#pricing" className="hover:text-gray-900 transition-colors">ROI Calculator</a>
+     <a href="#pricing-tiers" className="hover:text-gray-900 transition-colors">Pricing</a>
+     <a href="#pricing" className="hover:text-gray-900 transition-colors">ROI</a>
      <Link href="/login" className="hover:text-gray-900 transition-colors">Sign in</Link>
     </div>
     <Link
@@ -565,9 +567,6 @@ function RoiCalculator() {
      </div>
     </div>
 
-    <p className="text-center text-xs text-gray-400 mt-6">
-     Plans: $499/mo Starter (after-hours) · $899/mo Full 24/7. No per-booking fees.
-    </p>
    </div>
   </section>
  )
@@ -605,6 +604,154 @@ function Row({ label, value, muted = false }: { label: string; value: string; mu
   <div className="flex items-baseline justify-between text-sm">
    <span className="text-gray-600">{label}</span>
    <span className={muted ? 'text-gray-500' : 'text-gray-900 font-medium'}>{value}</span>
+  </div>
+ )
+}
+
+/* ---------------------------- Pricing -------------------------- */
+/**
+ * Two clear tiers. We highlight Full 24/7 as 'Most popular' because
+ * it's the upsell we actually want and it removes the most friction
+ * for service-business owners (most are losing calls during the day
+ * too, not just after hours).
+ */
+function Pricing() {
+ const tiers = [
+  {
+   name: 'After-hours',
+   priceLabel: '$499',
+   cadence: '/month',
+   blurb: 'Picks up evenings, weekends, and holidays. Your team handles 9-5.',
+   features: [
+    'Coverage outside business hours',
+    'Books straight into your calendar',
+    'SMS summary on every call',
+    'Hot transfer to on-call staff',
+    'Bilingual English / Spanish',
+    'Texas A2P-registered SMS',
+   ],
+   cta: 'Book Demo',
+   popular: false,
+  },
+  {
+   name: 'Full 24/7',
+   priceLabel: '$899',
+   cadence: '/month',
+   blurb: 'Every call, all day, every day. The full receptionist replacement.',
+   features: [
+    '24/7 coverage - never miss a call',
+    'Books straight into your calendar',
+    'SMS summary on every call',
+    'Hot transfer to on-call staff',
+    'Bilingual English / Spanish',
+    'Custom voice + greeting',
+    'Call recordings + searchable transcripts',
+    'Priority onboarding (live in 24 hrs)',
+   ],
+   cta: 'Book Demo',
+   popular: true,
+  },
+ ]
+ return (
+  <section id="pricing-tiers" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
+   <div className="max-w-6xl mx-auto">
+    <div className="text-center mb-10">
+     <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-3">
+      Pricing
+     </p>
+     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
+      Two plans. <span className="text-gray-400">No surprises.</span>
+     </h2>
+     <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto">
+      Flat monthly. No per-booking fees, no per-minute fees, no contracts.
+     </p>
+    </div>
+
+    <div className="grid md:grid-cols-2 gap-4 md:gap-6 relative max-w-4xl mx-auto">
+     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+     {tiers.map((t) => (
+      <div
+       key={t.name}
+       className={`relative bg-white rounded-3xl p-7 md:p-8 flex flex-col ${
+        t.popular
+         ? 'border-2 border-gray-900 shadow-[0_0_60px_-15px_rgba(56,189,248,0.45)]'
+         : 'border border-gray-200'
+       }`}
+      >
+       {t.popular && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] font-mono uppercase tracking-[0.2em] px-3 py-1 rounded-full">
+         Most popular
+        </div>
+       )}
+       <div className="mb-5">
+        <div className="text-sm text-gray-500 font-medium mb-1">{t.name}</div>
+        <div className="flex items-baseline gap-1">
+         <span className="font-display text-5xl md:text-6xl font-medium tracking-tight text-gray-900">
+          {t.priceLabel}
+         </span>
+         <span className="text-sm text-gray-500">{t.cadence}</span>
+        </div>
+        <p className="text-sm text-gray-600 mt-3 leading-relaxed">{t.blurb}</p>
+       </div>
+
+       <ul className="space-y-2.5 mb-7 flex-1">
+        {t.features.map((f) => (
+         <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700">
+          <CheckCircle2 className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" strokeWidth={2} />
+          <span>{f}</span>
+         </li>
+        ))}
+       </ul>
+
+       <Link
+        href="/contact"
+        className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl text-sm font-medium transition-colors ${
+         t.popular
+          ? 'bg-gray-900 text-white hover:bg-gray-800'
+          : 'bg-white border border-gray-300 text-gray-900 hover:border-gray-900'
+        }`}
+       >
+        {t.cta}
+        <ArrowUpRight className="w-4 h-4" />
+       </Link>
+      </div>
+     ))}
+    </div>
+
+    <div className="mt-10 grid sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+     <PriceFootCard
+      icon={<ShieldCheck className="w-4 h-4" />}
+      title="30-day money-back"
+      body="If it doesn't pay for itself in the first 30 days, full refund."
+     />
+     <PriceFootCard
+      icon={<Phone className="w-4 h-4" />}
+      title="Keep your number"
+      body="We forward your existing line. No new numbers, no porting drama."
+     />
+     <PriceFootCard
+      icon={<Zap className="w-4 h-4" />}
+      title="Live in 24-48 hours"
+      body="From signup to your AI answering real calls. We do the heavy lifting."
+     />
+    </div>
+   </div>
+  </section>
+ )
+}
+
+function PriceFootCard({
+ icon, title, body,
+}: { icon: React.ReactNode; title: string; body: string }) {
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl p-4 md:p-5">
+   <div className="flex items-center gap-2 mb-2">
+    <span className="w-7 h-7 rounded-lg bg-sky-50 flex items-center justify-center text-sky-600">
+     {icon}
+    </span>
+    <div className="text-sm font-medium text-gray-900">{title}</div>
+   </div>
+   <p className="text-xs text-gray-600 leading-relaxed">{body}</p>
   </div>
  )
 }
