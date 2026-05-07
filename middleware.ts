@@ -179,7 +179,7 @@ export async function middleware(request: NextRequest) {
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
     response.headers.set('X-XSS-Protection', '1; mode=block')
     response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
-    response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()')
+    response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(self), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()')
     response.headers.set('Cross-Origin-Embedder-Policy', 'unsafe-none')
     response.headers.set('Cross-Origin-Opener-Policy', 'same-origin')
     response.headers.set('Cross-Origin-Resource-Policy', 'same-origin')
