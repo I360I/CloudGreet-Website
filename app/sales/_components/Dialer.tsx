@@ -76,12 +76,13 @@ export function Dialer() {
     const setup = async (opts?: { fromUserGesture?: boolean }) => {
       setError(null)
 
-      // On mount: only the Permissions API is allowed to confirm a
-      // pre-existing grant. We deliberately do NOT call getUserMedia
-      // here, because Safari (and Chrome with default site settings)
-      // treat *any* mount-time getUserMedia call as a fresh request and
-      // re-fire the OS-level mic prompt on every reload - which is
-      // worse UX than just having the user click our in-app button.
+      // On mount: use Permissions API to detect a pre-existing grant. If
+      // it says 'granted', skip straight to token mint. Otherwise show
+      // the click-to-allow UI - we do NOT auto-call getUserMedia here,
+      // since that would fire a fresh OS prompt on every page reload.
+      // When called from grantMicrophone (fromUserGesture), we know the
+      // user just granted via a synchronous getUserMedia and can proceed
+      // straight to connecting.
       if (!opts?.fromUserGesture) {
         let granted = false
         try {
@@ -92,28 +93,6 @@ export function Dialer() {
         } catch { /* unsupported - fall through */ }
         if (!granted) {
           setStatus('mic_required')
-          return
-        }
-      } else {
-        // We were invoked from a click handler. getUserMedia is the source
-        // of truth; do not gate on Permissions API (it can be stale).
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-          stream.getTracks().forEach((t) => t.stop())
-        } catch (e: any) {
-          // eslint-disable-next-line no-console
-          console.error('getUserMedia failed', e)
-          const name = e?.name || 'Error'
-          setMicErrName(`${name}${e?.message ? ` - ${e.message}` : ''}`)
-          if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
-            setStatus('mic_denied')
-          } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-            setStatus('error')
-            setError('No microphone detected on this device.')
-          } else {
-            setStatus('error')
-            setError(e?.message || 'Could not access microphone')
-          }
           return
         }
       }
@@ -224,19 +203,54 @@ export function Dialer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const grantMicrophone = useCallback(async () => {
+  const grantMicrophone = useCallback((e?: React.MouseEvent) => {
+    // CRITICAL: getUserMedia must be called synchronously from the click
+    // handler with no awaits before it, otherwise some browsers consider
+    // the user gesture stale and silently auto-deny without prompting.
+    // We do not mark the function async - we call gUM immediately and
+    // attach the .then/.catch chain so the promise resolves later, but
+    // the call itself is in the same tick as the click.
     setError(null)
     setMicErrName(null)
     setMicBusy(true)
-    // setup() now does the getUserMedia call itself - this click provides
-    // the user gesture browsers require. If the OS/browser is still
-    // blocking, setup will land us in mic_required/error with micErrName
-    // showing the actual reason.
+    let micPromise: Promise<MediaStream>
     try {
-      if (setupRef.current) await setupRef.current({ fromUserGesture: true })
-    } finally {
+      micPromise = navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch (err: any) {
+      // eslint-disable-next-line no-console
+      console.error('getUserMedia threw synchronously', err)
       setMicBusy(false)
+      setStatus('error')
+      setError(err?.message || 'Could not access microphone')
+      return
     }
+    micPromise.then(
+      (stream) => {
+        stream.getTracks().forEach((t) => t.stop())
+        if (setupRef.current) {
+          setupRef.current({ fromUserGesture: true })
+            .finally(() => setMicBusy(false))
+        } else {
+          setMicBusy(false)
+        }
+      },
+      (err: any) => {
+        // eslint-disable-next-line no-console
+        console.error('getUserMedia rejected', err)
+        setMicBusy(false)
+        const name = err?.name || 'Error'
+        setMicErrName(`${name}${err?.message ? ` - ${err.message}` : ''}`)
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
+          setStatus('mic_denied')
+        } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+          setStatus('error')
+          setError('No microphone detected on this device.')
+        } else {
+          setStatus('error')
+          setError(err?.message || 'Could not access microphone')
+        }
+      }
+    )
   }, [])
 
   // ---- Auto-open the panel when something needs the user's attention
