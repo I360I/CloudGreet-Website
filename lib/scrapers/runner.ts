@@ -49,9 +49,9 @@ export async function runScrapeJob(jobId: string): Promise<void> {
   })
   .eq('id', jobId)
 
- const seen = await loadSeenSets()
-
  const params: ScrapeParams = (job.params || {}) as ScrapeParams
+ const repIdForSeen = (params as any)?.rep_id as string | undefined
+ const seen = await loadSeenSets(repIdForSeen)
  let buffer: ScrapeRecord[] = []
  let count = 0
  let droppedDup = 0
@@ -170,56 +170,90 @@ async function markFailed(jobId: string, error: string, count = 0) {
  * means more dupes get caught downstream by the in-loop check, so
  * this is safe.
  */
-async function loadSeenSets(): Promise<SeenSets> {
+async function loadSeenSets(repId?: string): Promise<SeenSets> {
  const sets: SeenSets = {
   phones: new Set(),
   websites: new Set(),
   placeIds: new Set(),
   nameKeys: new Set(),
  }
- // Leads - the canonical "already imported" list.
+ // Per-rep dedupe: only dedupe against leads THIS rep already has assigned
+ // and scrape_results from THIS rep's prior jobs. The leads pool itself is
+ // shared across reps - if rep A scraped a contractor last week, rep B
+ // running the same scrape today should still see them. promote.ts handles
+ // the actual leads-table dedupe (reuses the existing lead row and adds a
+ // new lead_assignments row for rep B), so the runner shouldn't filter
+ // them out before they reach promote.
+ //
+ // Without a repId we fall back to no dedupe - admin/test scrapes have to
+ // cope with their own dupes downstream.
+ if (!repId) return sets
+
+ // Leads this rep is already assigned to. Two-step query so we don't need
+ // a SQL join through the supabase client.
  try {
-  const { data } = await supabaseAdmin
-   .from('leads')
-   .select('phone, website, business_name, city')
+  const { data: assigns } = await supabaseAdmin
+   .from('lead_assignments')
+   .select('lead_id')
+   .eq('rep_id', repId)
    .limit(50_000)
-  for (const row of data || []) {
-   const p = normalizePhone(row.phone)
-   if (p) sets.phones.add(p)
-   const w = normalizeWebsite(row.website)
-   if (w) sets.websites.add(w)
-   const k = businessNameKey(row.business_name, row.city)
-   if (k) sets.nameKeys.add(k)
+  const leadIds = (assigns || []).map((a) => a.lead_id).filter(Boolean)
+  if (leadIds.length > 0) {
+   // Chunk to avoid hitting the URL-length cap on .in() with 50k ids.
+   const CHUNK = 1000
+   for (let i = 0; i < leadIds.length; i += CHUNK) {
+    const slice = leadIds.slice(i, i + CHUNK)
+    const { data } = await supabaseAdmin
+     .from('leads')
+     .select('phone, website, business_name, city')
+     .in('id', slice)
+    for (const row of data || []) {
+     const p = normalizePhone(row.phone)
+     if (p) sets.phones.add(p)
+     const w = normalizeWebsite(row.website)
+     if (w) sets.websites.add(w)
+     const k = businessNameKey(row.business_name, row.city)
+     if (k) sets.nameKeys.add(k)
+    }
+   }
   }
  } catch (e) {
-  logger.warn('seen-set load: leads failed', { error: e instanceof Error ? e.message : 'Unknown' })
+  logger.warn('seen-set load: rep leads failed', { error: e instanceof Error ? e.message : 'Unknown' })
  }
- // Recent scrape_results - covers in-flight (not-yet-promoted) hits and
- // older promoted ones so we don't re-show the same lead.
+
+ // Scrape_results from THIS rep's prior jobs (last 30 days) - covers
+ // in-flight rows that haven't promoted yet but are already targeted at
+ // this rep so we don't double-yield within a short test cycle.
  try {
-  // 30-day window. Was 180 but each source's effective population is small
-  // (Google caps text-search at ~60 results; TDLR HVAC is ~6k statewide), so
-  // a long window meant a few test runs against the same metro exhausted
-  // every option and subsequent scrapes returned 0. 30 days still prevents
-  // a rep from seeing the same lead twice in any reasonable working cycle.
   const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString()
-  const { data } = await supabaseAdmin
-   .from('scrape_results')
-   .select('phone, website, business_name, city, raw')
+  // rep_id is stored inside params (jsonb) for scrape_jobs - filter by
+  // params->>rep_id to find jobs this rep created.
+  const { data: jobs } = await supabaseAdmin
+   .from('scrape_jobs')
+   .select('id')
    .gte('created_at', cutoff)
-   .limit(50_000)
-  for (const row of data || []) {
-   const p = normalizePhone(row.phone)
-   if (p) sets.phones.add(p)
-   const w = normalizeWebsite(row.website)
-   if (w) sets.websites.add(w)
-   const k = businessNameKey(row.business_name, row.city)
-   if (k) sets.nameKeys.add(k)
-   const placeId = (row.raw as any)?.google_place_id || (row.raw as any)?.google_places?.place_id
-   if (placeId) sets.placeIds.add(String(placeId))
+   .eq('params->>rep_id', repId)
+   .limit(500)
+  const jobIds = (jobs || []).map((j) => j.id).filter(Boolean)
+  if (jobIds.length > 0) {
+   const { data } = await supabaseAdmin
+    .from('scrape_results')
+    .select('phone, website, business_name, city, raw')
+    .in('job_id', jobIds)
+    .limit(50_000)
+   for (const row of data || []) {
+    const p = normalizePhone(row.phone)
+    if (p) sets.phones.add(p)
+    const w = normalizeWebsite(row.website)
+    if (w) sets.websites.add(w)
+    const k = businessNameKey(row.business_name, row.city)
+    if (k) sets.nameKeys.add(k)
+    const placeId = (row.raw as any)?.google_place_id || (row.raw as any)?.google_places?.place_id
+    if (placeId) sets.placeIds.add(String(placeId))
+   }
   }
  } catch (e) {
-  logger.warn('seen-set load: scrape_results failed', { error: e instanceof Error ? e.message : 'Unknown' })
+  logger.warn('seen-set load: rep scrape_results failed', { error: e instanceof Error ? e.message : 'Unknown' })
  }
  return sets
 }
