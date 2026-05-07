@@ -1,9 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { FORM_SECTIONS } from '@/lib/customization/form-config'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+
+// useSearchParams forces this page out of static generation. Marking
+// dynamic explicitly avoids the prerender bail at build time and the
+// Suspense wrapper below covers the client-render edge case.
+export const dynamic = 'force-dynamic'
 
 /**
  * Print-friendly version of the customization form.
@@ -20,6 +25,18 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
  */
 
 export default function CustomizationTemplatePage() {
+  return (
+    <Suspense fallback={
+      <main className="bg-white text-gray-900 min-h-screen">
+        <div className="max-w-3xl mx-auto px-6 py-10 text-sm text-gray-500">Loading…</div>
+      </main>
+    }>
+      <CustomizationTemplateInner />
+    </Suspense>
+  )
+}
+
+function CustomizationTemplateInner() {
   const searchParams = useSearchParams()
   const businessId = searchParams?.get('businessId')
 
