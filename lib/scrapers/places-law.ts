@@ -19,6 +19,7 @@
 
 import { logger } from '../monitoring'
 import { discoverPlaces, isGooglePlacesConfigured, txCityCoords } from './google-places'
+import { resolveUsMetro, NATIONAL_FANOUT } from './us-metros'
 import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
 import type { ScrapeParams, ScrapeRecord, SourceDefinition, SourceRunOpts } from './types'
 
@@ -43,34 +44,35 @@ const LAW_TYPE_QUERIES: Record<string, string> = {
   immigration:     'immigration lawyer',
 }
 
-/**
- * Same TX metro fan-out the contractor sources use. Lawyers are dense
- * in TX so the existing metro list works well as a default; reps can
- * still type a specific city.
- */
-const TX_FANOUT_CITIES = [
-  'houston', 'san antonio', 'dallas', 'fort worth', 'austin',
-  'el paso', 'arlington', 'plano', 'corpus christi', 'lubbock',
-  'mckinney', 'frisco', 'killeen', 'waco', 'denton',
-  'midland', 'beaumont', 'tyler',
-]
 
 async function* runLaw(
   params: ScrapeParams,
   opts: SourceRunOpts,
 ): AsyncGenerator<ScrapeRecord, void, void> {
+  const diag = opts.diag
   if (!isGooglePlacesConfigured()) {
     logger.warn('places law skipped - GOOGLE_PLACES_API_KEY missing')
+    diag?.push('GOOGLE_PLACES_API_KEY missing - places law skipped entirely')
     return
   }
 
   const limit = Math.max(1, Math.min(500, params.limit ?? 50))
   const lawType = String(params.extra?.lawType || 'general')
   const textQuery = LAW_TYPE_QUERIES[lawType] || LAW_TYPE_QUERIES.general
-  const cityRaw = (params.location || '').trim().toLowerCase()
-    .replace(/\s*,?\s*(tx|texas)\s*$/i, '').trim()
+  const cityRaw = (params.location || '').trim()
 
-  const cityList = cityRaw && txCityCoords(cityRaw) ? [cityRaw] : TX_FANOUT_CITIES
+  // Three-tier resolution mirrors google-trades:
+  //   TX city -> just that city; US metro -> just that metro; blank -> national fan-out.
+  type Target = { name: string; state: string; lat: number; lng: number }
+  let targets: Target[] = []
+  const txCleaned = cityRaw.toLowerCase().replace(/\s*,?\s*(tx|texas)\s*$/i, '').trim()
+  if (txCleaned && txCityCoords(txCleaned)) {
+    const c = txCityCoords(txCleaned)!
+    targets = [{ name: txCleaned, state: 'TX', lat: c.lat, lng: c.lng }]
+  } else {
+    const us = resolveUsMetro(cityRaw)
+    targets = us ? [us] : NATIONAL_FANOUT
+  }
   const seen = opts.seen
   const localPhones = new Set<string>()
   const localPlaceIds = new Set<string>()
@@ -78,11 +80,9 @@ async function* runLaw(
   let totalYielded = 0
   let totalDropped = 0
 
-  for (const city of cityList) {
+  for (const target of targets) {
     if (totalYielded >= limit) break
-    const center = txCityCoords(city)
-    if (!center) continue
-    const query = `${textQuery} near ${city} TX`
+    const query = `${textQuery} near ${target.name} ${target.state}`
     const remaining = limit - totalYielded
 
     for await (const place of discoverPlaces(query, {
@@ -94,9 +94,11 @@ async function* runLaw(
       minReviewCount: MIN_REVIEWS,
       minRating: 3.5,
       excludeClosed: true,
+      stateAllowList: [target.state],
       locationRestriction: {
-        lat: center.lat, lng: center.lng, radiusMeters: 40_000,
+        lat: target.lat, lng: target.lng, radiusMeters: 40_000,
       },
+      onDiag: (m) => diag?.push(m),
     })) {
       // Post-filter to make sure we got something legal. The text query
       // alone can return courts, paralegals, even bail bondsmen.
@@ -151,18 +153,19 @@ async function* runLaw(
           google_review_count: place.review_count,
           google_business_status: place.business_status,
           law_type: lawType,
-          fanout_city: city,
+          fanout_city: target.name,
+          fanout_state: target.state,
         },
       }
       totalYielded++
     }
-    if (cityList.length === 1) break
+    if (targets.length === 1) break
   }
 
   if (totalDropped > 0) {
     logger.info('places law filter', {
       kept: totalYielded, dropped: totalDropped,
-      cities_scanned: cityList.length, lawType,
+      cities_scanned: targets.length, lawType,
     })
   }
 }
@@ -170,7 +173,7 @@ async function* runLaw(
 export const placesLaw: SourceDefinition = {
   id: 'places_law',
   label: 'Solo & small law firms',
-  description: 'Solo and small-firm lawyers across Texas - the kind of practice that misses calls because they\'re in court. Filters out national mega-firms (Morgan & Morgan, etc) and giant corporate law shops by review count and name. Optional law-type filter via the extras.',
+  description: 'Solo and small-firm lawyers nationwide - the kind of practice that misses calls because they\'re in court. Type any US city or leave blank to fan out across top metros. Filters out national mega-firms (Morgan & Morgan, etc) by review count and name. Optional law-type filter via the extras.',
   trade: 'Law',
   run: runLaw,
 }

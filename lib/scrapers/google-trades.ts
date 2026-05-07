@@ -1,5 +1,6 @@
 import { discoverPlaces, txCityCoords, TX_CITY_COORDS } from './google-places'
 import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
+import { resolveUsMetro, NATIONAL_FANOUT } from './us-metros'
 import { logger } from '../monitoring'
 import type { ScrapeParams, ScrapeRecord, SeenSets, SourceDefinition, SourceRunOpts } from './types'
 
@@ -23,25 +24,25 @@ const TRADES: Record<TradeId, {
   trade: 'Roofing',
   label: 'Google · Roofing',
   description:
-   'Direct Google Places discovery for roofing contractors. Texas doesn\'t license roofers, so this is the cleanest free path.',
+   'Roofing contractors via Google Places. Type any US city, or leave blank to fan out across top US metros nationwide.',
   query: 'roofing contractors',
  },
  painting: {
   trade: 'Painting',
   label: 'Google · Painting',
-  description: 'Direct Google Places discovery for painting contractors.',
+  description: 'Painting contractors via Google Places. Type any US city or leave blank to fan out nationwide.',
   query: 'painting contractors',
  },
  handyman: {
   trade: 'Handyman',
   label: 'Google · Handyman',
-  description: 'Direct Google Places discovery for handyman / general repair services.',
+  description: 'Handyman / general repair services via Google Places. Any US city or nationwide.',
   query: 'handyman services',
  },
  landscaping: {
   trade: 'Landscaping',
   label: 'Google · Landscaping',
-  description: 'Direct Google Places discovery for landscaping / lawn care.',
+  description: 'Landscaping / lawn care via Google Places. Any US city or nationwide.',
   query: 'landscaping companies',
  },
 }
@@ -91,7 +92,23 @@ function buildSource(id: TradeId): SourceDefinition {
    const requireWebsite = qualityLevel === 'strict'
    diag?.push(`google-trades start: city=${cityRaw || '(fanout)'} strictness=${qualityLevel} minRating=${minRating} minReviews=${minReviewCount}`)
 
-   const cityList = isSpecificCity(cityRaw) ? [cityRaw] : TX_FANOUT_CITIES
+   // Three-tier resolution:
+   //   1. specific TX city -> just that city (existing behavior)
+   //   2. specific non-TX US metro (resolveUsMetro hits) -> just that metro
+   //   3. blank or unrecognized -> national fan-out across top US metros
+   type Target = { name: string; state: string; lat: number; lng: number }
+   let targets: Target[] = []
+   if (isSpecificCity(cityRaw)) {
+    const center = txCityCoords(cityRaw)!
+    targets = [{ name: cityRaw, state: 'TX', lat: center.lat, lng: center.lng }]
+   } else {
+    const us = resolveUsMetro(cityRaw)
+    if (us) {
+     targets = [us]
+    } else {
+     targets = NATIONAL_FANOUT
+    }
+   }
    const seen = opts.seen
    const localPhones = new Set<string>()
    const localPlaceIds = new Set<string>()
@@ -99,21 +116,21 @@ function buildSource(id: TradeId): SourceDefinition {
    let totalYielded = 0
    let totalDropped = 0
 
-   for (const city of cityList) {
+   for (const target of targets) {
     if (totalYielded >= limit) break
-    const center = txCityCoords(city)
-    if (!center) continue
     const remaining = limit - totalYielded
     const askPerCity = Math.min(60, Math.max(20, remaining * 3))
+    const city = target.name
 
     let cityYielded = 0
     let cityDropped = 0
 
-    for await (const place of discoverPlaces(`${meta.query} near ${city} TX`, {
+    for await (const place of discoverPlaces(`${meta.query} near ${city} ${target.state}`, {
      maxResults: askPerCity,
      minReviewCount,
      minRating,
-     locationRestriction: { lat: center.lat, lng: center.lng, radiusMeters },
+     stateAllowList: [target.state],
+     locationRestriction: { lat: target.lat, lng: target.lng, radiusMeters },
      onDiag: (m) => diag?.push(m),
     })) {
      if (totalYielded >= limit) break
@@ -148,7 +165,7 @@ function buildSource(id: TradeId): SourceDefinition {
       business_type: meta.trade,
       address: place.address,
       city: place.city,
-      state: place.state || 'TX',
+      state: place.state || target.state,
       zip: place.zip,
       raw: {
        google_place_id: place.place_id,
@@ -171,7 +188,7 @@ function buildSource(id: TradeId): SourceDefinition {
      })
     }
     diag?.push(`${city}/${id}: kept=${cityYielded} dropped=${cityDropped}`)
-    if (cityList.length === 1) break
+    if (targets.length === 1) break
    }
   },
  }

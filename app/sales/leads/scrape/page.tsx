@@ -296,6 +296,12 @@ export default function SalesScrapePage() {
               {sources.find((s) => s.id === sourceId)?.description}
             </p>
           )}
+          {sourceId && /^(tdlr_|tsbpe_|tda_)/.test(sourceId) && (
+            <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] bg-amber-50 border border-amber-200 rounded-md px-2 py-1 text-amber-800">
+              <Info className="w-3 h-3" />
+              Texas state board only - type a TX city / county or leave blank to scan all of Texas. Non-TX cities will return 0.
+            </div>
+          )}
 
           {err && (
             <div className="mt-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
