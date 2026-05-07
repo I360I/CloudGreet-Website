@@ -126,6 +126,14 @@ async function* runQualityMode(
   const requireWebsite = qualityLevel === 'strict'
   diag?.push(`strictness=${qualityLevel} minRating=${minRating} minReviews=${minReviews} requireWebsite=${requireWebsite}`)
 
+  // Geographic diversity cap. Without this, NYC (first in QUALITY_METROS)
+  // hogs the first ~100 yields because every metro is asked for 20
+  // results before we move to the next. Cap per-metro/trade yield so
+  // results spread across the country.
+  const limitForCap = Math.max(1, Math.min(200, params.limit ?? 30))
+  const totalCells = QUALITY_METROS.length * QUALITY_TRADES.length
+  const maxPerCell = Math.max(2, Math.ceil(limitForCap / totalCells) + 1)
+
   // Per-run dedupe across the metro × trade matrix. A national chain
   // hits both Houston and Dallas; we should yield it once.
   const localPhones = new Set<string>()
@@ -145,6 +153,7 @@ async function* runQualityMode(
       const query = `${cfg.textQuery} near ${metro.name} ${metro.state}`
       let kept = 0
       let dropped = 0
+      const cellCap = Math.min(maxPerCell, limit - totalYielded)
       try {
         for await (const place of discoverPlaces(query, {
           maxResults: 20, // first page only - that's where the best-rated land
@@ -159,6 +168,7 @@ async function* runQualityMode(
           onDiag: (m) => diag?.push(m),
         })) {
           if (totalYielded >= limit) break
+          if (kept >= cellCap) break
           // Trade-specific size cap: drops mega-firms whose review
           // counts dwarf solo / small competitors.
           if (cfg.maxReviewCount && (place.review_count ?? 0) > cfg.maxReviewCount) {
