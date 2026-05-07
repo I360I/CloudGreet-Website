@@ -705,7 +705,10 @@ function groupSources(sources: Source[]): { label: string; items: Source[] }[] {
   }
   for (const s of sources) {
     if (s.id === 'quality_mode') groups['Recommended'].push(s)
-    else if (s.id === 'places_law') groups['Recommended'].push(s)
+    // places_law goes in the first labeled group right under Recommended
+    // so reps see it at the top, even though the source itself is now
+    // nationwide rather than TX-licensed-only.
+    else if (s.id === 'places_law') groups['Texas — license databases'].push(s)
     else if (s.id.startsWith('tdlr_') || s.id.startsWith('tsbpe') || s.id.startsWith('tda_')) {
       groups['Texas — license databases'].push(s)
     } else if (s.id.startsWith('places_') || s.id.startsWith('google_')) {
