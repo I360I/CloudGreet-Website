@@ -81,7 +81,7 @@ function Hero() {
      to voicemail.
     </h1>
     <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto mb-8 sm:mb-12 leading-relaxed px-2">
-     A 24/7 AI receptionist for service businesses. Answers every call, books jobs straight into your calendar, and texts you a summary before the caller hangs up.
+     A 24/7 AI receptionist for service businesses. Answers every call, books jobs straight into your calendar, and logs the full transcript and recording in your dashboard the second the call ends.
     </p>
     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center">
      <a
@@ -195,8 +195,8 @@ function Capabilities() {
   },
   {
    icon: BellRing,
-   title: 'Instant SMS summary',
-   body: 'You get the caller\'s name, number, and reason for calling on your phone before the call ends.',
+   title: 'Live in your dashboard',
+   body: 'Caller name, phone, full transcript, recording, and outcome - all in your dashboard within 30 seconds of the call ending.',
   },
   {
    icon: Zap,
@@ -347,7 +347,7 @@ function CallFlow() {
   { icon: PhoneIncoming, title: 'Incoming call.', body: 'Customer dials your main number - no new lines needed.' },
   { icon: Phone, title: 'AI agent answers.', body: 'Picks up instantly or after a set number of rings.' },
   { icon: MessageSquare, title: 'Call is handled.', body: 'AI talks naturally, answers questions, and books appointments.' },
-  { icon: FileText, title: 'Summary sent.', body: 'Name, number, and reason for calling sent to you by SMS.' },
+  { icon: FileText, title: 'Logged to your dashboard.', body: 'Caller name, phone, full transcript, and recording show up within 30 seconds.' },
   { icon: PhoneForwarded, title: 'Ends or transfers.', body: 'Resolved calls end. Others are passed to your team.' },
  ]
  return (
@@ -617,10 +617,10 @@ function Pricing() {
    features: [
     'Coverage outside business hours',
     'Books straight into your calendar',
-    'SMS summary on every call',
+    'Full transcript + recording in your dashboard',
     'Hot transfer to on-call staff',
     'Bilingual English / Spanish',
-    'Texas A2P-registered SMS',
+    'Searchable call history',
    ],
    cta: 'Book Demo',
    popular: false,
@@ -633,7 +633,7 @@ function Pricing() {
    features: [
     '24/7 coverage - never miss a call',
     'Books straight into your calendar',
-    'SMS summary on every call',
+    'Full transcript + recording in your dashboard',
     'Hot transfer to on-call staff',
     'Bilingual English / Spanish',
     'Custom voice + greeting',
@@ -710,12 +710,7 @@ function Pricing() {
      ))}
     </div>
 
-    <div className="mt-10 grid sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
-     <PriceFootCard
-      icon={<ShieldCheck className="w-4 h-4" />}
-      title="30-day money-back"
-      body="If it doesn't pay for itself in the first 30 days, full refund."
-     />
+    <div className="mt-10 grid sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
      <PriceFootCard
       icon={<Phone className="w-4 h-4" />}
       title="Keep your number"
@@ -770,7 +765,7 @@ function Faq() {
   },
   {
    q: 'What happens when the AI can\'t help?',
-   a: "You set the rules. By default it takes a detailed message and texts you instantly. You can also configure hot transfers - certain keywords ('emergency', 'leak', 'fire'), specific callers (VIP list), or anything outside its scope routes the live call to whoever is on call.",
+   a: "You set the rules. By default it takes a detailed message and logs everything in your dashboard right away. You can also configure hot transfers - certain keywords ('emergency', 'leak', 'fire'), specific callers (VIP list), or anything outside its scope routes the live call to whoever is on call.",
   },
   {
    q: 'Can I customize what it says?',
@@ -786,7 +781,7 @@ function Faq() {
   },
   {
    q: 'What if it doesn\'t work for my business?',
-   a: "30-day money-back. If CloudGreet hasn't paid for itself in the first month, we refund every dollar. We'd rather give you your money back than have an unhappy customer.",
+   a: "We work with you. If you're not seeing bookings come through in the first couple of weeks we'll dig into the call transcripts together, tune the script, and get it right. The product is the result for you - if it isn't producing, we're going to fix it.",
   },
  ]
  return (
@@ -936,9 +931,9 @@ function FinalCTA() {
      </div>
     </div>
     <div className="relative mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] font-mono uppercase tracking-[0.18em] text-gray-400">
-     <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> 30-day money-back</span>
      <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Keep your number</span>
      <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> Live in 24-48 hours</span>
+     <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> Flat monthly, no per-call fees</span>
     </div>
    </div>
   </section>
@@ -1003,7 +998,7 @@ function FooterCard() {
     <div className="mt-10 pt-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-400">
      <div>© {new Date().getFullYear()} CloudGreet. All rights reserved.</div>
      <div className="flex items-center gap-1.5">
-      <ShieldCheck className="w-3.5 h-3.5" /> 30-day money-back guarantee
+      <ShieldCheck className="w-3.5 h-3.5" /> Flat monthly, no per-call fees
      </div>
     </div>
    </div>

@@ -131,7 +131,7 @@ The safety-net frame is the answer here. Right now your missed calls go nowhere 
 You don't need to be. We do the entire setup. You answer 8 questions about your business in a form, we build the agent, you approve it, we go live. ~3 days end to end.
 
 **6. "Can I try it for free?"**
-We do a paid pilot, not a free trial. Reason: free trials get ignored. The first month is fully refundable if it doesn't book a single job. That's the same risk profile as free with much better adoption.
+We do a paid pilot, not a free trial. Reason: free trials get ignored. The math: if it books even ONE job in the first 30 days, it's already paid for itself - that's the bar we set, and almost nobody fails to clear it. Don't lead with the refund as a sales tool (see closing section); use it only if a prospect is genuinely about to walk and you've exhausted the other angles.
 
 **7. "How is this different from [competitor]?"**
 Two things: a real-time call log in your dashboard with every transcript and recording (most just send a vague summary email hours later), and the agent learns your business from a 10-minute form, not a 2-hour onboarding call. We're cheaper than the named competitors too.
@@ -255,8 +255,18 @@ You don't need to be right. You need to make them do the math themselves.`,
 **2. Either/or close**
 "Want to start with the standard $300 plan or the $400 plan with the multi-line setup?" You're not asking IF they'll buy, you're asking WHICH they'll buy.
 
-**3. Risk-reversal close**
-"First month is fully refundable if it doesn't book a single job. That's our problem to solve, not yours." Use this when they're stuck on "what if it doesn't work."
+**3. Risk-reversal close (LAST RESORT - read this carefully)**
+We have a 30-day refund: if CloudGreet books **zero** jobs in the first 30 days, full refund. The bar is one booked job, not "they're happy with it" - any single job clears the bar.
+
+Do NOT lead with this. Reasons:
+  · It signals you don't believe in the product. Prospects pick that up.
+  · It anchors them on "I might want my money back" instead of "this will book me jobs."
+  · It's almost never used in real life because almost every account books in week one. Reps who lead with it teach prospects to expect it.
+
+When you DO use it: only after every other close has failed and they're about to walk. Phrase it tight:
+  "Look - if it doesn't book one single job in 30 days, you get every dollar back. That's the bar. One booking. We've never had an account miss it. Want me to send the link?"
+
+The product is the result. The refund is the airbag. Lead with the result.
 
 **4. Urgency close (only when true)**
 "We're locking in setup fees at $500 through the end of [month] - going to $750 after that for new accounts." Don't lie about this. If you say it, set a calendar reminder to actually raise it.
