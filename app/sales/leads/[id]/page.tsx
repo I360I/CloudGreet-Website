@@ -481,20 +481,13 @@ export default function LeadDetailPage() {
                 )}
             </div>
           </Modal>
-          {showPayForm && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25, ease: EASE }}
-              className="overflow-hidden mb-5"
-            >
-              <div className="bg-emerald-50/50 border border-emerald-200 rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <CurrencyDollar weight="duotone" className="w-5 h-5 text-emerald-600" />
-                  <div className="text-sm font-medium text-emerald-900">Send payment link</div>
-                </div>
-
+          <Modal
+            open={showPayForm}
+            onClose={() => setShowPayForm(false)}
+            title="Send payment link"
+            icon={<CurrencyDollar weight="duotone" className="w-5 h-5 text-emerald-600" />}
+          >
+            <div>
                 {paymentUrl ? (
                   <div className="space-y-2">
                     <div className="text-xs text-emerald-800">
@@ -608,9 +601,8 @@ export default function LeadDetailPage() {
                     </div>
                   </>
                 )}
-              </div>
-            </motion.div>
-          )}
+            </div>
+          </Modal>
         </AnimatePresence>
 
         <motion.div
