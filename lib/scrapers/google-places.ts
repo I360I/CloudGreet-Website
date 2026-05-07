@@ -274,6 +274,10 @@ export async function* discoverPlaces(
    *  omitted, defaults to TX-only (preserves existing source behavior).
    *  Pass an empty array to accept any US state. */
   stateAllowList?: string[]
+  /** Optional sink for human-readable diagnostic messages. Sources thread
+   *  this from SourceRunOpts.diag so empty-result jobs can surface API
+   *  errors back to the rep. */
+  onDiag?: (line: string) => void
  },
 ): AsyncGenerator<PlaceDiscoveryResult, void, void> {
  const key = process.env.GOOGLE_PLACES_API_KEY
@@ -339,7 +343,9 @@ export async function* discoverPlaces(
 
   if (!res.ok) {
    const txt = await res.text().catch(() => '')
-   logger.warn('Places discovery failed', { status: res.status, body: txt.slice(0, 300), query })
+   const snippet = txt.slice(0, 200)
+   logger.warn('Places discovery failed', { status: res.status, body: snippet, query })
+   opts?.onDiag?.(`Places ${res.status} on "${query.slice(0, 60)}": ${snippet.slice(0, 140)}`)
    return
   }
 

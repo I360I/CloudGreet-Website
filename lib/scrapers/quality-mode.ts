@@ -107,10 +107,13 @@ async function* runQualityMode(
   params: ScrapeParams,
   opts: SourceRunOpts,
 ): AsyncGenerator<ScrapeRecord, void, void> {
+  const diag = opts.diag
   if (!isGooglePlacesConfigured()) {
     logger.warn('quality mode skipped - GOOGLE_PLACES_API_KEY missing')
+    diag?.push('GOOGLE_PLACES_API_KEY missing - quality mode skipped entirely')
     return
   }
+  diag?.push(`quality mode start: ${QUALITY_METROS.length} metros x ${QUALITY_TRADES.length} trades`)
 
   const limit = Math.max(1, Math.min(200, params.limit ?? 30))
   const seen = opts.seen
@@ -145,6 +148,7 @@ async function* runQualityMode(
           locationRestriction: {
             lat: metro.lat, lng: metro.lng, radiusMeters: QUALITY_RADIUS_METERS,
           },
+          onDiag: (m) => diag?.push(m),
         })) {
           if (totalYielded >= limit) break
           // Trade-specific size cap: drops mega-firms whose review
@@ -214,12 +218,14 @@ async function* runQualityMode(
           totalYielded++
         }
       } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Unknown'
         logger.warn('quality mode metro pass threw', {
-          metro: metro.name, trade: cfg.trade,
-          error: e instanceof Error ? e.message : 'Unknown',
+          metro: metro.name, trade: cfg.trade, error: msg,
         })
+        diag?.push(`${metro.name}/${cfg.trade} threw: ${msg}`)
       }
       totalDropped += dropped
+      diag?.push(`${metro.name}/${cfg.trade}: kept=${kept} dropped=${dropped}`)
       logger.info('quality mode pass', {
         metro: metro.name, trade: cfg.trade, kept, dropped, total_yielded: totalYielded,
       })

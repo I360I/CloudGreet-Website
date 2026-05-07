@@ -505,6 +505,14 @@ function JobDrawer({
             <div className="text-xs text-gray-500 mt-0.5 font-mono">
               {results.length} results · {results.filter((r) => r.promoted_lead_id).length} promoted
             </div>
+            {job.error && results.length === 0 && (
+              <details className="mt-2 text-[11px] bg-amber-50 border border-amber-200 rounded-md text-amber-900">
+                <summary className="px-2 py-1 cursor-pointer font-medium">
+                  Why 0 results? (click to expand)
+                </summary>
+                <pre className="px-2 pb-2 whitespace-pre-wrap font-mono leading-snug text-amber-900/90">{job.error}</pre>
+              </details>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button

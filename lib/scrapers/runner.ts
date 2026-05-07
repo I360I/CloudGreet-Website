@@ -52,6 +52,12 @@ export async function runScrapeJob(jobId: string): Promise<void> {
  const params: ScrapeParams = (job.params || {}) as ScrapeParams
  const repIdForSeen = (params as any)?.rep_id as string | undefined
  const seen = await loadSeenSets(repIdForSeen)
+ const diag: import('./types').ScrapeDiag = {
+  messages: [],
+  push: (line) => {
+   if (diag.messages.length < 50) diag.messages.push(line)
+  },
+ }
  let buffer: ScrapeRecord[] = []
  let count = 0
  let droppedDup = 0
@@ -89,7 +95,7 @@ export async function runScrapeJob(jobId: string): Promise<void> {
  }
 
  try {
-  for await (const record of source.run(params, { seen })) {
+  for await (const record of source.run(params, { seen, diag })) {
    const phone = normalizePhone(record.phone)
    const website = normalizeWebsite(record.website)
    const placeId = (record.raw as any)?.google_place_id
@@ -129,15 +135,22 @@ export async function runScrapeJob(jobId: string): Promise<void> {
    }
   }
 
-  await supabaseAdmin
-   .from('scrape_jobs')
-   .update({
-    status: 'completed',
-    results_count: count,
-    finished_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-   })
-   .eq('id', jobId)
+  // On completed-but-empty, surface diagnostics into the job's error
+   // field so the rep can read it in the UI without checking Vercel logs.
+   const completionError = count === 0
+    ? buildEmptyJobReason(diag, droppedDup)
+    : null
+
+   await supabaseAdmin
+    .from('scrape_jobs')
+    .update({
+     status: 'completed',
+     results_count: count,
+     finished_at: new Date().toISOString(),
+     updated_at: new Date().toISOString(),
+     ...(completionError ? { error: completionError } : {}),
+    })
+    .eq('id', jobId)
 
   if (droppedDup > 0) {
    logger.info('scrape cross-run dedupe', {
@@ -149,6 +162,24 @@ export async function runScrapeJob(jobId: string): Promise<void> {
   await markFailed(jobId, e instanceof Error ? e.message : 'Unknown error', count)
   throw e
  }
+}
+
+function buildEmptyJobReason(
+ diag: import('./types').ScrapeDiag,
+ droppedDup: number,
+): string {
+ const lines: string[] = []
+ lines.push(`No results. Dropped ${droppedDup} record(s) as duplicates / phone-less.`)
+ if (!process.env.GOOGLE_PLACES_API_KEY) {
+  lines.push('GOOGLE_PLACES_API_KEY is not set in this environment.')
+ }
+ if (diag.messages.length === 0) {
+  lines.push('Source produced no diagnostics. Likely the source iterator yielded nothing (filtering or API error before yield).')
+ } else {
+  lines.push('--- source diagnostics (most recent) ---')
+  for (const m of diag.messages.slice(-20)) lines.push(m)
+ }
+ return lines.join('\n').slice(0, 4000)
 }
 
 async function markFailed(jobId: string, error: string, count = 0) {

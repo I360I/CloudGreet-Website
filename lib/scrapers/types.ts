@@ -46,9 +46,23 @@ export type SeenSets = {
   nameKeys: Set<string>     // already-normalized via businessNameKey
 }
 
+/**
+ * Lightweight diagnostic accumulator. Sources push human-readable strings
+ * onto `messages` whenever they hit something noteworthy (API error, empty
+ * page, drop-counter summaries). The runner persists the last 20 messages
+ * onto scrape_jobs.error when a job completes with 0 results so a rep
+ * (or admin) can immediately see why it was empty without spelunking
+ * Vercel logs.
+ */
+export type ScrapeDiag = {
+  messages: string[]
+  push: (line: string) => void
+}
+
 export type SourceRunOpts = {
   signal?: AbortSignal
   seen?: SeenSets
+  diag?: ScrapeDiag
 }
 
 export type SourceDefinition = {
