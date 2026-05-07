@@ -14,11 +14,11 @@ const Dialer = dynamicImport(
 )
 import {
   SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch,
-  Gear, Users, GraduationCap, Icon as PhosphorIcon,
+  Gear, Users, GraduationCap, BookOpen, Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
-type ActiveLabel = 'Overview' | 'Leads' | 'Closes' | 'Clients' | 'Earnings' | 'Onboarding'
+type ActiveLabel = 'Overview' | 'Leads' | 'Closes' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook'
 
 type NavItem = {
   label: ActiveLabel
@@ -33,6 +33,7 @@ const NAV: NavItem[] = [
   { label: 'Closes',   href: '/sales/closes',   icon: Trophy,        match: (p) => p.startsWith('/sales/closes') },
   { label: 'Clients',  href: '/sales/clients',  icon: Users,         match: (p) => p.startsWith('/sales/clients') },
   { label: 'Earnings', href: '/sales/earnings', icon: CurrencyDollar, match: (p) => p.startsWith('/sales/earnings') },
+  { label: 'Playbook',  href: '/sales/playbook',  icon: BookOpen,       match: (p) => p.startsWith('/sales/playbook') },
   { label: 'Onboarding', href: '/sales/onboarding', icon: GraduationCap, match: (p) => p.startsWith('/sales/onboarding') },
 ]
 
