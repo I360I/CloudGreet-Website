@@ -24,7 +24,7 @@ export const PLAYBOOK_SECTIONS: PlaybookSection[] = [
     title: 'Product in 60 seconds',
     blurb: 'What CloudGreet actually does, in language a contractor will get.',
     body: `**The pitch in one sentence**
-CloudGreet is an AI receptionist that answers a contractor's missed calls 24/7, books jobs straight onto their calendar, and texts them a summary - so they stop losing $5K-$15K a month to voicemails.
+CloudGreet is an AI receptionist that answers a contractor's missed calls 24/7, books jobs straight onto their calendar, and shows every call (transcript, recording, outcome) in their dashboard - so they stop losing $5K-$15K a month to voicemails.
 
 **Why it works**
 The average HVAC, plumbing, electrical, or roofing shop misses 30-50% of inbound calls (in the truck, on a roof, after hours, lunch break). Every missed call is a job a competitor books instead. A human receptionist costs $3-5K/mo. CloudGreet is $200-500/mo and never sleeps.
@@ -34,7 +34,7 @@ The average HVAC, plumbing, electrical, or roofing shop misses 30-50% of inbound
 2. Greets caller in the contractor's voice/style
 3. Captures: name, phone, address, service type, urgency
 4. Books an appointment on Cal.com / Google Calendar / their existing booking link
-5. Texts the contractor a summary the second the call ends
+5. Logs the full call (transcript, recording, outcome) to the contractor's dashboard the second the call ends
 6. If it can't answer something, it offers a callback
 
 **What it doesn't do**
@@ -95,7 +95,7 @@ HVAC: $300-800 service, $5-15K install. Plumbing: $200-600. Roofing: $8-25K. Now
 Spouse, voicemail, answering service ($300+/mo), or nobody. CloudGreet is cheaper than every option except nobody, and nobody is the option that's costing them money.
 
 **5. "Do you use Cal.com, Google Calendar, Calendly, or anything for booking?"**
-You need to know what the agent will book into. If they say "a paper notebook" - that's fine, we can text them the booking and they write it down.
+You need to know what the agent will book into. If they say "a paper notebook" - that's fine, every booking shows up in their dashboard with the caller's name, phone, and requested time so they can copy it down.
 
 **6. "What time do you typically start and stop taking calls?"**
 Sets up the after-hours pitch. "So calls coming in after 6pm just go to voicemail?"
@@ -107,18 +107,25 @@ This is the ask. Soft yes → demo. Hard no → ask why and either handle the ob
   {
     id: 'objections',
     title: 'Objections',
-    blurb: 'The 10 things you\'ll hear and what to say back.',
-    body: `**1. "AI sounds robotic / customers will hate it."**
-Fair concern. Two answers: (1) we use Retell + voice cloning so it sounds like a real person, not Siri. (2) I'll send you a recording of one handling a real call - you tell me which lines are AI. I'm right 9 times out of 10 they can't tell.
+    blurb: 'The strongest reframe + the 10 things you\'ll hear.',
+    body: `**THE FRAME TO LEAD WITH (use this every chance you get)**
+Think of CloudGreet as a safety net, not a replacement. Right now, your missed calls go to voicemail and the prospect calls your competitor. That's a 100% loss. With CloudGreet, maybe one in fifty calls the AI fumbles - the prospect hangs up annoyed and calls your competitor anyway. Same outcome on the bad ones. But on the other 49? You just booked a job you would've lost. The downside is identical. The upside is huge. You're not betting on the AI being perfect; you're betting that "imperfect AI" beats "voicemail."
+
+This reframe handles 70% of objections before they come up. Use it early.
+
+---
+
+**1. "AI sounds robotic / customers will hate it."**
+Fair concern. Two answers: (1) we use Retell + voice cloning so it sounds like a real person, not Siri. (2) I'll send you a recording of one handling a real call - you tell me which lines are AI. I'm right 9 times out of 10 they can't tell. And remember the safety net frame: even if some callers do hate it, that's no worse than voicemail - which they also hate.
 
 **2. "I already have an answering service."**
-What's it cost you? (Usually $300-500/mo.) Does it book jobs onto your calendar or just take messages? CloudGreet does both for less - and the messages come instantly, not 4 hours later.
+What's it cost you? (Usually $300-500/mo.) Does it book jobs onto your calendar or just take messages? CloudGreet does both for less - and every call lands in your dashboard the second it ends, not 4 hours later.
 
 **3. "I'd rather just hire a receptionist."**
 Hiring's $35-50K/yr fully loaded plus benefits and PTO. CloudGreet is $300/mo and works 24/7 including Saturdays at 9pm when your competitor is asleep. We can pause your subscription the month you hire someone.
 
 **4. "What if it gets something wrong?"**
-Two safeguards: (1) every call is transcribed and texted to you within 30 seconds - you can call back if something's off. (2) for anything outside the script, the agent takes a message and tells the caller you'll follow up. It never invents prices or commits you to anything.
+The safety-net frame is the answer here. Right now your missed calls go nowhere - that's a 100% loss. Even if the AI flubs one in fifty, the worst case is that one prospect goes to your competitor, which is exactly what happens today on every miss. The other 49 are jobs you would've lost. Plus: every call is transcribed in your dashboard within 30 seconds so you can call back if anything's off, and the agent never invents prices or commits you to anything outside the script.
 
 **5. "I'm not technical."**
 You don't need to be. We do the entire setup. You answer 8 questions about your business in a form, we build the agent, you approve it, we go live. ~3 days end to end.
@@ -127,7 +134,7 @@ You don't need to be. We do the entire setup. You answer 8 questions about your 
 We do a paid pilot, not a free trial. Reason: free trials get ignored. The first month is fully refundable if it doesn't book a single job. That's the same risk profile as free with much better adoption.
 
 **7. "How is this different from [competitor]?"**
-Two things: real-time texting of every call (most don't), and the agent learns your business from a 10-minute form, not a 2-hour onboarding call. We're cheaper than the named competitors too.
+Two things: a real-time call log in your dashboard with every transcript and recording (most just send a vague summary email hours later), and the agent learns your business from a 10-minute form, not a 2-hour onboarding call. We're cheaper than the named competitors too.
 
 **8. "I get like 2 calls a day, this is overkill."**
 If you get 2 calls a day and miss one, that's one missed job. What's a job worth? If it pays for the month, the math works.
@@ -176,7 +183,7 @@ Walk them through the same discovery. Then: "I appreciate it. The reason I asked
 **Live call (4 min)**
 Dial the demo number on speaker. Let it answer. Walk through booking a fake job using their actual business name. Don't narrate - let it sound natural.
 
-When the call ends, show them the text summary that arrived on your phone. This is the moment most prospects close themselves.
+When the call ends, pull up the dashboard - they'll see the transcript, recording, caller info, and the booked appointment all in one place. This is the moment most prospects close themselves.
 
 **The "what if" tour (4 min)**
 Cover the three things every prospect worries about:
