@@ -1546,6 +1546,12 @@ function AdminActions({
      <GhostButton onClick={onSendCheckout}>
       <CreditCard className="w-4 h-4" /> Send checkout link
      </GhostButton>
+     <a
+      href={`/admin/customization/${client.id}`}
+      className="inline-flex items-center gap-2 text-xs text-gray-300 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] rounded-md px-2.5 py-1.5 transition-colors"
+     >
+      <Pencil className="w-4 h-4" /> Pre-fill customization
+     </a>
      <GhostButton onClick={() => onResetPassword()} disabled={!client.owner}>
       <KeyRound className="w-4 h-4" /> Random password
      </GhostButton>
