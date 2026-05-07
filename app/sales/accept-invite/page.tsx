@@ -13,22 +13,48 @@ INDEPENDENT CONTRACTOR AGREEMENT (summary)
 
 1. You're a 1099 contractor, not an employee. You set your own hours,
    tools, and approach.
-2. Compensation: 50% of every paid invoice from clients you sign,
-   for as long as the client stays subscribed. If a client cancels,
-   commission stops at the last paid invoice - no clawbacks on past
-   payments.
-3. Setup fees you negotiate get the same 50/50 split.
-4. Payouts every Friday via Stripe Connect direct deposit.
-5. CloudGreet owns all client relationships. If you leave or are
-   removed, you keep what you've earned through that point but stop
-   accruing on those clients going forward.
-6. CloudGreet handles product, onboarding, support, prompt tuning,
+
+2. Compensation - trailing commission structure:
+   · 50% of every paid invoice (monthly + setup) on every client
+     you've signed, FOR AS LONG AS YOU STAY ACTIVE. "Active" means
+     you've closed a new paid client within the last 3 months.
+   · If 3 months go by with no new close, your commission rate on
+     every existing client drops to 25% on the next billing cycle.
+   · If 6 months go by with no new close, your commission rate on
+     every existing client drops to 0% and those clients transfer
+     fully to CloudGreet.
+   · The clock resets the moment you close another client. Any new
+     close moves you back to 50% on every client you've ever signed
+     (no permanent decay - one new close fully restores you).
+
+3. The structure is designed so reps who keep selling get
+   long-tail recurring income; reps who stop selling stop carrying
+   the book they're not actively servicing.
+
+4. Setup fees follow the same trailing rate as monthly commission
+   at the time the invoice is paid.
+
+5. Payouts every Friday via Stripe Connect direct deposit. Amounts
+   below $1 roll over to the following Friday.
+
+6. If a client cancels, commission stops at their last paid invoice -
+   no clawbacks on past payments.
+
+7. CloudGreet owns all client relationships. If you leave, are
+   removed, or hit the 6-month inactive mark, you keep every dollar
+   you've already earned but stop accruing on those clients going
+   forward.
+
+8. CloudGreet handles product, onboarding, support, prompt tuning,
    and infrastructure. You handle prospecting, calling, demoing,
    and closing.
-7. CloudGreet auto-files your 1099-NEC at year-end via Stripe.
-8. You agree not to misrepresent the product to prospects, share
-   client data outside CloudGreet, or solicit clients on behalf of
-   competitors during your engagement.
+
+9. CloudGreet auto-files your 1099-NEC at year-end via Stripe for
+   any rep paid $600+ in the calendar year.
+
+10. You agree not to misrepresent the product to prospects, share
+    client data outside CloudGreet, or solicit clients on behalf of
+    competitors during your engagement.
 `.trim()
 
 export default function AcceptInvitePage() {

@@ -8,7 +8,10 @@ import { provisionRepNumber } from '@/lib/telnyx/provision-number'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const AGREEMENT_VERSION = '2026-05-04'
+// Bump whenever AGREEMENT_TEXT in /app/sales/accept-invite/page.tsx
+// changes materially. Stored on sales_reps.agreement_version so
+// admin can see which version any given rep agreed to.
+const AGREEMENT_VERSION = '2026-05-07'
 
 /**
  * POST /api/sales/accept-invite
