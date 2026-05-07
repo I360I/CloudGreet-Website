@@ -34,7 +34,11 @@ const NAV: NavItem[] = [
   { label: 'Clients',  href: '/sales/clients',  icon: Users,         match: (p) => p.startsWith('/sales/clients') },
   { label: 'Earnings', href: '/sales/earnings', icon: CurrencyDollar, match: (p) => p.startsWith('/sales/earnings') },
   { label: 'Playbook',  href: '/sales/playbook',  icon: BookOpen,       match: (p) => p.startsWith('/sales/playbook') },
-  { label: 'Onboarding', href: '/sales/onboarding', icon: GraduationCap, match: (p) => p.startsWith('/sales/onboarding') },
+  // Onboarding tab hidden from the sidebar - the underlying /sales/onboarding
+  // route still works (banner CTAs link to it for Stripe Connect / quiz),
+  // but reps shouldn't have a top-level entry to a page that's mostly
+  // training-video-shaped right now. Re-add when videos ship.
+  // { label: 'Onboarding', href: '/sales/onboarding', icon: GraduationCap, match: (p) => p.startsWith('/sales/onboarding') },
 ]
 
 export function SalesShell({
@@ -71,7 +75,14 @@ export function SalesShell({
   const signOut = async () => {
     try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
     try {
-      localStorage.removeItem('user'); localStorage.removeItem('business'); localStorage.removeItem('token')
+      // Scrub every key the auth fallback chain might pull from. Missing
+      // any one of these caused the "signed in as Anthony" stale-name
+      // bug when testing the rep flow on a shared computer - the cookie
+      // had been overwritten but localStorage still had the old token.
+      localStorage.removeItem('user')
+      localStorage.removeItem('business')
+      localStorage.removeItem('token')
+      localStorage.removeItem('auth_token')
     } catch {}
     router.replace('/login')
   }
@@ -109,13 +120,23 @@ export function SalesShell({
             <div className="text-sm text-gray-700 truncate mt-0.5">{name || '...'}</div>
           </div>
           {payoutsReady === false && (
-            <Link
-              href="/sales/onboarding"
-              className="block bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 hover:bg-amber-100 transition-colors"
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const r = await fetch('/api/sales/connect-onboarding', { method: 'POST', credentials: 'include' })
+                  const j = await r.json().catch(() => ({}))
+                  if (r.ok && j?.success && j.url) window.location.href = j.url
+                  else alert(j?.error || 'Could not start Stripe onboarding')
+                } catch {
+                  alert('Could not start Stripe onboarding')
+                }
+              }}
+              className="block w-full text-left bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 hover:bg-amber-100 transition-colors"
             >
               <div className="text-[10px] font-mono uppercase tracking-wider text-amber-700">Action needed</div>
-              <div className="text-xs text-amber-900 mt-0.5">Finish bank setup to receive payouts</div>
-            </Link>
+              <div className="text-xs text-amber-900 mt-0.5">Connect bank to receive payouts</div>
+            </button>
           )}
           <div className="flex items-center gap-4 text-xs">
             <Link

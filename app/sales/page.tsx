@@ -167,12 +167,24 @@ export default function SalesHome() {
               <p className="text-xs text-amber-800 mt-1">
                 Finish Stripe Connect so Friday auto-payouts can deposit.
               </p>
-              <Link
-                href="/sales/onboarding"
+              <button
+                onClick={async () => {
+                  try {
+                    const r = await fetch('/api/sales/connect-onboarding', { method: 'POST', credentials: 'include' })
+                    const j = await r.json().catch(() => ({}))
+                    if (r.ok && j?.success && j.url) {
+                      window.location.href = j.url
+                    } else {
+                      alert(j?.error || 'Could not start Stripe onboarding')
+                    }
+                  } catch {
+                    alert('Could not start Stripe onboarding')
+                  }
+                }}
                 className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-amber-900 hover:text-amber-700"
               >
-                Finish setup <ArrowRight className="w-3 h-3" />
-              </Link>
+                Connect bank <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
           </motion.div>
         )}

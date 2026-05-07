@@ -152,12 +152,22 @@ export default function SalesEarningsPage() {
               <p className="text-xs text-amber-800 mt-1">
                 Commissions still accrue, but Friday transfers skip you until Stripe Connect is finished.
               </p>
-              <Link
-                href="/sales/onboarding"
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const r = await fetch('/api/sales/connect-onboarding', { method: 'POST', credentials: 'include' })
+                    const j = await r.json().catch(() => ({}))
+                    if (r.ok && j?.success && j.url) window.location.href = j.url
+                    else alert(j?.error || 'Could not start Stripe onboarding')
+                  } catch {
+                    alert('Could not start Stripe onboarding')
+                  }
+                }}
                 className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-amber-900 hover:text-amber-700"
               >
-                Finish setup <ArrowRight className="w-3 h-3" />
-              </Link>
+                Connect bank <ArrowRight className="w-3 h-3" />
+              </button>
             </div>
           </motion.div>
         )}
@@ -361,12 +371,22 @@ function TaxCard({
           Open Stripe dashboard
         </button>
       ) : (
-        <Link
-          href="/sales/onboarding"
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              const r = await fetch('/api/sales/connect-onboarding', { method: 'POST', credentials: 'include' })
+              const j = await r.json().catch(() => ({}))
+              if (r.ok && j?.success && j.url) window.location.href = j.url
+              else alert(j?.error || 'Could not start Stripe onboarding')
+            } catch {
+              alert('Could not start Stripe onboarding')
+            }
+          }}
           className="inline-flex items-center gap-2 text-sm border border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100 rounded-lg px-3.5 py-2 transition-colors"
         >
           Connect Stripe to enable payouts <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
+        </button>
       )}
       <p className="text-[11px] text-gray-500 mt-3">
         Your Stripe Express dashboard has the full breakdown of every transfer plus

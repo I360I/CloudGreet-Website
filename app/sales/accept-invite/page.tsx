@@ -87,8 +87,31 @@ function AcceptInviteInner() {
    })
    const j = await res.json().catch(() => ({}))
    if (!res.ok || !j.success) throw new Error(j?.error || `Failed (${res.status})`)
-   // Account created, JWT cookie set. Send them to the Connect onboarding step.
-   router.push('/sales/onboarding')
+   // Wipe any stale localStorage tokens left over from a different
+   // user (e.g. testing on a shared computer). The new account's JWT
+   // is in the httpOnly cookie set by the API; localStorage fallbacks
+   // would otherwise still hold the previous user's bearer token.
+   try {
+     localStorage.removeItem('token')
+     localStorage.removeItem('auth_token')
+     localStorage.removeItem('user')
+     localStorage.removeItem('business')
+   } catch { /* non-fatal */ }
+   // Skip the multi-step /sales/onboarding page and go straight to
+   // Stripe Connect bank setup - that's the only blocking step before
+   // a rep can earn. Quiz / training modules live in /sales/playbook
+   // for read-it-when-you-want.
+   try {
+     const r = await fetch('/api/sales/connect-onboarding', { method: 'POST', credentials: 'include' })
+     const cj = await r.json().catch(() => ({}))
+     if (r.ok && cj?.success && cj.url) {
+       window.location.href = cj.url
+       return
+     }
+   } catch { /* falls through to /sales below */ }
+   // Stripe Connect either not configured or failed - drop them on the
+   // sales overview and surface a banner there so they can retry.
+   router.push('/sales')
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed')
   } finally {
