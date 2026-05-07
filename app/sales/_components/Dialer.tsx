@@ -404,11 +404,13 @@ export function Dialer() {
             dragListener={false}
             dragMomentum={false}
             dragElastic={0}
-            initial={{ opacity: 0, y: -8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+            initial={{ opacity: 0, scale: 0.2 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.2 }}
+            transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+            style={{ transformOrigin: 'top right' }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed top-4 left-4 z-[80] hidden sm:block w-80 bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden"
+            className="fixed top-14 right-5 z-[80] hidden sm:block w-80 bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden"
           >
             <div
               onPointerDown={(e) => dragControls.start(e)}
@@ -615,18 +617,21 @@ export function Dialer() {
         )}
       </AnimatePresence>
 
-      {/* Floating launcher - lives in the bottom-right corner regardless of
-          where the panel has been dragged to. */}
+      {/* Floating launcher - top-right, small black circle. The panel
+          scales out of this exact corner via transformOrigin so the
+          expansion feels anchored to the click. */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`fixed bottom-5 right-5 z-[80] hidden sm:flex relative w-9 h-9 rounded-full shadow-md items-center justify-center transition-all active:scale-[0.96] ${
+        className={`fixed top-4 right-4 z-[80] hidden sm:flex w-8 h-8 rounded-full shadow-md items-center justify-center transition-all active:scale-90 hover:scale-110 ${
           inCall
             ? 'bg-emerald-600 text-white shadow-emerald-600/30'
-            : 'bg-gray-900 text-white shadow-gray-900/15 hover:bg-gray-800'
+            : 'bg-gray-900 text-white shadow-gray-900/20 hover:bg-black'
         }`}
         aria-label="Open dialer"
       >
-        {inCall ? <PhoneCall className="w-3.5 h-3.5" weight="fill" /> : <Phone className="w-3.5 h-3.5" weight="fill" />}
+        {inCall
+          ? <PhoneCall className="w-3.5 h-3.5" weight="fill" />
+          : <Phone className="w-3.5 h-3.5" weight="fill" />}
         {status === 'ready' && !inCall && (
           <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-white" aria-hidden />
         )}
