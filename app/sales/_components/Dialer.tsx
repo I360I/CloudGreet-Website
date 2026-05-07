@@ -76,22 +76,33 @@ export function Dialer() {
     const setup = async (opts?: { fromUserGesture?: boolean }) => {
       setError(null)
 
-      // On mount we use the Permissions API as a *fast path only*: if it
-      // says 'granted', skip straight to connecting. Anything else (prompt,
-      // denied, or API missing), wait for the user to click "Allow
-      // microphone" - calling getUserMedia without a gesture both fails
-      // and pollutes the UI with a non-actionable NotAllowedError.
+      // On mount: first ask the Permissions API (fast path with no
+      // browser-level side effect). If it says 'granted', proceed. If it
+      // says 'denied' or is unavailable (Safari), try a silent
+      // getUserMedia - browsers that have the permission cached resolve
+      // it instantly without prompting, which means a returning user
+      // doesn't have to click "Allow" on every page reload. If that also
+      // fails, only then do we surface the "click to allow" UI.
       if (!opts?.fromUserGesture) {
         let granted = false
         try {
           const perm = await navigator.permissions
             ?.query?.({ name: 'microphone' as PermissionName })
             .catch(() => null)
-          granted = perm?.state === 'granted'
-        } catch { /* fall through to require click */ }
+          if (perm?.state === 'granted') granted = true
+        } catch { /* fall through to silent attempt */ }
+
         if (!granted) {
-          setStatus('mic_required')
-          return
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            stream.getTracks().forEach((t) => t.stop())
+            granted = true
+          } catch {
+            // No prior permission. Need a user click. Don't surface the
+            // error - it's expected on first visit / no-gesture context.
+            setStatus('mic_required')
+            return
+          }
         }
       } else {
         // We were invoked from a click handler. getUserMedia is the source
