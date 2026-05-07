@@ -41,14 +41,14 @@ type Lead = {
 
 const STATUS_META: Record<string, { label: string; pill: string; dot: string; row: string }> = {
   new:             { label: 'New',         pill: 'bg-gray-100 text-gray-700',          dot: 'bg-gray-400',     row: '' },
-  called:          { label: 'Called',      pill: 'bg-sky-50 text-sky-700',             dot: 'bg-sky-500',      row: 'bg-sky-50/40 hover:bg-sky-50/70' },
-  voicemail:       { label: 'Voicemail',   pill: 'bg-violet-50 text-violet-700',       dot: 'bg-violet-500',   row: 'bg-violet-50/40 hover:bg-violet-50/70' },
-  interested:      { label: 'Interested',  pill: 'bg-amber-50 text-amber-700',         dot: 'bg-amber-500',    row: 'bg-amber-50/50 hover:bg-amber-50/80' },
-  demo_scheduled:  { label: 'Demo set',    pill: 'bg-amber-100 text-amber-800',        dot: 'bg-amber-600',    row: 'bg-amber-50/70 hover:bg-amber-100/60' },
-  proposal_sent:   { label: 'Proposal',    pill: 'bg-emerald-50 text-emerald-700',     dot: 'bg-emerald-500',  row: 'bg-emerald-50/40 hover:bg-emerald-50/70' },
-  closed:          { label: 'Closed',      pill: 'bg-emerald-100 text-emerald-800',    dot: 'bg-emerald-600',  row: 'bg-emerald-50/70 hover:bg-emerald-100/60' },
-  dead:            { label: 'Dead',        pill: 'bg-gray-100 text-gray-500',          dot: 'bg-gray-300',     row: 'bg-gray-50/60 opacity-60 hover:opacity-80' },
-  do_not_call:     { label: 'DNC',         pill: 'bg-red-50 text-red-700',             dot: 'bg-red-500',      row: 'bg-red-50/40 hover:bg-red-50/70' },
+  called:          { label: 'Called',      pill: 'bg-sky-100 text-sky-700',            dot: 'bg-sky-500',      row: 'bg-sky-100/70 hover:bg-sky-100' },
+  voicemail:       { label: 'Voicemail',   pill: 'bg-violet-100 text-violet-700',      dot: 'bg-violet-500',   row: 'bg-violet-100/70 hover:bg-violet-100' },
+  interested:      { label: 'Interested',  pill: 'bg-amber-100 text-amber-800',        dot: 'bg-amber-500',    row: 'bg-amber-100/80 hover:bg-amber-100' },
+  demo_scheduled:  { label: 'Demo set',    pill: 'bg-amber-200 text-amber-900',        dot: 'bg-amber-600',    row: 'bg-amber-100 hover:bg-amber-200/70' },
+  proposal_sent:   { label: 'Proposal',    pill: 'bg-emerald-100 text-emerald-700',    dot: 'bg-emerald-500',  row: 'bg-emerald-100/70 hover:bg-emerald-100' },
+  closed:          { label: 'Closed',      pill: 'bg-emerald-200 text-emerald-900',    dot: 'bg-emerald-600',  row: 'bg-emerald-100 hover:bg-emerald-200/70' },
+  dead:            { label: 'Dead',        pill: 'bg-gray-200 text-gray-500',          dot: 'bg-gray-300',     row: 'bg-gray-100/80 opacity-50 hover:opacity-75' },
+  do_not_call:     { label: 'DNC',         pill: 'bg-red-100 text-red-700',            dot: 'bg-red-500',      row: 'bg-red-100/70 hover:bg-red-100' },
 }
 
 const STATUS_FILTERS: Array<{ key: string; label: string }> = [
@@ -74,7 +74,61 @@ export default function SalesLeadsPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [sortBy, setSortBy] = useState<'quality' | 'newest' | 'untouched'>('quality')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement | null>(null)
+
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  const clearSelected = () => setSelected(new Set())
+
+  const bulkUpdateStatus = async (status: string) => {
+    if (selected.size === 0) return
+    setBulkBusy(true)
+    const ids = Array.from(selected)
+    setLeads((prev) => prev.map((l) => ids.includes(l.id) ? { ...l, status } : l))
+    try {
+      await fetchWithAuth('/api/sales/leads/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, status, touched: true }),
+      })
+      setFlash(`Updated ${ids.length} lead${ids.length === 1 ? '' : 's'}.`)
+      setTimeout(() => setFlash(''), 1500)
+      clearSelected()
+    } catch {
+      await load()
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  const bulkDelete = async () => {
+    if (selected.size === 0) return
+    if (!confirm(`Delete ${selected.size} lead${selected.size === 1 ? '' : 's'}? This unassigns them from your portal.`)) return
+    setBulkBusy(true)
+    const ids = Array.from(selected)
+    setLeads((prev) => prev.filter((l) => !ids.includes(l.id)))
+    try {
+      await fetchWithAuth('/api/sales/leads/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      setFlash(`Removed ${ids.length} lead${ids.length === 1 ? '' : 's'}.`)
+      setTimeout(() => setFlash(''), 1500)
+      clearSelected()
+    } catch {
+      await load()
+    } finally {
+      setBulkBusy(false)
+    }
+  }
 
   const load = async () => {
     setLoading(true); setError('')
@@ -372,6 +426,58 @@ export default function SalesLeadsPage() {
               </div>
             </div>
 
+            {/* Bulk action bar - appears once any row is selected */}
+            <AnimatePresence>
+              {selected.size > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="sticky top-0 z-10 px-3 py-2 bg-sky-50 border-y border-sky-200 flex items-center gap-3 flex-wrap"
+                >
+                  <span className="text-sm font-medium text-sky-900 inline-flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center w-5 h-5 bg-sky-600 text-white rounded-full text-[10px] font-mono tabular-nums">{selected.size}</span>
+                    selected
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (selected.size === filtered.length) clearSelected()
+                      else setSelected(new Set(filtered.map((l) => l.id)))
+                    }}
+                    className="text-xs text-sky-700 hover:text-sky-900 underline-offset-2 hover:underline"
+                  >
+                    {selected.size === filtered.length ? 'Deselect all' : `Select all ${filtered.length}`}
+                  </button>
+                  <div className="flex-1" />
+                  <select
+                    onChange={(e) => { if (e.target.value) bulkUpdateStatus(e.target.value); e.target.value = '' }}
+                    disabled={bulkBusy}
+                    defaultValue=""
+                    className="text-xs font-mono uppercase tracking-wider rounded-lg border border-sky-300 bg-white px-3 py-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="" disabled>Set status…</option>
+                    {STATUS_FILTERS.filter((s) => s.key !== 'all').map((s) => (
+                      <option key={s.key} value={s.key}>{s.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={bulkDelete}
+                    disabled={bulkBusy}
+                    className="text-xs text-rose-700 hover:text-rose-900 bg-white border border-rose-200 hover:border-rose-300 rounded-lg px-3 py-1.5 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                  <button
+                    onClick={clearSelected}
+                    className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5"
+                  >
+                    Cancel
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {filtered.length === 0 ? (
               <div className="px-6 py-10 text-center text-sm text-gray-500">
                 No matches.
@@ -386,13 +492,25 @@ export default function SalesLeadsPage() {
                   const meta = STATUS_META[l.status] || STATUS_META.new
                   const fu = l.follow_up_at ? fmtFollowUp(l.follow_up_at) : null
                   const updating = updatingStatusId === l.id
+                  const isSelected = selected.has(l.id)
                   return (
                     <motion.li
                       key={l.id}
                       variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: EASE } } }}
-                      className={`px-4 py-2 transition-colors ${meta.row || 'hover:bg-gray-50/60'}`}
+                      className={`px-3 py-1.5 transition-colors ${
+                        isSelected ? 'bg-sky-100/80 ring-1 ring-inset ring-sky-300' :
+                        (meta.row || 'hover:bg-gray-50/60')
+                      }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelected(l.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 rounded border-gray-300 text-sky-600 focus:ring-sky-500 cursor-pointer flex-shrink-0"
+                          aria-label="Select lead"
+                        />
                         {/* Left: company + contact */}
                         <Link
                           href={`/sales/leads/${l.id}`}
