@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
-import { Phone, PhoneCall, PhoneSlash, MicrophoneSlash, Microphone, X, CircleNotch, WarningCircle } from '@phosphor-icons/react'
+import { Phone, PhoneCall, PhoneSlash, MicrophoneSlash, Microphone, X, CircleNotch, WarningCircle, Pause, Play, SkipForward, Stop } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 /**
@@ -41,9 +41,18 @@ type SessionStatus =
   | 'error'
   | 'unconfigured'
 
+export type PowerDialItem = {
+  leadId: string
+  phone: string
+  businessName?: string | null
+  contactName?: string | null
+}
+
 declare global {
   interface Window {
     cgDial?: (number: string, leadId?: string) => void
+    cgPowerDial?: (items: PowerDialItem[]) => void
+    cgPowerDialAbort?: () => void
   }
 }
 
@@ -59,6 +68,17 @@ export function Dialer() {
   const [micBusy, setMicBusy] = useState(false)
   const [micErrName, setMicErrName] = useState<string | null>(null)
   const dragControls = useDragControls()
+
+  // Power dialer queue. When non-empty, the dialer auto-advances
+  // through items: dial item N → wait for call to end → 5s countdown
+  // (with optional post-call status selection) → dial item N+1.
+  const [queue, setQueue] = useState<PowerDialItem[]>([])
+  const [queueIndex, setQueueIndex] = useState(0)
+  const [queuePaused, setQueuePaused] = useState(false)
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const [postCallStatus, setPostCallStatus] = useState<string | null>(null)
+  const lastQueuedLeadIdRef = useRef<string | null>(null)
+  const queueAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Refs to long-lived objects (Telnyx client, current Call, server-side
   // log row id, etc.) so re-renders don't recreate them.
@@ -330,8 +350,38 @@ export function Dialer() {
   // React context plumbing exercise.
   useEffect(() => {
     window.cgDial = (number: string, leadId?: string) => dial(number, leadId)
+    window.cgPowerDial = (items: PowerDialItem[]) => {
+      const cleaned = items.filter((it) => it.phone && it.leadId)
+      if (cleaned.length === 0) return
+      setQueue(cleaned)
+      setQueueIndex(0)
+      setQueuePaused(false)
+      setPostCallStatus(null)
+      setCountdown(null)
+      setOpen(true)
+      // Defer the first dial a tick so React applies the queue state
+      // before we kick off the call (the call-end watcher reads `queue`).
+      setTimeout(() => {
+        const first = cleaned[0]
+        lastQueuedLeadIdRef.current = first.leadId
+        dial(first.phone, first.leadId)
+      }, 50)
+    }
+    window.cgPowerDialAbort = () => {
+      if (queueAdvanceTimerRef.current) {
+        clearTimeout(queueAdvanceTimerRef.current)
+        queueAdvanceTimerRef.current = null
+      }
+      setQueue([])
+      setQueueIndex(0)
+      setQueuePaused(false)
+      setCountdown(null)
+      setPostCallStatus(null)
+    }
     return () => {
       if (window.cgDial) delete window.cgDial
+      if (window.cgPowerDial) delete window.cgPowerDial
+      if (window.cgPowerDialAbort) delete window.cgPowerDialAbort
     }
   }, [dial])
 
@@ -392,6 +442,101 @@ export function Dialer() {
   }
 
   const inCall = callState === 'connecting' || callState === 'ringing' || callState === 'active'
+  const queueActive = queue.length > 0
+  const currentItem = queueActive ? queue[queueIndex] : null
+  const isLast = queueActive && queueIndex >= queue.length - 1
+
+  // Auto-advance: when call ends inside a queue session, run a 5-second
+  // countdown with a post-call status picker, then dial the next item.
+  // Pause stops the countdown without losing position; skip jumps to
+  // next without completing the picker; stop nukes the queue.
+  useEffect(() => {
+    if (!queueActive) return
+    if (callState !== 'ended') return
+    if (queuePaused) return
+    if (isLast && !currentItem) return
+
+    setCountdown(5)
+    const tick = (n: number) => {
+      if (n <= 0) {
+        if (queueAdvanceTimerRef.current) {
+          clearTimeout(queueAdvanceTimerRef.current)
+          queueAdvanceTimerRef.current = null
+        }
+        setCountdown(null)
+        // Persist post-call status if the rep picked one (or default to 'called').
+        if (lastQueuedLeadIdRef.current) {
+          const status = postCallStatus || 'called'
+          void fetchWithAuth(`/api/sales/leads/${lastQueuedLeadIdRef.current}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status, touched: true }),
+          }).catch(() => { /* non-fatal */ })
+        }
+        setPostCallStatus(null)
+        // Advance.
+        if (isLast) {
+          // Done.
+          setQueue([])
+          setQueueIndex(0)
+          lastQueuedLeadIdRef.current = null
+          return
+        }
+        const next = queue[queueIndex + 1]
+        if (next) {
+          setQueueIndex((i) => i + 1)
+          lastQueuedLeadIdRef.current = next.leadId
+          dial(next.phone, next.leadId)
+        }
+        return
+      }
+      setCountdown(n)
+      queueAdvanceTimerRef.current = setTimeout(() => tick(n - 1), 1000)
+    }
+    queueAdvanceTimerRef.current = setTimeout(() => tick(4), 1000)
+
+    return () => {
+      if (queueAdvanceTimerRef.current) {
+        clearTimeout(queueAdvanceTimerRef.current)
+        queueAdvanceTimerRef.current = null
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callState, queueActive, queuePaused, queueIndex])
+
+  // Pause/resume keeps the same queue position. When un-paused inside
+  // an 'ended' state, the effect above re-runs naturally.
+  const togglePause = () => setQueuePaused((p) => !p)
+  const skipCurrent = () => {
+    if (queueAdvanceTimerRef.current) clearTimeout(queueAdvanceTimerRef.current)
+    setCountdown(null)
+    setPostCallStatus(null)
+    if (callState !== 'idle' && callState !== 'ended') {
+      try { callRef.current?.hangup?.() } catch {}
+    }
+    if (isLast) {
+      setQueue([])
+      setQueueIndex(0)
+      return
+    }
+    const next = queue[queueIndex + 1]
+    if (next) {
+      setQueueIndex((i) => i + 1)
+      lastQueuedLeadIdRef.current = next.leadId
+      // Brief delay so the current call finishes hanging up before we redial.
+      setTimeout(() => dial(next.phone, next.leadId), 250)
+    }
+  }
+  const stopQueue = () => {
+    if (queueAdvanceTimerRef.current) clearTimeout(queueAdvanceTimerRef.current)
+    setCountdown(null)
+    setPostCallStatus(null)
+    setQueue([])
+    setQueueIndex(0)
+    if (callState !== 'idle') {
+      try { callRef.current?.hangup?.() } catch {}
+    }
+  }
 
   return (
     <>
@@ -409,7 +554,6 @@ export function Dialer() {
             exit={{ opacity: 0, scale: 0.2 }}
             transition={{ type: 'spring', stiffness: 360, damping: 28 }}
             style={{ transformOrigin: 'top right' }}
-            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             className="fixed top-14 right-5 z-[80] hidden sm:block w-80 bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden"
           >
             <div
@@ -430,6 +574,78 @@ export function Dialer() {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {queueActive && (
+              <div className="px-3 py-2.5 bg-violet-50 border-b border-violet-100 text-xs">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="font-medium text-violet-900 inline-flex items-center gap-1.5">
+                    <PhoneCall className="w-3.5 h-3.5" weight="fill" />
+                    Power dial · {queueIndex + 1} of {queue.length}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={togglePause}
+                      className="p-1 text-violet-700 hover:text-violet-900"
+                      title={queuePaused ? 'Resume' : 'Pause'}
+                    >
+                      {queuePaused
+                        ? <Play className="w-3.5 h-3.5" weight="fill" />
+                        : <Pause className="w-3.5 h-3.5" weight="fill" />}
+                    </button>
+                    <button
+                      onClick={skipCurrent}
+                      className="p-1 text-violet-700 hover:text-violet-900"
+                      title="Skip"
+                    >
+                      <SkipForward className="w-3.5 h-3.5" weight="fill" />
+                    </button>
+                    <button
+                      onClick={stopQueue}
+                      className="p-1 text-rose-700 hover:text-rose-900"
+                      title="Stop"
+                    >
+                      <Stop className="w-3.5 h-3.5" weight="fill" />
+                    </button>
+                  </div>
+                </div>
+                {currentItem && (
+                  <div className="text-violet-800 truncate">
+                    {currentItem.businessName || currentItem.contactName || currentItem.phone}
+                  </div>
+                )}
+                {callState === 'ended' && countdown !== null && !queuePaused && (
+                  <div className="mt-2 pt-2 border-t border-violet-100">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-violet-700 mb-1.5">
+                      Tag this call · next in {countdown}s
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { v: 'called',     l: 'Talked' },
+                        { v: 'voicemail',  l: 'VM' },
+                        { v: 'interested', l: 'Interested' },
+                        { v: 'dead',       l: 'Dead' },
+                        { v: 'do_not_call', l: 'DNC' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.v}
+                          onClick={() => setPostCallStatus(opt.v)}
+                          className={`text-[11px] rounded-md px-2 py-1 border transition-colors ${
+                            postCallStatus === opt.v
+                              ? 'bg-violet-700 text-white border-violet-700'
+                              : 'bg-white text-violet-800 border-violet-200 hover:border-violet-400'
+                          }`}
+                        >
+                          {opt.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {queuePaused && (
+                  <div className="mt-1 text-[11px] italic text-violet-700">Paused.</div>
+                )}
+              </div>
+            )}
 
             <div className="p-3">
               {status === 'unconfigured' ? (

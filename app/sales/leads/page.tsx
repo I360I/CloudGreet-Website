@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Phone, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch,
+  Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch,
   Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass,
   CaretRight, Clock, CalendarBlank,
 } from '@phosphor-icons/react'
@@ -273,6 +273,32 @@ export default function SalesLeadsPage() {
           title="Your leads"
           action={
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => {
+                  const callable = filtered
+                    .filter((l) => !!l.phone && l.status !== 'do_not_call' && l.status !== 'closed' && l.status !== 'dead')
+                    .map((l) => ({
+                      leadId: l.id,
+                      phone: l.phone!,
+                      businessName: l.business_name,
+                      contactName: l.contact_name,
+                    }))
+                  if (callable.length === 0) {
+                    alert('No callable leads in the current filter. Power dial only runs against leads with a phone number that aren\'t Closed/Dead/DNC.')
+                    return
+                  }
+                  if (typeof window === 'undefined' || !window.cgPowerDial) {
+                    alert('Dialer not loaded yet. Try again in a second.')
+                    return
+                  }
+                  if (!confirm(`Power dial through ${callable.length} lead${callable.length === 1 ? '' : 's'}? Auto-dials each one with a 5-second pause between calls. Pause/skip/stop available throughout.`)) return
+                  window.cgPowerDial(callable)
+                }}
+                className="inline-flex items-center gap-1.5 text-sm bg-violet-600 text-white hover:bg-violet-700 rounded-lg px-3.5 py-2 transition-colors shadow-sm"
+                title="Auto-dial through the filtered list"
+              >
+                <PhoneCall weight="fill" className="w-4 h-4" /> Power dial
+              </button>
               <Link
                 href="/sales/leads/scrape"
                 className="inline-flex items-center gap-1.5 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg px-3.5 py-2 transition-colors shadow-sm"
