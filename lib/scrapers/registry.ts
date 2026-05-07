@@ -6,6 +6,7 @@ import {
  googleRoofing, googlePainting, googleHandyman, googleLandscaping,
 } from './google-trades'
 import { placesSources } from './google-places-discovery'
+import { qualityModeSource } from './quality-mode'
 
 /**
  * Single registry of every scraper source. Add new sources here once and
@@ -20,6 +21,9 @@ import { placesSources } from './google-places-discovery'
  * for trades that don't have a public Texas license database.
  */
 export const SCRAPER_SOURCES: SourceDefinition[] = [
+ // Quality mode - small national batch, ruthlessly filtered. First in
+ // the list because reps complaining about "trash leads" want this.
+ qualityModeSource,
  // Preferred - Texas licensing databases (free, with owner name)
  tdlrHvac,
  tdlrElectrical,

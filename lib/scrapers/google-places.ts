@@ -183,11 +183,38 @@ export async function enrichWithGooglePlaces(
  * - Google sometimes returns one or the other depending on the locality.
  */
 export function isTexasAddress(addr: string): boolean {
- if (!addr) return false
+ return addressMatchesStates(addr, ['TX'])
+}
+
+const STATE_FULL_NAMES: Record<string, string> = {
+ AL: 'ALABAMA', AK: 'ALASKA', AZ: 'ARIZONA', AR: 'ARKANSAS', CA: 'CALIFORNIA',
+ CO: 'COLORADO', CT: 'CONNECTICUT', DE: 'DELAWARE', FL: 'FLORIDA', GA: 'GEORGIA',
+ HI: 'HAWAII', ID: 'IDAHO', IL: 'ILLINOIS', IN: 'INDIANA', IA: 'IOWA',
+ KS: 'KANSAS', KY: 'KENTUCKY', LA: 'LOUISIANA', ME: 'MAINE', MD: 'MARYLAND',
+ MA: 'MASSACHUSETTS', MI: 'MICHIGAN', MN: 'MINNESOTA', MS: 'MISSISSIPPI', MO: 'MISSOURI',
+ MT: 'MONTANA', NE: 'NEBRASKA', NV: 'NEVADA', NH: 'NEW HAMPSHIRE', NJ: 'NEW JERSEY',
+ NM: 'NEW MEXICO', NY: 'NEW YORK', NC: 'NORTH CAROLINA', ND: 'NORTH DAKOTA', OH: 'OHIO',
+ OK: 'OKLAHOMA', OR: 'OREGON', PA: 'PENNSYLVANIA', RI: 'RHODE ISLAND', SC: 'SOUTH CAROLINA',
+ SD: 'SOUTH DAKOTA', TN: 'TENNESSEE', TX: 'TEXAS', UT: 'UTAH', VT: 'VERMONT',
+ VA: 'VIRGINIA', WA: 'WASHINGTON', WV: 'WEST VIRGINIA', WI: 'WISCONSIN', WY: 'WYOMING',
+}
+
+/**
+ * True if a Google formattedAddress is in any of the given two-letter
+ * state codes. Matches both the abbreviated form (", CA 90210") and
+ * the spelled-out form (", California, USA").
+ */
+export function addressMatchesStates(addr: string, states: string[]): boolean {
+ if (!addr || states.length === 0) return false
  const upper = addr.toUpperCase()
- // Match ", TX" with optional zip following, or ", Texas"
- if (/,\s*TX(\s+\d{5})?(\s*,|\s*$)/i.test(addr)) return true
- if (upper.includes(', TEXAS')) return true
+ for (const code of states) {
+  const c = code.toUpperCase()
+  // Abbreviated form: ", XX" optionally followed by a 5-digit ZIP
+  const abbrevRx = new RegExp(`,\\s*${c}(\\s+\\d{5})?(\\s*,|\\s*$)`)
+  if (abbrevRx.test(addr)) return true
+  const full = STATE_FULL_NAMES[c]
+  if (full && upper.includes(`, ${full}`)) return true
+ }
  return false
 }
 
@@ -237,6 +264,10 @@ export async function* discoverPlaces(
   minRating?: number
   /** Drop results that are CLOSED_PERMANENTLY / CLOSED_TEMPORARILY (default true). */
   excludeClosed?: boolean
+  /** Optional list of two-letter state abbreviations to accept. If
+   *  omitted, defaults to TX-only (preserves existing source behavior).
+   *  Pass an empty array to accept any US state. */
+  stateAllowList?: string[]
  },
 ): AsyncGenerator<PlaceDiscoveryResult, void, void> {
  const key = process.env.GOOGLE_PLACES_API_KEY
@@ -247,6 +278,9 @@ export async function* discoverPlaces(
  const minReviews = opts?.minReviewCount ?? 0
  const minRating = opts?.minRating ?? 0
  const excludeClosed = opts?.excludeClosed !== false
+ // Default behavior preserved: TX-only. Existing TX-discovery sources
+ // pass nothing and keep getting the TX filter. Quality mode passes [].
+ const stateFilter = opts?.stateAllowList ?? ['TX']
  let pageToken: string | null = null
  let yielded = 0
  const seenIds = new Set<string>()
@@ -311,7 +345,7 @@ export async function* discoverPlaces(
    if (p?.id) seenIds.add(p.id)
 
    const addr: string = p.formattedAddress || ''
-   if (!isTexasAddress(addr)) continue
+   if (stateFilter.length > 0 && !addressMatchesStates(addr, stateFilter)) continue
 
    const components = extractAddressComponents(p.addressComponents)
    const reviewCount: number = typeof p.userRatingCount === 'number' ? p.userRatingCount : 0
