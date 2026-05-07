@@ -304,10 +304,17 @@ export async function* discoverPlaces(
   }
   if (opts?.includedType) body.includedType = opts.includedType
   if (opts?.locationRestriction) {
+   // Places API (New) searchText only accepts `rectangle` here, not `circle`
+   // (circles work for searchNearby and for locationBias, but searchText's
+   // restriction is rectangle-only). Convert the requested circle into the
+   // smallest enclosing lat/lng rectangle.
+   const r = opts.locationRestriction
+   const dLat = r.radiusMeters / 111_320 // meters per degree latitude
+   const dLng = r.radiusMeters / (111_320 * Math.cos(r.lat * Math.PI / 180))
    body.locationRestriction = {
-    circle: {
-     center: { latitude: opts.locationRestriction.lat, longitude: opts.locationRestriction.lng },
-     radius: opts.locationRestriction.radiusMeters,
+    rectangle: {
+     low:  { latitude: r.lat - dLat, longitude: r.lng - dLng },
+     high: { latitude: r.lat + dLat, longitude: r.lng + dLng },
     },
    }
   } else if (opts?.locationBias) {
