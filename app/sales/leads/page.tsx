@@ -456,10 +456,16 @@ export default function SalesLeadsPage() {
                           {l.phone && (
                             <a
                               href={`tel:${l.phone}`}
-                              className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-gray-900 text-white hover:bg-gray-700 transition-colors"
+                              onClick={(e) => {
+                                if (typeof window !== 'undefined' && window.cgDial && l.phone) {
+                                  e.preventDefault()
+                                  window.cgDial(l.phone, l.id)
+                                }
+                              }}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                               aria-label="Call"
                             >
-                              <Phone weight="fill" className="w-4.5 h-4.5" />
+                              <Phone weight="bold" className="w-4 h-4" />
                             </a>
                           )}
                         </div>

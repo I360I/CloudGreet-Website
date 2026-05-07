@@ -364,6 +364,17 @@ export function Dialer() {
     dial(destination)
   }
 
+  // Keypad press: append to destination when idle, send DTMF when on a
+  // live call (so reps can navigate IVRs). Telnyx exposes dtmf() on the
+  // call object - signature is just the single digit string.
+  const onKeypadPress = (digit: string) => {
+    if (callState === 'active' && callRef.current) {
+      try { callRef.current.dtmf(digit) } catch { /* non-fatal */ }
+      return
+    }
+    setDestination((d) => d + digit)
+  }
+
   const inCall = callState === 'connecting' || callState === 'ringing' || callState === 'active'
 
   return (
@@ -376,7 +387,7 @@ export function Dialer() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.96 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="mb-3 w-72 bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden"
+            className="mb-3 w-80 bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden"
           >
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -460,53 +471,87 @@ export function Dialer() {
                 </div>
               ) : (
                 <>
-                  <div className="mb-3">
-                    <label className="block text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1">
-                      Number
-                    </label>
-                    <input
-                      type="tel"
-                      value={destination}
-                      onChange={(e) => setDestination(e.target.value)}
-                      placeholder="+1 555 123 4567"
-                      disabled={inCall}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-gray-400 focus:bg-white disabled:opacity-60"
-                    />
-                  </div>
+                  <input
+                    type="tel"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    placeholder="Enter or paste a number"
+                    disabled={inCall}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-base font-mono tabular-nums text-center focus:outline-none focus:border-gray-400 focus:bg-white disabled:opacity-60"
+                  />
 
-                  {/* Live state */}
-                  {callState !== 'idle' && callState !== 'ended' && (
-                    <div className="mb-3 flex items-center justify-between gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs">
-                      <span className="text-gray-700">
-                        {callState === 'connecting' && 'Dialing…'}
-                        {callState === 'ringing' && 'Ringing…'}
-                        {callState === 'active' && (
-                          <span className="text-emerald-700 font-medium tabular-nums">{fmtDuration(secondsActive)}</span>
-                        )}
-                      </span>
-                      <span className="font-mono text-gray-500">{destination}</span>
+                  {/* Live call state - replaces the keypad while a call is in flight. */}
+                  {(callState === 'connecting' || callState === 'ringing') && (
+                    <div className="mt-4 flex flex-col items-center justify-center py-4">
+                      <div className="text-sm text-gray-700 mb-2">
+                        {callState === 'connecting' ? 'Dialing' : 'Ringing'}
+                        <RingingDots />
+                      </div>
+                      <RingingPulse />
+                      <div className="mt-3 font-mono text-xs text-gray-500 tabular-nums">{destination}</div>
+                    </div>
+                  )}
+                  {callState === 'active' && (
+                    <div className="mt-4 flex flex-col items-center justify-center py-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-emerald-700">on call</span>
+                      </div>
+                      <div className="text-2xl font-mono tabular-nums text-gray-900">{fmtDuration(secondsActive)}</div>
+                      <div className="mt-1 font-mono text-xs text-gray-500 tabular-nums">{destination}</div>
                     </div>
                   )}
                   {callState === 'ended' && (
-                    <div className="mb-3 text-xs text-gray-500">Call ended.</div>
+                    <div className="mt-3 text-center text-xs text-gray-500">Call ended.</div>
                   )}
 
-                  {/* Buttons */}
-                  <div className="flex items-center gap-2">
+                  {/* Keypad - hidden during connecting/ringing so the live state
+                      gets full visual focus. Shown during active calls so reps
+                      can send DTMF digits to IVR menus. */}
+                  {(callState === 'idle' || callState === 'ended' || callState === 'active') && (
+                    <div className="mt-3 grid grid-cols-3 gap-1.5">
+                      {KEYPAD.map(({ digit, sub }) => (
+                        <button
+                          key={digit}
+                          type="button"
+                          onClick={() => onKeypadPress(digit)}
+                          className="h-11 rounded-lg bg-gray-50 hover:bg-gray-100 active:bg-gray-200 active:scale-[0.97] transition-all flex flex-col items-center justify-center"
+                        >
+                          <span className="text-base font-medium text-gray-900 leading-none">{digit}</span>
+                          {sub && <span className="text-[9px] font-mono text-gray-400 mt-0.5 tracking-wider">{sub}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="mt-3 flex items-center gap-2">
                     {!inCall ? (
-                      <button
-                        onClick={onCallNow}
-                        disabled={status !== 'ready' || !destination.trim()}
-                        className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-emerald-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <PhoneCall className="w-4 h-4" weight="fill" />
-                        Call
-                      </button>
+                      <>
+                        {destination && !inCall && (
+                          <button
+                            onClick={() => setDestination((d) => d.slice(0, -1))}
+                            className="inline-flex items-center justify-center w-10 h-10 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+                            aria-label="Backspace"
+                            type="button"
+                          >
+                            ⌫
+                          </button>
+                        )}
+                        <button
+                          onClick={onCallNow}
+                          disabled={status !== 'ready' || !destination.trim()}
+                          className="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white text-sm font-medium rounded-xl px-4 py-2.5 hover:bg-emerald-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <PhoneCall className="w-4 h-4" weight="fill" />
+                          Call
+                        </button>
+                      </>
                     ) : (
                       <>
                         <button
                           onClick={toggleMute}
-                          className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm border transition-all ${
+                          className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-sm border transition-all ${
                             muted
                               ? 'bg-amber-50 border-amber-200 text-amber-800'
                               : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
@@ -517,7 +562,7 @@ export function Dialer() {
                         </button>
                         <button
                           onClick={hangup}
-                          className="flex-1 inline-flex items-center justify-center gap-2 bg-rose-600 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-rose-700 active:scale-[0.98] transition-all"
+                          className="flex-1 inline-flex items-center justify-center gap-2 bg-rose-600 text-white text-sm font-medium rounded-xl px-4 py-2.5 hover:bg-rose-700 active:scale-[0.98] transition-all"
                         >
                           <PhoneSlash className="w-4 h-4" weight="fill" />
                           Hang up
@@ -533,9 +578,9 @@ export function Dialer() {
                     </div>
                   )}
 
-                  {fromNumberRef.current && status === 'ready' && (
-                    <div className="mt-3 text-[10px] font-mono text-gray-400">
-                      caller id · {fromNumberRef.current}
+                  {fromNumberRef.current && status === 'ready' && !inCall && (
+                    <div className="mt-3 text-[10px] font-mono text-gray-400 text-center">
+                      from · {fromNumberRef.current}
                     </div>
                   )}
                 </>
@@ -596,6 +641,51 @@ function e164(raw: string): string | null {
   if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
   if (digits.length >= 11) return `+1${digits.slice(-10)}`
   return null
+}
+
+const KEYPAD: { digit: string; sub?: string }[] = [
+  { digit: '1' },
+  { digit: '2', sub: 'ABC' },
+  { digit: '3', sub: 'DEF' },
+  { digit: '4', sub: 'GHI' },
+  { digit: '5', sub: 'JKL' },
+  { digit: '6', sub: 'MNO' },
+  { digit: '7', sub: 'PQRS' },
+  { digit: '8', sub: 'TUV' },
+  { digit: '9', sub: 'WXYZ' },
+  { digit: '*' },
+  { digit: '0', sub: '+' },
+  { digit: '#' },
+]
+
+function RingingDots() {
+  return (
+    <span className="inline-flex ml-0.5">
+      <span className="animate-[ring_1.4s_ease-in-out_infinite] [animation-delay:0ms]">.</span>
+      <span className="animate-[ring_1.4s_ease-in-out_infinite] [animation-delay:200ms]">.</span>
+      <span className="animate-[ring_1.4s_ease-in-out_infinite] [animation-delay:400ms]">.</span>
+      <style jsx>{`
+        @keyframes ring {
+          0%, 60%, 100% { opacity: 0.2; }
+          30% { opacity: 1; }
+        }
+      `}</style>
+    </span>
+  )
+}
+
+function RingingPulse() {
+  // Concentric expanding rings under a phone icon - classic "ringing"
+  // visual without being a full lottie animation.
+  return (
+    <div className="relative w-16 h-16 flex items-center justify-center">
+      <span className="absolute inset-0 rounded-full bg-emerald-400/25 animate-ping" />
+      <span className="absolute inset-2 rounded-full bg-emerald-400/40 animate-ping [animation-delay:200ms]" />
+      <span className="relative inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/40">
+        <PhoneCall className="w-5 h-5" weight="fill" />
+      </span>
+    </div>
+  )
 }
 
 function fmtDuration(s: number): string {
