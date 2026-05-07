@@ -78,10 +78,18 @@ function buildSource(id: TradeId): SourceDefinition {
    const radiusMiles =
     typeof params.extra?.radiusMiles === 'number' ? params.extra.radiusMiles as number : 30
    const radiusMeters = Math.round(radiusMiles * 1609.34)
+   const diag = opts.diag
+   const qualityLevel = (params.extra?.quality as 'loose' | 'standard' | 'strict' | undefined) || 'standard'
    const minReviewCount =
-    typeof params.extra?.minReviewCount === 'number' ? params.extra.minReviewCount as number : 0
+    typeof params.extra?.minReviewCount === 'number'
+     ? params.extra.minReviewCount as number
+     : qualityLevel === 'strict' ? 20 : qualityLevel === 'loose' ? 0 : 3
    const minRating =
-    typeof params.extra?.minRating === 'number' ? params.extra.minRating as number : 0
+    typeof params.extra?.minRating === 'number'
+     ? params.extra.minRating as number
+     : qualityLevel === 'strict' ? 4.0 : qualityLevel === 'loose' ? 0 : 3.5
+   const requireWebsite = qualityLevel === 'strict'
+   diag?.push(`google-trades start: city=${cityRaw || '(fanout)'} strictness=${qualityLevel} minRating=${minRating} minReviews=${minReviewCount}`)
 
    const cityList = isSpecificCity(cityRaw) ? [cityRaw] : TX_FANOUT_CITIES
    const seen = opts.seen
@@ -106,6 +114,7 @@ function buildSource(id: TradeId): SourceDefinition {
      minReviewCount,
      minRating,
      locationRestriction: { lat: center.lat, lng: center.lng, radiusMeters },
+     onDiag: (m) => diag?.push(m),
     })) {
      if (totalYielded >= limit) break
      if (cityYielded >= remaining) break
@@ -114,6 +123,7 @@ function buildSource(id: TradeId): SourceDefinition {
      if (!phone) { cityDropped++; totalDropped++; continue }
 
      const website = normalizeWebsite(place.website)
+     if (requireWebsite && !website) { cityDropped++; totalDropped++; continue }
      const placeId = place.place_id || ''
      const nameKey = businessNameKey(place.business_name, place.city)
 
@@ -160,6 +170,7 @@ function buildSource(id: TradeId): SourceDefinition {
       source: `google_${id}`, city, kept: cityYielded, dropped: cityDropped,
      })
     }
+    diag?.push(`${city}/${id}: kept=${cityYielded} dropped=${cityDropped}`)
     if (cityList.length === 1) break
    }
   },

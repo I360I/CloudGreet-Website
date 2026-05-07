@@ -117,6 +117,14 @@ async function* runQualityMode(
 
   const limit = Math.max(1, Math.min(200, params.limit ?? 30))
   const seen = opts.seen
+  // Quality strictness ladder. Wired from the scrape form; defaults to
+  // 'standard' when missing. Loose returns more leads; strict drops
+  // anything not obviously worth a call.
+  const qualityLevel = (params.extra?.quality as 'loose' | 'standard' | 'strict' | undefined) || 'standard'
+  const minRating = qualityLevel === 'strict' ? 4.0 : qualityLevel === 'loose' ? 0 : HARD_MIN_RATING
+  const minReviews = qualityLevel === 'strict' ? 20 : qualityLevel === 'loose' ? 0 : HARD_MIN_REVIEWS
+  const requireWebsite = qualityLevel === 'strict'
+  diag?.push(`strictness=${qualityLevel} minRating=${minRating} minReviews=${minReviews} requireWebsite=${requireWebsite}`)
 
   // Per-run dedupe across the metro × trade matrix. A national chain
   // hits both Houston and Dallas; we should yield it once.
@@ -141,8 +149,8 @@ async function* runQualityMode(
         for await (const place of discoverPlaces(query, {
           maxResults: 20, // first page only - that's where the best-rated land
           includedType: cfg.includedType,
-          minReviewCount: HARD_MIN_REVIEWS,
-          minRating: HARD_MIN_RATING,
+          minReviewCount: minReviews,
+          minRating: minRating,
           excludeClosed: true,
           stateAllowList: [], // [] = any US state
           locationRestriction: {
@@ -171,6 +179,7 @@ async function* runQualityMode(
           // contractors don't have one - that's fine. The score
           // multiplier still rewards records that do.
           const website = normalizeWebsite(place.website)
+          if (requireWebsite && !website) { dropped++; continue }
 
           const placeId = place.place_id || ''
           const nameKey = businessNameKey(place.business_name, place.city)

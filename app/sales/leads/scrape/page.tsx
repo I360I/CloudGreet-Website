@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Play, CircleNotch, WarningCircle, CheckCircle, X, Trash, ArrowLeft,
-  CaretRight, MapPin, Phone, Globe, PaperPlaneTilt, Plus,
+  CaretRight, MapPin, Phone, Globe, PaperPlaneTilt, Plus, Info,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
@@ -55,6 +55,8 @@ export default function SalesScrapePage() {
   const [sourceId, setSourceId] = useState('')
   const [location, setLocation] = useState('Austin')
   const [limit, setLimit] = useState('50')
+  const [quality, setQuality] = useState<'loose' | 'standard' | 'strict'>('standard')
+  const [showQualityInfo, setShowQualityInfo] = useState(false)
 
   const dailyRemaining = Math.max(0, dailyLimit - dailyUsed)
   const capReached = dailyRemaining <= 0
@@ -95,6 +97,7 @@ export default function SalesScrapePage() {
           source: sourceId,
           location: location.trim() || undefined,
           limit: requested,
+          extra: { quality },
         }),
       })
       const j = await res.json().catch(() => ({}))
@@ -246,6 +249,46 @@ export default function SalesScrapePage() {
                 className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 disabled:opacity-60 disabled:bg-gray-50"
               />
             </div>
+          </div>
+
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-medium text-gray-600 inline-flex items-center gap-1.5">
+                Quality strictness
+                <button
+                  type="button"
+                  onClick={() => setShowQualityInfo((v) => !v)}
+                  className="text-gray-400 hover:text-gray-700 transition-colors"
+                  aria-label="What does this do?"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+              </label>
+              <span className="text-[11px] font-mono text-gray-500 capitalize">{quality}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {(['loose', 'standard', 'strict'] as const).map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => setQuality(q)}
+                  className={`flex-1 text-xs py-1.5 rounded-md border transition-colors ${
+                    quality === q
+                      ? 'bg-gray-900 text-white border-gray-900'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  {q[0].toUpperCase() + q.slice(1)}
+                </button>
+              ))}
+            </div>
+            {showQualityInfo && (
+              <div className="mt-2 text-[11px] bg-gray-50 border border-gray-200 rounded-md p-2.5 text-gray-700 leading-snug space-y-1">
+                <p><strong>Loose</strong> - returns more leads. No star-rating floor, accepts new businesses with few reviews, skips trade-match double-check. Use when you want max volume and don't mind sorting through.</p>
+                <p><strong>Standard</strong> - balanced. Drops sub-3-star shops when Google has them rated, keeps unrated new businesses, applies trade-match check on enriched records.</p>
+                <p><strong>Strict</strong> - smaller, cleaner batch. Requires 4-star+ rating with at least 20 reviews and a website. Best when you only want obviously-worth-calling leads.</p>
+              </div>
+            )}
           </div>
 
           {sourceId && (
