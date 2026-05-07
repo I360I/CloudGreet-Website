@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { supabaseAdmin } from '@/lib/supabase'
 import { JWTManager } from '@/lib/jwt-manager'
 import { logger } from '@/lib/monitoring'
+import { provisionRepNumber } from '@/lib/telnyx/provision-number'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -102,6 +103,15 @@ export async function POST(request: NextRequest) {
   .from('sales_rep_invites')
   .update({ consumed_at: new Date().toISOString(), consumed_by: newUser.id })
   .eq('token', token)
+
+ // Best-effort: provision a personal Telnyx DID for this rep so their
+ // outbound dialer caller-ID matches their identity, not the shared
+ // company number. Runs async-fire-and-forget - if it fails the rep
+ // can still call (token endpoint falls back to env default), and
+ // admin can manually retry from the rep page.
+ void provisionRepNumber(newUser.id).catch((e) => {
+   logger.warn('rep number provision threw', { repId: newUser.id, error: e instanceof Error ? e.message : 'Unknown' })
+ })
 
  // Issue a JWT and set the cookie so they're signed in immediately.
  const jwt = JWTManager.createUserToken(newUser.id, '', newUser.email, 'sales')

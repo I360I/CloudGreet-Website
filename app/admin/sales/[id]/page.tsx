@@ -36,6 +36,8 @@ type RepDetail = {
   lead_scrape_limit: number
   max_monthly_cents: number
   max_setup_cents: number
+  telnyx_outbound_number: string | null
+  telnyx_provision_error: string | null
  }
  kpis: {
   mtd_commission_cents: number
@@ -285,6 +287,17 @@ export default function RepDetailPage() {
       />
      </Panel>
 
+     {/* Dialer caller-ID */}
+     <Panel>
+      <PanelHeader title="Dialer number" eyebrow="outbound caller id" />
+      <DialerNumberField
+       repId={rep.id}
+       current={rep.telnyx_outbound_number}
+       lastError={rep.telnyx_provision_error}
+       onProvisioned={load}
+      />
+     </Panel>
+
      {/* Clients */}
      <Panel padding="none">
       <div className="px-5 sm:px-6 pt-5 pb-3 border-b border-white/[0.06]">
@@ -450,6 +463,92 @@ function ScrapeLimitField({
     {saving && <Loader2 className="w-3 h-3 animate-spin" />}
     Save
    </button>
+  </div>
+ )
+}
+
+function DialerNumberField({
+ repId, current, lastError, onProvisioned,
+}: {
+ repId: string
+ current: string | null
+ lastError: string | null
+ onProvisioned: () => void
+}) {
+ const [areaCode, setAreaCode] = useState('')
+ const [busy, setBusy] = useState(false)
+ const [err, setErr] = useState<string | null>(null)
+ const [okMsg, setOkMsg] = useState<string | null>(null)
+
+ const provision = async (force: boolean) => {
+  setBusy(true); setErr(null); setOkMsg(null)
+  try {
+   const r = await fetchWithAuth(`/api/admin/sales/reps/${repId}/provision-number`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ area_code: areaCode.trim() || undefined, force }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setErr(j?.error || `Failed (${r.status})`)
+   } else {
+    setOkMsg(j.reused ? `Already had ${j.phone_number}` : `Provisioned ${j.phone_number}`)
+    onProvisioned()
+   }
+  } catch (e) {
+   setErr(e instanceof Error ? e.message : 'Failed')
+  } finally {
+   setBusy(false)
+  }
+ }
+
+ return (
+  <div className="space-y-3">
+   {current ? (
+    <div className="flex items-center gap-2 text-sm">
+     <span className="font-mono tabular-nums text-white">{current}</span>
+     <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2 py-0.5">active</span>
+    </div>
+   ) : (
+    <div className="text-sm text-gray-400">No personal number yet · falling back to env default.</div>
+   )}
+
+   {lastError && !current && (
+    <div className="text-[11px] text-rose-300 bg-rose-500/10 border border-rose-400/20 rounded-lg px-3 py-2">
+     Last attempt failed: {lastError}
+    </div>
+   )}
+
+   <div className="flex items-end gap-3 flex-wrap">
+    <div>
+     <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+      Area code (optional)
+     </label>
+     <input
+      type="text"
+      inputMode="numeric"
+      maxLength={3}
+      placeholder="512"
+      value={areaCode}
+      onChange={(e) => setAreaCode(e.target.value.replace(/[^0-9]/g, ''))}
+      className="w-24 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white tabular-nums focus:outline-none focus:border-sky-400/50"
+     />
+     <p className="text-[11px] text-gray-500 mt-1.5">
+      Telnyx will pick from this area code first; falls back to any US local if none free.
+     </p>
+    </div>
+    <button
+     onClick={() => provision(current ? true : false)}
+     disabled={busy}
+     className="text-xs bg-sky-500/15 text-sky-300 border border-sky-400/20 hover:bg-sky-500/25 rounded-lg px-3 py-2 disabled:opacity-40 transition-colors inline-flex items-center gap-1.5"
+    >
+     {busy && <Loader2 className="w-3 h-3 animate-spin" />}
+     {current ? 'Replace number' : 'Provision number'}
+    </button>
+   </div>
+
+   {err && <div className="text-[11px] text-rose-300">{err}</div>}
+   {okMsg && <div className="text-[11px] text-emerald-300">{okMsg}</div>}
   </div>
  )
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -36,14 +37,25 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.TELNYX_API_KEY
   const credentialId = process.env.TELNYX_TELEPHONY_CREDENTIAL_ID
-  const fromNumber = process.env.TELNYX_OUTBOUND_FROM_NUMBER
+  const envFromNumber = process.env.TELNYX_OUTBOUND_FROM_NUMBER
+
+  // Prefer the rep's own Telnyx DID (provisioned at invite-accept).
+  // Fall back to the shared env default so the dialer keeps working
+  // for legacy reps whose provisioning failed or hasn't run yet.
+  const { data: rep } = await supabaseAdmin
+    .from('sales_reps')
+    .select('telnyx_outbound_number')
+    .eq('id', auth.userId)
+    .maybeSingle()
+  const fromNumber = rep?.telnyx_outbound_number || envFromNumber
+
   if (!apiKey || !credentialId || !fromNumber) {
     return NextResponse.json({
       error: 'Dialer not configured',
       setup_needed: {
         TELNYX_API_KEY: !apiKey,
         TELNYX_TELEPHONY_CREDENTIAL_ID: !credentialId,
-        TELNYX_OUTBOUND_FROM_NUMBER: !fromNumber,
+        TELNYX_OUTBOUND_FROM_NUMBER: !envFromNumber && !rep?.telnyx_outbound_number,
       },
     }, { status: 503 })
   }
