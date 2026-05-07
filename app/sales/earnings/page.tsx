@@ -7,6 +7,7 @@ import {
   WarningCircle, ArrowRight, TrendUp, Receipt, ArrowSquareOut, CircleNotch,
 } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
+import { ForecastPanel } from './_forecast'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { Line } from 'react-chartjs-2'
 import {
@@ -197,6 +198,8 @@ export default function SalesEarningsPage() {
               lifetimeCents={totals?.lifetime_cents ?? 0}
               mrrCents={totals?.mrr_cents ?? 0}
             />
+
+            <ForecastPanel />
 
             <motion.div
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
