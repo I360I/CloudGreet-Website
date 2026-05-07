@@ -1,7 +1,6 @@
 import { supabaseAdmin } from '../supabase'
 import { logger } from '../monitoring'
 import { getSource } from './registry'
-import { promoteScrapeResults } from './promote'
 import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
 import type { ScrapeParams, ScrapeRecord, SeenSets } from './types'
 
@@ -122,18 +121,10 @@ export async function runScrapeJob(jobId: string): Promise<void> {
   }
   await flush()
 
-  // Auto-promote into leads when this scrape was run by a rep.
-  const repId = (params as any)?.rep_id as string | undefined
-  if (repId && count > 0) {
-   try {
-    const promoteResult = await promoteScrapeResults({ jobId, repId })
-    logger.info('scrape auto-promote complete', { jobId, repId, ...promoteResult })
-   } catch (e) {
-    logger.warn('scrape auto-promote threw (non-fatal)', {
-     jobId, error: e instanceof Error ? e.message : 'Unknown',
-    })
-   }
-  }
+  // No auto-promote. Reps should review the raw scrape_results first
+  // and explicitly click Promote on the ones they actually want in their
+  // leads list. The /api/sales/scrape/[id]/promote route handles the
+  // manual path and the UI exposes a per-row + bulk promote button.
 
   // On completed-but-empty, surface diagnostics into the job's error
    // field so the rep can read it in the UI without checking Vercel logs.
