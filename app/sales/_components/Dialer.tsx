@@ -76,13 +76,12 @@ export function Dialer() {
     const setup = async (opts?: { fromUserGesture?: boolean }) => {
       setError(null)
 
-      // On mount: first ask the Permissions API (fast path with no
-      // browser-level side effect). If it says 'granted', proceed. If it
-      // says 'denied' or is unavailable (Safari), try a silent
-      // getUserMedia - browsers that have the permission cached resolve
-      // it instantly without prompting, which means a returning user
-      // doesn't have to click "Allow" on every page reload. If that also
-      // fails, only then do we surface the "click to allow" UI.
+      // On mount: only the Permissions API is allowed to confirm a
+      // pre-existing grant. We deliberately do NOT call getUserMedia
+      // here, because Safari (and Chrome with default site settings)
+      // treat *any* mount-time getUserMedia call as a fresh request and
+      // re-fire the OS-level mic prompt on every reload - which is
+      // worse UX than just having the user click our in-app button.
       if (!opts?.fromUserGesture) {
         let granted = false
         try {
@@ -90,19 +89,10 @@ export function Dialer() {
             ?.query?.({ name: 'microphone' as PermissionName })
             .catch(() => null)
           if (perm?.state === 'granted') granted = true
-        } catch { /* fall through to silent attempt */ }
-
+        } catch { /* unsupported - fall through */ }
         if (!granted) {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            stream.getTracks().forEach((t) => t.stop())
-            granted = true
-          } catch {
-            // No prior permission. Need a user click. Don't surface the
-            // error - it's expected on first visit / no-gesture context.
-            setStatus('mic_required')
-            return
-          }
+          setStatus('mic_required')
+          return
         }
       } else {
         // We were invoked from a click handler. getUserMedia is the source
