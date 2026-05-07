@@ -197,7 +197,12 @@ async function loadSeenSets(): Promise<SeenSets> {
  // Recent scrape_results - covers in-flight (not-yet-promoted) hits and
  // older promoted ones so we don't re-show the same lead.
  try {
-  const cutoff = new Date(Date.now() - 180 * 86_400_000).toISOString()
+  // 30-day window. Was 180 but each source's effective population is small
+  // (Google caps text-search at ~60 results; TDLR HVAC is ~6k statewide), so
+  // a long window meant a few test runs against the same metro exhausted
+  // every option and subsequent scrapes returned 0. 30 days still prevents
+  // a rep from seeing the same lead twice in any reasonable working cycle.
+  const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString()
   const { data } = await supabaseAdmin
    .from('scrape_results')
    .select('phone, website, business_name, city, raw')
