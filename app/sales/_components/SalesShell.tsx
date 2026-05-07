@@ -157,7 +157,7 @@ export function SalesShell({
         {children}
       </div>
 
-      <Dialer />
+      {pathname.startsWith('/sales/leads') && <Dialer />}
     </main>
   )
 }

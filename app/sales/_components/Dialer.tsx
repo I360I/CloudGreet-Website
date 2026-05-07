@@ -608,16 +608,16 @@ export function Dialer() {
       {/* Floating launcher */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`relative w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all active:scale-[0.96] ${
+        className={`relative w-9 h-9 rounded-full shadow-md flex items-center justify-center transition-all active:scale-[0.96] ${
           inCall
             ? 'bg-emerald-600 text-white shadow-emerald-600/30'
-            : 'bg-gray-900 text-white shadow-gray-900/20 hover:bg-gray-800'
+            : 'bg-gray-900 text-white shadow-gray-900/15 hover:bg-gray-800'
         }`}
         aria-label="Open dialer"
       >
-        {inCall ? <PhoneCall className="w-5 h-5" weight="fill" /> : <Phone className="w-5 h-5" weight="fill" />}
+        {inCall ? <PhoneCall className="w-3.5 h-3.5" weight="fill" /> : <Phone className="w-3.5 h-3.5" weight="fill" />}
         {status === 'ready' && !inCall && (
-          <span className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white" aria-hidden />
+          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-white" aria-hidden />
         )}
       </button>
     </div>
