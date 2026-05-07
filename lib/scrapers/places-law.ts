@@ -23,7 +23,7 @@ import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
 import type { ScrapeParams, ScrapeRecord, SourceDefinition, SourceRunOpts } from './types'
 
 const MAX_REVIEWS = 200
-const MIN_REVIEWS = 5
+const MIN_REVIEWS = 3
 
 const NAME_BLOCKLIST = [
   'morgan & morgan', 'jacoby & meyers', 'cellino', 'parker waichman',
@@ -87,14 +87,24 @@ async function* runLaw(
 
     for await (const place of discoverPlaces(query, {
       maxResults: Math.min(60, Math.max(20, remaining * 3)),
-      includedType: 'lawyer',
+      // Don't restrict to includedType: 'lawyer' - Google tags many
+      // solo attorneys with more specific subtypes (personal_injury_attorney,
+      // family_law_attorney, etc) which fail an exact 'lawyer' filter.
+      // Trust the text query and post-filter on type tokens below.
       minReviewCount: MIN_REVIEWS,
-      minRating: 4.0,
+      minRating: 3.5,
       excludeClosed: true,
       locationRestriction: {
         lat: center.lat, lng: center.lng, radiusMeters: 40_000,
       },
     })) {
+      // Post-filter to make sure we got something legal. The text query
+      // alone can return courts, paralegals, even bail bondsmen.
+      const types = (place.google_types || []).map((t) => t.toLowerCase())
+      const isLegal = types.some((t) =>
+        t === 'lawyer' || t.endsWith('_attorney') || t.endsWith('_lawyer') || t === 'legal_services'
+      )
+      if (!isLegal) { totalDropped++; continue }
       if (totalYielded >= limit) break
 
       // Drop mega-firms by review count.
@@ -105,8 +115,9 @@ async function* runLaw(
 
       const phone = normalizePhone(place.phone)
       if (!phone) { totalDropped++; continue }
+      // Website preferred but not required - many small solo lawyers
+      // run on bar-association profiles + Google Business only.
       const website = normalizeWebsite(place.website)
-      if (!website) { totalDropped++; continue }
 
       const placeId = place.place_id || ''
       const nameKey = businessNameKey(place.business_name, place.city)

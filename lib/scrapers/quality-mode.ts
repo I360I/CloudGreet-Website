@@ -95,8 +95,13 @@ const QUALITY_METROS: { name: string; state: string; lat: number; lng: number }[
 
 const QUALITY_RADIUS_METERS = 40_000 // ~25 miles, covers a metro core
 
-const HARD_MIN_RATING = 4.5
-const HARD_MIN_REVIEWS = 30
+// Quality bar - calibrated empirically. Started at 4.5 / 30 reviews
+// but that was too aggressive: Google's text search frequently returns
+// places without ratings yet, and many legitimate small contractors
+// sit at 4.0-4.4. We accept 4.0+ now and rely on the score (which
+// favors higher rating + review volume) to bubble the best up.
+const HARD_MIN_RATING = 4.0
+const HARD_MIN_REVIEWS = 10
 
 async function* runQualityMode(
   params: ScrapeParams,
@@ -158,8 +163,10 @@ async function* runQualityMode(
 
           const phone = normalizePhone(place.phone)
           if (!phone) { dropped++; continue }
+          // Website is a soft signal now. Many legitimate solo
+          // contractors don't have one - that's fine. The score
+          // multiplier still rewards records that do.
           const website = normalizeWebsite(place.website)
-          if (!website) { dropped++; continue } // hard gate: no site = skip
 
           const placeId = place.place_id || ''
           const nameKey = businessNameKey(place.business_name, place.city)
