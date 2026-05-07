@@ -32,15 +32,42 @@ import { discoverPlaces, isGooglePlacesConfigured } from './google-places'
 import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
 import type { ScrapeParams, ScrapeRecord, SeenSets, SourceDefinition, SourceRunOpts } from './types'
 
-type TradeKey = 'HVAC' | 'Plumbing' | 'Electrical' | 'Roofing'
+type TradeKey = 'HVAC' | 'Plumbing' | 'Electrical' | 'Roofing' | 'Law'
 
-type TradeCfg = { trade: TradeKey; includedType: string; textQuery: string }
+type TradeCfg = {
+  trade: TradeKey
+  includedType: string
+  textQuery: string
+  /** Optional cap to filter out enterprise mega-firms / national chains
+   *  whose review counts are orders of magnitude above the local
+   *  competition. Used for Law - the AI receptionist's actual buyers
+   *  are solo and small-firm attorneys, not Morgan & Morgan. */
+  maxReviewCount?: number
+  /** Substring blocklist tested against business_name (case-insensitive).
+   *  A second guard so chains slipping past the review cap still get
+   *  dropped. */
+  nameBlocklist?: string[]
+}
 
 const QUALITY_TRADES: TradeCfg[] = [
-  { trade: 'HVAC',       includedType: 'hvac_contractor', textQuery: 'hvac contractors' },
-  { trade: 'Plumbing',   includedType: 'plumber',         textQuery: 'plumbing contractors' },
-  { trade: 'Electrical', includedType: 'electrician',     textQuery: 'electrical contractors' },
+  { trade: 'HVAC',       includedType: 'hvac_contractor',    textQuery: 'hvac contractors' },
+  { trade: 'Plumbing',   includedType: 'plumber',            textQuery: 'plumbing contractors' },
+  { trade: 'Electrical', includedType: 'electrician',        textQuery: 'electrical contractors' },
   { trade: 'Roofing',    includedType: 'roofing_contractor', textQuery: 'roofing contractors' },
+  {
+    trade: 'Law',
+    includedType: 'lawyer',
+    textQuery: 'law firm',
+    // Solo + small-firm sweet spot. 200+ reviews is almost always a
+    // multi-state PI/class-action mill that already has a phone team.
+    maxReviewCount: 200,
+    nameBlocklist: [
+      'morgan & morgan', 'jacoby & meyers', 'cellino', 'parker waichman',
+      'lerner', 'sokolove', 'simmons hanly', 'weitz', 'baron & budd',
+      'kirkland & ellis', 'latham & watkins', 'jones day', 'sidley',
+      'skadden', 'baker mckenzie', 'dla piper', 'norton rose',
+    ],
+  },
 ]
 
 /**
@@ -71,8 +98,6 @@ const QUALITY_RADIUS_METERS = 40_000 // ~25 miles, covers a metro core
 const HARD_MIN_RATING = 4.5
 const HARD_MIN_REVIEWS = 30
 
-type Scored = ScrapeRecord & { __score: number }
-
 async function* runQualityMode(
   params: ScrapeParams,
   opts: SourceRunOpts,
@@ -90,13 +115,17 @@ async function* runQualityMode(
   const localPhones = new Set<string>()
   const localPlaceIds = new Set<string>()
 
-  // Buffer all surviving leads so we can rank globally before yielding
-  // anything. This is the whole point of Quality Mode - the rep gets
-  // the *best* N nationwide, not the first N we happened to find.
-  const survivors: Scored[] = []
+  let totalYielded = 0
+  let totalDropped = 0
+  // Stream records as we find them. The runner persists each one
+  // immediately so partial results survive mid-sweep failures or
+  // function timeouts. Hard quality gates (4.5+ rating, 30+ reviews,
+  // website, phone) ensure every yielded record is high quality;
+  // we trade global score ranking for resilience and visible progress.
 
-  for (const metro of QUALITY_METROS) {
+  outer: for (const metro of QUALITY_METROS) {
     for (const cfg of QUALITY_TRADES) {
+      if (totalYielded >= limit) break outer
       const query = `${cfg.textQuery} near ${metro.name} ${metro.state}`
       let kept = 0
       let dropped = 0
@@ -112,6 +141,21 @@ async function* runQualityMode(
             lat: metro.lat, lng: metro.lng, radiusMeters: QUALITY_RADIUS_METERS,
           },
         })) {
+          if (totalYielded >= limit) break
+          // Trade-specific size cap: drops mega-firms whose review
+          // counts dwarf solo / small competitors.
+          if (cfg.maxReviewCount && (place.review_count ?? 0) > cfg.maxReviewCount) {
+            dropped++; continue
+          }
+          // Trade-specific name blocklist: catches branded chains that
+          // sneak under the review cap via a small satellite office.
+          if (cfg.nameBlocklist) {
+            const lower = (place.business_name || '').toLowerCase()
+            if (cfg.nameBlocklist.some((n) => lower.includes(n))) {
+              dropped++; continue
+            }
+          }
+
           const phone = normalizePhone(place.phone)
           if (!phone) { dropped++; continue }
           const website = normalizeWebsite(place.website)
@@ -138,8 +182,7 @@ async function* runQualityMode(
             Math.log10(Math.max(10, reviews)) *
             (website ? 1.2 : 1.0)
 
-          survivors.push({
-            __score: score,
+          yield {
             source: 'quality_mode',
             business_name: place.business_name,
             owner_name: null,
@@ -159,8 +202,9 @@ async function* runQualityMode(
               quality_score: Number(score.toFixed(3)),
               metro: metro.name,
             },
-          })
+          }
           kept++
+          totalYielded++
         }
       } catch (e) {
         logger.warn('quality mode metro pass threw', {
@@ -168,27 +212,16 @@ async function* runQualityMode(
           error: e instanceof Error ? e.message : 'Unknown',
         })
       }
-      if (kept > 0 || dropped > 0) {
-        logger.info('quality mode pass', {
-          metro: metro.name, trade: cfg.trade, kept, dropped,
-        })
-      }
+      totalDropped += dropped
+      logger.info('quality mode pass', {
+        metro: metro.name, trade: cfg.trade, kept, dropped, total_yielded: totalYielded,
+      })
     }
   }
 
-  // Rank globally and yield top N.
-  survivors.sort((a, b) => b.__score - a.__score)
-  const top = survivors.slice(0, limit)
-  logger.info('quality mode result', {
-    candidates: survivors.length, returned: top.length,
-    top_score: top[0]?.__score, bottom_score: top[top.length - 1]?.__score,
+  logger.info('quality mode complete', {
+    yielded: totalYielded, dropped: totalDropped, limit,
   })
-
-  for (const r of top) {
-    // Strip the internal score field before yielding.
-    const { __score, ...record } = r
-    yield record
-  }
 }
 
 export const qualityModeSource: SourceDefinition = {

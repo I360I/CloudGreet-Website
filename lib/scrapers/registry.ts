@@ -7,6 +7,7 @@ import {
 } from './google-trades'
 import { placesSources } from './google-places-discovery'
 import { qualityModeSource } from './quality-mode'
+import { placesLaw } from './places-law'
 
 /**
  * Single registry of every scraper source. Add new sources here once and
@@ -24,6 +25,9 @@ export const SCRAPER_SOURCES: SourceDefinition[] = [
  // Quality mode - small national batch, ruthlessly filtered. First in
  // the list because reps complaining about "trash leads" want this.
  qualityModeSource,
+ // Solo & small law firms - non-contractor vertical, kept near top
+ // because legal is a strong fit for the AI receptionist pitch.
+ placesLaw,
  // Preferred - Texas licensing databases (free, with owner name)
  tdlrHvac,
  tdlrElectrical,

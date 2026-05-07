@@ -214,8 +214,12 @@ export default function SalesScrapePage() {
                 onChange={(e) => setSourceId(e.target.value)}
                 className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
               >
-                {sources.map((s) => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
+                {groupSources(sources).map((g) => (
+                  <optgroup key={g.label} label={g.label}>
+                    {g.items.map((s) => (
+                      <option key={s.id} value={s.id}>{prettySourceLabel(s)}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
@@ -628,6 +632,48 @@ function JobDrawer({
       </motion.aside>
     </>
   )
+}
+
+/**
+ * Group scraper sources for the dropdown so reps don't see one giant
+ * jumbled list. Categorisation is hardcoded by source id - the source
+ * registry stays in code, but UX lives here.
+ */
+function groupSources(sources: Source[]): { label: string; items: Source[] }[] {
+  const groups: Record<string, Source[]> = {
+    'Recommended': [],
+    'Texas — license databases': [],
+    'Texas — Google Places': [],
+    'National sweeps': [],
+  }
+  for (const s of sources) {
+    if (s.id === 'quality_mode') groups['Recommended'].push(s)
+    else if (s.id.startsWith('tdlr_') || s.id.startsWith('tsbpe') || s.id.startsWith('tda_')) {
+      groups['Texas — license databases'].push(s)
+    } else if (s.id === 'places_law') {
+      groups['National sweeps'].push(s)
+    } else if (s.id.startsWith('places_') || s.id.startsWith('google_')) {
+      groups['Texas — Google Places'].push(s)
+    } else {
+      groups['Texas — Google Places'].push(s) // fallback bucket
+    }
+  }
+  return Object.entries(groups)
+    .filter(([_, items]) => items.length > 0)
+    .map(([label, items]) => ({ label, items }))
+}
+
+/**
+ * Strip noisy prefixes - the optgroup already says "Google" or
+ * "License database", so each line just shows the trade.
+ */
+function prettySourceLabel(s: Source): string {
+  return s.label
+    .replace(/^Google\s*·\s*/i, '')
+    .replace(/^TDLR\s*·\s*/i, 'TDLR · ')
+    .replace(/^TSBPE\s*·\s*/i, 'TSBPE · ')
+    .replace(/^TDA\s*·\s*/i, 'TDA · ')
+    .replace(/^Quality mode\s*·\s*/i, '')
 }
 
 function normalizePhone(p: string | null): string | null {
