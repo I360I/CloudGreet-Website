@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import { Phone, PhoneCall, PhoneSlash, MicrophoneSlash, Microphone, X, CircleNotch, WarningCircle } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -58,6 +58,7 @@ export function Dialer() {
   const [secondsActive, setSecondsActive] = useState(0)
   const [micBusy, setMicBusy] = useState(false)
   const [micErrName, setMicErrName] = useState<string | null>(null)
+  const dragControls = useDragControls()
 
   // Refs to long-lived objects (Telnyx client, current Call, server-side
   // log row id, etc.) so re-renders don't recreate them.
@@ -393,26 +394,35 @@ export function Dialer() {
   const inCall = callState === 'connecting' || callState === 'ringing' || callState === 'active'
 
   return (
-    <div className="fixed bottom-5 right-5 z-[80] sm:block hidden">
+    <>
       <AnimatePresence>
         {open && (
           <motion.div
             key="panel"
-            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+            drag
+            dragControls={dragControls}
+            dragListener={false}
+            dragMomentum={false}
+            dragElastic={0}
+            initial={{ opacity: 0, y: -8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.96 }}
+            exit={{ opacity: 0, y: -8, scale: 0.96 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-            className="mb-3 w-80 bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden"
+            className="fixed top-4 left-4 z-[80] hidden sm:block w-80 bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden"
           >
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <div
+              onPointerDown={(e) => dragControls.start(e)}
+              className="px-4 py-3 border-b border-gray-100 flex items-center justify-between cursor-move select-none touch-none"
+            >
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-gray-700" weight="fill" />
                 <div className="text-sm font-medium text-gray-900">Dialer</div>
                 <SessionPill status={status} />
               </div>
               <button
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => setOpen(false)}
-                className="p-1 -m-1 text-gray-400 hover:text-gray-700"
+                className="p-1 -m-1 text-gray-400 hover:text-gray-700 cursor-pointer"
                 aria-label="Close"
               >
                 <X className="w-4 h-4" />
@@ -605,10 +615,11 @@ export function Dialer() {
         )}
       </AnimatePresence>
 
-      {/* Floating launcher */}
+      {/* Floating launcher - lives in the bottom-right corner regardless of
+          where the panel has been dragged to. */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`relative w-9 h-9 rounded-full shadow-md flex items-center justify-center transition-all active:scale-[0.96] ${
+        className={`fixed bottom-5 right-5 z-[80] hidden sm:flex relative w-9 h-9 rounded-full shadow-md items-center justify-center transition-all active:scale-[0.96] ${
           inCall
             ? 'bg-emerald-600 text-white shadow-emerald-600/30'
             : 'bg-gray-900 text-white shadow-gray-900/15 hover:bg-gray-800'
@@ -620,7 +631,7 @@ export function Dialer() {
           <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-white" aria-hidden />
         )}
       </button>
-    </div>
+    </>
   )
 }
 

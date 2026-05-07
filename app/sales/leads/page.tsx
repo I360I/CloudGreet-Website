@@ -39,16 +39,16 @@ type Lead = {
   latest_note?: { body: string; created_at: string } | null
 }
 
-const STATUS_META: Record<string, { label: string; pill: string; dot: string }> = {
-  new:             { label: 'New',         pill: 'bg-gray-100 text-gray-700',          dot: 'bg-gray-400' },
-  called:          { label: 'Called',      pill: 'bg-sky-50 text-sky-700',             dot: 'bg-sky-500' },
-  voicemail:       { label: 'Voicemail',   pill: 'bg-violet-50 text-violet-700',       dot: 'bg-violet-500' },
-  interested:      { label: 'Interested',  pill: 'bg-amber-50 text-amber-700',         dot: 'bg-amber-500' },
-  demo_scheduled:  { label: 'Demo set',    pill: 'bg-amber-100 text-amber-800',        dot: 'bg-amber-600' },
-  proposal_sent:   { label: 'Proposal',    pill: 'bg-emerald-50 text-emerald-700',     dot: 'bg-emerald-500' },
-  closed:          { label: 'Closed',      pill: 'bg-emerald-100 text-emerald-800',    dot: 'bg-emerald-600' },
-  dead:            { label: 'Dead',        pill: 'bg-gray-100 text-gray-500',          dot: 'bg-gray-300' },
-  do_not_call:     { label: 'DNC',         pill: 'bg-red-50 text-red-700',             dot: 'bg-red-500' },
+const STATUS_META: Record<string, { label: string; pill: string; dot: string; row: string }> = {
+  new:             { label: 'New',         pill: 'bg-gray-100 text-gray-700',          dot: 'bg-gray-400',     row: '' },
+  called:          { label: 'Called',      pill: 'bg-sky-50 text-sky-700',             dot: 'bg-sky-500',      row: 'bg-sky-50/40 hover:bg-sky-50/70' },
+  voicemail:       { label: 'Voicemail',   pill: 'bg-violet-50 text-violet-700',       dot: 'bg-violet-500',   row: 'bg-violet-50/40 hover:bg-violet-50/70' },
+  interested:      { label: 'Interested',  pill: 'bg-amber-50 text-amber-700',         dot: 'bg-amber-500',    row: 'bg-amber-50/50 hover:bg-amber-50/80' },
+  demo_scheduled:  { label: 'Demo set',    pill: 'bg-amber-100 text-amber-800',        dot: 'bg-amber-600',    row: 'bg-amber-50/70 hover:bg-amber-100/60' },
+  proposal_sent:   { label: 'Proposal',    pill: 'bg-emerald-50 text-emerald-700',     dot: 'bg-emerald-500',  row: 'bg-emerald-50/40 hover:bg-emerald-50/70' },
+  closed:          { label: 'Closed',      pill: 'bg-emerald-100 text-emerald-800',    dot: 'bg-emerald-600',  row: 'bg-emerald-50/70 hover:bg-emerald-100/60' },
+  dead:            { label: 'Dead',        pill: 'bg-gray-100 text-gray-500',          dot: 'bg-gray-300',     row: 'bg-gray-50/60 opacity-60 hover:opacity-80' },
+  do_not_call:     { label: 'DNC',         pill: 'bg-red-50 text-red-700',             dot: 'bg-red-500',      row: 'bg-red-50/40 hover:bg-red-50/70' },
 }
 
 const STATUS_FILTERS: Array<{ key: string; label: string }> = [
@@ -390,21 +390,21 @@ export default function SalesLeadsPage() {
                     <motion.li
                       key={l.id}
                       variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: EASE } } }}
-                      className="px-5 py-4 hover:bg-gray-50/60 transition-colors"
+                      className={`px-4 py-2 transition-colors ${meta.row || 'hover:bg-gray-50/60'}`}
                     >
-                      <div className="flex items-start gap-4">
+                      <div className="flex items-center gap-3">
                         {/* Left: company + contact */}
                         <Link
                           href={`/sales/leads/${l.id}`}
                           className="flex-1 min-w-0 block group"
                         >
                           <div className="flex items-baseline gap-2 flex-wrap">
-                            <div className="text-base font-medium text-gray-900 group-hover:text-gray-700 truncate leading-snug">
+                            <div className="text-sm font-medium text-gray-900 group-hover:text-gray-700 truncate leading-tight">
                               {l.business_name}
                             </div>
                             <QualityChip lead={l} />
                           </div>
-                          <div className="text-xs text-gray-500 mt-0.5 truncate flex items-center gap-2 flex-wrap">
+                          <div className="text-[11px] text-gray-500 truncate flex items-center gap-1.5 flex-wrap leading-tight">
                             {l.contact_name && <span>{l.contact_name}</span>}
                             {l.contact_name && (l.city || l.business_type) && <span className="text-gray-300">·</span>}
                             {l.business_type && <span className="text-gray-600">{l.business_type}</span>}
@@ -425,7 +425,7 @@ export default function SalesLeadsPage() {
                                 window.cgDial(l.phone, l.id)
                               }
                             }}
-                            className="hidden sm:flex items-center gap-2 text-base font-mono tabular-nums text-gray-900 hover:text-gray-700 select-all"
+                            className="hidden sm:flex items-center gap-2 text-sm font-mono tabular-nums text-gray-900 hover:text-gray-700 select-all"
                             aria-label="Call"
                           >
                             {formatPhone(l.phone)}
