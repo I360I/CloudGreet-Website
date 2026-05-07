@@ -705,10 +705,9 @@ function groupSources(sources: Source[]): { label: string; items: Source[] }[] {
   }
   for (const s of sources) {
     if (s.id === 'quality_mode') groups['Recommended'].push(s)
+    else if (s.id === 'places_law') groups['Recommended'].push(s)
     else if (s.id.startsWith('tdlr_') || s.id.startsWith('tsbpe') || s.id.startsWith('tda_')) {
       groups['Texas — license databases'].push(s)
-    } else if (s.id === 'places_law') {
-      groups['National sweeps'].push(s)
     } else if (s.id.startsWith('places_') || s.id.startsWith('google_')) {
       groups['Texas — Google Places'].push(s)
     } else {
