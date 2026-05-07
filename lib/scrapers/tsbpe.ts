@@ -95,7 +95,8 @@ async function* runTsbpe(params: ScrapeParams): AsyncGenerator<ScrapeRecord, voi
    if (drop) { droppedPre++; continue }
   }
 
-  // Enrich for website only - phone is already in the CSV.
+  // Enrich for website + rating + reviews. Phone is already in the CSV
+  // but the rep's quality signal comes from Google.
   let placesData: import('./google-places').PlacesEnrichment | null = null
   let placesError: string | null = null
   if (enrichEnabled) {
@@ -106,7 +107,15 @@ async function* runTsbpe(params: ScrapeParams): AsyncGenerator<ScrapeRecord, voi
      record = {
       ...record,
       website: attempt.data.website || null,
-      raw: { ...r, google_places: attempt.data },
+      raw: {
+       ...r,
+       google_places: attempt.data,
+       google_rating: attempt.data.rating,
+       google_review_count: attempt.data.review_count,
+       google_place_id: attempt.data.place_id,
+       google_business_status: attempt.data.business_status,
+       google_types: attempt.data.google_types,
+      },
      }
     } else {
      placesError = attempt.error
@@ -122,9 +131,13 @@ async function* runTsbpe(params: ScrapeParams): AsyncGenerator<ScrapeRecord, voi
    }
   }
 
-  if (strict && enrichEnabled && !placesError) {
+  if (strict && enrichEnabled && placesData && !placesError) {
    const verdict = googleConfirmsTrade(record, 'Plumbing', placesData)
    if (!verdict.ok) { droppedPost++; continue }
+   // Quality gate matches TDLR: drop documented sub-3-star listings.
+   if (placesData.rating !== null && placesData.rating < 3.0) {
+    droppedPost++; continue
+   }
   }
 
   if (strict && params.location && !phoneMatchesMetro(record.phone, params.location)) {
@@ -204,7 +217,7 @@ export const tsbpePlumbing: SourceDefinition = {
  id: 'tsbpe_plumbing',
  label: 'TSBPE · Plumbing contractors',
  description:
-  'Texas State Board of Plumbing Examiners - Responsible Master Plumbers. Owner name, business, phone, and full address come straight from TSBPE\'s public CSV. Google Places fills in websites.',
+  'Licensed Texas master plumbers from TSBPE (owner, business, phone, full address), cross-referenced with Google for star rating, review count, and website. Sub-3-star shops dropped automatically.',
  trade: 'Plumbing',
  run: (params, _opts) => runTsbpe(params),
 }

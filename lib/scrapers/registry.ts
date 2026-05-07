@@ -38,8 +38,12 @@ export const SCRAPER_SOURCES: SourceDefinition[] = [
  googlePainting,
  googleHandyman,
  googleLandscaping,
- // Optional - Google Places type-filtered (higher precision, no owner name, costs more)
- ...placesSources,
+ // Google Places-only sources for trades that don't have a Texas
+ // license database (roofing, painting, etc). HVAC/Plumbing/Electrical/
+ // Pest are intentionally hidden here - the TDLR/TSBPE/TDA sources
+ // above already enrich with the same Google data and add the owner's
+ // legal name + license number, so showing both confused reps.
+ ...placesSources.filter((s) => !['places_hvac', 'places_plumbing', 'places_electrical', 'places_pest'].includes(s.id)),
 ]
 
 export function getSource(id: string): SourceDefinition | undefined {

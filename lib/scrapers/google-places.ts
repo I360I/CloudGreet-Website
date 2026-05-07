@@ -97,6 +97,9 @@ export type PlacesEnrichment = {
  matched_name: string | null
  matched_address: string | null
  place_id: string | null
+ rating: number | null
+ review_count: number | null
+ business_status: string | null
 }
 
 export type PlacesAttempt =
@@ -168,6 +171,9 @@ export async function enrichWithGooglePlaces(
     matched_name: place.displayName?.text || null,
     matched_address: place.formattedAddress || null,
     place_id: place.id || null,
+    rating: typeof place.rating === 'number' ? place.rating : null,
+    review_count: typeof place.userRatingCount === 'number' ? place.userRatingCount : null,
+    business_status: place.businessStatus || null,
    },
   }
  } catch (e) {

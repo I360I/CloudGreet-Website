@@ -124,7 +124,15 @@ async function* runTda(params: ScrapeParams): AsyncGenerator<ScrapeRecord, void,
       phone: attempt.data.phone || null,
       website: attempt.data.website || null,
       address: attempt.data.matched_address || record.address,
-      raw: { ...r, google_places: attempt.data },
+      raw: {
+       ...r,
+       google_places: attempt.data,
+       google_rating: attempt.data.rating,
+       google_review_count: attempt.data.review_count,
+       google_place_id: attempt.data.place_id,
+       google_business_status: attempt.data.business_status,
+       google_types: attempt.data.google_types,
+      },
      }
     } else {
      placesError = attempt.error
@@ -140,9 +148,12 @@ async function* runTda(params: ScrapeParams): AsyncGenerator<ScrapeRecord, void,
    }
   }
 
-  if (strict && enrichEnabled && !placesError) {
+  if (strict && enrichEnabled && placesData && !placesError) {
    const verdict = googleConfirmsTrade(record, 'Pest Control', placesData)
    if (!verdict.ok) { droppedPost++; continue }
+   if (placesData.rating !== null && placesData.rating < 3.0) {
+    droppedPost++; continue
+   }
   }
 
   yield record
@@ -218,7 +229,7 @@ export const tdaPestControl: SourceDefinition = {
  id: 'tda_pest',
  label: 'TDA · Pest control',
  description:
-  'Texas Department of Agriculture - Commercial Structural Pest Control Businesses. Owner / business / category come from TDA\'s public CSV. Google Places fills in phone, website, and full address.',
+  'Licensed Texas commercial pest-control businesses from TDA (owner, business, category), cross-referenced with Google for phone, website, address, star rating, and review count. Sub-3-star shops dropped automatically.',
  trade: 'Pest Control',
  run: (params, _opts) => runTda(params),
 }

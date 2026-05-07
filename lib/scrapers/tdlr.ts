@@ -117,12 +117,13 @@ async function* runTdlr(
     if (drop) { droppedPre++; continue }
    }
 
-   // Skip enrichment entirely if we already have what we'd ask Google for -
-   // saves API spend and avoids cross-state mismatches on common names.
-   const needsEnrichment = !record.phone || !record.website
+   // Always enrich when configured. Even if TDLR already gave us a phone,
+   // we want Google's rating + review count so reps can see at a glance
+   // whether a lead is worth calling. Cost is ~$0.035/call - bounded by
+   // the rep's `limit`.
    let placesData: import('./google-places').PlacesEnrichment | null = null
    let placesError: string | null = null
-   if (enrichEnabled && needsEnrichment) {
+   if (enrichEnabled) {
     try {
      const attempt = await enrichWithGooglePlaces(
       record.business_name,
@@ -130,7 +131,9 @@ async function* runTdlr(
      )
      if (attempt.ok) {
       placesData = attempt.data
-      // Fill-in-only: never overwrite a value we already had.
+      // Fill-in-only for phone/website/address. Promote rating + reviews
+      // + place_id under the canonical `google_*` keys promote.ts reads
+      // so the leads table gets populated for every TDLR-sourced lead.
       record = {
        ...record,
        phone: record.phone || attempt.data.phone || null,
@@ -138,7 +141,15 @@ async function* runTdlr(
        address: record.address && !record.address.endsWith(' County')
         ? record.address
         : (attempt.data.matched_address || record.address),
-       raw: { ...row, google_places: attempt.data },
+       raw: {
+        ...row,
+        google_places: attempt.data,
+        google_rating: attempt.data.rating,
+        google_review_count: attempt.data.review_count,
+        google_place_id: attempt.data.place_id,
+        google_business_status: attempt.data.business_status,
+        google_types: attempt.data.google_types,
+       },
       }
      } else {
       placesError = attempt.error
@@ -158,13 +169,21 @@ async function* runTdlr(
     }
    }
 
-   // Post-filter: trade match via Google. Only enforced when we actually
-   // ran enrichment - if the row already had a phone we trust the license
-   // database. If enrichment hit a hard error (rate limit, etc.) we keep
-   // the row rather than wholesale dropping the page.
-   if (strict && enrichEnabled && needsEnrichment && !placesError) {
+   // Post-filter: trade match via Google. If enrichment hit a hard error
+   // (rate limit, etc.) we keep the row rather than wholesale dropping
+   // the page. The license database already vouches for the trade, so
+   // Google is a second-opinion check.
+   if (strict && enrichEnabled && placesData && !placesError) {
     const verdict = googleConfirmsTrade(record, trade, placesData)
     if (!verdict.ok) { droppedPost++; continue }
+
+    // Quality gate: drop dud listings when Google has rated them. We
+    // accept anything with no rating yet (legitimately new businesses)
+    // but drop sub-3 stars - reps shouldn't waste calls on contractors
+    // with documented bad reviews.
+    if (placesData.rating !== null && placesData.rating < 3.0) {
+     droppedPost++; continue
+    }
    }
 
    // Metro filter - drops Houston/Dallas results when the rep
@@ -359,7 +378,7 @@ export const tdlrHvac: SourceDefinition = {
  id: 'tdlr_hvac',
  label: 'TDLR · HVAC contractors',
  description:
-  'Texas Department of Licensing and Regulation - Air Conditioning Contractors. Owner name + business + license + city. Phone & website filled in via Google Places enrichment.',
+  'Licensed Texas HVAC contractors with owner name and license number from TDLR, cross-referenced with Google for current phone, website, star rating, and review count. Sub-3-star shops dropped automatically.',
  trade: 'HVAC',
  run: (params, _opts) => runTdlr('HVAC', params),
 }
@@ -368,7 +387,7 @@ export const tdlrElectrical: SourceDefinition = {
  id: 'tdlr_electrical',
  label: 'TDLR · Electrical contractors',
  description:
-  'Texas Department of Licensing and Regulation - Electricians. Owner name + business + license + city. Phone & website filled in via Google Places enrichment.',
+  'Licensed Texas electricians from TDLR (license + business + city), enriched with Google phone, website, star rating, and review count. Sub-3-star shops dropped automatically.',
  trade: 'Electrical',
  run: (params, _opts) => runTdlr('Electrical', params),
 }
