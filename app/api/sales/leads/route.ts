@@ -52,6 +52,11 @@ export async function GET(request: NextRequest) {
     .from('leads')
     .select('*')
     .in('id', ids)
+    // Hide phone-less leads from the rep portal. The scraper now
+    // refuses to create them, but old assignments may still point at
+    // legacy rows with no phone.
+    .not('phone', 'is', null)
+    .neq('phone', '')
   if (lErr) {
     logger.error('Sales leads body query failed', {
       userId: auth.userId, error: lErr.message,

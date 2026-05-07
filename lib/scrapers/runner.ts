@@ -95,6 +95,11 @@ export async function runScrapeJob(jobId: string): Promise<void> {
    const placeId = (record.raw as any)?.google_place_id
    const nameKey = businessNameKey(record.business_name, record.city)
 
+   // Hard gate: no phone = no lead. Reps can't cold-call without one.
+   // Enforced at the runner so every source benefits even if its own
+   // filter misses an edge case.
+   if (!phone) { droppedDup++; continue }
+
    // Dedupe ladder: phone > placeId > website > name+city.
    if (phone && seen.phones.has(phone)) { droppedDup++; continue }
    if (placeId && seen.placeIds.has(String(placeId))) { droppedDup++; continue }

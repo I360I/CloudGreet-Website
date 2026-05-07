@@ -63,6 +63,10 @@ export async function promoteScrapeResults(opts: {
 
   for (const r of pending) {
     const phone = normalizePhone(r.phone)
+    // Hard gate: skip any scrape_result that lacks a phone. The runner
+    // already drops these, but legacy rows from older scrapes are still
+    // in scrape_results and would otherwise become phone-less leads.
+    if (!phone) { failed++; continue }
     let leadId: string | null = null
 
     if (phone && existingPhoneToLead.has(phone)) {
