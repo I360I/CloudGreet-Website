@@ -710,16 +710,11 @@ function Pricing() {
      ))}
     </div>
 
-    <div className="mt-10 grid sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
+    <div className="mt-10 max-w-md mx-auto">
      <PriceFootCard
       icon={<Phone className="w-4 h-4" />}
       title="Keep your number"
       body="We forward your existing line. No new numbers, no porting drama."
-     />
-     <PriceFootCard
-      icon={<Zap className="w-4 h-4" />}
-      title="Live in 24-48 hours"
-      body="From signup to your AI answering real calls. We do the heavy lifting."
      />
     </div>
    </div>
@@ -932,7 +927,6 @@ function FinalCTA() {
     </div>
     <div className="relative mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] font-mono uppercase tracking-[0.18em] text-gray-400">
      <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Keep your number</span>
-     <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> Live in 24-48 hours</span>
      <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> Flat monthly, no per-call fees</span>
     </div>
    </div>
@@ -971,9 +965,9 @@ function FooterCard() {
      <div className="md:col-span-2">
       <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Product</h4>
       <ul className="space-y-2 text-sm text-gray-700">
-       <li><a href="#pricing-tiers" className="hover:text-sky-600 transition-colors">Pricing</a></li>
+       <li><a href="#roi" className="hover:text-sky-600 transition-colors">ROI calculator</a></li>
        <li><a href="#faq" className="hover:text-sky-600 transition-colors">FAQ</a></li>
-       <li><a href="#pricing" className="hover:text-sky-600 transition-colors">ROI calculator</a></li>
+       <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Book a demo</Link></li>
       </ul>
      </div>
 

@@ -7,7 +7,7 @@ import { Phone, Mail, MapPin, Check } from "lucide-react"
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
-const SUPPORT_EMAIL = 'hello@cloudgreet.com'
+const SUPPORT_EMAIL = 'anthony@cloudgreet.com'
 const CAL_LINK = 'cloudgreet'
 
 export default function ContactPage() {
@@ -108,7 +108,7 @@ export default function ContactPage() {
        <ul className="space-y-3 text-sm text-gray-700">
         <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />A demo of the AI handling a sample call for your business</li>
         <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />Setup walkthrough &mdash; we wire it up for you, no DIY</li>
-        <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />Pricing, plan options, and a clear ROI for your numbers</li>
+        <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />A clear ROI breakdown for your specific numbers</li>
        </ul>
       </div>
 
