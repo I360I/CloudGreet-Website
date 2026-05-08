@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { telnyxClient } from '@/lib/telnyx'
 import { sendBookingNotification } from '@/lib/booking-notifications'
+import { lookupCallerHistory } from '@/lib/caller-history'
 import { createCalendarEvent } from '@/lib/calendar'
 import { verifyRetellSignature } from '@/lib/webhook-verification'
 import { CONFIG } from '@/lib/config'
@@ -83,6 +84,52 @@ export async function POST(request: NextRequest) {
     .eq('retell_agent_id', callingAgentId)
     .maybeSingle()
    if (bizRow?.id) resolvedBusinessId = bizRow.id
+  }
+ }
+
+ // call_inbound fires the moment a call hits Retell, BEFORE the agent
+ // greets. We respond with dynamic_variables that get substituted into
+ // the prompt at call start, letting the agent open with the caller's
+ // name when they're a known recurring customer. Resolved by to_number
+ // (the CloudGreet DID that received the call) since agent_id isn't
+ // set on call_inbound events.
+ if (eventType === 'call_inbound') {
+  try {
+   const inbound = body.call_inbound || body.call || body
+   const toNumber: string =
+    inbound?.to_number || inbound?.to || body?.to_number || ''
+   const fromNumber: string =
+    inbound?.from_number || inbound?.from || body?.from_number || ''
+
+   let inboundBusinessId: string | null = resolvedBusinessId
+   if (!inboundBusinessId && toNumber) {
+    const { data: bizByNumber } = await supabaseAdmin
+     .from('businesses')
+     .select('id')
+     .eq('phone_number', toNumber)
+     .maybeSingle()
+    if (bizByNumber?.id) inboundBusinessId = bizByNumber.id
+   }
+
+   const history = inboundBusinessId
+    ? await lookupCallerHistory(inboundBusinessId, fromNumber)
+    : { returning_caller: 'false', caller_name: '', last_service: '' }
+
+   return NextResponse.json({
+    call_inbound: {
+     dynamic_variables: history,
+     metadata: { business_id: inboundBusinessId || '' },
+    },
+   })
+  } catch (e) {
+   logger.warn('call_inbound handler failed - falling back to no history', {
+    error: e instanceof Error ? e.message : 'Unknown',
+   })
+   return NextResponse.json({
+    call_inbound: {
+     dynamic_variables: { returning_caller: 'false', caller_name: '', last_service: '' },
+    },
+   })
   }
  }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart } from 'lucide-react'
+import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw } from 'lucide-react'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
 
@@ -23,6 +23,12 @@ const TOOLS: { href: string; label: string; description: string; icon: React.Ele
   label: 'SMS tester',
   description: 'Fire a single booking-notification SMS to any number to verify the wiring before onboarding a contractor. Surfaces raw Telnyx response on failure.',
   icon: MessageSquare,
+ },
+ {
+  href: '/admin/agent-backfill',
+  label: 'Returning-caller backfill',
+  description: 'Push the returning-caller prompt block into every existing Retell agent so contractors who onboarded before the feature shipped get the new behavior. Idempotent.',
+  icon: RefreshCw,
  },
  {
   href: '/admin/settings',

@@ -2,7 +2,7 @@
 // Each client gets their own personalized AI agent
 
 import { supabaseAdmin } from './supabase';
-import { SmartAIPrompts, spliceEdgeCasesIntoPrompt } from './smart-ai-prompts';
+import { SmartAIPrompts, spliceEdgeCasesIntoPrompt, spliceReturningCallerIntoPrompt } from './smart-ai-prompts';
 import { logger } from '@/lib/monitoring'
 import { normalizePhoneForStorage } from './phone-normalization'
 import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, ValidationResult, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, RateLimitConfig, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
@@ -441,6 +441,7 @@ class RetellAgentManager {
                   currentPrompt,
                   mergedConfig.agentEdgeCases || [],
                 )
+                newPrompt = spliceReturningCallerIntoPrompt(newPrompt)
                 t(`splice ok: based on existing ${currentPrompt.length}-char prompt`)
               }
             } else {
@@ -455,6 +456,7 @@ class RetellAgentManager {
             newPrompt = SmartAIPrompts.generateIndustrySpecificPrompt(
               mergedConfig.businessType, promptConfig,
             )
+            newPrompt = spliceReturningCallerIntoPrompt(newPrompt)
           }
 
           const promptRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {

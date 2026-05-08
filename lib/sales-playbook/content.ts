@@ -302,7 +302,7 @@ Configurable per business. Common patterns: book an emergency slot + notify the 
 Agent doesn't pick the tech - it books the slot, dispatcher assigns. Round-robin or skills-based routing is the contractor's dispatch process, not ours. Set this expectation early.
 
 **Recurring customers ("hey it's John, you know my address")**
-Agent re-asks the basics today. Customer history isn't a shipped feature. Position as a feature: keeps the call data clean and confirms the address hasn't changed.
+Supported. When a known number calls back, the agent recognizes them, greets them by name, and asks if it's about the same kind of work as last time - based on the most recent extracted name and service from past calls. Address is re-asked on purpose (job sites and addresses change).
 
 **Calendar already full / no slots available**
 Agent offers the next available slot or takes a callback request. Specific overflow behavior (waitlist, etc.) is configurable during onboarding.

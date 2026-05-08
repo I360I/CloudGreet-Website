@@ -446,3 +446,46 @@ export function spliceEdgeCasesIntoPrompt(
   if (!newBlock) return stripped
   return `${stripped}${newBlock}`
 }
+
+/* ============================================================
+ * RETURNING-CALLER BLOCK (separate sentinels from edge cases).
+ *
+ * The agent's prompt references three Retell dynamic variables that
+ * the call_inbound webhook populates per call:
+ *   {{returning_caller}} - "true" or "false"
+ *   {{caller_name}}      - extracted name from the most recent call
+ *   {{last_service}}     - extracted service from the most recent call
+ *
+ * When this block is present in the prompt and the variables are
+ * provided, the agent opens with a name greeting and skips the
+ * "what's your name" question. Address is intentionally not used
+ * (could've changed since last call).
+ * ============================================================ */
+
+export const RETURNING_CALLER_START = '<!-- CG_RETURNING_CALLER_START -->'
+export const RETURNING_CALLER_END   = '<!-- CG_RETURNING_CALLER_END -->'
+
+export const RETURNING_CALLER_BLOCK = `
+${RETURNING_CALLER_START}
+RETURNING CALLER HANDLING:
+At the start of every call, you receive three variables: returning_caller, caller_name, last_service.
+- If returning_caller is "true": greet the caller by name (e.g., "Hi {{caller_name}}, welcome back!"), then ask if their call is about the same kind of work as last time ({{last_service}}) or something new. Skip the "can I get your name" question - you already have it. Still confirm the address fresh, since it may have changed.
+- If returning_caller is "false" or missing: greet normally and ask for the caller's name as you usually would.
+${RETURNING_CALLER_END}
+`
+
+/**
+ * Splice the returning-caller block into a prompt. Same pattern as
+ * spliceEdgeCasesIntoPrompt but for a fixed block (not user-editable),
+ * so the splicer just ensures the block is present once.
+ */
+export function spliceReturningCallerIntoPrompt(currentPrompt: string): string {
+  const startIdx = currentPrompt.indexOf(RETURNING_CALLER_START)
+  const endIdx = currentPrompt.indexOf(RETURNING_CALLER_END)
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    const before = currentPrompt.slice(0, startIdx).replace(/\s+$/, '')
+    const after = currentPrompt.slice(endIdx + RETURNING_CALLER_END.length).replace(/^\s+/, '')
+    return `${before}${RETURNING_CALLER_BLOCK}${after ? `\n\n${after}` : ''}`
+  }
+  return `${currentPrompt.replace(/\s+$/, '')}${RETURNING_CALLER_BLOCK}`
+}
