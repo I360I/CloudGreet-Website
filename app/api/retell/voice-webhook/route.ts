@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { telnyxClient } from '@/lib/telnyx'
+import { sendBookingNotification } from '@/lib/booking-notifications'
 import { createCalendarEvent } from '@/lib/calendar'
 import { verifyRetellSignature } from '@/lib/webhook-verification'
 import { CONFIG } from '@/lib/config'
@@ -341,27 +342,29 @@ export async function POST(request: NextRequest) {
 
  // Per-booking fees removed; pricing is flat-monthly only.
 
- // Send SMS confirmation. Sender = the contractor's own number so
- // the caller sees the same line they just dialed. If the business
- // has no phone_number on file we skip the send rather than leak
- // a generic CloudGreet number.
- if (phone && (business as any).phone_number) {
+ // Booking notification SMS - sent to the CONTRACTOR (account
+ // holder), not the caller. Single CloudGreet sender number, so
+ // this is account-notification traffic and doesn't require per-
+ // contractor messaging-profile attachments. Template editable in
+ // /dashboard/settings; falls back to DEFAULT_BOOKING_SMS_TEMPLATE.
  try {
- await telnyxClient.sendSMS(
+ const apptDate = new Date(datetime)
+ const formattedTime = apptDate.toLocaleString('en-US', {
+ weekday: 'short', month: 'short', day: 'numeric',
+ hour: 'numeric', minute: '2-digit', hour12: true,
+ })
+ await sendBookingNotification(business_id, {
+ name,
  phone,
- `${(business as any).business_name || 'Your appointment'} is booked for ${new Date(datetime).toLocaleDateString()} at ${new Date(datetime).toLocaleTimeString()}. Service: ${service}. Reply STOP to opt out; HELP for help.`,
- (business as any).phone_number,
- )
+ time: formattedTime,
+ service,
+ business: (business as any).business_name || null,
+ })
  } catch (e) {
- logger.warn('SMS confirmation failed', {
- error: (e as Error).message,
+ logger.warn('booking notification failed', {
+ error: e instanceof Error ? e.message : 'Unknown',
  business_id,
  has_messaging_profile: !!process.env.TELNYX_MESSAGING_PROFILE_ID,
- })
- }
- } else if (phone) {
- logger.warn('SMS confirmation skipped - business has no phone_number on file', {
- business_id,
  })
  }
 

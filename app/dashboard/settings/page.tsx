@@ -101,6 +101,7 @@ export default function SettingsPage() {
        <GreetingSection profile={profile} state={agentState} onSaved={reload} />
        <VoiceSection profile={profile} state={agentState} onSaved={reload} />
        <SpeedSection profile={profile} state={agentState} onSaved={reload} />
+       <BookingNotificationsSection />
        <PasswordSection />
        <ProfileSection profile={profile} onSaved={reload} />
       </div>
@@ -953,4 +954,229 @@ function ProfileSection({ profile, onSaved }: { profile: Profile; onSaved: () =>
    </p>
   </div>
  )
+}
+
+/* ------------------- Booking notification SMS ------------------- */
+/**
+ * Settings panel for the booking-notification SMS - the text that
+ * fires the moment the AI books a job. Editable phone + template,
+ * live preview, "Send test" button so contractors can verify the
+ * wiring before the first real booking.
+ */
+function BookingNotificationsSection() {
+ const [loading, setLoading] = useState(true)
+ const [saving, setSaving] = useState(false)
+ const [testing, setTesting] = useState(false)
+ const [phone, setPhone] = useState('')
+ const [template, setTemplate] = useState('')
+ const [businessName, setBusinessName] = useState('')
+ const [defaultTemplate, setDefaultTemplate] = useState('')
+ const [maxLen, setMaxLen] = useState(320)
+ const [flash, setFlash] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+
+ const VARS: { name: string; description: string; sample: string }[] = [
+  { name: 'name',     description: "caller's name",         sample: 'John Smith' },
+  { name: 'phone',    description: "caller's phone",        sample: '+1 (555) 123-4567' },
+  { name: 'time',     description: 'appointment date/time', sample: 'Tue Jul 8, 2:00 PM' },
+  { name: 'service',  description: 'what they booked',      sample: 'AC repair' },
+  { name: 'address',  description: 'service address',       sample: '123 Main St' },
+  { name: 'business', description: "the business's name",   sample: 'Mike\'s HVAC' },
+ ]
+
+ const load = async () => {
+  setLoading(true)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/notifications')
+   const j = await r.json().catch(() => ({}))
+   if (r.ok && j?.success) {
+    setPhone(j.notifications_phone || '')
+    setTemplate(j.booking_sms_template || j.default_template || '')
+    setDefaultTemplate(j.default_template || '')
+    setBusinessName(j.business_name || '')
+    setMaxLen(j.template_max_length || 320)
+   }
+  } finally {
+   setLoading(false)
+  }
+ }
+
+ useEffect(() => { load() }, [])
+
+ const save = async () => {
+  setSaving(true); setFlash(null)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/notifications', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+     notifications_phone: phone,
+     booking_sms_template: template,
+    }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setFlash({ tone: 'err', text: j?.error || 'Save failed' })
+   } else {
+    setFlash({ tone: 'ok', text: 'Saved' })
+   }
+  } finally {
+   setSaving(false)
+   setTimeout(() => setFlash(null), 2400)
+  }
+ }
+
+ const sendTest = async () => {
+  setTesting(true); setFlash(null)
+  try {
+   // Save first so the test uses the latest template + phone.
+   await fetchWithAuth('/api/dashboard/notifications', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+     notifications_phone: phone,
+     booking_sms_template: template,
+    }),
+   })
+   const r = await fetchWithAuth('/api/dashboard/notifications/test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ template }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setFlash({ tone: 'err', text: j?.error || 'Test send failed' })
+   } else {
+    setFlash({ tone: 'ok', text: `Test sent to ${j.sent_to}` })
+   }
+  } finally {
+   setTesting(false)
+   setTimeout(() => setFlash(null), 5000)
+  }
+ }
+
+ const reset = () => setTemplate(defaultTemplate)
+
+ const preview = renderPreview(template || defaultTemplate, businessName)
+
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl p-6">
+   <div className="mb-4">
+    <h2 className="text-lg font-medium text-gray-900">Booking notifications</h2>
+    <p className="text-sm text-gray-500 mt-1">
+     Get a text the second the AI books a job. One message per booking,
+     sent to whichever phone you list below.
+    </p>
+   </div>
+
+   {loading ? (
+    <div className="py-8 text-center text-sm text-gray-500">
+     <Loader2 className="w-4 h-4 animate-spin inline mr-1.5" /> Loading…
+    </div>
+   ) : (
+    <div className="space-y-4">
+     <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+       Notify this number
+      </label>
+      <input
+       type="tel"
+       value={phone}
+       onChange={(e) => setPhone(e.target.value)}
+       placeholder="+1 (737) 555-0123"
+       className="w-full max-w-sm bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-900"
+      />
+      <p className="text-[11px] text-gray-500 mt-1">
+       US number, any common format. We&apos;ll normalize it on save.
+      </p>
+     </div>
+
+     <div>
+      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+       Message template
+      </label>
+      <textarea
+       value={template}
+       onChange={(e) => setTemplate(e.target.value)}
+       rows={3}
+       maxLength={maxLen}
+       className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-gray-900 resize-y"
+      />
+      <div className="flex items-center justify-between mt-1">
+       <span className="text-[11px] text-gray-400">{template.length}/{maxLen}</span>
+       {template !== defaultTemplate && (
+        <button onClick={reset} className="text-[11px] text-gray-500 hover:text-gray-900">
+         Reset to default
+        </button>
+       )}
+      </div>
+     </div>
+
+     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">
+       Available variables
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[12px]">
+       {VARS.map((v) => (
+        <div key={v.name}>
+         <code className="font-mono text-gray-900">{`{${v.name}}`}</code>
+         <span className="text-gray-500"> — {v.description}</span>
+        </div>
+       ))}
+      </div>
+     </div>
+
+     <div>
+      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+       Preview
+      </div>
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm font-mono text-emerald-900 whitespace-pre-wrap">
+       {preview}
+      </div>
+     </div>
+
+     {flash && (
+      <div className={`text-xs px-3 py-2 rounded-lg ${
+       flash.tone === 'ok'
+        ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+        : 'bg-rose-50 border border-rose-200 text-rose-800'
+      }`}>
+       {flash.text}
+      </div>
+     )}
+
+     <div className="flex flex-wrap items-center gap-2">
+      <button
+       onClick={save}
+       disabled={saving}
+       className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white text-sm rounded-lg px-4 py-2 disabled:opacity-60"
+      >
+       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+       Save
+      </button>
+      <button
+       onClick={sendTest}
+       disabled={testing || !phone.trim()}
+       className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg px-4 py-2 disabled:opacity-60"
+       title={!phone.trim() ? 'Save a phone number first' : 'Fire a real test SMS to your phone'}
+      >
+       {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+       Send test
+      </button>
+     </div>
+    </div>
+   )}
+  </div>
+ )
+}
+
+function renderPreview(template: string, businessName: string): string {
+ const ctx: Record<string, string> = {
+  name: 'John Smith',
+  phone: '+1 (555) 123-4567',
+  time: 'Tue Jul 8, 2:00 PM',
+  service: 'AC repair',
+  address: '123 Main St',
+  business: businessName || "Mike's HVAC",
+ }
+ return template.replace(/\{(\w+)\}/g, (_, k) => ctx[k] ?? '').replace(/[ \t]+/g, ' ').trim()
 }

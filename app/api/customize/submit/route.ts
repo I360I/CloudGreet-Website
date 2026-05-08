@@ -34,14 +34,30 @@ export async function POST(request: NextRequest) {
 
   try {
     const nowIso = new Date().toISOString()
+    const update: Record<string, any> = {
+      customization: answers,
+      customization_status: 'submitted',
+      customization_submitted_at: nowIso,
+      updated_at: nowIso,
+    }
+    // Backfill booking-notification destination from the form's
+    // forward_phone field if the business hasn't set notifications_phone
+    // explicitly in /dashboard/settings yet. Lets contractors get their
+    // first booking notification without any extra setup step.
+    const forwardPhone = (answers.forward_phone || '').toString().trim()
+    if (forwardPhone) {
+      const { data: existing } = await supabaseAdmin
+        .from('businesses')
+        .select('notifications_phone')
+        .eq('id', auth.businessId)
+        .maybeSingle()
+      if (!existing?.notifications_phone) {
+        update.notifications_phone = forwardPhone
+      }
+    }
     const { error } = await supabaseAdmin
       .from('businesses')
-      .update({
-        customization: answers,
-        customization_status: 'submitted',
-        customization_submitted_at: nowIso,
-        updated_at: nowIso,
-      })
+      .update(update)
       .eq('id', auth.businessId)
     if (error) {
       return NextResponse.json({
