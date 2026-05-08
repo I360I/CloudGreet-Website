@@ -37,6 +37,12 @@ const TOOLS: { href: string; label: string; description: string; icon: React.Ele
   icon: RefreshCw,
  },
  {
+  href: '/admin/review-consent-backfill',
+  label: 'Review-consent tool param',
+  description: 'Add review_consent (boolean) to the book_appointment tool on every existing Retell agent. Required before review-request SMS will start firing. Idempotent.',
+  icon: RefreshCw,
+ },
+ {
   href: '/admin/settings',
   label: 'Integrations',
   description: 'Connect Stripe, Twilio, Retell, OpenAI, and other providers. Credential health is checked live.',
