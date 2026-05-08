@@ -67,6 +67,11 @@ export const US_METROS: UsMetro[] = [
  { name: 'columbus',        state: 'OH', lat: 39.9612, lng: -82.9988 },
  { name: 'cleveland',       state: 'OH', lat: 41.4993, lng: -81.6944 },
  { name: 'cincinnati',      state: 'OH', lat: 39.1031, lng: -84.5120 },
+ { name: 'toledo',          state: 'OH', lat: 41.6528, lng: -83.5379 },
+ { name: 'akron',           state: 'OH', lat: 41.0814, lng: -81.5190 },
+ { name: 'dayton',          state: 'OH', lat: 39.7589, lng: -84.1916 },
+ { name: 'youngstown',      state: 'OH', lat: 41.0998, lng: -80.6495 },
+ { name: 'canton',          state: 'OH', lat: 40.7989, lng: -81.3784 },
 
  // ---------- Georgia ----------
  { name: 'atlanta',         state: 'GA', lat: 33.7490, lng: -84.3880 },

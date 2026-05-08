@@ -704,7 +704,7 @@ function groupSources(sources: Source[]): { label: string; items: Source[] }[] {
     'National sweeps': [],
   }
   for (const s of sources) {
-    if (s.id === 'quality_mode') groups['Recommended'].push(s)
+    if (s.id === 'quality_mode' || s.id === 'ohio_mode') groups['Recommended'].push(s)
     // places_law goes in the first labeled group right under Recommended
     // so reps see it at the top, even though the source itself is now
     // nationwide rather than TX-licensed-only.
