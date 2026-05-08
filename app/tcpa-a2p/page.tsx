@@ -8,8 +8,7 @@ import { ErrorBoundary } from '@/app/components/ErrorBoundary'
 function TCPAA2PPageContent() {
  return (
  <div className="min-h-screen bg-[#f6f5f1] text-gray-900">
- {/* Navigation */}
- <motion.nav 
+ <motion.nav
  initial={{ opacity: 0, y: -20 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ duration: 0.6 }}
@@ -37,8 +36,8 @@ function TCPAA2PPageContent() {
  transition={{ duration: 0.8 }}
  className="prose prose-gray max-w-none"
  >
- <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-gray-900 ">
- TCPA/A2P Compliance Policy
+ <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-6 text-gray-900">
+ TCPA / A2P Compliance Policy
  </h1>
  <p className="text-base text-gray-500 mb-10">
  Last updated: May 7, 2026
@@ -46,130 +45,153 @@ function TCPAA2PPageContent() {
 
  <div className="bg-white rounded-2xl p-8 border border-gray-200">
  <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-8">
- <h3 className="text-lg font-semibold text-amber-900 mb-2">Important Notice</h3>
+ <h3 className="text-lg font-semibold text-amber-900 mb-2">Plain-English summary</h3>
  <p className="text-gray-700">
- CloudGreet is committed to full compliance with the Telephone Consumer Protection Act (TCPA) and Application-to-Person (A2P) messaging regulations. This policy outlines our compliance measures and your responsibilities.
+ CloudGreet is a voice-first AI receptionist. The only automated text
+ message we send today is a single booking-confirmation SMS to a
+ caller after they schedule an appointment with one of our customers.
+ We do not send marketing texts, broadcast campaigns, or proactive
+ reminder / follow-up messages. STOP / HELP / UNSTOP keywords are
+ honored. This page describes that program in detail.
  </p>
  </div>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">1. TCPA Compliance Overview</h2>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">1. What this policy covers</h2>
  <p className="text-gray-700 leading-relaxed mb-6">
- The TCPA regulates telemarketing calls, automated calls, and text messages. CloudGreet operates in full compliance with TCPA requirements, including:
+ The Telephone Consumer Protection Act (TCPA) and the carrier-driven
+ Application-to-Person (A2P) framework regulate automated calls and
+ text messages to consumers in the United States. CloudGreet operates
+ a narrow text-message program in support of voice calls, described
+ below. This policy explains what we send, on whose behalf, and how
+ a recipient can opt out.
  </p>
- <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
- <li>Obtaining proper consent before sending automated messages</li>
- <li>Providing clear opt-out mechanisms</li>
- <li>Maintaining detailed consent records</li>
- <li>Respecting the National Do Not Call Registry</li>
- <li>Including required identification in messages</li>
- </ul>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">2. A2P Messaging Compliance</h2>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">2. Messages we send today</h2>
  <p className="text-gray-700 leading-relaxed mb-4">
- Application-to-Person (A2P) messaging refers to automated text messages sent from applications to consumers. Our compliance includes:
+ The only automated message CloudGreet sends in the current product is:
  </p>
- <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
- <li>Proper message classification and routing</li>
- <li>Brand registration with messaging aggregators</li>
- <li>Traffic filtering and monitoring</li>
- <li>Compliance with carrier-specific requirements</li>
- <li>Message content and formatting standards</li>
- </ul>
-
- <h2 className="text-2xl font-bold text-gray-900 mb-6">3. Consent Requirements</h2>
- <p className="text-gray-700 leading-relaxed mb-4">
- Before sending any automated messages, we ensure:
+ <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 mb-6">
+ <h4 className="text-sm font-semibold text-sky-900 mb-1 uppercase tracking-wider">Booking confirmation</h4>
+ <p className="text-gray-700 text-sm">
+ Triggered when our customer&apos;s AI agent books an appointment during
+ a phone call. The SMS contains the appointment date, time, and
+ service requested, plus the line <em>&ldquo;Reply STOP to opt out;
+ HELP for help.&rdquo;</em> Sent from the customer&apos;s assigned
+ outbound number, not a generic CloudGreet number.
  </p>
- <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
- <li><strong>Express Written Consent:</strong> Clear, unambiguous consent to receive messages</li>
- <li><strong>Purpose Disclosure:</strong> Clear explanation of what messages will be sent</li>
- <li><strong>Frequency Disclosure:</strong> Information about message frequency</li>
- <li><strong>Opt-out Instructions:</strong> Clear instructions on how to stop messages</li>
- <li><strong>Consent Records:</strong> Detailed records of when and how consent was obtained</li>
- </ul>
-
- <h2 className="text-2xl font-bold text-gray-900 mb-6">4. Message Types We Send</h2>
- <div className="space-y-4 mb-6">
- <div className="bg-sky-50 border border-sky-200 rounded-lg p-4">
- <h4 className="text-lg font-semibold text-sky-900 mb-2">Appointment Confirmations</h4>
- <p className="text-gray-700 text-sm">Sent when appointments are scheduled or modified</p>
  </div>
- <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
- <h4 className="text-lg font-semibold text-emerald-900 mb-2">Reminders</h4>
- <p className="text-gray-700 text-sm">Sent 24 hours before scheduled appointments</p>
- </div>
- <div className="bg-violet-50 border border-violet-200 rounded-lg p-4">
- <h4 className="text-lg font-semibold text-violet-900 mb-2">Follow-up Messages</h4>
- <p className="text-gray-700 text-sm">Sent after service completion or missed appointments</p>
- </div>
- </div>
+ <p className="text-gray-700 leading-relaxed mb-6">
+ We do <strong>not</strong> send marketing messages, broadcast
+ campaigns, surveys, drip sequences, reminder messages, follow-up
+ messages, or any other text traffic without an explicit policy
+ update. If we add new message categories in the future this page
+ will be updated and existing recipients will be notified before
+ the new traffic begins.
+ </p>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">5. Opt-out Procedures</h2>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">3. Consent</h2>
+ <p className="text-gray-700 leading-relaxed mb-6">
+ The booking-confirmation SMS is sent only to a phone number that
+ the recipient provided directly to our customer&apos;s AI agent
+ during a live inbound call for the express purpose of receiving
+ that confirmation. This is the kind of transactional, single-message
+ confirmation that carriers and regulators treat as having implied
+ consent given the call context. We do not import contact lists, buy
+ phone numbers, or send messages to numbers obtained outside the
+ active call that triggered the message.
+ </p>
+
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">4. Opt-out (STOP / HELP / UNSTOP)</h2>
  <p className="text-gray-700 leading-relaxed mb-4">
- Recipients can opt out of messages by:
+ Every outbound message ends with the line <em>&ldquo;Reply STOP to
+ opt out; HELP for help.&rdquo;</em> Inbound messages on those
+ numbers are routed to our SMS webhook which handles the standard
+ keywords:
  </p>
  <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
- <li>Replying &quot;STOP&quot; to any message</li>
- <li>Replying &quot;UNSUBSCRIBE&quot; to any message</li>
- <li>Calling our support number</li>
- <li>Contacting us through our website</li>
- <li>Emailing us at anthony@cloudgreet.com</li>
+ <li><strong>STOP</strong> &mdash; future messages to that number are blocked. We reply once with confirmation: <em>&ldquo;You have been opted out. Reply UNSTOP to rejoin.&rdquo;</em></li>
+ <li><strong>UNSTOP</strong> &mdash; reverses an opt-out. We reply once with <em>&ldquo;You have been opted in again. Reply STOP to opt out; HELP for help.&rdquo;</em></li>
+ <li><strong>HELP</strong> &mdash; we reply with our identity line and instructions: <em>&ldquo;CloudGreet: Reply STOP to opt out; HELP for help.&rdquo;</em></li>
  </ul>
+ <p className="text-gray-700 leading-relaxed mb-6">
+ Opt-out status is stored against the phone number; the same number
+ cannot be re-messaged until UNSTOP is received. You can also opt out
+ by replying to any message with the words <em>cancel, end, quit,</em>
+ or <em>unsubscribe</em>; we treat all of these the same as STOP.
+ </p>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">6. Message Content Standards</h2>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">5. Identity and disclosures in every message</h2>
  <p className="text-gray-700 leading-relaxed mb-4">
- All messages include:
+ Every SMS we send includes:
  </p>
  <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
- <li>Clear identification of the sender (your business name)</li>
- <li>Purpose of the message</li>
- <li>Opt-out instructions (&quot;Reply STOP to opt out&quot;)</li>
- <li>Contact information for questions</li>
- <li>Professional, non-promotional language</li>
+ <li>The sending business&apos;s name (our customer&apos;s name &mdash; e.g. &ldquo;ABC Plumbing&rdquo;), so the recipient knows who is texting.</li>
+ <li>The purpose of the message (the booked appointment).</li>
+ <li>The opt-out instruction (<em>Reply STOP to opt out</em>).</li>
  </ul>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">7. Data Protection</h2>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">6. Carrier registration</h2>
  <p className="text-gray-700 leading-relaxed mb-6">
- We protect customer data in accordance with applicable privacy laws and maintain strict security measures to prevent unauthorized access to personal information.
+ A2P 10DLC registration is the carrier-mandated process for
+ application-originated messaging in the US. Where required by our
+ messaging provider for the volume and content of traffic above,
+ we register our brand and use cases through Telnyx&apos;s 10DLC
+ portal. We do not send messages on a use case for which the
+ carrier registration is incomplete or pending.
  </p>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">8. Your Responsibilities</h2>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">7. Customer responsibilities</h2>
  <p className="text-gray-700 leading-relaxed mb-4">
- As a CloudGreet customer, you agree to:
+ If you are a CloudGreet customer (a business using our service):
  </p>
  <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
- <li>Only use our service for legitimate business purposes</li>
- <li>Ensure you have proper consent before using our messaging features</li>
- <li>Comply with all applicable laws and regulations</li>
- <li>Not use our service for spam or unsolicited communications</li>
- <li>Maintain accurate customer contact information</li>
+ <li>You may only use CloudGreet to receive calls from people who chose to call you. You may not import outbound campaigns or contact lists into our service.</li>
+ <li>You must be the actual owner of the business name and phone numbers configured on your account.</li>
+ <li>You may not configure the AI agent to deceive callers about the sending business&apos;s identity.</li>
+ <li>You acknowledge that the booking-confirmation SMS is sent under your business&apos;s name, and you are responsible for honoring the appointment that triggered it.</li>
  </ul>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">9. Monitoring and Compliance</h2>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">8. Recordkeeping</h2>
  <p className="text-gray-700 leading-relaxed mb-6">
- We continuously monitor our messaging activities for compliance and maintain detailed records of all communications. We also provide tools to help you maintain compliance with your messaging activities.
+ Every outbound message and inbound reply is logged with timestamp,
+ phone numbers, and full message text in our <code className="font-mono text-sm">sms_messages</code> table.
+ Opt-out events are durable. We retain these records for at least
+ four years to support carrier audits and consumer complaints.
  </p>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">10. Violations and Enforcement</h2>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">9. Reporting violations</h2>
  <p className="text-gray-700 leading-relaxed mb-6">
- Violations of TCPA/A2P regulations can result in significant penalties. We take compliance seriously and may suspend or terminate accounts that violate these requirements.
+ If you believe you received an SMS from CloudGreet or one of our
+ customers that does not comply with this policy, write to{' '}
+ <a href="mailto:anthony@cloudgreet.com" className="text-sky-700 hover:underline">anthony@cloudgreet.com</a>{' '}
+ with the message in question (screenshot or forwarded text). We
+ investigate every report and respond within 5 business days.
  </p>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">11. Updates to This Policy</h2>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">10. Changes to this policy</h2>
  <p className="text-gray-700 leading-relaxed mb-6">
- We may update this policy to reflect changes in regulations or our practices. We will notify you of any material changes.
+ We may update this page when we change what messages we send,
+ add a new use case, or in response to changes in TCPA / A2P rules.
+ The &ldquo;Last updated&rdquo; date at the top reflects the most
+ recent change. Material changes will be communicated to active
+ customers in advance.
  </p>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">12. Contact Information</h2>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">11. Contact</h2>
  <p className="text-gray-700 leading-relaxed mb-6">
- For questions about TCPA/A2P compliance or to report violations, contact us at anthony@cloudgreet.com or through our contact page. CloudGreet is operated from Austin, Texas.
+ Questions, opt-out problems, or compliance reports go to{' '}
+ <a href="mailto:anthony@cloudgreet.com" className="text-sky-700 hover:underline">anthony@cloudgreet.com</a>{' '}
+ or through our contact page. CloudGreet is operated from Austin, Texas.
  </p>
 
  <div className="bg-rose-50 border border-rose-200 rounded-lg p-6 mt-8">
- <h3 className="text-lg font-semibold text-rose-900 mb-2">Legal Disclaimer</h3>
+ <h3 className="text-lg font-semibold text-rose-900 mb-2">Legal disclaimer</h3>
  <p className="text-gray-700 text-sm">
- This policy is for informational purposes only and does not constitute legal advice. 
- You should consult with legal counsel to ensure your specific use case complies with all applicable laws and regulations.
+ This page is provided for informational purposes and does not
+ constitute legal advice. It is intended to describe CloudGreet&apos;s
+ current SMS practices accurately so consumers and customers can
+ make informed decisions; it is not a substitute for advice from
+ qualified counsel about your specific situation.
  </p>
  </div>
  </div>
