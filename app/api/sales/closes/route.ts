@@ -27,8 +27,7 @@ export async function GET(request: NextRequest) {
         customization_status,
         phone_number,
         greeting_message,
-        voice_id,
-        retell_phone_number
+        voice_id
       )
     `)
     .eq('rep_id', auth.userId)
@@ -49,7 +48,7 @@ export async function GET(request: NextRequest) {
     // The "agent number" the rep wants to see is whichever Retell-issued
     // forwarding line we've assigned. Retell stores it on retell_phone_number
     // when admin connects it; some legacy rows keep it on phone_number.
-    business_phone_number: c.business?.retell_phone_number || c.business?.phone_number || null,
+    business_phone_number: c.business?.phone_number || null,
     business_greeting: c.business?.greeting_message || null,
     business_voice_id: c.business?.voice_id || null,
   }))

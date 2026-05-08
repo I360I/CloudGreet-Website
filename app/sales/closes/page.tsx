@@ -10,20 +10,42 @@ import { CloseDetailPanel, type CloseRow } from './_detail'
 
 type Close = CloseRow
 
-const STATUS_STYLE: Record<Close['status'], string> = {
-  pending: 'bg-amber-50 text-amber-800 border-amber-200',
-  invoice_sent: 'bg-sky-50 text-sky-800 border-sky-200',
-  paid: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  cancelled: 'bg-gray-100 text-gray-600 border-gray-200',
-  rejected: 'bg-red-50 text-red-700 border-red-200',
+/**
+ * Derive the most accurate lifecycle stage label for a close. Reads
+ * close.status as the spine and layers customization_status on top so
+ * a 'paid' close progresses visibly through "Paid → Form sent → Form
+ * submitted → Agent ready → Live" instead of just sitting on "Paid"
+ * forever.
+ */
+function lifecycleStage(c: Close): { label: string; cls: string } {
+  if (c.status === 'cancelled') return { label: 'Cancelled', cls: 'bg-gray-100 text-gray-600 border-gray-200' }
+  if (c.status === 'rejected')  return { label: 'Rejected',  cls: 'bg-red-50 text-red-700 border-red-200' }
+  if (c.status === 'pending')   return { label: 'Submitted', cls: 'bg-amber-50 text-amber-800 border-amber-200' }
+  if (c.status === 'invoice_sent') return { label: 'Awaiting payment', cls: 'bg-sky-50 text-sky-800 border-sky-200' }
+  // Paid: layer customization_status to surface the actual stage.
+  switch (c.customization_status) {
+    case 'live':      return { label: 'Live',           cls: 'bg-emerald-100 text-emerald-900 border-emerald-300' }
+    case 'ready':     return { label: 'Agent ready',    cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+    case 'building':  return { label: 'Agent building', cls: 'bg-sky-50 text-sky-800 border-sky-200' }
+    case 'submitted': return { label: 'Form submitted', cls: 'bg-violet-50 text-violet-800 border-violet-200' }
+    case 'sent':      return { label: 'Form sent',      cls: 'bg-amber-50 text-amber-800 border-amber-200' }
+    default:          return { label: 'Paid',           cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+  }
 }
 
-const STATUS_LABEL: Record<Close['status'], string> = {
-  pending: 'Pending',
-  invoice_sent: 'Invoice sent',
-  paid: 'Signed',
-  cancelled: 'Cancelled',
-  rejected: 'Rejected',
+/**
+ * Demo-agent build stage - secondary pill on the right of the row.
+ * Returns null when nothing is in flight so we don't show empty chips.
+ */
+function agentStage(c: Close): { label: string; cls: string } | null {
+  if (!c.demo_agent_status) return null
+  switch (c.demo_agent_status) {
+    case 'ready':    return { label: 'Agent ready',    cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+    case 'building': return { label: 'Agent building', cls: 'bg-sky-50 text-sky-800 border-sky-200' }
+    case 'pending':  return { label: 'Agent pending',  cls: 'bg-amber-50 text-amber-800 border-amber-200' }
+    case 'skipped':  return { label: 'Agent skipped',  cls: 'bg-gray-100 text-gray-600 border-gray-200' }
+    default:         return null
+  }
 }
 
 function subscriptionPill(status: string | null): { label: string; cls: string } | null {
@@ -239,12 +261,31 @@ export default function SalesClosesPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span
-                          className={`text-[10px] font-mono uppercase tracking-wider rounded-full border px-2 py-0.5 whitespace-nowrap ${STATUS_STYLE[c.status]}`}
-                        >
-                          {STATUS_LABEL[c.status]}
-                        </span>
                         {(() => {
+                          const stage = lifecycleStage(c)
+                          return (
+                            <span
+                              className={`text-[10px] font-mono uppercase tracking-wider rounded-full border px-2 py-0.5 whitespace-nowrap ${stage.cls}`}
+                            >
+                              {stage.label}
+                            </span>
+                          )
+                        })()}
+                        {(() => {
+                          // Right pill = agent build stage when present, else
+                          // fall back to subscription state so we show
+                          // "Trial" / "Active" / "Past due" on paid closes
+                          // without an agent in flight.
+                          const agent = agentStage(c)
+                          if (agent) {
+                            return (
+                              <span
+                                className={`text-[10px] font-mono uppercase tracking-wider rounded-full border px-2 py-0.5 whitespace-nowrap ${agent.cls}`}
+                              >
+                                {agent.label}
+                              </span>
+                            )
+                          }
                           const sub = subscriptionPill(c.subscription_status)
                           return sub ? (
                             <span
