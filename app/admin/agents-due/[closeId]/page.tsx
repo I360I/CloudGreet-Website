@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Loader2, ArrowLeft, ExternalLink, Phone, Mail, Calendar, Bot, Globe, Building2,
@@ -40,8 +40,8 @@ type Item = {
   } | null
 }
 
-export default function AgentWorkspacePage({ params }: { params: Promise<{ closeId: string }> }) {
-  const { closeId } = use(params)
+export default function AgentWorkspacePage({ params }: { params: { closeId: string } }) {
+  const { closeId } = params
   const [item, setItem] = useState<Item | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
