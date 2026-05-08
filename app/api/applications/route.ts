@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
   if (error) {
     if (/unique|duplicate/i.test(error.message)) {
       return NextResponse.json({
-        error: 'You already have an active application on file. We\'ll be in touch - feel free to email anthony@cloudgreet.com if you need to update something.',
+        error: `You already have an active application on file. We'll be in touch${process.env.SUPPORT_EMAIL ? ` - feel free to email ${process.env.SUPPORT_EMAIL} if you need to update something` : ''}.`,
       }, { status: 409 })
     }
     logger.error('Application insert failed', { error: error.message })

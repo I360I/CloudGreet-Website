@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import jwt from 'jsonwebtoken'
+import { requireAdmin } from '@/lib/auth-middleware'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -7,17 +8,18 @@ export const runtime = 'nodejs'
 /**
  * GET /api/debug/whoami
  *
- * Diagnostic - returns exactly why auth is or isn't working without
- * requiring auth itself. Surfaces:
- *   - whether a token was found, where (header vs cookie)
- *   - whether JWT_SECRET is configured server-side
- *   - whether the token verifies, and if so, the payload
- *   - if it fails, the specific error class (expired / invalid sig / malformed)
- *
- * Safe to leave deployed - returns no secrets, just the decoded payload
- * fields that the user already has in their own JWT.
+ * Admin-only diagnostic. Surfaces token state + which integration env
+ * vars are configured so we can debug "why isn't my SMS sending" etc.
+ * Was previously public (the comment said "safe to leave deployed");
+ * confirming env-var presence is mild recon for an attacker, so we
+ * lock it to admin role.
  */
 export async function GET(request: NextRequest) {
+  const adminCheck = await requireAdmin(request)
+  if (!adminCheck.success) {
+    return NextResponse.json({ error: 'Admin role required' }, { status: 401 })
+  }
+
   const authHeader = request.headers.get('authorization')
   const cookieToken = request.cookies.get('token')?.value || null
 

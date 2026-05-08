@@ -160,10 +160,12 @@ export function verifyTelynyxSignature(
 
   
   if (!publicKey) {
-    logger.warn('TELNYX_PUBLIC_KEY not configured, skipping signature verification')
-    // In production, this should return false
-    // For now, allow but log warning
-    return true
+    // Fail closed in production. If TELNYX_PUBLIC_KEY isn't set, anyone
+    // can hit the webhook URL with arbitrary payloads (call events,
+    // SMS deliveries, etc.) and corrupt our state. In dev we already
+    // short-circuit above; in prod, refuse the request and log loud.
+    logger.error('TELNYX_PUBLIC_KEY not configured - rejecting webhook')
+    return false
   }
 
   try {
@@ -251,10 +253,11 @@ export function verifyRetellSignature(
   const webhookSecret = process.env.RETELL_WEBHOOK_SECRET
 
   if (!webhookSecret) {
-    logger.warn('RETELL_WEBHOOK_SECRET not configured, skipping signature verification')
-    // In production, this should return false
-    // For now, allow but log warning
-    return true
+    // Fail closed in production. Without the secret we can't verify
+    // call/booking events; allowing them through means anyone with
+    // the URL can write fake bookings into the system.
+    logger.error('RETELL_WEBHOOK_SECRET not configured - rejecting webhook')
+    return false
   }
 
   try {
