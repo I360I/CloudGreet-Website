@@ -8,20 +8,56 @@ import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/S
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { CloseDetailPanel, type CloseRow } from './_detail'
 
-type Close = CloseRow
+type Close = CloseRow & {
+  demo_scheduled_at?: string | null
+  demo_result?: 'pending' | 'won' | 'lost' | 'no_show' | 'needs_followup' | 'reschedule' | 'ghosted' | null
+  demo_result_at?: string | null
+  demo_result_notes?: string | null
+}
 
 /**
- * Derive the most accurate lifecycle stage label for a close. Reads
- * close.status as the spine and layers customization_status on top so
- * a 'paid' close progresses visibly through "Paid → Form sent → Form
- * submitted → Agent ready → Live" instead of just sitting on "Paid"
- * forever.
+ * Derive the most accurate lifecycle label for a close. Reads:
+ *   - close.status            (pending / invoice_sent / paid / cancelled / rejected)
+ *   - subscription_status     ('active' / 'trialing' overrides invoice_sent → paid)
+ *   - demo_scheduled_at       (future = "Demo booked", past + no result = "Demo complete")
+ *   - demo_result             (won / lost / etc - terminal labels)
+ *   - customization_status    (post-paid funnel stages)
+ *
+ * Subscription override: if the Stripe subscription is active or
+ * trialing, the deal IS paid even when the closes.status flag hasn't
+ * caught up (webhook lag, manual checkout, $0 invoices, etc).
  */
 function lifecycleStage(c: Close): { label: string; cls: string } {
   if (c.status === 'cancelled') return { label: 'Cancelled', cls: 'bg-gray-100 text-gray-600 border-gray-200' }
   if (c.status === 'rejected')  return { label: 'Rejected',  cls: 'bg-red-50 text-red-700 border-red-200' }
-  if (c.status === 'pending')   return { label: 'Submitted', cls: 'bg-amber-50 text-amber-800 border-amber-200' }
-  if (c.status === 'invoice_sent') return { label: 'Awaiting payment', cls: 'bg-sky-50 text-sky-800 border-sky-200' }
+
+  const sub = (c.subscription_status || '').toLowerCase()
+  const subActive = sub === 'active' || sub === 'trialing' || sub === 'trial'
+  const isPaid = c.status === 'paid' || subActive
+
+  // Pre-paid: demo lifecycle takes over the label as soon as one is
+  // booked. This way reps see "Demo booked · Mon Jul 8" rather than
+  // a flat "Awaiting payment" while the deal is in motion.
+  if (!isPaid) {
+    if (c.demo_result && c.demo_result !== 'pending') {
+      return demoResultPill(c.demo_result)
+    }
+    if (c.demo_scheduled_at) {
+      const t = new Date(c.demo_scheduled_at).getTime()
+      if (Number.isFinite(t)) {
+        if (t > Date.now()) {
+          return {
+            label: `Demo booked · ${new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`,
+            cls: 'bg-violet-50 text-violet-800 border-violet-200',
+          }
+        }
+        return { label: 'Demo complete', cls: 'bg-sky-50 text-sky-800 border-sky-200' }
+      }
+    }
+    if (c.status === 'invoice_sent') return { label: 'Awaiting payment', cls: 'bg-sky-50 text-sky-800 border-sky-200' }
+    return { label: 'Submitted', cls: 'bg-amber-50 text-amber-800 border-amber-200' }
+  }
+
   // Paid: layer customization_status to surface the actual stage.
   switch (c.customization_status) {
     case 'live':      return { label: 'Live',           cls: 'bg-emerald-100 text-emerald-900 border-emerald-300' }
@@ -30,6 +66,18 @@ function lifecycleStage(c: Close): { label: string; cls: string } {
     case 'submitted': return { label: 'Form submitted', cls: 'bg-violet-50 text-violet-800 border-violet-200' }
     case 'sent':      return { label: 'Form sent',      cls: 'bg-amber-50 text-amber-800 border-amber-200' }
     default:          return { label: 'Paid',           cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+  }
+}
+
+function demoResultPill(r: NonNullable<Close['demo_result']>): { label: string; cls: string } {
+  switch (r) {
+    case 'won':            return { label: 'Demo · won',          cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
+    case 'lost':           return { label: 'Demo · lost',         cls: 'bg-red-50 text-red-700 border-red-200' }
+    case 'no_show':        return { label: 'Demo · no-show',      cls: 'bg-gray-100 text-gray-700 border-gray-200' }
+    case 'needs_followup': return { label: 'Demo · follow-up',    cls: 'bg-amber-50 text-amber-800 border-amber-200' }
+    case 'reschedule':     return { label: 'Demo · reschedule',   cls: 'bg-amber-50 text-amber-800 border-amber-200' }
+    case 'ghosted':        return { label: 'Demo · ghosted',      cls: 'bg-gray-100 text-gray-600 border-gray-200' }
+    default:               return { label: 'Demo complete',       cls: 'bg-sky-50 text-sky-800 border-sky-200' }
   }
 }
 
@@ -248,9 +296,14 @@ export default function SalesClosesPage() {
                               Form submitted
                             </span>
                           )}
-                          {c.business_phone_number && (
+                          {/* Only surface the agent number on the row once the
+                              agent is actually live - before that, the businesses.phone_number
+                              is just whatever was on the close form (often the prospect's
+                              cell), not a Retell-issued forwarding line. The detail panel
+                              shows it during demo too with proper labeling. */}
+                          {c.customization_status === 'live' && c.business_phone_number && (
                             <span className="text-[11px] bg-gray-900 text-white rounded-lg px-2 py-0.5 font-mono">
-                              Agent · {c.business_phone_number}
+                              Live · {c.business_phone_number}
                             </span>
                           )}
                           {(c.status === 'pending' || c.status === 'invoice_sent') && url && (

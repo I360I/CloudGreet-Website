@@ -31,6 +31,10 @@ export type CloseRow = {
   business_phone_number: string | null
   business_greeting: string | null
   business_voice_id: string | null
+  demo_scheduled_at?: string | null
+  demo_result?: 'pending' | 'won' | 'lost' | 'no_show' | 'needs_followup' | 'reschedule' | 'ghosted' | null
+  demo_result_at?: string | null
+  demo_result_notes?: string | null
 }
 
 /**
@@ -138,20 +142,26 @@ export function CloseDetailPanel({
 
           {/* Stage-aware action sections */}
           {(stage === 'pending' || stage === 'invoice_sent') && (
-            <PaymentSection
-              close={close}
-              paymentUrl={paymentUrl}
-              onGenerate={onPaymentLink}
-              busy={onPaymentLinkBusy}
-              onCopy={onCopy}
-            />
+            <>
+              <PaymentSection
+                close={close}
+                paymentUrl={paymentUrl}
+                onGenerate={onPaymentLink}
+                busy={onPaymentLinkBusy}
+                onCopy={onCopy}
+              />
+              <DemoCard close={close} />
+            </>
           )}
 
           {stage === 'paid' && (
             <>
+              <DemoCard close={close} />
               <CustomizationSection close={close} />
               <DemoAgentSection close={close} />
-              {close.business_phone_number && <AgentNumberCard close={close} />}
+              {close.customization_status === 'live' && close.business_phone_number && (
+                <AgentNumberCard close={close} />
+              )}
               {close.business_id && <QuickEditsCard close={close} />}
             </>
           )}
@@ -300,6 +310,152 @@ function PaymentSection({
       )}
     </Card>
   )
+}
+
+function DemoCard({ close }: { close: CloseRow }) {
+  const [scheduledAt, setScheduledAt] = useState(close.demo_scheduled_at || '')
+  const [result, setResult] = useState<NonNullable<CloseRow['demo_result']>>(
+    (close.demo_result || 'pending') as NonNullable<CloseRow['demo_result']>,
+  )
+  const [notes, setNotes] = useState(close.demo_result_notes || '')
+  const [busy, setBusy] = useState<'date' | 'result' | null>(null)
+  const [savedFlash, setSavedFlash] = useState<string | null>(null)
+
+  const upcoming = scheduledAt && new Date(scheduledAt).getTime() > Date.now()
+  const past = scheduledAt && new Date(scheduledAt).getTime() <= Date.now()
+
+  const save = async (body: any, kind: 'date' | 'result') => {
+    setBusy(kind)
+    try {
+      const r = await fetchWithAuth(`/api/sales/closes/${close.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setSavedFlash(j?.error || 'Save failed')
+      } else {
+        setSavedFlash('Saved')
+      }
+      setTimeout(() => setSavedFlash(null), 1800)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const RESULTS: { v: NonNullable<CloseRow['demo_result']>; label: string }[] = [
+    { v: 'pending',         label: 'Pending' },
+    { v: 'won',             label: 'Won' },
+    { v: 'lost',            label: 'Lost' },
+    { v: 'no_show',         label: 'No-show' },
+    { v: 'needs_followup',  label: 'Follow-up' },
+    { v: 'reschedule',      label: 'Reschedule' },
+    { v: 'ghosted',         label: 'Ghosted' },
+  ]
+
+  return (
+    <Card
+      title={upcoming ? 'Demo booked' : past ? 'Demo' : 'Demo'}
+      icon={<Sparkle weight="fill" className="w-4 h-4 text-violet-600" />}
+    >
+      <div>
+        <label className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1 block">
+          Demo date / time
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="datetime-local"
+            value={toLocalInput(scheduledAt)}
+            onChange={(e) => setScheduledAt(e.target.value)}
+            className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+          />
+          <button
+            onClick={() => save({ demo_scheduled_at: scheduledAt || null }, 'date')}
+            disabled={busy === 'date'}
+            className="text-xs bg-gray-900 hover:bg-gray-800 text-white rounded-lg px-3 py-2 disabled:opacity-60"
+          >
+            {busy === 'date' ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : 'Save'}
+          </button>
+        </div>
+        {upcoming && (
+          <div className="mt-1 text-[11px] text-violet-700">
+            Upcoming · {formatNice(scheduledAt)}
+          </div>
+        )}
+        {past && (
+          <div className="mt-1 text-[11px] text-sky-700">
+            Past · {formatNice(scheduledAt)}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4">
+        <label className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5 block">
+          Demo result
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {RESULTS.map((opt) => (
+            <button
+              key={opt.v}
+              onClick={() => {
+                setResult(opt.v)
+                void save({ demo_result: opt.v, demo_result_notes: notes || null }, 'result')
+              }}
+              className={`text-xs rounded-lg px-2.5 py-1 border transition-colors ${
+                result === opt.v
+                  ? 'bg-gray-900 text-white border-gray-900'
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <label className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1 block">
+          Result notes (optional)
+        </label>
+        <textarea
+          rows={2}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          onBlur={() => {
+            if ((notes || '') !== (close.demo_result_notes || '')) {
+              void save({ demo_result_notes: notes || null }, 'result')
+            }
+          }}
+          placeholder="Anything worth remembering for the next touch."
+          className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400 resize-y"
+        />
+      </div>
+
+      {savedFlash && (
+        <div className="mt-2 text-[11px] text-emerald-700">{savedFlash}</div>
+      )}
+    </Card>
+  )
+}
+
+function toLocalInput(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return ''
+  // Convert to local datetime-local format yyyy-mm-ddTHH:MM
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function formatNice(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (!Number.isFinite(d.getTime())) return ''
+  return d.toLocaleString(undefined, {
+    month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  })
 }
 
 function CustomizationSection({ close }: { close: CloseRow }) {
