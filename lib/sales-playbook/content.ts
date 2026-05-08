@@ -275,7 +275,7 @@ Don't disappear. Within 24 hours, text them: welcome, customization form is in t
     id: 'edge-cases',
     title: 'Edge cases & how we handle them',
     blurb: 'Real questions that come up mid-call. Know the answer, don\'t guess.',
-    body: `Default rule: if you don't know the answer, say so. "Good question - I'd have to check and get back with you." Don't invent specifics, don't promise timelines, don't make up features. A "let me find out" never lost a deal; a wrong answer can.
+    body: `Default rule: if you don't know the answer, say so. "Good question - I'd have to check and get back with you." Don't invent specifics, don't promise timelines, don't make up features.
 
 **Multi-location / multi-business owner**
 Supported. One agent per business, configurable. They pay per business at the standard rate. Bundle pricing case-by-case - check before quoting a discount.
