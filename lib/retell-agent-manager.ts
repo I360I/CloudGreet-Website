@@ -2,7 +2,7 @@
 // Each client gets their own personalized AI agent
 
 import { supabaseAdmin } from './supabase';
-import { SmartAIPrompts } from './smart-ai-prompts';
+import { SmartAIPrompts, spliceEdgeCasesIntoPrompt } from './smart-ai-prompts';
 import { logger } from '@/lib/monitoring'
 import { normalizePhoneForStorage } from './phone-normalization'
 import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, ValidationResult, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, RateLimitConfig, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
@@ -417,10 +417,46 @@ class RetellAgentManager {
       const edgeCasesProvided = Object.prototype.hasOwnProperty.call(config, 'agentEdgeCases')
       if (llmId && edgeCasesProvided) {
         try {
-          const promptConfig = await this.buildPromptConfig(mergedConfig)
-          const newPrompt = SmartAIPrompts.generateIndustrySpecificPrompt(
-            mergedConfig.businessType, promptConfig,
-          )
+          // Append-only update path:
+          //   1. GET the current general_prompt from Retell
+          //   2. Splice the SPECIAL HANDLING block between the
+          //      sentinels (or strip a legacy unsentineled block and
+          //      append a sentineled one)
+          //   3. PATCH back
+          //
+          // This preserves any hand-tuning admin did in the Retell
+          // UI - only the rep-managed block changes. If the GET fails
+          // (404, network, etc) we fall back to the safe-but-clobbery
+          // full regenerate so a rep edit is never silently dropped.
+          let newPrompt: string | null = null
+          try {
+            const llmRes = await fetch(`https://api.retellai.com/get-retell-llm/${llmId}`, {
+              headers: { Authorization: `Bearer ${this.apiKey}` },
+            })
+            if (llmRes.ok) {
+              const llmJson = await llmRes.json().catch(() => null) as any
+              const currentPrompt: string = llmJson?.general_prompt || ''
+              if (currentPrompt) {
+                newPrompt = spliceEdgeCasesIntoPrompt(
+                  currentPrompt,
+                  mergedConfig.agentEdgeCases || [],
+                )
+                t(`splice ok: based on existing ${currentPrompt.length}-char prompt`)
+              }
+            } else {
+              t(`get-retell-llm ${llmRes.status} - falling back to full regen`)
+            }
+          } catch (e) {
+            t(`get-retell-llm threw - falling back to full regen: ${e instanceof Error ? e.message : 'Unknown'}`)
+          }
+
+          if (!newPrompt) {
+            const promptConfig = await this.buildPromptConfig(mergedConfig)
+            newPrompt = SmartAIPrompts.generateIndustrySpecificPrompt(
+              mergedConfig.businessType, promptConfig,
+            )
+          }
+
           const promptRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
             method: 'PATCH',
             headers: {
@@ -439,6 +475,9 @@ class RetellAgentManager {
           // Surface the error but don't abort the rest of the agent
           // sync - voice/greeting changes still apply.
           t(`prompt push threw: ${e instanceof Error ? e.message : 'Unknown'}`)
+          // Re-throw so the API route's saveAndSync surfaces a
+          // retell_warning to the rep instead of silently swallowing.
+          throw e
         }
       }
 

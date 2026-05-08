@@ -221,26 +221,17 @@ CLEANING SPECIFIC REVENUE OPTIMIZATION:
    * Append a SPECIAL HANDLING section listing rep-managed snippets.
    * These come from the agent_edge_cases column on businesses; reps
    * add them via the rep portal to shape behavior without prompt
-   * access. Each item is rendered as a bullet under a clearly-fenced
-   * section so it can't fight the rest of the prompt.
+   * access.
+   *
+   * The section is wrapped in sentinel comments so a later append-
+   * only update (see spliceEdgeCasesIntoPrompt) can find + replace
+   * just this block without disturbing any hand-tuning the contractor
+   * may have done in the Retell prompt directly.
    */
   private static buildEdgeCasesSection(
-    edgeCases: Array<{ label: string; instruction: string }> | undefined,
+    edgeCases: Array<{ label?: string; instruction: string }> | undefined,
   ): string {
-    if (!edgeCases || edgeCases.length === 0) return ''
-    const lines = edgeCases
-      .filter((e) => e?.instruction && e.instruction.trim())
-      .map((e) => {
-        const label = (e.label || '').trim()
-        const instr = e.instruction.trim().replace(/\s+/g, ' ')
-        return label ? `- ${label}: ${instr}` : `- ${instr}`
-      })
-    if (lines.length === 0) return ''
-    return `
-
-SPECIAL HANDLING (situation-specific instructions from the business owner - follow these exactly when the listed situation comes up; otherwise behave normally):
-${lines.join('\n')}
-`;
+    return buildEdgeCasesBlock(edgeCases)
   }
 
   /**
@@ -371,4 +362,87 @@ ${lines.join('\n')}
 
     return `OPERATIONAL SAFETY & ESCALATION RULES:\n${directives.join('\n')}\n`
   }
+}
+
+/* ============================================================
+ * Edge-case prompt splicing
+ *
+ * Used by retell-agent-manager when a rep adds / edits / removes a
+ * rule. Instead of regenerating the entire prompt (which would clobber
+ * any hand-tuning admin did directly in the Retell UI), we read the
+ * current prompt, splice just the SPECIAL HANDLING block between the
+ * sentinels below, and PATCH back.
+ *
+ * The sentinels are HTML comments so they're invisible to the LLM
+ * (Retell prompts are plain text but the model treats lines starting
+ * with "<!--" as instruction-irrelevant noise) and unlikely to appear
+ * in natural prompt content.
+ * ============================================================ */
+
+export const EDGE_CASES_START = '<!-- CG_EDGE_CASES_START -->'
+export const EDGE_CASES_END   = '<!-- CG_EDGE_CASES_END -->'
+
+/**
+ * Build the wrapped block (sentinels + heading + bullets). Returns
+ * empty string when there are no rules so callers can splice "remove
+ * the block" by passing [].
+ */
+export function buildEdgeCasesBlock(
+  edgeCases: Array<{ label?: string; instruction: string }> | undefined,
+): string {
+  if (!edgeCases || edgeCases.length === 0) return ''
+  const lines = edgeCases
+    .filter((e) => e?.instruction && e.instruction.trim())
+    .map((e) => {
+      const label = (e.label || '').trim()
+      const instr = e.instruction.trim().replace(/\s+/g, ' ')
+      return label ? `- ${label}: ${instr}` : `- ${instr}`
+    })
+  if (lines.length === 0) return ''
+  return `
+
+${EDGE_CASES_START}
+SPECIAL HANDLING (situation-specific instructions from the business owner - follow these exactly when the listed situation comes up; otherwise behave normally):
+${lines.join('\n')}
+${EDGE_CASES_END}
+`
+}
+
+/**
+ * Splice the rep-managed edge-cases block into an existing prompt
+ * without disturbing anything else.
+ *
+ * Three cases:
+ *
+ *  1. Sentineled block exists  -> replace what's between the sentinels
+ *  2. Legacy unsentineled block (literal "SPECIAL HANDLING (situation
+ *     -specific..." header from earlier writes) -> strip it once and
+ *     append the new sentineled block at the end
+ *  3. No existing block        -> append at the end
+ *
+ * Whitespace around the splice is normalized so we don't leave double
+ * blank lines that pile up across multiple edits.
+ */
+export function spliceEdgeCasesIntoPrompt(
+  currentPrompt: string,
+  edgeCases: Array<{ label?: string; instruction: string }> | undefined,
+): string {
+  const newBlock = buildEdgeCasesBlock(edgeCases)
+
+  const startIdx = currentPrompt.indexOf(EDGE_CASES_START)
+  const endIdx = currentPrompt.indexOf(EDGE_CASES_END)
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    const before = currentPrompt.slice(0, startIdx).replace(/\s+$/, '')
+    const after = currentPrompt.slice(endIdx + EDGE_CASES_END.length).replace(/^\s+/, '')
+    if (newBlock) {
+      return `${before}${newBlock}${after ? `\n\n${after}` : ''}`
+    }
+    return after ? `${before}\n\n${after}` : before
+  }
+
+  const legacyHeader = /\n*SPECIAL HANDLING \(situation-specific instructions[\s\S]*?$/
+  const stripped = currentPrompt.replace(legacyHeader, '').replace(/\s+$/, '')
+
+  if (!newBlock) return stripped
+  return `${stripped}${newBlock}`
 }
