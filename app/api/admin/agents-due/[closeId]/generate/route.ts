@@ -102,7 +102,7 @@ export async function POST(
         agent_draft_context: ctx,
         agent_draft_prompt: gen.prompt,
         agent_draft_validation: validation,
-        agent_draft_cost_micro: gen.cost_micro,
+        agent_draft_cost_micro: Math.round(Number(gen.cost_micro) || 0),
         agent_draft_generated_at: new Date().toISOString(),
         agent_draft_error: null,
         updated_at: new Date().toISOString(),
