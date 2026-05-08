@@ -6,9 +6,9 @@
  * the codebase so a rep onboarding tomorrow has something to read while
  * the polished video version is still in production.
  *
- * Tone: written for someone who has sold SaaS before but is new to AI
- * receptionists for service businesses. Direct, no fluff. Numbers are
- * defaults the rep can flex within.
+ * Tone: written for experienced sellers. Substance over scripts - principles,
+ * numbers, the logic behind the objection handling. Reps phrase it their own
+ * way.
  */
 
 export type PlaybookSection = {
@@ -24,223 +24,211 @@ export const PLAYBOOK_SECTIONS: PlaybookSection[] = [
     title: 'Product in 60 seconds',
     blurb: 'What CloudGreet actually does, in language a contractor will get.',
     body: `**The pitch in one sentence**
-CloudGreet is an AI receptionist that answers a contractor's missed calls 24/7, books jobs straight onto their calendar, and shows every call (transcript, recording, outcome) in their dashboard - so they stop losing $5K-$15K a month to voicemails.
+CloudGreet is an AI receptionist that answers a contractor's missed calls 24/7, books jobs onto their calendar, and shows every call (transcript, recording, outcome) in their dashboard - so they stop losing $5K-$15K a month to voicemails.
 
 **Why it works**
 The average HVAC, plumbing, electrical, or roofing shop misses 30-50% of inbound calls (in the truck, on a roof, after hours, lunch break). Every missed call is a job a competitor books instead. A human receptionist costs $3-5K/mo. CloudGreet is $200-500/mo and never sleeps.
 
-**What it actually does on a call**
+**What it does on a call**
 1. Picks up on ring 1
-2. Greets caller in the contractor's voice/style
+2. Greets in the contractor's voice/style
 3. Captures: name, phone, address, service type, urgency
-4. Books an appointment on Cal.com / Google Calendar / their existing booking link
-5. Logs the full call (transcript, recording, outcome) to the contractor's dashboard the second the call ends
-6. If it can't answer something, it offers a callback
+4. Books on Cal.com / Google Calendar / their existing booking link
+5. Logs the full call (transcript, recording, outcome) to the dashboard the second the call ends
+6. Offers a callback if it can't answer something
 
 **What it doesn't do**
-It doesn't pretend to be human. It doesn't replace technicians, dispatchers, or office managers. It doesn't quote prices unless the owner explicitly tells it to.
+Pretend to be human. Replace techs, dispatchers, or office managers. Quote prices unless the owner explicitly enables it.
 
 **Who it's for**
-Solo and small-shop service businesses with 1-15 employees. HVAC, plumbing, electrical, roofing, pest control, landscaping, painting, handyman, law firms (yes), small medical/dental, anyone who lives or dies on inbound calls.`,
+Solo and small-shop service businesses, 1-15 employees. HVAC, plumbing, electrical, roofing, pest control, landscaping, painting, handyman, law firms, small medical/dental - anyone who lives or dies on inbound calls.`,
   },
 
   {
     id: 'pricing',
     title: 'Pricing',
     blurb: 'What to charge, where to flex, and the floor.',
-    body: `**Standard pricing (default offer)**
-- **Setup fee:** $500 one-time
-- **Monthly:** $300/mo
+    body: `**Standard offer**
+- Setup: $500 one-time
+- Monthly: $300
 
-**When to flex up**
+**Flex up**
 - Multiple locations, multi-line phone tree, custom integrations beyond Cal.com → $400-500/mo
-- Setup fee can go to $750-1000 if they want a custom voice clone or a complex script
+- Custom voice clone or complex script → setup $750-1000
 
-**When to flex down**
-- Tiny solo operator, struggling cash flow, willing to do a video testimonial → drop monthly to $200, keep setup
-- Never drop setup below $250. If they won't pay setup, they won't take onboarding seriously
+**Flex down**
+- Solo operator, tight cash, willing to do a video testimonial → $200/mo, keep setup
+- Never drop setup below $250. If they won't pay setup, they won't take onboarding seriously.
 
-**Hard floor (Stripe minimum)**
-- $50/mo absolute minimum on the platform. Below that the math doesn't work for us.
+**Hard floor**
+- $50/mo platform minimum.
 
-**The 50/50 split (your earnings)**
-- You earn 50% of every dollar paid for the first 3 months past your last close
+**Comp (50/50 split)**
+- 50% of every dollar paid for the first 3 months past your last close
 - Months 3-6 past last close → 25% trailing
 - 6+ months past last close → 0%, client transfers
 - One new close resets the trailing clock back to 50% on every active client
 
-**Translation**
-On a $300/mo + $500 setup deal you make:
+**Worked example**
+$300/mo + $500 setup deal:
 - $250 immediately (50% of setup)
 - $150/mo recurring while you stay active
-- Year 1 total per close: ~$2,050 if you keep closing`,
+- Year 1 per close: ~$2,050 if you keep closing`,
   },
 
   {
     id: 'discovery-questions',
-    title: 'Discovery questions',
-    blurb: 'The 7 questions that qualify a contractor in 5 minutes.',
-    body: `Ask these in order. If they answer the first three honestly, you're 80% closed.
+    title: 'Discovery',
+    blurb: 'Seven things to learn in five minutes.',
+    body: `Phrase it your way. The point is the answers, not the questions.
 
-**1. "How many calls would you say you miss in a typical week?"**
-The honest ones say 5-20. If they say "none" they're either lying or they have a receptionist - find out which.
+**1. Missed calls per week**
+You're calibrating. Honest answers land 5-20. "None" usually means they have a receptionist or they're lying.
 
-**2. "When you miss a call, what happens?"**
-You're listening for: voicemail nobody checks, callback two hours later, prospect calls competitor. Their own answer is your pitch.
+**2. What happens when one comes in**
+Voicemail nobody checks, callback hours later, prospect calls competitor. Their own answer becomes the pitch.
 
-**3. "What's a job worth to you on average?"**
-HVAC: $300-800 service, $5-15K install. Plumbing: $200-600. Roofing: $8-25K. Now do the math out loud: "So if you're missing 10 calls a week and one in three would've booked, that's $X/mo walking out the door."
+**3. Average job value**
+Reference numbers: HVAC $300-800 service / $5-15K install. Plumbing $200-600. Roofing $8-25K. Pull this out for the math later.
 
-**4. "Who answers the phone when you can't?"**
-Spouse, voicemail, answering service ($300+/mo), or nobody. CloudGreet is cheaper than every option except nobody, and nobody is the option that's costing them money.
+**4. Who answers when they can't**
+Spouse, voicemail, $300+/mo answering service, or nobody. CloudGreet beats every option except nobody, and nobody is the option that's costing them money.
 
-**5. "Do you use Cal.com, Google Calendar, Calendly, or anything for booking?"**
-You need to know what the agent will book into. If they say "a paper notebook" - that's fine, every booking shows up in their dashboard with the caller's name, phone, and requested time so they can copy it down.
+**5. Booking system**
+Cal.com / Google Calendar / Calendly / paper notebook. The agent books into whatever they have - even with no system, the booking lands in their dashboard.
 
-**6. "What time do you typically start and stop taking calls?"**
-Sets up the after-hours pitch. "So calls coming in after 6pm just go to voicemail?"
+**6. Hours**
+Sets up the after-hours angle.
 
-**7. "If I could show you a way to capture every one of those missed calls for less than the cost of one job a month, would you want to see it work?"**
-This is the ask. Soft yes → demo. Hard no → ask why and either handle the objection or move on.`,
+**7. Soft yes / hard no**
+Last question is the close-on-discovery: would they want to see it work. Soft yes → demo. Hard no → handle the objection or move on.`,
   },
 
   {
     id: 'objections',
     title: 'Objections',
-    blurb: 'The strongest reframe + the 10 things you\'ll hear.',
-    body: `**THE FRAME TO LEAD WITH (use this every chance you get)**
-Think of CloudGreet as a safety net, not a replacement. Right now, your missed calls go to voicemail and the prospect calls your competitor. That's a 100% loss. With CloudGreet, maybe one in fifty calls the AI fumbles - the prospect hangs up annoyed and calls your competitor anyway. Same outcome on the bad ones. But on the other 49? You just booked a job you would've lost. The downside is identical. The upside is huge. You're not betting on the AI being perfect; you're betting that "imperfect AI" beats "voicemail."
+    blurb: 'The frame to lead with, plus the ten you\'ll hear.',
+    body: `**Lead frame: safety net, not replacement**
+Today, missed calls go to voicemail and the prospect calls a competitor. 100% loss. With CloudGreet, maybe one in fifty calls the AI fumbles - same outcome on the bad ones. But on the other 49, you booked a job you would've lost. Downside identical, upside huge. They're not betting on perfect AI; they're betting "imperfect AI" beats "voicemail."
 
-This reframe handles 70% of objections before they come up. Use it early.
+This handles 70% of objections before they come up. Bring it up early.
 
 ---
 
-**1. "AI sounds robotic / customers will hate it."**
-Fair concern. Two answers: (1) we use Retell + voice cloning so it sounds like a real person, not Siri. (2) I'll send you a recording of one handling a real call - you tell me which lines are AI. I'm right 9 times out of 10 they can't tell. And remember the safety net frame: even if some callers do hate it, that's no worse than voicemail - which they also hate.
+**1. AI sounds robotic / customers will hate it**
+Two answers: voice cloning makes it sound like a person, not Siri. Send a recording of one handling a real call - they usually can't pick out the AI lines. Plus the safety-net frame: even if some hate it, no worse than voicemail.
 
-**2. "I already have an answering service."**
-What's it cost you? (Usually $300-500/mo.) Does it book jobs onto your calendar or just take messages? CloudGreet does both for less - and every call lands in your dashboard the second it ends, not 4 hours later.
+**2. Already have an answering service**
+What's it cost? (Usually $300-500.) Does it book jobs onto the calendar or just take messages? CloudGreet does both for less, with calls landing in the dashboard the second they end vs hours later.
 
-**3. "I'd rather just hire a receptionist."**
-Hiring's $35-50K/yr fully loaded plus benefits and PTO. CloudGreet is $300/mo and works 24/7 including Saturdays at 9pm when your competitor is asleep. We can pause your subscription the month you hire someone.
+**3. Rather hire a receptionist**
+$35-50K/yr fully loaded plus benefits and PTO vs $300/mo, working 24/7. We can pause the subscription the month they hire someone.
 
-**4. "What if it gets something wrong?"**
-The safety-net frame is the answer here. Right now your missed calls go nowhere - that's a 100% loss. Even if the AI flubs one in fifty, the worst case is that one prospect goes to your competitor, which is exactly what happens today on every miss. The other 49 are jobs you would've lost. Plus: every call is transcribed in your dashboard within 30 seconds so you can call back if anything's off, and the agent never invents prices or commits you to anything outside the script.
+**4. What if it gets something wrong**
+Safety-net frame is the answer. Plus: every call transcribed in the dashboard within 30 seconds so they can call back if anything's off; agent never invents prices or commits them to anything outside the script.
 
-**5. "I'm not technical."**
-You don't need to be. We do the entire setup. You answer 8 questions about your business in a form, we build the agent, you approve it, we go live. ~3 days end to end.
+**5. Not technical**
+Eight-question form, we build the agent, they approve, we go live. ~3 days end to end.
 
-**6. "Can I try it for free?"**
-We do a paid pilot, not a free trial. Reason: free trials get ignored. The math: if it books even ONE job in the first 30 days, it's already paid for itself - that's the bar we set, and almost nobody fails to clear it. Don't lead with the refund as a sales tool (see closing section); use it only if a prospect is genuinely about to walk and you've exhausted the other angles.
+**6. Free trial**
+We do paid pilots, not free trials - free trials get ignored. The bar is one booked job in 30 days, almost nobody fails to clear it. Don't lead with the refund as a sales tool (see Closing); use it only to save a deal that's about to walk.
 
-**7. "How is this different from [competitor]?"**
-Two things: a real-time call log in your dashboard with every transcript and recording (most just send a vague summary email hours later), and the agent learns your business from a 10-minute form, not a 2-hour onboarding call. We're cheaper than the named competitors too.
+**7. How is this different from [competitor]**
+Real-time call log with transcripts and recordings (most send a vague summary email hours later), and the agent learns the business from a 10-minute form, not a 2-hour onboarding call. Cheaper than the named competitors.
 
-**8. "I get like 2 calls a day, this is overkill."**
-If you get 2 calls a day and miss one, that's one missed job. What's a job worth? If it pays for the month, the math works.
+**8. Only 2 calls a day, overkill**
+If they get 2 a day and miss one, that's one missed job. If a job pays for the month, the math works.
 
-**9. "Send me some info and I'll think about it."**
-The kiss of death. Counter: "Happy to. Quick question first - if I send you a 2-minute recording of CloudGreet booking a job on your behalf, can we get back on a 15-minute call Thursday to either close it or kill it?"
+**9. "Send me info, I'll think about it"**
+Counter with a recording + a hard follow-up time. No info-send without a calendar slot.
 
-**10. "Let me talk to my [partner / spouse / business coach]."**
-"Of course. While you do, can I send the link so they can hear the demo too? It's easier than you describing it." Then schedule the follow-up before you hang up.`,
+**10. "Need to talk to my partner/spouse/coach"**
+Send the demo so the third party hears it directly. Schedule the follow-up before hanging up.`,
   },
 
   {
     id: 'scripts',
-    title: 'Cold-call scripts',
-    blurb: 'Three openers - hard, soft, educational. Pick by mood.',
-    body: `**THE HARD OPENER (use when you're confident)**
-"Hey [name], it's [your name] with CloudGreet. Quick reason for the call - I work with HVAC contractors in [their city] who are losing $5-10K a month to missed calls. I built something that fixes it for $300 a month. Worth 60 seconds to see if it'd work for you?"
+    title: 'Cold-call openers',
+    blurb: 'Three angles - hard, soft, educational.',
+    body: `Phrase any of these your way. The angle is the point.
 
-If yes → run discovery.
-If no → "Got it - last question, are you missing calls or are you fully staffed up?" Their answer either tees up the pitch again or kills it cleanly.
+**Hard opener** - confident, fast
+Lead with the problem ($5-10K/mo lost to missed calls), the fix ($300/mo), and ask for 60 seconds. If they say no, fall back: are they missing calls or fully staffed up? Either re-tees the pitch or kills it cleanly.
 
-**THE SOFT OPENER (use when you want to feel out the situation)**
-"Hey [name], [your name] from CloudGreet - is this a bad time? ... Quick context: I help service businesses like yours stop losing customers to voicemail. Two questions and I'm out of your hair: how many calls do you miss a week, and what happens when one comes in after hours?"
+**Soft opener** - feeler
+"Bad time?" lowers their guard, then run two discovery questions (missed calls/week, what happens after hours). Decide whether to pitch or hang up after 90 seconds.
 
-This puts them in control and you learn enough in 90 seconds to decide whether to pitch or hang up.
+**Educational opener** - skeptical or technical prospect
+Frame it as research on how local [trade] companies handle after-hours calls. Walk them through discovery. Then pivot: you work with a tool that books those calls, here's a 2-minute recording, want a follow-up.
 
-**THE EDUCATIONAL OPENER (use when they're skeptical or technical)**
-"Hey [name], not a sales call - I'm doing some research on how [HVAC/plumbing/etc] companies in [city] handle after-hours calls. Got 90 seconds for two questions?"
+**Voicemail**
+Always leave one (2x return rate). Cover: who you are, the missed-call angle, that you work with local references in their trade, and the callback number. Keep it under 20 seconds.
 
-Walk them through the same discovery. Then: "I appreciate it. The reason I asked: I work with a tool that books those after-hours calls automatically. Here's a 2-minute recording of one in action. Worth a 15-minute follow-up if it does what you need?"
-
-**Voicemail script (always leave one - 2x return rate vs no message)**
-"Hey [name], [your name] with CloudGreet. Calling about your missed-call problem - we work with [3 local references in their trade if you have them] and have something that's saving them about $8K a month. Number's [your number]. Worth 5 minutes when you've got a second."
-
-**Text follow-up (send 30 seconds after voicemail)**
-"Hey [name] - just left a vm. Recording of CloudGreet booking a real HVAC job: [link]. Worth a 5-min call? I'm free [day] [time] or [day] [time]. - [your name]"`,
+**Text follow-up (30 sec after voicemail)**
+Reference the vm, drop a recording link, propose two specific times. Keep it short.`,
   },
 
   {
     id: 'demo-flow',
     title: 'Demo flow',
-    blurb: 'How to run the 15-minute demo without losing them.',
+    blurb: 'How to run the 15 minutes without losing them.',
     body: `**Setup (1 min)**
-"Before I show you, two things. One: you can interrupt me anytime, this isn't a presentation. Two: by the end of this 15 minutes I want to know if it's a fit or not - I'm not chasing you for two months."
+Set the rules: they can interrupt, and by the end you both want a yes/no - no two-month chases.
 
 **Live call (4 min)**
-Dial the demo number on speaker. Let it answer. Walk through booking a fake job using their actual business name. Don't narrate - let it sound natural.
+Dial the demo number on speaker. Walk through booking a fake job using their actual business name. Don't narrate - let it sound natural.
 
-When the call ends, pull up the dashboard - they'll see the transcript, recording, caller info, and the booked appointment all in one place. This is the moment most prospects close themselves.
+When the call ends, pull up the dashboard. Transcript, recording, caller info, booked appointment - all in one place. This is where most prospects close themselves.
 
 **The "what if" tour (4 min)**
-Cover the three things every prospect worries about:
-- "What if it doesn't know the answer?" → show edge-case handling
-- "What if it screws up my pricing?" → show how it never quotes unless the owner explicitly enables it
-- "What if my customers want a human?" → show the callback request flow
+Three things every prospect worries about:
+- Doesn't know the answer → show edge-case handling
+- Screws up pricing → show how it never quotes unless explicitly enabled
+- Customer wants a human → show the callback request flow
 
 **The numbers (3 min)**
-Pull up a calculator on screen. Plug in their numbers from discovery: missed calls/week, average job value, close rate. Show the monthly $ they're losing. Subtract $300 (CloudGreet cost). The delta is their "I'd be an idiot not to do this" number.
+Calculator on screen. Plug in their discovery numbers (missed calls/week, job value, close rate). Show the monthly $ they're losing. Subtract $300. The delta is their no-brainer number.
 
 **The ask (3 min)**
-"Two ways we can go from here. (1) I send you the link, you get on the phone with our team this week and we have you live by [day]. (2) You think about it and we lose touch. Which one?"
+Two paths: close this week, or you stop following up. Force the decision.
 
-If 1: send the payment link on the call. Don't hang up until they've clicked.
-If 2: schedule the follow-up before you hang up. "Thursday 2pm or Friday 10am - which works?"
+If they close: send the payment link on the call. Stay until they click.
+If they need time: hard follow-up before you hang up. Two specific times, pick one.
 
-**Things that kill demos**
-- Talking through the live call (let it speak for itself)
-- Showing every feature (show 3, not 30)
-- Discussing pricing before the value math is on screen
-- Letting them say "I'll think about it" without giving you a hard date`,
+**Demo killers**
+- Talking through the live call
+- Showing every feature (3 not 30)
+- Pricing before the value math is on screen
+- Letting "I'll think about it" land without a hard date`,
   },
 
   {
     id: 'objection-economics',
-    title: 'The math you should memorize',
+    title: 'The math',
     blurb: 'Five numbers that close deals.',
-    body: `**Memorize these. Use them in every call.**
+    body: `**1. Missed-call rate: 30-50%**
+Industry average for service trades. A contractor who pushes back doesn't actually know how many they miss - that's its own pitch.
 
-**1. Missed-call rate: 30-50%**
-The industry average for service trades. A contractor who pushes back on this number doesn't actually know how many they miss - that's its own pitch.
-
-**2. Conversion rate on answered calls: ~30%**
-Roughly 1 in 3 answered inbound calls becomes a booked job. Use this for the math.
+**2. Answered-call conversion: ~30%**
+Roughly 1 in 3 answered inbounds books. Use this for the math.
 
 **3. Average job values**
-- HVAC service call: $300-500
-- HVAC install: $5,000-15,000
-- Plumbing call: $200-600
-- Plumbing big job (water heater, repipe): $1,500-8,000
-- Electrical service: $200-500
-- Electrical big job (panel upgrade): $1,500-4,000
-- Roofing repair: $400-1,500
-- Roofing replacement: $8,000-25,000
+- HVAC service: $300-500 / install: $5,000-15,000
+- Plumbing call: $200-600 / big job: $1,500-8,000
+- Electrical service: $200-500 / panel upgrade: $1,500-4,000
+- Roofing repair: $400-1,500 / replacement: $8,000-25,000
 
 **4. CloudGreet cost: $300/mo + $500 setup**
 Anchor here.
 
-**5. The close-the-deal sentence**
-"You're missing about [missed calls/week] calls a week. One in three would book. Average job is $[their number]. That's $[do the math out loud] a month walking out the door. CloudGreet costs $300. So you're choosing between losing $X or paying $300 to keep it. Which one feels better?"
+**5. The close math**
+Walk them through it: missed calls × 30% × avg job value = monthly $ lost. Subtract $300. The delta is their loss vs. cost.
 
-**Worked example for HVAC**
-- 12 missed calls/week × 4 weeks = 48 missed/mo
-- 30% would have booked = 14 missed jobs/mo
-- $400 average ticket = $5,600/mo in lost revenue
-- CloudGreet: $300/mo
-- Net: $5,300/mo recovered, or 17x ROI in month 1
+**Worked example (HVAC)**
+- 12 missed/wk × 4 = 48/mo
+- 30% would have booked = 14 missed jobs
+- $400 ticket = $5,600/mo lost
+- CloudGreet $300/mo → $5,300/mo recovered, 17x ROI month 1
 
 You don't need to be right. You need to make them do the math themselves.`,
   },
@@ -250,39 +238,36 @@ You don't need to be right. You need to make them do the math themselves.`,
     title: 'Closing',
     blurb: 'Five techniques in priority order.',
     body: `**1. Assumptive close (try first)**
-"Cool, I'll send the payment link to this email - is [their email] still good?" Then send it. 60% of soft yeses close on the assumptive close because there's no decision moment.
+Confirm the email and send the payment link. No decision moment. Closes most soft yeses.
 
 **2. Either/or close**
-"Want to start with the standard $300 plan or the $400 plan with the multi-line setup?" You're not asking IF they'll buy, you're asking WHICH they'll buy.
+Frame the choice as which plan, not whether to buy. ($300 standard vs $400 multi-line.)
 
-**3. Risk-reversal close (LAST RESORT - read this carefully)**
-We have a 30-day refund: if CloudGreet books **zero** jobs in the first 30 days, full refund. The bar is one booked job, not "they're happy with it" - any single job clears the bar.
+**3. Risk-reversal (last resort - read carefully)**
+30-day refund: if CloudGreet books **zero** jobs in 30 days, full refund. Bar is one booking, not "they're happy."
 
-Do NOT lead with this. Reasons:
-  · It signals you don't believe in the product. Prospects pick that up.
-  · It anchors them on "I might want my money back" instead of "this will book me jobs."
-  · It's almost never used in real life because almost every account books in week one. Reps who lead with it teach prospects to expect it.
+Do NOT lead with this:
+- Signals you don't believe in the product
+- Anchors them on "money back" instead of "books me jobs"
+- Almost never used because almost every account books in week one
 
-When you DO use it: only after every other close has failed and they're about to walk. Phrase it tight:
-  "Look - if it doesn't book one single job in 30 days, you get every dollar back. That's the bar. One booking. We've never had an account miss it. Want me to send the link?"
+Use it only when every other close has failed and they're about to walk. Keep it tight: one booking is the bar, no account has ever missed it.
 
-The product is the result. The refund is the airbag. Lead with the result.
+**4. Urgency (only when true)**
+Setup fee locked through end of month, going up after. Don't lie - if you say it, set a calendar reminder to actually raise it.
 
-**4. Urgency close (only when true)**
-"We're locking in setup fees at $500 through the end of [month] - going to $750 after that for new accounts." Don't lie about this. If you say it, set a calendar reminder to actually raise it.
+**5. Kill-or-close (final)**
+Force the binary: this is a fit and we go this week, or it's not and you stop following up. Often gets the yes because the prospect was waiting for permission to decide.
 
-**5. The "kill or close" close (last resort)**
-"I want to be respectful of your time. Either this is a fit and we go this week, or it's not and I stop following up. Which is it?" Surprisingly often this gets the close, because the prospect was waiting for permission to just decide.
-
-**The send sequence after a yes**
+**Send sequence after a yes**
 1. Click "Send payment link" in the lead detail
-2. Auto-copies to your clipboard - paste it in the live conversation (text/email)
-3. Stay on the line/chat until they confirm payment came through
-4. Confirm a date/time for the customization call
+2. Auto-copies to clipboard - paste in live conversation
+3. Stay on the line until they confirm payment
+4. Confirm date/time for customization call
 5. Tell them to expect an email from CloudGreet within 1 hour
-6. Update lead status to **proposal_sent** if it isn't already
+6. Update lead status to **proposal_sent** if not already
 
 **After the close**
-Don't disappear. Text them within 24 hours: "Hey [name], welcome aboard. Your customization form should've landed in your inbox - if you can knock it out today the team can have you live by [day]. Hit me back with any questions." This drops your churn by ~20%.`,
+Don't disappear. Within 24 hours, text them: welcome, customization form is in their inbox, knock it out today and they're live by [day]. Drops churn by ~20%.`,
   },
 ]
