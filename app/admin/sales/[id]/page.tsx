@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
  Loader2, ArrowLeft, AlertCircle, CheckCircle2, Pause, RotateCcw, Trash2, KeyRound,
- Mail, MapPin,
+ Mail, MapPin, Hash, Copy, Send, ExternalLink,
 } from 'lucide-react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
@@ -298,6 +298,12 @@ export default function RepDetailPage() {
       />
      </Panel>
 
+     {/* Slack notifications */}
+     <Panel>
+      <PanelHeader title="Slack notifications" eyebrow="agent-complete pings" />
+      <SlackSection repId={rep.id} repEmail={rep.email} repName={rep.name} />
+     </Panel>
+
      {/* Clients */}
      <Panel padding="none">
       <div className="px-5 sm:px-6 pt-5 pb-3 border-b border-white/[0.06]">
@@ -463,6 +469,210 @@ function ScrapeLimitField({
     {saving && <Loader2 className="w-3 h-3 animate-spin" />}
     Save
    </button>
+  </div>
+ )
+}
+
+function SlackSection({ repId, repEmail, repName }: {
+ repId: string; repEmail: string; repName: string
+}) {
+ type State = {
+  email: string | null
+  slack_user_id: string | null
+  mention_tag: string | null
+  current_env: string
+  suggested_env: string
+  already_included: boolean
+  bot_token_configured: boolean
+  invite_url: string | null
+  lookup_error: string | null
+ }
+ const [s, setS] = useState<State | null>(null)
+ const [loading, setLoading] = useState(true)
+ const [err, setErr] = useState<string | null>(null)
+ const [manualId, setManualId] = useState('')
+ const [copied, setCopied] = useState<'tag' | 'env' | null>(null)
+
+ const load = async () => {
+  setLoading(true); setErr(null)
+  try {
+   const r = await fetchWithAuth(`/api/admin/sales/${repId}/slack-id`)
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) { setErr(j?.error || `Failed (${r.status})`); return }
+   setS(j)
+  } finally {
+   setLoading(false)
+  }
+ }
+ useEffect(() => { void load() }, [repId])
+
+ const copy = async (value: string, kind: 'tag' | 'env') => {
+  try { await navigator.clipboard.writeText(value); setCopied(kind); setTimeout(() => setCopied(null), 1500) } catch { /* non-fatal */ }
+ }
+
+ // Build a "suggested env" string from a manually-entered ID when the
+ // bot lookup isn't available (no SLACK_BOT_TOKEN set).
+ const manualTag = (() => {
+  const raw = manualId.trim().replace(/^<@/, '').replace(/>$/, '')
+  if (!raw) return null
+  return `<@${raw}>`
+ })()
+ const manualSuggested = (() => {
+  if (!manualTag || !s) return null
+  const tokens = new Set(s.current_env.split(/\s+/).map((t) => t.trim()).filter(Boolean))
+  tokens.add(manualTag)
+  return Array.from(tokens).join(' ')
+ })()
+ const manualAlready = !!(s && manualTag && s.current_env.split(/\s+/).map((t) => t.trim()).includes(manualTag))
+
+ if (loading) {
+  return <div className="flex items-center gap-2 text-xs text-gray-500"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Looking up Slack…</div>
+ }
+ if (err || !s) {
+  return <div className="text-xs text-rose-300 flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" /> {err || 'Could not load'}</div>
+ }
+
+ return (
+  <div className="space-y-4 text-sm">
+   {/* Invite (only if SLACK_INVITE_URL is set) */}
+   {s.invite_url ? (
+    <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3 flex items-center justify-between gap-3 flex-wrap">
+     <div className="text-xs text-gray-400">
+      Send {repName} a Slack workspace invite. They&apos;ll show up in the lookup below once they accept.
+     </div>
+     <div className="flex items-center gap-2 flex-wrap">
+      <a
+       href={`mailto:${repEmail}?subject=${encodeURIComponent('Join us on Slack')}&body=${encodeURIComponent(`Hey ${repName.split(' ')[0]} - join the CloudGreet Slack so you get the agent-complete pings:\n\n${s.invite_url}\n\nSee you in there.`)}`}
+       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]"
+      >
+       <Send className="w-3.5 h-3.5" /> Email invite
+      </a>
+      <a
+       href={s.invite_url}
+       target="_blank"
+       rel="noreferrer"
+       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]"
+      >
+       Open invite link <ExternalLink className="w-3.5 h-3.5" />
+      </a>
+     </div>
+    </div>
+   ) : (
+    <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3 text-xs text-amber-200/90">
+     Set <span className="font-mono">SLACK_INVITE_URL</span> in Vercel to a workspace invite link (Slack admin → Invitations → Copy invite link) and an &quot;Email invite&quot; button shows up here.
+    </div>
+   )}
+
+   {/* Lookup result */}
+   {s.bot_token_configured ? (
+    s.slack_user_id && s.mention_tag ? (
+     <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+       <div className="flex items-center gap-2">
+        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <span className="text-emerald-200 text-xs">Found in workspace</span>
+        {s.already_included && (
+         <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-emerald-300/80 px-2 py-0.5 rounded-full border border-emerald-500/30">
+          already in mention list
+         </span>
+        )}
+       </div>
+       <button onClick={load} className="text-[10px] text-gray-500 hover:text-gray-200">Refresh</button>
+      </div>
+      <div className="mt-2 grid sm:grid-cols-2 gap-2">
+       <Field2 label="Member ID" value={s.slack_user_id} mono />
+       <div>
+        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1">Mention tag</div>
+        <div className="flex items-center gap-2">
+         <code className="font-mono text-xs text-gray-200 bg-black/40 border border-white/10 rounded px-2 py-1 flex-1 break-all">{s.mention_tag}</code>
+         <GhostButton onClick={() => copy(s.mention_tag!, 'tag')}>
+          {copied === 'tag' ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+          Copy
+         </GhostButton>
+        </div>
+       </div>
+      </div>
+     </div>
+    ) : (
+     <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3 text-xs text-amber-200/90">
+      <div className="flex items-center gap-2 mb-1">
+       <AlertCircle className="w-3.5 h-3.5" />
+       <strong className="text-amber-200">Not in the Slack workspace yet</strong>
+      </div>
+      Looked up <span className="font-mono">{s.email || repEmail}</span> via Slack&apos;s API; they aren&apos;t a member.
+      {s.lookup_error && <div className="mt-1 font-mono text-[11px] text-amber-300/70">{s.lookup_error}</div>}
+      <div className="mt-2">Send the invite above, then click <button onClick={load} className="underline">refresh</button>.</div>
+     </div>
+    )
+   ) : (
+    /* Manual mode - no SLACK_BOT_TOKEN */
+    <div className="rounded-xl border border-white/[0.08] bg-black/20 p-3 space-y-2">
+     <div className="text-xs text-gray-400">
+      <span className="font-mono">SLACK_BOT_TOKEN</span> isn&apos;t set, so we can&apos;t auto-lookup. Paste {repName.split(' ')[0]}&apos;s Slack member ID here (in Slack: click name → More → Copy member ID).
+     </div>
+     <div className="flex items-center gap-2">
+      <div className="relative flex-1">
+       <Hash className="w-3.5 h-3.5 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+       <input
+        value={manualId}
+        onChange={(e) => setManualId(e.target.value)}
+        placeholder="U01ABC234"
+        spellCheck={false}
+        className="w-full pl-9 pr-3 py-2 bg-black/40 border border-white/10 rounded-xl text-xs font-mono text-gray-200 focus:border-sky-400/40 focus:outline-none"
+       />
+      </div>
+      {manualTag && (
+       <GhostButton onClick={() => copy(manualTag, 'tag')}>
+        {copied === 'tag' ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+        Copy tag
+       </GhostButton>
+      )}
+     </div>
+     {manualTag && (
+      <div className="text-[11px] text-gray-500 font-mono">
+       Tag: <span className="text-gray-300">{manualTag}</span>
+       {manualAlready && <span className="text-emerald-300 ml-2">(already in env)</span>}
+      </div>
+     )}
+    </div>
+   )}
+
+   {/* Suggested env value */}
+   {(s.suggested_env || manualSuggested) && (
+    <div className="rounded-xl border border-sky-500/20 bg-sky-500/[0.06] p-3">
+     <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+      <div>
+       <div className="text-xs text-sky-200 font-medium">Vercel env value</div>
+       <div className="text-[11px] text-sky-300/70 mt-0.5">
+        Set <span className="font-mono">SLACK_AGENT_COMPLETE_MENTIONS</span> in Vercel → Settings → Environment Variables, then redeploy.
+       </div>
+      </div>
+      <GhostButton onClick={() => copy(manualSuggested || s.suggested_env, 'env')}>
+       {copied === 'env' ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+       {copied === 'env' ? 'Copied' : 'Copy for Vercel'}
+      </GhostButton>
+     </div>
+     <code className="block font-mono text-[11px] text-gray-200 bg-black/40 border border-white/10 rounded px-2 py-1.5 break-all">
+      {manualSuggested || s.suggested_env}
+     </code>
+    </div>
+   )}
+
+   {/* Current env (read-only display, helps debug) */}
+   {s.current_env && (
+    <div className="text-[11px] text-gray-500">
+     Currently deployed: <code className="font-mono text-gray-400">{s.current_env}</code>
+    </div>
+   )}
+  </div>
+ )
+}
+
+function Field2({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+ return (
+  <div>
+   <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1">{label}</div>
+   <div className={`text-xs text-gray-200 ${mono ? 'font-mono' : ''} break-all`}>{value}</div>
   </div>
  )
 }
