@@ -55,19 +55,47 @@ export async function GET(request: NextRequest) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any
+
+    // Surface exactly what each SMS endpoint would say for this user/env.
+    const role = decoded.role || null
+    const isAdmin = role === 'admin'
+    const hasNotifFrom = !!process.env.CLOUDGREET_NOTIFICATIONS_FROM
+    const hasTelnyxKey = !!process.env.TELNYX_API_KEY
+    const hasMsgProfile = !!process.env.TELNYX_MESSAGING_PROFILE_ID
+
     return NextResponse.json({
       ok: true,
       token_source: tokenSource,
       payload: {
         userId: decoded.userId,
         businessId: decoded.businessId,
-        role: decoded.role || null,
+        role,
         iat: decoded.iat,
         exp: decoded.exp,
-        // human-readable times
         issued_at: decoded.iat ? new Date(decoded.iat * 1000).toISOString() : null,
         expires_at: decoded.exp ? new Date(decoded.exp * 1000).toISOString() : null,
         seconds_until_expiry: decoded.exp ? decoded.exp - Math.floor(Date.now() / 1000) : null,
+      },
+      // What the SMS endpoints would do for this exact request
+      sms_endpoint_predictions: {
+        admin_sms_test: isAdmin
+          ? (hasNotifFrom && hasTelnyxKey
+              ? 'WOULD ATTEMPT SEND'
+              : `would 400 - missing env (${[
+                  !hasTelnyxKey && 'TELNYX_API_KEY',
+                  !hasNotifFrom && 'CLOUDGREET_NOTIFICATIONS_FROM',
+                ].filter(Boolean).join(', ')})`)
+          : `would 401 - role is "${role}", admin endpoint requires "admin"`,
+        dashboard_notifications_test: !decoded.businessId
+          ? 'would 401 - token has no businessId'
+          : !hasNotifFrom
+            ? 'would 503 - CLOUDGREET_NOTIFICATIONS_FROM not set in Vercel env'
+            : 'WOULD ATTEMPT SEND (auth + env both ok)',
+      },
+      env_flags: {
+        TELNYX_API_KEY_set: hasTelnyxKey,
+        TELNYX_MESSAGING_PROFILE_ID_set: hasMsgProfile,
+        CLOUDGREET_NOTIFICATIONS_FROM_set: hasNotifFrom,
       },
     })
   } catch (e) {
