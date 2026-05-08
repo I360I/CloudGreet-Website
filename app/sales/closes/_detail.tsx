@@ -48,15 +48,22 @@ export type CloseRow = {
  *
  * Renders inline next to the closes list. Closes via X / ESC / backdrop.
  */
+export type PaymentLinkOverrides = {
+  monthly_cents?: number
+  setup_fee_cents?: number
+  email?: string
+}
+
 export function CloseDetailPanel({
-  close, paymentUrl, onClose, onPaymentLink, onPaymentLinkBusy, onCopy,
+  close, paymentUrl, onClose, onPaymentLink, onPaymentLinkBusy, onCopy, paymentError,
 }: {
   close: CloseRow
   paymentUrl: string | null
   onClose: () => void
-  onPaymentLink: () => void
+  onPaymentLink: (overrides?: PaymentLinkOverrides) => void
   onPaymentLinkBusy: boolean
   onCopy: () => void
+  paymentError?: string
 }) {
   const [copied, setCopied] = useState(false)
   useEffect(() => {
@@ -149,6 +156,7 @@ export function CloseDetailPanel({
                 onGenerate={onPaymentLink}
                 busy={onPaymentLinkBusy}
                 onCopy={onCopy}
+                error={paymentError}
               />
               <DemoCard close={close} />
             </>
@@ -233,15 +241,41 @@ function StageStrip({ stage }: { stage: Stage }) {
 }
 
 function PaymentSection({
-  close, paymentUrl, onGenerate, busy, onCopy,
+  close, paymentUrl, onGenerate, busy, onCopy, error,
 }: {
   close: CloseRow
   paymentUrl: string | null
-  onGenerate: () => void
+  onGenerate: (overrides?: PaymentLinkOverrides) => void
   busy: boolean
   onCopy: () => void
+  error?: string
 }) {
-  const noEmail = !close.prospect_email
+  // Form defaults from the close's agreed amounts. If the close was
+  // created from a "send booking link" flow with no pricing yet, monthly
+  // will be 0 and the rep needs to fill it in here.
+  const [monthly, setMonthly] = useState<string>(
+    close.agreed_monthly_cents ? String(close.agreed_monthly_cents / 100) : '',
+  )
+  const [setupFee, setSetupFee] = useState<string>(
+    close.agreed_setup_fee_cents ? String(close.agreed_setup_fee_cents / 100) : '',
+  )
+  const [overrideEmail, setOverrideEmail] = useState<string>('')
+
+  const monthlyNum = parseFloat(monthly || '0')
+  const setupNum = parseFloat(setupFee || '0')
+  const monthlyValid = Number.isFinite(monthlyNum) && monthlyNum >= 50
+  const needEmail = !close.prospect_email
+  const emailValid = !needEmail || /^\S+@\S+\.\S+$/.test(overrideEmail.trim())
+
+  const submit = () => {
+    if (!monthlyValid || !emailValid) return
+    onGenerate({
+      monthly_cents: Math.round(monthlyNum * 100),
+      setup_fee_cents: Math.round((Number.isFinite(setupNum) ? setupNum : 0) * 100),
+      ...(needEmail ? { email: overrideEmail.trim() } : {}),
+    })
+  }
+
   const emailDeepLink = close.prospect_email && paymentUrl
     ? `mailto:${close.prospect_email}?subject=${encodeURIComponent(`Payment link · CloudGreet for ${close.prospect_business_name}`)}&body=${encodeURIComponent(`Here's the payment link to get started:\n\n${paymentUrl}\n\nLet me know if you have any questions.`)}`
     : null
@@ -290,20 +324,77 @@ function PaymentSection({
       ) : (
         <>
           <p className="text-sm text-gray-700 mb-3">
-            Generate a Stripe Checkout link with the agreed pricing. We&apos;ll
-            email it via the address on file (or you can copy + paste).
+            Set the agreed pricing and generate a Stripe Checkout link.
+            Stripe requires <span className="font-mono">$50</span> minimum monthly.
           </p>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-600 mb-1">
+                Monthly $
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                <input
+                  type="number"
+                  min={50}
+                  max={50000}
+                  step={1}
+                  value={monthly}
+                  onChange={(e) => setMonthly(e.target.value)}
+                  placeholder="200"
+                  className="w-full bg-white border border-gray-200 rounded-lg pl-6 pr-3 py-2 text-sm tabular-nums focus:outline-none focus:border-gray-400"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-600 mb-1">
+                Setup $
+              </label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={50000}
+                  step={1}
+                  value={setupFee}
+                  onChange={(e) => setSetupFee(e.target.value)}
+                  placeholder="0"
+                  className="w-full bg-white border border-gray-200 rounded-lg pl-6 pr-3 py-2 text-sm tabular-nums focus:outline-none focus:border-gray-400"
+                />
+              </div>
+            </div>
+          </div>
+          {needEmail && (
+            <div className="mb-3">
+              <label className="block text-[10px] font-mono uppercase tracking-wider text-gray-600 mb-1">
+                Prospect email <span className="text-amber-700">(close has none)</span>
+              </label>
+              <input
+                type="email"
+                value={overrideEmail}
+                onChange={(e) => setOverrideEmail(e.target.value)}
+                placeholder="prospect@example.com"
+                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+              />
+            </div>
+          )}
           <button
-            onClick={onGenerate}
-            disabled={busy || noEmail}
+            onClick={submit}
+            disabled={busy || !monthlyValid || !emailValid}
             className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-3.5 py-2 hover:bg-gray-800 disabled:opacity-60"
           >
             {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <LinkIcon className="w-4 h-4" weight="bold" />}
             Generate payment link
           </button>
-          {noEmail && (
+          {!monthlyValid && monthly !== '' && (
             <div className="mt-2 text-[11px] text-amber-700">
-              Add a prospect email on the close to enable.
+              Monthly must be at least $50.
+            </div>
+          )}
+          {error && (
+            <div className="mt-2 text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1.5">
+              {error}
             </div>
           )}
         </>

@@ -90,30 +90,65 @@ export async function POST(
     }
   }
 
+  // Body overrides: when the rep opens the payment-link form on a close
+  // whose agreed amounts are 0/null (e.g. close was created from a "send
+  // booking link" before pricing was confirmed), they pass the actual
+  // numbers in the body. We persist them back to the close so the close
+  // row reflects what the customer is actually being charged.
+  const body = await request.json().catch(() => ({} as any))
+  const overrideMonthly = body?.monthly_cents != null ? Math.round(Number(body.monthly_cents)) : null
+  const overrideSetup = body?.setup_fee_cents != null ? Math.round(Number(body.setup_fee_cents)) : null
+  const overrideEmail = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : null
+
   // No upper cap - reps can generate payment links at any amount they
-  // negotiated. Stripe still requires a $50 minimum for monthly. The
-  // sales_reps.max_monthly_cents / max_setup_cents columns are kept
-  // in the schema for future use but are not enforced here.
-  const monthlyCents = close.agreed_monthly_cents || 0
-  const setupCents = close.agreed_setup_fee_cents || 0
-  if (monthlyCents < 5000) {
+  // negotiated. Stripe still requires a $50 minimum for monthly.
+  const monthlyCents = overrideMonthly && overrideMonthly > 0
+    ? overrideMonthly
+    : (close.agreed_monthly_cents || 0)
+  const setupCents = overrideSetup != null
+    ? overrideSetup
+    : (close.agreed_setup_fee_cents || 0)
+  if (!Number.isFinite(monthlyCents) || monthlyCents < 5000) {
     return NextResponse.json({ error: 'Monthly amount must be at least $50.' }, { status: 400 })
   }
   if (monthlyCents > 5_000_000) {
     return NextResponse.json({ error: 'Monthly amount looks too high (>$50,000). Double-check the value.' }, { status: 400 })
   }
-  if (setupCents < 0 || setupCents > 5_000_000) {
+  if (!Number.isFinite(setupCents) || setupCents < 0 || setupCents > 5_000_000) {
     return NextResponse.json({ error: 'Setup fee out of range.' }, { status: 400 })
   }
 
+  // Persist the overrides to the close row so what we charge matches
+  // what the close says it agreed to.
+  if (
+    (overrideMonthly != null && overrideMonthly !== close.agreed_monthly_cents) ||
+    (overrideSetup != null && overrideSetup !== close.agreed_setup_fee_cents)
+  ) {
+    await supabaseAdmin
+      .from('closes')
+      .update({
+        agreed_monthly_cents: monthlyCents,
+        agreed_setup_fee_cents: setupCents,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', close.id)
+  }
+
   // We require an email so Stripe can identify the customer + send
-  // the receipt. If the close didn't capture one, the rep should
-  // edit the close first (or admin can add it manually).
-  const email = (close.prospect_email || '').trim().toLowerCase()
+  // the receipt. If the close didn't capture one, the rep can pass
+  // it via the body.
+  const email = (overrideEmail || close.prospect_email || '').trim().toLowerCase()
   if (!email) {
     return NextResponse.json({
-      error: "This close has no prospect email. Add one on the close before generating a payment link.",
+      error: "This close has no prospect email. Add one on the close (or paste one into the form) before generating a payment link.",
     }, { status: 400 })
+  }
+  // If the close had no email but the rep just provided one, persist it.
+  if (overrideEmail && !close.prospect_email) {
+    await supabaseAdmin
+      .from('closes')
+      .update({ prospect_email: overrideEmail, updated_at: new Date().toISOString() })
+      .eq('id', close.id)
   }
 
   const stripe = getStripeClient()

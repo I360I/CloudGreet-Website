@@ -160,13 +160,16 @@ export default function SalesClosesPage() {
     return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [])
 
-  const generateLink = async (id: string) => {
+  const generateLink = async (
+    id: string,
+    overrides?: { monthly_cents?: number; setup_fee_cents?: number; email?: string },
+  ) => {
     setLinkBusy(id); setError('')
     try {
       const res = await fetchWithAuth(`/api/sales/closes/${id}/payment-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify(overrides || {}),
       })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -367,8 +370,9 @@ export default function SalesClosesPage() {
               close={sel}
               paymentUrl={linkUrls[sel.id] || null}
               onClose={() => setSelectedId(null)}
-              onPaymentLink={() => generateLink(sel.id)}
+              onPaymentLink={(overrides) => generateLink(sel.id, overrides)}
               onPaymentLinkBusy={linkBusy === sel.id}
+              paymentError={error}
               onCopy={() => copyLink(sel.id)}
             />
           )
