@@ -5,7 +5,6 @@ import { logger } from '@/lib/monitoring'
 import { buildBusinessContext } from '@/lib/agent-builder/build-context'
 import { generateAgentPrompt } from '@/lib/agent-builder/generate'
 import { validatePrompt } from '@/lib/agent-builder/validate'
-import { postToSlack } from '@/lib/notifications/slack'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -113,10 +112,12 @@ export async function POST(
       return NextResponse.json({ error: 'Could not save - run sql/agent-draft-pipeline.sql' }, { status: 500 })
     }
 
-    // 6. Slack ping.
-    void postToSlack({
-      text: `:hammer_and_wrench: Agent draft ready · ${ctx.business.name} · ${validation.passed ? 'validation OK' : 'validation flagged'}`,
-    })
+    // No Slack ping here on purpose. Drafts are intermediate state -
+    // the prompt has to be reviewed, the Retell agent has to be built,
+    // and the test number pasted before anything's actually shippable.
+    // The "complete" notification fires once on /submit when the admin
+    // marks the demo agent ready and the rep + client dashboards reflect
+    // it. Pinging on every draft regenerate would just spam the channel.
 
     return NextResponse.json({
       success: true,

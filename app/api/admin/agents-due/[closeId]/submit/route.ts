@@ -72,8 +72,11 @@ export async function POST(
       }, { status: 500 })
     }
 
-    // Slack ping when the demo agent flips to ready - the rep can now
-    // see the test number on their /sales/closes.
+    // Slack ping when the demo agent flips to ready - the rep + client
+    // dashboards now reflect it, so this is the "complete" signal. Set
+    // SLACK_AGENT_COMPLETE_MENTIONS in env to a space-separated list of
+    // Slack member IDs (e.g. "<@U01ABCDEF> <@U02GHIJKL>") to @-mention
+    // specific people (Aaron, ops, etc.) on every completion.
     if (touchedReady) {
       void (async () => {
         const { data: c } = await supabaseAdmin
@@ -93,8 +96,10 @@ export async function POST(
             || (u as any)?.email
             || null
         }
+        const mentions = (process.env.SLACK_AGENT_COMPLETE_MENTIONS || '').trim()
+        const prefix = mentions ? `${mentions} ` : ''
         await postToSlack({
-          text: `:robot_face: Demo agent ready - ${(c as any)?.prospect_business_name || 'client'}${repName ? ` (rep: ${repName})` : ''} · test: ${update.demo_agent_test_phone}`,
+          text: `${prefix}:white_check_mark: *Agent complete* - ${(c as any)?.prospect_business_name || 'client'}${repName ? ` · rep: ${repName}` : ''} · test #: ${update.demo_agent_test_phone}\nThe rep and client dashboards now reflect the agent. Demo can run.`,
         })
       })()
     }
