@@ -275,63 +275,63 @@ Don't disappear. Within 24 hours, text them: welcome, customization form is in t
     id: 'edge-cases',
     title: 'Edge cases & how we handle them',
     blurb: 'Real questions that come up mid-call. Know the answer, don\'t guess.',
-    body: `Anything not covered here, say "let me check with our team and get back to you in 10 minutes" - then ping #sales-help. Guessing kills deals.
+    body: `Default rule: if you don't know the answer, say so. "Good question - I'd have to check and get back with you." Don't invent specifics, don't promise timelines, don't make up features. A "let me find out" never lost a deal; a wrong answer can.
 
 **Multi-location / multi-business owner**
-Supported. One agent per business or one per number, configurable. They pay per business at the standard rate; bundle discount available (e.g., $250/mo each on 3+).
+Supported. One agent per business, configurable. They pay per business at the standard rate. Bundle pricing case-by-case - check before quoting a discount.
 
 **Existing phone tree / IVR ("press 1 for service")**
-Two paths: (a) we replace the IVR entirely - faster, simpler, what we recommend. (b) we sit behind their existing tree as the "press X" branch. Both work. Recommend (a) unless they push back - the tree is usually losing them more calls than they realize.
+Two paths: replace the IVR entirely (simpler, what we recommend) or sit behind their existing tree as one branch. Both work. Replacing it usually picks up more calls because IVRs themselves cause hangups.
 
 **Spanish-speaking callers**
-Agent handles Spanish out of the box if they enable it. Can run bilingual (greets in English, switches based on caller language) or Spanish-only. No extra charge.
+We can configure the agent to handle Spanish or run bilingual. If they ask whether it's already on, the answer is no by default - it's a config choice during onboarding.
 
 **They use ServiceTitan / Housecall Pro / Jobber / FieldEdge**
-Today: agent books to Cal.com/Google Calendar and the contractor or office manager copies into the CRM. Direct CRM integration is on the roadmap - mention "Q2" if pressed but don't promise a date. The two-step is fine for 95% of shops.
+Today the agent books to Cal.com or Google Calendar and the contractor or office manager copies into the CRM. Direct CRM integrations aren't shipped - don't promise a timeline. Two-step works fine for most shops.
 
 **They want to keep their current phone number (porting)**
-We forward the existing number to CloudGreet. Their published number stays the same. Customers never notice. No port required for go-live; we can port officially later if they want everything on Telnyx (~7-10 days, no charge).
+We forward the existing number to CloudGreet. Published number stays the same; customers never notice. No port required for go-live. If they want to fully port to Telnyx later, that's possible but timing/process - check before quoting.
 
 **They want the AI to quote prices**
-Off by default. Owner can enable "give a price range" with their own ranges (e.g., "service calls run $150-250"). Never lets the agent invent a number. If they want hard quotes, we steer them away - it's the #1 way the AI fumbles.
+Off by default. Owner can enable "give a price range" using ranges they provide. The agent never invents numbers. Hard quotes are not a feature we recommend turning on - it's the most common way the AI fumbles.
 
-**After-hours emergency dispatch ("burst pipe at 2am")**
-Two options: (a) AI books an emergency slot and sends an SMS alert to the on-call tech immediately. (b) AI offers a callback within X minutes from the on-call number. Most contractors pick (a). Configurable per business.
+**After-hours emergency ("burst pipe at 2am")**
+Configurable per business. Common patterns: book an emergency slot + notify the on-call tech, or offer a callback. Specific behavior is set during the customization call - don't promise a specific flow on a sales call.
 
 **Multi-tech dispatch (which tech gets the job?)**
-Agent doesn't pick the tech - it books the time slot, dispatcher assigns. If they want round-robin or skills-based routing, that's the dispatcher's job, not the AI's. Setting expectations here matters.
+Agent doesn't pick the tech - it books the slot, dispatcher assigns. Round-robin or skills-based routing is the contractor's dispatch process, not ours. Set this expectation early.
 
 **Recurring customers ("hey it's John, you know my address")**
-Agent doesn't have customer history yet (roadmap). It re-asks the basics. Position as a feature: keeps the call data clean and lets the contractor confirm the address hasn't changed.
+Agent re-asks the basics today. Customer history isn't a shipped feature. Position as a feature: keeps the call data clean and confirms the address hasn't changed.
 
 **Calendar already full / no slots available**
-Agent offers the next available slot, takes a callback request, or routes to the contractor's overflow rule (waitlist, "we'll call back"). Configurable.
+Agent offers the next available slot or takes a callback request. Specific overflow behavior (waitlist, etc.) is configurable during onboarding.
 
 **Spam / robocalls**
-We screen at the carrier layer (Telnyx) - most spam never gets through. Agent also doesn't book without a name and callback number, which kills most spam attempts. If a spam call lands in the dashboard, contractor can mark it - we feed that back into the filter.
+Agent doesn't book without a name and callback number, which kills most spam attempts. Anything more specific (carrier-level filtering, ML scoring) - check before claiming.
 
 **Compliance (TCPA, recording disclosure)**
-Agent opens with a recording disclosure on every call. We log consent. Contractor doesn't need a separate TCPA flow for inbound. For outbound (confirmations, reminders), contractor consent is captured in the form.
+Agent opens with a recording disclosure. For outbound texts (booking notifications), consent is captured in the customization form. If a contractor wants a deep dive on TCPA specifics, route to anthony@cloudgreet.com.
 
 **"What if your service goes down?"**
-Calls fall through to whatever they had before (voicemail or their cell). They're never *worse* off. We monitor 24/7 and have never had >5 minutes of unplanned downtime. Don't oversell - 99.9% uptime, not "100%."
+Calls fall through to whatever they had before (voicemail or their cell). They're never *worse* off. Don't quote uptime numbers - we don't publish an SLA yet.
 
 **They want to listen live / barge in**
-Live listen on the roadmap, not shipped. Today: every call is recorded and in the dashboard within 30 seconds of ending. They can listen back, not interrupt mid-call.
+Not a shipped feature. Today: every call is recorded and in the dashboard shortly after it ends. They can listen back, not interrupt mid-call.
 
-**They want a custom voicemail greeting they love**
-We can clone their voice from a 30-second sample. Same applies to the agent's voice. Costs $0 extra; takes ~24 hrs.
+**They want a custom voicemail greeting / voice cloning**
+Voice customization is possible but specifics (sample length, turnaround, cost) - check before quoting. Don't promise 24 hours unless someone confirms it.
 
 **"My customers are old, they hate AI"**
-Two angles: (1) the AI sounds like a person, send a recording; their customers won't know unless told. (2) for the truly anti-tech crowd, the agent offers "or I can have [owner name] call you back" - opt-out by design.
+Two angles: the AI sounds like a person (send a recording), and the agent can be configured to offer "or I can have [owner] call you back" as an opt-out.
 
 **Industries we're newer to (medical, legal, finance)**
-We work with them but the agent is more conservative - doesn't take medical info, doesn't give legal/financial advice, just books and routes. Frame it as a feature, not a limitation.
+We work with them but conservatively - the agent books and routes, doesn't take medical info or give legal/financial advice. Frame it as a feature.
 
-**Refund situation (post-sale, comes up rarely)**
-If a client asks for a refund within the first 30 days and zero jobs were booked, route to anthony@cloudgreet.com - we honor it. Don't promise refunds outside that window; flag the account so we can review.
+**Refund situation (post-sale)**
+Refund policy is the 30-day, zero-bookings bar from Closing. Anything outside that window or unusual - route to anthony@cloudgreet.com. Don't promise refunds you can't authorize.
 
 **"AI just hung up on my customer" (post-sale escalation)**
-Pull the call from the dashboard, find the transcript, identify what tripped it (usually an unhandled question). Add it as a custom edge case for that contractor's agent - it's a one-line config change, not a code release. Loop in support if you can't ID the issue in 5 min.`,
+Pull the call from the dashboard, find the transcript, identify what tripped it. Edge cases can be added to the agent per business. If you can't ID the issue quickly, route to anthony@cloudgreet.com.`,
   },
 ]
