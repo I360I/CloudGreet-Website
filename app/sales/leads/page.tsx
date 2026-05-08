@@ -147,7 +147,36 @@ export default function SalesLeadsPage() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    void load()
+    // "Just promoted" handshake from /sales/leads/scrape: when promote
+    // succeeds it sets cg.leads.justPromoted in sessionStorage. The
+    // initial load() above usually fires before Supabase's read-after-
+    // write lag clears, so do one more refetch ~1.5s later to catch
+    // the new rows. This is what made reps think they had to "refresh
+    // 1-2 times" to see promoted leads.
+    let extra: ReturnType<typeof setTimeout> | null = null
+    try {
+      if (sessionStorage.getItem('cg.leads.justPromoted')) {
+        sessionStorage.removeItem('cg.leads.justPromoted')
+        extra = setTimeout(() => { void load() }, 1500)
+      }
+    } catch { /* sessionStorage unavailable, skip */ }
+
+    // Refetch when the tab regains focus / visibility - covers reps
+    // tabbing back from /sales/leads/scrape or any other window.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void load()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      if (extra) clearTimeout(extra)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const updateStatus = async (leadId: string, status: string) => {
     setUpdatingStatusId(leadId)

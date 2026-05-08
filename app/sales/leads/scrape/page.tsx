@@ -517,6 +517,10 @@ function JobDrawer({
       if (!res.ok || !j.success) throw new Error(j?.error || 'Promote failed')
       setPromoteMsg(`${j.promoted} new · ${j.skipped} dup · ${j.claimed} claimed`)
       setSelected(new Set())
+      // Tell the leads page to do an extra delayed refetch on next mount
+      // - Supabase has small read-after-write lag and the immediate
+      // load() reps did when navigating back was missing the new rows.
+      try { sessionStorage.setItem('cg.leads.justPromoted', String(Date.now())) } catch {}
       await load()
       onChanged()
     } catch (e) {
