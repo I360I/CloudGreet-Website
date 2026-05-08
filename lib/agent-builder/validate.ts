@@ -62,17 +62,19 @@ export function validatePrompt(
     level: 'critical',
   })
 
-  // 3. Greeting is not the generic "how can I help you" line.
-  // Look only at the first 400 characters - that's where the greeting lives.
-  const greetingZone = prompt.slice(0, 800)
-  const generic = GENERIC_GREETING_RE.test(greetingZone) && !/this is/i.test(greetingZone)
+  // 3. The prompt MUST NOT include a greeting / "Thanks for calling…" line.
+  // Greeting is handled separately by Retell's begin_message; baking one
+  // into the system prompt makes the agent say it twice.
+  const hasBakedGreeting =
+    /thanks for calling|thank you for calling|^GREETING\b/im.test(prompt) ||
+    GENERIC_GREETING_RE.test(prompt.slice(0, 800))
   checks.push({
-    name: 'specific_greeting',
-    ok: !generic,
-    detail: generic
-      ? 'Greeting reads as generic ("how can I help you today?")'
-      : 'Greeting looks specific to the business',
-    level: 'warning',
+    name: 'no_baked_greeting',
+    ok: !hasBakedGreeting,
+    detail: hasBakedGreeting
+      ? 'Prompt contains a greeting - remove it (Retell begin_message owns the greeting)'
+      : 'No baked-in greeting (correct)',
+    level: 'critical',
   })
 
   // 4. Hours are referenced if we have them.
@@ -129,16 +131,17 @@ export function validatePrompt(
     level: 'warning',
   })
 
-  // 8. Has the structural sections we asked for.
-  const hasGreeting = /\bgreeting\b/i.test(prompt) || /^"[^"]+"\s*$/m.test(prompt.slice(0, 800))
+  // 8. Has the structural sections we asked for (greeting deliberately
+  // excluded - Retell's begin_message owns the greeting).
+  const hasIdentity = /\bidentity\b/i.test(prompt)
   const hasBooking = /\bbooking|appointment|schedul/i.test(prompt)
   const hasHandoff = /\bhandoff|hand[-\s]?off|transfer\b/i.test(prompt)
   const hasEdge = /\bedge case|objection|complaint/i.test(prompt)
   checks.push({
     name: 'has_required_sections',
-    ok: hasGreeting && hasBooking && hasHandoff && hasEdge,
+    ok: hasIdentity && hasBooking && hasHandoff && hasEdge,
     detail: [
-      hasGreeting ? null : 'no greeting section',
+      hasIdentity ? null : 'no identity section',
       hasBooking ? null : 'no booking flow',
       hasHandoff ? null : 'no handoff rule',
       hasEdge ? null : 'no edge cases',
