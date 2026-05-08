@@ -41,7 +41,7 @@ function CookiesPageContent() {
  Cookie Policy
  </h1>
  <p className="text-base text-gray-500 mb-10">
- Last updated: 10/14/2025
+ Last updated: May 7, 2026
  </p>
 
  <div className="bg-white rounded-2xl p-8 border border-gray-200">
@@ -77,9 +77,9 @@ function CookiesPageContent() {
  We may use third-party services that set their own cookies, including:
  </p>
  <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
- <li><strong>Analytics Services:</strong> Google Analytics and similar tools</li>
  <li><strong>Payment Processors:</strong> Stripe for secure payment processing</li>
  <li><strong>Authentication:</strong> Session management and security</li>
+ <li><strong>Analytics:</strong> We may add analytics tooling in the future. If we do, this policy will be updated and the cookies will be classified as Analytics above so you can opt out.</li>
  </ul>
 
  <h2 className="text-2xl font-bold text-gray-900 mb-6">4. Managing Cookies</h2>
@@ -104,7 +104,7 @@ function CookiesPageContent() {
 
  <h2 className="text-2xl font-bold text-gray-900 mb-6">7. Contact Us</h2>
  <p className="text-gray-700 leading-relaxed mb-6">
- If you have questions about our use of cookies, please contact us at privacy@cloudgreet.com or through our contact page.
+ If you have questions about our use of cookies, contact us at anthony@cloudgreet.com or through our contact page.
  </p>
  </div>
  </motion.div>

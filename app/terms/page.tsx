@@ -41,7 +41,7 @@ function TermsPageContent() {
  Terms of Service
  </h1>
  <p className="text-base text-gray-500 mb-10">
- Last updated: 10/14/2025
+ Last updated: May 7, 2026
  </p>
 
  <div className="bg-white rounded-2xl p-8 border border-gray-200">
@@ -63,16 +63,13 @@ function TermsPageContent() {
  <li>Dashboard analytics and reporting</li>
  </ul>
 
- <h2 className="text-2xl font-bold text-gray-900 mb-6">3. Pricing and Billing</h2>
- <p className="text-gray-700 leading-relaxed mb-4">
- CloudGreet offers two flat monthly plans:
- </p>
+ <h2 className="text-2xl font-bold text-gray-900 mb-6">3. Billing</h2>
  <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
- <li>Starter: $499 per month &mdash; AI receptionist for after-hours calls only</li>
- <li>Full 24/7: $899 per month &mdash; AI receptionist for all incoming calls, around the clock</li>
- <li>All fees are billed monthly in advance and are non-refundable except as required by law</li>
- <li>No per-booking fees</li>
- <li>Pricing may change with 30 days notice</li>
+ <li>CloudGreet is sold as a flat monthly subscription. Pricing is provided during the demo or through your sales rep and is recorded on your signed agreement.</li>
+ <li>All fees are billed monthly in advance and are non-refundable except as required by law.</li>
+ <li>No per-booking fees, no per-minute fees, no usage-based surprises.</li>
+ <li>Pricing on existing accounts will not change without 30 days written notice.</li>
+ <li>Billing is processed via Stripe; you authorize CloudGreet to charge the payment method on file each cycle until you cancel.</li>
  </ul>
 
  <h2 className="text-2xl font-bold text-gray-900 mb-6">4. User Responsibilities</h2>
@@ -114,7 +111,7 @@ function TermsPageContent() {
 
  <h2 className="text-2xl font-bold text-gray-900 mb-6">10. Contact Information</h2>
  <p className="text-gray-700 leading-relaxed mb-6">
- For questions about these terms, please contact us at legal@cloudgreet.com or through our contact page.
+ For questions about these terms, contact us at anthony@cloudgreet.com or through our contact page. CloudGreet is operated from Austin, Texas.
  </p>
  </div>
  </motion.div>

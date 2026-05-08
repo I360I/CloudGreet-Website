@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
  // Queue email notification to support team (async processing)
  const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
- const supportEmail = process.env.SUPPORT_EMAIL || 'support@cloudgreet.com'
+ const supportEmail = process.env.SUPPORT_EMAIL || 'anthony@cloudgreet.com'
  const emailHtml = `
  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
  <h2 style="color: #2563eb;">New Contact Form Submission</h2>

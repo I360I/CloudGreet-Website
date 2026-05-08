@@ -763,7 +763,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
  </div>
  
  <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
- If you have any questions, please contact support at <a href="mailto:support@cloudgreet.com">support@cloudgreet.com</a> or call (833) 395-6731.
+ If you have any questions, reply to this email or write to <a href="mailto:anthony@cloudgreet.com">anthony@cloudgreet.com</a>.
  </p>
  
  <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
@@ -788,7 +788,7 @@ Invoice Details:
 - Amount Due: $${amount}
 - Due Date: ${new Date(invoice.due_date * 1000).toLocaleDateString()}
 
-If you have any questions, please contact support at support@cloudgreet.com or call (833) 395-6731.
+If you have any questions, reply to this email or write to anthony@cloudgreet.com.
 
 Best regards,
 The CloudGreet Team

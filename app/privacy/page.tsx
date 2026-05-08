@@ -41,7 +41,7 @@ function PrivacyPageContent() {
  Privacy Policy
  </h1>
  <p className="text-base text-gray-500 mb-10">
- Last updated: 10/14/2025
+ Last updated: May 7, 2026
  </p>
 
  <div className="bg-white rounded-2xl p-8 border border-gray-200">
@@ -131,7 +131,7 @@ function PrivacyPageContent() {
 
  <h2 className="text-2xl font-bold text-gray-900 mb-6">12. Contact Us</h2>
  <p className="text-gray-700 leading-relaxed mb-6">
- For questions about this privacy policy or to exercise your rights, contact us at privacy@cloudgreet.com or through our contact page.
+ For questions about this privacy policy or to exercise your rights, contact us at anthony@cloudgreet.com or through our contact page. CloudGreet is operated from Austin, Texas.
  </p>
  </div>
  </motion.div>

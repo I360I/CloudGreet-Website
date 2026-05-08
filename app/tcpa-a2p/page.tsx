@@ -41,7 +41,7 @@ function TCPAA2PPageContent() {
  TCPA/A2P Compliance Policy
  </h1>
  <p className="text-base text-gray-500 mb-10">
- Last updated: 10/14/2025
+ Last updated: May 7, 2026
  </p>
 
  <div className="bg-white rounded-2xl p-8 border border-gray-200">
@@ -91,15 +91,15 @@ function TCPAA2PPageContent() {
  <h2 className="text-2xl font-bold text-gray-900 mb-6">4. Message Types We Send</h2>
  <div className="space-y-4 mb-6">
  <div className="bg-sky-50 border border-sky-200 rounded-lg p-4">
- <h4 className="text-lg font-semibold text-sky-700 mb-2">Appointment Confirmations</h4>
+ <h4 className="text-lg font-semibold text-sky-900 mb-2">Appointment Confirmations</h4>
  <p className="text-gray-700 text-sm">Sent when appointments are scheduled or modified</p>
  </div>
  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
- <h4 className="text-lg font-semibold text-green-300 mb-2">Reminders</h4>
+ <h4 className="text-lg font-semibold text-emerald-900 mb-2">Reminders</h4>
  <p className="text-gray-700 text-sm">Sent 24 hours before scheduled appointments</p>
  </div>
- <div className="bg-sky-500/10 border border-sky-500/30 rounded-lg p-4">
- <h4 className="text-lg font-semibold text-sky-300 mb-2">Follow-up Messages</h4>
+ <div className="bg-violet-50 border border-violet-200 rounded-lg p-4">
+ <h4 className="text-lg font-semibold text-violet-900 mb-2">Follow-up Messages</h4>
  <p className="text-gray-700 text-sm">Sent after service completion or missed appointments</p>
  </div>
  </div>
@@ -113,7 +113,7 @@ function TCPAA2PPageContent() {
  <li>Replying &quot;UNSUBSCRIBE&quot; to any message</li>
  <li>Calling our support number</li>
  <li>Contacting us through our website</li>
- <li>Emailing us at support@cloudgreet.com</li>
+ <li>Emailing us at anthony@cloudgreet.com</li>
  </ul>
 
  <h2 className="text-2xl font-bold text-gray-900 mb-6">6. Message Content Standards</h2>
@@ -162,11 +162,11 @@ function TCPAA2PPageContent() {
 
  <h2 className="text-2xl font-bold text-gray-900 mb-6">12. Contact Information</h2>
  <p className="text-gray-700 leading-relaxed mb-6">
- For questions about TCPA/A2P compliance or to report violations, contact us at compliance@cloudgreet.com or through our contact page.
+ For questions about TCPA/A2P compliance or to report violations, contact us at anthony@cloudgreet.com or through our contact page. CloudGreet is operated from Austin, Texas.
  </p>
 
  <div className="bg-rose-50 border border-rose-200 rounded-lg p-6 mt-8">
- <h3 className="text-lg font-semibold text-red-300 mb-2">Legal Disclaimer</h3>
+ <h3 className="text-lg font-semibold text-rose-900 mb-2">Legal Disclaimer</h3>
  <p className="text-gray-700 text-sm">
  This policy is for informational purposes only and does not constitute legal advice. 
  You should consult with legal counsel to ensure your specific use case complies with all applicable laws and regulations.

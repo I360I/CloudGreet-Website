@@ -117,7 +117,7 @@ export const CONFIG_DEFAULTS = {
   
   // Email configuration
   EMAIL_FROM: 'noreply@cloudgreet.com',
-  EMAIL_REPLY_TO: 'support@cloudgreet.com',
+  EMAIL_REPLY_TO: 'anthony@cloudgreet.com',
   EMAIL_TEMPLATE_DIR: 'templates/email',
   
   // SMS configuration
