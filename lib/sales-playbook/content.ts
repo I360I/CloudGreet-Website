@@ -283,8 +283,8 @@ Supported. One agent per business, configurable. They pay per business at the st
 **Existing phone tree / IVR ("press 1 for service")**
 Two paths: replace the IVR entirely (simpler, what we recommend) or sit behind their existing tree as one branch. Both work. Replacing it usually picks up more calls because IVRs themselves cause hangups.
 
-**Spanish-speaking callers**
-We can configure the agent to handle Spanish or run bilingual. If they ask whether it's already on, the answer is no by default - it's a config choice during onboarding.
+**Non-English callers**
+Agent can handle any language. Configurable single-language or bilingual (greets in English, switches based on caller). It's a config choice during onboarding, not on by default.
 
 **They use ServiceTitan / Housecall Pro / Jobber / FieldEdge**
 Today the agent books to Cal.com or Google Calendar and the contractor or office manager copies into the CRM. Direct CRM integrations aren't shipped - don't promise a timeline. Two-step works fine for most shops.
