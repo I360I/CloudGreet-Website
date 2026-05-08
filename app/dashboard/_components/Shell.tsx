@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { Wand2, ArrowRight } from 'lucide-react'
 import { Sidebar, SidebarSkeleton } from './Sidebar'
 import { TopBar } from './TopBar'
+import { ImpersonationBanner } from './ImpersonationBanner'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { OnboardingProvider } from './onboarding-context'
 
@@ -78,6 +79,7 @@ export function DashShell({
 
  return (
   <OnboardingProvider value={{ needsSetup }}>
+   <ImpersonationBanner />
    <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
     <Sidebar businessName={businessName} onSignOut={handleSignOut} activeLabel={activeLabel} />
     <div className="flex-1 min-w-0 pb-20 lg:pb-0">

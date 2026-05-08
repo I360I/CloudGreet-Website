@@ -1543,6 +1543,31 @@ function AdminActions({
 
     {/* Other actions */}
     <div className="border-t border-white/[0.06] pt-4 flex flex-wrap items-center gap-2">
+     <GhostButton
+      onClick={async () => {
+       if (!client.owner) {
+        alert('No owner account is linked to this business yet.')
+        return
+       }
+       try {
+        const r = await fetch(`/api/admin/clients/${client.id}/impersonate`, {
+         method: 'POST',
+         credentials: 'include',
+        })
+        const j = await r.json().catch(() => ({}))
+        if (r.ok && j?.success) {
+         window.location.href = j.redirect_url || '/dashboard'
+        } else {
+         alert(j?.error || 'Could not impersonate this client')
+        }
+       } catch {
+        alert('Could not impersonate this client')
+       }
+      }}
+      disabled={!client.owner}
+     >
+      <KeyRound className="w-4 h-4" /> Sign in as this client
+     </GhostButton>
      <GhostButton onClick={onSendCheckout}>
       <CreditCard className="w-4 h-4" /> Send checkout link
      </GhostButton>
