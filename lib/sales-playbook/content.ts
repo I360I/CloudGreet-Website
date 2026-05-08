@@ -329,7 +329,7 @@ Two angles: the AI sounds like a person (send a recording), and the agent can be
 We work with them but conservatively - the agent books and routes, doesn't take medical info or give legal/financial advice. Frame it as a feature.
 
 **Refund situation (post-sale)**
-Refund policy is the 30-day, zero-bookings bar from Closing. Anything outside that window or unusual - route to anthony@cloudgreet.com. Don't promise refunds you can't authorize.
+Refund policy is the 30-day, zero-bookings bar from Closing. Route any refund request to anthony@cloudgreet.com - reviewed and honored on my end, no expense to the rep (your commission isn't clawed back). Don't promise refunds you can't authorize, but you also don't need to fight one off to protect your earnings.
 
 **"AI just hung up on my customer" (post-sale escalation)**
 Pull the call from the dashboard, find the transcript, identify what tripped it. Edge cases can be added to the agent per business. If you can't ID the issue quickly, route to anthony@cloudgreet.com.`,
