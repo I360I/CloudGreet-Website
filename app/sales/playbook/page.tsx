@@ -28,7 +28,7 @@ export default function PlaybookPage() {
     <SalesShell activeLabel="Playbook">
       <SalesPageHeader eyebrow="Sales rep playbook" title="Playbook" />
       <p className="text-sm text-gray-500 -mt-6 mb-8">
-        The basics. Read it once, come back when you're stuck. Video walkthroughs landing this week.
+        The basics. Read it once, come back when you&apos;re stuck.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 mt-2">

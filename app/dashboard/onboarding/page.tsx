@@ -36,17 +36,23 @@ type Step = 'calcom' | 'forwarding' | 'verify' | 'done'
 export default function OnboardingPage() {
  const router = useRouter()
  const [state, setState] = useState<State | null>(null)
+ const [retellPhone, setRetellPhone] = useState<string | null | undefined>(undefined)
  const [loading, setLoading] = useState(true)
  const [error, setError] = useState('')
  const [step, setStep] = useState<Step>('calcom')
 
  const reload = async () => {
   try {
-   const res = await fetchWithAuth('/api/onboarding/state')
-   const json = await res.json()
-   if (!res.ok || !json.success) throw new Error(json?.error || 'Failed')
+   const [stateRes, phoneRes] = await Promise.all([
+    fetchWithAuth('/api/onboarding/state'),
+    fetchWithAuth('/api/dashboard/phone'),
+   ])
+   const json = await stateRes.json()
+   if (!stateRes.ok || !json.success) throw new Error(json?.error || 'Failed')
    const b: State = json.business
    setState(b)
+   const phoneJson = await phoneRes.json().catch(() => ({}))
+   setRetellPhone(typeof phoneJson?.phone === 'string' && phoneJson.phone ? phoneJson.phone : null)
    if (b.onboarding_completed) setStep('done')
    else if (b.forwarding_verified_at) setStep('done')
    else if (b.calcom_connected) setStep('forwarding')
@@ -98,7 +104,7 @@ export default function OnboardingPage() {
       {step === 'forwarding' && (
        <Panel key="forwarding">
         <ForwardingStep
-         retellNumber={state.phone_number || '(provisioning…)'}
+         retellNumber={retellPhone || null}
          saved={{
           carrier: state.forwarding_carrier,
           lineType: state.forwarding_line_type,
@@ -142,15 +148,7 @@ function Header({ step }: { step: Step }) {
  const idx = step === 'done' ? 3 : steps.findIndex((s) => s.id === step)
  return (
   <div className="mb-8">
-   <div className="flex items-start justify-between gap-4 flex-wrap">
-    <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Get set up</h1>
-    <a
-     href="/dashboard/onboarding/videos"
-     className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-    >
-     ▶ Watch walkthrough videos
-    </a>
-   </div>
+   <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Get set up</h1>
    <div className="mt-6 flex items-center gap-3 text-xs">
     {steps.map((s, i) => {
      const done = i < idx
@@ -397,7 +395,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
 function ForwardingStep({
  retellNumber, saved, onSavedChoice, onTryVerify,
 }: {
- retellNumber: string
+ retellNumber: string | null
  saved: { carrier: CarrierId | null; lineType: LineType | null; mode: ForwardingMode | null }
  onSavedChoice: () => void
  onTryVerify: () => void
@@ -406,6 +404,24 @@ function ForwardingStep({
  const [carrier, setCarrier] = useState<CarrierId | null>(saved.carrier)
  const [mode, setMode] = useState<ForwardingMode>(saved.mode || 'missed_only')
  const [saving, setSaving] = useState(false)
+
+ if (!retellNumber) {
+  return (
+   <div className="bg-white border border-gray-200 rounded-2xl p-6">
+    <div className="flex items-center gap-2 mb-1">
+     <Phone className="w-4 h-4 text-amber-500" />
+     <h2 className="text-xl font-medium text-gray-900">Forward your business line</h2>
+    </div>
+    <p className="text-sm text-gray-500 mt-1">
+     Your AI receptionist number is still being provisioned. We&apos;ll show your forwarding code here as soon as it&apos;s live - usually within a few minutes. If this sticks for more than 15 minutes, tap the support link below.
+    </p>
+    <div className="mt-5 flex items-center gap-2 text-xs text-gray-500">
+     <Loader2 className="w-3.5 h-3.5 animate-spin" />
+     Waiting on number provisioning…
+    </div>
+   </div>
+  )
+ }
 
  const carrierGuide = findCarrier(carrier || undefined)
  const carriers = lineType ? carriersForLineType(lineType) : []
