@@ -65,9 +65,20 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // CRITICAL: never let the edge cache API responses by URL alone.
+        // We had `public, s-maxage=60` here previously, which caused
+        // Vercel's CDN to serve User A's cached response (including
+        // their auth token + dashboard data) to User B if User B hit
+        // the same URL within 60 seconds. The cache key is URL-only;
+        // httpOnly cookies are NOT part of it. Cross-tenant data leak.
+        //
+        // `private, no-store, must-revalidate` = browser may keep a
+        // copy for the same user, no shared cache, always revalidate.
+        // Routes that genuinely benefit from edge caching (public
+        // content, e.g. health checks) can override per-route.
         source: '/api/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=120' },
+          { key: 'Cache-Control', value: 'private, no-store, must-revalidate' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-XSS-Protection', value: '1; mode=block' }
