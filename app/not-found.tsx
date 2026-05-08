@@ -10,7 +10,7 @@ import Link from 'next/link'
 // Explicit export for Next.js not-found page
 export default function NotFound() {
  return (
- <div className="min-h-screen bg-black text-white flex items-center justify-center">
+ <div className="min-h-screen bg-[#f6f5f1] text-gray-900 flex items-center justify-center">
  <div className="max-w-4xl mx-auto px-4 text-center">
  <motion.div
  initial={{ opacity: 0, y: 30 }}
@@ -27,7 +27,7 @@ export default function NotFound() {
  <div className="text-8xl md:text-9xl font-bold bg-blue-400 mb-4">
  404
  </div>
- <div className="text-4xl md:text-6xl font-bold text-white mb-6">
+ <div className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
  Page Not Found
  </div>
  </motion.div>
@@ -37,7 +37,7 @@ export default function NotFound() {
  initial={{ opacity: 0, y: 20 }}
  animate={{ opacity: 1, y: 0 }}
  transition={{ delay: 0.4, duration: 0.6 }}
- className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto"
+ className="text-xl text-gray-700 mb-12 max-w-2xl mx-auto"
  >
  The page you&apos;re looking for doesn&apos;t exist. It might have been moved, deleted, 
  or you entered the wrong URL.
@@ -52,14 +52,14 @@ export default function NotFound() {
  >
  <Link
  href="/"
- className="flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold transition-all duration-300"
+ className="flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 text-gray-900 rounded-xl font-semibold transition-all duration-300"
  >
  <Home className="w-5 h-5" />
  Go Home
  </Link>
  <button
  onClick={() => window.history.back()}
- className="flex items-center justify-center gap-3 px-8 py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-semibold transition-all duration-300"
+ className="flex items-center justify-center gap-3 px-8 py-4 bg-gray-700 hover:bg-gray-600 text-gray-900 rounded-xl font-semibold transition-all duration-300"
  >
  <ArrowLeft className="w-5 h-5" />
  Go Back
@@ -75,29 +75,29 @@ export default function NotFound() {
  >
  <Link
  href="/#how-it-works"
- className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50 hover:border-blue-500/30 transition-all duration-300"
+ className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-sky-300 transition-all duration-300"
  >
  <HelpCircle className="w-8 h-8 text-blue-400 mx-auto mb-4" />
- <h3 className="text-lg font-bold text-white mb-2">How it Works</h3>
- <p className="text-gray-300 text-sm">Learn how CloudGreet helps your business</p>
+ <h3 className="text-lg font-bold text-gray-900 mb-2">How it Works</h3>
+ <p className="text-gray-700 text-sm">Learn how CloudGreet helps your business</p>
  </Link>
 
  <Link
  href="/contact"
- className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50 hover:border-green-500/30 transition-all duration-300"
+ className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-emerald-300 transition-all duration-300"
  >
  <Phone className="w-8 h-8 text-green-400 mx-auto mb-4" />
- <h3 className="text-lg font-bold text-white mb-2">Contact Support</h3>
- <p className="text-gray-300 text-sm">Get help from our support team</p>
+ <h3 className="text-lg font-bold text-gray-900 mb-2">Contact Support</h3>
+ <p className="text-gray-700 text-sm">Get help from our support team</p>
  </Link>
 
  <Link
  href="/dashboard"
- className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-6 border border-gray-700/50 hover:border-sky-500/30 transition-all duration-300"
+ className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-sky-300 transition-all duration-300"
  >
  <Brain className="w-8 h-8 text-sky-400 mx-auto mb-4" />
- <h3 className="text-lg font-bold text-white mb-2">Dashboard</h3>
- <p className="text-gray-300 text-sm">Access your CloudGreet dashboard</p>
+ <h3 className="text-lg font-bold text-gray-900 mb-2">Dashboard</h3>
+ <p className="text-gray-700 text-sm">Access your CloudGreet dashboard</p>
  </Link>
  </motion.div>
  </motion.div>

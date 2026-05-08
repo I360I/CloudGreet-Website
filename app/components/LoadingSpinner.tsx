@@ -49,7 +49,7 @@ export default function LoadingSpinner({ size = 'md', text, className = '' }: Lo
  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
  />
  {text && (
- <p className="text-gray-400 text-sm">{text}</p>
+ <p className="text-gray-500 text-sm">{text}</p>
  )}
  </div>
  </div>
@@ -58,7 +58,7 @@ export default function LoadingSpinner({ size = 'md', text, className = '' }: Lo
 
 export function PageLoader({ text = "Loading..." }: { text?: string }) {
  return (
- <div className="min-h-screen via-black text-white flex items-center justify-center">
+ <div className="min-h-screen bg-[#f6f5f1] text-gray-900 flex items-center justify-center">
  <motion.div
  initial={{ opacity: 0 }}
  animate={{ opacity: 1 }}

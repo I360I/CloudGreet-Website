@@ -140,7 +140,7 @@ export default function UsageAnalyticsPage() {
  }
 
  return (
- <div className="min-h-screen via-black text-white">
+ <div className="min-h-screen bg-[#0a0a0c] text-gray-100">
  <div className="mx-auto max-w-6xl space-y-12 px-4 py-12 sm:px-8">
  <header className="space-y-4">
  <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.4em] text-slate-300">

@@ -244,7 +244,7 @@ export default function BillingDashboardPage() {
  ) : (
  <>
  {/* Hero - the trophy */}
- <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-950/40 via-black/40 to-emerald-950/30 p-8 lg:p-12 shadow-2xl shadow-blue-900/20">
+ <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-blue-950/40 bg-black/40 to-emerald-950/30 p-8 lg:p-12 shadow-2xl shadow-blue-900/20">
   {/* glow */}
   <div className="absolute -top-32 -right-24 w-96 h-96 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
   <div className="absolute -bottom-32 -left-24 w-96 h-96 bg-sky-500/10 blur-[120px] rounded-full pointer-events-none" />

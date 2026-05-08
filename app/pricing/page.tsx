@@ -156,10 +156,10 @@ export default function PricingPage() {
 
  if (isLoading) {
  return (
- <div className="min-h-screen bg-black flex items-center justify-center">
+ <div className="min-h-screen bg-[#f6f5f1] flex items-center justify-center">
  <div className="text-center">
  <div className="w-12 h-12 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-4" style={{ borderColor: primaryColor + '50', borderTopColor: primaryColor }}></div>
- <p className="text-white text-lg">Loading Pricing Rules...</p>
+ <p className="text-gray-900 text-lg">Loading Pricing Rules...</p>
  </div>
  </div>
  )
@@ -168,13 +168,13 @@ export default function PricingPage() {
  // If no business ID, show login prompt
  if (!businessId) {
  return (
- <div className="min-h-screen bg-black flex items-center justify-center">
+ <div className="min-h-screen bg-[#f6f5f1] flex items-center justify-center">
  <div className="text-center">
- <h1 className="text-2xl font-bold text-white mb-4">Please Log In</h1>
- <p className="text-gray-400 mb-6">You need to be logged in to access pricing rules.</p>
+ <h1 className="text-2xl font-bold text-gray-900 mb-4">Please Log In</h1>
+ <p className="text-gray-500 mb-6">You need to be logged in to access pricing rules.</p>
  <Link 
  href="/login" 
- className="text-white px-4 py-2 rounded-lg text-sm shadow-lg transition-all duration-300 hover:opacity-90"
+ className="text-gray-900 px-4 py-2 rounded-lg text-sm shadow-lg transition-all duration-300 hover:opacity-90"
  style={{ backgroundColor: primaryColor }}
  >
  Log In
@@ -185,21 +185,21 @@ export default function PricingPage() {
  }
 
  return (
- <div className="min-h-screen bg-black text-white">
+ <div className="min-h-screen bg-[#f6f5f1] text-gray-900">
  {/* Header */}
  <header className="border-b border-gray-800 bg-black/80 backdrop-blur-sm sticky top-0 z-50">
  <div className="max-w-7xl mx-auto px-6 py-4">
  <div className="flex items-center justify-between">
  <div className="flex items-center space-x-4">
  <Link href="/dashboard" className="flex items-center space-x-4 hover:opacity-80 transition-opacity">
- <ArrowLeft className="w-6 h-6 text-gray-300" />
+ <ArrowLeft className="w-6 h-6 text-gray-700" />
  <div className="flex items-center space-x-4">
  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: primaryColor }}>
- <Brain className="w-6 h-6 text-white" />
+ <Brain className="w-6 h-6 text-gray-900" />
  </div>
  <div>
- <h1 className="text-2xl font-bold text-white">CloudGreet</h1>
- <p className="text-xs text-gray-400 font-medium">AI RECEPTIONIST</p>
+ <h1 className="text-2xl font-bold text-gray-900">CloudGreet</h1>
+ <p className="text-xs text-gray-500 font-medium">AI RECEPTIONIST</p>
  </div>
  </div>
  </Link>
@@ -207,7 +207,7 @@ export default function PricingPage() {
  
  <div className="flex items-center space-x-4">
  <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
- <Settings className="w-5 h-5 text-gray-300" />
+ <Settings className="w-5 h-5 text-gray-700" />
  </div>
  </div>
  </div>
@@ -219,13 +219,13 @@ export default function PricingPage() {
  {/* Page Header */}
  <div className="flex items-center justify-between mb-8">
  <div>
- <h2 className="text-3xl font-bold text-white mb-2">Pricing Rules</h2>
- <p className="text-gray-400">Configure pricing rules for AI-generated quotes and estimates</p>
+ <h2 className="text-3xl font-bold text-gray-900 mb-2">Pricing Rules</h2>
+ <p className="text-gray-500">Configure pricing rules for AI-generated quotes and estimates</p>
  </div>
  
  <button
  onClick={() => setShowAddRule(true)}
- className="text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-300 hover:opacity-90 flex items-center gap-2"
+ className="text-gray-900 px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-300 hover:opacity-90 flex items-center gap-2"
  style={{ backgroundColor: primaryColor }}
  >
  <Plus className="w-5 h-5" />
@@ -236,15 +236,15 @@ export default function PricingPage() {
  {/* Pricing Rules Grid */}
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
  {pricingRules.map((rule) => (
- <div key={rule.id} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 shadow-lg hover:border-slate-600/50 transition-all duration-300">
+ <div key={rule.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-lg hover:border-slate-600/50 transition-all duration-300">
  <div className="flex items-start justify-between mb-4">
  <div className="flex items-center space-x-3">
  <div className="p-2 rounded-lg" style={{ backgroundColor: getServiceTypeColor(rule.service_type) }}>
- <DollarSign className="w-5 h-5 text-white" />
+ <DollarSign className="w-5 h-5 text-gray-900" />
  </div>
  <div>
- <h3 className="text-lg font-semibold text-white">{rule.name}</h3>
- <p className="text-gray-400 text-sm capitalize">{rule.service_type}</p>
+ <h3 className="text-lg font-semibold text-gray-900">{rule.name}</h3>
+ <p className="text-gray-500 text-sm capitalize">{rule.service_type}</p>
  </div>
  </div>
  
@@ -253,31 +253,31 @@ export default function PricingPage() {
  onClick={() => setEditingRule(rule)}
  className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
  >
- <Edit className="w-4 h-4 text-gray-300" />
+ <Edit className="w-4 h-4 text-gray-700" />
  </button>
  <button
  onClick={() => handleDeleteRule(rule.id)}
  className="p-2 rounded-lg bg-red-600 hover:bg-red-700 transition-colors"
  >
- <Trash2 className="w-4 h-4 text-white" />
+ <Trash2 className="w-4 h-4 text-gray-900" />
  </button>
  </div>
  </div>
  
  {rule.description && (
- <p className="text-gray-300 text-sm mb-4">{rule.description}</p>
+ <p className="text-gray-700 text-sm mb-4">{rule.description}</p>
  )}
  
  <div className="space-y-2">
  <div className="flex justify-between items-center">
- <span className="text-gray-400 text-sm">Base Price:</span>
- <span className="text-white font-medium">${rule.base_price}</span>
+ <span className="text-gray-500 text-sm">Base Price:</span>
+ <span className="text-gray-900 font-medium">${rule.base_price}</span>
  </div>
  
  {rule.unit_price && (
  <div className="flex justify-between items-center">
- <span className="text-gray-400 text-sm">Unit Price:</span>
- <span className="text-white font-medium">
+ <span className="text-gray-500 text-sm">Unit Price:</span>
+ <span className="text-gray-900 font-medium">
  ${rule.unit_price}{getUnitTypeLabel(rule.unit_type)}
  </span>
  </div>
@@ -285,15 +285,15 @@ export default function PricingPage() {
  
  {rule.min_price && (
  <div className="flex justify-between items-center">
- <span className="text-gray-400 text-sm">Min Price:</span>
- <span className="text-white font-medium">${rule.min_price}</span>
+ <span className="text-gray-500 text-sm">Min Price:</span>
+ <span className="text-gray-900 font-medium">${rule.min_price}</span>
  </div>
  )}
  
  {rule.max_price && (
  <div className="flex justify-between items-center">
- <span className="text-gray-400 text-sm">Max Price:</span>
- <span className="text-white font-medium">${rule.max_price}</span>
+ <span className="text-gray-500 text-sm">Max Price:</span>
+ <span className="text-gray-900 font-medium">${rule.max_price}</span>
  </div>
  )}
  </div>
@@ -304,13 +304,13 @@ export default function PricingPage() {
  {pricingRules.length === 0 && (
  <div className="text-center py-12">
  <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
- <DollarSign className="w-8 h-8 text-gray-400" />
+ <DollarSign className="w-8 h-8 text-gray-500" />
  </div>
- <h3 className="text-xl font-semibold text-white mb-2">No Pricing Rules</h3>
- <p className="text-gray-400 mb-6">Create your first pricing rule to enable AI-generated quotes</p>
+ <h3 className="text-xl font-semibold text-gray-900 mb-2">No Pricing Rules</h3>
+ <p className="text-gray-500 mb-6">Create your first pricing rule to enable AI-generated quotes</p>
  <button
  onClick={() => setShowAddRule(true)}
- className="text-white px-6 py-3 rounded-lg font-medium shadow-lg transition-all duration-300 hover:opacity-90"
+ className="text-gray-900 px-6 py-3 rounded-lg font-medium shadow-lg transition-all duration-300 hover:opacity-90"
  style={{ backgroundColor: primaryColor }}
  >
  Add First Rule
@@ -363,27 +363,27 @@ function RuleModal({ rule, onSave, onClose }: {
  <motion.div
  initial={{ opacity: 0, scale: 0.95 }}
  animate={{ opacity: 1, scale: 1 }}
- className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 md:p-6 w-full max-w-md mx-4 shadow-2xl"
+ className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 w-full max-w-md mx-4 shadow-2xl"
  >
  <div className="flex items-center justify-between mb-6">
- <h3 className="text-xl font-semibold text-white">
+ <h3 className="text-xl font-semibold text-gray-900">
  {rule ? 'Edit Rule' : 'Add Pricing Rule'}
  </h3>
  <button
  onClick={onClose}
  className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
  >
- <X className="w-5 h-5 text-gray-300" />
+ <X className="w-5 h-5 text-gray-700" />
  </button>
  </div>
 
  <form onSubmit={handleSubmit} className="space-y-4">
  <div>
- <label className="block text-gray-300 text-sm font-medium mb-2">Service Type</label>
+ <label className="block text-gray-700 text-sm font-medium mb-2">Service Type</label>
  <select
  value={formData.service_type}
  onChange={(e) => setFormData({ ...formData, service_type: e.target.value as any })}
- className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+ className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
  style={{ 
  '--tw-ring-color': primaryColor + '50'
  } as React.CSSProperties & { '--tw-ring-color'?: string }}
@@ -395,12 +395,12 @@ function RuleModal({ rule, onSave, onClose }: {
  </div>
 
  <div>
- <label className="block text-gray-300 text-sm font-medium mb-2">Rule Name</label>
+ <label className="block text-gray-700 text-sm font-medium mb-2">Rule Name</label>
  <input
  type="text"
  value={formData.name}
  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
- className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+ className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
  style={{ 
  '--tw-ring-color': primaryColor + '50'
  } as React.CSSProperties & { '--tw-ring-color'?: string }}
@@ -410,11 +410,11 @@ function RuleModal({ rule, onSave, onClose }: {
  </div>
 
  <div>
- <label className="block text-gray-300 text-sm font-medium mb-2">Description</label>
+ <label className="block text-gray-700 text-sm font-medium mb-2">Description</label>
  <textarea
  value={formData.description}
  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
- className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+ className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
  style={{ 
  '--tw-ring-color': primaryColor + '50'
  } as React.CSSProperties & { '--tw-ring-color'?: string }}
@@ -425,12 +425,12 @@ function RuleModal({ rule, onSave, onClose }: {
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-gray-300 text-sm font-medium mb-2">Base Price</label>
+ <label className="block text-gray-700 text-sm font-medium mb-2">Base Price</label>
  <input
  type="number"
  value={formData.base_price}
  onChange={(e) => setFormData({ ...formData, base_price: parseFloat(e.target.value) || 0 })}
- className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+ className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
  style={{ 
  '--tw-ring-color': primaryColor + '50'
  } as React.CSSProperties & { '--tw-ring-color'?: string }}
@@ -440,11 +440,11 @@ function RuleModal({ rule, onSave, onClose }: {
  </div>
 
  <div>
- <label className="block text-gray-300 text-sm font-medium mb-2">Unit Type</label>
+ <label className="block text-gray-700 text-sm font-medium mb-2">Unit Type</label>
  <select
  value={formData.unit_type}
  onChange={(e) => setFormData({ ...formData, unit_type: e.target.value as any })}
- className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+ className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
  style={{ 
  '--tw-ring-color': primaryColor + '50'
  } as React.CSSProperties & { '--tw-ring-color'?: string }}
@@ -459,12 +459,12 @@ function RuleModal({ rule, onSave, onClose }: {
 
  {formData.unit_type !== 'fixed' && (
  <div>
- <label className="block text-gray-300 text-sm font-medium mb-2">Unit Price</label>
+ <label className="block text-gray-700 text-sm font-medium mb-2">Unit Price</label>
  <input
  type="number"
  value={formData.unit_price}
  onChange={(e) => setFormData({ ...formData, unit_price: parseFloat(e.target.value) || 0 })}
- className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+ className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
  style={{ 
  '--tw-ring-color': primaryColor + '50'
  } as React.CSSProperties & { '--tw-ring-color'?: string }}
@@ -475,12 +475,12 @@ function RuleModal({ rule, onSave, onClose }: {
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-gray-300 text-sm font-medium mb-2">Min Price (Optional)</label>
+ <label className="block text-gray-700 text-sm font-medium mb-2">Min Price (Optional)</label>
  <input
  type="number"
  value={formData.min_price}
  onChange={(e) => setFormData({ ...formData, min_price: parseFloat(e.target.value) || 0 })}
- className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+ className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
  style={{ 
  '--tw-ring-color': primaryColor + '50'
  } as React.CSSProperties & { '--tw-ring-color'?: string }}
@@ -489,12 +489,12 @@ function RuleModal({ rule, onSave, onClose }: {
  </div>
 
  <div>
- <label className="block text-gray-300 text-sm font-medium mb-2">Max Price (Optional)</label>
+ <label className="block text-gray-700 text-sm font-medium mb-2">Max Price (Optional)</label>
  <input
  type="number"
  value={formData.max_price}
  onChange={(e) => setFormData({ ...formData, max_price: parseFloat(e.target.value) || 0 })}
- className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
+ className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/20 transition-all"
  style={{ 
  '--tw-ring-color': primaryColor + '50'
  } as React.CSSProperties & { '--tw-ring-color'?: string }}
@@ -507,7 +507,7 @@ function RuleModal({ rule, onSave, onClose }: {
  <button
  type="submit"
  style={{ backgroundColor: primaryColor }}
- className="flex-1 hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+ className="flex-1 hover:opacity-90 text-gray-900 px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
  >
  <Save className="w-5 h-5" />
  <span>{rule ? 'Update Rule' : 'Add Rule'}</span>
@@ -515,7 +515,7 @@ function RuleModal({ rule, onSave, onClose }: {
  <button
  type="button"
  onClick={onClose}
- className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm font-medium transition-colors"
+ className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-gray-900 rounded-lg text-sm font-medium transition-colors"
  >
  Cancel
  </button>

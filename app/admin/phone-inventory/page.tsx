@@ -348,7 +348,7 @@ export default function AdminPhoneInventoryPage() {
  }
 
  return (
- <div className="min-h-screen via-black text-white">
+ <div className="min-h-screen bg-[#0a0a0c] text-gray-100">
  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
  <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
  <div>
@@ -479,7 +479,7 @@ export default function AdminPhoneInventoryPage() {
  </div>
  </div>
 
- <div className="rounded-3xl border border-white/10 via-black/60 p-6 backdrop-blur-xl shadow-2xl shadow-blue-900/40">
+ <div className="rounded-3xl border border-white/10 bg-black/60 p-6 backdrop-blur-xl shadow-2xl shadow-blue-900/40">
  <div className="flex items-center gap-3 text-blue-200 mb-5">
  <PhoneCall className="h-5 w-5" />
  <h3 className="text-sm font-semibold uppercase tracking-[0.3em]">Inventory health</h3>

@@ -145,7 +145,7 @@ export function SkeletonTable({ rows = 5 }: { rows?: number }) {
 
 export function DashboardSkeleton() {
  return (
- <div className="min-h-screen via-black text-white">
+ <div className="min-h-screen bg-[#f6f5f1] text-gray-900">
  {/* Header Skeleton */}
  <header className="border-b border-sky-500/20 bg-black/30 backdrop-blur-xl sticky top-0 z-50">
  <div className="max-w-7xl mx-auto px-4 py-4">
