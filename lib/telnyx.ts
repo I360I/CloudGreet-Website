@@ -1,366 +1,173 @@
-// Telnyx API integration for CloudGreet
+/**
+ * Telnyx API integration for CloudGreet.
+ *
+ * Hits Telnyx v2 endpoints exclusively. v1 is deprecated and was the
+ * source of every silent SMS failure - the old client even fell back
+ * to using the connection_id UUID as the `from` phone number, which
+ * the API rejects 100% of the time.
+ *
+ * SMS sends require a real phone number on `from`. There is NO
+ * fallback - if you don't pass one, you get a clear error rather
+ * than a silent network failure to a bad payload. Call sites must
+ * look up the contractor's outbound number from `businesses.phone_number`
+ * (or wherever it's stored for that flow) and pass it explicitly.
+ *
+ * Required env vars for SMS:
+ *   TELNYX_API_KEY                  required for everything
+ *   TELNYX_MESSAGING_PROFILE_ID     ties outbound sends to the
+ *                                   right brand/campaign so carriers
+ *                                   route them. Numbers used as `from`
+ *                                   must be attached to this profile
+ *                                   in the Telnyx dashboard.
+ */
+
+import { logger } from '@/lib/monitoring'
+
+const TELNYX_BASE = 'https://api.telnyx.com/v2'
+
 export class TelnyxClient {
   private apiKey: string
   private connectionId: string
   private messagingProfileId: string
 
   constructor() {
-    this.apiKey = process.env.TELNYX_API_KEY || process.env.TELYNX_API_KEY || '' // Support both for backward compatibility
-    this.connectionId = process.env.TELNYX_CONNECTION_ID || ''
+    // Support the legacy typo'd env var name in case prod still sets it
+    // that way - don't break existing deployments while we transition.
+    this.apiKey = process.env.TELNYX_API_KEY || process.env.TELYNX_API_KEY || ''
+    this.connectionId = process.env.TELNYX_SIP_CONNECTION_ID
+      || process.env.TELNYX_CONNECTION_ID
+      || ''
     this.messagingProfileId = process.env.TELNYX_MESSAGING_PROFILE_ID || ''
   }
 
-  // Send SMS message
-  async sendSMS(to: string, message: string, from?: string) {
-    try {
-      const response = await fetch('https://api.telnyx.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          to,
-          from: from || this.connectionId,
-          body: message,
-          messaging_profile_id: this.messagingProfileId
-        })
-      })
+  /**
+   * Send a single SMS via Telnyx /v2/messages.
+   *
+   * @param to        E.164 destination
+   * @param message   message body (carriers cap at ~160 chars per
+   *                  segment; over that gets segmented automatically)
+   * @param from      E.164 sender number. REQUIRED. Must be a number
+   *                  attached to TELNYX_MESSAGING_PROFILE_ID in the
+   *                  Telnyx dashboard.
+   *
+   * Returns the parsed Telnyx response on success. Throws with a
+   * descriptive error on failure - callers should catch and decide
+   * whether the failure is fatal to their flow.
+   */
+  async sendSMS(
+    to: string,
+    message: string,
+    from: string,
+  ): Promise<{ data: { id: string; to: any; from: any; text: string } }> {
+    if (!this.apiKey) throw new Error('TELNYX_API_KEY missing')
+    if (!from) throw new Error('sendSMS: `from` (E.164 phone number) is required')
+    if (!to) throw new Error('sendSMS: `to` (E.164 phone number) is required')
 
-      /**
-
-
-       * if - Add description here
-
-
-       * 
-
-
-       * @param {...any} args - Method parameters
-
-
-       * @returns {Promise<any>} Method return value
-
-
-       * @throws {Error} When operation fails
-
-
-       * 
-
-
-       * @example
-
-
-       * ```typescript
-
-
-       * await this.if(param1, param2)
-
-
-       * ```
-
-
-       */
-
-
-      if (!response.ok) {
-        throw new Error(`Telnyx API error: ${response.statusText}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      throw error
+    const body: Record<string, unknown> = {
+      to,
+      from,
+      text: message,
     }
+    // messaging_profile_id is recommended but not strictly required
+    // when `from` is on a single profile. Send it when we have one.
+    if (this.messagingProfileId) {
+      body.messaging_profile_id = this.messagingProfileId
+    }
+
+    const res = await fetch(`${TELNYX_BASE}/messages`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => res.statusText)
+      logger.warn('Telnyx SMS send failed', {
+        status: res.status,
+        body: txt.slice(0, 300),
+        to: maskPhone(to),
+        from,
+        has_profile: !!this.messagingProfileId,
+      })
+      throw new Error(`Telnyx SMS failed (${res.status}): ${txt.slice(0, 200)}`)
+    }
+    return await res.json()
   }
 
-  // Provision phone number
+  /** Search for an available US local DID and order it. */
   async provisionPhoneNumber(areaCode: string) {
-    try {
-      const response = await fetch('https://api.telnyx.com/v1/phone_numbers', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          area_code: areaCode,
-          connection_id: this.connectionId
-        })
-      })
-
-      /**
-
-
-       * if - Add description here
-
-
-       * 
-
-
-       * @param {...any} args - Method parameters
-
-
-       * @returns {Promise<any>} Method return value
-
-
-       * @throws {Error} When operation fails
-
-
-       * 
-
-
-       * @example
-
-
-       * ```typescript
-
-
-       * await this.if(param1, param2)
-
-
-       * ```
-
-
-       */
-
-
-      if (!response.ok) {
-        throw new Error(`Telnyx API error: ${response.statusText}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      throw error
+    if (!this.apiKey) throw new Error('TELNYX_API_KEY missing')
+    const res = await fetch(`${TELNYX_BASE}/number_orders`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        area_code: areaCode,
+        connection_id: this.connectionId || undefined,
+      }),
+    })
+    if (!res.ok) {
+      const txt = await res.text().catch(() => res.statusText)
+      throw new Error(`Telnyx number_orders failed (${res.status}): ${txt.slice(0, 200)}`)
     }
+    return await res.json()
   }
 
-  // Get phone number details
+  /** Read a phone number resource. */
   async getPhoneNumber(phoneNumberId: string) {
-    try {
-      const response = await fetch(`https://api.telnyx.com/v1/phone_numbers/${phoneNumberId}`, {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`
-        }
-      })
-
-      /**
-
-
-       * if - Add description here
-
-
-       * 
-
-
-       * @param {...any} args - Method parameters
-
-
-       * @returns {Promise<any>} Method return value
-
-
-       * @throws {Error} When operation fails
-
-
-       * 
-
-
-       * @example
-
-
-       * ```typescript
-
-
-       * await this.if(param1, param2)
-
-
-       * ```
-
-
-       */
-
-
-      if (!response.ok) {
-        throw new Error(`Telnyx API error: ${response.statusText}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      throw error
+    if (!this.apiKey) throw new Error('TELNYX_API_KEY missing')
+    const res = await fetch(`${TELNYX_BASE}/phone_numbers/${encodeURIComponent(phoneNumberId)}`, {
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    })
+    if (!res.ok) {
+      const txt = await res.text().catch(() => res.statusText)
+      throw new Error(`Telnyx getPhoneNumber failed (${res.status}): ${txt.slice(0, 200)}`)
     }
+    return await res.json()
   }
 
-  // Update AI agent
-  async updateAgent(agentId: string, updates: unknown) {
+  async purchasePhoneNumber(areaCode: string, _businessName: string) {
     try {
-      const response = await fetch(`https://api.telnyx.com/v1/ai_agents/${agentId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updates)
-      })
-
-      /**
-
-
-       * if - Add description here
-
-
-       * 
-
-
-       * @param {...any} args - Method parameters
-
-
-       * @returns {Promise<any>} Method return value
-
-
-       * @throws {Error} When operation fails
-
-
-       * 
-
-
-       * @example
-
-
-       * ```typescript
-
-
-       * await this.if(param1, param2)
-
-
-       * ```
-
-
-       */
-
-
-      if (!response.ok) {
-        throw new Error(`Telnyx API error: ${response.statusText}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      throw error
-    }
-  }
-
-  // Purchase phone number (alias for provisionPhoneNumber)
-  async purchasePhoneNumber(areaCode: string, businessName: string) {
-    try {
-      const result = await this.provisionPhoneNumber(areaCode)
+      const result = await this.provisionPhoneNumber(areaCode) as any
       return {
         success: true,
-        phone_number: result.phone_number,
-        id: result.id
+        phone_number: result?.data?.phone_numbers?.[0]?.phone_number,
+        id: result?.data?.id,
       }
     } catch (error) {
       return {
         success: false,
-        error: error
+        error: error instanceof Error ? error.message : 'Unknown error',
       }
-    }
-  }
-
-  // Create AI agent
-  async createAIAgent(businessData: unknown) {
-    try {
-      const data = businessData as { business_name?: string; greeting_message?: string }
-      const response = await fetch('https://api.telnyx.com/v1/ai_agents', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: data.business_name || 'AI Agent',
-          instructions: data.greeting_message || 'Hello, how can I help you today?',
-          voice: 'alloy'
-        })
-      })
-
-      /**
-
-
-       * if - Add description here
-
-
-       * 
-
-
-       * @param {...any} args - Method parameters
-
-
-       * @returns {Promise<any>} Method return value
-
-
-       * @throws {Error} When operation fails
-
-
-       * 
-
-
-       * @example
-
-
-       * ```typescript
-
-
-       * await this.if(param1, param2)
-
-
-       * ```
-
-
-       */
-
-
-      if (!response.ok) {
-        throw new Error(`Telnyx API error: ${response.statusText}`)
-      }
-
-      return await response.json()
-    } catch (error) {
-      throw error
     }
   }
 }
 
-// Verify Telnyx webhook signature
-/**
- * verifyTelnyxSignature - Add description here
- * 
- * @param {...any} args - Function parameters
- * @returns {Promise<any>} Function return value
- * @throws {Error} When operation fails
- * 
- * @example
- * ```typescript
- * await verifyTelnyxSignature(param1, param2)
- * ```
- */
 export function verifyTelnyxSignature(payload: string, signature: string, secret: string): boolean {
   try {
     const crypto = require('crypto')
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(payload)
-      .digest('hex')
-    
+    const expected = crypto.createHmac('sha256', secret).update(payload).digest('hex')
     return crypto.timingSafeEqual(
       Buffer.from(signature, 'hex'),
-      Buffer.from(expectedSignature, 'hex')
+      Buffer.from(expected, 'hex'),
     )
-  } catch (error) {
+  } catch {
     return false
   }
 }
 
+function maskPhone(p: string): string {
+  if (!p || p.length < 6) return p
+  return `${p.slice(0, 2)}****${p.slice(-2)}`
+}
+
 export const telnyxClient = new TelnyxClient()
 
-// Backward compatibility aliases
+// Backward compatibility aliases (old code referenced typo'd / mixed casing)
 export const telynyxClient = telnyxClient
 export const telynyx = telnyxClient
-

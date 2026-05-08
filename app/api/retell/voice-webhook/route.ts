@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
  // Get business info - need cal.com config for the booking too.
  const { data: business, error: businessError } = await supabaseAdmin
  .from('businesses')
- .select('id, stripe_customer_id, subscription_status, timezone, cal_com_api_key, cal_com_event_type_id, business_name, email')
+ .select('id, stripe_customer_id, subscription_status, timezone, cal_com_api_key, cal_com_event_type_id, business_name, email, phone_number')
  .eq('id', business_id)
  .single()
 
@@ -341,16 +341,28 @@ export async function POST(request: NextRequest) {
 
  // Per-booking fees removed; pricing is flat-monthly only.
 
- // Send SMS confirmation
- if (phone) {
+ // Send SMS confirmation. Sender = the contractor's own number so
+ // the caller sees the same line they just dialed. If the business
+ // has no phone_number on file we skip the send rather than leak
+ // a generic CloudGreet number.
+ if (phone && (business as any).phone_number) {
  try {
  await telnyxClient.sendSMS(
  phone,
- `Your appointment is booked for ${new Date(datetime).toLocaleDateString()} at ${new Date(datetime).toLocaleTimeString()}. Service: ${service}. Reply STOP to opt out; HELP for help.`
+ `${(business as any).business_name || 'Your appointment'} is booked for ${new Date(datetime).toLocaleDateString()} at ${new Date(datetime).toLocaleTimeString()}. Service: ${service}. Reply STOP to opt out; HELP for help.`,
+ (business as any).phone_number,
  )
  } catch (e) {
- logger.warn('SMS confirmation failed', { error: (e as Error).message })
+ logger.warn('SMS confirmation failed', {
+ error: (e as Error).message,
+ business_id,
+ has_messaging_profile: !!process.env.TELNYX_MESSAGING_PROFILE_ID,
+ })
  }
+ } else if (phone) {
+ logger.warn('SMS confirmation skipped - business has no phone_number on file', {
+ business_id,
+ })
  }
 
  return NextResponse.json({ success: true, appointment_id: apptId })
@@ -360,10 +372,23 @@ export async function POST(request: NextRequest) {
  if (!phone || !appt_id) {
  return NextResponse.json({ success: false, error: 'missing_parameters' }, { status: 400 })
  }
+ // Look up the business's outbound number so the SMS appears to
+ // come from the same line the caller dialed.
+ const { data: bizRow } = await supabaseAdmin
+ .from('businesses')
+ .select('phone_number, business_name')
+ .eq('id', resolvedBusinessId)
+ .maybeSingle()
+ const fromNum = (bizRow as any)?.phone_number
+ if (!fromNum) {
+ logger.warn('send_booking_sms skipped - no phone_number on business', { business_id: resolvedBusinessId })
+ return NextResponse.json({ success: false, error: 'no_business_phone' }, { status: 400 })
+ }
  try {
  await telnyxClient.sendSMS(
  phone,
- `Confirmation for appointment ${appt_id}. Reply STOP to opt out; HELP for help.`
+ `${(bizRow as any)?.business_name || 'Booking'}: confirmation for appointment ${appt_id}. Reply STOP to opt out; HELP for help.`,
+ fromNum,
  )
  return NextResponse.json({ success: true })
  } catch (smsError) {
