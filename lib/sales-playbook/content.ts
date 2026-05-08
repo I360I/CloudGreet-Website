@@ -41,7 +41,7 @@ The average HVAC, plumbing, electrical, or roofing shop misses 30-50% of inbound
 Pretend to be human. Replace techs, dispatchers, or office managers. Quote prices unless the owner explicitly enables it.
 
 **Who it's for**
-Solo and small-shop service businesses, 1-15 employees. HVAC, plumbing, electrical, roofing, pest control, landscaping, painting, handyman, law firms, small medical/dental - anyone who lives or dies on inbound calls.`,
+Solo and small-shop service businesses, 1-15 employees. HVAC, plumbing, electrical, roofing, pest control, landscaping, painting, handyman, law firms, accounting, auto repair - anyone who lives or dies on inbound calls.`,
   },
 
   {
@@ -325,8 +325,11 @@ Voice customization is possible but specifics (sample length, turnaround, cost) 
 **"My customers are old, they hate AI"**
 Two angles: the AI sounds like a person (send a recording), and the agent can be configured to offer "or I can have [owner] call you back" as an opt-out.
 
-**Industries we're newer to (medical, legal, finance)**
-We work with them but conservatively - the agent books and routes, doesn't take medical info or give legal/financial advice. Frame it as a feature.
+**Industries we don't take (healthcare, anything HIPAA)**
+We don't onboard medical practices, dental, medspas, therapy, or any healthcare-adjacent business. HIPAA compliance is out of scope. If a prospect is in that bucket, decline politely - "we're not set up for healthcare yet" - and don't book a demo.
+
+**Industries we're newer to (legal, finance)**
+We work with them but conservatively - the agent books and routes, doesn't give legal or financial advice. Frame it as a feature.
 
 **Refund situation (post-sale)**
 Refund policy is the 30-day, zero-bookings bar from Closing. Route any refund request to anthony@cloudgreet.com - reviewed and honored on my end, no expense to the rep (your commission isn't clawed back). Don't promise refunds you can't authorize, but you also don't need to fight one off to protect your earnings.

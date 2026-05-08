@@ -50,10 +50,38 @@ const ENTERPRISE_PATTERNS: RegExp[] = [
   /\bI\.?S\.?D\b/,
   /\bACADEMY\b/,
 
-  // Hospitals / healthcare campuses
+  // Healthcare / HIPAA-adjacent (we don't onboard these - HIPAA is out of scope).
+  // Conservative on purpose: a contractor with "medical" in their name (e.g.,
+  // "Medical Building Maintenance") will be filtered too, and that's fine -
+  // there are plenty of other leads.
   /\bHOSPITAL\b/,
   /\bMEDICAL CENTER\b/,
   /\bHEALTH SYSTEM\b/,
+  /\bMEDICAL\b/,
+  /\bMEDSPA\b/,
+  /\bMED SPA\b/,
+  /\bDENTAL\b/,
+  /\bDENTISTRY\b/,
+  /\bORTHODONTIC\b/,
+  /\bCHIROPRACT/,
+  /\bPHYSICAL THERAPY\b/,
+  /\bPHYSIO\b/,
+  /\bCLINIC\b/,
+  /\bWELLNESS\b/,
+  /\bDERMATOLOG/,
+  /\bPEDIATRIC/,
+  /\bOB[-\/]?GYN\b/,
+  /\bURGENT CARE\b/,
+  /\bHEALTHCARE\b/,
+  /\bHEALTH CARE\b/,
+  /\bTHERAP(?:IST|Y)\b/,
+  /\bPSYCHIATR/,
+  /\bPSYCHOLOG/,
+  /\bCOUNSELING\b/,
+  /\bMENTAL HEALTH\b/,
+  /\bAESTHETIC/,
+  /\bBOTOX\b/,
+  /\bIV THERAPY\b/,
 
   // Big-co campuses (limited list - the most common offenders)
   /\bMOTOROLA\b/,

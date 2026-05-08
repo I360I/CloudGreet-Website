@@ -56,7 +56,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
       'Founder intro - who built CloudGreet and why',
       'What CloudGreet does (24/7 AI receptionist, books appointments)',
       'Live demo: hear the AI handle a call end-to-end',
-      'Who buys this: HVAC, plumbing, dental, legal - service businesses losing money to missed calls',
+      'Who buys this: HVAC, plumbing, roofing, legal, auto - service businesses losing money to missed calls',
       'Why it sells: average service business misses 30% of calls',
     ],
   },
