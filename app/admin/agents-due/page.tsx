@@ -205,14 +205,22 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
           </div>
         </div>
 
-        {item.business?.id && (
+        <div className="flex items-center gap-3 flex-wrap">
           <Link
-            href={`/admin/clients/${item.business.id}`}
-            className="text-xs text-sky-300 hover:text-sky-200 inline-flex items-center gap-1"
+            href={`/admin/agents-due/${item.close_id}`}
+            className="text-xs text-fuchsia-300 hover:text-fuchsia-200 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/[0.06]"
           >
-            Open client <ExternalLink className="w-3 h-3" />
+            Open workspace <ExternalLink className="w-3 h-3" />
           </Link>
-        )}
+          {item.business?.id && (
+            <Link
+              href={`/admin/clients/${item.business.id}`}
+              className="text-xs text-sky-300 hover:text-sky-200 inline-flex items-center gap-1"
+            >
+              Open client <ExternalLink className="w-3 h-3" />
+            </Link>
+          )}
+        </div>
       </div>
 
       <div className="border-t border-white/5 px-5 py-4 grid sm:grid-cols-2 gap-x-8 gap-y-4">

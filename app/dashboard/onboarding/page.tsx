@@ -409,15 +409,15 @@ function ForwardingStep({
   return (
    <div className="bg-white border border-gray-200 rounded-2xl p-6">
     <div className="flex items-center gap-2 mb-1">
-     <Phone className="w-4 h-4 text-amber-500" />
-     <h2 className="text-xl font-medium text-gray-900">Forward your business line</h2>
+     <Sparkles className="w-4 h-4 text-amber-500" />
+     <h2 className="text-xl font-medium text-gray-900">Your agent is being built</h2>
     </div>
     <p className="text-sm text-gray-500 mt-1">
-     Your AI receptionist number is still being provisioned. We&apos;ll show your forwarding code here as soon as it&apos;s live - usually within a few minutes. If this sticks for more than 15 minutes, tap the support link below.
+     We&apos;re setting up your dedicated AI receptionist - scraping your site, tuning the script for your services, and provisioning your phone number. This usually takes a few minutes. We&apos;ll drop your forwarding code right here the moment it&apos;s ready. If it&apos;s been more than 15 minutes, tap the support link below.
     </p>
     <div className="mt-5 flex items-center gap-2 text-xs text-gray-500">
      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-     Waiting on number provisioning…
+     Building your agent…
     </div>
    </div>
   )

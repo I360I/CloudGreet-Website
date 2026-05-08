@@ -129,10 +129,19 @@ export function DraftBuilder({
     setDraft((d) => d ? { ...d, status: 'generating' } : { status: 'generating' } as any)
     try {
       const r = await fetchWithAuth(`/api/admin/agents-due/${closeId}/generate`, { method: 'POST' })
-      const j = await r.json().catch(() => ({}))
-      if (!r.ok || !j?.success) setErr(j?.error || 'Pipeline failed')
+      const text = await r.text()
+      let j: any = {}
+      try { j = JSON.parse(text) } catch { /* keep raw text */ }
+      if (!r.ok || !j?.success) {
+        // Surface the *full* server response (not just j.error) so missing
+        // env vars, schema, or model-format failures don't show as a silent
+        // "back to Build draft" button.
+        setErr(j?.error || text.slice(0, 500) || `Pipeline failed (${r.status})`)
+      }
       await reload()
       onChanged()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Pipeline failed')
     } finally {
       setBusy(null)
     }
@@ -358,7 +367,17 @@ export function DraftBuilder({
             </div>
           )}
 
-          {err && <div className="mt-2 text-xs text-rose-300">{err}</div>}
+          {err && (
+            <div className="mt-3 bg-rose-500/10 border border-rose-500/30 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-rose-200">Build failed</div>
+                  <pre className="mt-1 text-[11px] font-mono text-rose-300 whitespace-pre-wrap break-words leading-relaxed">{err}</pre>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
