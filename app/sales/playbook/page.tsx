@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BookOpen, MagnifyingGlass, X, CaretRight } from '@phosphor-icons/react'
+import { MagnifyingGlass, X, CaretRight } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader } from '../_components/SalesShell'
 import { PLAYBOOK_SECTIONS, type PlaybookSection } from '@/lib/sales-playbook/content'
 
@@ -91,14 +91,6 @@ export default function PlaybookPage() {
             )}
           </ul>
 
-          <div className="mt-4 text-[11px] bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-900 leading-relaxed">
-            <div className="font-medium mb-1 inline-flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5" /> Quick note
-            </div>
-            Onboarding videos are landing this week. Until then, this written
-            playbook covers everything you need for your first calls. Anything
-            unclear, ask Anthony directly.
-          </div>
         </aside>
 
         {/* Main content */}
