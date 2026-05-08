@@ -2,106 +2,98 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { 
- Home, ArrowLeft, Search, HelpCircle, Phone, Brain
-} from 'lucide-react'
+import { Home, ArrowLeft, HelpCircle, Phone, Brain } from 'lucide-react'
 import Link from 'next/link'
 
-// Explicit export for Next.js not-found page
 export default function NotFound() {
- return (
- <div className="min-h-screen bg-[#f6f5f1] text-gray-900 flex items-center justify-center">
- <div className="max-w-4xl mx-auto px-4 text-center">
- <motion.div
- initial={{ opacity: 0, y: 30 }}
- animate={{ opacity: 1, y: 0 }}
- transition={{ duration: 0.8 }}
- >
- {/* 404 Animation */}
- <motion.div
- initial={{ scale: 0.8, opacity: 0 }}
- animate={{ scale: 1, opacity: 1 }}
- transition={{ delay: 0.2, duration: 0.6 }}
- className="mb-8"
- >
- <div className="text-8xl md:text-9xl font-bold bg-blue-400 mb-4">
- 404
- </div>
- <div className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
- Page Not Found
- </div>
- </motion.div>
+  return (
+    <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center">
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="mb-8"
+          >
+            <div className="text-7xl md:text-9xl font-bold tracking-tight bg-gradient-to-br from-sky-400 to-indigo-500 bg-clip-text text-transparent mb-4">
+              404
+            </div>
+            <div className="text-3xl md:text-5xl font-medium tracking-tight text-gray-100">
+              Page not found
+            </div>
+          </motion.div>
 
- {/* Error Message */}
- <motion.p
- initial={{ opacity: 0, y: 20 }}
- animate={{ opacity: 1, y: 0 }}
- transition={{ delay: 0.4, duration: 0.6 }}
- className="text-xl text-gray-700 mb-12 max-w-2xl mx-auto"
- >
- The page you&apos;re looking for doesn&apos;t exist. It might have been moved, deleted, 
- or you entered the wrong URL.
- </motion.p>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="text-base sm:text-lg text-gray-400 mb-10 max-w-xl mx-auto leading-relaxed"
+          >
+            The page you&apos;re looking for doesn&apos;t exist. It may have been moved, deleted, or the URL was mistyped.
+          </motion.p>
 
- {/* Action Buttons */}
- <motion.div
- initial={{ opacity: 0, y: 20 }}
- animate={{ opacity: 1, y: 0 }}
- transition={{ delay: 0.6, duration: 0.6 }}
- className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
- >
- <Link
- href="/"
- className="flex items-center justify-center gap-3 px-8 py-4 bg-blue-600 text-gray-900 rounded-xl font-semibold transition-all duration-300"
- >
- <Home className="w-5 h-5" />
- Go Home
- </Link>
- <button
- onClick={() => window.history.back()}
- className="flex items-center justify-center gap-3 px-8 py-4 bg-gray-700 hover:bg-gray-600 text-gray-900 rounded-xl font-semibold transition-all duration-300"
- >
- <ArrowLeft className="w-5 h-5" />
- Go Back
- </button>
- </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+            className="flex flex-col sm:flex-row gap-3 justify-center mb-16"
+          >
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-900 hover:bg-gray-200 rounded-lg font-medium text-sm transition-colors"
+            >
+              <Home className="w-4 h-4" />
+              Go home
+            </Link>
+            <button
+              onClick={() => window.history.back()}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-gray-200 rounded-lg font-medium text-sm transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Go back
+            </button>
+          </motion.div>
 
- {/* Quick Links */}
- <motion.div
- initial={{ opacity: 0, y: 20 }}
- animate={{ opacity: 1, y: 0 }}
- transition={{ delay: 0.8, duration: 0.6 }}
- className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto"
- >
- <Link
- href="/#how-it-works"
- className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-sky-300 transition-all duration-300"
- >
- <HelpCircle className="w-8 h-8 text-blue-400 mx-auto mb-4" />
- <h3 className="text-lg font-bold text-gray-900 mb-2">How it Works</h3>
- <p className="text-gray-700 text-sm">Learn how CloudGreet helps your business</p>
- </Link>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.6 }}
+            className="grid sm:grid-cols-3 gap-3 max-w-3xl mx-auto"
+          >
+            <Link
+              href="/#how-it-works"
+              className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-5 transition-colors"
+            >
+              <HelpCircle className="w-6 h-6 text-sky-400 mx-auto mb-3" strokeWidth={1.75} />
+              <h3 className="text-sm font-medium text-gray-100 mb-1">How it works</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">Learn how CloudGreet helps service businesses.</p>
+            </Link>
 
- <Link
- href="/contact"
- className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-emerald-300 transition-all duration-300"
- >
- <Phone className="w-8 h-8 text-green-400 mx-auto mb-4" />
- <h3 className="text-lg font-bold text-gray-900 mb-2">Contact Support</h3>
- <p className="text-gray-700 text-sm">Get help from our support team</p>
- </Link>
+            <Link
+              href="/contact"
+              className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-5 transition-colors"
+            >
+              <Phone className="w-6 h-6 text-emerald-400 mx-auto mb-3" strokeWidth={1.75} />
+              <h3 className="text-sm font-medium text-gray-100 mb-1">Contact</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">Get in touch with the team.</p>
+            </Link>
 
- <Link
- href="/dashboard"
- className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-sky-300 transition-all duration-300"
- >
- <Brain className="w-8 h-8 text-sky-400 mx-auto mb-4" />
- <h3 className="text-lg font-bold text-gray-900 mb-2">Dashboard</h3>
- <p className="text-gray-700 text-sm">Access your CloudGreet dashboard</p>
- </Link>
- </motion.div>
- </motion.div>
- </div>
- </div>
- )
+            <Link
+              href="/dashboard"
+              className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-5 transition-colors"
+            >
+              <Brain className="w-6 h-6 text-indigo-400 mx-auto mb-3" strokeWidth={1.75} />
+              <h3 className="text-sm font-medium text-gray-100 mb-1">Dashboard</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">Sign in to your CloudGreet dashboard.</p>
+            </Link>
+          </motion.div>
+        </motion.div>
+      </div>
+    </div>
+  )
 }
