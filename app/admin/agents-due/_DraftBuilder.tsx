@@ -125,8 +125,12 @@ export function DraftBuilder({
 
   const generate = async () => {
     setBusy('generate'); setErr('')
+    // Wipe local user edits so the regenerated prompt actually shows up
+    // in the textarea (otherwise `value={edited ?? draft.prompt}` keeps
+    // displaying the stale edited copy).
+    setEdited(null)
     // Optimistic flip so the UI doesn't sit idle for the 30-60s pipeline.
-    setDraft((d) => d ? { ...d, status: 'generating' } : { status: 'generating' } as any)
+    setDraft((d) => d ? { ...d, status: 'generating', prompt: null } : { status: 'generating' } as any)
     try {
       const r = await fetchWithAuth(`/api/admin/agents-due/${closeId}/generate`, { method: 'POST' })
       const text = await r.text()
@@ -289,9 +293,18 @@ export function DraftBuilder({
           )}
 
           {draft?.status === 'generating' && (
-            <div className="flex items-center gap-2 text-xs text-fuchsia-300">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Scraping + generating - this takes 30-60 seconds.
+            <div className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/[0.06] px-4 py-5 flex items-center gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-fuchsia-300 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-sm text-fuchsia-200 font-medium">
+                  Building agent prompt…
+                </div>
+                <div className="text-xs text-fuchsia-300/70 mt-0.5">
+                  Scraping the website, calling Claude, validating the output.
+                  This usually takes 30-60 seconds. The previous prompt will be
+                  replaced when this finishes.
+                </div>
+              </div>
             </div>
           )}
 
@@ -354,7 +367,10 @@ export function DraftBuilder({
                 </div>
                 <div className="flex items-center gap-2">
                   <GhostButton onClick={generate} disabled={busy !== null}>
-                    <RefreshCw className="w-3 h-3" /> Regenerate
+                    {busy === 'generate'
+                      ? <Loader2 className="w-3 h-3 animate-spin" />
+                      : <RefreshCw className="w-3 h-3" />}
+                    {busy === 'generate' ? 'Regenerating…' : 'Regenerate'}
                   </GhostButton>
                   {draft.status !== 'approved' && (
                     <PrimaryButton onClick={approve} disabled={busy !== null}>
