@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw } from 'lucide-react'
+import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw, FileText } from 'lucide-react'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
 
@@ -23,6 +23,12 @@ const TOOLS: { href: string; label: string; description: string; icon: React.Ele
   label: 'SMS tester',
   description: 'Fire a single booking-notification SMS to any number to verify the wiring before onboarding a contractor. Surfaces raw Telnyx response on failure.',
   icon: MessageSquare,
+ },
+ {
+  href: '/admin/agent-prompt',
+  label: 'Agent prompt preview',
+  description: 'See exactly what the universal agent prompt renders to per industry. Copy it into Claude to iterate, then paste back into the codebase.',
+  icon: FileText,
  },
  {
   href: '/admin/agent-backfill',
