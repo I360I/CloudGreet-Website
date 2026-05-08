@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
-import { Phone, PhoneCall, PhoneSlash, MicrophoneSlash, Microphone, X, CircleNotch, WarningCircle, Pause, Play, SkipForward, Stop } from '@phosphor-icons/react'
+import { Phone, PhoneCall, PhoneSlash, MicrophoneSlash, Microphone, X, CircleNotch, WarningCircle, Pause, Play, SkipForward, Stop, CaretDown } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { NumberPicker } from './NumberPicker'
 
 /**
  * Floating Telnyx WebRTC dialer.
@@ -67,6 +68,8 @@ export function Dialer() {
   const [secondsActive, setSecondsActive] = useState(0)
   const [micBusy, setMicBusy] = useState(false)
   const [micErrName, setMicErrName] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [, forceFromRefresh] = useState(0)
   const dragControls = useDragControls()
 
   // Power dialer queue. When non-empty, the dialer auto-advances
@@ -822,9 +825,15 @@ export function Dialer() {
                   )}
 
                   {fromNumberRef.current && status === 'ready' && !inCall && (
-                    <div className="mt-3 text-[10px] font-mono text-gray-400 text-center">
-                      from · {fromNumberRef.current}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpen(true)}
+                      className="mt-3 mx-auto flex items-center gap-1 text-[10px] font-mono text-gray-500 hover:text-gray-900 transition-colors"
+                      title="Switch which number you call from"
+                    >
+                      from · <span className="text-gray-700">{fromNumberRef.current}</span>
+                      <CaretDown weight="bold" className="w-2.5 h-2.5" />
+                    </button>
                   )}
                 </>
               )}
@@ -852,6 +861,19 @@ export function Dialer() {
           <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-white" aria-hidden />
         )}
       </button>
+
+      <NumberPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onActiveChanged={(num) => {
+          // Update the displayed from-number immediately. The dialer
+          // session itself doesn't need to reconnect for outbound
+          // caller-ID switches - Telnyx looks up the from on each
+          // call placement against the connection's allowed numbers.
+          fromNumberRef.current = num
+          forceFromRefresh((n) => n + 1)
+        }}
+      />
     </>
   )
 }
