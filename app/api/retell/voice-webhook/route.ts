@@ -4,6 +4,7 @@ import { logger } from '@/lib/monitoring'
 import { telnyxClient } from '@/lib/telnyx'
 import { sendBookingNotification } from '@/lib/booking-notifications'
 import { lookupCallerHistory } from '@/lib/caller-history'
+import { scheduleReviewRequest } from '@/lib/review-requests'
 import { createCalendarEvent } from '@/lib/calendar'
 import { verifyRetellSignature } from '@/lib/webhook-verification'
 import { CONFIG } from '@/lib/config'
@@ -136,7 +137,15 @@ export async function POST(request: NextRequest) {
  if (tool) {
  switch (tool.name) {
  case 'book_appointment': {
- const { name, phone, service, datetime, business_id: toolBusinessId } = tool.arguments || {}
+ const { name, phone, service, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw } = tool.arguments || {}
+ // Coerce review_consent to a strict boolean - the agent may pass true/false,
+ // "true"/"false", "yes"/"no", or omit entirely. Anything ambiguous = false
+ // so we never text without an explicit yes.
+ const reviewConsent =
+   reviewConsentRaw === true ||
+   reviewConsentRaw === 'true' ||
+   reviewConsentRaw === 'yes' ||
+   reviewConsentRaw === 'y'
 
  // Reject if we couldn't resolve a business from the agent. Falling
  // back to tool args would re-introduce the spoofing risk.
@@ -192,6 +201,43 @@ export async function POST(request: NextRequest) {
  }
 
  const apptId = appointmentId
+
+ // Persist review_consent on the appointment so we have an audit trail
+ // alongside the appointment row (independent of whether scheduling
+ // succeeds). Errors here are non-fatal - the booking is the priority.
+ await supabaseAdmin
+   .from('appointments')
+   .update({
+     review_consent: reviewConsent,
+     review_consent_captured_at: new Date().toISOString(),
+   })
+   .eq('id', apptId)
+   .then(undefined, () => null)
+
+ // Schedule the post-appointment review SMS. No-op if the business
+ // has the feature off, no review URL configured, no consent captured,
+ // the customer is opted out, or we already sent within 90 days.
+ // Fire-and-forget - never let this block the booking response.
+ try {
+   const result = await scheduleReviewRequest({
+     appointmentId: apptId,
+     businessId: business_id,
+     customerPhone: phone,
+     customerName: name,
+     appointmentStart: startTime,
+     reviewConsent,
+   })
+   if (result.ok === true) {
+     logger.info('review request scheduled', { apptId, scheduled_for: result.scheduled_for })
+   } else if (result.ok === false) {
+     logger.info('review request not scheduled', { apptId, reason: result.reason })
+   }
+ } catch (e) {
+   logger.warn('scheduleReviewRequest threw', {
+     apptId,
+     error: e instanceof Error ? e.message : 'Unknown',
+   })
+ }
 
  // Cal.com booking - this is the path that lands on the contractor's
  // calendar (Google/Apple/Outlook via Cal.com). Without this, the
