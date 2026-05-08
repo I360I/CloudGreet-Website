@@ -47,7 +47,7 @@ async function loadOwned(businessId: string, repId: string) {
 
 async function saveAndSync(
   businessId: string, repId: string, cases: EdgeCase[],
-): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+): Promise<{ ok: true; retell_warning: string | null } | { ok: false; status: number; error: string }> {
   const { error } = await supabaseAdmin
     .from('businesses')
     .update({
@@ -59,18 +59,22 @@ async function saveAndSync(
     return { ok: false, status: 500, error: error.message }
   }
   // Sync to Retell - passing agentEdgeCases triggers a prompt push.
+  // Failures are non-fatal for the DB save but the rep needs to KNOW
+  // when the live agent didn't actually pick up the change, otherwise
+  // they'll show a customer a behavior the agent isn't doing.
+  let retellWarning: string | null = null
   try {
     await retellAgentManager().updateBusinessAgent(businessId, {
       agentEdgeCases: cases.map((c) => ({ label: c.label, instruction: c.instruction })),
     })
   } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unknown'
     logger.warn('Edge-case Retell sync failed (DB updated)', {
-      businessId, repId, error: e instanceof Error ? e.message : 'Unknown',
+      businessId, repId, error: msg,
     })
-    // Surface a soft warning but treat the save itself as successful
-    // - the next agent sync will pick it up.
+    retellWarning = msg
   }
-  return { ok: true }
+  return { ok: true, retell_warning: retellWarning }
 }
 
 /* --- POST: add one --- */
@@ -121,7 +125,7 @@ export async function POST(
 
   const r = await saveAndSync(params.id, auth.userId, next)
   if (r.ok === false) return NextResponse.json({ error: r.error }, { status: r.status })
-  return NextResponse.json({ success: true, edge_cases: next })
+  return NextResponse.json({ success: true, edge_cases: next, retell_warning: r.retell_warning })
 }
 
 /* --- DELETE: remove one --- */
@@ -149,7 +153,7 @@ export async function DELETE(
 
   const r = await saveAndSync(params.id, auth.userId, next)
   if (r.ok === false) return NextResponse.json({ error: r.error }, { status: r.status })
-  return NextResponse.json({ success: true, edge_cases: next })
+  return NextResponse.json({ success: true, edge_cases: next, retell_warning: r.retell_warning })
 }
 
 /* --- PUT: bulk replace (used for reorder + edits in place) --- */
@@ -183,5 +187,26 @@ export async function PUT(
 
   const r = await saveAndSync(params.id, auth.userId, cleaned)
   if (r.ok === false) return NextResponse.json({ error: r.error }, { status: r.status })
-  return NextResponse.json({ success: true, edge_cases: cleaned })
+  return NextResponse.json({ success: true, edge_cases: cleaned, retell_warning: r.retell_warning })
+}
+
+/* --- PATCH: re-push current rules to Retell (retry button after a sync error) --- */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const auth = await requireAuth(request)
+  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+    return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
+  }
+  const business = await loadOwned(params.id, auth.userId)
+  if (!business) return NextResponse.json({ error: 'Not your client' }, { status: 404 })
+  const current: EdgeCase[] = Array.isArray(business.agent_edge_cases)
+    ? (business.agent_edge_cases as EdgeCase[])
+    : []
+  // Same save+sync path; the DB write is effectively a no-op (same
+  // value) but the Retell push retries.
+  const r = await saveAndSync(params.id, auth.userId, current)
+  if (r.ok === false) return NextResponse.json({ error: r.error }, { status: r.status })
+  return NextResponse.json({ success: true, edge_cases: current, retell_warning: r.retell_warning })
 }

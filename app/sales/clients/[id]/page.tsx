@@ -43,6 +43,38 @@ type EdgeCase = {
   created_at: string
 }
 
+/**
+ * Placeholder detection in edge-case instructions. Templates ship with
+ * fake numbers / addresses ("(555) 123-4567", "123 Main St") that
+ * will be read to real callers verbatim if a rep saves without
+ * editing. We block save until they're swapped out.
+ *
+ * Patterns we flag:
+ *   - 555 numbers in any common US format
+ *   - "123 Main St" / "123 Anywhere"
+ *   - "your.email@example.com"
+ *   - "[brackets]" since templates often use them as fill-me hints
+ */
+const PLACEHOLDER_PATTERNS: RegExp[] = [
+  /\(?555\)?[\s.-]?\d{3}[\s.-]?\d{4}/,         // (555) 123-4567 / 555.123.4567
+  /\b1[\s.-]?\(?555\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/,
+  /\b123\s+(main|anywhere|elm|first)\s+(st|street|ave|road|rd)\b/i,
+  /\bexample\.(com|org|net)\b/i,
+  /\[[^\]]+\]/,                                 // [your name], [their address]
+]
+
+function firstPlaceholder(text: string): string | null {
+  for (const re of PLACEHOLDER_PATTERNS) {
+    const m = text.match(re)
+    if (m) return m[0]
+  }
+  return null
+}
+
+function hasPlaceholder(text: string): boolean {
+  return firstPlaceholder(text) !== null
+}
+
 const STARTER_TEMPLATES: Array<{ label: string; instruction: string; tag: string }> = [
   {
     tag: 'Pricing',
@@ -52,7 +84,7 @@ const STARTER_TEMPLATES: Array<{ label: string; instruction: string; tag: string
   {
     tag: 'Emergency',
     label: 'After-hours emergency',
-    instruction: 'If the caller mentions an emergency or no heat / no water / leak, transfer immediately to (555) 123-4567 and don\'t collect more info.',
+    instruction: 'If the caller mentions an emergency or no heat / no water / leak, transfer immediately to [forwarding number] and don\'t collect more info.',
   },
   {
     tag: 'Service area',
@@ -85,6 +117,8 @@ export default function SalesClientDetailPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [newLabel, setNewLabel] = useState('')
   const [newInstruction, setNewInstruction] = useState('')
+  const [syncWarning, setSyncWarning] = useState<string | null>(null)
+  const [resyncBusy, setResyncBusy] = useState(false)
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -105,7 +139,7 @@ export default function SalesClientDetailPage() {
 
   const addCase = async (label: string, instruction: string) => {
     if (!instruction.trim()) return
-    setSaving(true); setErr('')
+    setSaving(true); setErr(''); setSyncWarning(null)
     try {
       const res = await fetchWithAuth(`/api/sales/clients/${id}/agent/edge-cases`, {
         method: 'POST',
@@ -116,6 +150,7 @@ export default function SalesClientDetailPage() {
       if (!res.ok) setErr(j?.error || 'Add failed')
       else {
         setEdgeCases(j.edge_cases || [])
+        setSyncWarning(j.retell_warning || null)
         setShowAdd(false)
         setNewLabel('')
         setNewInstruction('')
@@ -127,6 +162,7 @@ export default function SalesClientDetailPage() {
 
   const removeCase = async (caseId: string) => {
     setEdgeCases((prev) => prev.filter((c) => c.id !== caseId))
+    setSyncWarning(null)
     try {
       const res = await fetchWithAuth(`/api/sales/clients/${id}/agent/edge-cases?case_id=${caseId}`, {
         method: 'DELETE',
@@ -137,10 +173,46 @@ export default function SalesClientDetailPage() {
         load() // re-sync
       } else {
         setEdgeCases(j.edge_cases || [])
+        setSyncWarning(j.retell_warning || null)
       }
     } catch {
       load()
     }
+  }
+
+  const resyncToRetell = async () => {
+    setResyncBusy(true); setErr('')
+    try {
+      const res = await fetchWithAuth(`/api/sales/clients/${id}/agent/edge-cases`, {
+        method: 'PATCH',
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) setErr(j?.error || 'Resync failed')
+      else {
+        setEdgeCases(j.edge_cases || [])
+        setSyncWarning(j.retell_warning || null)
+      }
+    } finally {
+      setResyncBusy(false)
+    }
+  }
+
+  /**
+   * Open the add form pre-filled from a starter template instead of
+   * saving immediately. Templates contain placeholder values like
+   * "(555) 123-4567" that would otherwise hit the live agent verbatim.
+   * Reps must edit + confirm before save.
+   */
+  const useTemplate = (label: string, instruction: string) => {
+    setNewLabel(label)
+    setNewInstruction(instruction)
+    setShowAdd(true)
+    // Smooth scroll the add form into view so the rep sees what just opened.
+    setTimeout(() => {
+      try {
+        document.getElementById('cg-edge-add-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } catch { /* noop */ }
+    }, 0)
   }
 
   if (loading || !business) {
@@ -247,9 +319,40 @@ export default function SalesClientDetailPage() {
             )}
           </div>
 
+          {syncWarning && (
+            <div className="mb-4 bg-amber-50 border border-amber-300 rounded-xl px-3.5 py-3 flex items-start gap-3">
+              <WarningCircle weight="fill" className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-amber-900">
+                  Saved to your dashboard, but the live agent didn&apos;t accept the update.
+                </div>
+                <div className="text-[11px] text-amber-800 mt-0.5 break-words">
+                  {syncWarning}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    onClick={resyncToRetell}
+                    disabled={resyncBusy}
+                    className="inline-flex items-center gap-1.5 text-xs bg-amber-900 text-amber-50 hover:bg-black rounded-md px-2.5 py-1 disabled:opacity-60"
+                  >
+                    {resyncBusy ? <CircleNotch className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                    {resyncBusy ? 'Retrying…' : 'Retry sync'}
+                  </button>
+                  <button
+                    onClick={() => setSyncWarning(null)}
+                    className="text-[11px] text-amber-800 hover:text-amber-900"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <AnimatePresence>
             {showAdd && (
               <motion.div
+                id="cg-edge-add-form"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
@@ -257,6 +360,14 @@ export default function SalesClientDetailPage() {
                 className="overflow-hidden mb-4"
               >
                 <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-4 space-y-3">
+                  {hasPlaceholder(newInstruction) && (
+                    <div className="bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 text-[12px] text-rose-900">
+                      <strong>Edit the placeholder before saving.</strong>{' '}
+                      The current text contains a fake number / value (
+                      <span className="font-mono">{firstPlaceholder(newInstruction)}</span>
+                      ) that will be read to real callers exactly as written.
+                    </div>
+                  )}
                   <div>
                     <label className="block text-[10px] font-mono uppercase tracking-wider text-amber-900 mb-1">
                       Label (optional)
@@ -294,7 +405,10 @@ export default function SalesClientDetailPage() {
                     </button>
                     <button
                       onClick={() => addCase(newLabel, newInstruction)}
-                      disabled={!newInstruction.trim() || saving}
+                      disabled={!newInstruction.trim() || saving || hasPlaceholder(newInstruction)}
+                      title={hasPlaceholder(newInstruction)
+                        ? `Edit the placeholder ${firstPlaceholder(newInstruction)} first.`
+                        : ''}
                       className="inline-flex items-center gap-1.5 text-xs bg-gray-900 text-white rounded-lg px-3 py-2 hover:bg-gray-800 disabled:opacity-60"
                     >
                       {saving ? <CircleNotch className="w-3 h-3 animate-spin" /> : <CheckCircle weight="fill" className="w-3 h-3" />}
@@ -315,9 +429,10 @@ export default function SalesClientDetailPage() {
                 {STARTER_TEMPLATES.map((t, i) => (
                   <li key={i}>
                     <button
-                      onClick={() => addCase(t.label, t.instruction)}
+                      onClick={() => useTemplate(t.label, t.instruction)}
                       disabled={saving}
                       className="w-full text-left bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl px-3 py-2.5 transition-colors disabled:opacity-60"
+                      title="Opens the editor pre-filled - edit any placeholders before saving"
                     >
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 bg-white border border-gray-200 rounded-full px-1.5 py-0.5">
