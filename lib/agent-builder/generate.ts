@@ -112,10 +112,15 @@ export async function generateAgentPrompt(
     const inputTokens = (usage.input_tokens || 0) + (usage.cache_read_input_tokens || 0) + (usage.cache_creation_input_tokens || 0)
     const outputTokens = usage.output_tokens || 0
     // Sonnet 4.6 pricing: $3 / MTok input (uncached), $15 / MTok output.
-    // Cache reads are 10% of input, cache writes are 1.25x. We approximate
-    // by treating uncached input as $3 and ignoring the cache nuance for
-    // ledgering - real billing comes from Anthropic.
-    const costMicro = Math.round((usage.input_tokens || 0) * 3 + (usage.cache_creation_input_tokens || 0) * 3.75 + (usage.cache_read_input_tokens || 0) * 0.3 + outputTokens * 15) / 1_000
+    // Cache reads are 10% of input, cache writes are 1.25x. $3/MTok =
+    // 3 micro-dollars per token, so tokens * rate already gives micro-$.
+    // Round to int because the DB column is `bigint`.
+    const costMicro = Math.round(
+      (usage.input_tokens || 0) * 3 +
+      (usage.cache_creation_input_tokens || 0) * 3.75 +
+      (usage.cache_read_input_tokens || 0) * 0.3 +
+      outputTokens * 15,
+    )
 
     return {
       ok: true,
