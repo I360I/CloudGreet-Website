@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Database, Wand2, ArrowUpRight, Plug } from 'lucide-react'
+import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart } from 'lucide-react'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
 
@@ -11,6 +11,18 @@ const TOOLS: { href: string; label: string; description: string; icon: React.Ele
   label: 'Lead scraper',
   description: 'Pull verified Texas contractors from public licensing databases. HVAC, electrical, plumbing, pest control, plus Google Places for roofing/painting/handyman/landscaping.',
   icon: Database,
+ },
+ {
+  href: '/admin/buy-sms-number',
+  label: 'Buy SMS number',
+  description: 'One-click: searches Telnyx for an SMS-capable local US number, orders it, and attaches it to the messaging profile. Paste the result into CLOUDGREET_NOTIFICATIONS_FROM.',
+  icon: ShoppingCart,
+ },
+ {
+  href: '/admin/sms-test',
+  label: 'SMS tester',
+  description: 'Fire a single booking-notification SMS to any number to verify the wiring before onboarding a contractor. Surfaces raw Telnyx response on failure.',
+  icon: MessageSquare,
  },
  {
   href: '/admin/settings',
