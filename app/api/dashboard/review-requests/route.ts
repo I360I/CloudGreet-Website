@@ -2,13 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
-import { DEFAULT_REVIEW_SMS_TEMPLATE } from '@/lib/review-requests'
+import {
+  DEFAULT_REVIEW_SMS_TEMPLATE,
+  cancelQueuedForBusiness,
+  getReviewStats,
+} from '@/lib/review-requests'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const VALID_TIMINGS = new Set(['1h_after', 'evening_same_day', 'next_morning'])
 const TEMPLATE_MAX = 320
+
+/**
+ * Loose Google review URL check. We accept anything that points at one
+ * of Google's review surfaces. Doesn't guarantee the URL works - just
+ * stops obvious mistakes (random https URLs, missing protocol, etc).
+ */
+const GOOGLE_REVIEW_HOSTS_RE =
+  /^https:\/\/(g\.page|search\.google\.com|maps\.google\.com|maps\.app\.goo\.gl|www\.google\.com\/maps|goo\.gl)/i
 
 /**
  * GET  → returns the contractor's current review-request settings
@@ -33,6 +45,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'fetch_failed' }, { status: 500 })
   }
 
+  // Best-effort stats. Don't block settings load if the count query
+  // throws (e.g. table doesn't exist yet on a fresh deploy).
+  let stats = {
+    queued: 0,
+    sent_last_30d: 0,
+    failed_last_30d: 0,
+    opted_out_count: 0,
+    last_sent_at: null as string | null,
+  }
+  try { stats = await getReviewStats(auth.businessId) }
+  catch (e) { logger.warn('review stats failed', { error: e instanceof Error ? e.message : 'unknown' }) }
+
   return NextResponse.json({
     success: true,
     enabled: !!(data as any)?.review_requests_enabled,
@@ -40,6 +64,7 @@ export async function GET(request: NextRequest) {
     review_sms_template: (data as any)?.review_sms_template || '',
     review_send_timing: (data as any)?.review_send_timing || '1h_after',
     default_template: DEFAULT_REVIEW_SMS_TEMPLATE,
+    stats,
   })
 }
 
@@ -64,8 +89,15 @@ export async function PATCH(request: NextRequest) {
 
   if (typeof body.google_review_url === 'string') {
     const trimmed = body.google_review_url.trim()
-    if (trimmed && !/^https?:\/\//i.test(trimmed)) {
-      return NextResponse.json({ error: 'review URL must start with http(s)://' }, { status: 400 })
+    if (trimmed) {
+      if (!/^https:\/\//i.test(trimmed)) {
+        return NextResponse.json({ error: 'review URL must start with https://' }, { status: 400 })
+      }
+      if (!GOOGLE_REVIEW_HOSTS_RE.test(trimmed)) {
+        return NextResponse.json({
+          error: "That doesn't look like a Google review link. Use the URL from Google Business Profile → Customers → Reviews → Get more reviews (it usually starts with https://g.page/r/ or https://search.google.com/local/writereview).",
+        }, { status: 400 })
+      }
     }
     update.google_review_url = trimmed || null
   }
@@ -99,5 +131,14 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'update_failed' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true })
+  // Side effect: when toggling OFF, cancel any queued sends so the
+  // contractor's "off" decision is immediate, not "off going forward
+  // but the queue still drains for 24h."
+  let canceledQueued = 0
+  if (update.review_requests_enabled === false) {
+    const r = await cancelQueuedForBusiness(auth.businessId)
+    canceledQueued = r.canceled
+  }
+
+  return NextResponse.json({ success: true, canceled_queued: canceledQueued })
 }

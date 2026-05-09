@@ -394,3 +394,135 @@ export async function markPhoneOptedOut(
     .eq('customer_phone', phoneDigits)
     .eq('status', 'queued')
 }
+
+/* ---------- bulk cancel ---------- */
+
+/**
+ * Cancel every queued review request for a business. Called when the
+ * contractor toggles review requests OFF in their settings - we don't
+ * want messages going out for appointments that were queued before they
+ * changed their mind.
+ */
+export async function cancelQueuedForBusiness(businessId: string): Promise<{
+  canceled: number
+}> {
+  const { data, error } = await supabaseAdmin
+    .from('review_requests')
+    .update({
+      status: 'canceled',
+      skip_reason: 'business_disabled',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('business_id', businessId)
+    .eq('status', 'queued')
+    .select('id')
+
+  if (error) {
+    logger.warn('cancelQueuedForBusiness failed', { businessId, error: error.message })
+    return { canceled: 0 }
+  }
+  return { canceled: data?.length || 0 }
+}
+
+/* ---------- test send ---------- */
+
+/**
+ * Send a one-off test SMS using the business's current settings. Used
+ * by the "Send test" button in /dashboard/settings so contractors can
+ * verify the review URL + template + SMS deliverability without booking
+ * a real appointment. Bypasses the queue, frequency cap, opt-out, and
+ * quiet-hours checks - it's a manual contractor-initiated send to a
+ * number they own.
+ */
+export async function sendTestReviewSms(args: {
+  businessId: string
+  toPhone: string
+  customerName?: string | null
+}): Promise<
+  | { ok: true; rendered: string; telnyx_message_id: string | null }
+  | { ok: false; reason: string; detail?: string }
+> {
+  const fromNumber = process.env.CLOUDGREET_NOTIFICATIONS_FROM
+  if (!fromNumber) return { ok: false, reason: 'notifications_from_unset' }
+
+  const { data: biz } = await supabaseAdmin
+    .from('businesses')
+    .select('business_name, google_review_url, review_sms_template')
+    .eq('id', args.businessId)
+    .maybeSingle()
+  if (!biz) return { ok: false, reason: 'business_not_found' }
+
+  const reviewUrl = (biz as any).google_review_url || ''
+  if (!reviewUrl) return { ok: false, reason: 'no_review_url' }
+
+  const template = (biz as any).review_sms_template || DEFAULT_REVIEW_SMS_TEMPLATE
+  const rendered = renderReviewTemplate(template, {
+    first_name: firstName(args.customerName) || 'there',
+    business_name: (biz as any).business_name || 'us',
+    review_link: reviewUrl,
+  })
+
+  try {
+    const resp = await telnyxClient.sendSMS(args.toPhone, rendered, fromNumber)
+    return {
+      ok: true,
+      rendered,
+      telnyx_message_id: resp?.data?.id || null,
+    }
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : 'unknown'
+    logger.warn('test review SMS failed', { businessId: args.businessId, error: detail })
+    return { ok: false, reason: 'send_failed', detail }
+  }
+}
+
+/* ---------- stats for client dashboard ---------- */
+
+export async function getReviewStats(businessId: string): Promise<{
+  queued: number
+  sent_last_30d: number
+  failed_last_30d: number
+  opted_out_count: number  // global - we don't track per-business opt-outs
+  last_sent_at: string | null
+}> {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+
+  const [{ count: queued }, { count: sent }, { count: failed }, { data: lastSent }, { count: optedOut }] = await Promise.all([
+    supabaseAdmin
+      .from('review_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', businessId)
+      .eq('status', 'queued'),
+    supabaseAdmin
+      .from('review_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', businessId)
+      .eq('status', 'sent')
+      .gte('sent_at', since),
+    supabaseAdmin
+      .from('review_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', businessId)
+      .eq('status', 'failed')
+      .gte('updated_at', since),
+    supabaseAdmin
+      .from('review_requests')
+      .select('sent_at')
+      .eq('business_id', businessId)
+      .eq('status', 'sent')
+      .order('sent_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('review_opt_outs')
+      .select('phone', { count: 'exact', head: true }),
+  ])
+
+  return {
+    queued: queued || 0,
+    sent_last_30d: sent || 0,
+    failed_last_30d: failed || 0,
+    opted_out_count: optedOut || 0,
+    last_sent_at: (lastSent as any)?.sent_at || null,
+  }
+}

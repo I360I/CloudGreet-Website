@@ -1190,6 +1190,14 @@ function renderPreview(template: string, businessName: string): string {
  *   - 90-day per-customer cap, quiet hours 9am-7pm local, STOP-to-opt-out.
  * Zero ongoing work for the contractor.
  */
+type ReviewStats = {
+ queued: number
+ sent_last_30d: number
+ failed_last_30d: number
+ opted_out_count: number
+ last_sent_at: string | null
+}
+
 function ReviewRequestsSection() {
  const [loading, setLoading] = useState(true)
  const [saving, setSaving] = useState(false)
@@ -1199,6 +1207,10 @@ function ReviewRequestsSection() {
  const [defaultTemplate, setDefaultTemplate] = useState('')
  const [timing, setTiming] = useState<'1h_after' | 'evening_same_day' | 'next_morning'>('1h_after')
  const [flash, setFlash] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+ const [stats, setStats] = useState<ReviewStats | null>(null)
+ const [testPhone, setTestPhone] = useState('')
+ const [testing, setTesting] = useState(false)
+ const [testResult, setTestResult] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
 
  const load = async () => {
   setLoading(true)
@@ -1211,9 +1223,30 @@ function ReviewRequestsSection() {
     setTemplate(j.review_sms_template || j.default_template || '')
     setDefaultTemplate(j.default_template || '')
     setTiming((j.review_send_timing as any) || '1h_after')
+    setStats(j.stats || null)
    }
   } finally {
    setLoading(false)
+  }
+ }
+
+ const sendTest = async () => {
+  setTesting(true); setTestResult(null)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/review-requests/test', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: testPhone }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setTestResult({ tone: 'err', text: j?.error || 'Send failed' })
+   } else {
+    setTestResult({ tone: 'ok', text: `Sent to ${j.sent_to}. Check your phone.` })
+   }
+  } finally {
+   setTesting(false)
+   setTimeout(() => setTestResult(null), 8000)
   }
  }
 
@@ -1353,7 +1386,69 @@ function ReviewRequestsSection() {
       </span>
      )}
     </div>
+
+    {/* Send a test SMS to a number you own. Bypasses the queue/cap so you
+        can verify the wiring works without booking a real appointment. */}
+    <div className="pt-4 mt-4 border-t border-white/5">
+     <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-2">Send test SMS</div>
+     <p className="text-[11px] text-gray-500 mb-2">
+      Type your phone number and we&apos;ll send the actual review SMS using your settings above. Use this to verify your link, your template, and that messages reach the customer.
+     </p>
+     <div className="flex flex-col sm:flex-row gap-2">
+      <input
+       type="tel"
+       value={testPhone}
+       onChange={(e) => setTestPhone(e.target.value)}
+       placeholder="+1 (555) 555-5555"
+       className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-white/30 font-mono"
+      />
+      <button
+       onClick={sendTest}
+       disabled={testing || !testPhone.trim() || !reviewUrl.trim()}
+       className="inline-flex items-center justify-center gap-2 bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-200 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+       title={!reviewUrl.trim() ? 'Add a Google review link above first' : ''}
+      >
+       {testing ? 'Sending…' : 'Send test'}
+      </button>
+     </div>
+     {testResult && (
+      <p className={`text-xs mt-2 ${testResult.tone === 'ok' ? 'text-emerald-300' : 'text-rose-300'}`}>
+       {testResult.text}
+      </p>
+     )}
+    </div>
+
+    {/* Read-only stats so the contractor can see the system is alive. */}
+    {stats && (
+     <div className="pt-4 mt-4 border-t border-white/5">
+      <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-2">Activity</div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+       <Stat label="Queued" value={stats.queued} />
+       <Stat label="Sent (30d)" value={stats.sent_last_30d} />
+       <Stat label="Failed (30d)" value={stats.failed_last_30d} tone={stats.failed_last_30d > 0 ? 'rose' : 'gray'} />
+       <Stat label="Opted out" value={stats.opted_out_count} hint="across all of CloudGreet" />
+      </div>
+      {stats.last_sent_at && (
+       <p className="text-[11px] text-gray-500 mt-2">
+        Last review SMS sent {new Date(stats.last_sent_at).toLocaleString()}
+       </p>
+      )}
+     </div>
+    )}
    </div>
   </section>
+ )
+}
+
+function Stat({ label, value, tone = 'gray', hint }: {
+ label: string; value: number; tone?: 'gray' | 'rose' | 'emerald'; hint?: string
+}) {
+ const color = tone === 'rose' ? 'text-rose-300' : tone === 'emerald' ? 'text-emerald-300' : 'text-gray-200'
+ return (
+  <div className="bg-black/30 border border-white/5 rounded-lg p-3">
+   <div className={`text-2xl font-medium font-mono ${color}`}>{value}</div>
+   <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-gray-500 mt-0.5">{label}</div>
+   {hint && <div className="text-[9px] text-gray-600 mt-0.5">{hint}</div>}
+  </div>
  )
 }
