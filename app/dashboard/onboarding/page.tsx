@@ -413,7 +413,7 @@ function ForwardingStep({
      <h2 className="text-xl font-medium text-gray-900">Your agent is being built</h2>
     </div>
     <p className="text-sm text-gray-500 mt-1">
-     We&apos;re setting up your dedicated AI receptionist - scraping your site, tuning the script for your services, and provisioning your phone number. This usually takes a few minutes. We&apos;ll drop your forwarding code right here the moment it&apos;s ready. If it&apos;s been more than 15 minutes, tap the support link below.
+     We&apos;re setting up your dedicated AI receptionist - scraping your site, tuning the script for your services, and provisioning your phone number. We&apos;ll drop your forwarding code right here the moment it&apos;s ready, before your demo. If you don&apos;t see it by then, tap the support link below.
     </p>
     <div className="mt-5 flex items-center gap-2 text-xs text-gray-500">
      <Loader2 className="w-3.5 h-3.5 animate-spin" />
