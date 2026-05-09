@@ -7,6 +7,7 @@ import {
   cancelQueuedForBusiness,
   getReviewStats,
 } from '@/lib/review-requests'
+import { logImpersonatedAction } from '@/lib/compliance/logging'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -139,6 +140,14 @@ export async function PATCH(request: NextRequest) {
     const r = await cancelQueuedForBusiness(auth.businessId)
     canceledQueued = r.canceled
   }
+
+  // If an admin made this change while impersonating, log both ids.
+  await logImpersonatedAction({
+    auth,
+    action: 'review_requests.update',
+    path: '/api/dashboard/review-requests',
+    metadata: { fields: Object.keys(update) },
+  })
 
   return NextResponse.json({ success: true, canceled_queued: canceledQueued })
 }

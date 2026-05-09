@@ -134,6 +134,35 @@ export async function POST(
       .eq('id', close.id)
   }
 
+  // Idempotency: if there's already a recent session for this close
+  // with the same pricing, hand back the existing URL. Stops a
+  // double-click from creating two Stripe sessions for one prospect.
+  // Rep can pass { force: true } to bypass and mint a fresh one.
+  const force = body?.force === true
+  const cachedExpiresAt = (close as any).latest_payment_session_expires_at as string | null
+  const cachedUrl = (close as any).latest_payment_session_url as string | null
+  const cachedSessionId = (close as any).latest_payment_session_id as string | null
+  const cachedMonthly = (close as any).latest_payment_session_monthly_cents as number | null
+  const cachedSetup = (close as any).latest_payment_session_setup_cents as number | null
+  const cacheValid =
+    !force &&
+    !!cachedUrl &&
+    !!cachedExpiresAt &&
+    new Date(cachedExpiresAt).getTime() > Date.now() &&
+    cachedMonthly === monthlyCents &&
+    (cachedSetup ?? 0) === setupCents
+  if (cacheValid) {
+    logger.info('Rep payment-link reused cached session', {
+      repId: auth.userId, closeId: close.id, sessionId: cachedSessionId,
+    })
+    return NextResponse.json({
+      success: true,
+      url: cachedUrl,
+      reused: true,
+      expires_at: Math.floor(new Date(cachedExpiresAt!).getTime() / 1000),
+    })
+  }
+
   // We require an email so Stripe can identify the customer + send
   // the receipt. If the close didn't capture one, the rep can pass
   // it via the body.
@@ -219,6 +248,22 @@ export async function POST(
   if (!session?.url) {
     return NextResponse.json({ error: 'Stripe did not return a checkout URL' }, { status: 500 })
   }
+
+  // Cache the session on the close so a refresh / double-click hits
+  // the cache branch above instead of creating another Stripe session.
+  await supabaseAdmin
+    .from('closes')
+    .update({
+      latest_payment_session_id: session.id,
+      latest_payment_session_url: session.url,
+      latest_payment_session_expires_at: session.expires_at
+        ? new Date(session.expires_at * 1000).toISOString()
+        : null,
+      latest_payment_session_monthly_cents: monthlyCents,
+      latest_payment_session_setup_cents: setupCents,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', close.id)
 
   // Best-effort heads-up to Anthony so you can see what reps are sending.
   try {

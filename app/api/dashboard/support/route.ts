@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { postToSlack } from '@/lib/notifications/slack'
+import { logImpersonatedAction } from '@/lib/compliance/logging'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -73,6 +74,16 @@ export async function POST(request: NextRequest) {
       error: 'Could not save request - run sql/support-requests.sql',
     }, { status: 500 })
   }
+
+  // If admin filed this while impersonating, log both ids - support
+  // tickets filed under a client account but actually authored by us
+  // would otherwise be indistinguishable in the audit trail.
+  await logImpersonatedAction({
+    auth,
+    action: 'support_request.create',
+    path: '/api/dashboard/support',
+    metadata: { kind, request_id: (inserted as any).id },
+  })
 
   // Best-effort Slack ping. Don't block the response on Slack outcome.
   void (async () => {

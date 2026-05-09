@@ -40,6 +40,41 @@ function scrubPayload(payload: unknown): unknown {
   return payload
 }
 
+/**
+ * Log an admin-impersonating action. No-ops if the auth result wasn't
+ * an impersonation (auth.impersonatorUserId is undefined). When an admin
+ * is acting AS a client and performs a mutation, we record it to
+ * compliance_events with both the real admin's id and the impersonated
+ * user's id so the audit trail can answer "who actually clicked save".
+ *
+ * Cheap and best-effort - never throws on log failure.
+ */
+export async function logImpersonatedAction(args: {
+  auth: { userId?: string; businessId?: string; impersonatorUserId?: string }
+  action: string
+  path?: string
+  metadata?: Record<string, unknown>
+}): Promise<void> {
+  if (!args.auth.impersonatorUserId) return
+  try {
+    await supabaseAdmin.from('compliance_events').insert({
+      tenant_id: args.auth.businessId ?? null,
+      channel: 'onboarding',
+      event_type: `impersonated:${args.action}`,
+      path: args.path ?? null,
+      metadata: {
+        impersonator_user_id: args.auth.impersonatorUserId,
+        acting_as_user_id: args.auth.userId ?? null,
+        ...args.metadata,
+      },
+    })
+  } catch (e) {
+    logger.warn('logImpersonatedAction insert failed', {
+      error: e instanceof Error ? e.message : 'Unknown',
+    })
+  }
+}
+
 export async function logComplianceEvent(input: ComplianceLogInput) {
   try {
     const payload = {

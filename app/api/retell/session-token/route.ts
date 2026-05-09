@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/monitoring'
 import { verifyJWT } from '@/lib/auth-middleware'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -14,6 +15,21 @@ export async function POST(request: NextRequest) {
  { success: false, error: 'Unauthorized' },
  { status: 401 }
  )
+ }
+
+ // Rate limit: 10 tokens per user per minute. Each Retell session
+ // token is short-lived but still costs and counts against quota;
+ // a buggy or malicious client could otherwise mint thousands a minute.
+ const rateOk = rateLimit(
+  `retell-session-token:${(authResult.user as any).userId || (authResult.user as any).id || 'anon'}`,
+  10,
+  60_000,
+ )
+ if (!rateOk) {
+  return NextResponse.json(
+   { success: false, error: 'too_many_requests' },
+   { status: 429 },
+  )
  }
 
  const apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY

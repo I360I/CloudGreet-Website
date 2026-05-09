@@ -10,6 +10,14 @@ export interface AuthResult {
   businessId?: string
   role?: string
   error?: string
+  /**
+   * If an admin is currently impersonating this user, this is the
+   * REAL admin's userId - decoded from the parallel `impersonator_token`
+   * cookie. Mutation handlers should log it to compliance_events so the
+   * audit trail captures who actually performed the action, not just
+   * the impersonated identity.
+   */
+  impersonatorUserId?: string
 }
 
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
@@ -29,20 +37,36 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     if (!token) {
       return { success: false, error: 'Missing auth token' }
     }
-    
+
     // Check if JWT_SECRET is configured
     if (!process.env.JWT_SECRET) {
       logger.error('JWT_SECRET not configured')
       return { success: false, error: 'Authentication not configured' }
     }
-    
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload
-    
+
+    // If an admin is impersonating, the real admin's token sits in
+    // a parallel cookie. Decode best-effort and surface to the caller
+    // so write handlers can record both ids in audit logs.
+    let impersonatorUserId: string | undefined
+    const impersonatorToken = request.cookies.get('impersonator_token')?.value
+    if (impersonatorToken) {
+      try {
+        const impDecoded = jwt.verify(impersonatorToken, process.env.JWT_SECRET) as JWTPayload
+        impersonatorUserId = impDecoded.userId
+      } catch {
+        // Invalid/expired impersonator token = ignore. The main session
+        // is still valid; the audit is just thinner for this request.
+      }
+    }
+
     return {
       success: true,
       userId: decoded.userId,
       businessId: decoded.businessId,
-      role: decoded.role ?? 'user'
+      role: decoded.role ?? 'user',
+      impersonatorUserId,
     }
   } catch (error) {
     // Handle JWT errors gracefully - these should return 401, not 500
