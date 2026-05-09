@@ -1,11 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw, FileText, Activity, Gauge } from 'lucide-react'
+import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw, FileText, Activity, Gauge, LifeBuoy } from 'lucide-react'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
 
 const TOOLS: { href: string; label: string; description: string; icon: React.ElementType }[] = [
+ {
+  href: '/admin/support-requests',
+  label: 'Support requests',
+  description: 'Contractor-submitted change requests + messages from the dashboard support button. Triage queue with admin notes and status flips. Slack pings on every new submission.',
+  icon: LifeBuoy,
+ },
  {
   href: '/admin/system-health',
   label: 'System health',

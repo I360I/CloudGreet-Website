@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
  LayoutDashboard, PhoneCall, Calendar, Settings, CreditCard, LogOut, Wand2,
 } from 'lucide-react'
+import { SupportButton } from './SupportButton'
 
 type Item = { icon: React.ElementType; label: string; href: string; match: (pathname: string) => boolean }
 
@@ -58,6 +59,7 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
      <div className="text-xs text-gray-500 mb-1">Signed in as</div>
      <div className="text-sm font-medium text-gray-900 truncate">{businessName}</div>
     </div>
+    <SupportButton />
     <button onClick={onSignOut}
      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-gray-900 hover:bg-black/[.04] transition-all duration-300 ease-out"
     >
