@@ -1,11 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw, FileText, Activity } from 'lucide-react'
+import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw, FileText, Activity, Gauge } from 'lucide-react'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
 
 const TOOLS: { href: string; label: string; description: string; icon: React.ElementType }[] = [
+ {
+  href: '/admin/system-health',
+  label: 'System health',
+  description: 'One-page operator dashboard. Env vars, Telnyx balance, demos in next 24h, abandoned onboardings, stuck agents, dunning, recent paid closes, calls under 30s, cron heartbeat. No fake values - sections that can\'t be computed say so explicitly.',
+  icon: Gauge,
+ },
  {
   href: '/admin/telnyx-health',
   label: 'Telnyx health',
