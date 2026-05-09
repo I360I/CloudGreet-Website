@@ -116,8 +116,13 @@ export default function TelnyxHealthPage() {
               In Telnyx: <span className="text-gray-200">Messaging → Messaging Profiles → your profile → Inbound Settings → Webhook URL</span>. Paste this:
             </p>
             <CopyRow label="Inbound SMS" value={data.expected_webhooks.inbound_sms} copied={copied === 'in_sms'} onCopy={() => copy(data.expected_webhooks.inbound_sms, 'in_sms')} />
-            <p className="text-xs text-gray-400 mt-4 mb-3">
-              And for voice (if used): <span className="text-gray-200">Voice → SIP Connections → your connection → Webhook URL</span>:
+            <p className="text-xs text-gray-400 mt-4 mb-1">
+              Voice (most likely <em>not</em> needed):
+            </p>
+            <p className="text-[11px] text-gray-500 mb-2 leading-relaxed">
+              Only set this if you&apos;re routing calls through us before Retell (Telnyx → our app → SIP bridge → Retell).
+              The default CloudGreet setup is Telnyx → Retell number directly, in which case
+              leave Telnyx&apos;s voice webhook blank — Retell hits us at <span className="font-mono text-gray-400">/api/retell/voice-webhook</span> on its own.
             </p>
             <CopyRow label="Voice" value={data.expected_webhooks.voice} copied={copied === 'voice'} onCopy={() => copy(data.expected_webhooks.voice, 'voice')} />
             <a
