@@ -63,6 +63,12 @@ There's a separate `/api/sms/webhook/route.ts` that DOES verify signatures (uses
 **Why**: Tells an attacker exactly which integrations are wired (Stripe, Telnyx, Retell, OpenAI, Resend, Redis, etc.) and which are misconfigured. Useful recon before targeting a specific weak link.
 **Fix**: Gate on `requireAdmin`. Same pattern I applied to `/api/debug/whoami`.
 
+### 7b. `/api/health` (the simple one) leaks per-env-var presence + DB error string
+
+**Where**: `app/api/health/route.ts:23-28, 36-37`.
+**Why**: The simpler `/api/health` (used by load balancers) is also public. It returns `{ checks: { RETELL_API_KEY: bool, TELNYX_API_KEY: bool, STRIPE_SECRET_KEY: bool, ... } }`, plus the raw DB error message on failure (line 37: `checks.DATABASE_ERROR = error.message`). Same recon problem as #7. Plus DB error strings can include connection-string fragments / table names.
+**Fix**: Strip detailed checks from the public response — return `{ status: 'ok' | 'degraded', timestamp }` only. Move the detailed flags behind admin auth or to `/api/admin/system-health` (which is already gated).
+
 ### 8. `/api/monitoring/error` is public, no rate limit, free log spam vector
 
 **Where**: `app/api/monitoring/error/route.ts:13`.
@@ -154,6 +160,20 @@ Every JWT verification path goes through `lib/auth-middleware.ts` or `lib/jwt-ma
 ### 22. SMS opt-out logic is solid
 
 `lib/review-requests.ts` re-checks opt-out at send time (not just at schedule time) — line 297-306 in the cron worker. Catches the case where a customer texts STOP between scheduling and sending. Good defense-in-depth.
+
+### 22b. Tenant-scoping spot-check passed
+
+I sampled `/api/dashboard/calendar`, `/api/dashboard/metrics`, `/api/dashboard/overview`, `/api/sales/closes`, `/api/sales/leads`, `/api/sales/earnings`, `/api/sales/clients`, `/api/sales/clients/[id]/agent`, `/api/sales/clients/[id]/calcom`. All scope by `business_id`/`rep_id`/`auth.userId` correctly. None take a tenant ID from the request body. No body-id-trust bugs in the sample.
+
+I did NOT exhaustively sample all 183 API routes — would be guessing if I claimed full coverage. The pattern across the sample is tight, which is reassuring, but a paranoid pre-launch audit would script-check every Supabase query against an "auth scope filter exists" rule. Out of scope for this pass.
+
+### 22c. Admin-routes coverage
+
+Of all routes under `/api/admin`, only `/api/admin/end-impersonation` skips `requireAdmin`. That's by design — the endpoint validates the stashed `impersonator_token` itself before swapping back to the original admin session. Correct.
+
+### 22d. Force-dynamic coverage on user-scoped APIs
+
+Every route under `/api/dashboard` and `/api/sales` (52 files) declares `export const dynamic = 'force-dynamic'`. Combined with the `next.config.js` cache-header fix from earlier today, no user-scoped response is at risk of being served to another user from edge cache. Confirmed by direct search.
 
 ### 23. Universal CloudGreet behavior layer composes correctly
 
