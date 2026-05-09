@@ -72,6 +72,78 @@ export async function POST(
       }, { status: 500 })
     }
 
+    // When we flip to ready, propagate the Retell test number into the
+    // canonical sources the client dashboard reads from (phone_numbers
+    // table + ai_agents.phone_number + businesses.phone_number). Without
+    // this, the contractor's onboarding page sits on "your agent is being
+    // built" forever even though we just gave their rep a working test
+    // number to demo with. Failures here are best-effort - we log but
+    // don't fail the whole request, since Slack still pings and the rep
+    // still gets the test # on their close.
+    if (touchedReady && update.demo_agent_test_phone) {
+      void (async () => {
+        const testPhone = update.demo_agent_test_phone as string
+        try {
+          const { data: closeRow } = await supabaseAdmin
+            .from('closes')
+            .select('business_id')
+            .eq('id', params.closeId)
+            .maybeSingle()
+          const businessId = (closeRow as any)?.business_id as string | null
+          if (!businessId) return  // unprovisioned close, nothing to propagate to
+
+          // 1. phone_numbers (provider='retell') - the primary source the
+          //    dashboard's TopBar + onboarding wizard read from.
+          const { data: existingPN } = await supabaseAdmin
+            .from('phone_numbers')
+            .select('id')
+            .eq('business_id', businessId)
+            .eq('provider', 'retell')
+            .maybeSingle()
+          if (existingPN) {
+            await supabaseAdmin
+              .from('phone_numbers')
+              .update({ phone_number: testPhone, updated_at: new Date().toISOString() })
+              .eq('id', (existingPN as any).id)
+          } else {
+            await supabaseAdmin
+              .from('phone_numbers')
+              .insert({
+                business_id: businessId,
+                provider: 'retell',
+                phone_number: testPhone,
+              })
+          }
+
+          // 2. ai_agents.phone_number - fallback the dashboard checks if
+          //    phone_numbers is empty. Some older clients only have this row.
+          const { data: aiAgent } = await supabaseAdmin
+            .from('ai_agents')
+            .select('id')
+            .eq('business_id', businessId)
+            .maybeSingle()
+          if (aiAgent) {
+            await supabaseAdmin
+              .from('ai_agents')
+              .update({ phone_number: testPhone, updated_at: new Date().toISOString() })
+              .eq('id', (aiAgent as any).id)
+          }
+
+          // 3. businesses.phone_number - the legacy column. Cheap to keep
+          //    in sync so any code path still reading it gets the right value.
+          await supabaseAdmin
+            .from('businesses')
+            .update({ phone_number: testPhone, updated_at: new Date().toISOString() })
+            .eq('id', businessId)
+        } catch (e) {
+          logger.warn('test-phone propagation failed (best-effort)', {
+            closeId: params.closeId,
+            error: e instanceof Error ? e.message : 'Unknown',
+          })
+        }
+      })()
+    }
+
     // Slack ping when the demo agent flips to ready - the rep + client
     // dashboards now reflect it, so this is the "complete" signal. Set
     // SLACK_AGENT_COMPLETE_MENTIONS in env to a space-separated list of

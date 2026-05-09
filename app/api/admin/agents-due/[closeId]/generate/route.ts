@@ -5,6 +5,7 @@ import { logger } from '@/lib/monitoring'
 import { buildBusinessContext } from '@/lib/agent-builder/build-context'
 import { generateAgentPrompt } from '@/lib/agent-builder/generate'
 import { validatePrompt } from '@/lib/agent-builder/validate'
+import { composeFinalPrompt } from '@/lib/agent-builder/universal-layer'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -90,16 +91,23 @@ export async function POST(
       return NextResponse.json({ error: gen.error }, { status: 500 })
     }
 
-    // 4. Validate.
+    // 4. Validate the model-generated portion (before we splice the
+    //    universal block, which is hand-tuned and trusted).
     const validation = validatePrompt(gen.prompt, ctx)
 
-    // 5. Save.
+    // 5. Compose the final prompt: business-specific section from the
+    //    model + the universal CloudGreet receptionist behavior layer
+    //    (do-not-repeat, email readback, numbers-as-words, defensive
+    //    language, etc.). Stored prompt = what gets pasted into Retell.
+    const finalPrompt = composeFinalPrompt(gen.prompt)
+
+    // 6. Save.
     const { error: saveErr } = await supabaseAdmin
       .from('closes')
       .update({
         agent_draft_status: 'ready',
         agent_draft_context: ctx,
-        agent_draft_prompt: gen.prompt,
+        agent_draft_prompt: finalPrompt,
         agent_draft_validation: validation,
         agent_draft_cost_micro: Math.round(Number(gen.cost_micro) || 0),
         agent_draft_generated_at: new Date().toISOString(),
