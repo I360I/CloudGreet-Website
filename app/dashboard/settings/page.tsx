@@ -1201,7 +1201,10 @@ type ReviewStats = {
 function ReviewRequestsSection() {
  const [loading, setLoading] = useState(true)
  const [saving, setSaving] = useState(false)
- const [enabled, setEnabled] = useState(false)
+ // Default ON. The contractor can flip it off if they don't want it,
+ // but the value of the feature only happens when it's enabled, so
+ // making them opt-in is friction for no upside.
+ const [enabled, setEnabled] = useState(true)
  const [reviewUrl, setReviewUrl] = useState('')
  const [template, setTemplate] = useState('')
  const [defaultTemplate, setDefaultTemplate] = useState('')
@@ -1286,44 +1289,37 @@ function ReviewRequestsSection() {
 
  if (loading) return null
 
+ const dim = !enabled
+
  return (
-  <section className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 sm:p-6">
-   <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
+  <div className="bg-white border border-gray-200 rounded-2xl p-6">
+   <div className="flex items-start justify-between gap-4 mb-1 flex-wrap">
     <div>
-     <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1">Automatic follow-ups</div>
-     <h2 className="text-base font-medium text-white">Review requests</h2>
-     <p className="text-sm text-gray-400 mt-1.5 max-w-prose">
+     <h2 className="text-sm font-medium text-gray-700">Review requests</h2>
+     <p className="text-xs text-gray-500 mt-1 max-w-prose leading-relaxed">
       After every appointment your AI books, automatically text the customer asking for a Google review. The AI asks for consent on the call first — only customers who say yes get the text. 90-day cap per customer, sends only between 9am-7pm local, STOP-to-opt-out is automatic.
      </p>
     </div>
-    <label className="inline-flex items-center gap-2 cursor-pointer">
-     <input
-      type="checkbox"
-      checked={enabled}
-      onChange={(e) => setEnabled(e.target.checked)}
-      className="w-4 h-4 rounded border-white/20 bg-black/40"
-     />
-     <span className="text-xs font-mono uppercase tracking-[0.18em] text-gray-300">{enabled ? 'On' : 'Off'}</span>
-    </label>
+    <Toggle checked={enabled} onChange={setEnabled} />
    </div>
 
-   <div className="space-y-4">
+   <div className={`space-y-5 mt-5 ${dim ? 'opacity-50 pointer-events-none' : ''}`}>
     <div>
-     <label className="block text-xs font-medium text-gray-300 mb-1.5">Your Google review link</label>
+     <label className="block text-xs font-medium text-gray-700 mb-1.5">Your Google review link</label>
      <input
       type="url"
       value={reviewUrl}
       onChange={(e) => setReviewUrl(e.target.value)}
       placeholder="https://g.page/r/your-business/review"
-      className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-white/30 font-mono"
+      className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors font-mono"
      />
      <p className="text-[11px] text-gray-500 mt-1">
-      Get this from <a href="https://www.google.com/business/" target="_blank" rel="noopener noreferrer" className="text-sky-400 hover:underline">Google Business Profile</a> → Customers → Reviews → "Get more reviews".
+      Get this from <a href="https://www.google.com/business/" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline">Google Business Profile</a> → Customers → Reviews → &quot;Get more reviews&quot;.
      </p>
     </div>
 
     <div>
-     <label className="block text-xs font-medium text-gray-300 mb-1.5">When to send</label>
+     <label className="block text-xs font-medium text-gray-700 mb-1.5">When to send</label>
      <div className="flex flex-wrap gap-2">
       {[
        { value: '1h_after',           label: '1 hour after appointment' },
@@ -1336,8 +1332,8 @@ function ReviewRequestsSection() {
         onClick={() => setTiming(opt.value as any)}
         className={`text-xs px-3 py-1.5 rounded-md border transition-colors ${
          timing === opt.value
-          ? 'bg-white text-gray-900 border-white'
-          : 'bg-transparent text-gray-300 border-white/10 hover:border-white/30'
+          ? 'bg-gray-900 text-white border-gray-900'
+          : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
         }`}
        >
         {opt.label}
@@ -1348,40 +1344,40 @@ function ReviewRequestsSection() {
     </div>
 
     <div>
-     <label className="block text-xs font-medium text-gray-300 mb-1.5">Message template</label>
+     <label className="block text-xs font-medium text-gray-700 mb-1.5">Message template</label>
      <textarea
       value={template}
       onChange={(e) => setTemplate(e.target.value)}
       rows={3}
       placeholder={defaultTemplate}
-      className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-white/30 font-mono resize-y"
+      className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors font-mono resize-y"
      />
      <p className="text-[11px] text-gray-500 mt-1">
-      Variables: <code className="text-gray-400">{'{first_name}'}</code> <code className="text-gray-400">{'{business_name}'}</code> <code className="text-gray-400">{'{review_link}'}</code>. Leave blank for the default.
+      Variables: <code className="text-gray-700 bg-gray-100 rounded px-1">{'{first_name}'}</code> <code className="text-gray-700 bg-gray-100 rounded px-1">{'{business_name}'}</code> <code className="text-gray-700 bg-gray-100 rounded px-1">{'{review_link}'}</code>. Leave blank for the default.
      </p>
     </div>
 
-    <div className="rounded-lg bg-black/30 border border-white/5 p-3">
-     <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1.5">Preview</div>
-     <p className="text-sm text-gray-200 leading-relaxed">{renderPreview(template)}</p>
+    <div className="rounded-xl bg-gray-50 border border-gray-200 p-3.5">
+     <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-gray-500 mb-1.5">Preview</div>
+     <p className="text-sm text-gray-800 leading-relaxed">{renderPreview(template)}</p>
     </div>
 
     <div className="flex items-center gap-3 flex-wrap">
      <button
       onClick={save}
       disabled={saving}
-      className="inline-flex items-center gap-2 bg-white text-gray-900 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+      className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
      >
       {saving ? 'Saving…' : 'Save'}
      </button>
      <button
       onClick={() => setTemplate(defaultTemplate)}
-      className="inline-flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-gray-200 px-4 py-2 rounded-lg text-sm font-medium"
+      className="inline-flex items-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
      >
       Reset to default
      </button>
      {flash && (
-      <span className={`text-xs ${flash.tone === 'ok' ? 'text-emerald-300' : 'text-rose-300'}`}>
+      <span className={`text-xs ${flash.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>
        {flash.text}
       </span>
      )}
@@ -1389,8 +1385,8 @@ function ReviewRequestsSection() {
 
     {/* Send a test SMS to a number you own. Bypasses the queue/cap so you
         can verify the wiring works without booking a real appointment. */}
-    <div className="pt-4 mt-4 border-t border-white/5">
-     <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-2">Send test SMS</div>
+    <div className="pt-5 mt-5 border-t border-gray-100">
+     <div className="text-xs font-medium text-gray-700 mb-1">Send test SMS</div>
      <p className="text-[11px] text-gray-500 mb-2">
       Type your phone number and we&apos;ll send the actual review SMS using your settings above. Use this to verify your link, your template, and that messages reach the customer.
      </p>
@@ -1400,19 +1396,19 @@ function ReviewRequestsSection() {
        value={testPhone}
        onChange={(e) => setTestPhone(e.target.value)}
        placeholder="+1 (555) 555-5555"
-       className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:border-white/30 font-mono"
+       className="flex-1 bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors font-mono"
       />
       <button
        onClick={sendTest}
        disabled={testing || !testPhone.trim() || !reviewUrl.trim()}
-       className="inline-flex items-center justify-center gap-2 bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-200 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+       className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
        title={!reviewUrl.trim() ? 'Add a Google review link above first' : ''}
       >
        {testing ? 'Sending…' : 'Send test'}
       </button>
      </div>
      {testResult && (
-      <p className={`text-xs mt-2 ${testResult.tone === 'ok' ? 'text-emerald-300' : 'text-rose-300'}`}>
+      <p className={`text-xs mt-2 ${testResult.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>
        {testResult.text}
       </p>
      )}
@@ -1420,8 +1416,8 @@ function ReviewRequestsSection() {
 
     {/* Read-only stats so the contractor can see the system is alive. */}
     {stats && (
-     <div className="pt-4 mt-4 border-t border-white/5">
-      <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-2">Activity</div>
+     <div className="pt-5 mt-5 border-t border-gray-100">
+      <div className="text-xs font-medium text-gray-700 mb-2">Activity</div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
        <Stat label="Queued" value={stats.queued} />
        <Stat label="Sent (30d)" value={stats.sent_last_30d} />
@@ -1436,19 +1432,41 @@ function ReviewRequestsSection() {
      </div>
     )}
    </div>
-  </section>
+  </div>
+ )
+}
+
+/** Small iOS-style toggle. */
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+ return (
+  <button
+   type="button"
+   role="switch"
+   aria-checked={checked}
+   onClick={() => onChange(!checked)}
+   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 ${
+    checked ? 'bg-emerald-500' : 'bg-gray-300'
+   }`}
+  >
+   <span
+    aria-hidden="true"
+    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${
+     checked ? 'translate-x-5' : 'translate-x-0'
+    }`}
+   />
+  </button>
  )
 }
 
 function Stat({ label, value, tone = 'gray', hint }: {
  label: string; value: number; tone?: 'gray' | 'rose' | 'emerald'; hint?: string
 }) {
- const color = tone === 'rose' ? 'text-rose-300' : tone === 'emerald' ? 'text-emerald-300' : 'text-gray-200'
+ const color = tone === 'rose' ? 'text-rose-700' : tone === 'emerald' ? 'text-emerald-700' : 'text-gray-900'
  return (
-  <div className="bg-black/30 border border-white/5 rounded-lg p-3">
-   <div className={`text-2xl font-medium font-mono ${color}`}>{value}</div>
+  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+   <div className={`text-2xl font-medium font-mono tabular-nums ${color}`}>{value}</div>
    <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-gray-500 mt-0.5">{label}</div>
-   {hint && <div className="text-[9px] text-gray-600 mt-0.5">{hint}</div>}
+   {hint && <div className="text-[9px] text-gray-400 mt-0.5">{hint}</div>}
   </div>
  )
 }
