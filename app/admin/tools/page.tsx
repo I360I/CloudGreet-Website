@@ -1,11 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw, FileText } from 'lucide-react'
+import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw, FileText, Mic } from 'lucide-react'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
 
 const TOOLS: { href: string; label: string; description: string; icon: React.ElementType }[] = [
+ {
+  href: '/admin/elevenlabs-test',
+  label: 'ElevenLabs sanity check',
+  description: 'Pre-migration test. Ping the API, spin up a throwaway receptionist agent, talk to it in the browser. Decides whether we commit to the migration.',
+  icon: Mic,
+ },
  {
   href: '/admin/tools/scraper',
   label: 'Lead scraper',

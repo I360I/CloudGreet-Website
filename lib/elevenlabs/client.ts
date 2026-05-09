@@ -120,7 +120,7 @@ export type AgentTtsConfig = {
   similarity_boost?: number
   /** 0.7 - 1.2 (talking speed; 1.0 = native) */
   speed?: number
-  /** Late-2025+ voices use this instead of style/speaker_boost. */
+  /** May or may not exist on current API version - safe to omit. */
   expressive_mode?: boolean
 }
 
@@ -320,6 +320,11 @@ export async function startOutboundCall(input: {
     dynamic_variables?: Record<string, string | number | boolean>
     /** Per-call overrides to first_message, voice, etc. */
     conversation_config_override?: Partial<AgentConversationConfig>
+  }
+  /** Telephony controls added in 2026 - ringing timeout etc. */
+  telephony_call_config?: {
+    /** Hang up if the callee doesn't pick up within N seconds (default 60). */
+    ringing_timeout_secs?: number
   }
 }) {
   return request<{
