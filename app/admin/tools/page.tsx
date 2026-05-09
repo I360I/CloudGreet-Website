@@ -1,11 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw, FileText } from 'lucide-react'
+import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw, FileText, Activity } from 'lucide-react'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
 
 const TOOLS: { href: string; label: string; description: string; icon: React.ElementType }[] = [
+ {
+  href: '/admin/telnyx-health',
+  label: 'Telnyx health',
+  description: 'Verify env vars, copy webhook URLs to paste into Telnyx, see recent inbound opt-outs + outbound sends + failures. Walk this when setting up a new number or when SMS isn\'t flowing.',
+  icon: Activity,
+ },
  {
   href: '/admin/tools/scraper',
   label: 'Lead scraper',
