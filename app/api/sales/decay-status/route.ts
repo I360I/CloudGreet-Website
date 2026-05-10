@@ -24,24 +24,24 @@ export async function GET(request: NextRequest) {
   try {
     const { data: rep } = await supabaseAdmin
       .from('sales_reps')
-      .select('created_at, last_close_at')
+      .select('created_at')
       .eq('id', auth.userId)
       .maybeSingle()
 
-    // last_close_at column may be missing on older deployments; fall
-    // back to a live MAX() over closes so the banner still works.
-    let lastCloseAt: string | null = (rep as any)?.last_close_at ?? null
-    if (!lastCloseAt) {
-      const { data: row } = await supabaseAdmin
-        .from('closes')
-        .select('created_at')
-        .eq('rep_id', auth.userId)
-        .not('status', 'in', '(cancelled,rejected)')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      lastCloseAt = row?.created_at ?? null
-    }
+    // Anchor "last close" to the most recent PAID commission, not to
+    // close-form submission. A rep clicking "Submit close" doesn't
+    // reset the decay clock — only money actually landing in Stripe
+    // (which writes a commission_ledger row from the invoice.paid
+    // webhook) does. Keeps the incentive honest: pending paperwork
+    // doesn't count.
+    const { data: row } = await supabaseAdmin
+      .from('commission_ledger')
+      .select('earned_at')
+      .eq('rep_id', auth.userId)
+      .order('earned_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const lastCloseAt: string | null = row?.earned_at ?? null
 
     const repStartedAt = (rep as any)?.created_at ?? new Date().toISOString()
     const state = computeDecayState({ lastCloseAt, repStartedAt })

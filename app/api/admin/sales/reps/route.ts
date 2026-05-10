@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
  const reps = users || []
  const repIds = reps.map((r) => r.id)
 
- const [{ data: profiles }, { data: ledger }, { data: closes }, { data: invites }] = await Promise.all([
+ const [{ data: profiles }, { data: ledger }, { data: invites }] = await Promise.all([
   repIds.length
    ? supabaseAdmin.from('sales_reps').select('*').in('id', repIds)
    : Promise.resolve({ data: [] as any[] }),
@@ -54,15 +54,6 @@ export async function GET(request: NextRequest) {
       .select('rep_id, commission_cents, payout_id, earned_at')
       .in('rep_id', repIds)
    : Promise.resolve({ data: [] as any[] }),
-  // Pull qualifying closes (any status except cancelled/rejected) so we
-  // can compute "days since last close" per rep for the decay column.
-  repIds.length
-   ? supabaseAdmin
-      .from('closes')
-      .select('rep_id, created_at, status')
-      .in('rep_id', repIds)
-      .not('status', 'in', '(cancelled,rejected)')
-   : Promise.resolve({ data: [] as any[] }),
   supabaseAdmin
    .from('sales_rep_invites')
    .select('token, email, invited_at, expires_at, consumed_at')
@@ -70,11 +61,15 @@ export async function GET(request: NextRequest) {
    .order('invited_at', { ascending: false }),
  ])
 
+ // Decay clock resets on PAID commission, not on close-form submission.
+ // Walk the ledger we already pulled above and keep the latest earned_at
+ // per rep.
  const lastCloseByRep = new Map<string, string>()
- for (const c of closes || []) {
-  const prev = lastCloseByRep.get(c.rep_id)
-  if (!prev || new Date(c.created_at) > new Date(prev)) {
-   lastCloseByRep.set(c.rep_id, c.created_at)
+ for (const row of ledger || []) {
+  if (!row.earned_at) continue
+  const prev = lastCloseByRep.get(row.rep_id)
+  if (!prev || new Date(row.earned_at) > new Date(prev)) {
+   lastCloseByRep.set(row.rep_id, row.earned_at)
   }
  }
 
