@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { nextBusinessSlot, clampToBusinessHours } from '@/lib/sales/business-hours'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -92,8 +93,10 @@ export async function PATCH(
   }
 
   // When a call is marked as voicemail, auto-schedule a follow-up
-  // in 2 days (9am) - unless the rep is also setting follow_up_at
-  // explicitly in this request, or one is already on the row.
+  // in 2 days at 9am Central - unless the rep is also setting
+  // follow_up_at explicitly in this request, or one is already on
+  // the row. Previously this used setHours(9) which is server-local
+  // (UTC on Vercel), so reps were seeing 4am callbacks.
   if (update.status === 'voicemail' && body.follow_up_at === undefined) {
     const { data: cur } = await supabaseAdmin
       .from('lead_assignments')
@@ -102,10 +105,7 @@ export async function PATCH(
       .eq('lead_id', params.id)
       .maybeSingle()
     if (!cur?.follow_up_at) {
-      const d = new Date()
-      d.setDate(d.getDate() + 2)
-      d.setHours(9, 0, 0, 0)
-      update.follow_up_at = d.toISOString()
+      update.follow_up_at = nextBusinessSlot({ daysFromNow: 2 }).toISOString()
     }
   }
   if (typeof body.disposition === 'string') {
@@ -121,7 +121,10 @@ export async function PATCH(
       if (isNaN(d.getTime())) {
         return NextResponse.json({ error: 'Invalid follow_up_at' }, { status: 400 })
       }
-      update.follow_up_at = d.toISOString()
+      // Clamp to business hours (Mon-Fri 9am-6pm Central). If a rep
+      // somehow picks 4am, push it to 9am same day. If they pick a
+      // weekend, push to Monday morning. Stops "Tmrw 4:00 AM" callbacks.
+      update.follow_up_at = clampToBusinessHours(d).toISOString()
     }
   }
 
