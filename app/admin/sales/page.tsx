@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { CircleNotch, Plus, UserPlus, Envelope, Copy, ArrowSquareOut, WarningCircle, CheckCircle, Trophy, CurrencyDollar } from '@phosphor-icons/react'
+import { CircleNotch, Plus, UserPlus, Envelope, Copy, ArrowSquareOut, WarningCircle, CheckCircle, Trophy, CurrencyDollar, Eye, X } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, PrimaryButton, GhostButton, Input } from '../_components/ui'
@@ -45,6 +45,39 @@ export default function AdminSalesPage() {
  const [showInvite, setShowInvite] = useState(false)
  const [runningPayouts, setRunningPayouts] = useState(false)
  const [payoutResult, setPayoutResult] = useState<string | null>(null)
+ const [preview, setPreview] = useState<null | {
+  rep_count: number
+  total_would_pay_cents: number
+  results: Array<{
+   rep_id: string
+   rep_email: string | null
+   rep_name: string | null
+   status: 'would_transfer' | 'skipped_too_small' | 'skipped_no_connect' | 'skipped_terminated' | 'skipped_no_owed'
+   amount_cents: number
+   ledger_count: number
+   stripe_payouts_enabled: boolean
+  }>
+ }>(null)
+ const [previewLoading, setPreviewLoading] = useState(false)
+ const [previewErr, setPreviewErr] = useState('')
+
+ const loadPreview = async () => {
+  setPreviewLoading(true); setPreviewErr('')
+  try {
+   const res = await fetchWithAuth('/api/admin/sales/payouts/preview')
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
+   setPreview({
+    rep_count: j.rep_count,
+    total_would_pay_cents: j.total_would_pay_cents,
+    results: j.results || [],
+   })
+  } catch (e) {
+   setPreviewErr(e instanceof Error ? e.message : 'Failed')
+  } finally {
+   setPreviewLoading(false)
+  }
+ }
 
  const runPayouts = async () => {
   if (!confirm(
@@ -116,6 +149,15 @@ export default function AdminSalesPage() {
       </div>
       <div className="flex items-center gap-2 flex-wrap">
        <button
+        onClick={loadPreview}
+        disabled={previewLoading}
+        title="Dry-run: shows what each rep would receive without firing transfers"
+        className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-white border border-white/10 hover:border-white/20 rounded-lg px-3 py-2 disabled:opacity-60 transition-colors"
+       >
+        {previewLoading ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+        Preview payouts
+       </button>
+       <button
         onClick={runPayouts}
         disabled={runningPayouts}
         title="Friday cron runs this automatically - manual trigger for off-cycle payouts"
@@ -140,6 +182,64 @@ export default function AdminSalesPage() {
        </div>
       )}
      </header>
+
+     {(preview || previewErr) && (
+      <Panel padding="none">
+       <div className="px-5 sm:px-6 py-4 border-b border-white/[0.06] flex items-center justify-between gap-3">
+        <div>
+         <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Dry-run</div>
+         <div className="text-sm text-white mt-0.5">
+          {preview
+           ? `${preview.results.filter((r) => r.status === 'would_transfer').length} of ${preview.rep_count} reps would transfer · ${fmtMoney(preview.total_would_pay_cents)} total`
+           : 'Preview failed'}
+         </div>
+        </div>
+        <button
+         onClick={() => { setPreview(null); setPreviewErr('') }}
+         className="p-1 text-gray-400 hover:text-white"
+         aria-label="Close"
+        >
+         <X className="w-4 h-4" />
+        </button>
+       </div>
+       {previewErr ? (
+        <div className="px-5 sm:px-6 py-4 text-sm text-rose-300">{previewErr}</div>
+       ) : preview && preview.results.length === 0 ? (
+        <div className="px-5 sm:px-6 py-6 text-sm text-gray-500">
+         No reps have unpaid commission. Pressing Run payouts would do nothing.
+        </div>
+       ) : (
+        <ul className="divide-y divide-white/[0.04]">
+         {preview!.results.map((r) => (
+          <li key={r.rep_id} className="px-5 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+           <div className="min-w-0">
+            <div className="text-sm text-gray-200 truncate">
+             {r.rep_name || r.rep_email || r.rep_id}
+            </div>
+            <div className="text-[11px] text-gray-500 mt-0.5">
+             {r.ledger_count} ledger row{r.ledger_count === 1 ? '' : 's'}
+             {' · '}
+             {r.stripe_payouts_enabled ? 'Connect ready' : 'Connect not ready'}
+            </div>
+           </div>
+           <div className="text-right">
+            <div className="text-sm text-white">
+             {r.status === 'would_transfer' ? fmtMoney(r.amount_cents) : '—'}
+            </div>
+            <div className={`text-[11px] mt-0.5 ${
+             r.status === 'would_transfer' ? 'text-emerald-300'
+              : r.status === 'skipped_no_owed' ? 'text-gray-500'
+              : 'text-amber-300'
+            }`}>
+             {previewStatusLabel(r.status, r.amount_cents)}
+            </div>
+           </div>
+          </li>
+         ))}
+        </ul>
+       )}
+      </Panel>
+     )}
 
      {/* KPI strip */}
      <div className="grid sm:grid-cols-3 gap-3">
@@ -395,4 +495,15 @@ function fmtMoney(cents: number): string {
 }
 function fmtDate(iso: string): string {
  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function previewStatusLabel(status: string, amount_cents: number): string {
+ switch (status) {
+  case 'would_transfer': return 'Would transfer'
+  case 'skipped_too_small': return `Below $1.00 minimum (${fmtMoney(amount_cents)} rolls over)`
+  case 'skipped_no_connect': return 'Stripe Connect not set up'
+  case 'skipped_terminated': return 'Rep terminated'
+  case 'skipped_no_owed': return 'Nothing owed'
+  default: return status
+ }
 }
