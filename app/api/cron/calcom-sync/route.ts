@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { syncAllCalendars } from '@/lib/calcom-sync'
 import { logger } from '@/lib/monitoring'
+import { checkCronAuth } from '@/lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -13,8 +14,17 @@ export const runtime = 'nodejs'
  * appointments table. Backstop for the webhook so missed deliveries
  * (registration failure, network blip, manual booking inside Cal.com)
  * don't leave the dashboard stale.
+ *
+ * Auth: requires CRON_SECRET in production. The job hits Cal.com APIs
+ * with every connected contractor's key - public exposure would let an
+ * attacker fan out rate-limit pressure across the whole tenant base.
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+  const denial = checkCronAuth(request)
+  if (denial) {
+    logger.warn('Unauthorized calcom-sync cron attempt', { reason: denial })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const start = Date.now()
   try {
     const summary = await syncAllCalendars()

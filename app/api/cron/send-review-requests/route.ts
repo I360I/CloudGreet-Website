@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendDueReviewRequests } from '@/lib/review-requests'
 import { logger } from '@/lib/monitoring'
+import { checkCronAuth } from '@/lib/cron-auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -8,17 +9,20 @@ export const runtime = 'nodejs'
 /**
  * Cron worker: GET /api/cron/send-review-requests
  *
- * Vercel cron schedule: every 15 minutes (see vercel.json).
- * Reads queued review_requests rows where scheduled_for <= now() and
- * fires the SMS via Telnyx. Idempotent and safe to overlap (worker
- * marks rows status='sent' before the next run sees them).
+ * Vercel cron schedule: daily at 14:00 UTC (see vercel.json). Reads
+ * queued review_requests rows where scheduled_for <= now() and fires
+ * the SMS via Telnyx. Idempotent and safe to overlap (worker marks
+ * rows status='sent' before the next run sees them).
  *
- * Auth: Vercel cron sends a `x-vercel-cron-signature` header. We don't
- * verify it strictly; the endpoint is also protected by being a GET
- * with no real side effects unless rows are actually due. If you want
- * stricter auth later, add a CRON_SECRET env and check x-cron-secret.
+ * Auth: requires CRON_SECRET in production. Without it, anyone could
+ * fire SMS by hitting this endpoint.
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+  const denial = checkCronAuth(request)
+  if (denial) {
+    logger.warn('Unauthorized review cron attempt', { reason: denial })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   try {
     const result = await sendDueReviewRequests({ batchSize: 50 })
     if (result.attempted > 0) {

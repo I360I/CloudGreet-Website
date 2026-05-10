@@ -20,8 +20,17 @@ export async function POST(request: NextRequest) {
  const signature = request.headers.get('telnyx-signature-ed25519')
  const timestamp = request.headers.get('telnyx-timestamp')
  
- // Skip verification in development, require in production
- if (process.env.NODE_ENV === 'production') {
+ // Verify whenever we're in production OR a webhook secret is
+ // configured. The previous NODE_ENV-only gate was a spoofing vector
+ // on any environment that didn't set NODE_ENV=production - this
+ // endpoint writes opt-outs and compliance events from the request
+ // body, so an unauthenticated caller could trash a contractor's
+ // consent state.
+ const shouldVerify =
+   process.env.NODE_ENV === 'production' ||
+   !!process.env.TELNYX_WEBHOOK_SECRET ||
+   !!process.env.TELNYX_PUBLIC_KEY
+ if (shouldVerify) {
  const isValid = verifyTelynyxSignature(rawBody, signature, timestamp)
  if (!isValid) {
  logger.warn('SMS webhook signature verification failed', {

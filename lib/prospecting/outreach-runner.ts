@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 import { TelnyxClient } from '@/lib/telnyx'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { normalizePhoneForLookup } from '@/lib/phone-normalization'
 
 type ProspectRow = {
   id: string
@@ -113,9 +114,25 @@ async function sendSMS(template: TemplateRow, prospect: ProspectRow) {
     throw new Error('No SMS sending number configured')
   }
 
+  const to = normalizePhoneForLookup(prospect.phone)
+  if (!to) throw new Error('Prospect phone failed E.164 normalization')
+
+  // TCPA / carrier compliance: STOP must mean STOP everywhere.
+  // Prospecting outreach was bypassing this entirely - if a prospect
+  // texts STOP back, this loop would happily resend them on the next
+  // cron tick. Check before send.
+  const { data: optedOut } = await supabaseAdmin
+    .from('review_opt_outs')
+    .select('phone')
+    .eq('phone', to)
+    .maybeSingle()
+  if (optedOut) {
+    throw new Error('Prospect is opted out (STOP)')
+  }
+
   const telnyx = new TelnyxClient()
   const body = renderBody(template, prospect)
-  const payload = await telnyx.sendSMS(prospect.phone, body, SMS_FROM)
+  const payload = await telnyx.sendSMS(to, body, SMS_FROM)
   return payload?.data?.id ?? null
 }
 

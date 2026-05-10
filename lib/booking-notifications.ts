@@ -18,6 +18,8 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { telnyxClient } from '@/lib/telnyx'
+import { normalizePhoneForLookup } from '@/lib/phone-normalization'
+import { notifyAdmin } from '@/lib/notifications/notify'
 
 export const DEFAULT_BOOKING_SMS_TEMPLATE =
   '[CloudGreet] New booking: {name}, {time}. Service: {service}. Caller: {phone}'
@@ -87,7 +89,20 @@ export async function sendBookingNotification(
 ): Promise<{ sent: boolean; reason?: string }> {
   const fromNumber = process.env.CLOUDGREET_NOTIFICATIONS_FROM
   if (!fromNumber) {
-    logger.warn('booking-notification skipped - CLOUDGREET_NOTIFICATIONS_FROM unset', { businessId })
+    // Misconfiguration in prod = every booking is invisible to the
+    // contractor. Surface to admin instead of swallowing.
+    logger.error('booking-notification skipped - CLOUDGREET_NOTIFICATIONS_FROM unset', { businessId })
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        await notifyAdmin({
+          type: 'booking_notification.misconfigured',
+          severity: 'critical',
+          title: 'Booking SMS sender number not configured',
+          body: `CLOUDGREET_NOTIFICATIONS_FROM env var is missing. Contractors are not receiving booking alerts. Set it in Vercel and redeploy.`,
+          metadata: { business_id: businessId },
+        })
+      } catch { /* notification dropping shouldn't block */ }
+    }
     return { sent: false, reason: 'CLOUDGREET_NOTIFICATIONS_FROM env var not set' }
   }
 
@@ -99,10 +114,28 @@ export async function sendBookingNotification(
 
   if (!biz) return { sent: false, reason: 'business not found' }
 
-  const to = (biz as any).notifications_phone
-  if (!to) {
+  const rawTo = (biz as any).notifications_phone
+  if (!rawTo) {
     logger.warn('booking-notification skipped - business has no notifications_phone', { businessId })
     return { sent: false, reason: 'business has no notifications_phone set' }
+  }
+  const to = normalizePhoneForLookup(rawTo)
+  if (!to) {
+    logger.error('booking-notification skipped - notifications_phone failed E.164 normalization', { businessId, rawTo })
+    return { sent: false, reason: 'notifications_phone is not a valid phone number' }
+  }
+
+  // STOP-keyword opt-outs apply even to "account notification" traffic.
+  // If the contractor texted STOP from this number, Telnyx will reject
+  // the send anyway - we check first so we can record the skip.
+  const { data: optedOut } = await supabaseAdmin
+    .from('review_opt_outs')
+    .select('phone')
+    .eq('phone', to)
+    .maybeSingle()
+  if (optedOut) {
+    logger.warn('booking-notification skipped - recipient opted out', { businessId, to })
+    return { sent: false, reason: 'recipient is opted out (STOP)' }
   }
 
   const template = (biz as any).booking_sms_template || DEFAULT_BOOKING_SMS_TEMPLATE
@@ -112,7 +145,25 @@ export async function sendBookingNotification(
   }
   const message = renderTemplate(template, finalCtx).slice(0, TEMPLATE_MAX_LENGTH)
 
-  await telnyxClient.sendSMS(to, message, fromNumber)
+  try {
+    await telnyxClient.sendSMS(to, message, fromNumber)
+  } catch (sendErr) {
+    // Don't swallow - the caller (Retell webhook) catches and logs warn,
+    // but a persistent failure means contractors miss bookings. Loud
+    // log + admin notification.
+    const errMsg = sendErr instanceof Error ? sendErr.message : 'Unknown'
+    logger.error('booking-notification send failed', { businessId, to, error: errMsg })
+    try {
+      await notifyAdmin({
+        type: 'booking_notification.send_failed',
+        severity: 'warning',
+        title: 'Booking SMS failed to send',
+        body: `Telnyx rejected booking notification for business ${businessId} to ${to}. Error: ${errMsg}. Likely missing messaging-profile attachment.`,
+        metadata: { business_id: businessId, to, error: errMsg },
+      })
+    } catch { /* non-fatal */ }
+    throw sendErr
+  }
 
   // Log to sms_messages for audit. Best-effort - the send already
   // succeeded by this point.
