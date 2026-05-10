@@ -2,23 +2,18 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { CircleNotch, WarningCircle, CheckCircle, Clock, Phone, Envelope, ArrowSquareOut, Robot, Calendar } from '@phosphor-icons/react'
+import { CircleNotch, Clock, Calendar, ArrowSquareOut, Robot } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
-import { Panel, PanelHeader, PrimaryButton, GhostButton, Input } from '../_components/ui'
-import { DraftBuilder } from './_DraftBuilder'
+import { Panel } from '../_components/ui'
 
 /**
  * /admin/agents-due
  *
- * Queue of demo agents I need to build before the rep's demo call.
- * For each row I get rep, prospect, the provisioned client business,
- * the login email of the client account, scraped info, Cal.com wiring
- * (if any), countdown to the demo, and a place to paste the Retell
- * test number.
- *
- * Typing/setting the test number flips status to 'ready' and the rep
- * sees it on their close in /sales/closes.
+ * Compact list view of demo agents that need to be built before each
+ * rep's demo. One row per close - status pill, countdown, prospect.
+ * Click "Open workspace" to drill into the full build view at
+ * /admin/agents-due/[closeId].
  */
 
 type Item = {
@@ -42,21 +37,17 @@ type Item = {
   business: {
     id: string
     business_name: string | null
-    address: string | null
-    services: string[] | null
-    business_hours: any
-    website: string | null
-    login_email: string | null
-    cal_com_username: string | null
-    cal_com_event_type_slug: string | null
-    has_cal_api_key: boolean
-    customization_status: string
-    customization_submitted_at: string | null
   } | null
   agent_draft: {
     status: 'none' | 'generating' | 'ready' | 'failed' | 'approved'
-    generated_at: string | null
   }
+}
+
+const STATUS_TONE: Record<Item['demo']['status'], { pill: string; label: string }> = {
+  pending:  { pill: 'bg-amber-500/10 text-amber-300 border-amber-500/20', label: 'pending' },
+  building: { pill: 'bg-sky-500/10 text-sky-300 border-sky-500/20',     label: 'building' },
+  ready:    { pill: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20', label: 'ready' },
+  skipped:  { pill: 'bg-gray-500/10 text-gray-400 border-gray-500/20',  label: 'skipped' },
 }
 
 export default function AgentsDuePage() {
@@ -77,17 +68,40 @@ export default function AgentsDuePage() {
 
   useEffect(() => { reload() }, [])
 
+  // Sort: not-ready/not-skipped first, then by demo time ascending
+  // (soonest first), then by created_at as tiebreaker. Skipped sinks.
+  const sorted = useMemo(() => {
+    const order = (s: Item['demo']['status']) =>
+      s === 'skipped' ? 3 : s === 'ready' ? 2 : 0
+    return [...items].sort((a, b) => {
+      const oa = order(a.demo.status)
+      const ob = order(b.demo.status)
+      if (oa !== ob) return oa - ob
+      const da = a.demo.scheduled_at ? new Date(a.demo.scheduled_at).getTime() : Number.POSITIVE_INFINITY
+      const db = b.demo.scheduled_at ? new Date(b.demo.scheduled_at).getTime() : Number.POSITIVE_INFINITY
+      if (da !== db) return da - db
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    })
+  }, [items])
+
   return (
     <AdminShell activeLabel="Agents Due">
       <div className="px-5 sm:px-8 py-6 sm:py-8 max-w-6xl">
-        <div className="mb-6">
-          <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-1">
-            Pre-demo queue
+        <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-1">
+              Pre-demo queue
+            </div>
+            <h1 className="text-2xl font-medium tracking-tight text-white">Agents due</h1>
+            <p className="text-sm text-gray-400 mt-1.5">
+              Demo agents to build before each rep&apos;s demo. Click a row to open its workspace.
+            </p>
           </div>
-          <h1 className="text-2xl font-medium tracking-tight text-white">Agents due</h1>
-          <p className="text-sm text-gray-400 mt-1.5">
-            Demo agents I need to build before each rep&apos;s demo. Paste the Retell test number to mark one ready - the rep sees it on their close instantly.
-          </p>
+          <div className="text-xs text-gray-500 font-mono tabular-nums">
+            {sorted.filter((i) => i.demo.status !== 'ready' && i.demo.status !== 'skipped').length} open
+            <span className="text-gray-700"> · </span>
+            {sorted.length} total
+          </div>
         </div>
 
         {error && (
@@ -100,16 +114,16 @@ export default function AgentsDuePage() {
           <div className="flex items-center justify-center py-16">
             <CircleNotch className="w-5 h-5 animate-spin text-gray-500" />
           </div>
-        ) : items.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <Panel>
             <div className="px-6 py-12 text-center text-sm text-gray-500">
-              No agents due. When a rep sends a booking link, the close will show up here for build.
+              No agents due. When a rep submits a close, it lands here for build.
             </div>
           </Panel>
         ) : (
-          <ul className="space-y-3">
-            {items.map((it) => (
-              <ItemCard key={it.close_id} item={it} onChanged={reload} />
+          <ul className="bg-white/[0.02] border border-white/10 rounded-2xl divide-y divide-white/5 overflow-hidden">
+            {sorted.map((it) => (
+              <Row key={it.close_id} item={it} />
             ))}
           </ul>
         )}
@@ -118,293 +132,129 @@ export default function AgentsDuePage() {
   )
 }
 
-function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
-  const [testPhone, setTestPhone] = useState(item.demo.test_phone || '')
-  const [notes, setNotes] = useState(item.demo.notes || '')
-  const [busy, setBusy] = useState<'submit' | 'building' | 'skip' | null>(null)
-  const [err, setErr] = useState('')
-
+function Row({ item }: { item: Item }) {
+  const tone = STATUS_TONE[item.demo.status]
   const countdown = useCountdown(item.demo.scheduled_at)
-
-  const post = async (body: Record<string, any>, action: 'submit' | 'building' | 'skip') => {
-    setErr(''); setBusy(action)
-    try {
-      const r = await fetchWithAuth(`/api/admin/agents-due/${item.close_id}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      const j = await r.json().catch(() => ({}))
-      if (!r.ok || !j?.success) setErr(j?.error || 'Failed')
-      else onChanged()
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  const flipCustomization = async (newStatus: 'building' | 'ready' | 'live') => {
-    if (!item.business?.id) return
-    setErr('')
-    try {
-      const r = await fetchWithAuth(`/api/admin/customization/${item.business.id}/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      })
-      const j = await r.json().catch(() => ({}))
-      if (!r.ok || !j?.success) setErr(j?.error || 'Failed')
-      else onChanged()
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed')
-    }
-  }
-
-  const submit = () => {
-    if (!testPhone.trim()) { setErr('Paste the Retell test number first.'); return }
-    return post({ test_phone: testPhone.trim(), notes: notes.trim() || undefined }, 'submit')
-  }
-
-  const status = item.demo.status
-  const statusTone = status === 'ready' ? 'emerald' : status === 'building' ? 'sky' : status === 'skipped' ? 'gray' : 'amber'
+  const businessName =
+    item.business?.business_name || item.prospect.business_name || 'Unknown business'
+  const isSkippedOrReady = item.demo.status === 'skipped' || item.demo.status === 'ready'
 
   return (
-    <li className="bg-white/[0.03] border border-white/10 rounded-2xl overflow-hidden">
-      <div className="px-5 py-4 flex items-start gap-4 flex-wrap">
+    <li>
+      <Link
+        href={`/admin/agents-due/${item.close_id}`}
+        className="group flex items-center gap-4 px-5 py-3.5 hover:bg-white/[0.03] transition-colors"
+      >
+        {/* Status pill */}
+        <span
+          className={`inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.18em] px-2 py-0.5 rounded-full border ${tone.pill} flex-shrink-0`}
+        >
+          <Robot className="w-3 h-3" />
+          {tone.label}
+        </span>
+
+        {/* Business + rep + prospect */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-3 flex-wrap">
-            <div className="text-base font-medium text-white truncate">
-              {item.business?.business_name || item.prospect.business_name || 'Unknown business'}
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <div className="text-sm font-medium text-white truncate group-hover:text-gray-200">
+              {businessName}
             </div>
-            <span className={`inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 rounded-full bg-${statusTone}-500/10 text-${statusTone}-300 border border-${statusTone}-500/20`}>
-              <Robot className="w-3 h-3" /> {status}
-            </span>
-            {item.business?.customization_status === 'submitted' && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                Form submitted
-              </span>
+            {item.prospect.name && (
+              <div className="text-[11px] text-gray-500 truncate">
+                {item.prospect.name}
+              </div>
             )}
           </div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-[11px] text-gray-500 truncate mt-0.5">
             via {item.rep.name}
             {item.rep.email && <span className="text-gray-600"> · {item.rep.email}</span>}
-          </div>
-
-          {/* Countdown row */}
-          <div className="mt-3 flex items-center gap-4 text-xs flex-wrap">
-            {item.demo.scheduled_at ? (
-              <span className="inline-flex items-center gap-1.5 text-amber-300">
-                <Clock className="w-3.5 h-3.5" />
-                {countdown}
-                <span className="text-gray-500">· {new Date(item.demo.scheduled_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 text-gray-500">
-                <Calendar className="w-3.5 h-3.5" /> No demo time on file yet
-              </span>
+            {item.agent_draft.status === 'ready' && (
+              <span className="text-emerald-400/80"> · draft ready</span>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <Link
-            href={`/admin/agents-due/${item.close_id}`}
-            className="text-xs text-fuchsia-300 hover:text-fuchsia-200 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/[0.06]"
-          >
-            Open workspace <ArrowSquareOut className="w-3 h-3" />
-          </Link>
-          {item.business?.id && (
-            <Link
-              href={`/admin/clients/${item.business.id}`}
-              className="text-xs text-sky-300 hover:text-sky-200 inline-flex items-center gap-1"
-            >
-              Open client <ArrowSquareOut className="w-3 h-3" />
-            </Link>
-          )}
-        </div>
-      </div>
+        {/* Countdown - hidden on mobile to keep the row tight */}
+        <CountdownCell
+          countdown={countdown}
+          scheduledAt={item.demo.scheduled_at}
+          dim={isSkippedOrReady}
+        />
 
-      <div className="border-t border-white/5 px-5 py-4 grid sm:grid-cols-2 gap-x-8 gap-y-4">
-        {/* Prospect column */}
-        <div>
-          <SectionLabel>Prospect</SectionLabel>
-          <KV label="Contact" value={item.prospect.name} />
-          <KV label="Email" value={item.prospect.email} icon={<Envelope className="w-3 h-3 text-gray-500" />} />
-          <KV label="Phone" value={item.prospect.phone} icon={<Phone className="w-3 h-3 text-gray-500" />} />
-          {item.business?.login_email && (
-            <KV label="Login" value={item.business.login_email} hint="Account already provisioned" />
-          )}
-          {item.business?.website && (
-            <KV label="Website" value={
-              <a href={item.business.website} target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200 inline-flex items-center gap-1">
-                {item.business.website} <ArrowSquareOut className="w-3 h-3" />
-              </a>
-            } />
-          )}
-          {item.business?.address && <KV label="Address" value={item.business.address} />}
-        </div>
-
-        {/* Calendar / scraped column */}
-        <div>
-          <SectionLabel>Calendar wiring</SectionLabel>
-          {item.business?.has_cal_api_key ? (
-            <>
-              <KV label="Cal.com user" value={item.business.cal_com_username || <em className="text-gray-500">not set</em>} />
-              <KV label="Event slug" value={item.business.cal_com_event_type_slug || <em className="text-gray-500">not set</em>} />
-              <div className="text-[10px] text-emerald-400 mt-1">API key on file</div>
-            </>
-          ) : (
-            <div className="text-xs text-gray-500">No Cal.com key yet - the agent will text-only handoff.</div>
-          )}
-
-          {item.business?.services && item.business.services.length > 0 && (
-            <>
-              <div className="mt-3"><SectionLabel>Services</SectionLabel></div>
-              <ul className="text-xs text-gray-300 space-y-0.5">
-                {item.business.services.slice(0, 8).map((s, i) => (
-                  <li key={i}>• {s}</li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          {item.business?.business_hours && typeof item.business.business_hours === 'object' && Object.keys(item.business.business_hours).length > 0 && (
-            <>
-              <div className="mt-3"><SectionLabel>Hours</SectionLabel></div>
-              <div className="text-xs text-gray-300 font-mono whitespace-pre-wrap">
-                {JSON.stringify(item.business.business_hours, null, 2)}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* AI agent draft builder - Phase 1 from the agent-builder doc */}
-      <DraftBuilder
-        closeId={item.close_id}
-        initialStatus={item.agent_draft.status}
-        hasWebsite={!!(item.business?.website)}
-        currentWebsite={item.business?.website || null}
-        onChanged={onChanged}
-      />
-
-      {/* Customization pipeline - only meaningful once the client has submitted */}
-      {item.business && ['submitted', 'building', 'ready', 'live'].includes(item.business.customization_status) && (
-        <div className="border-t border-white/5 px-5 py-3 bg-violet-500/5">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="text-xs text-violet-300 inline-flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-violet-400">Customization</span>
-              <span className="font-medium">{item.business.customization_status}</span>
-              {item.business.customization_submitted_at && (
-                <span className="text-gray-500">· submitted {new Date(item.business.customization_submitted_at).toLocaleDateString()}</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {item.business.customization_status === 'submitted' && (
-                <GhostButton onClick={() => flipCustomization('building')}>Mark building</GhostButton>
-              )}
-              {(item.business.customization_status === 'submitted' || item.business.customization_status === 'building') && (
-                <PrimaryButton onClick={() => flipCustomization('ready')}>
-                  Mark ready (emails client)
-                </PrimaryButton>
-              )}
-              {item.business.customization_status === 'ready' && (
-                <PrimaryButton onClick={() => flipCustomization('live')}>Mark live</PrimaryButton>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Submit row */}
-      <div className="border-t border-white/5 px-5 py-4">
-        {status === 'ready' ? (
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="text-sm text-emerald-300 inline-flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" />
-              Ready · test #: <span className="font-mono">{item.demo.test_phone}</span>
-            </div>
-            <GhostButton onClick={() => post({ status: 'pending' }, 'building')} disabled={busy !== null}>
-              Reopen
-            </GhostButton>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500">
-              Build the agent in Retell, then paste the test number
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                placeholder="+1 555 123 4567"
-                value={testPhone}
-                onChange={(e) => setTestPhone(e.target.value)}
-                className="flex-1 font-mono"
-              />
-              <PrimaryButton onClick={submit} disabled={busy !== null}>
-                {busy === 'submit' && <CircleNotch className="w-4 h-4 animate-spin" />}
-                Mark ready
-              </PrimaryButton>
-            </div>
-            <Input
-              placeholder="Build notes (optional, internal)"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-            <div className="flex items-center gap-2 flex-wrap">
-              {status !== 'building' && (
-                <GhostButton onClick={() => post({ status: 'building' }, 'building')} disabled={busy !== null}>
-                  {busy === 'building' && <CircleNotch className="w-3 h-3 animate-spin" />}
-                  Mark "building"
-                </GhostButton>
-              )}
-              <GhostButton onClick={() => post({ status: 'skipped' }, 'skip')} disabled={busy !== null}>
-                {busy === 'skip' && <CircleNotch className="w-3 h-3 animate-spin" />}
-                Skip
-              </GhostButton>
-            </div>
-          </div>
-        )}
-        {err && <div className="mt-2 text-xs text-rose-300">{err}</div>}
-      </div>
+        {/* Open workspace */}
+        <span className="hidden sm:inline-flex items-center gap-1 text-xs text-fuchsia-300 group-hover:text-fuchsia-200 px-2.5 py-1 rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/[0.06] flex-shrink-0">
+          Open workspace
+          <ArrowSquareOut className="w-3 h-3" />
+        </span>
+      </Link>
     </li>
   )
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function CountdownCell({
+  countdown, scheduledAt, dim,
+}: {
+  countdown: { text: string; urgency: 'past' | 'soon' | 'normal' | 'far' | 'none' }
+  scheduledAt: string | null
+  dim: boolean
+}) {
+  if (!scheduledAt) {
+    return (
+      <div className="hidden md:flex items-center gap-1.5 text-[11px] text-gray-600 font-mono tabular-nums w-44 flex-shrink-0">
+        <Calendar className="w-3.5 h-3.5" />
+        no demo time yet
+      </div>
+    )
+  }
+  const tone = dim
+    ? 'text-gray-500'
+    : countdown.urgency === 'past'
+      ? 'text-gray-500'
+      : countdown.urgency === 'soon'
+        ? 'text-rose-300'
+        : countdown.urgency === 'normal'
+          ? 'text-amber-300'
+          : 'text-gray-400'
   return (
-    <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1.5">
-      {children}
+    <div className={`hidden md:flex items-center gap-1.5 text-[11px] font-mono tabular-nums w-44 flex-shrink-0 ${tone}`}>
+      <Clock className="w-3.5 h-3.5" />
+      <span>{countdown.text}</span>
+      <span className="text-gray-600 truncate">
+        · {new Date(scheduledAt).toLocaleString(undefined, {
+          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+        })}
+      </span>
     </div>
   )
 }
 
-function KV({ label, value, icon, hint }: { label: string; value: any; icon?: React.ReactNode; hint?: string }) {
-  if (value === null || value === undefined || value === '') return null
-  return (
-    <div className="text-xs text-gray-300 mb-1 flex items-baseline gap-2">
-      <span className="text-gray-500 w-16 shrink-0">{label}</span>
-      <span className="inline-flex items-center gap-1.5 break-all">{icon}{value}</span>
-      {hint && <span className="text-[10px] text-gray-600">· {hint}</span>}
-    </div>
-  )
-}
+type CountdownResult = { text: string; urgency: 'past' | 'soon' | 'normal' | 'far' | 'none' }
 
-function useCountdown(iso: string | null): string {
+function useCountdown(iso: string | null): CountdownResult {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     if (!iso) return
     const t = setInterval(() => setNow(Date.now()), 60_000)
     return () => clearInterval(t)
   }, [iso])
-  return useMemo(() => {
-    if (!iso) return ''
+  return useMemo<CountdownResult>(() => {
+    if (!iso) return { text: '', urgency: 'none' }
     const ms = new Date(iso).getTime() - now
-    if (Number.isNaN(ms)) return ''
-    const sign = ms < 0 ? -1 : 1
+    if (Number.isNaN(ms)) return { text: '', urgency: 'none' }
+    const past = ms < 0
     const abs = Math.abs(ms)
     const days = Math.floor(abs / 86_400_000)
     const hours = Math.floor((abs % 86_400_000) / 3_600_000)
     const mins = Math.floor((abs % 3_600_000) / 60_000)
     const head = days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
-    return sign < 0 ? `${head} ago` : `in ${head}`
+    const text = past ? `${head} ago` : `in ${head}`
+    const urgency: CountdownResult['urgency'] = past
+      ? 'past'
+      : abs < 4 * 3_600_000
+        ? 'soon'
+        : abs < 24 * 3_600_000
+          ? 'normal'
+          : 'far'
+    return { text, urgency }
   }, [iso, now])
 }
