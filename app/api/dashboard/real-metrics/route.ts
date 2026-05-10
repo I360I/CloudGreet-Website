@@ -8,9 +8,13 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
+ // Hoisted so the catch block at the bottom can reference them in the
+ // error log without TS complaining about block-scope.
+ let authResult: Awaited<ReturnType<typeof requireAuth>> | null = null
+ let timeframe = '30d'
  try {
  // Verify authentication
- const authResult = await requireAuth(request)
+ authResult = await requireAuth(request)
  if (!authResult.success || !authResult.userId || !authResult.businessId) {
  // Return empty metrics data instead of 401 for users without businesses
  return NextResponse.json({
@@ -35,7 +39,7 @@ export async function GET(request: NextRequest) {
  }
 
  const { searchParams } = new URL(request.url)
- const timeframe = searchParams.get('timeframe') || '30d'
+ timeframe = searchParams.get('timeframe') || '30d'
  const businessId = authResult.businessId
 
  // Calculate date range

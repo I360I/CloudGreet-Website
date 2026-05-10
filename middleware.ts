@@ -118,9 +118,11 @@ export async function middleware(request: NextRequest) {
     // Trim the Map opportunistically so it doesn't grow unbounded on a
     // long-lived warm instance. Cheap O(n) sweep, runs ~1% of requests.
     if (Math.random() < 0.01) {
-      for (const [k, v] of rateLimitMap.entries()) {
+      // Array.from avoids the downlevelIteration TS error and keeps
+      // delete-during-iteration safe by snapshotting first.
+      Array.from(rateLimitMap.entries()).forEach(([k, v]) => {
         if (now > v.resetTime) rateLimitMap.delete(k)
-      }
+      })
     }
   }
 

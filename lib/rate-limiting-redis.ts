@@ -24,6 +24,29 @@ export interface RateLimitResult {
   allowed: boolean
   remaining: number
   resetTime: number
+  /**
+   * Standard rate-limit response headers. Spread into NextResponse so
+   * callers can echo them back to the client without boilerplate.
+   */
+  headers: Record<string, string>
+}
+
+function buildRateLimitHeaders(args: {
+  allowed: boolean
+  remaining: number
+  resetTime: number
+  maxRequests: number
+}): Record<string, string> {
+  const h: Record<string, string> = {
+    'X-RateLimit-Limit': String(args.maxRequests),
+    'X-RateLimit-Remaining': String(Math.max(0, args.remaining)),
+    'X-RateLimit-Reset': String(Math.ceil(args.resetTime / 1000)),
+  }
+  if (!args.allowed) {
+    const retryAfterSec = Math.max(0, Math.ceil((args.resetTime - Date.now()) / 1000))
+    h['Retry-After'] = String(retryAfterSec)
+  }
+  return h
 }
 
 // In-memory fallback (used when Redis is not available)
@@ -83,10 +106,12 @@ export async function rateLimitWithRedis(
       if (current === 0) {
         // First request in window
         await redis.set(redisKey, 1, { ex: Math.ceil(config.windowMs / 1000) })
+        const resetTime = now + config.windowMs
         return {
           allowed: true,
           remaining: config.maxRequests - 1,
-          resetTime: now + config.windowMs
+          resetTime,
+          headers: buildRateLimitHeaders({ allowed: true, remaining: config.maxRequests - 1, resetTime, maxRequests: config.maxRequests }),
         }
       }
 
@@ -99,10 +124,12 @@ export async function rateLimitWithRedis(
           maxRequests: config.maxRequests,
           ttl
         })
+        const resetTime = now + (ttl * 1000)
         return {
           allowed: false,
           remaining: 0,
-          resetTime: now + (ttl * 1000)
+          resetTime,
+          headers: buildRateLimitHeaders({ allowed: false, remaining: 0, resetTime, maxRequests: config.maxRequests }),
         }
       }
 
@@ -110,11 +137,13 @@ export async function rateLimitWithRedis(
       await redis.incr(redisKey)
       const newCount = current + 1
       const ttl = await redis.ttl(redisKey)
-      
+      const resetTime = now + (ttl * 1000)
+
       return {
         allowed: true,
         remaining: config.maxRequests - newCount,
-        resetTime: now + (ttl * 1000)
+        resetTime,
+        headers: buildRateLimitHeaders({ allowed: true, remaining: config.maxRequests - newCount, resetTime, maxRequests: config.maxRequests }),
       }
     } catch (error) {
       logger.error('Redis rate limit error, falling back to in-memory', {
@@ -133,7 +162,8 @@ export async function rateLimitWithRedis(
     return {
       allowed: true,
       remaining: config.maxRequests - 1,
-      resetTime
+      resetTime,
+      headers: buildRateLimitHeaders({ allowed: true, remaining: config.maxRequests - 1, resetTime, maxRequests: config.maxRequests }),
     }
   }
 
@@ -146,17 +176,19 @@ export async function rateLimitWithRedis(
     return {
       allowed: false,
       remaining: 0,
-      resetTime: current.resetTime
+      resetTime: current.resetTime,
+      headers: buildRateLimitHeaders({ allowed: false, remaining: 0, resetTime: current.resetTime, maxRequests: config.maxRequests }),
     }
   }
 
   current.count++
   fallbackMap.set(key, current)
-  
+
   return {
     allowed: true,
     remaining: config.maxRequests - current.count,
-    resetTime: current.resetTime
+    resetTime: current.resetTime,
+    headers: buildRateLimitHeaders({ allowed: true, remaining: config.maxRequests - current.count, resetTime: current.resetTime, maxRequests: config.maxRequests }),
   }
 }
 

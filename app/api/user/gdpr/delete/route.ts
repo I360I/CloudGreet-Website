@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
  requestedAt: new Date().toISOString()
  }
  })
- .catch((error) => {
+ .then(undefined, (error) => {
  logger.error('Failed to log GDPR deletion event', { error })
  })
 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
  updated_at: new Date().toISOString()
  })
  .eq('id', userId)
- .catch((error) => {
+ .then(undefined, (error) => {
  logger.error('Failed to anonymize user', { error, userId })
  })
 
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
  updated_at: new Date().toISOString()
  })
  .eq('id', businessId)
- .catch((error) => {
+ .then(undefined, (error) => {
  logger.error('Failed to anonymize business', { error, businessId })
  })
 
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
  updated_at: new Date().toISOString()
  })
  .eq('business_id', businessId)
- .catch((error) => {
+ .then(undefined, (error) => {
  logger.error('Failed to anonymize calls', { error, businessId })
  })
 
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
  updated_at: new Date().toISOString()
  })
  .eq('business_id', businessId)
- .catch((error) => {
+ .then(undefined, (error) => {
  logger.error('Failed to anonymize appointments', { error, businessId })
  })
 
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
  updated_at: new Date().toISOString()
  })
  .eq('business_id', businessId)
- .catch((error) => {
+ .then(undefined, (error) => {
  logger.error('Failed to anonymize SMS messages', { error, businessId })
  })
 
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
  updated_at: new Date().toISOString()
  })
  .eq('business_id', businessId)
- .catch((error) => {
+ .then(undefined, (error) => {
  logger.error('Failed to anonymize email logs', { error, businessId })
  })
  }

@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
  exportDate: userData.exportDate
  }
  })
- .catch((error) => {
+ .then(undefined, (error) => {
  logger.error('Failed to log GDPR export event', { error })
  })
 

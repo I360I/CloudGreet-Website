@@ -395,7 +395,9 @@ export async function DELETE(
   }
 
   logger.info("Admin deleted client", {
-   clientId, businessName: business.business_name, stepErrors,
+   clientId,
+   businessName: business.business_name,
+   stepErrorCount: stepErrors.length,
   })
 
   return NextResponse.json({

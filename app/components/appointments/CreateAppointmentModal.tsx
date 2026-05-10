@@ -44,7 +44,7 @@ export function CreateAppointmentModal({
  initialTime
 }: CreateAppointmentModalProps) {
  const { business, theme, getServiceColor } = useBusinessData()
- const { addOptimisticUpdate, refreshAppointments, refreshAll } = useDashboardData()
+ const { addOptimisticUpdate, removeOptimisticUpdate, refreshAppointments, refreshAll } = useDashboardData()
  const toast = useToast()
  
  const [formData, setFormData] = useState({
