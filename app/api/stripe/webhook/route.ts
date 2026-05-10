@@ -601,21 +601,34 @@ async function creditRepCommission(
   })
  }
 
- let mrrCents = 0
- let setupCents = 0
+ // Sum gross MRR vs setup-fee line amounts (pre-discount), then scale
+ // them down by `invoice.amount_paid / total_gross` so commission is
+ // computed off what Stripe actually COLLECTED, not the sticker price.
+ // Without this, applying a discount code to a $1000 setup fee that
+ // collected $10 still credited the rep $500. Proportional scaling
+ // splits the discount across MRR and setup the same way Stripe does.
+ //
+ // Subscription line items have type='subscription' (legacy API) or a
+ // recurring price (new). One-off `invoiceitem` lines are setup-fees.
+ let mrrGross = 0
+ let setupGross = 0
  const lines = invoice.lines?.data || []
  for (const line of lines) {
   const cents = line.amount || 0
   if (cents <= 0) continue // skip $0 / credit lines
-  // Stripe: subscription line items have type='subscription' (legacy
-  // API) or a recurring price (new). One-off `invoiceitem` lines are
-  // setup-fees / overages.
   const isRecurring =
    (line as any).type === 'subscription' ||
    !!(line.price as any)?.recurring
-  if (isRecurring) mrrCents += cents
-  else setupCents += cents
+  if (isRecurring) mrrGross += cents
+  else setupGross += cents
  }
+ const totalGross = mrrGross + setupGross
+ const actualPaid = invoice.amount_paid || 0
+ // If amount_paid is 0 (fully discounted invoice that Stripe still
+ // marks paid), no commission. If gross was 0, fall through to skip.
+ const scale = totalGross > 0 ? actualPaid / totalGross : 0
+ const mrrCents = Math.round(mrrGross * scale)
+ const setupCents = Math.round(setupGross * scale)
 
  const earnedAt = invoice.status_transitions?.paid_at
   ? new Date(invoice.status_transitions.paid_at * 1000).toISOString()
