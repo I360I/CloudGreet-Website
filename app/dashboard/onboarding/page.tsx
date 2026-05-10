@@ -66,6 +66,27 @@ export default function OnboardingPage() {
 
  useEffect(() => { reload() }, [])
 
+ // Poll for the Retell phone number while we're stuck on the forwarding
+ // step without one. Without this, the spinner spins forever even after
+ // the admin provisions the number - the user has to hard-refresh. Cap
+ // at 2 minutes so we don't hammer the API for a stuck account.
+ const [pollExpired, setPollExpired] = useState(false)
+ useEffect(() => {
+  if (step !== 'forwarding' || retellPhone) return
+  const startedAt = Date.now()
+  setPollExpired(false)
+  const interval = setInterval(() => {
+   if (Date.now() - startedAt > 2 * 60 * 1000) {
+    setPollExpired(true)
+    clearInterval(interval)
+    return
+   }
+   reload()
+  }, 15000)
+  return () => clearInterval(interval)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [step, retellPhone])
+
  if (loading) {
   return (
    <DashShell activeLabel="Setup">
@@ -105,6 +126,7 @@ export default function OnboardingPage() {
        <Panel key="forwarding">
         <ForwardingStep
          retellNumber={retellPhone || null}
+         pollExpired={pollExpired}
          saved={{
           carrier: state.forwarding_carrier,
           lineType: state.forwarding_line_type,
@@ -393,9 +415,10 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
 /* ----------------------------- Forwarding step --------------------------- */
 
 function ForwardingStep({
- retellNumber, saved, onSavedChoice, onTryVerify,
+ retellNumber, pollExpired, saved, onSavedChoice, onTryVerify,
 }: {
  retellNumber: string | null
+ pollExpired?: boolean
  saved: { carrier: CarrierId | null; lineType: LineType | null; mode: ForwardingMode | null }
  onSavedChoice: () => void
  onTryVerify: () => void
@@ -406,6 +429,37 @@ function ForwardingStep({
  const [saving, setSaving] = useState(false)
 
  if (!retellNumber) {
+  if (pollExpired) {
+   // Two minutes elapsed and the agent provisioning never finished.
+   // The previous screen spun forever which left contractors stuck
+   // with no clear next step.
+   return (
+    <div className="bg-white border border-amber-200 rounded-2xl p-6">
+     <div className="flex items-center gap-2 mb-1">
+      <WarningCircle className="w-4 h-4 text-amber-500" />
+      <h2 className="text-xl font-medium text-gray-900">This is taking longer than usual</h2>
+     </div>
+     <p className="text-sm text-gray-500 mt-1">
+      Your dedicated number should be ready by now. Reach out so we can finish the handoff - it usually takes us a couple minutes once we see the message.
+     </p>
+     <div className="mt-4 flex flex-wrap gap-3">
+      <a
+       href="mailto:support@cloudgreet.com?subject=Onboarding%20stuck%20-%20no%20phone%20number"
+       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+      >
+       Email support
+      </a>
+      <button
+       type="button"
+       onClick={() => window.location.reload()}
+       className="inline-flex items-center gap-2 border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+      >
+       Try again
+      </button>
+     </div>
+    </div>
+   )
+  }
   return (
    <div className="bg-white border border-gray-200 rounded-2xl p-6">
     <div className="flex items-center gap-2 mb-1">

@@ -1458,7 +1458,29 @@ function AdminActions({
   run(`sub:${status}`, async () => { await onPatch({ subscription_status: status }) })
 
  const toggleOnboarding = () =>
-  run('onboarding', async () => { await onPatch({ onboarding_completed: !client.onboarding_completed }) })
+  run('onboarding', async () => {
+   if (client.onboarding_completed) {
+    // Re-opening: just flip the flag.
+    await onPatch({ onboarding_completed: false })
+    return
+   }
+   // Going live: hit force-live so forwarding_verified_at gets set
+   // too (dashboard step machine reads both flags).
+   const reason = window.prompt(
+    'Reason for forcing this client live (skips Cal.com / forwarding / Stripe checks):',
+    '',
+   )
+   if (!reason || reason.trim().length < 4) {
+    throw new Error('reason_required')
+   }
+   const res = await fetchWithAuth(`/api/admin/clients/${client.id}/force-live`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: reason.trim() }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j?.success) throw new Error(j?.error || 'force-live failed')
+  })
 
  const disconnectCalcom = () =>
   run('calcom', async () => {

@@ -104,13 +104,29 @@ export async function POST(
   const subscriberUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/webhooks/cal/${ownership.id}`
   const webhookSecret = crypto.randomBytes(32).toString('hex')
   let webhookId: string | null = null
+  let webhookError: string | null = null
   try {
     const wh = await registerWebhook(apiKey, subscriberUrl, webhookSecret)
     webhookId = wh.id
   } catch (e) {
-    logger.warn('Cal.com webhook registration failed (rep path)', {
-      error: e instanceof Error ? e.message : 'Unknown',
+    webhookError = e instanceof Error ? e.message : 'Unknown'
+    // Don't kill the connection - the dashboard's live-merge fallback
+    // and the calcom-sync cron will keep events flowing even without
+    // a webhook. But log loud + admin-notify so this gets reconnected
+    // before going stale.
+    logger.error('Cal.com webhook registration failed (rep path)', {
+      businessId: ownership.id, error: webhookError,
     })
+    try {
+      const { notifyAdmin } = await import('@/lib/notifications/notify')
+      await notifyAdmin({
+        type: 'calcom.webhook_register_failed',
+        severity: 'warning',
+        title: 'Cal.com webhook did not register (rep flow)',
+        body: `Rep connected Cal.com for business ${ownership.id} but webhook registration failed (${webhookError}). Live-merge + cron will cover; client should hit Re-sync calendar in settings to recover.`,
+        metadata: { business_id: ownership.id, error: webhookError, rep_user_id: auth.userId },
+      })
+    } catch { /* non-fatal */ }
   }
 
   const { error: updateError } = await supabaseAdmin
