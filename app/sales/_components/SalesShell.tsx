@@ -115,6 +115,10 @@ export function SalesShell({
             )
           })}
         </nav>
+        {/* Notifications - dedicated row, can't be missed. */}
+        <div className="px-2 mt-2">
+          <NotificationsRow basePath="/api/sales/notifications" />
+        </div>
         <div className="border-t border-black/5 pt-4 px-2 space-y-3">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Signed in as</div>
@@ -139,22 +143,19 @@ export function SalesShell({
               <div className="text-xs text-amber-900 mt-0.5">Connect bank to receive payouts</div>
             </button>
           )}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-4 text-xs">
-              <Link
-                href="/sales/settings"
-                className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
-              >
-                <Gear className="w-3.5 h-3.5" /> Settings
-              </Link>
-              <button
-                onClick={signOut}
-                className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
-              >
-                <SignOut className="w-3.5 h-3.5" /> Sign out
-              </button>
-            </div>
-            <NotificationsBell basePath="/api/sales/notifications" theme="light" />
+          <div className="flex items-center gap-4 text-xs">
+            <Link
+              href="/sales/settings"
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              <Gear className="w-3.5 h-3.5" /> Settings
+            </Link>
+            <button
+              onClick={signOut}
+              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              <SignOut className="w-3.5 h-3.5" /> Sign out
+            </button>
           </div>
         </div>
       </aside>
