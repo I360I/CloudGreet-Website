@@ -17,7 +17,7 @@ import {
   Gear, Users, GraduationCap, BookOpen, Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { NotificationsBell, NotificationsRow } from '@/components/NotificationsBell'
+import { NotificationsBell } from '@/components/NotificationsBell'
 
 type ActiveLabel = 'Overview' | 'Leads' | 'Closes' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook'
 
@@ -91,9 +91,12 @@ export function SalesShell({
   return (
     <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
       <aside className="hidden lg:flex w-60 border-r border-black/5 flex-col py-6 px-4 sticky top-0 h-screen bg-white/40 backdrop-blur-sm">
-        <div className="px-2 mb-8">
-          <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500">CloudGreet</div>
-          <div className="text-sm font-medium text-gray-900 mt-0.5">Sales rep</div>
+        <div className="px-2 mb-8 flex items-start justify-between gap-2">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500">CloudGreet</div>
+            <div className="text-sm font-medium text-gray-900 mt-0.5">Sales rep</div>
+          </div>
+          <NotificationsBell basePath="/api/sales/notifications" />
         </div>
         <nav className="flex-1 space-y-1">
           {NAV.map((item) => {
@@ -115,10 +118,6 @@ export function SalesShell({
             )
           })}
         </nav>
-        {/* Notifications - dedicated row, can't be missed. */}
-        <div className="px-2 mt-2">
-          <NotificationsRow basePath="/api/sales/notifications" />
-        </div>
         <div className="border-t border-black/5 pt-4 px-2 space-y-3">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Signed in as</div>
