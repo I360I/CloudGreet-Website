@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge } from '@phosphor-icons/react'
+import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 
@@ -102,6 +102,7 @@ export default function SettingsPage() {
        <VoiceSection profile={profile} state={agentState} onSaved={reload} />
        <SpeedSection profile={profile} state={agentState} onSaved={reload} />
        <BookingNotificationsSection />
+       <CalendarConnectionSection />
        <ReviewRequestsSection />
        <PasswordSection />
        <ProfileSection profile={profile} onSaved={reload} />
@@ -1467,6 +1468,110 @@ function Stat({ label, value, tone = 'gray', hint }: {
    <div className={`text-2xl font-medium font-mono tabular-nums ${color}`}>{value}</div>
    <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-gray-500 mt-0.5">{label}</div>
    {hint && <div className="text-[9px] text-gray-400 mt-0.5">{hint}</div>}
+  </div>
+ )
+}
+
+function CalendarConnectionSection() {
+ const [loading, setLoading] = useState(true)
+ const [info, setInfo] = useState<{
+  connected: boolean
+  username: string | null
+  eventTypeTitle: string | null
+  webhookConfigured: boolean
+ } | null>(null)
+ const [resyncing, setResyncing] = useState(false)
+ const [flash, setFlash] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+
+ const load = async () => {
+  setLoading(true)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/calcom/status')
+   const j = await r.json().catch(() => ({}))
+   if (r.ok && j?.success) {
+    setInfo({
+     connected: !!j.connected,
+     username: j.username || null,
+     eventTypeTitle: j.event_type_title || null,
+     webhookConfigured: !!j.webhook_configured,
+    })
+   } else {
+    setInfo({ connected: false, username: null, eventTypeTitle: null, webhookConfigured: false })
+   }
+  } finally {
+   setLoading(false)
+  }
+ }
+
+ useEffect(() => { load() }, [])
+
+ const reregister = async () => {
+  setResyncing(true); setFlash(null)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/calcom/reregister-webhook', { method: 'POST' })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setFlash({ tone: 'err', text: j?.error || 'Re-sync failed' })
+   } else {
+    const synced =
+     j.sync && (j.sync.inserted || j.sync.updated)
+      ? `Pulled ${j.sync.inserted || 0} new and updated ${j.sync.updated || 0}.`
+      : 'Calendar already up to date.'
+    setFlash({ tone: 'ok', text: `Webhook reconnected. ${synced}` })
+    await load()
+   }
+  } catch (e) {
+   setFlash({ tone: 'err', text: e instanceof Error ? e.message : 'Re-sync failed' })
+  } finally {
+   setResyncing(false)
+   setTimeout(() => setFlash(null), 5000)
+  }
+ }
+
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl p-6">
+   <div className="flex items-center gap-2 mb-1">
+    <CalendarBlank className="w-4 h-4 text-sky-500" />
+    <h2 className="text-base font-medium text-gray-900">Cal.com calendar</h2>
+   </div>
+   <p className="text-sm text-gray-500 mb-4">
+    Bookings made by your AI receptionist land on the calendar you have connected inside Cal.com. If your dashboard ever
+    looks out of step with what&apos;s actually in Cal.com, re-sync to reconnect the live feed.
+   </p>
+
+   {loading ? (
+    <div className="flex items-center gap-2 text-sm text-gray-500">
+     <CircleNotch className="w-4 h-4 animate-spin" /> Loading
+    </div>
+   ) : !info?.connected ? (
+    <div className="text-sm text-gray-600">
+     Cal.com isn&apos;t connected yet. Finish onboarding to link an event type.
+    </div>
+   ) : (
+    <div className="space-y-4">
+     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+      <CurrentLine label="Cal.com user" value={info.username || '-'} />
+      <CurrentLine label="Event type" value={info.eventTypeTitle || '-'} />
+      <CurrentLine label="Live webhook" value={info.webhookConfigured ? 'Connected' : 'Missing'} />
+     </div>
+     <div className="flex flex-wrap items-center gap-3">
+      <button
+       type="button"
+       onClick={reregister}
+       disabled={resyncing}
+       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+      >
+       {resyncing ? <CircleNotch className="w-4 h-4 animate-spin" /> : <ArrowsClockwise className="w-4 h-4" />}
+       {resyncing ? 'Re-syncing...' : 'Re-sync calendar'}
+      </button>
+      {flash && (
+       <span className={`text-sm ${flash.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>
+        {flash.text}
+       </span>
+      )}
+     </div>
+    </div>
+   )}
   </div>
  )
 }
