@@ -27,7 +27,7 @@ type BillingData = {
 
 const STATUS_TONE: Record<string, { dot: string; text: string; label: string }> = {
  active: { dot: 'bg-emerald-500', text: 'text-emerald-700', label: 'Active' },
- trialing: { dot: 'bg-sky-500', text: 'text-sky-700', label: 'Comped' },
+ trialing: { dot: 'bg-sky-500', text: 'text-sky-700', label: 'Active' },
  past_due: { dot: 'bg-amber-500', text: 'text-amber-700', label: 'Past due' },
  canceled: { dot: 'bg-gray-400', text: 'text-gray-600', label: 'Canceled' },
  cancelled: { dot: 'bg-gray-400', text: 'text-gray-600', label: 'Canceled' },
@@ -187,13 +187,6 @@ function SubscriptionCard({ billing }: { billing: BillingData }) {
 
  const showStrikethrough = (hasDiscount || trialing) && list > 0 && effectiveCents !== list
 
- const subline =
-  hasDiscount && billing.discount?.durationLabel
-   ? `${billing.discount.durationLabel}${billing.discount?.promotionCode ? ` · code ${billing.discount.promotionCode}` : ''}`
-   : trialing && billing.trialEndsAt
-    ? `Comped until ${formatDate(billing.trialEndsAt)}`
-    : 'per month, flat - no per-booking fees'
-
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
    <div className="flex items-center gap-2 mb-2">
@@ -206,12 +199,7 @@ function SubscriptionCard({ billing }: { billing: BillingData }) {
      <p className="text-base text-gray-400 line-through leading-tight">{formatCurrency(list)}</p>
     )}
    </div>
-   <p className="text-xs text-gray-500 mt-1">{subline}</p>
-   {(hasDiscount || trialing) && list > 0 && (
-    <p className="text-[11px] text-gray-400 mt-2">
-     Standard rate {formatCurrency(list)}/mo resumes after the {trialing ? 'comp period' : 'discount'} ends.
-    </p>
-   )}
+   <p className="text-xs text-gray-500 mt-1">per month, flat - no per-booking fees</p>
   </div>
  )
 }

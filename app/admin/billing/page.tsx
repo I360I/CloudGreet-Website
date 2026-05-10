@@ -94,11 +94,11 @@ export default function BillingDashboardPage() {
 
  const compedBlurb =
   summary.compedCount && summary.compedCount > 0
-   ? `Includes $${((summary.compedMrrCents ?? 0) / 100).toFixed(0)} from ${summary.compedCount} comped (100%-off)`
+   ? `Includes $${((summary.compedMrrCents ?? 0) / 100).toFixed(0)} from ${summary.compedCount} non-paying`
    : null
  const mrrDescription =
   summary.source === 'stripe-live'
-   ? `Live from Stripe - active + comped + past_due. ${summary.paidCount ?? 0} paid${compedBlurb ? `. ${compedBlurb}` : ''}.`
+   ? `Live from Stripe - active + non-paying + past_due. ${summary.paidCount ?? 0} paid${compedBlurb ? `. ${compedBlurb}` : ''}.`
    : 'Subscription charges captured in the last 30 days.'
 
  return [
@@ -277,7 +277,7 @@ export default function BillingDashboardPage() {
      tone="emerald"
     />
     <BreakdownPill
-     label="Comped"
+     label="Non-paying"
      count={compedCount}
      amountCents={compedMrrCents}
      tone="sky"
@@ -330,11 +330,11 @@ export default function BillingDashboardPage() {
    delay={0.05}
   />
   <SecondaryStat
-   label="Comped upside"
+   label="Conversion upside"
    value={compedCount > 0 ? `+$${Math.round(compedMrrCents / 100).toLocaleString()}` : '-'}
    hint={compedCount > 0
-    ? `If the ${compedCount} comped sub${compedCount === 1 ? '' : 's'} flip to full price`
-    : 'No comped subs right now'}
+    ? `If the ${compedCount} non-paying sub${compedCount === 1 ? '' : 's'} flip to full price`
+    : 'No non-paying subs right now'}
    icon={Sparkle}
    delay={0.1}
   />

@@ -123,7 +123,7 @@ export const smsTemplates: SMSTemplate[] = [
   {
     id: 'urgent_follow_up_sms',
     name: 'Urgent Follow-up SMS',
-    message: `Last chance: AI receptionist for {business_name}. 30-day money-back if we don't book a job. Reply YES or call {your_phone}.`,
+    message: `Last chance: AI receptionist for {business_name}. No contracts, cancel anytime. Reply YES or call {your_phone}.`,
     businessType: ['All'],
     variables: ['business_name', 'your_phone'],
     followUpDays: 0,

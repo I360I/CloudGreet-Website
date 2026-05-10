@@ -74,7 +74,7 @@ export default function Hero() {
  </div>
  <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10">
  <ShieldCheck className="w-4 h-4 text-sky-400" />
- <span className="text-sm font-medium">30-Day Money-Back Guarantee</span>
+ <span className="text-sm font-medium">No contracts, cancel anytime</span>
  </div>
  </motion.div>
  </div>

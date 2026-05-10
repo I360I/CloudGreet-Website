@@ -79,7 +79,7 @@ const STATUS_TONES: Record<string, {
  bg: string; text: string; border: string; dot: string; label?: string
 }> = {
  active:    { bg: 'bg-emerald-400/10', text: 'text-emerald-300', border: 'border-emerald-400/20', dot: 'bg-emerald-400', label: 'active' },
- trialing:  { bg: 'bg-sky-400/10', text: 'text-sky-300', border: 'border-sky-400/20', dot: 'bg-sky-400', label: 'comped' },
+ trialing:  { bg: 'bg-sky-400/10', text: 'text-sky-300', border: 'border-sky-400/20', dot: 'bg-sky-400', label: 'non-paying' },
  past_due:  { bg: 'bg-amber-400/10', text: 'text-amber-300', border: 'border-amber-400/20', dot: 'bg-amber-400', label: 'past due' },
  paused:    { bg: 'bg-gray-400/10', text: 'text-gray-300', border: 'border-gray-400/20', dot: 'bg-gray-400', label: 'paused' },
  inactive:  { bg: 'bg-gray-400/10', text: 'text-gray-400', border: 'border-gray-400/20', dot: 'bg-gray-500', label: 'inactive' },

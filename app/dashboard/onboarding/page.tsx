@@ -705,7 +705,7 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
      <div className="text-sm font-medium text-amber-900">Forwarding works - one more thing</div>
      <p className="text-xs text-amber-800 mt-1">
       We won&apos;t flip your account to live until your subscription is active.
-      Head to billing to add a payment method or apply your discount code.
+      Head to billing to add a payment method.
      </p>
      <a
       href="/dashboard/billing"
