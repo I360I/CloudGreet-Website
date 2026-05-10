@@ -8,6 +8,7 @@ import { scheduleReviewRequest } from '@/lib/review-requests'
 import { createCalendarEvent } from '@/lib/calendar'
 import { verifyRetellSignature } from '@/lib/webhook-verification'
 import { notifyAdmin } from '@/lib/notifications/notify'
+import { resolveCallBusinessId } from '@/lib/calls/resolve-business'
 import { CONFIG } from '@/lib/config'
 import Stripe from 'stripe'
 
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
   body.call?.agent_id || body.agent_id || body.metadata?.agent_id
  const eventToNumber: string | undefined =
   body.call?.to_number || body.to_number || body.call_inbound?.to_number
- const resolvedBusinessId: string | null = await resolveBusinessId(callingAgentId, eventToNumber)
+ const resolvedBusinessId: string | null = await resolveCallBusinessId(callingAgentId, eventToNumber)
 
  // call_inbound fires the moment a call hits Retell, BEFORE the agent
  // greets. We respond with dynamic_variables that get substituted into
@@ -558,53 +559,6 @@ export async function POST(request: NextRequest) {
  * call_analyzed once the post-call analysis pass completes (extracted
  * fields per the agent's post_call_analysis_data definition).
  */
-/**
- * Resolve the business that owns this call. Tries (in order):
- *   1. ai_agents.business_id by retell_agent_id
- *   2. businesses.retell_agent_id (legacy direct mapping)
- *   3. phone_numbers.business_id by to_number (provider='retell')
- *   4. businesses.phone_number by to_number (some clients only have this)
- *
- * Lifecycle events occasionally arrive without agent_id, and the
- * to_number fallback is what catches those. Without it, the call
- * silently never lands in the calls table.
- */
-async function resolveBusinessId(
- agentId: string | undefined,
- toNumber: string | undefined,
-): Promise<string | null> {
- if (agentId) {
-  const { data: agentRow } = await supabaseAdmin
-   .from('ai_agents')
-   .select('business_id')
-   .eq('retell_agent_id', agentId)
-   .maybeSingle()
-  if (agentRow?.business_id) return agentRow.business_id
-  const { data: bizByAgent } = await supabaseAdmin
-   .from('businesses')
-   .select('id')
-   .eq('retell_agent_id', agentId)
-   .maybeSingle()
-  if (bizByAgent?.id) return bizByAgent.id
- }
- if (toNumber) {
-  const { data: byPhone } = await supabaseAdmin
-   .from('phone_numbers')
-   .select('business_id')
-   .eq('phone_number', toNumber)
-   .eq('provider', 'retell')
-   .maybeSingle()
-  if (byPhone?.business_id) return byPhone.business_id
-  const { data: byBizPhone } = await supabaseAdmin
-   .from('businesses')
-   .select('id')
-   .eq('phone_number', toNumber)
-   .maybeSingle()
-  if (byBizPhone?.id) return byBizPhone.id
- }
- return null
-}
-
 async function handleCallEvent(
  eventType: string,
  body: any,
@@ -679,7 +633,7 @@ async function handleCallEvent(
   // any to_number on this event itself (call_ended often carries it
   // even when call_inbound resolution failed).
   const finalBusinessId =
-   resolvedBusinessId || (await resolveBusinessId(callingAgentId, call?.to_number))
+   resolvedBusinessId || (await resolveCallBusinessId(callingAgentId, call?.to_number))
 
   if (finalBusinessId) {
    await supabaseAdmin
