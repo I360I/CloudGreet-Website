@@ -14,7 +14,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Bell, Check, X, AlertCircle, CheckCircle2, AlertTriangle, Info } from 'lucide-react'
+import { Check, X, AlertCircle, CheckCircle2, AlertTriangle, Info } from 'lucide-react'
+import { Bell } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 type Severity = 'info' | 'success' | 'warning' | 'critical'
@@ -114,9 +115,13 @@ export function NotificationsBell({
     ? 'relative inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-300 hover:text-white hover:bg-white/[0.06]'
     : 'relative inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-black/[.04]'
 
+  // Anchor dropdown to the LEFT of the trigger so it opens toward main
+  // content. Anchoring `right-0` was clipping it offscreen when the bell
+  // sits in the sidebar (which is itself flush against the viewport's
+  // left edge). Width capped + internal scroll keeps long lists tidy.
   const popClass = isDark
-    ? 'absolute right-0 mt-2 w-96 max-h-[70vh] overflow-hidden bg-[#0d0d10] border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col'
-    : 'absolute right-0 mt-2 w-96 max-h-[70vh] overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-2xl flex flex-col'
+    ? 'absolute left-0 mt-2 w-80 max-h-[70vh] overflow-hidden bg-[#0d0d10] border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col z-50'
+    : 'absolute left-0 mt-2 w-80 max-h-[70vh] overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-2xl flex flex-col z-50'
 
   return (
     <div className="relative" ref={popRef}>
@@ -126,13 +131,14 @@ export function NotificationsBell({
         className={buttonClass}
         aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ''}`}
       >
-        <Bell className="w-4 h-4" strokeWidth={1.75} />
+        <Bell className="w-[18px] h-[18px]" weight={unread > 0 ? 'fill' : 'regular'} />
         {unread > 0 && (
-          <span className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold flex items-center justify-center ${
-            isDark ? 'bg-rose-500 text-white' : 'bg-rose-500 text-white'
-          }`}>
-            {unread > 99 ? '99+' : unread}
-          </span>
+          <span
+            className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ${
+              isDark ? 'ring-[#0d0d10]' : 'ring-white'
+            }`}
+            aria-hidden
+          />
         )}
       </button>
 
@@ -226,7 +232,7 @@ export function NotificationsRow({ basePath }: { basePath: string }) {
         }`}
       >
         <span className="inline-flex items-center gap-2.5">
-          <Bell className="w-4 h-4" strokeWidth={1.75} />
+          <Bell className="w-4 h-4" weight={unread > 0 ? 'fill' : 'regular'} />
           Notifications
         </span>
         {unread > 0 && (
