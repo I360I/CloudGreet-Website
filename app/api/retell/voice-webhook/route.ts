@@ -7,6 +7,7 @@ import { lookupCallerHistory } from '@/lib/caller-history'
 import { scheduleReviewRequest } from '@/lib/review-requests'
 import { createCalendarEvent } from '@/lib/calendar'
 import { verifyRetellSignature } from '@/lib/webhook-verification'
+import { notifyAdmin } from '@/lib/notifications/notify'
 import { CONFIG } from '@/lib/config'
 import Stripe from 'stripe'
 
@@ -69,24 +70,9 @@ export async function POST(request: NextRequest) {
  // body and the agent → business mapping is in our DB.
  const callingAgentId: string | undefined =
   body.call?.agent_id || body.agent_id || body.metadata?.agent_id
- let resolvedBusinessId: string | null = null
- if (callingAgentId) {
-  const { data: agentRow } = await supabaseAdmin
-   .from('ai_agents')
-   .select('business_id')
-   .eq('retell_agent_id', callingAgentId)
-   .maybeSingle()
-  if (agentRow?.business_id) {
-   resolvedBusinessId = agentRow.business_id
-  } else {
-   const { data: bizRow } = await supabaseAdmin
-    .from('businesses')
-    .select('id')
-    .eq('retell_agent_id', callingAgentId)
-    .maybeSingle()
-   if (bizRow?.id) resolvedBusinessId = bizRow.id
-  }
- }
+ const eventToNumber: string | undefined =
+  body.call?.to_number || body.to_number || body.call_inbound?.to_number
+ const resolvedBusinessId: string | null = await resolveBusinessId(callingAgentId, eventToNumber)
 
  // call_inbound fires the moment a call hits Retell, BEFORE the agent
  // greets. We respond with dynamic_variables that get substituted into
@@ -556,7 +542,7 @@ export async function POST(request: NextRequest) {
  // Lifecycle events (no tool_call). The most important is
  // call_analyzed - that's where Retell's post-call extraction lands.
  if (eventType === 'call_analyzed' || eventType === 'call_ended') {
-  await handleCallEvent(eventType, body, resolvedBusinessId)
+  await handleCallEvent(eventType, body, resolvedBusinessId, callingAgentId)
  }
 
  return NextResponse.json({ received: true })
@@ -572,10 +558,58 @@ export async function POST(request: NextRequest) {
  * call_analyzed once the post-call analysis pass completes (extracted
  * fields per the agent's post_call_analysis_data definition).
  */
+/**
+ * Resolve the business that owns this call. Tries (in order):
+ *   1. ai_agents.business_id by retell_agent_id
+ *   2. businesses.retell_agent_id (legacy direct mapping)
+ *   3. phone_numbers.business_id by to_number (provider='retell')
+ *   4. businesses.phone_number by to_number (some clients only have this)
+ *
+ * Lifecycle events occasionally arrive without agent_id, and the
+ * to_number fallback is what catches those. Without it, the call
+ * silently never lands in the calls table.
+ */
+async function resolveBusinessId(
+ agentId: string | undefined,
+ toNumber: string | undefined,
+): Promise<string | null> {
+ if (agentId) {
+  const { data: agentRow } = await supabaseAdmin
+   .from('ai_agents')
+   .select('business_id')
+   .eq('retell_agent_id', agentId)
+   .maybeSingle()
+  if (agentRow?.business_id) return agentRow.business_id
+  const { data: bizByAgent } = await supabaseAdmin
+   .from('businesses')
+   .select('id')
+   .eq('retell_agent_id', agentId)
+   .maybeSingle()
+  if (bizByAgent?.id) return bizByAgent.id
+ }
+ if (toNumber) {
+  const { data: byPhone } = await supabaseAdmin
+   .from('phone_numbers')
+   .select('business_id')
+   .eq('phone_number', toNumber)
+   .eq('provider', 'retell')
+   .maybeSingle()
+  if (byPhone?.business_id) return byPhone.business_id
+  const { data: byBizPhone } = await supabaseAdmin
+   .from('businesses')
+   .select('id')
+   .eq('phone_number', toNumber)
+   .maybeSingle()
+  if (byBizPhone?.id) return byBizPhone.id
+ }
+ return null
+}
+
 async function handleCallEvent(
  eventType: string,
  body: any,
  resolvedBusinessId: string | null,
+ callingAgentId: string | undefined,
 ): Promise<void> {
  try {
   const call = body.call || body
@@ -638,18 +672,49 @@ async function handleCallEvent(
     .from('calls')
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq('id', existing.id)
-  } else if (resolvedBusinessId) {
+   return
+  }
+
+  // No existing row - try one more time to resolve the business using
+  // any to_number on this event itself (call_ended often carries it
+  // even when call_inbound resolution failed).
+  const finalBusinessId =
+   resolvedBusinessId || (await resolveBusinessId(callingAgentId, call?.to_number))
+
+  if (finalBusinessId) {
    await supabaseAdmin
     .from('calls')
     .insert({
-     business_id: resolvedBusinessId,
+     business_id: finalBusinessId,
      retell_call_id: retellCallId,
      ...patch,
      created_at: new Date().toISOString(),
     })
-  } else {
-   logger.warn('Call event with no business id and no existing row', { retellCallId, eventType })
+   return
   }
+
+  // Still unresolved. This is the silent-data-loss path - log loudly
+  // and fire an admin notification so it doesn't sit unnoticed.
+  logger.error('Retell call event could not be matched to a business', {
+   retellCallId,
+   eventType,
+   agentId: callingAgentId,
+   toNumber: call?.to_number,
+   fromNumber: call?.from_number,
+  })
+  await notifyAdmin({
+   type: 'call.unmatched',
+   severity: 'critical',
+   title: 'Inbound call not linked to a business',
+   body: `Retell ${eventType} fired but no business matched. ${call?.from_number || 'unknown'} -> ${call?.to_number || 'unknown'}, agent ${callingAgentId || 'none'}, call ${retellCallId}.`,
+   metadata: {
+    retell_call_id: retellCallId,
+    event_type: eventType,
+    agent_id: callingAgentId || null,
+    to_number: call?.to_number || null,
+    from_number: call?.from_number || null,
+   },
+  })
  } catch (e) {
   logger.error('handleCallEvent failed', {
    error: e instanceof Error ? e.message : 'Unknown', eventType,

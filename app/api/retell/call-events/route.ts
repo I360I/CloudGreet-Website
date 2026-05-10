@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { verifyRetellSignature } from '@/lib/webhook-verification'
+import { notifyAdmin } from '@/lib/notifications/notify'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -77,9 +78,33 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
    if (byPhone) businessId = byPhone.business_id
   }
+  if (!businessId && toNumber) {
+   const { data: byBizPhone } = await supabaseAdmin
+    .from('businesses')
+    .select('id')
+    .eq('phone_number', toNumber)
+    .maybeSingle()
+   if (byBizPhone) businessId = byBizPhone.id
+  }
   if (!businessId) {
-   logger.warn('Retell call-events: no business match', { callId, agentId, toNumber })
-   // 200 so Retell doesn't keep retrying for an unknown number
+   // Silent-drop path: Retell saw a call we can't tie to a business.
+   // Log loud + fire admin notification so this never disappears
+   // unnoticed. 200 still since retries won't help if our DB is missing
+   // the mapping - the operator has to fix the number-to-business link.
+   logger.error('Retell call-events: no business match', { callId, agentId, toNumber, fromNumber, eventType })
+   await notifyAdmin({
+    type: 'call.unmatched',
+    severity: 'critical',
+    title: 'Inbound call not linked to a business',
+    body: `Retell ${eventType} fired but no business matched. ${fromNumber || 'unknown'} -> ${toNumber || 'unknown'}, agent ${agentId || 'none'}, call ${callId}.`,
+    metadata: {
+     retell_call_id: callId,
+     event_type: eventType,
+     agent_id: agentId || null,
+     to_number: toNumber || null,
+     from_number: fromNumber || null,
+    },
+   })
    return NextResponse.json({ ok: true, ignored: true, reason: 'no_business_match' })
   }
 
