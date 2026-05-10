@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import { postToSlack } from '@/lib/notifications/slack'
+import { notifyAdmin, notifyRep } from '@/lib/notifications/notify'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -173,6 +174,38 @@ export async function POST(
         await postToSlack({
           text: `${prefix}:white_check_mark: *Agent complete* - ${(c as any)?.prospect_business_name || 'client'}${repName ? ` · rep: ${repName}` : ''} · test #: ${update.demo_agent_test_phone}\nThe rep and client dashboards now reflect the agent. Demo can run.`,
         })
+
+        // In-app admin notification (parallel to Slack, different
+        // surface). Less noisy because we only fire on the actual
+        // ready-flip, not on every test-phone update.
+        await notifyAdmin({
+          type: 'agent_built',
+          title: `Agent ready: ${(c as any)?.prospect_business_name || 'client'}`,
+          body: `Test #: ${update.demo_agent_test_phone}${repName ? ` · rep: ${repName}` : ''}`,
+          link: `/admin/agents-due/${params.closeId}`,
+          severity: 'success',
+          metadata: {
+            close_id: params.closeId,
+            test_phone: update.demo_agent_test_phone,
+            rep_id: (c as any)?.rep_id,
+          },
+        })
+
+        // Notify the rep in-app: their demo agent is live and they can
+        // call the test number. This is a "moment of truth" for them.
+        if ((c as any)?.rep_id) {
+          await notifyRep((c as any).rep_id, {
+            type: 'demo_agent_ready',
+            title: `Your demo agent is ready`,
+            body: `${(c as any)?.prospect_business_name || 'Your client'} - call ${update.demo_agent_test_phone} to test it before the demo.`,
+            link: '/sales/closes',
+            severity: 'success',
+            metadata: {
+              close_id: params.closeId,
+              test_phone: update.demo_agent_test_phone,
+            },
+          })
+        }
       })()
     }
 

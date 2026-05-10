@@ -689,6 +689,49 @@ async function creditRepCommission(
    setupCents,
    commissionCents: rows.reduce((s, r) => s + r.commission_cents, 0),
   })
+
+  // In-app notifications for the moment of truth: rep gets paid, admin
+  // sees the close convert. Best-effort, never blocks the webhook.
+  const { notifyAdmin, notifyRep } = await import('@/lib/notifications/notify')
+  const totalCommission = rows.reduce((s, r) => s + r.commission_cents, 0)
+  const grossDollars = `$${((mrrCents + setupCents) / 100).toFixed(0)}`
+  const commissionDollars = `$${(totalCommission / 100).toFixed(0)}`
+  // Pull the business name for nicer copy.
+  const { data: bizRow } = await supabaseAdmin
+   .from('businesses')
+   .select('business_name')
+   .eq('id', business.id)
+   .maybeSingle()
+  const bizName = (bizRow as any)?.business_name || 'a client'
+
+  await notifyRep(business.rep_id, {
+   type: 'commission_credited',
+   title: `${commissionDollars} commission credited`,
+   body: `${bizName} just paid ${grossDollars}. Your half is locked in - payouts run Friday.`,
+   link: '/sales/earnings',
+   severity: 'success',
+   icon: 'dollar-sign',
+   metadata: {
+    business_id: business.id,
+    invoice_id: invoice.id,
+    commission_cents: totalCommission,
+   },
+  })
+
+  await notifyAdmin({
+   type: 'invoice_paid',
+   title: `${bizName} paid ${grossDollars}`,
+   body: `Commission ${commissionDollars} credited to rep.`,
+   link: `/admin/clients/${business.id}`,
+   severity: 'success',
+   metadata: {
+    business_id: business.id,
+    invoice_id: invoice.id,
+    rep_id: business.rep_id,
+    gross_cents: mrrCents + setupCents,
+    commission_cents: totalCommission,
+   },
+  })
  }
 }
 

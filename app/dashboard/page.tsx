@@ -622,7 +622,7 @@ function CallsEmpty({ hasAnyData }: { hasAnyData: boolean }) {
  return (
   <div className="px-6 py-6">
    <p className="text-sm text-gray-700">
-    No calls yet. Once your Retell number is forwarded to from your business line, calls will show up here.
+    No calls yet. Once your business line forwards to your CloudGreet agent, calls will show up here.
    </p>
   </div>
  )

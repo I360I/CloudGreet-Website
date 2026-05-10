@@ -208,7 +208,7 @@ function LiveAgentBanner({ state }: { state: AgentState | null }) {
     <div className="flex-1">
      <p className="text-sm font-medium text-amber-900">No live AI agent linked yet</p>
      <p className="text-xs text-amber-800 mt-0.5">
-      {state.reason || 'Saved settings won\'t reach Retell until an admin links your agent.'}
+      {state.reason || 'Saved settings won\'t reach the agent until an admin links it.'}
      </p>
     </div>
    </div>
@@ -222,7 +222,7 @@ function LiveAgentBanner({ state }: { state: AgentState | null }) {
     <div className="flex-1 text-xs">
      <div className={`font-medium ${noPhone ? 'text-amber-900' : 'text-emerald-900'}`}>
       {noPhone
-       ? 'Agent linked, but no Retell phone number routes to it yet'
+       ? 'Agent linked, but no phone number routes to it yet'
        : `Live · answers calls on ${(state.boundNumbers || []).join(', ')}`}
      </div>
      <div className={`mt-1 font-mono ${noPhone ? 'text-amber-800/80' : 'text-emerald-800/80'}`}>
@@ -269,7 +269,7 @@ function GreetingSection({ profile, state, onSaved }: { profile: Profile; state:
    setSavedFlag(true)
    setTimeout(() => setSavedFlag(false), 2500)
    if (r.agentSyncError) {
-    setError(`Saved, but Retell didn't sync: ${r.agentSyncError}`)
+    setError(`Saved, but the agent didn't sync: ${r.agentSyncError}`)
     setTrace(Array.isArray(r.retellTrace) ? r.retellTrace : null)
    } else if (Array.isArray(r.retellTrace)) {
     setTrace(r.retellTrace)
@@ -303,7 +303,7 @@ function GreetingSection({ profile, state, onSaved }: { profile: Profile; state:
    {error && <ErrorHint message={error} />}
    {trace && trace.length > 0 && (
     <details className="mt-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs">
-     <summary className="cursor-pointer text-gray-700 font-medium">Retell trace ({trace.length} steps)</summary>
+     <summary className="cursor-pointer text-gray-700 font-medium">Sync trace ({trace.length} steps)</summary>
      <ul className="mt-2 space-y-1 font-mono text-gray-600">
       {trace.map((line, i) => <li key={i}>· {line}</li>)}
      </ul>
@@ -427,7 +427,7 @@ function VoiceSection({ profile, state, onSaved }: { profile: Profile; state: Ag
    <div className="flex justify-end mt-4">
     <SaveButton
      disabled={!dirty} saving={saving} onClick={onSave}
-     label={profile.retellAgentId ? 'Save & push to Retell' : 'Save'}
+     label={profile.retellAgentId ? 'Save & push to agent' : 'Save'}
     />
    </div>
    {savedFlag && <SavedHint />}
@@ -576,7 +576,7 @@ function SpeedSection({ profile, state, onSaved }: { profile: Profile; state: Ag
    <div className="flex justify-end mt-4">
     <SaveButton
      disabled={!dirty} saving={saving} onClick={onSave}
-     label={profile.retellAgentId ? 'Save & push to Retell' : 'Save'}
+     label={profile.retellAgentId ? 'Save & push to agent' : 'Save'}
     />
    </div>
    {savedFlag && <SavedHint />}
@@ -1120,7 +1120,7 @@ function BookingNotificationsSection() {
        {VARS.map((v) => (
         <div key={v.name}>
          <code className="font-mono text-gray-900">{`{${v.name}}`}</code>
-         <span className="text-gray-500"> — {v.description}</span>
+         <span className="text-gray-500"> - {v.description}</span>
         </div>
        ))}
       </div>
@@ -1297,7 +1297,7 @@ function ReviewRequestsSection() {
     <div>
      <h2 className="text-sm font-medium text-gray-700">Review requests</h2>
      <p className="text-xs text-gray-500 mt-1 max-w-prose leading-relaxed">
-      After every appointment your AI books, automatically text the customer asking for a Google review. The AI asks for consent on the call first — only customers who say yes get the text. 90-day cap per customer, sends only between 9am-7pm local, STOP-to-opt-out is automatic.
+      After every appointment your AI books, automatically text the customer asking for a Google review. The AI asks for consent on the call first - only customers who say yes get the text. 90-day cap per customer, sends only between 9am-7pm local, STOP-to-opt-out is automatic.
      </p>
     </div>
     <Toggle checked={enabled} onChange={setEnabled} />

@@ -703,8 +703,8 @@ function JobDrawer({
 function groupSources(sources: Source[]): { label: string; items: Source[] }[] {
   const groups: Record<string, Source[]> = {
     'Recommended': [],
-    'Texas — license databases': [],
-    'Texas — Google Places': [],
+    'Texas - license databases': [],
+    'Texas - Google Places': [],
     'National sweeps': [],
   }
   for (const s of sources) {
@@ -712,13 +712,13 @@ function groupSources(sources: Source[]): { label: string; items: Source[] }[] {
     // places_law goes in the first labeled group right under Recommended
     // so reps see it at the top, even though the source itself is now
     // nationwide rather than TX-licensed-only.
-    else if (s.id === 'places_law') groups['Texas — license databases'].push(s)
+    else if (s.id === 'places_law') groups['Texas - license databases'].push(s)
     else if (s.id.startsWith('tdlr_') || s.id.startsWith('tsbpe') || s.id.startsWith('tda_')) {
-      groups['Texas — license databases'].push(s)
+      groups['Texas - license databases'].push(s)
     } else if (s.id.startsWith('places_') || s.id.startsWith('google_')) {
-      groups['Texas — Google Places'].push(s)
+      groups['Texas - Google Places'].push(s)
     } else {
-      groups['Texas — Google Places'].push(s) // fallback bucket
+      groups['Texas - Google Places'].push(s) // fallback bucket
     }
   }
   return Object.entries(groups)

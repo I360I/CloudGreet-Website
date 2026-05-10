@@ -12,7 +12,7 @@ import { telnyxClient } from '@/lib/telnyx'
  *      with scheduled_for set per the business's timing pref, clamped
  *      to 9am-7pm local. Skips the row (or never inserts) if consent
  *      missing, opt-out exists, frequency cap hit, or business disabled.
- *   3. Cron worker (every 15 min) reads queued rows where
+ *   3. Cron worker (daily at 9 AM ET on the Hobby plan; bump to */15
  *      scheduled_for <= now(), renders the template, fires the SMS via
  *      Telnyx, marks status='sent' or 'failed'.
  *   4. STOP/UNSUBSCRIBE inbound webhook writes to review_opt_outs.

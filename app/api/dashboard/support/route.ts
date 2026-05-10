@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { postToSlack } from '@/lib/notifications/slack'
 import { logImpersonatedAction } from '@/lib/compliance/logging'
+import { notifyAdmin } from '@/lib/notifications/notify'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -83,6 +84,22 @@ export async function POST(request: NextRequest) {
     action: 'support_request.create',
     path: '/api/dashboard/support',
     metadata: { kind, request_id: (inserted as any).id },
+  })
+
+  // In-app admin notification.
+  void notifyAdmin({
+    type: kind === 'change_request' ? 'support_change_request' : 'support_message',
+    title: kind === 'change_request' ? `Change request from ${businessName}` : `Support message from ${businessName}`,
+    body: subject,
+    link: '/admin/support-requests',
+    severity: kind === 'change_request' ? 'warning' : 'info',
+    icon: 'wrench',
+    metadata: {
+      request_id: (inserted as any).id,
+      business_id: auth.businessId,
+      business_name: businessName,
+      user_name: userName,
+    },
   })
 
   // Best-effort Slack ping. Don't block the response on Slack outcome.

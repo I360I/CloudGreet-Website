@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyAdmin } from '@/lib/notifications/notify'
 import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
@@ -172,6 +173,24 @@ ${notes ? `Notes:\n${notes}\n\n` : ''}Review & approve in admin: ${process.env.N
       })
     }
   }
+
+  // In-app admin notification (separate from the email - different
+  // medium, different mental model, both useful).
+  const repName2 = [rep?.first_name, rep?.last_name].filter(Boolean).join(' ') || rep?.email || 'A rep'
+  void notifyAdmin({
+    type: 'close_submitted',
+    title: `New close from ${repName2}`,
+    body: `${name} - $${(monthly / 100).toFixed(0)}/mo${setupFee > 0 ? ` + $${(setupFee / 100).toFixed(0)} setup` : ''}`,
+    link: `/admin/sales/closes`,
+    severity: 'success',
+    metadata: {
+      close_id: created.id,
+      rep_id: auth.userId,
+      business_name: name,
+      monthly_cents: monthly,
+      setup_fee_cents: setupFee,
+    },
+  })
 
   return NextResponse.json({ success: true, close: created })
 }

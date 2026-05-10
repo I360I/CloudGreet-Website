@@ -17,6 +17,7 @@ import {
   Gear, Users, GraduationCap, BookOpen, Icon as PhosphorIcon,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { NotificationsBell } from '@/components/NotificationsBell'
 
 type ActiveLabel = 'Overview' | 'Leads' | 'Closes' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook'
 
@@ -138,19 +139,22 @@ export function SalesShell({
               <div className="text-xs text-amber-900 mt-0.5">Connect bank to receive payouts</div>
             </button>
           )}
-          <div className="flex items-center gap-4 text-xs">
-            <Link
-              href="/sales/settings"
-              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
-            >
-              <Gear className="w-3.5 h-3.5" /> Settings
-            </Link>
-            <button
-              onClick={signOut}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
-            >
-              <SignOut className="w-3.5 h-3.5" /> Sign out
-            </button>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-4 text-xs">
+              <Link
+                href="/sales/settings"
+                className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
+              >
+                <Gear className="w-3.5 h-3.5" /> Settings
+              </Link>
+              <button
+                onClick={signOut}
+                className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
+              >
+                <SignOut className="w-3.5 h-3.5" /> Sign out
+              </button>
+            </div>
+            <NotificationsBell basePath="/api/sales/notifications" theme="light" />
           </div>
         </div>
       </aside>

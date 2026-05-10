@@ -524,9 +524,9 @@ function VideoEmbed({ url }: { url: string }) {
     return (
       <div className="aspect-video bg-gray-100 rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center text-center px-6">
         <PlayCircle className="w-8 h-8 text-gray-400 mb-2" />
-        <div className="text-sm font-medium text-gray-700">Video coming soon</div>
+        <div className="text-sm font-medium text-gray-700">No video for this step</div>
         <div className="text-xs text-gray-500 mt-1 max-w-xs">
-          The outline below covers everything until the recording lands.
+          The outline below covers everything you need.
         </div>
       </div>
     )
