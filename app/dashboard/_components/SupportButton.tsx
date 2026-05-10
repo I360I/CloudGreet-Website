@@ -12,7 +12,8 @@
  * support_requests and pings Slack. Admin sees them in /admin/support-requests.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Lifebuoy, Envelope, Phone, X, CircleNotch, CheckCircle } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -49,6 +50,18 @@ function SupportModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
 
+  // Lock body scroll while the modal is open and let ESC close it.
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [onClose])
+
   const submit = async () => {
     setError(null); setBusy(true)
     try {
@@ -69,9 +82,16 @@ function SupportModal({ onClose }: { onClose: () => void }) {
     }
   }
 
-  return (
+  // Portal the modal to <body> so it escapes any ancestor stacking
+  // context. The previous in-tree render let dashboard cards (which
+  // sit inside a wrapper with transform/filter from animations) paint
+  // ON TOP of the backdrop - z-[100] only wins inside the same
+  // stacking context.
+  if (typeof window === 'undefined') return null
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -184,7 +204,8 @@ function SupportModal({ onClose }: { onClose: () => void }) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
