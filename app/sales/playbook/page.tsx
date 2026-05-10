@@ -35,12 +35,12 @@ export default function PlaybookPage() {
         {/* Sidebar TOC */}
         <aside className="md:sticky md:top-4 md:self-start">
           <div className="relative">
-            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search the playbook"
-              className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-gray-400"
+              className="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-9 py-2 text-sm focus:outline-none focus:border-gray-400"
             />
             {search && (
               <button

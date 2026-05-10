@@ -31,7 +31,7 @@ async function insert(args: {
   audience_id: string | null
 } & NotifyInput): Promise<void> {
   try {
-    const { error } = await supabaseAdmin.from('notifications').insert({
+    const { error } = await supabaseAdmin.from('app_notifications').insert({
       audience_type: args.audience_type,
       audience_id: args.audience_id,
       type: args.type,

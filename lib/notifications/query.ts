@@ -35,7 +35,7 @@ export async function listNotifications(
   const limit = Math.min(opts.limit ?? 50, 200)
 
   let q = supabaseAdmin
-    .from('notifications')
+    .from('app_notifications')
     .select('id, audience_type, audience_id, type, title, body, link, icon, severity, metadata, read_at, created_at')
     .eq('audience_type', audience.audience_type)
     .order('created_at', { ascending: false })
@@ -54,7 +54,7 @@ export async function listNotifications(
   // Unread count - separate cheap query so the bell badge can render
   // before the dropdown content does.
   let unreadQ = supabaseAdmin
-    .from('notifications')
+    .from('app_notifications')
     .select('id', { count: 'exact', head: true })
     .eq('audience_type', audience.audience_type)
     .is('read_at', null)
@@ -79,7 +79,7 @@ export async function markRead(
 ): Promise<{ marked: number }> {
   const nowIso = new Date().toISOString()
   let q = supabaseAdmin
-    .from('notifications')
+    .from('app_notifications')
     .update({ read_at: nowIso })
     .eq('audience_type', audience.audience_type)
     .is('read_at', null)
