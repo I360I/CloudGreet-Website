@@ -113,8 +113,7 @@ function SupportModal({ onClose }: { onClose: () => void }) {
             <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
             <h4 className="text-base font-medium text-gray-900 mb-1">Got it.</h4>
             <p className="text-sm text-gray-600 max-w-xs mx-auto">
-              We&apos;ll reach back out shortly. For urgent issues, the contact
-              options below still work.
+              We&apos;ll reach back out shortly.
             </p>
             <button
               onClick={onClose}

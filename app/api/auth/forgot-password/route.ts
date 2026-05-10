@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   // accounts silently never receive a reset email.
   const { data: user } = await supabaseAdmin
     .from('custom_users')
-    .select('id, email, first_name')
+    .select('id, email')
     .ilike('email', email)
     .maybeSingle()
 
@@ -89,12 +89,7 @@ export async function POST(request: NextRequest) {
     const resend = new Resend(resendKey)
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
     const replyTo = process.env.RESEND_REPLY_TO || 'anthony@cloudgreet.com'
-    const firstName = (user.first_name || '').trim()
-    const greeting = firstName ? `Hi ${firstName},` : 'Hi,'
-
     const text = [
-      greeting,
-      '',
       'Click the link below to reset your CloudGreet password. The link is good for 1 hour.',
       '',
       resetUrl,
@@ -114,7 +109,6 @@ export async function POST(request: NextRequest) {
           <div style="font-size:20px;font-weight:500;letter-spacing:-0.01em;margin-top:6px;">Reset your password</div>
         </td></tr>
         <tr><td style="padding:8px 32px 0;font-size:14px;line-height:1.6;color:#374151;">
-          <p style="margin:0 0 12px;">${escapeHtml(greeting)}</p>
           <p style="margin:0 0 20px;">Click the button below to set a new password. The link is good for 1 hour.</p>
           <p style="margin:0 0 24px;">
             <a href="${resetUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:13px;padding:10px 18px;font-weight:500;">Reset password</a>
@@ -150,8 +144,3 @@ export async function POST(request: NextRequest) {
   return genericOk
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[c] as string)
-}

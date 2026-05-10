@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Resend } from 'resend'
 import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
@@ -102,16 +103,47 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  // Best-effort Slack ping. Don't block the response on Slack outcome.
+  // Best-effort Slack ping to Anthony only. Use a dedicated webhook
+  // (SLACK_SUPPORT_WEBHOOK_URL = a Slackbot DM webhook) so this doesn't
+  // hit the team channel. Falls back to the default webhook if unset.
+  const emoji = kind === 'change_request' ? ':wrench:' : ':speech_balloon:'
+  const kindLabel = kind === 'change_request' ? 'Change request' : 'Support message'
+  const truncatedBody = message.length > 600 ? message.slice(0, 600) + '…' : message
+  const slackText = `${emoji} *${kindLabel}* from *${businessName}* (${userName})\n*${subject}*\n\n${truncatedBody}\n\n_/admin/support-requests_`
+
+  void postToSlack({
+    text: slackText,
+    webhookUrl: process.env.SLACK_SUPPORT_WEBHOOK_URL || undefined,
+  })
+
+  // Best-effort email to Anthony so urgent submissions surface in inbox
+  // even when Slack DMs are muted. Skipped silently if Resend isn't set.
   void (async () => {
-    const mentions = (process.env.SLACK_AGENT_COMPLETE_MENTIONS || '').trim()
-    const prefix = mentions ? `${mentions} ` : ''
-    const emoji = kind === 'change_request' ? ':wrench:' : ':speech_balloon:'
-    const kindLabel = kind === 'change_request' ? 'Change request' : 'Support message'
-    const truncatedBody = message.length > 600 ? message.slice(0, 600) + '…' : message
-    await postToSlack({
-      text: `${prefix}${emoji} *${kindLabel}* from *${businessName}* (${userName})\n*${subject}*\n\n${truncatedBody}\n\n_/admin/support-requests_`,
-    })
+    const resendKey = process.env.RESEND_API_KEY
+    if (!resendKey) return
+    const to = process.env.SUPPORT_NOTIFICATION_EMAIL || 'anthony@cloudgreet.com'
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
+    try {
+      const resend = new Resend(resendKey)
+      await resend.emails.send({
+        from: `CloudGreet Support <${fromEmail}>`,
+        to,
+        replyTo: (user as any)?.email || undefined,
+        subject: `[${kindLabel}] ${businessName}: ${subject}`,
+        text: [
+          `${kindLabel} from ${businessName} (${userName})`,
+          `Reply-to: ${(user as any)?.email || 'unknown'}`,
+          '',
+          `Subject: ${subject}`,
+          '',
+          message,
+          '',
+          'https://cloudgreet.com/admin/support-requests',
+        ].join('\n'),
+      })
+    } catch (e) {
+      logger.warn('support email send failed', { error: e instanceof Error ? e.message : 'Unknown' })
+    }
   })()
 
   return NextResponse.json({
