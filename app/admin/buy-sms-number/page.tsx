@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, CheckCircle2, AlertCircle, Copy, ShoppingCart } from 'lucide-react'
+import { CircleNotch, CheckCircle, WarningCircle, Copy, ShoppingCart } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PrimaryButton, GhostButton, Input } from '../_components/ui'
@@ -95,12 +95,12 @@ export default function BuySmsNumberPage() {
             {!result && (
               <div className="flex items-center gap-2">
                 <PrimaryButton onClick={submit} disabled={busy}>
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4" />}
+                  {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <ShoppingCart className="w-4 h-4" />}
                   Buy + attach
                 </PrimaryButton>
                 {error && (
                   <span className="text-xs text-rose-300 inline-flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {error}
+                    <WarningCircle className="w-3.5 h-3.5" /> {error}
                   </span>
                 )}
               </div>
@@ -109,7 +109,7 @@ export default function BuySmsNumberPage() {
             {result && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4">
                 <div className="text-sm text-emerald-300 inline-flex items-center gap-2 mb-3">
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle className="w-4 h-4" />
                   Number purchased and attached
                 </div>
 
@@ -119,7 +119,7 @@ export default function BuySmsNumberPage() {
                 <div className="flex items-center gap-2 bg-black/30 border border-white/10 rounded-lg px-3 py-2">
                   <code className="flex-1 text-sm font-mono text-gray-200 truncate">{result.phone_number}</code>
                   <GhostButton onClick={() => copy(result.phone_number)}>
-                    {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                     {copied ? 'Copied' : 'Copy'}
                   </GhostButton>
                 </div>

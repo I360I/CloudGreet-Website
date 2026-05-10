@@ -13,7 +13,7 @@
  */
 
 import { useState } from 'react'
-import { LifeBuoy, Mail, Phone, X, Loader2, CheckCircle2 } from 'lucide-react'
+import { Lifebuoy, Envelope, Phone, X, CircleNotch, CheckCircle } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 const SUPPORT_PHONE = process.env.NEXT_PUBLIC_SUPPORT_PHONE || '+1 (737) 937-0084'
@@ -34,7 +34,7 @@ export function SupportButton({ className = '' }: { className?: string }) {
         }
         type="button"
       >
-        <LifeBuoy className="w-4 h-4" strokeWidth={1.75} /> Support
+        <Lifebuoy className="w-4 h-4" /> Support
       </button>
       {open && <SupportModal onClose={() => setOpen(false)} />}
     </>
@@ -80,7 +80,7 @@ function SupportModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <LifeBuoy className="w-5 h-5 text-sky-600" strokeWidth={1.75} />
+            <Lifebuoy className="w-5 h-5 text-sky-600" />
             <h3 className="text-base font-medium text-gray-900">Support</h3>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1 -m-1" aria-label="Close">
@@ -90,7 +90,7 @@ function SupportModal({ onClose }: { onClose: () => void }) {
 
         {done ? (
           <div className="px-5 py-8 text-center">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
+            <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
             <h4 className="text-base font-medium text-gray-900 mb-1">Got it.</h4>
             <p className="text-sm text-gray-600 max-w-xs mx-auto">
               We&apos;ll reach back out shortly. For urgent issues, the contact
@@ -156,7 +156,7 @@ function SupportModal({ onClose }: { onClose: () => void }) {
                 disabled={busy || !subject.trim() || !body.trim()}
                 className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm rounded-lg px-4 py-2"
               >
-                {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+                {busy && <CircleNotch className="w-4 h-4 animate-spin" />}
                 {kind === 'change_request' ? 'Submit change request' : 'Send message'}
               </button>
               <button onClick={onClose} className="text-xs text-gray-500 hover:text-gray-900">Cancel</button>
@@ -171,7 +171,7 @@ function SupportModal({ onClose }: { onClose: () => void }) {
                   href={`mailto:${SUPPORT_EMAIL}`}
                   className="inline-flex items-center gap-1.5 text-sky-700 hover:text-sky-900"
                 >
-                  <Mail className="w-3.5 h-3.5" /> {SUPPORT_EMAIL}
+                  <Envelope className="w-3.5 h-3.5" /> {SUPPORT_EMAIL}
                 </a>
                 <a
                   href={`tel:${SUPPORT_PHONE_DIAL}`}

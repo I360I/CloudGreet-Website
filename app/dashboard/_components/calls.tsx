@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { X, Play } from 'lucide-react'
+import { X, Play } from '@phosphor-icons/react'
 
 export type Call = {
  id: string

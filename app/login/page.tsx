@@ -4,7 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Eye, EyeOff, ArrowUpRight, X } from "lucide-react"
+import { Eye, EyeSlash, ArrowUpRight, X } from '@phosphor-icons/react'
 import { setAuthToken } from '@/lib/auth/token-manager'
 
 function LoginInner() {
@@ -162,7 +162,7 @@ function LoginInner() {
           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
           aria-label={showPassword ? 'Hide password' : 'Show password'}
          >
-          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          {showPassword ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
          </button>
         </div>
        </div>

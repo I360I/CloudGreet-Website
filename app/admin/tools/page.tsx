@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Database, Wand2, ArrowUpRight, Plug, MessageSquare, ShoppingCart, RefreshCw, FileText, Activity, Gauge, LifeBuoy } from 'lucide-react'
+import { Database, MagicWand, ArrowUpRight, Plug, ChatCircle, ShoppingCart, ArrowsClockwise, FileText, Pulse, Gauge, Lifebuoy } from '@phosphor-icons/react'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
 
@@ -10,7 +10,7 @@ const TOOLS: { href: string; label: string; description: string; icon: React.Ele
   href: '/admin/support-requests',
   label: 'Support requests',
   description: 'Contractor-submitted change requests + messages from the dashboard support button. Triage queue with admin notes and status flips. Slack pings on every new submission.',
-  icon: LifeBuoy,
+  icon: Lifebuoy,
  },
  {
   href: '/admin/system-health',
@@ -22,7 +22,7 @@ const TOOLS: { href: string; label: string; description: string; icon: React.Ele
   href: '/admin/telnyx-health',
   label: 'Telnyx health',
   description: 'Verify env vars, copy webhook URLs to paste into Telnyx, see recent inbound opt-outs + outbound sends + failures. Walk this when setting up a new number or when SMS isn\'t flowing.',
-  icon: Activity,
+  icon: Pulse,
  },
  {
   href: '/admin/tools/scraper',
@@ -40,7 +40,7 @@ const TOOLS: { href: string; label: string; description: string; icon: React.Ele
   href: '/admin/sms-test',
   label: 'SMS tester',
   description: 'Fire a single booking-notification SMS to any number to verify the wiring before onboarding a contractor. Surfaces raw Telnyx response on failure.',
-  icon: MessageSquare,
+  icon: ChatCircle,
  },
  {
   href: '/admin/agent-prompt',
@@ -52,13 +52,13 @@ const TOOLS: { href: string; label: string; description: string; icon: React.Ele
   href: '/admin/agent-backfill',
   label: 'Returning-caller backfill',
   description: 'Push the returning-caller prompt block into every existing Retell agent so contractors who onboarded before the feature shipped get the new behavior. Idempotent.',
-  icon: RefreshCw,
+  icon: ArrowsClockwise,
  },
  {
   href: '/admin/review-consent-backfill',
   label: 'Review-consent tool param',
   description: 'Add review_consent (boolean) to the book_appointment tool on every existing Retell agent. Required before review-request SMS will start firing. Idempotent.',
-  icon: RefreshCw,
+  icon: ArrowsClockwise,
  },
  {
   href: '/admin/settings',
@@ -86,7 +86,7 @@ export default function AdminToolsPage() {
         <Panel className="hover:border-sky-400/30 transition-colors duration-300">
          <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
-           <t.icon className="w-4 h-4 text-sky-400" strokeWidth={1.75} />
+           <t.icon className="w-4 h-4 text-sky-400" />
           </div>
           <div className="flex-1 min-w-0">
            <h2 className="text-base font-medium text-white">{t.label}</h2>

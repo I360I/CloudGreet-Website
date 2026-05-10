@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, FileText, Video, ExternalLink } from 'lucide-react'
+import { CircleNotch, FileText, VideoCamera, ArrowSquareOut } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader } from '../_components/ui'
@@ -95,7 +95,7 @@ export default function AdminApplicationsPage() {
 
           {loading && (
             <div className="flex items-center gap-2 text-sm text-gray-400 py-12 justify-center">
-              <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+              <CircleNotch className="w-4 h-4 animate-spin" /> Loading…
             </div>
           )}
           {err && <div className="text-sm text-rose-300">{err}</div>}
@@ -149,7 +149,7 @@ export default function AdminApplicationsPage() {
                           )}
                           {a.video_url && (
                             <span className="inline-flex items-center gap-1 text-gray-400">
-                              <Video className="w-3 h-3" /> Video
+                              <VideoCamera className="w-3 h-3" /> VideoCamera
                             </span>
                           )}
                         </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Copy, CheckCircle2, AlertCircle } from 'lucide-react'
+import { CircleNotch, Copy, CheckCircle, WarningCircle } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, GhostButton } from '../_components/ui'
@@ -78,19 +78,19 @@ export default function AgentPromptPreviewPage() {
                 ))}
               </div>
               <GhostButton onClick={copy} disabled={!prompt}>
-                {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? 'Copied' : 'Copy'}
               </GhostButton>
             </div>
 
             {busy && (
               <div className="text-xs text-gray-400 inline-flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading…
+                <CircleNotch className="w-3.5 h-3.5 animate-spin" /> Loading…
               </div>
             )}
             {error && (
               <div className="text-xs text-rose-300 inline-flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5" /> {error}
+                <WarningCircle className="w-3.5 h-3.5" /> {error}
               </div>
             )}
 

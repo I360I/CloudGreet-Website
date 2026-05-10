@@ -2,10 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
- Shield, CheckCircle, AlertCircle, Lock, Users, 
- Database, Eye, EyeOff, Key, Building
-} from 'lucide-react'
+import { Shield, CheckCircle, WarningCircle, Lock, Users, Database, Eye, EyeSlash, Key, Building } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { logger } from '@/lib/monitoring'
 
@@ -77,7 +74,7 @@ export default function TenantIsolationIndicator({ businessId, businessName }: T
  <div className="bg-red-600/20 border border-red-500/30 rounded-xl p-6">
  <div className="flex items-center gap-3">
  <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
- <AlertCircle className="w-4 h-4 text-red-400" />
+ <WarningCircle className="w-4 h-4 text-red-400" />
  </div>
  <div>
  <h3 className="text-lg font-semibold text-red-400">Isolation Test Failed</h3>
@@ -92,7 +89,7 @@ export default function TenantIsolationIndicator({ businessId, businessName }: T
  return success ? (
  <CheckCircle className="w-4 h-4 text-green-400" />
  ) : (
- <AlertCircle className="w-4 h-4 text-red-400" />
+ <WarningCircle className="w-4 h-4 text-red-400" />
  )
  }
 

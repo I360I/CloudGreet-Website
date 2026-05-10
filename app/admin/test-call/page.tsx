@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/app/components/ui/Button'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { PhoneCall, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react'
+import { PhoneCall, CheckCircle, XCircle, CircleNotch, WarningCircle } from '@phosphor-icons/react'
 
 interface Business {
  id: string
@@ -219,7 +219,7 @@ export default function AdminTestCallPage() {
  >
  {isLoading ? (
  <>
- <Loader2 className="inline-block mr-2 animate-spin" />
+ <CircleNotch className="inline-block mr-2 animate-spin" />
  Placing Call...
  </>
  ) : (
@@ -289,7 +289,7 @@ export default function AdminTestCallPage() {
  <h2 className="text-xl font-semibold text-white mb-4">How to Verify SIP Format</h2>
  <div className="space-y-3 text-gray-300">
  <div className="flex items-start">
- <AlertCircle className="text-yellow-400 mr-2 mt-1" size={20} />
+ <WarningCircle className="text-yellow-400 mr-2 mt-1" size={20} />
  <div>
  <p className="font-medium mb-1">Check Application Logs</p>
  <p className="text-sm text-gray-400">
@@ -298,7 +298,7 @@ export default function AdminTestCallPage() {
  </div>
  </div>
  <div className="flex items-start">
- <AlertCircle className="text-yellow-400 mr-2 mt-1" size={20} />
+ <WarningCircle className="text-yellow-400 mr-2 mt-1" size={20} />
  <div>
  <p className="font-medium mb-1">Check Retell Dashboard</p>
  <p className="text-sm text-gray-400">
@@ -307,7 +307,7 @@ export default function AdminTestCallPage() {
  </div>
  </div>
  <div className="flex items-start">
- <AlertCircle className="text-yellow-400 mr-2 mt-1" size={20} />
+ <WarningCircle className="text-yellow-400 mr-2 mt-1" size={20} />
  <div>
  <p className="font-medium mb-1">Monitor Call Status</p>
  <p className="text-sm text-gray-400">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Loader2, Sparkles, CheckCircle2, AlertCircle, Copy, RefreshCw, ChevronDown, ChevronUp, Globe } from 'lucide-react'
+import { CircleNotch, Sparkle, CheckCircle, WarningCircle, Copy, ArrowsClockwise, CaretDown, CaretUp, Globe } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { PrimaryButton, GhostButton, Input } from '../_components/ui'
 
@@ -206,7 +206,7 @@ export function DraftBuilder({
         className="w-full flex items-center justify-between gap-3 text-left"
       >
         <div className="flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5 text-fuchsia-400" />
+          <Sparkle className="w-3.5 h-3.5 text-fuchsia-400" />
           <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-fuchsia-300">
             AI agent draft
           </span>
@@ -214,7 +214,7 @@ export function DraftBuilder({
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           {hasWebsite ? null : <span className="text-amber-300/80">no website on file</span>}
-          {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          {open ? <CaretUp className="w-3.5 h-3.5" /> : <CaretDown className="w-3.5 h-3.5" />}
         </div>
       </button>
 
@@ -251,7 +251,7 @@ export function DraftBuilder({
                 {websiteEditing ? (
                   <>
                     <PrimaryButton onClick={saveWebsite} disabled={busy === 'website'}>
-                      {busy === 'website' && <Loader2 className="w-3 h-3 animate-spin" />}
+                      {busy === 'website' && <CircleNotch className="w-3 h-3 animate-spin" />}
                       Save
                     </PrimaryButton>
                     {hasWebsite && (
@@ -271,7 +271,7 @@ export function DraftBuilder({
 
           {loading && !draft && (
             <div className="flex items-center gap-2 text-xs text-gray-500">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading draft…
+              <CircleNotch className="w-3.5 h-3.5 animate-spin" /> Loading draft…
             </div>
           )}
 
@@ -286,7 +286,7 @@ export function DraftBuilder({
                 )}
               </p>
               <PrimaryButton onClick={generate} disabled={busy !== null || !hasWebsite}>
-                {busy === 'generate' && <Loader2 className="w-4 h-4 animate-spin" />}
+                {busy === 'generate' && <CircleNotch className="w-4 h-4 animate-spin" />}
                 Build draft
               </PrimaryButton>
             </div>
@@ -294,7 +294,7 @@ export function DraftBuilder({
 
           {draft?.status === 'generating' && (
             <div className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/[0.06] px-4 py-5 flex items-center gap-3">
-              <Loader2 className="w-5 h-5 animate-spin text-fuchsia-300 shrink-0" />
+              <CircleNotch className="w-5 h-5 animate-spin text-fuchsia-300 shrink-0" />
               <div className="min-w-0">
                 <div className="text-sm text-fuchsia-200 font-medium">
                   Building agent prompt…
@@ -315,7 +315,7 @@ export function DraftBuilder({
                 <div className="font-mono">{draft.error || 'unknown error'}</div>
               </div>
               <GhostButton onClick={generate} disabled={busy !== null}>
-                <RefreshCw className="w-3 h-3" /> Retry
+                <ArrowsClockwise className="w-3 h-3" /> Retry
               </GhostButton>
             </div>
           )}
@@ -333,12 +333,12 @@ export function DraftBuilder({
                   </span>
                   <div className="flex items-center gap-2">
                     <GhostButton onClick={copyPrompt}>
-                      {copied ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      {copied ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
                       {copied ? 'Copied' : 'Copy'}
                     </GhostButton>
                     {edited !== null && draft.status === 'ready' && (
                       <GhostButton onClick={save} disabled={busy !== null}>
-                        {busy === 'save' && <Loader2 className="w-3 h-3 animate-spin" />}
+                        {busy === 'save' && <CircleNotch className="w-3 h-3 animate-spin" />}
                         Save edits
                       </GhostButton>
                     )}
@@ -368,13 +368,13 @@ export function DraftBuilder({
                 <div className="flex items-center gap-2">
                   <GhostButton onClick={generate} disabled={busy !== null}>
                     {busy === 'generate'
-                      ? <Loader2 className="w-3 h-3 animate-spin" />
-                      : <RefreshCw className="w-3 h-3" />}
+                      ? <CircleNotch className="w-3 h-3 animate-spin" />
+                      : <ArrowsClockwise className="w-3 h-3" />}
                     {busy === 'generate' ? 'Regenerating…' : 'Regenerate'}
                   </GhostButton>
                   {draft.status !== 'approved' && (
                     <PrimaryButton onClick={approve} disabled={busy !== null}>
-                      {busy === 'approve' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+                      {busy === 'approve' ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
                       Approve & copy for Retell
                     </PrimaryButton>
                   )}
@@ -386,7 +386,7 @@ export function DraftBuilder({
           {err && (
             <div className="mt-3 bg-rose-500/10 border border-rose-500/30 rounded-lg p-3">
               <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-400 mt-0.5 shrink-0" />
+                <WarningCircle className="w-4 h-4 text-rose-400 mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-medium text-rose-200">Build failed</div>
                   <pre className="mt-1 text-[11px] font-mono text-rose-300 whitespace-pre-wrap break-words leading-relaxed">{err}</pre>
@@ -431,8 +431,8 @@ function ValidationCard({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 text-xs">
           {validation.passed
-            ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            : <AlertCircle className="w-4 h-4 text-amber-400" />}
+            ? <CheckCircle className="w-4 h-4 text-emerald-400" />
+            : <WarningCircle className="w-4 h-4 text-amber-400" />}
           <span className={validation.passed ? 'text-emerald-300' : 'text-amber-300'}>
             {validation.passed ? 'All critical checks passed' : 'Critical checks flagged - review before approving'}
           </span>
@@ -445,8 +445,8 @@ function ValidationCard({
         {validation.checks.map((c) => (
           <li key={c.name} className="flex items-start gap-2 text-[11px] leading-relaxed">
             {c.ok
-              ? <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
-              : <AlertCircle className={`w-3 h-3 shrink-0 mt-0.5 ${c.level === 'critical' ? 'text-rose-400' : 'text-amber-400'}`} />}
+              ? <CheckCircle className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
+              : <WarningCircle className={`w-3 h-3 shrink-0 mt-0.5 ${c.level === 'critical' ? 'text-rose-400' : 'text-amber-400'}`} />}
             <span className={c.ok ? 'text-gray-400' : c.level === 'critical' ? 'text-rose-300' : 'text-amber-300'}>
               <span className="font-mono mr-1.5">{c.name}</span>
               {c.detail}
@@ -472,7 +472,7 @@ function ContextDrawer({
         className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 hover:bg-white/[0.02]"
       >
         Business context document (what Claude saw)
-        {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        {open ? <CaretUp className="w-3 h-3" /> : <CaretDown className="w-3 h-3" />}
       </button>
       {open && (
         <pre className="text-[10px] font-mono text-gray-400 bg-black/30 p-3 max-h-72 overflow-auto leading-relaxed">

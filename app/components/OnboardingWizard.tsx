@@ -2,12 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
- CheckCircle, ArrowRight, ArrowLeft, Building,
- Phone, Calendar, Settings, CreditCard,
- Shield, Zap, Star, Clock, MapPin,
- Mail, Globe, Users, Target, X, Gift, AlertCircle
-} from 'lucide-react'
+import { CheckCircle, ArrowRight, ArrowLeft, Building, Phone, Calendar, Gear, CreditCard, Shield, Lightning, Star, Clock, MapPin, Envelope, Globe, Users, Target, X, Gift, WarningCircle } from '@phosphor-icons/react'
 
 interface OnboardingWizardProps {
  isOpen: boolean
@@ -112,7 +107,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
  {
  id: 'ai-config',
  title: 'AI Personality',
- icon: Zap,
+ icon: Lightning,
  description: 'How should your AI sound?',
  timeEstimate: '2 min',
  why: 'Your AI will answer calls in your brand voice'
@@ -583,7 +578,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
 
  <div className="p-6 bg-gray-700/30 rounded-xl">
  <div className="flex items-center space-x-4 mb-4">
- <Zap className="w-6 h-6 text-yellow-400" />
+ <Lightning className="w-6 h-6 text-yellow-400" />
  <h4 className="text-white font-semibold">AI Configuration</h4>
  </div>
  <div className="space-y-2 text-gray-300">
@@ -769,7 +764,7 @@ export default function OnboardingWizard({ isOpen, onClose, onComplete }: Onboar
  <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
  <div className="flex items-center space-x-3">
  <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center">
- <AlertCircle className="w-4 h-4 text-red-400" />
+ <WarningCircle className="w-4 h-4 text-red-400" />
  </div>
  <div>
  <h4 className="text-red-400 font-semibold">Setup Error</h4>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Clock } from 'lucide-react'
+import { Clock } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { TimeSlot } from '@/lib/business-theme'
 import { useBusinessData } from '@/app/hooks/useBusinessData'

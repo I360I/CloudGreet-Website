@@ -4,9 +4,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import {
- ArrowLeft, AlertCircle, CheckCircle2, Building2, User, Phone, Bot,
-} from 'lucide-react'
+import { ArrowLeft, WarningCircle, CheckCircle, Buildings, User, Phone, Robot } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import {
@@ -71,7 +69,7 @@ export default function NewClientPage() {
         className="flex flex-col items-center"
        >
         <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-400/20 flex items-center justify-center mb-4">
-         <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+         <CheckCircle className="w-6 h-6 text-emerald-400" />
         </div>
         <h2 className="text-2xl font-medium text-white">Client created.</h2>
         <p className="text-sm text-gray-500 mt-2 max-w-sm">
@@ -118,7 +116,7 @@ export default function NewClientPage() {
 
      <form onSubmit={onSubmit} className="space-y-3">
       <Section
-       icon={Building2}
+       icon={Buildings}
        title="Business"
        eyebrow="01"
        description="What shows on the dashboard, and how the AI introduces itself."
@@ -152,7 +150,7 @@ export default function NewClientPage() {
       </Section>
 
       <Section
-       icon={Bot}
+       icon={Robot}
        title="AI agent (Retell)"
        eyebrow="04"
        description="Optional now, required before they go live. Wire the Retell number you provisioned for this client."
@@ -164,7 +162,7 @@ export default function NewClientPage() {
       {error && (
        <Panel className="!p-3 border-rose-500/20 bg-rose-500/5">
         <div className="flex items-start gap-2 text-sm text-rose-200">
-         <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+         <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
          <span>{error}</span>
         </div>
        </Panel>
@@ -198,7 +196,7 @@ function Section({
   <Panel>
    <div className="flex items-start gap-4 mb-4">
     <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
-     <Icon className="w-4 h-4 text-sky-400" strokeWidth={1.75} />
+     <Icon className="w-4 h-4 text-sky-400" />
     </div>
     <div className="flex-1 min-w-0">
      <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-1">{eyebrow}</div>

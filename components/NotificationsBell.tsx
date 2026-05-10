@@ -14,9 +14,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import {
-  Bell, Check, X, WarningCircle, CheckCircle, Warning, Info,
-} from '@phosphor-icons/react'
+import { Bell, Check, X, WarningCircle, CheckCircle, Warning, Info } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 type Severity = 'info' | 'success' | 'warning' | 'critical'

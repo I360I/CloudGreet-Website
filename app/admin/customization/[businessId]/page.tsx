@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, ArrowLeft, Wand2, FileText, Save } from 'lucide-react'
+import { CircleNotch, ArrowLeft, MagicWand, FileText, FloppyDisk } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import { FORM_SECTIONS, type FormSection } from '@/lib/customization/form-config'
@@ -179,7 +179,7 @@ export default function AdminCustomizationPage() {
     return (
       <AdminShell activeLabel="Overview">
         <div className="flex items-center justify-center py-16 text-gray-500 text-sm">
-          <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading form…
+          <CircleNotch className="w-4 h-4 animate-spin mr-2" /> Loading form…
         </div>
       </AdminShell>
     )
@@ -229,7 +229,7 @@ export default function AdminCustomizationPage() {
 
         <div className="bg-gradient-to-br from-violet-50 to-white border border-violet-200 rounded-2xl p-4 sm:p-5">
           <div className="flex items-start gap-3 flex-wrap">
-            <Wand2 className="w-5 h-5 text-violet-600 mt-0.5" />
+            <MagicWand className="w-5 h-5 text-violet-600 mt-0.5" />
             <div className="flex-1 min-w-[200px]">
               <div className="text-sm font-medium text-violet-900">Auto-fill from sources</div>
               <div className="text-xs text-violet-800/80 mt-0.5 leading-snug">
@@ -243,7 +243,7 @@ export default function AdminCustomizationPage() {
               disabled={autofilling}
               className="inline-flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg px-3 py-2 text-xs font-medium disabled:opacity-60"
             >
-              {autofilling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+              {autofilling ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <MagicWand className="w-3.5 h-3.5" />}
               {autofilling ? 'Filling…' : 'Auto-fill'}
             </button>
           </div>
@@ -272,7 +272,7 @@ export default function AdminCustomizationPage() {
             onClick={saveNow}
             className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl px-4 py-2 text-sm"
           >
-            <Save className="w-4 h-4" /> Save now
+            <FloppyDisk className="w-4 h-4" /> FloppyDisk now
           </button>
           <a
             href={printUrl}

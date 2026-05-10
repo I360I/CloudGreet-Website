@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Wand2, ArrowRight } from 'lucide-react'
+import { MagicWand, ArrowRight } from '@phosphor-icons/react'
 import { Sidebar, SidebarSkeleton } from './Sidebar'
 import { TopBar } from './TopBar'
 import { ImpersonationBanner } from './ImpersonationBanner'
@@ -103,7 +103,7 @@ function SetupBanner() {
  return (
   <div className="bg-amber-50 border-b border-amber-200 px-8 py-2.5">
    <div className="max-w-7xl mx-auto flex items-center gap-3 flex-wrap">
-    <Wand2 className="w-4 h-4 text-amber-700 flex-shrink-0" />
+    <MagicWand className="w-4 h-4 text-amber-700 flex-shrink-0" />
     <span className="text-sm text-amber-900">
      <span className="font-medium">Demo data shown.</span> Finish setup to start taking real calls and bookings.
     </span>

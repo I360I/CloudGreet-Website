@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Lock, CheckCircle2, PlayCircle, AlertCircle, ArrowRight, Trophy } from 'lucide-react'
+import { CircleNotch, Lock, CheckCircle, PlayCircle, WarningCircle, ArrowRight, Trophy } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { ONBOARDING_STEPS, type OnboardingStep } from '@/lib/sales/onboarding-steps'
@@ -107,7 +107,7 @@ export default function RepOnboardingPage() {
       <SalesShell activeLabel="Onboarding">
         <section className="max-w-3xl mx-auto px-6 py-10">
           <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <WarningCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <p className="text-sm text-gray-700">Could not load onboarding state.</p>
           </div>
         </section>
@@ -229,7 +229,7 @@ function StepCard({
       >
         <div className="shrink-0">
           {done ? (
-            <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+            <CheckCircle className="w-6 h-6 text-emerald-500" />
           ) : locked ? (
             <Lock className="w-5 h-5 text-gray-400" />
           ) : (
@@ -318,7 +318,7 @@ function StripeConnectAction({
   if (done) {
     return (
       <div className="flex items-center gap-2 text-sm text-emerald-700">
-        <CheckCircle2 className="w-4 h-4" /> Stripe payouts connected.
+        <CheckCircle className="w-4 h-4" /> Stripe payouts connected.
       </div>
     )
   }
@@ -334,7 +334,7 @@ function StripeConnectAction({
           disabled={busy}
           className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors"
         >
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : null}
           Connect Stripe
           <ArrowRight className="w-4 h-4" />
         </button>
@@ -344,7 +344,7 @@ function StripeConnectAction({
   return (
     <div className="flex items-center justify-between gap-3 flex-wrap">
       <p className="text-xs text-emerald-700 inline-flex items-center gap-1.5">
-        <CheckCircle2 className="w-4 h-4" /> Stripe payouts enabled.
+        <CheckCircle className="w-4 h-4" /> Stripe payouts enabled.
       </p>
       <button
         type="button"
@@ -378,7 +378,7 @@ function QuizSection({
   if (passed && !result) {
     return (
       <div className="flex items-center gap-2 text-sm text-emerald-700">
-        <CheckCircle2 className="w-4 h-4" />
+        <CheckCircle className="w-4 h-4" />
         Quiz passed{lastScore !== null ? ` (${lastScore}%)` : ''}. The full dashboard is unlocked.
       </div>
     )
@@ -463,7 +463,7 @@ function QuizSection({
             disabled={!allAnswered || submitting}
             className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {submitting ? <CircleNotch className="w-4 h-4 animate-spin" /> : null}
             Submit quiz
           </button>
         )}

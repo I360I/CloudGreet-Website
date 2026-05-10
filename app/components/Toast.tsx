@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle, AlertCircle, Info, X } from 'lucide-react'
+import { CheckCircle, WarningCircle, Info, X } from '@phosphor-icons/react'
 
 export interface ToastProps {
  id: string
@@ -28,9 +28,9 @@ export default function Toast({ id, type, title, message, duration = 5000, onClo
  case 'success':
  return <CheckCircle className="w-5 h-5 text-green-400" />
  case 'error':
- return <AlertCircle className="w-5 h-5 text-red-400" />
+ return <WarningCircle className="w-5 h-5 text-red-400" />
  case 'warning':
- return <AlertCircle className="w-5 h-5 text-yellow-400" />
+ return <WarningCircle className="w-5 h-5 text-yellow-400" />
  default:
  return <Info className="w-5 h-5 text-blue-400" />
  }

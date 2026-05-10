@@ -3,10 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
- Play, Loader2, AlertCircle, CheckCircle2, X, Trash2, ArrowUpRight,
- Search, Database, ChevronRight,
-} from 'lucide-react'
+import { Play, CircleNotch, WarningCircle, CheckCircle, X, Trash, ArrowUpRight, MagnifyingGlass, Database, CaretRight } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import {
@@ -135,7 +132,7 @@ export default function ScraperPage() {
      </h1>
      <Panel>
       <div className="flex items-start gap-3">
-       <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+       <WarningCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
        <div className="flex-1">
         <h3 className="text-sm font-medium text-white">Run the migration</h3>
         <p className="text-sm text-gray-400 mt-1.5">
@@ -181,7 +178,7 @@ export default function ScraperPage() {
 
      {!googleConfigured && (
       <div className="mb-3 bg-amber-500/10 border border-amber-400/20 rounded-2xl px-4 py-3 text-sm text-amber-200 flex items-start gap-3">
-       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+       <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
        <div>
         <span className="font-medium">Phone &amp; website enrichment is off.</span>{' '}
         <span className="text-amber-200/80">
@@ -225,7 +222,7 @@ export default function ScraperPage() {
 
       {error && (
        <div className="mt-3 bg-rose-500/10 border border-rose-500/20 text-rose-200 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
-        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
         <span>{error}</span>
        </div>
       )}
@@ -246,7 +243,7 @@ export default function ScraperPage() {
 
       {loading ? (
        <div className="px-6 py-16 flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+        <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
        </div>
       ) : jobs.length === 0 ? (
        <div className="px-6 py-16 text-center text-sm text-gray-500">
@@ -288,7 +285,7 @@ export default function ScraperPage() {
              {j.error && <span className="text-rose-400 truncate">· {j.error}</span>}
             </div>
            </div>
-           <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all duration-300 ease-out" />
+           <CaretRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all duration-300 ease-out" />
           </button>
          </motion.li>
         ))}
@@ -499,7 +496,7 @@ function JobDrawer({
        <StatusBadge status={job.status} />
        <div className="flex items-center gap-2">
         <DangerButton onClick={onDelete}>
-         <Trash2 className="w-4 h-4" /> Delete
+         <Trash className="w-4 h-4" /> Delete
         </DangerButton>
        </div>
       </div>
@@ -507,11 +504,11 @@ function JobDrawer({
 
      {loading && results.length === 0 ? (
       <div className="py-12 flex items-center justify-center">
-       <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+       <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
       </div>
      ) : error ? (
       <div className="bg-rose-500/10 border border-rose-500/20 text-rose-200 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
-       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+       <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
        <span>{error}</span>
       </div>
      ) : results.length === 0 ? (
@@ -544,7 +541,7 @@ function JobDrawer({
 
        {/* Search */}
        <div className="relative">
-        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+        <MagnifyingGlass className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
         <Input
          type="search" placeholder="Search by business / owner / phone / license…"
          value={search} onChange={(e) => setSearch(e.target.value)}
@@ -604,7 +601,7 @@ function JobDrawer({
        disabled={selected.size === 0}
        loading={promoting}
       >
-       <CheckCircle2 className="w-4 h-4" /> Promote {selected.size > 0 ? selected.size : ''} → leads
+       <CheckCircle className="w-4 h-4" /> Promote {selected.size > 0 ? selected.size : ''} → leads
       </PrimaryButton>
      </div>
     )}

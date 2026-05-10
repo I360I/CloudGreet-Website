@@ -3,11 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import {
- Phone, ArrowUpRight, ArrowRight, Calendar, Clock,
- PhoneIncoming, MessageSquare, FileText, PhoneForwarded, CheckCircle2,
- MapPin, ShieldCheck, Zap, BellRing, Languages, Workflow,
-} from "lucide-react"
+import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow } from '@phosphor-icons/react'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -90,7 +86,7 @@ function Hero() {
      >
       Try a live demo call
       <span className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center group-hover:border-gray-900 transition-colors">
-       <ArrowRight className="w-3.5 h-3.5" strokeWidth={2.5} />
+       <ArrowRight className="w-3.5 h-3.5" />
       </span>
      </a>
      <Link
@@ -98,7 +94,7 @@ function Hero() {
       className="inline-flex items-center justify-center gap-3 bg-gray-900 text-white px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors"
      >
       Book a 15-min demo
-      <ArrowUpRight className="w-5 h-5" strokeWidth={2} />
+      <ArrowUpRight className="w-5 h-5" />
      </Link>
     </div>
     <p className="text-sm text-gray-400 mt-8">
@@ -194,22 +190,22 @@ function Capabilities() {
    body: 'Two-way sync with Google Calendar, Outlook, or Cal.com. Real availability, no double-booking.',
   },
   {
-   icon: BellRing,
+   icon: BellRinging,
    title: 'Live in your dashboard',
    body: 'Caller name, phone, full transcript, recording, and outcome - all in your dashboard within 30 seconds of the call ending.',
   },
   {
-   icon: Zap,
+   icon: Lightning,
    title: 'Sounds human',
    body: 'Natural conversation, no robotic phone tree. Pick the voice and tone that fits your brand.',
   },
   {
-   icon: Workflow,
+   icon: FlowArrow,
    title: 'Hot transfers when you want',
    body: 'Set rules - VIPs, emergencies, certain words - and it routes the call to your team live.',
   },
   {
-   icon: Languages,
+   icon: Translate,
    title: 'Bilingual out of the box',
    body: 'Switches between English and Spanish automatically based on what the caller speaks.',
   },
@@ -230,7 +226,7 @@ function Capabilities() {
      {items.map(({ icon: Icon, title, body }) => (
       <div key={title} className="relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
        <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center mb-4">
-        <Icon className="w-5 h-5 text-sky-600" strokeWidth={1.75} />
+        <Icon className="w-5 h-5 text-sky-600" />
        </div>
        <h3 className="font-display text-lg font-medium tracking-tight mb-2 text-gray-900">{title}</h3>
        <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
@@ -346,9 +342,9 @@ function CallFlow() {
  const steps = [
   { icon: PhoneIncoming, title: 'Incoming call.', body: 'Customer dials your main number - no new lines needed.' },
   { icon: Phone, title: 'AI agent answers.', body: 'Picks up instantly or after a set number of rings.' },
-  { icon: MessageSquare, title: 'Call is handled.', body: 'AI talks naturally, answers questions, and books appointments.' },
+  { icon: ChatCircle, title: 'Call is handled.', body: 'AI talks naturally, answers questions, and books appointments.' },
   { icon: FileText, title: 'Logged to your dashboard.', body: 'Caller name, phone, full transcript, and recording show up within 30 seconds.' },
-  { icon: PhoneForwarded, title: 'Ends or transfers.', body: 'Resolved calls end. Others are passed to your team.' },
+  { icon: PhoneOutgoing, title: 'Ends or transfers.', body: 'Resolved calls end. Others are passed to your team.' },
  ]
  return (
   <section id="how-it-works" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
@@ -367,7 +363,7 @@ function CallFlow() {
        <div key={s.title} className="bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
         <div className="flex items-center gap-2 mb-4">
          <span className="text-xs text-gray-400 font-medium">0{i + 1}</span>
-         <s.icon className="w-4 h-4 text-gray-400" strokeWidth={1.5} />
+         <s.icon className="w-4 h-4 text-gray-400" />
         </div>
         <h3 className="font-display text-lg font-medium tracking-tight mb-2 text-gray-900">{s.title}</h3>
         <div className="text-sm text-gray-600 leading-relaxed">{s.body}</div>
@@ -689,7 +685,7 @@ function Pricing() {
        <ul className="space-y-2.5 mb-7 flex-1">
         {t.features.map((f) => (
          <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700">
-          <CheckCircle2 className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" strokeWidth={2} />
+          <CheckCircle className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />
           <span>{f}</span>
          </li>
         ))}
@@ -802,7 +798,7 @@ function Faq() {
          {item.q}
         </span>
         <span className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 group-open:bg-gray-900 group-open:text-white transition-colors">
-         <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2">
+         <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor">
           <path d="M8 3v10M3 8h10" className="group-open:opacity-0 transition-opacity" />
           <path d="M3 8h10" className="opacity-0 group-open:opacity-100 transition-opacity" />
          </svg>
@@ -914,7 +910,7 @@ function FinalCTA() {
        className="inline-flex items-center justify-center gap-2 bg-white text-gray-900 px-5 py-3 rounded-xl text-sm font-medium hover:bg-gray-100 transition-colors"
       >
        Call {DEMO_NUMBER}
-       <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+       <ArrowRight className="w-4 h-4" />
       </a>
       <Link
        href="/contact"

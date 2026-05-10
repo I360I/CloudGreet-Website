@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Phone, DollarSign, Calendar, Zap } from 'lucide-react'
+import { Phone, CurrencyDollar, Calendar, Lightning } from '@phosphor-icons/react'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { LoadingSkeleton } from './ui/LoadingSkeleton'
 import { AnimatedNumber } from './ui/AnimatedNumber'
@@ -109,7 +109,7 @@ export function DashboardHero({
  animate={{ rotate: [0, 360] }}
  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
  >
- <Zap className="w-4 h-4" style={{ color: primaryColor }} />
+ <Lightning className="w-4 h-4" style={{ color: primaryColor }} />
  </motion.div>
  <span className="text-sm font-medium text-white">AI Active</span>
  </motion.div>
@@ -156,7 +156,7 @@ export function DashboardHero({
  }}
  >
  <div className="flex items-center justify-between mb-2">
- <DollarSign className="w-5 h-5" style={{ color: primaryColor }} />
+ <CurrencyDollar className="w-5 h-5" style={{ color: primaryColor }} />
  <span className="text-xs text-slate-400">This Week</span>
  </div>
  <div className="text-2xl font-bold text-white">

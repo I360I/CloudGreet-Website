@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react'
+import { CircleNotch, WarningCircle, CheckCircle, Eye, EyeSlash } from '@phosphor-icons/react'
 
 // Force dynamic so Next doesn't try to prerender this - useSearchParams
 // requires a request and the page is per-invite anyway.
@@ -62,7 +62,7 @@ export default function AcceptInvitePage() {
   <Suspense
    fallback={
     <main className="min-h-screen bg-[#f6f5f1] flex items-center justify-center">
-     <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+     <CircleNotch className="w-5 h-5 text-gray-400 animate-spin" />
     </main>
    }
   >
@@ -149,7 +149,7 @@ function AcceptInviteInner() {
   return (
    <main className="min-h-screen bg-[#f6f5f1] flex items-center justify-center px-6">
     <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md text-center">
-     <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+     <WarningCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
      <h1 className="text-lg font-medium text-gray-900 mb-2">Invalid invite link</h1>
      <p className="text-sm text-gray-500">
       The link you used didn&apos;t carry a valid token. Ask the admin to send you a new invite.
@@ -194,7 +194,7 @@ function AcceptInviteInner() {
         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
         aria-label="toggle"
        >
-        {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        {showPw ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
        </button>
       </div>
       {password.length > 0 && password.length < 8 && (
@@ -238,7 +238,7 @@ function AcceptInviteInner() {
 
      {error && (
       <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700 flex items-start gap-2">
-       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+       <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
        <span>{error}</span>
       </div>
      )}
@@ -248,7 +248,7 @@ function AcceptInviteInner() {
       disabled={!canSubmit || submitting}
       className="w-full bg-gray-900 text-white px-4 py-3 rounded-xl text-sm font-medium hover:bg-gray-800 transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
      >
-      {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+      {submitting ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
       Create account & continue to bank setup
      </button>
     </div>

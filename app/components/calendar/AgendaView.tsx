@@ -8,7 +8,7 @@ import { LoadingSkeleton } from '../ui/LoadingSkeleton'
 import { EmptyState } from '../ui/EmptyState'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
-import { AlertCircle, Search, Calendar as CalendarIcon } from 'lucide-react'
+import { WarningCircle, MagnifyingGlass, Calendar as CalendarIcon } from '@phosphor-icons/react'
 
 interface Appointment {
  id: string
@@ -170,7 +170,7 @@ export function AgendaView({ currentDate, onAppointmentClick, onCreateAppointmen
  if (error) {
  return (
  <div className="flex flex-col items-center justify-center py-12">
- <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+ <WarningCircle className="w-12 h-12 text-red-400 mb-4" />
  <p className="text-red-400 mb-4">{error}</p>
  <Button onClick={loadAgendaData} size="sm">
  Retry
@@ -208,7 +208,7 @@ export function AgendaView({ currentDate, onAppointmentClick, onCreateAppointmen
  <div className="space-y-6">
  {/* Search */}
  <div className="relative">
- <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+ <MagnifyingGlass className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
  <Input
  type="text"
  placeholder="Search by customer, service, or address..."

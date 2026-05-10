@@ -4,19 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { logger } from '@/lib/monitoring'
 import { Button } from '@/app/components/ui/Button'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import {
- Upload,
- Check,
- AlertTriangle,
- Search,
- Filter,
- PhoneCall,
- ListFilter,
- RefreshCw,
- Link as LinkIcon,
- Copy,
- ExternalLink
-} from 'lucide-react'
+import { Upload, Check, Warning, MagnifyingGlass, Funnel, PhoneCall, FunnelSimple, ArrowsClockwise, Link as LinkIcon, Copy, ArrowSquareOut } from '@phosphor-icons/react'
 
 interface PhoneNumber {
  id: string
@@ -363,7 +351,7 @@ export default function AdminPhoneInventoryPage() {
  className="bg-white/10 hover:bg-white/20 border border-white/20 text-white flex items-center gap-2"
  disabled={refreshing}
  >
- <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+ <ArrowsClockwise className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
  Refresh
  </Button>
  </header>
@@ -380,7 +368,7 @@ export default function AdminPhoneInventoryPage() {
  {feedback.type === 'success' ? (
  <Check className="h-5 w-5 mt-1" />
  ) : (
- <AlertTriangle className="h-5 w-5 mt-1" />
+ <Warning className="h-5 w-5 mt-1" />
  )}
  <div>
  <p className="font-medium text-sm sm:text-base">{feedback.title}</p>
@@ -449,7 +437,7 @@ export default function AdminPhoneInventoryPage() {
  <Check className="h-3.5 w-3.5" /> {bulkPreview.valid.length} valid
  </span>
  <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1">
- <AlertTriangle className="h-3.5 w-3.5" /> {bulkPreview.invalid.length} invalid
+ <Warning className="h-3.5 w-3.5" /> {bulkPreview.invalid.length} invalid
  </span>
  </div>
 
@@ -508,7 +496,7 @@ export default function AdminPhoneInventoryPage() {
  <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
  <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
  <label className="relative flex items-center rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white/80 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-400/40">
- <Search className="mr-3 h-4 w-4 text-slate-400" />
+ <MagnifyingGlass className="mr-3 h-4 w-4 text-slate-400" />
  <input
  type="text"
  value={searchQuery}
@@ -518,7 +506,7 @@ export default function AdminPhoneInventoryPage() {
  />
  </label>
  <label className="relative flex items-center rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white/80 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-400/40">
- <Filter className="mr-3 h-4 w-4 text-slate-400" />
+ <Funnel className="mr-3 h-4 w-4 text-slate-400" />
  <select
  value={statusFilter}
  onChange={(event) => setStatusFilter(event.target.value)}
@@ -532,7 +520,7 @@ export default function AdminPhoneInventoryPage() {
  </label>
  </div>
  <div className="flex items-center gap-2 text-xs text-slate-400">
- <ListFilter className="h-4 w-4" /> Showing {filteredPhoneNumbers.length} of {statistics.total}
+ <FunnelSimple className="h-4 w-4" /> Showing {filteredPhoneNumbers.length} of {statistics.total}
  </div>
  </div>
 
@@ -660,7 +648,7 @@ export default function AdminPhoneInventoryPage() {
  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
  <p className="text-sm font-medium text-blue-200 mb-2">Manual Linking Steps:</p>
  <ol className="list-decimal list-inside space-y-1 text-sm text-gray-300">
- <li>Log into <a href="https://dashboard.retellai.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-1">Retell Dashboard <ExternalLink className="h-3 w-3" /></a></li>
+ <li>Log into <a href="https://dashboard.retellai.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-flex items-center gap-1">Retell Dashboard <ArrowSquareOut className="h-3 w-3" /></a></li>
  <li>Navigate to Agents section</li>
  <li>Find agent ID: <code className="bg-gray-800 px-1 rounded">{retellLinkingModal.retellAgentId}</code></li>
  <li>Click on the agent to edit</li>

@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import {
-  CircleNotch, CheckCircle, WarningCircle, CalendarBlank, ArrowSquareOut,
-  Key, X,
-} from '@phosphor-icons/react'
+import { CircleNotch, CheckCircle, WarningCircle, CalendarBlank, ArrowSquareOut, Key, X } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 

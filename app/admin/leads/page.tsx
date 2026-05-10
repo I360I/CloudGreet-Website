@@ -2,10 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
- Plus, Loader2, AlertCircle, Search, Trash2, X, Upload, Phone as PhoneIcon, Mail,
- ChevronRight, PhoneCall, SkipForward, ArrowRight, Copy,
-} from 'lucide-react'
+import { Plus, CircleNotch, WarningCircle, MagnifyingGlass, Trash, X, Upload, Phone as PhoneIcon, Envelope, CaretRight, PhoneCall, SkipForward, ArrowRight, Copy } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import {
@@ -175,7 +172,7 @@ export default function AdminLeadsPage() {
      </div>
      <Panel>
       <div className="flex items-start gap-3">
-       <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+       <WarningCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
        <div className="flex-1">
         <h3 className="text-sm font-medium text-white">Run the migration</h3>
         <p className="text-sm text-gray-400 mt-1.5">
@@ -293,7 +290,7 @@ create index if not exists leads_next_action_idx on public.leads (next_action_at
        </FilterPill>
       ))}
       <div className="ml-auto relative w-full sm:w-72">
-       <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+       <MagnifyingGlass className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
        <Input
         type="search" placeholder="Search…"
         value={search} onChange={(e) => setSearch(e.target.value)}
@@ -306,11 +303,11 @@ create index if not exists leads_next_action_idx on public.leads (next_action_at
      <Panel padding="none">
       {loading ? (
        <div className="px-6 py-16 flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+        <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
        </div>
       ) : error ? (
        <div className="px-6 py-12 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+        <WarningCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
         <div>
          <h3 className="text-sm font-medium text-white">Couldn&apos;t load leads</h3>
          <p className="text-sm text-gray-500 mt-1">{error}</p>
@@ -369,7 +366,7 @@ create index if not exists leads_next_action_idx on public.leads (next_action_at
              <PhoneCall className="w-4 h-4" />
             </a>
            )}
-           <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all duration-300 ease-out flex-shrink-0" />
+           <CaretRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all duration-300 ease-out flex-shrink-0" />
           </div>
          </motion.li>
         ))}
@@ -525,7 +522,7 @@ function AddLeadForm({ onCreated, onCancel }: { onCreated: () => void; onCancel:
    </div>
    {error && (
     <div className="sm:col-span-2 bg-rose-500/10 border border-rose-500/20 text-rose-200 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
-     <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+     <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
      <span>{error}</span>
     </div>
    )}
@@ -667,12 +664,12 @@ function LeadDrawer({
       )}
       {lead.email ? (
        <a href={`mailto:${lead.email}`} className="flex items-center gap-2.5 text-gray-300 hover:text-white">
-        <Mail className="w-4 h-4 text-gray-500" />
+        <Envelope className="w-4 h-4 text-gray-500" />
         <span>{lead.email}</span>
        </a>
       ) : (
        <div className="flex items-center gap-2.5 text-gray-600">
-        <Mail className="w-4 h-4" /><span>no email</span>
+        <Envelope className="w-4 h-4" /><span>no email</span>
        </div>
       )}
      </div>
@@ -727,7 +724,7 @@ function LeadDrawer({
 
      <div className="pt-2">
       <DangerButton onClick={onDelete} loading={busy}>
-       <Trash2 className="w-4 h-4" /> Delete lead
+       <Trash className="w-4 h-4" /> Delete lead
       </DangerButton>
      </div>
     </div>
@@ -952,7 +949,7 @@ function CallMode({
 
     {lead.email && (
      <a href={`mailto:${lead.email}`} className="mt-3 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white">
-      <Mail className="w-4 h-4" /> {lead.email}
+      <Envelope className="w-4 h-4" /> {lead.email}
      </a>
     )}
 

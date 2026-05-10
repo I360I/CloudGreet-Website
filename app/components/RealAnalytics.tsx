@@ -2,10 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
- Phone, Calendar, DollarSign, TrendingUp, TrendingDown, 
- Users, Clock, Zap, Target, Award, Activity, BarChart3 
-} from 'lucide-react'
+import { Phone, Calendar, CurrencyDollar, TrendUp, TrendDown, Users, Clock, Lightning, Target, Medal, Pulse, ChartBar } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { logger } from '@/lib/monitoring'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
@@ -115,7 +112,7 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
  transition={{ duration: 2, repeat: Infinity }}
  className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center"
  >
- <Activity className="w-5 h-5 text-red-400" />
+ <Pulse className="w-5 h-5 text-red-400" />
  </motion.div>
  <div>
  <h3 className="text-lg font-semibold text-red-400 mb-1">Analytics Unavailable</h3>
@@ -127,8 +124,8 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
  }
 
  const getTrendIcon = (value: number) => {
- if (value > 0) return <TrendingUp className="w-4 h-4 text-green-500" />
- if (value < 0) return <TrendingDown className="w-4 h-4 text-red-500" />
+ if (value > 0) return <TrendUp className="w-4 h-4 text-green-500" />
+ if (value < 0) return <TrendDown className="w-4 h-4 text-red-500" />
  return <div className="w-4 h-4 bg-gray-500 rounded-full" />
  }
 
@@ -225,7 +222,7 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
  className="p-3 bg-yellow-500/20 rounded-lg"
  whileHover={{ scale: 1.1, rotate: 5 }}
  >
- <DollarSign className="w-6 h-6 text-yellow-400" />
+ <CurrencyDollar className="w-6 h-6 text-yellow-400" />
  </motion.div>
  <div className="flex items-center gap-1">
  {getTrendIcon(metrics.revenueProjection)}
@@ -286,7 +283,7 @@ export default function RealAnalytics({ businessId, timeframe = '30d' }: RealAna
  className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg"
  >
  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
- <BarChart3 className="w-5 h-5" style={{ color: primaryColor }} />
+ <ChartBar className="w-5 h-5" style={{ color: primaryColor }} />
  Performance Summary
  </h3>
  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

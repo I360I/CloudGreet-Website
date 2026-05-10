@@ -3,9 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
- LayoutGrid, Phone, BadgeDollarSign, ListChecks, Wand2, LogOut, Users, FileText, Bot,
-} from 'lucide-react'
+import { SquaresFour, Phone, CurrencyDollar, ListChecks, MagicWand, SignOut, Users, FileText, Robot } from '@phosphor-icons/react'
 
 type Item = {
  icon: React.ElementType
@@ -15,14 +13,14 @@ type Item = {
 }
 
 const items: Item[] = [
- { icon: LayoutGrid, label: 'Overview', href: '/admin', match: (p) => p === '/admin' || p.startsWith('/admin/clients') },
+ { icon: SquaresFour, label: 'Overview', href: '/admin', match: (p) => p === '/admin' || p.startsWith('/admin/clients') },
  { icon: Phone, label: 'Calls', href: '/admin/calls', match: (p) => p.startsWith('/admin/calls') },
- { icon: BadgeDollarSign, label: 'Billing', href: '/admin/billing', match: (p) => p.startsWith('/admin/billing') },
+ { icon: CurrencyDollar, label: 'Billing', href: '/admin/billing', match: (p) => p.startsWith('/admin/billing') },
  { icon: Users, label: 'Sales', href: '/admin/sales', match: (p) => p.startsWith('/admin/sales') },
- { icon: Bot, label: 'Agents Due', href: '/admin/agents-due', match: (p) => p.startsWith('/admin/agents-due') },
+ { icon: Robot, label: 'Agents Due', href: '/admin/agents-due', match: (p) => p.startsWith('/admin/agents-due') },
  { icon: FileText, label: 'Applications', href: '/admin/applications', match: (p) => p.startsWith('/admin/applications') },
  { icon: ListChecks, label: 'Leads', href: '/admin/leads', match: (p) => p.startsWith('/admin/leads') },
- { icon: Wand2, label: 'Tools', href: '/admin/tools', match: (p) => p.startsWith('/admin/tools') },
+ { icon: MagicWand, label: 'Tools', href: '/admin/tools', match: (p) => p.startsWith('/admin/tools') },
 ]
 
 export type AdminActiveLabel =
@@ -73,7 +71,7 @@ export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
           : 'text-gray-400 hover:text-white hover:bg-white/[0.03]'
         }`}
        >
-        <item.icon className={`w-4 h-4 ${active ? 'text-sky-400' : ''}`} strokeWidth={1.75} />
+        <item.icon className={`w-4 h-4 ${active ? 'text-sky-400' : ''}`} />
         {item.label}
        </Link>
       )
@@ -89,7 +87,7 @@ export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
       onClick={onSignOut}
       className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/[0.03] transition-all duration-300 ease-out"
      >
-      <LogOut className="w-4 h-4" strokeWidth={1.75} /> Sign out
+      <SignOut className="w-4 h-4" /> Sign out
      </button>
     </div>
    </aside>
@@ -112,7 +110,7 @@ function AdminMobileNav({ pathname, activeLabel }: { pathname: string; activeLab
         active ? 'text-white' : 'text-gray-500 hover:text-white'
        }`}
       >
-       <item.icon className={`w-5 h-5 ${active ? 'text-sky-400' : ''}`} strokeWidth={1.75} />
+       <item.icon className={`w-5 h-5 ${active ? 'text-sky-400' : ''}`} />
        {item.label}
       </Link>
      )

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Save, Key, Eye, EyeOff } from 'lucide-react'
+import { FloppyDisk, Key, Eye, EyeSlash } from '@phosphor-icons/react'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { FormField } from '@/app/components/ui/FormField'
 import { Button } from '@/app/components/ui/Button'
@@ -64,7 +64,7 @@ export default function SecurityTab({ saving, onSave }: SecurityTabProps) {
  aria-label={showPasswords.current ? 'Hide password' : 'Show password'}
  >
  {showPasswords.current ? (
- <EyeOff className="h-4 w-4" />
+ <EyeSlash className="h-4 w-4" />
  ) : (
  <Eye className="h-4 w-4" />
  )}
@@ -90,7 +90,7 @@ export default function SecurityTab({ saving, onSave }: SecurityTabProps) {
  aria-label={showPasswords.new ? 'Hide password' : 'Show password'}
  >
  {showPasswords.new ? (
- <EyeOff className="h-4 w-4" />
+ <EyeSlash className="h-4 w-4" />
  ) : (
  <Eye className="h-4 w-4" />
  )}
@@ -116,7 +116,7 @@ export default function SecurityTab({ saving, onSave }: SecurityTabProps) {
  aria-label={showPasswords.confirm ? 'Hide password' : 'Show password'}
  >
  {showPasswords.confirm ? (
- <EyeOff className="h-4 w-4" />
+ <EyeSlash className="h-4 w-4" />
  ) : (
  <Eye className="h-4 w-4" />
  )}
@@ -138,7 +138,7 @@ export default function SecurityTab({ saving, onSave }: SecurityTabProps) {
  </>
  ) : (
  <>
- <Save className="h-4 w-4 mr-2" />
+ <FloppyDisk className="h-4 w-4 mr-2" />
  Change Password
  </>
  )}

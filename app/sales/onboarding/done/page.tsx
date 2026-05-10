@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
+import { CheckCircle, CircleNotch, WarningCircle } from '@phosphor-icons/react'
 
 export default function ConnectDonePage() {
  const router = useRouter()
@@ -39,14 +39,14 @@ export default function ConnectDonePage() {
    <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-md text-center">
     {state === 'checking' && (
      <>
-      <Loader2 className="w-8 h-8 text-gray-400 animate-spin mx-auto mb-3" />
+      <CircleNotch className="w-8 h-8 text-gray-400 animate-spin mx-auto mb-3" />
       <h1 className="text-lg font-medium text-gray-900 mb-1">Confirming with Stripe…</h1>
       <p className="text-sm text-gray-500">One sec.</p>
      </>
     )}
     {state === 'ready' && (
      <>
-      <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
+      <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
       <h1 className="text-lg font-medium text-gray-900 mb-1">You&apos;re all set</h1>
       <p className="text-sm text-gray-500">
        Bank connected. Commissions will deposit every Friday.
@@ -55,7 +55,7 @@ export default function ConnectDonePage() {
     )}
     {state === 'pending' && (
      <>
-      <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
+      <WarningCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
       <h1 className="text-lg font-medium text-gray-900 mb-1">Stripe is still reviewing</h1>
       <p className="text-sm text-gray-500">
        This sometimes takes a few minutes. You can keep using your dashboard;

@@ -1,9 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import {
- CreditCard, Calendar, AlertCircle, CheckCircle2, Loader2, ExternalLink,
-} from 'lucide-react'
+import { CreditCard, Calendar, WarningCircle, CheckCircle, CircleNotch, ArrowSquareOut } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 
@@ -74,13 +72,13 @@ export default function BillingPage() {
 
      {loading && (
       <div className="bg-white border border-gray-200 rounded-2xl p-10 flex items-center justify-center">
-       <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+       <CircleNotch className="w-5 h-5 animate-spin text-gray-400" />
       </div>
      )}
 
      {!loading && error && (
       <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-start gap-3">
-       <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+       <WarningCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
        <div className="flex-1">
         <h3 className="text-sm font-medium text-gray-900">Couldn&apos;t load billing</h3>
         <p className="text-sm text-gray-500 mt-1">{error}</p>
@@ -116,15 +114,15 @@ export default function BillingPage() {
         <h2 className="text-sm font-medium text-gray-700 mb-3">How billing works</h2>
         <ul className="space-y-2 text-sm text-gray-600">
          <li className="flex items-start gap-2">
-          <CheckCircle2 className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />
+          <CheckCircle className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />
           <span>Flat monthly subscription. No per-booking fees, no per-minute charges.</span>
          </li>
          <li className="flex items-start gap-2">
-          <CheckCircle2 className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />
+          <CheckCircle className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />
           <span>Manage payment method, invoices, and cancellation through the Stripe portal.</span>
          </li>
          <li className="flex items-start gap-2">
-          <CheckCircle2 className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />
+          <CheckCircle className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" />
           <span>Subscription changes take effect at the end of your current billing period.</span>
          </li>
         </ul>
@@ -163,7 +161,7 @@ function StatusCard({
       onClick={onOpenPortal} disabled={openingPortal}
       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
      >
-      {openingPortal ? <Loader2 className="w-4 h-4 animate-spin" /> : <ExternalLink className="w-4 h-4" />}
+      {openingPortal ? <CircleNotch className="w-4 h-4 animate-spin" /> : <ArrowSquareOut className="w-4 h-4" />}
       Manage subscription
      </button>
     ) : (
@@ -199,7 +197,7 @@ function SubscriptionCard({ billing }: { billing: BillingData }) {
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
    <div className="flex items-center gap-2 mb-2">
-    <CreditCard className="w-4 h-4 text-sky-500" strokeWidth={1.75} />
+    <CreditCard className="w-4 h-4 text-sky-500" />
     <h3 className="text-sm font-medium text-gray-700">Monthly subscription</h3>
    </div>
    <div className="flex items-baseline gap-2">
@@ -224,7 +222,7 @@ function SummaryCard({
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
    <div className="flex items-center gap-2 mb-2">
-    <Icon className="w-4 h-4 text-sky-500" strokeWidth={1.75} />
+    <Icon className="w-4 h-4 text-sky-500" />
     <h3 className="text-sm font-medium text-gray-700">{label}</h3>
    </div>
    <p className="text-2xl font-medium text-gray-900 leading-tight">{value}</p>

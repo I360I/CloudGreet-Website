@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import {
-  CaretRight, Robot, Phone, CircleNotch, Trophy, WarningCircle,
-  CalendarBlank, CheckCircle,
-} from '@phosphor-icons/react'
+import { CaretRight, Robot, Phone, CircleNotch, Trophy, WarningCircle, CalendarBlank, CheckCircle } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 

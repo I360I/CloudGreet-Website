@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useRef, useEffect, useCallback } from 'react'
-import { Phone } from 'lucide-react'
+import { Phone } from '@phosphor-icons/react'
 
 interface RingOrbProps {
  size?: number

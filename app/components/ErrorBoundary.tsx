@@ -1,7 +1,7 @@
 'use client'
 
 import React, { Component, ReactNode } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { Warning, ArrowsClockwise } from '@phosphor-icons/react'
 import { Card } from './ui/Card'
 import { logger } from '@/lib/monitoring'
 
@@ -51,7 +51,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
  return (
  <Card className="p-6 text-center">
- <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-red-400" />
+ <Warning className="w-12 h-12 mx-auto mb-4 text-red-400" />
  <h3 className="text-lg font-semibold text-white mb-2">Something went wrong</h3>
  <p className="text-gray-400 mb-4">
  This component encountered an error and couldn't load properly.
@@ -60,7 +60,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
  onClick={this.handleRetry}
  className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors flex items-center gap-2 mx-auto"
  >
- <RefreshCw className="w-4 h-4" />
+ <ArrowsClockwise className="w-4 h-4" />
  Try Again
  </button>
  {process.env.NODE_ENV === 'development' && this.state.error && (

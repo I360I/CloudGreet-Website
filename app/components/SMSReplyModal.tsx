@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Send, MessageSquare, Phone, User } from 'lucide-react'
+import { X, PaperPlaneTilt, ChatCircle, Phone, User } from '@phosphor-icons/react'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
@@ -89,7 +89,7 @@ export default function SMSReplyModal({ isOpen, onClose, contact, businessId }: 
  {sent ? (
  <div className="text-center py-8">
  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
- <Send className="w-8 h-8 text-green-400" />
+ <PaperPlaneTilt className="w-8 h-8 text-green-400" />
  </div>
  <h3 className="text-lg font-semibold text-white mb-2">Message Sent!</h3>
  <p className="text-slate-400">Your SMS has been delivered.</p>
@@ -161,7 +161,7 @@ export default function SMSReplyModal({ isOpen, onClose, contact, businessId }: 
  </>
  ) : (
  <>
- <Send className="w-4 h-4" />
+ <PaperPlaneTilt className="w-4 h-4" />
  <span>Send SMS</span>
  </>
  )}

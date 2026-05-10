@@ -3,20 +3,18 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import {
- LayoutDashboard, PhoneCall, Calendar, Settings, CreditCard, LogOut, Wand2,
-} from 'lucide-react'
+import { SquaresFour, PhoneCall, Calendar, Gear, CreditCard, SignOut, MagicWand } from '@phosphor-icons/react'
 import { SupportButton } from './SupportButton'
 
 type Item = { icon: React.ElementType; label: string; href: string; match: (pathname: string) => boolean }
 
 const items: Item[] = [
- { icon: LayoutDashboard, label: 'Overview', href: '/dashboard', match: (p) => p === '/dashboard' },
+ { icon: SquaresFour, label: 'Overview', href: '/dashboard', match: (p) => p === '/dashboard' },
  { icon: PhoneCall, label: 'Calls', href: '/dashboard/calls', match: (p) => p.startsWith('/dashboard/calls') },
  { icon: Calendar, label: 'Appointments', href: '/dashboard/appointments', match: (p) => p.startsWith('/dashboard/appointments') },
- { icon: Settings, label: 'Settings', href: '/dashboard/settings', match: (p) => p.startsWith('/dashboard/settings') },
+ { icon: Gear, label: 'Settings', href: '/dashboard/settings', match: (p) => p.startsWith('/dashboard/settings') },
  { icon: CreditCard, label: 'Billing', href: '/dashboard/billing', match: (p) => p.startsWith('/dashboard/billing') },
- { icon: Wand2, label: 'Setup', href: '/dashboard/onboarding', match: (p) => p.startsWith('/dashboard/onboarding') },
+ { icon: MagicWand, label: 'Setup', href: '/dashboard/onboarding', match: (p) => p.startsWith('/dashboard/onboarding') },
 ]
 
 export function Sidebar({ businessName, onSignOut, activeLabel }: {
@@ -47,7 +45,7 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
          : 'text-gray-600 hover:text-gray-900 hover:bg-black/[.04]'
        }`}
       >
-       <item.icon className="w-4 h-4" strokeWidth={1.75} />
+       <item.icon className="w-4 h-4" />
        {item.label}
       </Link>
      )
@@ -63,7 +61,7 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
     <button onClick={onSignOut}
      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-gray-900 hover:bg-black/[.04] transition-all duration-300 ease-out"
     >
-     <LogOut className="w-4 h-4" strokeWidth={1.75} /> Sign out
+     <SignOut className="w-4 h-4" /> Sign out
     </button>
    </div>
    </aside>
@@ -88,7 +86,7 @@ function MobileNav({ pathname, activeLabel }: { pathname: string; activeLabel?: 
         active ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
        }`}
       >
-       <item.icon className={`w-5 h-5 ${active ? 'text-sky-600' : ''}`} strokeWidth={1.75} />
+       <item.icon className={`w-5 h-5 ${active ? 'text-sky-600' : ''}`} />
        {item.label}
       </Link>
      )

@@ -3,12 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
- Phone, Calendar,
- Loader2, ChevronRight, PhoneCall,
- ArrowUpRight, ArrowDownRight,
- Search,
-} from 'lucide-react'
+import { Phone, Calendar, CircleNotch, CaretRight, PhoneCall, ArrowUpRight, ArrowDownRight, MagnifyingGlass } from '@phosphor-icons/react'
 import { Sidebar, SidebarSkeleton } from './_components/Sidebar'
 import { TopBar } from './_components/TopBar'
 import { demoOverview } from './_components/demo-data'
@@ -331,7 +326,7 @@ export default function DashboardPage() {
           <FilterChip active={callFilter === 'message'} onClick={() => setCallFilter('message')}>Messages</FilterChip>
           <FilterChip active={callFilter === 'dropped'} onClick={() => setCallFilter('dropped')}>Dropped</FilterChip>
           <div className="ml-auto relative">
-           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+           <MagnifyingGlass className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
            <input
             type="search" placeholder="Search…"
             value={search} onChange={(e) => setSearch(e.target.value)}
@@ -367,7 +362,7 @@ export default function DashboardPage() {
                 </p>
                </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" />
+              <CaretRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition-colors" />
              </button>
             </li>
            ))}
@@ -502,7 +497,7 @@ function Sparkline({ data, accent = false, large = false }: { data: number[]; ac
  return (
   <svg width={large ? '100%' : w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="overflow-visible">
    <polyline
-    fill="none" stroke={accent ? '#0ea5e9' : (large ? '#0ea5e9' : '#9ca3af')} strokeWidth={large ? '2' : '1.5'}
+    fill="none" stroke={accent ? '#0ea5e9' : (large ? '#0ea5e9' : '#9ca3af')}
     strokeLinecap="round" strokeLinejoin="round" points={pts}
    />
   </svg>

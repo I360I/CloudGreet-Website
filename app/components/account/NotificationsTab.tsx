@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Bell, Save } from 'lucide-react'
+import { Bell, FloppyDisk } from '@phosphor-icons/react'
 import { useToast } from '../../contexts/ToastContext'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { Button } from '../ui/Button'
@@ -160,7 +160,7 @@ export default function NotificationsTab({ saving, setSaving, onSave }: Notifica
  style={{ backgroundColor: primaryColor }}
  className="px-8 py-3"
  >
- <Save className="w-5 h-5 mr-2" />
+ <FloppyDisk className="w-5 h-5 mr-2" />
  <span>{saving ? 'Saving...' : 'Save Settings'}</span>
  </Button>
  </div>

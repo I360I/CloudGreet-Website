@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Save, AlertCircle, CheckCircle2, KeyRound, Eye, EyeOff, Play, Bot, Gauge } from 'lucide-react'
+import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 
@@ -79,13 +79,13 @@ export default function SettingsPage() {
 
      {loading && (
       <div className="bg-white border border-gray-200 rounded-2xl p-10 flex items-center justify-center">
-       <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+       <CircleNotch className="w-5 h-5 animate-spin text-gray-400" />
       </div>
      )}
 
      {!loading && error && !profile && (
       <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-start gap-3">
-       <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+       <WarningCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
        <div>
         <h3 className="text-sm font-medium text-gray-900">Couldn&apos;t load profile</h3>
         <p className="text-sm text-gray-500 mt-1">{error}</p>
@@ -129,7 +129,7 @@ async function patchBusiness(updates: Record<string, any>) {
 function SavedHint() {
  return (
   <p className="text-xs text-emerald-600 mt-3 flex items-center gap-1.5">
-   <CheckCircle2 className="w-3.5 h-3.5" /> Saved. AI agent updated automatically.
+   <CheckCircle className="w-3.5 h-3.5" /> Saved. AI agent updated automatically.
   </p>
  )
 }
@@ -146,7 +146,7 @@ function SaveButton({ disabled, saving, onClick, label = 'Save' }: {
    onClick={onClick} disabled={disabled || saving}
    className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed"
   >
-   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+   {saving ? <CircleNotch className="w-4 h-4 animate-spin" /> : <FloppyDisk className="w-4 h-4" />}
    {label}
   </button>
  )
@@ -204,7 +204,7 @@ function LiveAgentBanner({ state }: { state: AgentState | null }) {
  if (!state.linked) {
   return (
    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-    <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+    <WarningCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
     <div className="flex-1">
      <p className="text-sm font-medium text-amber-900">No live AI agent linked yet</p>
      <p className="text-xs text-amber-800 mt-0.5">
@@ -373,7 +373,7 @@ function VoiceSection({ profile, state, onSaved }: { profile: Profile; state: Ag
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
    <div className="flex items-center gap-2 mb-1">
-    <Bot className="w-4 h-4 text-sky-500" />
+    <Robot className="w-4 h-4 text-sky-500" />
     <h2 className="text-sm font-medium text-gray-700">AI voice</h2>
    </div>
    <p className="text-xs text-gray-500 mb-4">
@@ -386,7 +386,7 @@ function VoiceSection({ profile, state, onSaved }: { profile: Profile; state: Ag
     </div>
    ) : voicesLoading ? (
     <div className="flex items-center gap-2 text-xs text-gray-400">
-     <Loader2 className="w-4 h-4 animate-spin" /> Loading voices…
+     <CircleNotch className="w-4 h-4 animate-spin" /> Loading voices…
     </div>
    ) : (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[360px] overflow-y-auto pr-1">
@@ -650,7 +650,7 @@ function OwnerNameSection() {
    </p>
    {loading ? (
     <div className="flex items-center gap-2 text-xs text-gray-400">
-     <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+     <CircleNotch className="w-4 h-4 animate-spin" /> Loading…
     </div>
    ) : (
     <>
@@ -721,7 +721,7 @@ function PasswordSection() {
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
    <div className="flex items-center gap-2 mb-1">
-    <KeyRound className="w-4 h-4 text-sky-500" />
+    <Key className="w-4 h-4 text-sky-500" />
     <h2 className="text-base font-medium text-gray-900">Change password</h2>
    </div>
    <p className="text-sm text-gray-500 mb-4">
@@ -796,7 +796,7 @@ function PasswordField({
      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
      aria-label={show ? 'Hide password' : 'Show password'}
     >
-     {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+     {show ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
     </button>
    </div>
    {hint && (
@@ -1071,7 +1071,7 @@ function BookingNotificationsSection() {
 
    {loading ? (
     <div className="py-8 text-center text-sm text-gray-500">
-     <Loader2 className="w-4 h-4 animate-spin inline mr-1.5" /> Loading…
+     <CircleNotch className="w-4 h-4 animate-spin inline mr-1.5" /> Loading…
     </div>
    ) : (
     <div className="space-y-4">
@@ -1151,7 +1151,7 @@ function BookingNotificationsSection() {
        disabled={saving}
        className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white text-sm rounded-lg px-4 py-2 disabled:opacity-60"
       >
-       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+       {saving ? <CircleNotch className="w-4 h-4 animate-spin" /> : <FloppyDisk className="w-4 h-4" />}
        Save
       </button>
       <button
@@ -1160,7 +1160,7 @@ function BookingNotificationsSection() {
        className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg px-4 py-2 disabled:opacity-60"
        title={!phone.trim() ? 'Save a phone number first' : 'Fire a real test SMS to your phone'}
       >
-       {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+       {testing ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
        Send test
       </button>
      </div>

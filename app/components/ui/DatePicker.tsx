@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 
@@ -197,7 +197,7 @@ export function DatePicker({
  className="w-8 h-8 bg-slate-800/50 border border-slate-700/50 rounded-lg flex items-center justify-center hover:bg-slate-800/70 transition-colors"
  aria-label="Previous month"
  >
- <ChevronLeft className="w-4 h-4 text-slate-400" />
+ <CaretLeft className="w-4 h-4 text-slate-400" />
  </button>
  
  <h3 className="text-white font-semibold">
@@ -210,7 +210,7 @@ export function DatePicker({
  className="w-8 h-8 bg-slate-800/50 border border-slate-700/50 rounded-lg flex items-center justify-center hover:bg-slate-800/70 transition-colors"
  aria-label="Next month"
  >
- <ChevronRight className="w-4 h-4 text-slate-400" />
+ <CaretRight className="w-4 h-4 text-slate-400" />
  </button>
  </div>
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Plus, Edit3, Trash2, Search } from 'lucide-react'
+import { CircleNotch, Plus, PencilSimple, Trash, MagnifyingGlass } from '@phosphor-icons/react'
 import { Modal } from '@/app/components/ui/Modal'
 import { useToast } from '@/app/contexts/ToastContext'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -279,7 +279,7 @@ export default function KnowledgeBasePage() {
  disabled={creating}
  className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-5 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
  >
- {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+ {creating ? <CircleNotch className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
  Add knowledge entry
  </button>
  </div>
@@ -290,7 +290,7 @@ export default function KnowledgeBasePage() {
  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
  <h2 className="text-xl font-semibold text-white">Knowledge library</h2>
  <div className="relative">
- <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+ <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
  <input
  value={search}
  onChange={(event) => {
@@ -306,7 +306,7 @@ export default function KnowledgeBasePage() {
 
  {loading ? (
  <div className="flex min-h-[200px] items-center justify-center rounded-3xl border border-white/10 bg-black/40">
- <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+ <CircleNotch className="h-6 w-6 animate-spin text-slate-400" />
  </div>
  ) : filteredEntries.length === 0 ? (
  <div className="rounded-3xl border border-white/10 bg-black/40 p-12 text-center text-slate-400">
@@ -341,7 +341,7 @@ export default function KnowledgeBasePage() {
  onClick={() => openEditModal(entry)}
  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
  >
- <Edit3 className="h-3.5 w-3.5" />
+ <PencilSimple className="h-3.5 w-3.5" />
  Edit
  </button>
  <button
@@ -351,9 +351,9 @@ export default function KnowledgeBasePage() {
  className="inline-flex items-center gap-2 rounded-full border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-200 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
  >
  {deletingId === entry.id ? (
- <Loader2 className="h-3.5 w-3.5 animate-spin" />
+ <CircleNotch className="h-3.5 w-3.5 animate-spin" />
  ) : (
- <Trash2 className="h-3.5 w-3.5" />
+ <Trash className="h-3.5 w-3.5" />
  )}
  Delete
  </button>
@@ -416,7 +416,7 @@ export default function KnowledgeBasePage() {
  disabled={savingEdit}
  className="inline-flex items-center gap-2 rounded-full border border-blue-400/40 bg-blue-500/20 px-5 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60"
  >
- {savingEdit && <Loader2 className="h-4 w-4 animate-spin" />}
+ {savingEdit && <CircleNotch className="h-4 w-4 animate-spin" />}
  Save changes
  </button>
  </div>

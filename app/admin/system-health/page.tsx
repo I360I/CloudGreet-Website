@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, RefreshCw, CheckCircle2, AlertCircle, ExternalLink, Phone } from 'lucide-react'
+import { CircleNotch, ArrowsClockwise, CheckCircle, WarningCircle, ArrowSquareOut, Phone } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader } from '../_components/ui'
@@ -67,7 +67,7 @@ export default function SystemHealthPage() {
     return (
       <AdminShell activeLabel="Tools">
         <div className="px-5 sm:px-8 py-6 sm:py-8">
-          <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+          <CircleNotch className="w-5 h-5 animate-spin text-gray-500" />
         </div>
       </AdminShell>
     )
@@ -89,7 +89,7 @@ export default function SystemHealthPage() {
             disabled={reloading}
             className="inline-flex items-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] text-gray-200 px-3 py-1.5 rounded-xl text-xs font-medium disabled:opacity-50"
           >
-            {reloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            {reloading ? <CircleNotch className="w-3 h-3 animate-spin" /> : <ArrowsClockwise className="w-3 h-3" />}
             Refresh
           </button>
         </div>
@@ -113,7 +113,7 @@ export default function SystemHealthPage() {
                       </div>
                     </div>
                     <Link href={`/admin/agents-due/${d.close_id}`} className="text-xs text-fuchsia-300 hover:text-fuchsia-200 inline-flex items-center gap-1">
-                      Open <ExternalLink className="w-3 h-3" />
+                      Open <ArrowSquareOut className="w-3 h-3" />
                     </Link>
                   </li>
                 ))}
@@ -129,7 +129,7 @@ export default function SystemHealthPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
               {Object.entries(data.config.env).map(([k, v]) => (
                 <div key={k} className="flex items-center gap-2 text-xs">
-                  {v ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
+                  {v ? <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> : <WarningCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
                   <span className={`font-mono ${v ? 'text-gray-300' : 'text-rose-300'}`}>{k}</span>
                 </div>
               ))}
@@ -348,7 +348,7 @@ function SectionRender<T>({ section, children }: { section: Section<T>; children
   if (!section.available) {
     return (
       <div className="text-[11px] text-gray-500 inline-flex items-center gap-1.5">
-        <AlertCircle className="w-3 h-3 text-amber-400" />
+        <WarningCircle className="w-3 h-3 text-amber-400" />
         not available · <span className="font-mono">{section.reason}</span>
       </div>
     )

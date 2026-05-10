@@ -3,10 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import {
-  X, Phone, EnvelopeSimple, ChatText, Link as LinkIcon, Copy, CheckCircle,
-  CircleNotch, Trophy, ArrowSquareOut, Sparkle, ListChecks, GearSix,
-} from '@phosphor-icons/react'
+import { X, Phone, EnvelopeSimple, ChatText, Link as LinkIcon, Copy, CheckCircle, CircleNotch, Trophy, ArrowSquareOut, Sparkle, ListChecks, GearSix } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 const EASE = [0.22, 1, 0.36, 1] as const

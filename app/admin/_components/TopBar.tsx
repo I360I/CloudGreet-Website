@@ -1,6 +1,6 @@
 'use client'
 
-import { Activity } from 'lucide-react'
+import { Pulse } from '@phosphor-icons/react'
 import { NotificationsBell } from '@/components/NotificationsBell'
 
 export function AdminTopBar() {
@@ -21,7 +21,7 @@ export function AdminTopBar() {
     <div className="inline-flex items-center gap-3">
      <NotificationsBell basePath="/api/admin/notifications" theme="dark" />
      <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 inline-flex items-center gap-1.5">
-      <Activity className="w-3 h-3 text-emerald-400" />
+      <Pulse className="w-3 h-3 text-emerald-400" />
       all systems
      </div>
     </div>

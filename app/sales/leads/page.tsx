@@ -3,11 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch,
-  Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass,
-  CaretRight, Clock, CalendarBlank,
-} from '@phosphor-icons/react'
+import { Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch, Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass, CaretRight, Clock, CalendarBlank } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 

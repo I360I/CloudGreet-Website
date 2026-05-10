@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { CircleNotch } from '@phosphor-icons/react'
 
 /**
  * Admin auth gate. Pages handle their own chrome via <AdminShell>; this
@@ -47,7 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
  if (checking) {
   return (
    <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center">
-    <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+    <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
    </div>
   )
  }

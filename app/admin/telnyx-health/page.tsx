@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Loader2, CheckCircle2, AlertCircle, Copy, ExternalLink, RefreshCw } from 'lucide-react'
+import { CircleNotch, CheckCircle, WarningCircle, Copy, ArrowSquareOut, ArrowsClockwise } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, GhostButton } from '../_components/ui'
@@ -69,7 +69,7 @@ export default function TelnyxHealthPage() {
     return (
       <AdminShell activeLabel="Tools">
         <div className="px-5 sm:px-8 py-6 sm:py-8">
-          <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+          <CircleNotch className="w-5 h-5 animate-spin text-gray-500" />
         </div>
       </AdminShell>
     )
@@ -90,7 +90,7 @@ export default function TelnyxHealthPage() {
               Diagnostic for the Telnyx wiring. Use this when setting up a new number, or when SMS isn&apos;t flowing.
             </p>
           </div>
-          <GhostButton onClick={load}><RefreshCw className="w-3 h-3" /> Refresh</GhostButton>
+          <GhostButton onClick={load}><ArrowsClockwise className="w-3 h-3" /> Refresh</GhostButton>
         </div>
 
         {/* 1. Env vars */}
@@ -131,7 +131,7 @@ export default function TelnyxHealthPage() {
               rel="noreferrer"
               className="inline-flex items-center gap-1 text-xs text-sky-300 hover:text-sky-200 mt-4"
             >
-              Open Telnyx messaging portal <ExternalLink className="w-3 h-3" />
+              Open Telnyx messaging portal <ArrowSquareOut className="w-3 h-3" />
             </a>
           </Panel>
         </div>
@@ -145,12 +145,12 @@ export default function TelnyxHealthPage() {
                 <div className="font-medium text-gray-200 mb-1">Inbound webhook reachable?</div>
                 {anyInbound ? (
                   <div className="text-emerald-300 inline-flex items-center gap-2 text-xs">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Yes - {data.activity.recent_opt_outs.length} recent opt-outs received
+                    <CheckCircle className="w-3.5 h-3.5" /> Yes - {data.activity.recent_opt_outs.length} recent opt-outs received
                   </div>
                 ) : (
                   <div className="text-amber-300 text-xs">
                     <div className="inline-flex items-center gap-2 mb-1">
-                      <AlertCircle className="w-3.5 h-3.5" /> Unverified
+                      <WarningCircle className="w-3.5 h-3.5" /> Unverified
                     </div>
                     <div className="text-gray-400 leading-relaxed">
                       Text <span className="font-mono text-gray-200">STOP</span> from your phone to{' '}
@@ -225,7 +225,7 @@ export default function TelnyxHealthPage() {
 function EnvRow({ name, set, hint }: { name: string; set: boolean; hint: string }) {
   return (
     <li className="flex items-start gap-2">
-      {set ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />}
+      {set ? <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> : <WarningCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />}
       <div>
         <div className="font-mono text-xs text-gray-200">{name}</div>
         <div className="text-[11px] text-gray-500">{hint}</div>
@@ -240,7 +240,7 @@ function CopyRow({ label, value, copied, onCopy }: { label: string; value: strin
       <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 w-20 shrink-0">{label}</div>
       <code className="flex-1 font-mono text-[11px] text-gray-200 bg-black/40 border border-white/10 rounded px-2 py-1.5 break-all">{value}</code>
       <GhostButton onClick={onCopy}>
-        {copied ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+        {copied ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
         {copied ? 'Copied' : 'Copy'}
       </GhostButton>
     </div>

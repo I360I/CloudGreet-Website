@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { Warning, ArrowsClockwise } from '@phosphor-icons/react'
 import { logger } from '@/lib/monitoring'
 
 export default function GlobalError({
@@ -23,7 +23,7 @@ export default function GlobalError({
  <div className="max-w-md w-full text-center">
  <div className="mb-8">
  <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
- <AlertTriangle className="w-12 h-12 text-red-600" />
+ <Warning className="w-12 h-12 text-red-600" />
  </div>
  <h1 className="text-2xl font-bold text-gray-900 mb-2">Application Error</h1>
  <p className="text-gray-600 mb-8">
@@ -35,7 +35,7 @@ export default function GlobalError({
  onClick={reset}
  className="inline-flex items-center justify-center w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
  >
- <RefreshCw className="w-5 h-5 mr-2" />
+ <ArrowsClockwise className="w-5 h-5 mr-2" />
  Refresh Page
  </button>
 

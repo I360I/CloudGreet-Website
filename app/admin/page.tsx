@@ -3,9 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import {
- Plus, ArrowUpRight, Loader2, Trash2, Search, AlertCircle,
-} from 'lucide-react'
+import { Plus, ArrowUpRight, CircleNotch, Trash, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from './_components/Shell'
 import {
@@ -195,7 +193,7 @@ export default function AdminHome() {
        <div className="flex items-center gap-2 flex-wrap">
         <SortPills value={sortKey} onChange={setSortKey} />
         <div className="relative w-full sm:w-72">
-         <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+         <MagnifyingGlass className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
          <Input
           type="search"
           placeholder="Search…"
@@ -209,11 +207,11 @@ export default function AdminHome() {
 
       {loading ? (
        <div className="px-6 py-16 flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+        <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
        </div>
       ) : error ? (
        <div className="px-6 py-12 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+        <WarningCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
         <div>
          <h3 className="text-sm font-medium text-white">Couldn&apos;t load clients</h3>
          <p className="text-sm text-gray-500 mt-1">{error}</p>
@@ -283,7 +281,6 @@ function BigSparkline({ data }: { data: number[] }) {
    <polyline
     fill="none"
     stroke="#38bdf8"
-    strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
     points={pts}
@@ -368,7 +365,7 @@ function ClientRow({ client, onDelete }: { client: Client; onDelete: () => void 
         className="p-1.5 rounded-md text-gray-500 hover:text-rose-300 hover:bg-rose-400/10 opacity-0 group-hover:opacity-100 transition-all duration-300 ease-out"
         aria-label="Delete client"
        >
-        <Trash2 className="w-4 h-4" />
+        <Trash className="w-4 h-4" />
        </button>
        <ArrowUpRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all duration-300 ease-out" />
       </div>
@@ -383,7 +380,7 @@ function ClientRow({ client, onDelete }: { client: Client; onDelete: () => void 
       className="lg:hidden p-1.5 rounded-md text-gray-500 hover:text-rose-300"
       aria-label="Delete client"
      >
-      <Trash2 className="w-4 h-4" />
+      <Trash className="w-4 h-4" />
      </button>
     </div>
    </a>

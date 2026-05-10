@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react'
+import { CircleNotch, CheckCircle, WarningCircle, ArrowsClockwise } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PrimaryButton } from '../_components/ui'
@@ -61,12 +61,12 @@ export default function AgentBackfillPage() {
 
             <div className="flex items-center gap-2">
               <PrimaryButton onClick={run} disabled={busy}>
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <ArrowsClockwise className="w-4 h-4" />}
                 Run backfill
               </PrimaryButton>
               {error && (
                 <span className="text-xs text-rose-300 inline-flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5" /> {error}
+                  <WarningCircle className="w-3.5 h-3.5" /> {error}
                 </span>
               )}
             </div>
@@ -74,7 +74,7 @@ export default function AgentBackfillPage() {
             {result && (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 space-y-3">
                 <div className="text-sm text-emerald-300 inline-flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle className="w-4 h-4" />
                   Done
                 </div>
 

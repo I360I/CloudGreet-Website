@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Calendar } from 'lucide-react'
+import { ArrowRight, Calendar } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { LoadingSkeleton } from './ui/LoadingSkeleton'

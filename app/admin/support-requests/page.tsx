@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, RefreshCw, AlertCircle, CheckCircle2, Wrench, MessageSquare, ExternalLink } from 'lucide-react'
+import { CircleNotch, ArrowsClockwise, WarningCircle, CheckCircle, Wrench, ChatCircle, ArrowSquareOut } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, PrimaryButton, GhostButton } from '../_components/ui'
@@ -67,7 +67,7 @@ export default function SupportRequestsPage() {
               Contractor-submitted change requests and messages from the dashboard sidebar. Slack pings on every new submission.
             </p>
           </div>
-          <GhostButton onClick={load}><RefreshCw className="w-3 h-3" /> Refresh</GhostButton>
+          <GhostButton onClick={load}><ArrowsClockwise className="w-3 h-3" /> Refresh</GhostButton>
         </div>
 
         <div className="flex gap-2 flex-wrap mb-4">
@@ -87,7 +87,7 @@ export default function SupportRequestsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+          <div className="flex items-center gap-2 text-sm text-gray-500"><CircleNotch className="w-4 h-4 animate-spin" /> Loading…</div>
         ) : items.length === 0 ? (
           <Panel>
             <div className="px-6 py-12 text-center text-sm text-gray-500">
@@ -106,7 +106,7 @@ export default function SupportRequestsPage() {
                     <div className="shrink-0 mt-0.5">
                       {it.kind === 'change_request'
                         ? <Wrench className="w-4 h-4 text-amber-400" />
-                        : <MessageSquare className="w-4 h-4 text-sky-400" />}
+                        : <ChatCircle className="w-4 h-4 text-sky-400" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -133,7 +133,7 @@ export default function SupportRequestsPage() {
                         <div className="text-[11px]">
                           Reply at{' '}
                           <a href={`mailto:${it.user.email}?subject=${encodeURIComponent('Re: ' + it.subject)}`} className="text-sky-300 hover:text-sky-200 inline-flex items-center gap-1">
-                            {it.user.email} <ExternalLink className="w-3 h-3" />
+                            {it.user.email} <ArrowSquareOut className="w-3 h-3" />
                           </a>
                         </div>
                       )}
@@ -141,7 +141,7 @@ export default function SupportRequestsPage() {
                       {it.business_id && (
                         <div className="text-[11px]">
                           <Link href={`/admin/clients/${it.business_id}`} className="text-sky-300 hover:text-sky-200 inline-flex items-center gap-1">
-                            Open client workspace <ExternalLink className="w-3 h-3" />
+                            Open client workspace <ArrowSquareOut className="w-3 h-3" />
                           </Link>
                         </div>
                       )}

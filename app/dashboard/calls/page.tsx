@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronRight, Search, Loader2, AlertCircle, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react'
+import { CaretRight, MagnifyingGlass, CircleNotch, WarningCircle, CaretLeft, CaretRight as ChevronRightIcon } from '@phosphor-icons/react'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -125,7 +125,7 @@ export default function CallsPage() {
         <Pill active={filter === 'message'} onClick={() => setFilter('message')}>Messages</Pill>
         <Pill active={filter === 'dropped'} onClick={() => setFilter('dropped')}>Dropped</Pill>
         <div className="ml-auto relative">
-         <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+         <MagnifyingGlass className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
          <input
           type="search" placeholder="Search by name, number, summary…"
           value={search} onChange={(e) => setSearch(e.target.value)}
@@ -137,11 +137,11 @@ export default function CallsPage() {
 
       {loading ? (
        <div className="px-6 py-16 flex items-center justify-center">
-        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        <CircleNotch className="w-5 h-5 animate-spin text-gray-400" />
        </div>
       ) : error ? (
        <div className="px-6 py-12 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+        <WarningCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
         <div>
          <h3 className="text-sm font-medium text-gray-900">Couldn&apos;t load calls</h3>
          <p className="text-sm text-gray-500 mt-1">{error}</p>
@@ -189,7 +189,7 @@ export default function CallsPage() {
              <div className="text-gray-400 mt-0.5">{fmtDur(c.duration || 0)}</div>
             </div>
            </div>
-           <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 flex-shrink-0 transition-all duration-300 ease-out" />
+           <CaretRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 flex-shrink-0 transition-all duration-300 ease-out" />
           </button>
          </motion.li>
         ))}
@@ -205,7 +205,7 @@ export default function CallsPage() {
           disabled={page === 0}
           className="p-1.5 rounded-md hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
          >
-          <ChevronLeft className="w-4 h-4" />
+          <CaretLeft className="w-4 h-4" />
          </button>
          <button
           onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}

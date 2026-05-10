@@ -3,9 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import {
-  Loader2, AlertCircle, ArrowLeft, RefreshCw, ExternalLink,
-} from 'lucide-react'
+import { CircleNotch, WarningCircle, ArrowLeft, ArrowsClockwise, ArrowSquareOut } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import { Panel, PanelHeader } from '../../_components/ui'
@@ -107,7 +105,7 @@ export default function PlacesBillingPage() {
                 disabled={refreshing}
                 className="inline-flex items-center gap-1.5 text-xs text-gray-300 hover:text-white border border-white/10 rounded-lg px-3 py-2 disabled:opacity-60"
               >
-                {refreshing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                {refreshing ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <ArrowsClockwise className="w-3.5 h-3.5" />}
                 Refresh
               </button>
               <a
@@ -116,7 +114,7 @@ export default function PlacesBillingPage() {
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-gray-300 hover:text-white border border-white/10 rounded-lg px-3 py-2"
               >
-                GCP Console <ExternalLink className="w-3 h-3" />
+                GCP Console <ArrowSquareOut className="w-3 h-3" />
               </a>
             </div>
           </header>
@@ -129,12 +127,12 @@ export default function PlacesBillingPage() {
 
           {loading && !data ? (
             <div className="py-16 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+              <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
             </div>
           ) : !data?.configured ? (
             <Panel>
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <WarningCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <h3 className="text-sm font-medium text-white">GCP billing export not configured</h3>
                   <p className="text-sm text-gray-400 mt-1">
@@ -149,7 +147,7 @@ export default function PlacesBillingPage() {
           ) : err ? (
             <Panel>
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <WarningCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <h3 className="text-sm font-medium text-white">Couldn&apos;t query billing export</h3>
                   <p className="text-sm text-gray-400 mt-1.5 whitespace-pre-wrap">{err}</p>

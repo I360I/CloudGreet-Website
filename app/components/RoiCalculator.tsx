@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { logger } from '@/lib/monitoring'
 import { motion } from 'framer-motion'
-import { TrendingUp, DollarSign, Phone, Calendar, AlertCircle, CheckCircle } from 'lucide-react'
+import { TrendUp, CurrencyDollar, Phone, Calendar, WarningCircle, CheckCircle } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { getServiceColor } from '@/lib/business-theme'
@@ -109,7 +109,7 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
  {/* Header */}
  <div className="flex items-center gap-3 mb-6">
  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: primaryColor + '20' }}>
- <TrendingUp className="w-5 h-5" style={{ color: primaryColor }} />
+ <TrendUp className="w-5 h-5" style={{ color: primaryColor }} />
  </div>
  <div>
  <h3 className="text-lg font-semibold text-white">ROI Calculator</h3>
@@ -129,7 +129,7 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
  className="border rounded-xl p-4"
  >
  <div className="flex items-center gap-3 mb-2">
- <DollarSign className="w-5 h-5" style={{ color: revenueColor }} />
+ <CurrencyDollar className="w-5 h-5" style={{ color: revenueColor }} />
  <span className="font-medium" style={{ color: revenueColor }}>Net ROI</span>
  </div>
  <div className="text-2xl font-bold text-white">
@@ -151,7 +151,7 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
  className="border rounded-xl p-4"
  >
  <div className="flex items-center gap-3 mb-2">
- <DollarSign className="w-5 h-5" style={{ color: revenueColor }} />
+ <CurrencyDollar className="w-5 h-5" style={{ color: revenueColor }} />
  <span className="font-medium" style={{ color: revenueColor }}>Revenue</span>
  </div>
  <div className="text-2xl font-bold text-white">
@@ -270,7 +270,7 @@ export default function ROICalculator({ businessId, className = '' }: ROICalcula
  {roiData.roiPercentage > 0 ? (
  <CheckCircle className="w-5 h-5 text-green-400" />
  ) : (
- <AlertCircle className="w-5 h-5 text-red-400" />
+ <WarningCircle className="w-5 h-5 text-red-400" />
  )}
  <span className="text-white font-medium">
  {roiData.roiPercentage > 0 ? 'Positive ROI' : 'Negative ROI'}

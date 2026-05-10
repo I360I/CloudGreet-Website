@@ -8,7 +8,7 @@ export interface BusinessTheme {
   secondaryColor: string // Hex color
   serviceColors: Record<string, string> // service name → hex color
   labelMap: Record<string, string> // generic term → business-specific term
-  iconMap: Record<string, string> // service name → lucide icon name
+  iconMap: Record<string, string> // service name → phosphor icon name
 }
 
 export interface TimeSlot {
@@ -93,7 +93,7 @@ const LABEL_MAPS: Record<string, Record<string, string>> = {
   }
 }
 
-// Icon mapping (EXACT) - lucide-react icon names
+// Icon mapping (EXACT) - @phosphor-icons/react icon names
 const SERVICE_ICONS: Record<string, string> = {
   'HVAC Repair': 'Wrench',
   'AC Installation': 'Wind',
@@ -103,21 +103,21 @@ const SERVICE_ICONS: Record<string, string> = {
   'Painting': 'Paintbrush',
   'Interior Painting': 'Paintbrush',
   'Exterior Painting': 'Paintbrush',
-  'Roofing': 'Home',
-  'Roof Repair': 'Home',
-  'Roof Replacement': 'Home',
-  'Plumbing': 'Droplet',
-  'Plumbing Repair': 'Droplet',
-  'Drain Cleaning': 'Droplet',
-  'Electrical': 'Zap',
-  'Electrical Repair': 'Zap',
-  'Panel Upgrade': 'Zap',
-  'Landscaping': 'Trees',
-  'Lawn Care': 'Trees',
-  'Tree Service': 'Trees',
-  'Cleaning': 'Sparkles',
-  'House Cleaning': 'Sparkles',
-  'Commercial Cleaning': 'Sparkles'
+  'Roofing': 'House',
+  'Roof Repair': 'House',
+  'Roof Replacement': 'House',
+  'Plumbing': 'Drop',
+  'Plumbing Repair': 'Drop',
+  'Drain Cleaning': 'Drop',
+  'Electrical': 'Lightning',
+  'Electrical Repair': 'Lightning',
+  'Panel Upgrade': 'Lightning',
+  'Landscaping': 'Tree',
+  'Lawn Care': 'Tree',
+  'Tree Service': 'Tree',
+  'Cleaning': 'Sparkle',
+  'House Cleaning': 'Sparkle',
+  'Commercial Cleaning': 'Sparkle'
 }
 
 /**

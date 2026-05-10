@@ -4,11 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
- ArrowLeft, Loader2, AlertCircle, Trash2, Mail, Phone as PhoneIcon,
- MapPin, Globe, ExternalLink, Bot, X, Play, ChevronRight, Save,
- KeyRound, CheckCircle2, Pencil, Pause, RotateCcw, Unlink, CreditCard, Copy,
-} from 'lucide-react'
+import { ArrowLeft, CircleNotch, WarningCircle, Trash, Envelope, Phone as PhoneIcon, MapPin, Globe, ArrowSquareOut, Robot, X, Play, CaretRight, FloppyDisk, Key, CheckCircle, Pencil, Pause, ArrowCounterClockwise, LinkBreak, CreditCard, Copy } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import {
@@ -183,7 +179,7 @@ export default function ClientDetailPage() {
   return (
    <AdminShell activeLabel="Overview">
     <div className="px-4 lg:px-8 py-10 flex items-center justify-center">
-     <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+     <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
     </div>
    </AdminShell>
   )
@@ -198,7 +194,7 @@ export default function ClientDetailPage() {
      </Link>
      <Panel>
       <div className="flex items-start gap-3">
-       <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+       <WarningCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
        <div>
         <h3 className="text-sm font-medium text-white">Couldn&apos;t load client</h3>
         <p className="text-sm text-gray-500 mt-1">{error || 'Client not found.'}</p>
@@ -257,7 +253,7 @@ export default function ClientDetailPage() {
       <div className="flex items-center gap-2">
        <StripeSyncButton clientId={id} onSynced={load} />
        <DangerButton onClick={onDelete}>
-        <Trash2 className="w-4 h-4" /> Delete client
+        <Trash className="w-4 h-4" /> Delete client
        </DangerButton>
       </div>
      </div>
@@ -290,7 +286,7 @@ export default function ClientDetailPage() {
      {warnings.length > 0 && (
       <RisingFade>
        <div className="mb-3 bg-amber-500/10 border border-amber-400/20 rounded-2xl px-4 py-3 text-sm text-amber-200 flex items-start gap-3">
-        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
         <div className="flex-1 min-w-0">
          <span className="font-medium">Loaded with warnings.</span>
          <ul className="mt-1 space-y-0.5 text-xs text-amber-200/80 font-mono">
@@ -432,7 +428,7 @@ function RecentCalls({
           {c.from_number} · {fmtDur(c.duration ?? 0)}
          </div>
         </div>
-        <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all duration-300 ease-out" />
+        <CaretRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all duration-300 ease-out" />
        </button>
       </li>
      ))}
@@ -657,7 +653,7 @@ function OwnerCard({
      <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" />
      <div className="flex items-center gap-2">
       <PrimaryButton onClick={save} disabled={saving}>
-       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+       {saving ? <CircleNotch className="w-4 h-4 animate-spin" /> : <FloppyDisk className="w-4 h-4" />}
        Save
       </PrimaryButton>
       <GhostButton onClick={() => { setEditing(false); setErr('') }}>Cancel</GhostButton>
@@ -673,7 +669,7 @@ function OwnerCard({
       <li className="text-sm font-medium text-gray-200">{(o as any).name}</li>
      )}
      <li className="flex items-start gap-2.5 text-gray-300">
-      <Mail className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
+      <Envelope className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
       <a href={`mailto:${o.email}`} className="hover:text-white truncate">{o.email}</a>
      </li>
      {o.phone && (
@@ -686,7 +682,7 @@ function OwnerCard({
       <li className="flex items-start gap-2.5 text-gray-300">
        <Globe className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
        <a href={client.website} target="_blank" rel="noreferrer" className="hover:text-white truncate inline-flex items-center gap-1">
-        {client.website} <ExternalLink className="w-3 h-3" />
+        {client.website} <ArrowSquareOut className="w-3 h-3" />
        </a>
       </li>
      )}
@@ -766,7 +762,7 @@ function AgentCard({
    <div className="space-y-3 text-sm">
     {aiAgent ? (
      <div className="inline-flex items-center gap-2 text-gray-300">
-      <Bot className="w-4 h-4 text-sky-400" />
+      <Robot className="w-4 h-4 text-sky-400" />
       <span className="font-medium">{aiAgent.agent_name || 'Agent'}</span>
       {aiAgent.status && <StatusPill status={aiAgent.status} />}
      </div>
@@ -811,7 +807,7 @@ function AgentCard({
        />
        <div className="flex items-center gap-2">
         <PrimaryButton onClick={savePhone} disabled={savingPhone}>
-         {savingPhone ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+         {savingPhone ? <CircleNotch className="w-4 h-4 animate-spin" /> : <FloppyDisk className="w-4 h-4" />}
          Save
         </PrimaryButton>
         <GhostButton onClick={() => { setEditingPhone(false); setPhoneInput(retellPhone || ''); setPhoneErr('') }}>
@@ -840,7 +836,7 @@ function AgentCard({
         <span className="font-mono text-xs text-gray-300 break-all">{currentAgentId}</span>
        ) : (
         <span className="inline-flex items-center gap-2 text-amber-300/90 text-xs">
-         <Bot className="w-4 h-4" />
+         <Robot className="w-4 h-4" />
          Not linked · client&apos;s settings won&apos;t reach Retell
         </span>
        )}
@@ -861,7 +857,7 @@ function AgentCard({
        />
        <div className="flex items-center gap-2">
         <PrimaryButton onClick={saveAgent} disabled={savingAgent}>
-         {savingAgent ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+         {savingAgent ? <CircleNotch className="w-4 h-4 animate-spin" /> : <FloppyDisk className="w-4 h-4" />}
          Save
         </PrimaryButton>
         <GhostButton onClick={() => { setEditingAgent(false); setAgentInput(currentAgentId); setAgentErr('') }}>
@@ -880,7 +876,7 @@ function AgentCard({
      <div className="pt-3 border-t border-white/[0.06] text-xs text-gray-500 space-y-2">
       <div>
        Cal.com: <a href={`https://cal.com/${client.cal_com_username}/${client.cal_com_event_type_slug || ''}`} target="_blank" rel="noreferrer" className="text-sky-400 hover:text-sky-300 inline-flex items-center gap-1">
-        @{client.cal_com_username}{client.cal_com_event_type_slug ? `/${client.cal_com_event_type_slug}` : ''} <ExternalLink className="w-3 h-3" />
+        @{client.cal_com_username}{client.cal_com_event_type_slug ? `/${client.cal_com_event_type_slug}` : ''} <ArrowSquareOut className="w-3 h-3" />
        </a>
       </div>
       <CalcomWebhookStatus
@@ -923,12 +919,12 @@ function CalcomWebhookStatus({ clientId, webhookId }: { clientId: string; webhoo
   <div className="flex items-center gap-3 flex-wrap">
    {wired ? (
     <span className="inline-flex items-center gap-1.5 text-emerald-300/90 text-[11px]">
-     <CheckCircle2 className="w-3 h-3" /> Booking webhook wired - bookings flow to dashboard
+     <CheckCircle className="w-3 h-3" /> Booking webhook wired - bookings flow to dashboard
     </span>
    ) : (
     <>
      <span className="inline-flex items-center gap-1.5 text-amber-300/90 text-[11px]">
-      <AlertCircle className="w-3 h-3" /> Booking webhook not registered - Cal.com bookings won&apos;t hit the dashboard
+      <WarningCircle className="w-3 h-3" /> Booking webhook not registered - Cal.com bookings won&apos;t hit the dashboard
      </span>
      <button
       onClick={rewire}
@@ -1030,7 +1026,7 @@ function ExtractionFieldsSection({ clientId, hasAgent }: { clientId: string; has
    )}
 
    {loading ? (
-    <div className="flex items-center gap-2 text-xs text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+    <div className="flex items-center gap-2 text-xs text-gray-500"><CircleNotch className="w-4 h-4 animate-spin" /> Loading…</div>
    ) : (
     <div className="space-y-3">
      {fields.length === 0 && (
@@ -1090,12 +1086,12 @@ function ExtractionFieldsSection({ clientId, hasAgent }: { clientId: string; has
 
      <div className="flex items-center gap-3 pt-2 border-t border-white/[0.06]">
       <PrimaryButton onClick={onSave} disabled={saving}>
-       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+       {saving ? <CircleNotch className="w-4 h-4 animate-spin" /> : <FloppyDisk className="w-4 h-4" />}
        Save & push to Retell
       </PrimaryButton>
       {savedFlag && (
        <span className="text-xs text-emerald-400 inline-flex items-center gap-1">
-        <CheckCircle2 className="w-3.5 h-3.5" /> Synced
+        <CheckCircle className="w-3.5 h-3.5" /> Synced
        </span>
       )}
       {error && <span className="text-xs text-rose-300">{error}</span>}
@@ -1160,7 +1156,7 @@ function KnowledgeBaseCard({ clientId, hasAgent }: { clientId: string; hasAgent:
     </div>
    ) : loading ? (
     <div className="flex items-center gap-2 text-xs text-gray-500">
-     <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+     <CircleNotch className="w-4 h-4 animate-spin" /> Loading…
     </div>
    ) : bases && bases.length > 0 ? (
     <div className="space-y-3">
@@ -1195,7 +1191,7 @@ function KnowledgeBaseCard({ clientId, hasAgent }: { clientId: string; hasAgent:
               rel="noreferrer"
               className="text-[10px] font-mono text-sky-400 hover:text-sky-300 inline-flex items-center gap-1"
              >
-              open <ExternalLink className="w-3 h-3" />
+              open <ArrowSquareOut className="w-3 h-3" />
              </a>
             )}
            </div>
@@ -1359,12 +1355,12 @@ function AgentTuning({
 
     <div className="flex items-center gap-3 pt-2 border-t border-white/[0.06]">
      <PrimaryButton onClick={onSave} disabled={!dirty || saving}>
-      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+      {saving ? <CircleNotch className="w-4 h-4 animate-spin" /> : <FloppyDisk className="w-4 h-4" />}
       {saving ? 'Pushing to Retell…' : 'Save & push to Retell'}
      </PrimaryButton>
      {savedAt && !dirty && !saveError && (
       <span className="text-xs text-emerald-400 inline-flex items-center gap-1">
-       <CheckCircle2 className="w-3.5 h-3.5" /> Synced
+       <CheckCircle className="w-3.5 h-3.5" /> Synced
       </span>
      )}
      {saveError && (
@@ -1495,7 +1491,7 @@ function AdminActions({
        <div className="flex items-center gap-2">
         <Input value={name} onChange={(e) => setName(e.target.value)} />
         <PrimaryButton onClick={saveName} loading={busy === 'name'}>
-         <Save className="w-4 h-4" /> Save
+         <FloppyDisk className="w-4 h-4" /> Save
         </PrimaryButton>
         <GhostButton onClick={() => { setName(client.business_name); setEditName(false) }}>
          Cancel
@@ -1566,7 +1562,7 @@ function AdminActions({
       }}
       disabled={!client.owner}
      >
-      <KeyRound className="w-4 h-4" /> Sign in as this client
+      <Key className="w-4 h-4" /> Sign in as this client
      </GhostButton>
      <GhostButton onClick={onSendCheckout}>
       <CreditCard className="w-4 h-4" /> Send checkout link
@@ -1578,18 +1574,18 @@ function AdminActions({
       <Pencil className="w-4 h-4" /> Pre-fill customization
      </a>
      <GhostButton onClick={() => onResetPassword()} disabled={!client.owner}>
-      <KeyRound className="w-4 h-4" /> Random password
+      <Key className="w-4 h-4" /> Random password
      </GhostButton>
      <GhostButton onClick={() => setCustomPwOpen((v) => !v)} disabled={!client.owner}>
       <Pencil className="w-4 h-4" /> Set password
      </GhostButton>
      <GhostButton onClick={toggleOnboarding} disabled={busy === 'onboarding'}>
-      <RotateCcw className="w-4 h-4" />
+      <ArrowCounterClockwise className="w-4 h-4" />
       {client.onboarding_completed ? 'Re-open onboarding' : 'Mark onboarding done'}
      </GhostButton>
      {client.calcom_connected && (
       <GhostButton onClick={disconnectCalcom} disabled={busy === 'calcom'}>
-       <Unlink className="w-4 h-4" /> Disconnect Cal.com
+       <LinkBreak className="w-4 h-4" /> Disconnect Cal.com
       </GhostButton>
      )}
     </div>
@@ -1614,7 +1610,7 @@ function AdminActions({
         }}
         disabled={customPw.length < 8 || !client.owner}
        >
-        <KeyRound className="w-4 h-4" /> Set password
+        <Key className="w-4 h-4" /> Set password
        </PrimaryButton>
        <GhostButton onClick={() => { setCustomPwOpen(false); setCustomPw('') }}>
         Cancel
@@ -1628,12 +1624,12 @@ function AdminActions({
 
     {savedFlag && (
      <div className="text-xs text-emerald-400 flex items-center gap-1.5">
-      <CheckCircle2 className="w-3.5 h-3.5" /> Saved.
+      <CheckCircle className="w-3.5 h-3.5" /> Saved.
      </div>
     )}
     {error && error !== 'cancelled' && (
      <div className="text-xs text-rose-400 flex items-center gap-1.5">
-      <AlertCircle className="w-3.5 h-3.5" /> {error}
+      <WarningCircle className="w-3.5 h-3.5" /> {error}
      </div>
     )}
    </div>
@@ -1680,7 +1676,7 @@ function TempPasswordModal({
    >
     <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
      <div className="text-sm font-semibold text-white inline-flex items-center gap-2">
-      <KeyRound className="w-4 h-4 text-sky-400" /> Temporary password
+      <Key className="w-4 h-4 text-sky-400" /> Temporary password
      </div>
      <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-white/[0.06] transition-colors">
       <X className="w-4 h-4 text-gray-400" />
@@ -1699,7 +1695,7 @@ function TempPasswordModal({
      <div className="flex items-center justify-end gap-2">
       <GhostButton onClick={onClose}>Done</GhostButton>
       <PrimaryButton onClick={copy}>
-       <CheckCircle2 className="w-4 h-4" /> {copied ? 'Copied' : 'Copy'}
+       <CheckCircle className="w-4 h-4" /> {copied ? 'Copied' : 'Copy'}
       </PrimaryButton>
      </div>
     </div>
@@ -1868,7 +1864,7 @@ function CheckoutLinkModal({
 
        {error && (
         <div className="bg-rose-500/10 border border-rose-500/20 text-rose-200 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
-         <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+         <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
          <span>{error}</span>
         </div>
        )}
@@ -1883,7 +1879,7 @@ function CheckoutLinkModal({
      ) : (
       <>
        <div className="bg-emerald-500/10 border border-emerald-400/20 rounded-xl px-3 py-2 text-sm text-emerald-200 flex items-start gap-2">
-        <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
         <span>
          Live link for <strong>{result.plan_label}</strong> · {result.amount}. Pasted into a message, the client clicks and pays.
         </span>
@@ -1919,7 +1915,7 @@ function CheckoutLinkModal({
          href={result.url} target="_blank" rel="noreferrer"
          className="inline-flex items-center justify-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 hover:text-white px-4 py-2 rounded-xl text-sm font-medium border border-white/[0.06] transition-all duration-300 ease-out"
         >
-         <ExternalLink className="w-4 h-4" /> Preview
+         <ArrowSquareOut className="w-4 h-4" /> Preview
         </a>
        </div>
       </>
@@ -2035,7 +2031,7 @@ function SalesRepAssignmentCard({
      </Select>
     </div>
     <PrimaryButton onClick={save} disabled={!dirty || saving}>
-     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+     {saving ? <CircleNotch className="w-4 h-4 animate-spin" /> : <FloppyDisk className="w-4 h-4" />}
      Save
     </PrimaryButton>
    </div>
@@ -2047,7 +2043,7 @@ function SalesRepAssignmentCard({
    )}
    {saved && (
     <div className="mt-3 text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 inline-flex items-center gap-1.5">
-     <CheckCircle2 className="w-3.5 h-3.5" /> Saved · future invoice payments credit this rep
+     <CheckCircle className="w-3.5 h-3.5" /> Saved · future invoice payments credit this rep
     </div>
    )}
 
@@ -2094,7 +2090,7 @@ function StripeSyncButton({
  return (
   <div className="flex flex-col items-end gap-1">
    <GhostButton onClick={run} disabled={busy}>
-    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+    {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
     Sync from Stripe
    </GhostButton>
    {flash && (

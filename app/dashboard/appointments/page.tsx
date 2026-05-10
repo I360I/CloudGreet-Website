@@ -2,9 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
- ChevronLeft, ChevronRight, Loader2, AlertCircle, Clock, Plus,
-} from 'lucide-react'
+import { CaretLeft, CaretRight, CircleNotch, WarningCircle, Clock, Plus } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 import { demoMonthDays, demoWeekDays } from '../_components/demo-data'
@@ -188,7 +186,7 @@ export default function AppointmentsPage() {
          className="p-2 rounded-lg border border-gray-200 hover:bg-white transition-all duration-300 ease-out"
          aria-label="Previous week"
         >
-         <ChevronLeft className="w-4 h-4 text-gray-600" />
+         <CaretLeft className="w-4 h-4 text-gray-600" />
         </button>
         <button
          onClick={() => setWeekStart(startOfWeek(new Date()))}
@@ -201,7 +199,7 @@ export default function AppointmentsPage() {
          className="p-2 rounded-lg border border-gray-200 hover:bg-white transition-all duration-300 ease-out"
          aria-label="Next week"
         >
-         <ChevronRight className="w-4 h-4 text-gray-600" />
+         <CaretRight className="w-4 h-4 text-gray-600" />
         </button>
        </div>
        <span className="ml-2 text-sm text-gray-700 font-medium">{fmtRange(weekStart, weekEnd)}</span>
@@ -210,13 +208,13 @@ export default function AppointmentsPage() {
 
      {loading && (
       <div className="bg-white border border-gray-200 rounded-2xl p-16 flex items-center justify-center">
-       <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+       <CircleNotch className="w-5 h-5 animate-spin text-gray-400" />
       </div>
      )}
 
      {!loading && error && (
       <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-start gap-3">
-       <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+       <WarningCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
        <div>
         <h3 className="text-sm font-medium text-gray-900">Couldn&apos;t load calendar</h3>
         <p className="text-sm text-gray-500 mt-1">{error}</p>

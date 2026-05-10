@@ -2,11 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
- Phone, Calendar, DollarSign, User, Clock, 
- CheckCircle, AlertCircle, MessageSquare, Bell, Activity,
- TrendingUp, TrendingDown
-} from 'lucide-react'
+import { Phone, Calendar, CurrencyDollar, User, Clock, CheckCircle, WarningCircle, ChatCircle, Bell, Pulse, TrendUp, TrendDown } from '@phosphor-icons/react'
 import { useRealtimeMetrics } from '../../hooks/useDashboardData'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { getServiceColor } from '@/lib/business-theme'
@@ -116,11 +112,11 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
  case 'appointment':
  return <Calendar className="w-5 h-5" style={{ color: iconColor }} />
  case 'revenue':
- return <DollarSign className="w-5 h-5" style={{ color: iconColor }} />
+ return <CurrencyDollar className="w-5 h-5" style={{ color: iconColor }} />
  case 'message':
- return <MessageSquare className="w-5 h-5" style={{ color: iconColor }} />
+ return <ChatCircle className="w-5 h-5" style={{ color: iconColor }} />
  default:
- return <Activity className="w-5 h-5" style={{ color: iconColor }} />
+ return <Pulse className="w-5 h-5" style={{ color: iconColor }} />
  }
  }
 
@@ -129,9 +125,9 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
  
  switch (trend) {
  case 'up':
- return <TrendingUp className="w-4 h-4 text-green-500" />
+ return <TrendUp className="w-4 h-4 text-green-500" />
  case 'down':
- return <TrendingDown className="w-4 h-4 text-red-500" />
+ return <TrendDown className="w-4 h-4 text-red-500" />
  default:
  return <div className="w-4 h-4 bg-slate-500 rounded-full" />
  }
@@ -157,7 +153,7 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
  className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg"
  >
  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
- <Activity className="w-5 h-5" style={{ color: primaryColor }} />
+ <Pulse className="w-5 h-5" style={{ color: primaryColor }} />
  Recent Activity
  </h3>
  <div className="space-y-3">
@@ -189,10 +185,10 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
  transition={{ duration: 2, repeat: Infinity }}
  className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center"
  >
- <AlertCircle className="w-5 h-5 text-red-400" />
+ <WarningCircle className="w-5 h-5 text-red-400" />
  </motion.div>
  <div>
- <h3 className="text-lg font-semibold text-red-400 mb-1">Activity Unavailable</h3>
+ <h3 className="text-lg font-semibold text-red-400 mb-1">Pulse Unavailable</h3>
  <p className="text-red-300/80 text-sm">{errorMessage}</p>
  </div>
  </div>
@@ -209,7 +205,7 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
  >
  <div className="flex items-center justify-between mb-4">
  <h3 className="text-lg font-semibold flex items-center gap-2 text-white">
- <Activity className="w-5 h-5" style={{ color: primaryColor }} />
+ <Pulse className="w-5 h-5" style={{ color: primaryColor }} />
  Recent Activity
  </h3>
  <div className="flex items-center gap-2 text-sm" style={{ color: primaryColor }}>
@@ -221,9 +217,9 @@ export default function RealActivityFeed({ businessId, businessName }: RealActiv
  {activities.length === 0 ? (
  <div className="text-center py-8">
  <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
- <Activity className="w-8 h-8 text-slate-400" />
+ <Pulse className="w-8 h-8 text-slate-400" />
  </div>
- <h4 className="text-lg font-medium text-slate-300 mb-2">No Activity Yet</h4>
+ <h4 className="text-lg font-medium text-slate-300 mb-2">No Pulse Yet</h4>
  <p className="text-slate-400 text-sm">
  Activity will appear here once you start receiving calls and bookings
  </p>

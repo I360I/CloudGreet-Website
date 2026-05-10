@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import {
- Loader2, ArrowLeft, AlertCircle, CheckCircle2, Pause, RotateCcw, Trash2, KeyRound,
- Mail, MapPin, Hash, Copy, Send, ExternalLink,
-} from 'lucide-react'
+import { CircleNotch, ArrowLeft, WarningCircle, CheckCircle, Pause, ArrowCounterClockwise, Trash, Key, Envelope, MapPin, Hash, Copy, PaperPlaneTilt, ArrowSquareOut } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import { Panel, PanelHeader, GhostButton, DangerButton, PrimaryButton, StatusPill } from '../../_components/ui'
@@ -165,7 +162,7 @@ export default function RepDetailPage() {
   return (
    <AdminShell activeLabel="Sales">
     <div className="flex items-center justify-center py-32">
-     <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+     <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
     </div>
    </AdminShell>
   )
@@ -179,7 +176,7 @@ export default function RepDetailPage() {
      </Link>
      <Panel>
       <div className="flex items-start gap-3">
-       <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+       <WarningCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
        <div>
         <h1 className="text-base font-medium text-white">Couldn&apos;t load rep</h1>
         <p className="text-sm text-gray-500 mt-1">{error || 'Not found'}</p>
@@ -207,7 +204,7 @@ export default function RepDetailPage() {
         {rep.name}
        </h1>
        <div className="text-xs text-gray-400 mt-2 inline-flex items-center gap-3 flex-wrap">
-        <span className="inline-flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{rep.email}</span>
+        <span className="inline-flex items-center gap-1.5"><Envelope className="w-3.5 h-3.5" />{rep.email}</span>
         <StatusPill status={rep.status} />
         {rep.stripe_payouts_enabled
          ? <span className="text-emerald-300/90">Stripe payouts ready</span>
@@ -225,7 +222,7 @@ export default function RepDetailPage() {
        )}
        {rep.status === 'paused' && (
         <GhostButton onClick={() => setStatus('active')} disabled={busy === 'active'}>
-         <RotateCcw className="w-4 h-4" /> Reactivate
+         <ArrowCounterClockwise className="w-4 h-4" /> Reactivate
         </GhostButton>
        )}
        {rep.status !== 'terminated' ? (
@@ -237,11 +234,11 @@ export default function RepDetailPage() {
         </DangerButton>
        ) : (
         <GhostButton onClick={() => setStatus('active')} disabled={busy === 'active'}>
-         <RotateCcw className="w-4 h-4" /> Reinstate
+         <ArrowCounterClockwise className="w-4 h-4" /> Reinstate
         </GhostButton>
        )}
        <DangerButton onClick={hardDelete} disabled={busy === 'delete'}>
-        <Trash2 className="w-4 h-4" /> Delete
+        <Trash className="w-4 h-4" /> Delete
        </DangerButton>
       </div>
      </header>
@@ -466,7 +463,7 @@ function ScrapeLimitField({
     disabled={!dirty || saving}
     className="text-xs bg-sky-500/15 text-sky-300 border border-sky-400/20 hover:bg-sky-500/25 rounded-lg px-3 py-2 disabled:opacity-40 transition-colors inline-flex items-center gap-1.5"
    >
-    {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+    {saving && <CircleNotch className="w-3 h-3 animate-spin" />}
     Save
    </button>
   </div>
@@ -526,10 +523,10 @@ function SlackSection({ repId, repEmail, repName }: {
  const manualAlready = !!(s && manualTag && s.current_env.split(/\s+/).map((t) => t.trim()).includes(manualTag))
 
  if (loading) {
-  return <div className="flex items-center gap-2 text-xs text-gray-500"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Looking up Slack…</div>
+  return <div className="flex items-center gap-2 text-xs text-gray-500"><CircleNotch className="w-3.5 h-3.5 animate-spin" /> Looking up Slack…</div>
  }
  if (err || !s) {
-  return <div className="text-xs text-rose-300 flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" /> {err || 'Could not load'}</div>
+  return <div className="text-xs text-rose-300 flex items-center gap-2"><WarningCircle className="w-3.5 h-3.5" /> {err || 'Could not load'}</div>
  }
 
  return (
@@ -545,7 +542,7 @@ function SlackSection({ repId, repEmail, repName }: {
        href={`mailto:${repEmail}?subject=${encodeURIComponent('Join us on Slack')}&body=${encodeURIComponent(`Hey ${repName.split(' ')[0]} - join the CloudGreet Slack so you get the agent-complete pings:\n\n${s.invite_url}\n\nSee you in there.`)}`}
        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]"
       >
-       <Send className="w-3.5 h-3.5" /> Email invite
+       <PaperPlaneTilt className="w-3.5 h-3.5" /> Email invite
       </a>
       <a
        href={s.invite_url}
@@ -553,7 +550,7 @@ function SlackSection({ repId, repEmail, repName }: {
        rel="noreferrer"
        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]"
       >
-       Open invite link <ExternalLink className="w-3.5 h-3.5" />
+       Open invite link <ArrowSquareOut className="w-3.5 h-3.5" />
       </a>
      </div>
     </div>
@@ -569,7 +566,7 @@ function SlackSection({ repId, repEmail, repName }: {
      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
        <div className="flex items-center gap-2">
-        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <CheckCircle className="w-4 h-4 text-emerald-400" />
         <span className="text-emerald-200 text-xs">Found in workspace</span>
         {s.already_included && (
          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-emerald-300/80 px-2 py-0.5 rounded-full border border-emerald-500/30">
@@ -586,7 +583,7 @@ function SlackSection({ repId, repEmail, repName }: {
         <div className="flex items-center gap-2">
          <code className="font-mono text-xs text-gray-200 bg-black/40 border border-white/10 rounded px-2 py-1 flex-1 break-all">{s.mention_tag}</code>
          <GhostButton onClick={() => copy(s.mention_tag!, 'tag')}>
-          {copied === 'tag' ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+          {copied === 'tag' ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
           Copy
          </GhostButton>
         </div>
@@ -596,7 +593,7 @@ function SlackSection({ repId, repEmail, repName }: {
     ) : (
      <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3 text-xs text-amber-200/90">
       <div className="flex items-center gap-2 mb-1">
-       <AlertCircle className="w-3.5 h-3.5" />
+       <WarningCircle className="w-3.5 h-3.5" />
        <strong className="text-amber-200">Not in the Slack workspace yet</strong>
       </div>
       Looked up <span className="font-mono">{s.email || repEmail}</span> via Slack&apos;s API; they aren&apos;t a member.
@@ -623,7 +620,7 @@ function SlackSection({ repId, repEmail, repName }: {
       </div>
       {manualTag && (
        <GhostButton onClick={() => copy(manualTag, 'tag')}>
-        {copied === 'tag' ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+        {copied === 'tag' ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
         Copy tag
        </GhostButton>
       )}
@@ -648,7 +645,7 @@ function SlackSection({ repId, repEmail, repName }: {
        </div>
       </div>
       <GhostButton onClick={() => copy(manualSuggested || s.suggested_env, 'env')}>
-       {copied === 'env' ? <CheckCircle2 className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+       {copied === 'env' ? <CheckCircle className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
        {copied === 'env' ? 'Copied' : 'Copy for Vercel'}
       </GhostButton>
      </div>
@@ -752,7 +749,7 @@ function DialerNumberField({
      disabled={busy}
      className="text-xs bg-sky-500/15 text-sky-300 border border-sky-400/20 hover:bg-sky-500/25 rounded-lg px-3 py-2 disabled:opacity-40 transition-colors inline-flex items-center gap-1.5"
     >
-     {busy && <Loader2 className="w-3 h-3 animate-spin" />}
+     {busy && <CircleNotch className="w-3 h-3 animate-spin" />}
      {current ? 'Replace number' : 'Provision number'}
     </button>
    </div>
@@ -816,7 +813,7 @@ function PriceCapField({
      disabled={!dirty || saving}
      className="text-xs bg-sky-500/15 text-sky-300 border border-sky-400/20 hover:bg-sky-500/25 rounded-lg px-3 py-2 disabled:opacity-40 transition-colors inline-flex items-center gap-1.5"
     >
-     {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+     {saving && <CircleNotch className="w-3 h-3 animate-spin" />}
      Save
     </button>
    </div>

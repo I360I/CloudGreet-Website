@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Home, ArrowLeft, HelpCircle, Phone, Brain } from 'lucide-react'
+import { House, ArrowLeft, Question, Phone, Brain } from '@phosphor-icons/react'
 import Link from 'next/link'
 
 export default function NotFound() {
@@ -47,7 +47,7 @@ export default function NotFound() {
               href="/"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-900 hover:bg-gray-200 rounded-lg font-medium text-sm transition-colors"
             >
-              <Home className="w-4 h-4" />
+              <House className="w-4 h-4" />
               Go home
             </Link>
             <button
@@ -69,7 +69,7 @@ export default function NotFound() {
               href="/#how-it-works"
               className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-5 transition-colors"
             >
-              <HelpCircle className="w-6 h-6 text-sky-400 mx-auto mb-3" strokeWidth={1.75} />
+              <Question className="w-6 h-6 text-sky-400 mx-auto mb-3" />
               <h3 className="text-sm font-medium text-gray-100 mb-1">How it works</h3>
               <p className="text-xs text-gray-500 leading-relaxed">Learn how CloudGreet helps service businesses.</p>
             </Link>
@@ -78,7 +78,7 @@ export default function NotFound() {
               href="/contact"
               className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-5 transition-colors"
             >
-              <Phone className="w-6 h-6 text-emerald-400 mx-auto mb-3" strokeWidth={1.75} />
+              <Phone className="w-6 h-6 text-emerald-400 mx-auto mb-3" />
               <h3 className="text-sm font-medium text-gray-100 mb-1">Contact</h3>
               <p className="text-xs text-gray-500 leading-relaxed">Get in touch with the team.</p>
             </Link>
@@ -87,7 +87,7 @@ export default function NotFound() {
               href="/dashboard"
               className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.12] rounded-2xl p-5 transition-colors"
             >
-              <Brain className="w-6 h-6 text-indigo-400 mx-auto mb-3" strokeWidth={1.75} />
+              <Brain className="w-6 h-6 text-indigo-400 mx-auto mb-3" />
               <h3 className="text-sm font-medium text-gray-100 mb-1">Dashboard</h3>
               <p className="text-xs text-gray-500 leading-relaxed">Sign in to your CloudGreet dashboard.</p>
             </Link>

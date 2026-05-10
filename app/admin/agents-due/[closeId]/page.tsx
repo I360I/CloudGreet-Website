@@ -2,9 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import {
-  Loader2, ArrowLeft, ExternalLink, Phone, Mail, Calendar, Bot, Globe, Building2,
-} from 'lucide-react'
+import { CircleNotch, ArrowLeft, ArrowSquareOut, Phone, Envelope, Calendar, Robot, Globe, Buildings } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import { Panel } from '../../_components/ui'
@@ -72,7 +70,7 @@ export default function AgentWorkspacePage({ params }: { params: { closeId: stri
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+            <CircleNotch className="w-5 h-5 animate-spin text-gray-500" />
           </div>
         ) : error ? (
           <Panel><div className="px-6 py-12 text-sm text-rose-300">{error}</div></Panel>
@@ -110,7 +108,7 @@ function Workspace({ item, onChanged }: { item: Item; onChanged: () => void }) {
               href={`/admin/clients/${item.business.id}`}
               className="text-xs text-sky-300 hover:text-sky-200 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03]"
             >
-              Open client <ExternalLink className="w-3 h-3" />
+              Open client <ArrowSquareOut className="w-3 h-3" />
             </Link>
           )}
           <a
@@ -119,7 +117,7 @@ function Workspace({ item, onChanged }: { item: Item; onChanged: () => void }) {
             rel="noreferrer"
             className="text-xs text-fuchsia-300 hover:text-fuchsia-200 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/[0.06]"
           >
-            Retell dashboard <ExternalLink className="w-3 h-3" />
+            Retell dashboard <ArrowSquareOut className="w-3 h-3" />
           </a>
         </div>
       </div>
@@ -139,9 +137,9 @@ function Workspace({ item, onChanged }: { item: Item; onChanged: () => void }) {
         </div>
 
         <aside className="space-y-3 text-xs">
-          <Side title="Prospect" icon={<Building2 className="w-3.5 h-3.5 text-gray-500" />}>
+          <Side title="Prospect" icon={<Buildings className="w-3.5 h-3.5 text-gray-500" />}>
             <Row label="Contact" value={item.prospect.name} />
-            <Row label="Email" value={item.prospect.email} icon={<Mail className="w-3 h-3" />} />
+            <Row label="Email" value={item.prospect.email} icon={<Envelope className="w-3 h-3" />} />
             <Row label="Phone" value={item.prospect.phone} icon={<Phone className="w-3 h-3" />} />
             {item.business?.login_email && (
               <Row label="Login" value={item.business.login_email} hint="Account provisioned" />
@@ -157,7 +155,7 @@ function Workspace({ item, onChanged }: { item: Item; onChanged: () => void }) {
                 className="text-sky-300 hover:text-sky-200 break-all inline-flex items-center gap-1"
               >
                 {item.business.website.replace(/^https?:\/\//, '')}
-                <ExternalLink className="w-3 h-3" />
+                <ArrowSquareOut className="w-3 h-3" />
               </a>
             </Side>
           )}
@@ -175,7 +173,7 @@ function Workspace({ item, onChanged }: { item: Item; onChanged: () => void }) {
           </Side>
 
           {item.business?.services && item.business.services.length > 0 && (
-            <Side title="Services" icon={<Bot className="w-3.5 h-3.5 text-gray-500" />}>
+            <Side title="Services" icon={<Robot className="w-3.5 h-3.5 text-gray-500" />}>
               <ul className="text-gray-300 space-y-0.5">
                 {item.business.services.slice(0, 12).map((s, i) => <li key={i}>• {s}</li>)}
               </ul>

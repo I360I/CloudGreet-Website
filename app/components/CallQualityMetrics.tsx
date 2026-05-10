@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Phone, Clock, Volume2, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react'
+import { Phone, Clock, SpeakerHigh, CheckCircle, Warning, TrendUp } from '@phosphor-icons/react'
 import { Card } from './ui/Card'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -73,17 +73,17 @@ export default function CallQualityMetrics({ businessId, className = '' }: CallQ
  const getQualityIcon = (value: number, type: 'duration' | 'response' | 'audio' | 'drop' | 'satisfaction') => {
  switch (type) {
  case 'duration':
- return value > 180 ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />
+ return value > 180 ? <CheckCircle className="w-5 h-5" /> : <Warning className="w-5 h-5" />
  case 'response':
- return value < 2 ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />
+ return value < 2 ? <CheckCircle className="w-5 h-5" /> : <Warning className="w-5 h-5" />
  case 'audio':
- return value > 90 ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />
+ return value > 90 ? <CheckCircle className="w-5 h-5" /> : <Warning className="w-5 h-5" />
  case 'drop':
- return value < 5 ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />
+ return value < 5 ? <CheckCircle className="w-5 h-5" /> : <Warning className="w-5 h-5" />
  case 'satisfaction':
- return value > 80 ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />
+ return value > 80 ? <CheckCircle className="w-5 h-5" /> : <Warning className="w-5 h-5" />
  default:
- return <TrendingUp className="w-5 h-5" />
+ return <TrendUp className="w-5 h-5" />
  }
  }
 
@@ -157,7 +157,7 @@ export default function CallQualityMetrics({ businessId, className = '' }: CallQ
  >
  <div className="flex items-center justify-between mb-2">
  <div className="flex items-center gap-2">
- <TrendingUp className="w-5 h-5 text-green-400" />
+ <TrendUp className="w-5 h-5 text-green-400" />
  <span className="text-sm font-medium text-gray-300">Response Time</span>
  </div>
  {getQualityIcon(metrics.avgResponseTime, 'response')}
@@ -180,7 +180,7 @@ export default function CallQualityMetrics({ businessId, className = '' }: CallQ
  >
  <div className="flex items-center justify-between mb-2">
  <div className="flex items-center gap-2">
- <Volume2 className="w-5 h-5 text-sky-400" />
+ <SpeakerHigh className="w-5 h-5 text-sky-400" />
  <span className="text-sm font-medium text-gray-300">Audio Quality</span>
  </div>
  {getQualityIcon(metrics.audioQuality, 'audio')}
@@ -203,7 +203,7 @@ export default function CallQualityMetrics({ businessId, className = '' }: CallQ
  >
  <div className="flex items-center justify-between mb-2">
  <div className="flex items-center gap-2">
- <AlertTriangle className="w-5 h-5 text-orange-400" />
+ <Warning className="w-5 h-5 text-orange-400" />
  <span className="text-sm font-medium text-gray-300">Drop Rate</span>
  </div>
  {getQualityIcon(metrics.dropRate, 'drop')}

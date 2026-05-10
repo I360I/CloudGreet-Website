@@ -17,7 +17,7 @@ import {
  ChartOptions
 } from 'chart.js'
 import { Line, Bar, Doughnut } from 'react-chartjs-2'
-import { TrendingUp, Phone, Calendar, DollarSign } from 'lucide-react'
+import { TrendUp, Phone, Calendar, CurrencyDollar } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 
@@ -161,7 +161,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
  transition={{ duration: 2, repeat: Infinity }}
  className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center"
  >
- <TrendingUp className="w-5 h-5 text-red-400" />
+ <TrendUp className="w-5 h-5 text-red-400" />
  </motion.div>
  <div>
  <h3 className="text-lg font-semibold text-red-400 mb-1">Charts Unavailable</h3>
@@ -189,7 +189,7 @@ export default function RealCharts({ businessId, timeframe = '30d' }: RealCharts
  <motion.div
  whileHover={{ scale: 1.1, rotate: 5 }}
  >
- <DollarSign className="w-5 h-5" style={{ color: revenueColor }} />
+ <CurrencyDollar className="w-5 h-5" style={{ color: revenueColor }} />
  </motion.div>
  <h3 className="text-lg font-semibold">Revenue Trend</h3>
  </div>

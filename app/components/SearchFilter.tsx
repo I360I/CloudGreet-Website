@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Filter, X, Calendar, User, Phone, Tag } from 'lucide-react'
+import { MagnifyingGlass, Funnel, X, Calendar, User, Phone, Tag } from '@phosphor-icons/react'
 
 interface FilterOption {
  id: string
@@ -56,7 +56,7 @@ export default function SearchFilter({
  <div className={`space-y-4 ${className}`}>
  {/* Search Bar */}
  <div className="relative">
- <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+ <MagnifyingGlass className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
  <input
  type="text"
  placeholder="Search calls, customers, services..."
@@ -80,7 +80,7 @@ export default function SearchFilter({
  onClick={() => setIsFiltersOpen(!isFiltersOpen)}
  className="flex items-center gap-2 px-4 py-2 bg-gray-800/50 border border-gray-700/50 text-gray-300 rounded-lg hover:bg-gray-800/70 hover:text-white transition-colors"
  >
- <Filter className="w-4 h-4" />
+ <Funnel className="w-4 h-4" />
  <span>Filters</span>
  {activeFiltersCount > 0 && (
  <span className="px-2 py-0.5 bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs rounded-full">

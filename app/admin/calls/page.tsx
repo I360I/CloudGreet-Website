@@ -3,9 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
- Loader2, AlertCircle, Search, ChevronLeft, ChevronRight, X, Play, ExternalLink,
-} from 'lucide-react'
+import { CircleNotch, WarningCircle, MagnifyingGlass, CaretLeft, CaretRight, X, Play, ArrowSquareOut } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, Input, StatusPill } from '../_components/ui'
@@ -101,7 +99,7 @@ export default function AdminCallsPage() {
       <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-white/[0.06] flex items-center justify-between gap-3 flex-wrap">
        <h2 className="text-sm font-medium text-white">Recent</h2>
        <div className="relative w-full sm:w-72">
-        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+        <MagnifyingGlass className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
         <Input
          type="search"
          placeholder="Search by caller or number…"
@@ -114,11 +112,11 @@ export default function AdminCallsPage() {
 
       {loading ? (
        <div className="px-6 py-16 flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+        <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
        </div>
       ) : error ? (
        <div className="px-6 py-12 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+        <WarningCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
         <div>
          <h3 className="text-sm font-medium text-white">Couldn&apos;t load calls</h3>
          <p className="text-sm text-gray-500 mt-1">{error}</p>
@@ -155,7 +153,7 @@ export default function AdminCallsPage() {
               onClick={(e) => e.stopPropagation()}
               className="text-xs text-sky-400 hover:text-sky-300 truncate inline-flex items-center gap-1"
              >
-              {c.business_name} <ExternalLink className="w-3 h-3 flex-shrink-0" />
+              {c.business_name} <ArrowSquareOut className="w-3 h-3 flex-shrink-0" />
              </Link>
             </div>
             <div className="hidden lg:block lg:col-span-2"><StatusPill status={c.status} /></div>
@@ -182,14 +180,14 @@ export default function AdminCallsPage() {
           disabled={page === 0}
           className="p-1.5 rounded-md hover:bg-white/[0.05] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
          >
-          <ChevronLeft className="w-4 h-4" />
+          <CaretLeft className="w-4 h-4" />
          </button>
          <button
           onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
           disabled={page >= pageCount - 1}
           className="p-1.5 rounded-md hover:bg-white/[0.05] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
          >
-          <ChevronRight className="w-4 h-4" />
+          <CaretRight className="w-4 h-4" />
          </button>
         </div>
        </div>
@@ -247,7 +245,7 @@ function CallDrawer({ call, onClose }: { call: AdminCall; onClose: () => void })
        href={`/admin/clients/${call.business_id}`}
        className="text-xs text-sky-400 hover:text-sky-300 inline-flex items-center gap-1"
       >
-       {call.business_name} <ExternalLink className="w-3 h-3" />
+       {call.business_name} <ArrowSquareOut className="w-3 h-3" />
       </Link>
      </div>
 

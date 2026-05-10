@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ShieldAlert, ArrowLeft, Loader2 } from 'lucide-react'
+import { ShieldWarning, ArrowLeft, CircleNotch } from '@phosphor-icons/react'
 
 /**
  * Renders a fixed top banner whenever an admin is impersonating a
@@ -55,7 +55,7 @@ export function ImpersonationBanner() {
     <div className="sticky top-0 z-[60] bg-amber-500 text-amber-950 border-b border-amber-600 px-4 py-2">
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <ShieldAlert className="w-4 h-4" />
+          <ShieldWarning className="w-4 h-4" />
           You&apos;re signed in as a client account. Anything you do here is
           recorded as them.
         </div>
@@ -65,7 +65,7 @@ export function ImpersonationBanner() {
           disabled={exiting}
           className="inline-flex items-center gap-1.5 bg-amber-950 text-amber-50 hover:bg-black rounded-md px-3 py-1.5 text-xs font-medium disabled:opacity-60"
         >
-          {exiting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowLeft className="w-3.5 h-3.5" />}
+          {exiting ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <ArrowLeft className="w-3.5 h-3.5" />}
           Return to admin
         </button>
       </div>

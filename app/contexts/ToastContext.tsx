@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback } from 'react'
-import { CheckCircle, XCircle, AlertTriangle, Info, X } from 'lucide-react'
+import { CheckCircle, XCircle, Warning, Info, X } from '@phosphor-icons/react'
 
 interface Toast {
  id: string
@@ -102,7 +102,7 @@ function ToastItem({ toast, onHide }: ToastItemProps) {
  case 'error':
  return <XCircle className="w-5 h-5 text-red-400" />
  case 'warning':
- return <AlertTriangle className="w-5 h-5 text-yellow-400" />
+ return <Warning className="w-5 h-5 text-yellow-400" />
  case 'info':
  return <Info className="w-5 h-5 text-blue-400" />
  }

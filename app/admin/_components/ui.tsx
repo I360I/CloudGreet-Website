@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Loader2 } from 'lucide-react'
+import { CircleNotch } from '@phosphor-icons/react'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -105,7 +105,7 @@ export function PrimaryButton({
    type={type} onClick={onClick} disabled={disabled || loading}
    className={`inline-flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_30px_-12px_rgba(56,189,248,0.6)] ${className}`}
   >
-   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+   {loading && <CircleNotch className="w-4 h-4 animate-spin" />}
    {children}
   </button>
  )
@@ -147,7 +147,7 @@ export function DangerButton({
    type={type} onClick={onClick} disabled={disabled || loading}
    className={`inline-flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 hover:text-rose-200 px-4 py-2 rounded-xl text-sm font-medium border border-rose-500/20 transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
   >
-   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+   {loading && <CircleNotch className="w-4 h-4 animate-spin" />}
    {children}
   </button>
  )
@@ -191,7 +191,6 @@ export function Sparkline({ data, accent = false }: { data: number[]; accent?: b
    <polyline
     fill="none"
     stroke={accent ? '#38bdf8' : '#52525b'}
-    strokeWidth="1.5"
     strokeLinecap="round"
     strokeLinejoin="round"
     points={pts}

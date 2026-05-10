@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Lightbulb, TrendingUp, Clock, DollarSign, Target, AlertTriangle, CheckCircle, Star, Zap, Users, Calendar, Phone } from 'lucide-react'
+import { Lightbulb, TrendUp, Clock, CurrencyDollar, Target, Warning, CheckCircle, Star, Lightning, Users, Calendar, Phone } from '@phosphor-icons/react'
 import { Card } from './ui/Card'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -55,9 +55,9 @@ export default function AIInsights({ businessId, className = '' }: AIInsightsPro
 
  const getInsightIcon = (type: string) => {
  switch (type) {
- case 'optimization': return <TrendingUp className="w-5 h-5" />
- case 'opportunity': return <DollarSign className="w-5 h-5" />
- case 'warning': return <AlertTriangle className="w-5 h-5" />
+ case 'optimization': return <TrendUp className="w-5 h-5" />
+ case 'opportunity': return <CurrencyDollar className="w-5 h-5" />
+ case 'warning': return <Warning className="w-5 h-5" />
  case 'success': return <CheckCircle className="w-5 h-5" />
  default: return <Lightbulb className="w-5 h-5" />
  }
@@ -83,9 +83,9 @@ export default function AIInsights({ businessId, className = '' }: AIInsightsPro
  switch (category) {
  case 'conversion': return <Target className="w-4 h-4" />
  case 'timing': return <Clock className="w-4 h-4" />
- case 'revenue': return <DollarSign className="w-4 h-4" />
+ case 'revenue': return <CurrencyDollar className="w-4 h-4" />
  case 'quality': return <Star className="w-4 h-4" />
- case 'efficiency': return <Zap className="w-4 h-4" />
+ case 'efficiency': return <Lightning className="w-4 h-4" />
  default: return <Lightbulb className="w-4 h-4" />
  }
  }
@@ -94,9 +94,9 @@ export default function AIInsights({ businessId, className = '' }: AIInsightsPro
  { id: 'all', label: 'All', icon: <Lightbulb className="w-4 h-4" /> },
  { id: 'conversion', label: 'Conversion', icon: <Target className="w-4 h-4" /> },
  { id: 'timing', label: 'Timing', icon: <Clock className="w-4 h-4" /> },
- { id: 'revenue', label: 'Revenue', icon: <DollarSign className="w-4 h-4" /> },
+ { id: 'revenue', label: 'Revenue', icon: <CurrencyDollar className="w-4 h-4" /> },
  { id: 'quality', label: 'Quality', icon: <Star className="w-4 h-4" /> },
- { id: 'efficiency', label: 'Efficiency', icon: <Zap className="w-4 h-4" /> }
+ { id: 'efficiency', label: 'Efficiency', icon: <Lightning className="w-4 h-4" /> }
  ]
 
  const filteredInsights = selectedCategory === 'all' 

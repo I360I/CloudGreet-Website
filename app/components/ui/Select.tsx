@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, Check } from 'lucide-react'
+import { CaretDown, Check } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 
@@ -142,7 +142,7 @@ export function Select({
  {selectedOption ? selectedOption.label : placeholder}
  </span>
  </div>
- <ChevronDown
+ <CaretDown
  className={cn(
  'w-4 h-4 text-slate-400 flex-shrink-0 transition-transform',
  isOpen && 'rotate-180'

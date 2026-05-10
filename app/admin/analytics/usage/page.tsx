@@ -1,17 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import {
- Activity,
- BarChart3,
- CalendarCheck,
- DownloadCloud,
- Headphones,
- Loader2,
- Mic,
- PhoneCall,
- TrendingUp
-} from 'lucide-react'
+import { Pulse, ChartBar, CalendarCheck, DownloadSimple, Headphones, CircleNotch, Microphone, PhoneCall, TrendUp } from '@phosphor-icons/react'
 import { useToast } from '@/app/contexts/ToastContext'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -158,7 +148,7 @@ export default function UsageAnalyticsPage() {
  <section className="rounded-3xl border border-white/10 bg-black/40 p-6 shadow-2xl shadow-blue-900/20">
  {loading ? (
  <div className="flex h-48 items-center justify-center">
- <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+ <CircleNotch className="h-6 w-6 animate-spin text-slate-400" />
  </div>
  ) : analytics ? (
  <div className="grid gap-6 md:grid-cols-4">
@@ -185,7 +175,7 @@ export default function UsageAnalyticsPage() {
  <article className="rounded-2xl border border-white/10 bg-white/5 p-5">
  <div className="flex items-center justify-between">
  <h2 className="text-xs uppercase tracking-[0.3em] text-slate-400">Outreach touches</h2>
- <Activity className="h-5 w-5 text-sky-300" />
+ <Pulse className="h-5 w-5 text-sky-300" />
  </div>
  <p className="mt-3 text-4xl font-semibold text-white">{analytics.summary.outreach30}</p>
  <p className="mt-1 text-sm text-slate-300">Sequenced emails/SMS in the last 30 days</p>
@@ -194,7 +184,7 @@ export default function UsageAnalyticsPage() {
  <article className="rounded-2xl border border-white/10 bg-white/5 p-5">
  <div className="flex items-center justify-between">
  <h2 className="text-xs uppercase tracking-[0.3em] text-slate-400">Pipeline revenue</h2>
- <TrendingUp className="h-5 w-5 text-amber-300" />
+ <TrendUp className="h-5 w-5 text-amber-300" />
  </div>
  <p className="mt-3 text-4xl font-semibold text-white">${analytics.summary.pipelineRevenue}</p>
  <p className="mt-1 text-sm text-slate-300">
@@ -232,7 +222,7 @@ export default function UsageAnalyticsPage() {
  key={driver}
  className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200"
  >
- <Mic className="mt-1 h-4 w-4 flex-shrink-0 text-blue-300" />
+ <Microphone className="mt-1 h-4 w-4 flex-shrink-0 text-blue-300" />
  {driver}
  </li>
  ))}
@@ -256,7 +246,7 @@ export default function UsageAnalyticsPage() {
  disabled={exporting}
  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
  >
- {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <DownloadCloud className="h-4 w-4" />}
+ {exporting ? <CircleNotch className="h-4 w-4 animate-spin" /> : <DownloadSimple className="h-4 w-4" />}
  Export CSV
  </button>
  </div>
@@ -272,11 +262,11 @@ export default function UsageAnalyticsPage() {
  {point.calls}
  </span>
  <span className="inline-flex items-center gap-1 text-sky-200">
- <Activity className="h-3.5 w-3.5" />
+ <Pulse className="h-3.5 w-3.5" />
  {point.outreach}
  </span>
  <span className="inline-flex items-center gap-1 text-amber-200">
- <BarChart3 className="h-3.5 w-3.5" />
+ <ChartBar className="h-3.5 w-3.5" />
  {point.appointments}
  </span>
  </span>

@@ -4,11 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  Phone, EnvelopeSimple, ArrowLeft, CircleNotch, WarningCircle, CheckCircle,
-  Trash, CalendarBlank, ChatCircle, Trophy, Hash, MapPin, X, Copy,
-  CurrencyDollar, Link as LinkIcon,
-} from '@phosphor-icons/react'
+import { Phone, EnvelopeSimple, ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Trash, CalendarBlank, ChatCircle, Trophy, Hash, MapPin, X, Copy, CurrencyDollar, Link as LinkIcon } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 import { Modal } from '../../_components/Modal'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'

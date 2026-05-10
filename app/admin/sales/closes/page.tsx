@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import {
-  Loader2, AlertCircle, ArrowLeft, CheckCircle2, XCircle, ExternalLink, Trash2,
-} from 'lucide-react'
+import { CircleNotch, WarningCircle, ArrowLeft, CheckCircle, XCircle, ArrowSquareOut, Trash } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import { Panel, PanelHeader } from '../../_components/ui'
@@ -156,7 +154,7 @@ export default function AdminClosesPage() {
           {err && (
             <Panel>
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+                <WarningCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-gray-300">{err}</p>
               </div>
             </Panel>
@@ -193,7 +191,7 @@ export default function AdminClosesPage() {
 
             {loading ? (
               <div className="flex items-center justify-center py-10">
-                <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+                <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
               </div>
             ) : closes.length === 0 ? (
               <div className="px-6 py-10 text-center text-sm text-gray-500">
@@ -241,7 +239,7 @@ export default function AdminClosesPage() {
                                 href={`/admin/clients/${c.business.id}`}
                                 className="inline-flex items-center gap-1 text-sky-300 hover:text-sky-200"
                               >
-                                <ExternalLink className="w-3 h-3" /> {c.business.business_name}
+                                <ArrowSquareOut className="w-3 h-3" /> {c.business.business_name}
                               </Link>
                             </div>
                           )}
@@ -255,7 +253,7 @@ export default function AdminClosesPage() {
                                 onClick={() => convert(c.id)}
                                 className="inline-flex items-center gap-1.5 text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/30 rounded-lg px-3 py-1.5 disabled:opacity-60 font-medium"
                               >
-                                {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                                {busy ? <CircleNotch className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
                                 Convert to client
                               </button>
                               <button
@@ -274,7 +272,7 @@ export default function AdminClosesPage() {
                                 onClick={() => setStatus(c.id, 'paid')}
                                 className="inline-flex items-center gap-1.5 text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 rounded-lg px-3 py-1.5 disabled:opacity-60"
                               >
-                                {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                                {busy ? <CircleNotch className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
                                 Mark paid
                               </button>
                               <button
@@ -300,7 +298,7 @@ export default function AdminClosesPage() {
                                 onClick={() => remove(c.id)}
                                 className="inline-flex items-center gap-1.5 text-xs text-rose-300 hover:text-rose-200 border border-rose-500/20 rounded-lg px-2.5 py-1.5 disabled:opacity-60"
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash className="w-3 h-3" />
                               </button>
                             </>
                           )}

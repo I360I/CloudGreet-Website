@@ -6,18 +6,7 @@ import Link from 'next/link'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
-import { 
- Plus, 
- Edit, 
- Trash2, 
- DollarSign, 
- Settings,
- ArrowLeft,
- Brain,
- Save,
- X,
- AlertCircle
-} from 'lucide-react'
+import { Plus, Pencil, Trash, CurrencyDollar, Gear, ArrowLeft, Brain, FloppyDisk, X, WarningCircle } from '@phosphor-icons/react'
 
 interface PricingRule {
  id: string
@@ -207,7 +196,7 @@ export default function PricingPage() {
  
  <div className="flex items-center space-x-4">
  <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
- <Settings className="w-5 h-5 text-gray-700" />
+ <Gear className="w-5 h-5 text-gray-700" />
  </div>
  </div>
  </div>
@@ -240,7 +229,7 @@ export default function PricingPage() {
  <div className="flex items-start justify-between mb-4">
  <div className="flex items-center space-x-3">
  <div className="p-2 rounded-lg" style={{ backgroundColor: getServiceTypeColor(rule.service_type) }}>
- <DollarSign className="w-5 h-5 text-gray-900" />
+ <CurrencyDollar className="w-5 h-5 text-gray-900" />
  </div>
  <div>
  <h3 className="text-lg font-semibold text-gray-900">{rule.name}</h3>
@@ -253,13 +242,13 @@ export default function PricingPage() {
  onClick={() => setEditingRule(rule)}
  className="p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
  >
- <Edit className="w-4 h-4 text-gray-700" />
+ <Pencil className="w-4 h-4 text-gray-700" />
  </button>
  <button
  onClick={() => handleDeleteRule(rule.id)}
  className="p-2 rounded-lg bg-red-600 hover:bg-red-700 transition-colors"
  >
- <Trash2 className="w-4 h-4 text-gray-900" />
+ <Trash className="w-4 h-4 text-gray-900" />
  </button>
  </div>
  </div>
@@ -304,7 +293,7 @@ export default function PricingPage() {
  {pricingRules.length === 0 && (
  <div className="text-center py-12">
  <div className="w-16 h-16 bg-slate-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
- <DollarSign className="w-8 h-8 text-gray-500" />
+ <CurrencyDollar className="w-8 h-8 text-gray-500" />
  </div>
  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Pricing Rules</h3>
  <p className="text-gray-500 mb-6">Create your first pricing rule to enable AI-generated quotes</p>
@@ -509,7 +498,7 @@ function RuleModal({ rule, onSave, onClose }: {
  style={{ backgroundColor: primaryColor }}
  className="flex-1 hover:opacity-90 text-gray-900 px-4 py-2 rounded-lg text-sm font-medium shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
  >
- <Save className="w-5 h-5" />
+ <FloppyDisk className="w-5 h-5" />
  <span>{rule ? 'Update Rule' : 'Add Rule'}</span>
  </button>
  <button

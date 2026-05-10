@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Phone, Mail, MapPin, Check } from "lucide-react"
+import { Phone, Envelope, MapPin, Check } from '@phosphor-icons/react'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -114,7 +114,7 @@ export default function ContactPage() {
 
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 md:p-8 space-y-3 text-sm">
        <div className="flex items-center gap-2 text-gray-600">
-        <Mail className="w-4 h-4" />
+        <Envelope className="w-4 h-4" />
         <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-gray-900">{SUPPORT_EMAIL}</a>
        </div>
        <div className="flex items-center gap-2 text-gray-600">

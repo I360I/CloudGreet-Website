@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, AlertCircle, CheckCircle2, ExternalLink, Copy, Phone, Sparkles, Headphones } from 'lucide-react'
+import { CircleNotch, WarningCircle, CheckCircle, ArrowSquareOut, Copy, Phone, Sparkle, Headphones } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 import {
@@ -70,7 +70,7 @@ export default function OnboardingPage() {
   return (
    <DashShell activeLabel="Setup">
     <div className="flex-1 flex items-center justify-center py-32">
-     <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+     <CircleNotch className="w-5 h-5 animate-spin text-gray-400" />
     </div>
    </DashShell>
   )
@@ -81,7 +81,7 @@ export default function OnboardingPage() {
    <DashShell activeLabel="Setup">
     <div className="px-4 lg:px-8 py-6 lg:py-10 max-w-2xl">
      <div className="bg-white border border-gray-200 rounded-2xl p-6 flex items-start gap-3">
-      <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+      <WarningCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
       <p className="text-sm text-gray-700">{error || 'Could not load onboarding'}</p>
      </div>
     </div>
@@ -288,17 +288,17 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
     <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
      <li>
       Open <a href="https://app.cal.com/settings/developer/api-keys" target="_blank" rel="noreferrer" className="text-sky-600 hover:underline inline-flex items-center gap-0.5">
-       Cal.com → Settings → API Keys <ExternalLink className="w-3 h-3" />
+       Cal.com → Settings → API Keys <ArrowSquareOut className="w-3 h-3" />
       </a> and click <span className="font-medium">+ Add</span>. Copy the key - it starts with <code className="font-mono text-xs bg-white border border-gray-200 px-1 rounded">cal_live_</code>.
      </li>
      <li>
       Make sure you have at least one event type at <a href="https://app.cal.com/event-types" target="_blank" rel="noreferrer" className="text-sky-600 hover:underline inline-flex items-center gap-0.5">
-       Cal.com → Event Types <ExternalLink className="w-3 h-3" />
+       Cal.com → Event Types <ArrowSquareOut className="w-3 h-3" />
       </a> (we&apos;ll list them for you below).
      </li>
      <li>
       No Cal.com yet? <a href="https://app.cal.com/signup" target="_blank" rel="noreferrer" className="text-sky-600 hover:underline inline-flex items-center gap-0.5">
-       Sign up free <ExternalLink className="w-3 h-3" />
+       Sign up free <ArrowSquareOut className="w-3 h-3" />
       </a>, connect your Google/Apple/Outlook calendar, create one event type, then come back.
      </li>
     </ol>
@@ -345,7 +345,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
 
     {error && (
      <div className="bg-red-50 border border-red-200 text-red-900 rounded-lg px-3 py-2 text-sm flex items-start gap-2">
-      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+      <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
       <span>{error}</span>
      </div>
     )}
@@ -361,7 +361,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
 
     {success && (
      <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-lg px-3 py-2 text-sm flex items-start gap-2">
-      <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+      <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
       <span>Connected as <strong>{success.username || 'Cal.com user'}</strong> · event: {success.eventTypeTitle}</span>
      </div>
     )}
@@ -372,7 +372,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
       disabled={submitting || !!success || (!!eventTypeOptions && eventTypeOptions.length > 0 && eventTypeId == null)}
       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-all duration-300 ease-out disabled:opacity-50"
      >
-      {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+      {submitting && <CircleNotch className="w-4 h-4 animate-spin" />}
       {success ? 'Connected' : eventTypeOptions ? 'Connect this event type' : 'Load my event types'}
      </button>
     </div>
@@ -409,14 +409,14 @@ function ForwardingStep({
   return (
    <div className="bg-white border border-gray-200 rounded-2xl p-6">
     <div className="flex items-center gap-2 mb-1">
-     <Sparkles className="w-4 h-4 text-amber-500" />
+     <Sparkle className="w-4 h-4 text-amber-500" />
      <h2 className="text-xl font-medium text-gray-900">Your agent is being built</h2>
     </div>
     <p className="text-sm text-gray-500 mt-1">
      We&apos;re setting up your dedicated AI receptionist - scraping your site, tuning the script for your services, and provisioning your phone number. We&apos;ll drop your forwarding code right here the moment it&apos;s ready, before your demo. If you don&apos;t see it by then, tap the support link below.
     </p>
     <div className="mt-5 flex items-center gap-2 text-xs text-gray-500">
-     <Loader2 className="w-3.5 h-3.5 animate-spin" />
+     <CircleNotch className="w-3.5 h-3.5 animate-spin" />
      Building your agent…
     </div>
    </div>
@@ -541,7 +541,7 @@ function ForwardingStep({
           href={carrierGuide.portalUrl} target="_blank" rel="noreferrer"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-600 hover:underline"
          >
-          Open {carrierGuide.name} portal <ExternalLink className="w-3.5 h-3.5" />
+          Open {carrierGuide.name} portal <ArrowSquareOut className="w-3.5 h-3.5" />
          </a>
         )}
        </div>
@@ -663,7 +663,7 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
    <div className="flex items-center gap-2 mb-1">
-    <Sparkles className="w-4 h-4 text-sky-500" />
+    <Sparkle className="w-4 h-4 text-sky-500" />
     <h2 className="text-xl font-medium text-gray-900">Make a test call</h2>
    </div>
    <p className="text-sm text-gray-500 mb-5">
@@ -677,9 +677,9 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
    }`}>
     <div className="flex items-center gap-3">
      {verified ? (
-      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+      <CheckCircle className="w-5 h-5 text-emerald-600" />
      ) : (
-      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+      <CircleNotch className="w-5 h-5 animate-spin text-gray-400" />
      )}
      <div className="flex-1">
       <div className={`text-sm font-medium ${verified ? 'text-emerald-900' : 'text-gray-900'}`}>
@@ -742,7 +742,7 @@ function DoneStep({ onGo }: { onGo: () => void }) {
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">
    <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
-    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+    <CheckCircle className="w-6 h-6 text-emerald-600" />
    </div>
    <h2 className="text-2xl font-medium text-gray-900">You&apos;re live.</h2>
    <p className="text-sm text-gray-500 mt-2 max-w-sm mx-auto">

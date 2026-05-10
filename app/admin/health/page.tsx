@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Activity, RefreshCw, CheckCircle2, AlertCircle, XCircle, Clock, Loader2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Pulse, ArrowsClockwise, CheckCircle, WarningCircle, XCircle, Clock, CircleNotch, TrendUp, TrendDown, Minus } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useToast } from '@/app/contexts/ToastContext'
 import { Line } from 'react-chartjs-2'
@@ -153,9 +153,9 @@ export default function AdminHealthPage() {
  const getStatusIcon = (status: string) => {
  switch (status) {
  case 'healthy':
- return <CheckCircle2 className="w-5 h-5 text-green-600" />
+ return <CheckCircle className="w-5 h-5 text-green-600" />
  case 'degraded':
- return <AlertCircle className="w-5 h-5 text-yellow-600" />
+ return <WarningCircle className="w-5 h-5 text-yellow-600" />
  case 'down':
  return <XCircle className="w-5 h-5 text-red-600" />
  case 'not_configured':
@@ -244,7 +244,7 @@ export default function AdminHealthPage() {
  return (
  <div className="flex items-center justify-center py-12">
  <div className="flex flex-col items-center gap-4">
- <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+ <CircleNotch className="w-8 h-8 text-sky-500 animate-spin" />
  <div className="text-gray-600 text-lg">Loading health status...</div>
  </div>
  </div>
@@ -257,7 +257,7 @@ export default function AdminHealthPage() {
  <div className="flex items-center justify-between">
  <div>
  <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
- <Activity className="w-8 h-8 text-sky-500" />
+ <Pulse className="w-8 h-8 text-sky-500" />
  System Health
  </h1>
  <p className="text-gray-600 mt-2">
@@ -275,7 +275,7 @@ export default function AdminHealthPage() {
  disabled={loading}
  className="px-4 py-2 bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 rounded"
  >
- <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+ <ArrowsClockwise className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
  Refresh
  </button>
  <button
@@ -285,12 +285,12 @@ export default function AdminHealthPage() {
  >
  {runningTests ? (
  <>
- <Loader2 className="w-4 h-4 animate-spin" />
+ <CircleNotch className="w-4 h-4 animate-spin" />
  Running Tests...
  </>
  ) : (
  <>
- <Activity className="w-4 h-4" />
+ <Pulse className="w-4 h-4" />
  Run Tests Now
  </>
  )}
@@ -304,9 +304,9 @@ export default function AdminHealthPage() {
  <div className="col-span-1 md:col-span-2 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
  <div className="flex items-center justify-between mb-4">
  <h2 className="text-xl font-semibold text-gray-900">Overall Health</h2>
- {healthData.overall_status === 'healthy' && <TrendingUp className="w-5 h-5 text-green-600" />}
- {healthData.overall_status === 'degraded' && <TrendingDown className="w-5 h-5 text-yellow-600" />}
- {healthData.overall_status === 'down' && <TrendingDown className="w-5 h-5 text-red-600" />}
+ {healthData.overall_status === 'healthy' && <TrendUp className="w-5 h-5 text-green-600" />}
+ {healthData.overall_status === 'degraded' && <TrendDown className="w-5 h-5 text-yellow-600" />}
+ {healthData.overall_status === 'down' && <TrendDown className="w-5 h-5 text-red-600" />}
  </div>
  <div className={`text-3xl md:text-4xl lg:text-5xl font-bold leading-tight ${getHealthScoreColor(healthData.health_score)}`}>
  {healthData.health_score}%
@@ -380,7 +380,7 @@ export default function AdminHealthPage() {
  {healthData && healthData.metrics.failed_jobs > 0 && (
  <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
  <div className="flex items-center gap-2 text-red-600">
- <AlertCircle className="w-5 h-5" />
+ <WarningCircle className="w-5 h-5" />
  <span className="font-semibold">Warning: {healthData.metrics.failed_jobs} failed background jobs</span>
  </div>
  </div>

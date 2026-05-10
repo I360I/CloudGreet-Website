@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Send, CheckCircle2, AlertCircle } from 'lucide-react'
+import { CircleNotch, PaperPlaneTilt, CheckCircle, WarningCircle } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 
@@ -111,7 +111,7 @@ export default function AdminSmsTestPage() {
             disabled={busy || !to.trim()}
             className="inline-flex items-center gap-2 bg-white text-gray-900 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
           >
-            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <PaperPlaneTilt className="w-4 h-4" />}
             Send test SMS
           </button>
         </div>
@@ -124,8 +124,8 @@ export default function AdminSmsTestPage() {
           }`}>
             <div className="flex items-center gap-2 mb-3">
               {result.ok
-                ? <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                : <AlertCircle className="w-5 h-5 text-rose-400" />}
+                ? <CheckCircle className="w-5 h-5 text-emerald-400" />
+                : <WarningCircle className="w-5 h-5 text-rose-400" />}
               <h3 className={`text-sm font-medium ${result.ok ? 'text-emerald-100' : 'text-rose-100'}`}>
                 {result.ok ? 'Sent' : 'Failed'}
               </h3>

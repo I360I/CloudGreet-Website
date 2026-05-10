@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Home, Phone, Calendar, DollarSign, Settings, Users } from 'lucide-react'
+import { List, X, House, Phone, Calendar, CurrencyDollar, Gear, Users } from '@phosphor-icons/react'
 import Link from 'next/link'
 
 interface MobileDashboardNavProps {
@@ -13,11 +13,11 @@ export default function MobileDashboardNav({ currentPage = 'dashboard' }: Mobile
  const [isOpen, setIsOpen] = useState(false)
 
  const navItems = [
- { href: '/dashboard', label: 'Dashboard', icon: Home },
+ { href: '/dashboard', label: 'Dashboard', icon: House },
  { href: '/calls', label: 'Calls', icon: Phone },
  { href: '/appointments', label: 'Appointments', icon: Calendar },
- { href: '/billing', label: 'Billing', icon: DollarSign },
- { href: '/settings', label: 'Settings', icon: Settings },
+ { href: '/billing', label: 'Billing', icon: CurrencyDollar },
+ { href: '/settings', label: 'Settings', icon: Gear },
  ]
 
  return (
@@ -28,7 +28,7 @@ export default function MobileDashboardNav({ currentPage = 'dashboard' }: Mobile
  onClick={() => setIsOpen(true)}
  className="w-12 h-12 bg-gray-800/80 border border-gray-700/50 rounded-xl flex items-center justify-center backdrop-blur-xl"
  >
- <Menu className="w-6 h-6 text-white" />
+ <List className="w-6 h-6 text-white" />
  </button>
  </div>
 

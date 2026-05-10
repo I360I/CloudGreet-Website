@@ -2,12 +2,12 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { LucideIcon } from 'lucide-react'
+import { Icon } from '@phosphor-icons/react'
 import { Button } from './Button'
 import { cn } from '@/lib/utils'
 
 interface EmptyStateProps {
- icon: LucideIcon
+ icon: Icon
  title: string
  message: string
  actionLabel?: string

@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2, CheckCircle2, AlertCircle, Trash2, Plus } from 'lucide-react'
+import { CircleNotch, CheckCircle, WarningCircle, Trash, Plus } from '@phosphor-icons/react'
 import { type FormField, type FormSection } from '@/lib/customization/form-config'
 
 /**
@@ -14,9 +14,9 @@ import { type FormField, type FormSection } from '@/lib/customization/form-confi
 export function SaveIndicator({ state }: { state: 'idle' | 'saving' | 'saved' | 'error' }) {
   return (
     <div className="text-xs text-gray-500 flex items-center gap-1.5 min-h-[20px]">
-      {state === 'saving' && (<><Loader2 className="w-3 h-3 animate-spin" /> Saving…</>)}
-      {state === 'saved' && (<><CheckCircle2 className="w-3 h-3 text-emerald-500" /> Saved</>)}
-      {state === 'error' && (<><AlertCircle className="w-3 h-3 text-rose-500" /> Couldn&apos;t save</>)}
+      {state === 'saving' && (<><CircleNotch className="w-3 h-3 animate-spin" /> Saving…</>)}
+      {state === 'saved' && (<><CheckCircle className="w-3 h-3 text-emerald-500" /> Saved</>)}
+      {state === 'error' && (<><WarningCircle className="w-3 h-3 text-rose-500" /> Couldn&apos;t save</>)}
       {state === 'idle' && <span>&nbsp;</span>}
     </div>
   )
@@ -222,7 +222,7 @@ function KvList({
             onClick={() => remove(i)}
             className="p-2 text-gray-400 hover:text-rose-600 disabled:opacity-40"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash className="w-4 h-4" />
           </button>
         </div>
       ))}

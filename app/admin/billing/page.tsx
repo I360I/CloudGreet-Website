@@ -1,19 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import {
- AlertTriangle,
- ArrowRight,
- ArrowUpRight,
- CreditCard,
- DollarSign,
- DownloadCloud,
- Loader2,
- ShieldAlert,
- Sparkles,
- TrendingUp,
- Wallet,
-} from 'lucide-react'
+import { Warning, ArrowRight, ArrowUpRight, CreditCard, CurrencyDollar, DownloadSimple, CircleNotch, ShieldWarning, Sparkle, TrendUp, Wallet } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useToast } from '@/app/contexts/ToastContext'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -117,7 +105,7 @@ export default function BillingDashboardPage() {
  {
  label: 'Monthly recurring revenue',
  value: `$${(summary.mrrCents / 100).toFixed(2)}`,
- icon: DollarSign,
+ icon: CurrencyDollar,
  description: mrrDescription,
  },
  {
@@ -135,7 +123,7 @@ export default function BillingDashboardPage() {
  {
  label: 'Total billed (30 days)',
  value: `$${(summary.totalBilledCents / 100).toFixed(2)}`,
- icon: ShieldAlert,
+ icon: ShieldWarning,
  description: 'Aggregate ledger value across all billing sources.'
  }
  ]
@@ -239,7 +227,7 @@ export default function BillingDashboardPage() {
 
  {loading ? (
  <section className="rounded-3xl border border-white/10 bg-black/40 p-12 flex items-center justify-center">
- <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+ <CircleNotch className="h-8 w-8 animate-spin text-slate-400" />
  </section>
  ) : (
  <>
@@ -273,7 +261,7 @@ export default function BillingDashboardPage() {
      </span>
      {milestoneDelta > 0 && (
       <span className="inline-flex items-center gap-1.5 text-emerald-300/90">
-       <TrendingUp className="w-3.5 h-3.5" />
+       <TrendUp className="w-3.5 h-3.5" />
        <span className="font-mono">${milestoneDelta.toLocaleString()}</span> to ${milestone.toLocaleString()}/mo
       </span>
      )}
@@ -319,7 +307,7 @@ export default function BillingDashboardPage() {
     onClick={downloadCsv}
     className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] px-4 py-2 text-sm font-medium text-gray-300 transition-all duration-300"
    >
-    <DownloadCloud className="h-4 w-4" />
+    <DownloadSimple className="h-4 w-4" />
     Export CSV
    </button>
   </div>
@@ -331,14 +319,14 @@ export default function BillingDashboardPage() {
    label="Annualized run rate"
    value={`$${(mrrCents * 12 / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
    hint="MRR × 12 - what this pace earns over a year"
-   icon={TrendingUp}
+   icon={TrendUp}
    delay={0}
   />
   <SecondaryStat
    label="Avg per client"
    value={totalCount > 0 ? `$${Math.round(mrrCents / totalCount / 100).toLocaleString()}` : '-'}
    hint={`Across ${totalCount} active client${totalCount === 1 ? '' : 's'}`}
-   icon={DollarSign}
+   icon={CurrencyDollar}
    delay={0.05}
   />
   <SecondaryStat
@@ -347,7 +335,7 @@ export default function BillingDashboardPage() {
    hint={trialingCount > 0
     ? `If all ${trialingCount} trial${trialingCount === 1 ? '' : 's'} convert to paid`
     : 'No trials right now'}
-   icon={Sparkles}
+   icon={Sparkle}
    delay={0.1}
   />
  </section>
@@ -371,7 +359,7 @@ export default function BillingDashboardPage() {
  <div key={invoice.invoiceId} className="flex flex-col gap-3 rounded-2xl border border-rose-300/40 bg-rose-500/10 p-4">
  <div className="flex items-center justify-between text-sm text-rose-100">
  <span className="font-semibold">Invoice {invoice.invoiceId}</span>
- <AlertTriangle className="h-4 w-4" />
+ <Warning className="h-4 w-4" />
  </div>
  <p className="text-sm text-rose-50">
  Due {invoice.dueDate ? new Date(invoice.dueDate).toLocaleString() : 'unknown'}
@@ -383,7 +371,7 @@ export default function BillingDashboardPage() {
  disabled={retrying === invoice.invoiceId}
  className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
  >
- {retrying === invoice.invoiceId && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+ {retrying === invoice.invoiceId && <CircleNotch className="h-3.5 w-3.5 animate-spin" />}
  Retry payment
  </button>
  <button

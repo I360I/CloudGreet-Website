@@ -12,10 +12,7 @@ const Dialer = dynamicImport(
   () => import('./Dialer').then((m) => ({ default: m.Dialer })),
   { ssr: false },
 )
-import {
-  SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch,
-  Gear, Users, GraduationCap, BookOpen, Icon as PhosphorIcon,
-} from '@phosphor-icons/react'
+import { SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch, Gear, Users, GraduationCap, BookOpen, Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { NotificationsBell } from '@/components/NotificationsBell'
 

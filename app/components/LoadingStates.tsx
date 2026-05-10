@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Loader2, Phone, Database, Shield, Zap } from 'lucide-react'
+import { CircleNotch, Phone, Database, Shield, Lightning } from '@phosphor-icons/react'
 
 interface LoadingSpinnerProps {
  size?: 'sm' | 'md' | 'lg'
@@ -31,7 +31,7 @@ export function LoadingSpinner({ size = 'md', color = 'blue', text }: LoadingSpi
  animate={{ rotate: 360 }}
  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
  >
- <Loader2 className="w-full h-full" />
+ <CircleNotch className="w-full h-full" />
  </motion.div>
  {text && <span className="text-gray-300">{text}</span>}
  </div>
@@ -121,7 +121,7 @@ export function PhoneProvisioningLoader({ step, totalSteps }: PhoneProvisioningL
  { icon: <Shield className="w-6 h-6 text-blue-400" />, title: "Validating Security", description: "Verifying authentication and permissions" },
  { icon: <Database className="w-6 h-6 text-green-400" />, title: "Checking Database", description: "Connecting to secure database" },
  { icon: <Phone className="w-6 h-6 text-sky-400" />, title: "Provisioning Number", description: "Acquiring your dedicated phone number" },
- { icon: <Zap className="w-6 h-6 text-yellow-400" />, title: "Activating AI Agent", description: "Setting up your AI receptionist" }
+ { icon: <Lightning className="w-6 h-6 text-yellow-400" />, title: "Activating AI Agent", description: "Setting up your AI receptionist" }
  ]
 
  const progress = (step / totalSteps) * 100

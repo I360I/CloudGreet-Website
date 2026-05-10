@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, ArrowLeft, FileText, Video, ExternalLink, CheckCircle2, AlertCircle, Mail, Phone, Calendar, UserPlus, Copy } from 'lucide-react'
+import { CircleNotch, ArrowLeft, FileText, VideoCamera, ArrowSquareOut, CheckCircle, WarningCircle, Envelope, Phone, Calendar, UserPlus, Copy } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import { Panel, PanelHeader, PrimaryButton, Select } from '../../_components/ui'
@@ -181,7 +181,7 @@ export default function AdminApplicationDetailPage() {
 
         {loading && (
           <div className="flex items-center gap-2 text-sm text-gray-400 py-12 justify-center">
-            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+            <CircleNotch className="w-4 h-4 animate-spin" /> Loading…
           </div>
         )}
         {err && !app && <div className="text-sm text-rose-300">{err}</div>}
@@ -201,7 +201,7 @@ export default function AdminApplicationDetailPage() {
                     </h1>
                     <div className="mt-3 space-y-1 text-sm text-gray-300">
                       <div className="flex items-center gap-2">
-                        <Mail className="w-3.5 h-3.5 text-gray-500" />
+                        <Envelope className="w-3.5 h-3.5 text-gray-500" />
                         <a href={`mailto:${app.email}`} className="hover:text-sky-300">{app.email}</a>
                       </div>
                       <div className="flex items-center gap-2">
@@ -219,7 +219,7 @@ export default function AdminApplicationDetailPage() {
                           target="_blank" rel="noreferrer"
                           className="inline-flex items-center gap-1 text-xs text-sky-300 hover:text-sky-200"
                         >
-                          LinkedIn <ExternalLink className="w-3 h-3" />
+                          LinkedIn <ArrowSquareOut className="w-3 h-3" />
                         </a>
                       )}
                     </div>
@@ -257,7 +257,7 @@ export default function AdminApplicationDetailPage() {
                     url={app.resume_signed_url || app.resume_url}
                   />
                   <MaterialLink
-                    icon={<Video className="w-4 h-4" />}
+                    icon={<VideoCamera className="w-4 h-4" />}
                     label={app.video_filename || '90-second intro'}
                     url={app.video_signed_url || app.video_url}
                   />
@@ -316,7 +316,7 @@ export default function AdminApplicationDetailPage() {
                     disabled={interviewBusy || hireBusy}
                     className="w-full inline-flex items-center justify-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] text-gray-100 hover:text-white px-4 py-2.5 rounded-xl text-sm font-medium border border-white/[0.06] transition-colors disabled:opacity-40"
                   >
-                    {interviewBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
+                    {interviewBusy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
                     Send interview invite
                   </button>
                   <button
@@ -325,7 +325,7 @@ export default function AdminApplicationDetailPage() {
                     disabled={interviewBusy || hireBusy}
                     className="w-full inline-flex items-center justify-center gap-2 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 hover:text-emerald-200 px-4 py-2.5 rounded-xl text-sm font-medium border border-emerald-400/20 transition-colors disabled:opacity-40"
                   >
-                    {hireBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                    {hireBusy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                     Send rep invite
                   </button>
                 </div>
@@ -372,7 +372,7 @@ export default function AdminApplicationDetailPage() {
                   <div className="text-[11px] text-gray-500">
                     {savedFlash && (
                       <span className="inline-flex items-center gap-1 text-emerald-300">
-                        <CheckCircle2 className="w-3 h-3" /> Saved
+                        <CheckCircle className="w-3 h-3" /> Saved
                       </span>
                     )}
                   </div>
@@ -388,7 +388,7 @@ export default function AdminApplicationDetailPage() {
               {err && (
                 <Panel>
                   <div className="flex items-start gap-2 text-rose-300 text-sm">
-                    <AlertCircle className="w-4 h-4 mt-0.5" />
+                    <WarningCircle className="w-4 h-4 mt-0.5" />
                     {err}
                   </div>
                 </Panel>
@@ -501,7 +501,7 @@ function MaterialLink({ icon, label, url }: { icon: React.ReactNode; label: stri
     >
       {icon}
       <span className="flex-1">{label}</span>
-      <ExternalLink className="w-3.5 h-3.5 text-gray-500 group-hover:text-sky-300" />
+      <ArrowSquareOut className="w-3.5 h-3.5 text-gray-500 group-hover:text-sky-300" />
     </a>
   )
 }

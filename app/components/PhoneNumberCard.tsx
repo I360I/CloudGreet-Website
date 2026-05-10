@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Phone, PhoneCall, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Phone, PhoneCall, CircleNotch, CheckCircle, WarningCircle } from '@phosphor-icons/react'
 import { useToast } from '@/app/contexts/ToastContext'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { Button } from '@/app/components/ui/Button'
@@ -120,7 +120,7 @@ export default function PhoneNumberCard({ businessId }: PhoneNumberCardProps) {
  <h3 className="text-lg font-semibold text-white">Phone Number</h3>
  </div>
  <div className="flex items-center gap-2">
- <Loader2 className="w-4 h-4 animate-spin" style={{ color: primaryColor }} />
+ <CircleNotch className="w-4 h-4 animate-spin" style={{ color: primaryColor }} />
  <span className="text-slate-400">Loading...</span>
  </div>
  </div>
@@ -135,7 +135,7 @@ export default function PhoneNumberCard({ businessId }: PhoneNumberCardProps) {
  <h3 className="text-lg font-semibold text-white">Phone Number</h3>
  </div>
  <div className="flex items-center gap-2 mb-4">
- <AlertCircle className="w-4 h-4 text-yellow-400" />
+ <WarningCircle className="w-4 h-4 text-yellow-400" />
  <span className="text-slate-400">No phone number assigned</span>
  </div>
  <p className="text-sm text-slate-500 mb-4">
@@ -161,7 +161,7 @@ export default function PhoneNumberCard({ businessId }: PhoneNumberCardProps) {
  
  <div className="mb-4">
  <div className="flex items-center gap-2 mb-2">
- <CheckCircle2 className="w-4 h-4 text-green-400" />
+ <CheckCircle className="w-4 h-4 text-green-400" />
  <span className="text-sm text-slate-400">Phone number active</span>
  </div>
  <div className="text-2xl font-mono font-bold" style={{ color: primaryColor }}>
@@ -180,7 +180,7 @@ export default function PhoneNumberCard({ businessId }: PhoneNumberCardProps) {
  >
  {calling ? (
  <>
- <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+ <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
  Placing call...
  </>
  ) : (

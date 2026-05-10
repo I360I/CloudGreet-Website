@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Loader2, AlertCircle, CheckCircle2, Clock, Phone, Mail, ExternalLink, Bot, Calendar } from 'lucide-react'
+import { CircleNotch, WarningCircle, CheckCircle, Clock, Phone, Envelope, ArrowSquareOut, Robot, Calendar } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, PrimaryButton, GhostButton, Input } from '../_components/ui'
@@ -98,7 +98,7 @@ export default function AgentsDuePage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+            <CircleNotch className="w-5 h-5 animate-spin text-gray-500" />
           </div>
         ) : items.length === 0 ? (
           <Panel>
@@ -176,7 +176,7 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
               {item.business?.business_name || item.prospect.business_name || 'Unknown business'}
             </div>
             <span className={`inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 rounded-full bg-${statusTone}-500/10 text-${statusTone}-300 border border-${statusTone}-500/20`}>
-              <Bot className="w-3 h-3" /> {status}
+              <Robot className="w-3 h-3" /> {status}
             </span>
             {item.business?.customization_status === 'submitted' && (
               <span className="inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.2em] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
@@ -210,14 +210,14 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
             href={`/admin/agents-due/${item.close_id}`}
             className="text-xs text-fuchsia-300 hover:text-fuchsia-200 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/[0.06]"
           >
-            Open workspace <ExternalLink className="w-3 h-3" />
+            Open workspace <ArrowSquareOut className="w-3 h-3" />
           </Link>
           {item.business?.id && (
             <Link
               href={`/admin/clients/${item.business.id}`}
               className="text-xs text-sky-300 hover:text-sky-200 inline-flex items-center gap-1"
             >
-              Open client <ExternalLink className="w-3 h-3" />
+              Open client <ArrowSquareOut className="w-3 h-3" />
             </Link>
           )}
         </div>
@@ -228,7 +228,7 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
         <div>
           <SectionLabel>Prospect</SectionLabel>
           <KV label="Contact" value={item.prospect.name} />
-          <KV label="Email" value={item.prospect.email} icon={<Mail className="w-3 h-3 text-gray-500" />} />
+          <KV label="Email" value={item.prospect.email} icon={<Envelope className="w-3 h-3 text-gray-500" />} />
           <KV label="Phone" value={item.prospect.phone} icon={<Phone className="w-3 h-3 text-gray-500" />} />
           {item.business?.login_email && (
             <KV label="Login" value={item.business.login_email} hint="Account already provisioned" />
@@ -236,7 +236,7 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
           {item.business?.website && (
             <KV label="Website" value={
               <a href={item.business.website} target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200 inline-flex items-center gap-1">
-                {item.business.website} <ExternalLink className="w-3 h-3" />
+                {item.business.website} <ArrowSquareOut className="w-3 h-3" />
               </a>
             } />
           )}
@@ -320,7 +320,7 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
         {status === 'ready' ? (
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="text-sm text-emerald-300 inline-flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle className="w-4 h-4" />
               Ready · test #: <span className="font-mono">{item.demo.test_phone}</span>
             </div>
             <GhostButton onClick={() => post({ status: 'pending' }, 'building')} disabled={busy !== null}>
@@ -340,7 +340,7 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
                 className="flex-1 font-mono"
               />
               <PrimaryButton onClick={submit} disabled={busy !== null}>
-                {busy === 'submit' && <Loader2 className="w-4 h-4 animate-spin" />}
+                {busy === 'submit' && <CircleNotch className="w-4 h-4 animate-spin" />}
                 Mark ready
               </PrimaryButton>
             </div>
@@ -352,12 +352,12 @@ function ItemCard({ item, onChanged }: { item: Item; onChanged: () => void }) {
             <div className="flex items-center gap-2 flex-wrap">
               {status !== 'building' && (
                 <GhostButton onClick={() => post({ status: 'building' }, 'building')} disabled={busy !== null}>
-                  {busy === 'building' && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {busy === 'building' && <CircleNotch className="w-3 h-3 animate-spin" />}
                   Mark "building"
                 </GhostButton>
               )}
               <GhostButton onClick={() => post({ status: 'skipped' }, 'skip')} disabled={busy !== null}>
-                {busy === 'skip' && <Loader2 className="w-3 h-3 animate-spin" />}
+                {busy === 'skip' && <CircleNotch className="w-3 h-3 animate-spin" />}
                 Skip
               </GhostButton>
             </div>

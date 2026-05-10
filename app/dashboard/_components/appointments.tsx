@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Loader2, AlertCircle, MapPin, Phone, Mail, FileText, Trash2 } from 'lucide-react'
+import { X, CircleNotch, WarningCircle, MapPin, Phone, Envelope, FileText, Trash } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -327,7 +327,7 @@ export function BookingFormModal({
 
      {error && (
       <div className="bg-red-50 border border-red-200 text-red-900 rounded-lg px-3 py-2 text-sm flex items-start gap-2">
-       <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+       <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
        <span>{error}</span>
       </div>
      )}
@@ -344,7 +344,7 @@ export function BookingFormModal({
       type="submit" disabled={submitting || services.length === 0}
       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-all duration-300 ease-out disabled:opacity-50"
      >
-      {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+      {submitting && <CircleNotch className="w-4 h-4 animate-spin" />}
       {submitting ? 'Booking…' : 'Book appointment'}
      </button>
     </div>
@@ -496,13 +496,13 @@ export function AppointmentDrawer({
 
     {loading && (
      <div className="flex-1 flex items-center justify-center">
-      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+      <CircleNotch className="w-5 h-5 animate-spin text-gray-400" />
      </div>
     )}
 
     {!loading && error && !appt && (
      <div className="px-6 py-6 flex items-start gap-3">
-      <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+      <WarningCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
       <p className="text-sm text-gray-700">{error}</p>
      </div>
     )}
@@ -523,7 +523,7 @@ export function AppointmentDrawer({
       <div className="border-t border-gray-100 pt-4 space-y-3 text-sm">
        <Row icon={Phone}><a href={`tel:${appt.customer_phone}`} className="font-mono text-gray-900 hover:underline">{appt.customer_phone}</a></Row>
        {appt.customer_email && (
-        <Row icon={Mail}><a href={`mailto:${appt.customer_email}`} className="text-gray-900 hover:underline">{appt.customer_email}</a></Row>
+        <Row icon={Envelope}><a href={`mailto:${appt.customer_email}`} className="text-gray-900 hover:underline">{appt.customer_email}</a></Row>
        )}
        <Row icon={null}><span className="text-gray-700">{appt.service_type} · {appt.duration}min</span></Row>
        {appt.address && <Row icon={MapPin}><span className="text-gray-700">{appt.address}</span></Row>}
@@ -566,7 +566,7 @@ export function AppointmentDrawer({
          disabled={busy}
          className="ml-auto text-xs font-medium px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-all duration-300 ease-out disabled:opacity-50 inline-flex items-center gap-1.5"
         >
-         <Trash2 className="w-3 h-3" /> Cancel
+         <Trash className="w-3 h-3" /> Cancel
         </button>
        )}
       </div>

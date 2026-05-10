@@ -4,10 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X, Robot,
-  Lightning, ChatCircle, Phone, CalendarBlank,
-} from '@phosphor-icons/react'
+import { ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X, Robot, Lightning, ChatCircle, Phone, CalendarBlank } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Play, Pause, SkipBack, SkipForward, Download, Volume2, Clock, MessageSquare, Star, Bookmark } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, Download, SpeakerHigh, Clock, ChatCircle, Star, Bookmark } from '@phosphor-icons/react'
 import { Card } from './ui/Card'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -185,7 +185,7 @@ export default function CallPlayer({ callId, businessId, className = '' }: CallP
  if (!recording) {
  return (
  <Card className={`p-8 text-center ${className}`}>
- <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-500" />
+ <ChatCircle className="w-12 h-12 mx-auto mb-4 text-gray-500" />
  <h3 className="text-lg font-semibold text-white mb-2">No Recording Available</h3>
  <p className="text-gray-400">This call doesn't have a recording or transcript</p>
  </Card>
@@ -198,7 +198,7 @@ export default function CallPlayer({ callId, businessId, className = '' }: CallP
  <div className="flex items-center justify-between mb-6">
  <div>
  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
- <MessageSquare className="w-5 h-5 text-blue-400" />
+ <ChatCircle className="w-5 h-5 text-blue-400" />
  Call Recording
  </h3>
  <p className="text-sm text-gray-400">
@@ -303,7 +303,7 @@ export default function CallPlayer({ callId, businessId, className = '' }: CallP
  </div>
  
  <div className="flex items-center gap-2">
- <Volume2 className="w-4 h-4 text-gray-400" />
+ <SpeakerHigh className="w-4 h-4 text-gray-400" />
  <input
  type="range"
  min="0"

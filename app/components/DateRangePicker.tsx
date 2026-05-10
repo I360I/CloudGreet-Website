@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, CaretDown, CaretLeft, CaretRight } from '@phosphor-icons/react'
 
 interface DateRange {
  start: Date
@@ -136,7 +136,7 @@ export default function DateRangePicker({ value, onChange, className = '' }: Dat
  <Calendar className="w-4 h-4 text-gray-400" />
  <span className="text-white text-sm">{formatRange()}</span>
  </div>
- <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+ <CaretDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
  </button>
 
  {/* Dropdown */}
@@ -175,7 +175,7 @@ export default function DateRangePicker({ value, onChange, className = '' }: Dat
  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
  className="w-8 h-8 bg-gray-800/50 border border-gray-700/50 rounded-lg flex items-center justify-center hover:bg-gray-800/70 transition-colors"
  >
- <ChevronLeft className="w-4 h-4 text-gray-400" />
+ <CaretLeft className="w-4 h-4 text-gray-400" />
  </button>
  
  <h3 className="text-white font-semibold">
@@ -186,7 +186,7 @@ export default function DateRangePicker({ value, onChange, className = '' }: Dat
  onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
  className="w-8 h-8 bg-gray-800/50 border border-gray-700/50 rounded-lg flex items-center justify-center hover:bg-gray-800/70 transition-colors"
  >
- <ChevronRight className="w-4 h-4 text-gray-400" />
+ <CaretRight className="w-4 h-4 text-gray-400" />
  </button>
  </div>
 

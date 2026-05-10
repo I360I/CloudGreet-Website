@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Save, User } from 'lucide-react'
+import { FloppyDisk, User } from '@phosphor-icons/react'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { FormField } from '@/app/components/ui/FormField'
 import { Button } from '@/app/components/ui/Button'
@@ -123,7 +123,7 @@ export default function ProfileTab({ profile, setProfile, saving, setSaving, onS
  </>
  ) : (
  <>
- <Save className="h-4 w-4 mr-2" />
+ <FloppyDisk className="h-4 w-4 mr-2" />
  Save Changes
  </>
  )}

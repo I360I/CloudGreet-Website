@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Clock, Save, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
+import { Clock, FloppyDisk, ArrowsClockwise, CheckCircle, WarningCircle } from '@phosphor-icons/react'
 import { Card } from './ui/Card'
 import { logger } from '@/lib/monitoring'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -170,7 +170,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
  variant="secondary"
  className="text-sm"
  >
- <RefreshCw className="w-4 h-4 mr-1" />
+ <ArrowsClockwise className="w-4 h-4 mr-1" />
  Refresh
  </Button>
  <Button 
@@ -179,7 +179,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
  style={{ backgroundColor: primaryColor }}
  className="text-sm"
  >
- <Save className="w-4 h-4 mr-1" />
+ <FloppyDisk className="w-4 h-4 mr-1" />
  {saving ? 'Saving...' : 'Save'}
  </Button>
  </div>
@@ -199,7 +199,7 @@ export default function BusinessHoursSettings({ businessId, className = '' }: Bu
  {message.type === 'success' ? (
  <CheckCircle className="w-4 h-4" />
  ) : (
- <AlertCircle className="w-4 h-4" />
+ <WarningCircle className="w-4 h-4" />
  )}
  <span className="text-sm">{message.text}</span>
  </motion.div>

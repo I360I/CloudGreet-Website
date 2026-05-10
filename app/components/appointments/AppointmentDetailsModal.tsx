@@ -8,19 +8,7 @@ import { ConfirmationModal } from '@/app/components/ui/ConfirmationModal'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useToast } from '@/app/contexts/ToastContext'
-import { 
- Edit, 
- Trash2, 
- Phone, 
- Mail, 
- MapPin, 
- Calendar, 
- Clock, 
- DollarSign,
- ExternalLink,
- Loader2,
- FileText
-} from 'lucide-react'
+import { Pencil, Trash, Phone, Envelope, MapPin, Calendar, Clock, CurrencyDollar, ArrowSquareOut, CircleNotch, FileText } from '@phosphor-icons/react'
 
 interface AppointmentDetailsModalProps {
  open: boolean
@@ -144,7 +132,7 @@ export function AppointmentDetailsModal({
  >
  {loading ? (
  <div className="flex items-center justify-center py-12">
- <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+ <CircleNotch className="w-8 h-8 animate-spin text-slate-400" />
  <span className="ml-3 text-slate-400">Loading appointment...</span>
  </div>
  ) : appointment ? (
@@ -216,7 +204,7 @@ export function AppointmentDetailsModal({
  className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
  aria-label={`Email ${appointment.customer_name} at ${appointment.customer_email}`}
  >
- <Mail className="w-4 h-4" />
+ <Envelope className="w-4 h-4" />
  <span>{appointment.customer_email}</span>
  </a>
  )}
@@ -235,7 +223,7 @@ export function AppointmentDetailsModal({
  <div>
  <span className="text-sm text-slate-400">Estimated Value</span>
  <p className="text-white font-medium flex items-center gap-1">
- <DollarSign className="w-4 h-4" />
+ <CurrencyDollar className="w-4 h-4" />
  {formatCurrency(appointment.estimated_value)}
  </p>
  </div>
@@ -260,7 +248,7 @@ export function AppointmentDetailsModal({
  style={{ color: primaryColor }}
  aria-label="Open address in Google Maps"
  >
- <ExternalLink className="w-4 h-4" />
+ <ArrowSquareOut className="w-4 h-4" />
  View on Google Maps
  </a>
  )}
@@ -280,7 +268,7 @@ export function AppointmentDetailsModal({
  >
  <Calendar className="w-4 h-4" />
  Open in Google Calendar
- <ExternalLink className="w-3 h-3" />
+ <ArrowSquareOut className="w-3 h-3" />
  </a>
  </div>
  )}
@@ -320,7 +308,7 @@ export function AppointmentDetailsModal({
  className="text-red-400 border-red-400/30 hover:bg-red-400/10"
  aria-label="Delete appointment"
  >
- <Trash2 className="w-4 h-4 mr-2" />
+ <Trash className="w-4 h-4 mr-2" />
  Delete
  </Button>
  <div className="flex gap-3">
@@ -343,7 +331,7 @@ export function AppointmentDetailsModal({
  style={{ backgroundColor: primaryColor }}
  aria-label="Edit appointment"
  >
- <Edit className="w-4 h-4 mr-2" />
+ <Pencil className="w-4 h-4 mr-2" />
  Edit
  </Button>
  </div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Download, FileText, FileSpreadsheet, Calendar, Loader } from 'lucide-react'
+import { Download, FileText, FileXls, Calendar, CircleNotch } from '@phosphor-icons/react'
 import { logger } from '@/lib/monitoring'
 
 interface ExportButtonProps {
@@ -28,7 +28,7 @@ export default function ExportButton({ onExport, disabled = false, className = '
  format: 'excel' as const,
  label: 'Excel File',
  description: 'Microsoft Excel format',
- icon: FileSpreadsheet,
+ icon: FileXls,
  color: 'text-blue-400'
  },
  {
@@ -65,7 +65,7 @@ export default function ExportButton({ onExport, disabled = false, className = '
  >
  {isExporting ? (
  <>
- <Loader className="w-4 h-4 animate-spin" />
+ <CircleNotch className="w-4 h-4 animate-spin" />
  <span>Exporting...</span>
  </>
  ) : (
@@ -123,7 +123,7 @@ export default function ExportButton({ onExport, disabled = false, className = '
  {isExporting && exportingFormat && (
  <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
  <div className="flex items-center gap-2">
- <Loader className="w-4 h-4 animate-spin text-blue-400" />
+ <CircleNotch className="w-4 h-4 animate-spin text-blue-400" />
  <span className="text-blue-400 text-sm">
  Exporting {exportingFormat.toUpperCase()}...
  </span>

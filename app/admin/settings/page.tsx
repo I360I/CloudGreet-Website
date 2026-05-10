@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import {
- CheckCircle2, AlertCircle, Loader2, ExternalLink, Database, Users,
- BookOpen, ArrowUpRight, RefreshCw,
-} from 'lucide-react'
+import { CheckCircle, WarningCircle, CircleNotch, ArrowSquareOut, Database, Users, BookOpen, ArrowUpRight, ArrowsClockwise } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '@/app/admin/_components/Shell'
 import { Panel, PanelHeader, GhostButton } from '@/app/admin/_components/ui'
@@ -108,7 +105,7 @@ export default function OwnerSettingsPage() {
         </div>
        </div>
        <GhostButton onClick={load} disabled={loading}>
-        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+        <ArrowsClockwise className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
        </GhostButton>
       </div>
      </Panel>
@@ -117,7 +114,7 @@ export default function OwnerSettingsPage() {
      {error && (
       <Panel>
        <div className="flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+        <WarningCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
         <div>
          <h3 className="text-sm font-medium text-white">Couldn&apos;t load env status</h3>
          <p className="text-sm text-gray-500 mt-1">{error}</p>
@@ -129,7 +126,7 @@ export default function OwnerSettingsPage() {
      {loading && groups.length === 0 ? (
       <Panel>
        <div className="py-10 flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+        <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
        </div>
       </Panel>
      ) : (
@@ -145,7 +142,7 @@ export default function OwnerSettingsPage() {
          {g.checks.map((c) => (
           <li key={c.name} className="px-5 sm:px-6 py-4 flex items-start gap-3">
            {c.configured ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
            ) : (
             <span className="w-4 h-4 rounded-full border border-amber-400/40 bg-amber-400/10 flex-shrink-0 mt-0.5" />
            )}
@@ -157,7 +154,7 @@ export default function OwnerSettingsPage() {
                href={c.doc} target="_blank" rel="noreferrer"
                className="text-[10px] font-mono uppercase tracking-wider text-sky-400 hover:text-sky-300 inline-flex items-center gap-1"
               >
-               where to set <ExternalLink className="w-3 h-3" />
+               where to set <ArrowSquareOut className="w-3 h-3" />
               </a>
              )}
             </div>
@@ -191,7 +188,7 @@ export default function OwnerSettingsPage() {
          >
           <div className="flex items-start gap-3">
            <div className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
-            <l.icon className="w-4 h-4 text-sky-400" strokeWidth={1.75} />
+            <l.icon className="w-4 h-4 text-sky-400" />
            </div>
            <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-white">{l.label}</div>

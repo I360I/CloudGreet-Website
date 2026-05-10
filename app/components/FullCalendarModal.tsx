@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Download, RefreshCw, Settings } from 'lucide-react'
+import { X, CaretLeft, CaretRight, Calendar as CalendarIcon, Download, ArrowsClockwise, Gear } from '@phosphor-icons/react'
 import { Modal } from './ui/Modal'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { LoadingSkeleton } from './ui/LoadingSkeleton'
@@ -201,7 +201,7 @@ export function FullCalendarModal({
  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-800/50 transition-colors"
  aria-label="Previous"
  >
- <ChevronLeft className="w-4 h-4 text-slate-400" />
+ <CaretLeft className="w-4 h-4 text-slate-400" />
  </button>
  <button
  onClick={handleToday}
@@ -215,7 +215,7 @@ export function FullCalendarModal({
  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-800/50 transition-colors"
  aria-label="Next"
  >
- <ChevronRight className="w-4 h-4 text-slate-400" />
+ <CaretRight className="w-4 h-4 text-slate-400" />
  </button>
  <div className="ml-4 text-white font-medium">
  {getDateDisplay()}
@@ -267,13 +267,13 @@ export function FullCalendarModal({
  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-800/50 transition-colors"
  aria-label="Refresh calendar"
  >
- <RefreshCw className="w-4 h-4 text-slate-400" />
+ <ArrowsClockwise className="w-4 h-4 text-slate-400" />
  </button>
  <button
  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-800/50 transition-colors"
  aria-label="Calendar settings"
  >
- <Settings className="w-4 h-4 text-slate-400" />
+ <Gear className="w-4 h-4 text-slate-400" />
  </button>
  </div>
  </div>

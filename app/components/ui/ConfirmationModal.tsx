@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle, X } from 'lucide-react'
+import { Warning, X } from '@phosphor-icons/react'
 import { Modal } from './Modal'
 import { Button } from './Button'
 
@@ -44,7 +44,7 @@ export function ConfirmationModal({
  <div className="flex items-start gap-4">
  {variant === 'destructive' && (
  <div className="flex-shrink-0">
- <AlertTriangle className="w-6 h-6 text-red-400" />
+ <Warning className="w-6 h-6 text-red-400" />
  </div>
  )}
  <p className="text-slate-300 text-sm">{message}</p>

@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Phone, MapPin, ShieldCheck, Calendar } from "lucide-react"
+import { Phone, MapPin, ShieldCheck, Calendar } from '@phosphor-icons/react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 

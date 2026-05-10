@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus, Calendar as CalendarIcon, Clock } from 'lucide-react'
+import { X, Plus, Calendar as CalendarIcon, Clock } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useBusinessData } from '@/app/hooks/useBusinessData'
 import { LoadingSkeleton } from '../ui/LoadingSkeleton'
 import { EmptyState } from '../ui/EmptyState'
 import { Button } from '../ui/Button'
-import { AlertCircle } from 'lucide-react'
+import { WarningCircle } from '@phosphor-icons/react'
 
 interface Appointment {
  id: string
@@ -194,7 +194,7 @@ export function DayDetailsSidebar({
  </div>
  ) : error ? (
  <div className="flex flex-col items-center justify-center py-12">
- <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+ <WarningCircle className="w-12 h-12 text-red-400 mb-4" />
  <p className="text-red-400 mb-4 text-center">{error}</p>
  <Button onClick={loadDayAppointments} size="sm">
  Retry

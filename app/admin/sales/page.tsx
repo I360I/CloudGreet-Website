@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, Plus, UserPlus, Mail, Copy, ExternalLink, AlertCircle, CheckCircle2, Trophy, BadgeDollarSign } from 'lucide-react'
+import { CircleNotch, Plus, UserPlus, Envelope, Copy, ArrowSquareOut, WarningCircle, CheckCircle, Trophy, CurrencyDollar } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, PrimaryButton, GhostButton, Input } from '../_components/ui'
@@ -121,7 +121,7 @@ export default function AdminSalesPage() {
         title="Friday cron runs this automatically - manual trigger for off-cycle payouts"
         className="inline-flex items-center gap-2 text-sm text-emerald-300 hover:text-emerald-200 border border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/10 rounded-lg px-3 py-2 disabled:opacity-60 transition-colors"
        >
-        {runningPayouts ? <Loader2 className="w-4 h-4 animate-spin" /> : <BadgeDollarSign className="w-4 h-4" />}
+        {runningPayouts ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CurrencyDollar className="w-4 h-4" />}
         Run payouts
        </button>
        <Link
@@ -151,7 +151,7 @@ export default function AdminSalesPage() {
      {err && (
       <Panel>
        <div className="flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
+        <WarningCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
         <div>
          <h3 className="text-sm font-medium text-white">Couldn&apos;t load roster</h3>
          <p className="text-sm text-gray-500 mt-1">{err}</p>
@@ -189,7 +189,7 @@ export default function AdminSalesPage() {
       </div>
       {loading && reps.length === 0 ? (
        <div className="flex items-center justify-center py-10">
-        <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+        <CircleNotch className="w-5 h-5 text-gray-500 animate-spin" />
        </div>
       ) : reps.length === 0 ? (
        <div className="px-6 py-10 text-center text-sm text-gray-500">
@@ -319,15 +319,15 @@ function InviteModal({ onClose, onSent }: { onClose: () => void; onSent: () => v
        <div className="flex justify-end gap-2 pt-2">
         <GhostButton onClick={onClose}>Cancel</GhostButton>
         <PrimaryButton onClick={submit} disabled={busy || !email.includes('@')}>
-         {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-         <Mail className="w-4 h-4" /> Send invite
+         {busy && <CircleNotch className="w-4 h-4 animate-spin" />}
+         <Envelope className="w-4 h-4" /> Send invite
         </PrimaryButton>
        </div>
       </>
      ) : (
       <>
        <div className="bg-emerald-500/10 border border-emerald-400/20 text-emerald-200 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
-        <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
         <span>
          {result.emailSent
           ? 'Invite email sent. Copy the link below if you also want to send via Signal/SMS.'

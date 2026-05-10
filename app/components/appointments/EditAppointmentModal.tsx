@@ -15,7 +15,7 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { validateAndFormatPhone } from '@/lib/phone-validation'
 import { z } from 'zod'
 import { useToast } from '@/app/contexts/ToastContext'
-import { Trash2, Loader2 } from 'lucide-react'
+import { Trash, CircleNotch } from '@phosphor-icons/react'
 
 interface EditAppointmentModalProps {
  open: boolean
@@ -306,7 +306,7 @@ export function EditAppointmentModal({
  >
  {fetching ? (
  <div className="flex items-center justify-center py-12">
- <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+ <CircleNotch className="w-8 h-8 animate-spin text-slate-400" />
  <span className="ml-3 text-slate-400">Loading appointment...</span>
  </div>
  ) : (
@@ -469,7 +469,7 @@ export function EditAppointmentModal({
  className="text-red-400 border-red-400/30 hover:bg-red-400/10"
  aria-label="Delete appointment"
  >
- <Trash2 className="w-4 h-4 mr-2" />
+ <Trash className="w-4 h-4 mr-2" />
  Delete
  </Button>
  <div className="flex gap-3">
