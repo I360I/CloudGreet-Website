@@ -442,20 +442,45 @@ function VoiceCard({
 }: { voice: Voice; selected: boolean; onSelect: () => void }) {
  const [audio] = useState(() => typeof Audio !== 'undefined' ? new Audio() : null)
  const [playing, setPlaying] = useState(false)
+ const [error, setError] = useState(false)
+
+ const hasPreview = !!voice.preview_audio_url
 
  const togglePreview = (e: React.MouseEvent) => {
   e.stopPropagation()
-  if (!audio || !voice.preview_audio_url) return
+  e.preventDefault()
+  if (!audio || !hasPreview) return
   if (playing) {
    audio.pause(); audio.currentTime = 0; setPlaying(false); return
   }
-  audio.src = voice.preview_audio_url
+  setError(false)
+  audio.src = voice.preview_audio_url!
   audio.onended = () => setPlaying(false)
-  audio.onerror = () => setPlaying(false)
-  audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
+  audio.onerror = () => { setPlaying(false); setError(true) }
+  audio.play().then(() => setPlaying(true)).catch(() => { setPlaying(false); setError(true) })
  }
 
  useEffect(() => () => { if (audio) { audio.pause(); audio.src = '' } }, [audio])
+
+ // Inline pixel sizes for the play button so a missing Tailwind class
+ // (or a flex parent collapsing it) can't render it as an unstyled
+ // empty circle. Always show the affordance even when there's no
+ // preview - just disable it - so the row looks the same shape as
+ // the others.
+ const playBtnStyle: React.CSSProperties = {
+  width: 32,
+  height: 32,
+  borderRadius: 9999,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+  border: 'none',
+  cursor: hasPreview ? 'pointer' : 'not-allowed',
+  backgroundColor: playing ? '#0ea5e9' : (hasPreview ? '#f3f4f6' : '#f9fafb'),
+  color: playing ? '#ffffff' : (hasPreview ? '#374151' : '#9ca3af'),
+  transition: 'background-color 150ms ease',
+ }
 
  return (
   <div
@@ -466,23 +491,22 @@ function VoiceCard({
      : 'border-gray-200 hover:border-gray-400 bg-white'
    }`}
   >
-   {voice.preview_audio_url ? (
-    <button
-     type="button" onClick={togglePreview}
-     className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
-      playing ? 'bg-sky-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-     }`}
-     aria-label={playing ? 'Stop preview' : 'Play preview'}
-    >
-     <Play className="w-3.5 h-3.5" fill={playing ? 'currentColor' : 'none'} />
-    </button>
-   ) : (
-    <div className="w-8 h-8 rounded-full bg-gray-50 flex-shrink-0" />
-   )}
+   <button
+    type="button"
+    onClick={togglePreview}
+    disabled={!hasPreview}
+    title={hasPreview ? (playing ? 'Stop preview' : 'Play preview') : 'No audio preview for this voice'}
+    aria-label={hasPreview ? (playing ? 'Stop preview' : 'Play preview') : 'No preview available'}
+    style={playBtnStyle}
+   >
+    <Play size={14} weight={playing ? 'fill' : 'regular'} />
+   </button>
    <div className="flex-1 min-w-0">
     <div className="text-sm font-medium text-gray-900 truncate">{voice.voice_name}</div>
     <div className="text-[10px] text-gray-500 mt-0.5 font-mono uppercase tracking-wider truncate">
      {[voice.gender, voice.accent, voice.provider].filter(Boolean).join(' · ') || 'voice'}
+     {!hasPreview && <span className="text-gray-400 normal-case"> · no preview</span>}
+     {error && <span className="text-rose-500 normal-case"> · preview failed</span>}
     </div>
    </div>
   </div>
@@ -1439,21 +1463,42 @@ function ReviewRequestsSection() {
 
 /** Small iOS-style toggle. */
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+ // Inline px so flex parents can't squash the pill into a circle, and
+ // so a missing Tailwind class in the production bundle can't strip
+ // the width. The visual is identical to the previous Tailwind version.
  return (
   <button
    type="button"
    role="switch"
    aria-checked={checked}
    onClick={() => onChange(!checked)}
-   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 ${
-    checked ? 'bg-emerald-500' : 'bg-gray-300'
-   }`}
+   style={{
+    width: 44,
+    height: 24,
+    borderRadius: 9999,
+    backgroundColor: checked ? '#10b981' : '#d1d5db',
+    position: 'relative',
+    flexShrink: 0,
+    transition: 'background-color 200ms ease',
+    cursor: 'pointer',
+    border: 'none',
+    padding: 0,
+   }}
+   className="focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
   >
    <span
     aria-hidden="true"
-    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${
-     checked ? 'translate-x-5' : 'translate-x-0'
-    }`}
+    style={{
+     position: 'absolute',
+     top: 2,
+     left: checked ? 22 : 2,
+     width: 20,
+     height: 20,
+     borderRadius: 9999,
+     backgroundColor: '#ffffff',
+     boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+     transition: 'left 200ms ease',
+    }}
    />
   </button>
  )
