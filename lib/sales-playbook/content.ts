@@ -173,7 +173,7 @@ Reference the vm, drop a recording link, propose two specific times. Keep it sho
     title: 'Demo flow',
     blurb: 'How to run the 15 minutes without losing them.',
     body: `**Setup (1 min)**
-Frame it: 15 minutes, interrupt anytime, you're walking out with a yes or a no. No follow-up purgatory.
+15 minutes, yes or no by the end. We don't chase.
 
 **Live call (4 min)**
 Dial the demo number on speaker. Walk through booking a fake job using their actual business name. Don't narrate - let it sound natural.
