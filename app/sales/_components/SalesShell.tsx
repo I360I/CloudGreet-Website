@@ -93,7 +93,7 @@ export function SalesShell({
             <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500">CloudGreet</div>
             <div className="text-sm font-medium text-gray-900 mt-0.5">Sales rep</div>
           </div>
-          <NotificationsBell basePath="/api/sales/notifications" />
+          <NotificationsBell basePath="/api/sales/notifications" align="left" />
         </div>
         <nav className="flex-1 space-y-1">
           {NAV.map((item) => {

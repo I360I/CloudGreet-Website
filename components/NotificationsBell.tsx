@@ -37,10 +37,15 @@ type Theme = 'light' | 'dark'
 export function NotificationsBell({
   basePath,
   theme = 'light',
+  align = 'right',
 }: {
   /** e.g. '/api/admin/notifications' or '/api/sales/notifications' */
   basePath: string
   theme?: Theme
+  /** Which edge of the trigger the dropdown anchors to. 'right' opens
+   * leftward (use when bell sits near the right side of the viewport),
+   * 'left' opens rightward (use when bell sits near the left edge). */
+  align?: 'left' | 'right'
 }) {
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<Notif[]>([])
@@ -114,13 +119,14 @@ export function NotificationsBell({
     ? 'relative inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-300 hover:text-white hover:bg-white/[0.06]'
     : 'relative inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-black/[.04]'
 
-  // Anchor dropdown to the LEFT of the trigger so it opens toward main
-  // content. Anchoring `right-0` was clipping it offscreen when the bell
-  // sits in the sidebar (which is itself flush against the viewport's
-  // left edge). Width capped + internal scroll keeps long lists tidy.
+  // Anchor dropdown by `align` so it doesn't overflow the viewport.
+  // Sales sidebar (bell on the left edge) → align='left' opens
+  // rightward toward content. Admin top bar (bell on the right edge)
+  // → align='right' (default) opens leftward.
+  const anchor = align === 'left' ? 'left-0' : 'right-0'
   const popClass = isDark
-    ? 'absolute left-0 mt-2 w-80 max-h-[70vh] overflow-hidden bg-[#0d0d10] border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col z-50'
-    : 'absolute left-0 mt-2 w-80 max-h-[70vh] overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-2xl flex flex-col z-50'
+    ? `absolute ${anchor} mt-2 w-80 max-h-[70vh] overflow-hidden bg-[#0d0d10] border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col z-50`
+    : `absolute ${anchor} mt-2 w-80 max-h-[70vh] overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-2xl flex flex-col z-50`
 
   return (
     <div className="relative" ref={popRef}>
