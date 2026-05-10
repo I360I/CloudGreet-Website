@@ -190,13 +190,13 @@ export async function GET(request: NextRequest) {
       // very short (likely agent failure proxy).
       const { data, error } = await supabaseAdmin
         .from('calls')
-        .select('id, duration_seconds, started_at')
+        .select('id, duration, started_at')
         .gte('started_at', dayAgoIso)
       if (error) throw new Error(error.message)
       const rows = (data || []) as any[]
       const total = rows.length
       const durations = rows
-        .map((r) => Number(r.duration_seconds))
+        .map((r) => Number(r.duration))
         .filter((n) => Number.isFinite(n) && n > 0)
       const avg = durations.length > 0
         ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
@@ -229,16 +229,17 @@ export async function GET(request: NextRequest) {
       // Recent failed Stripe payments - the dunning queue.
       const { data, error } = await supabaseAdmin
         .from('billing_dunning_events')
-        .select('id, business_id, event_type, amount_cents, created_at')
+        .select('id, tenant_id, invoice_id, step, channel, status, created_at')
         .gte('created_at', weekAgoIso)
         .order('created_at', { ascending: false })
         .limit(10)
       if (error) throw new Error(error.message)
       return (data || []).map((d: any) => ({
         id: d.id,
-        business_id: d.business_id,
-        event_type: d.event_type,
-        amount_cents: d.amount_cents,
+        business_id: d.tenant_id,
+        event_type: `${d.channel} step ${d.step}`,
+        status: d.status,
+        invoice_id: d.invoice_id,
         created_at: d.created_at,
       }))
     }),
@@ -246,10 +247,10 @@ export async function GET(request: NextRequest) {
       // Sales reps who created an account but haven't finished Stripe Connect.
       const { data, error } = await supabaseAdmin
         .from('custom_users')
-        .select('id, name, first_name, last_name, email, stripe_payouts_enabled, status, created_at')
+        .select('id, name, first_name, last_name, email, stripe_connect_payouts_enabled, status, created_at')
         .eq('role', 'sales')
         .eq('status', 'active')
-        .or('stripe_payouts_enabled.is.null,stripe_payouts_enabled.eq.false')
+        .or('stripe_connect_payouts_enabled.is.null,stripe_connect_payouts_enabled.eq.false')
       if (error) throw new Error(error.message)
       return (data || []).map((u: any) => ({
         id: u.id,
