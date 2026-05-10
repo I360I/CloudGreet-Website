@@ -160,6 +160,104 @@ export function NotificationsBell({
   )
 }
 
+/**
+ * Wider, full-width row variant. Use in sidebars where the bell-only
+ * icon is too cramped to discover. Same dropdown behavior; the trigger
+ * is just visually bigger and labeled.
+ */
+export function NotificationsRow({ basePath }: { basePath: string }) {
+  const [open, setOpen] = useState(false)
+  const [items, setItems] = useState<Notif[]>([])
+  const [unread, setUnread] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const wrapRef = useRef<HTMLDivElement | null>(null)
+
+  const load = async (opts: { full?: boolean } = {}) => {
+    if (opts.full) setLoading(true)
+    try {
+      const r = await fetchWithAuth(`${basePath}?limit=20`)
+      const j = await r.json().catch(() => ({}))
+      if (j?.success) {
+        if (opts.full) setItems(j.items || [])
+        setUnread(j.unread_count || 0)
+      }
+    } finally { setLoading(false) }
+  }
+  useEffect(() => {
+    void load()
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') void load()
+    }, 30_000)
+    return () => clearInterval(id)
+  }, [basePath])
+  useEffect(() => {
+    if (open) void load({ full: true })
+  }, [open])
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  const markOne = async (id: string) => {
+    setItems((prev) => prev.map((n) => n.id === id && !n.read_at
+      ? { ...n, read_at: new Date().toISOString() } : n))
+    setUnread((c) => Math.max(0, c - 1))
+    await fetchWithAuth(basePath, { method: 'PATCH', body: JSON.stringify({ ids: [id] }) })
+  }
+  const markAll = async () => {
+    setItems((prev) => prev.map((n) => n.read_at ? n : { ...n, read_at: new Date().toISOString() }))
+    setUnread(0)
+    await fetchWithAuth(basePath, { method: 'PATCH', body: JSON.stringify({ all: true }) })
+  }
+
+  return (
+    <div className="relative" ref={wrapRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+          unread > 0
+            ? 'bg-sky-50 text-sky-900 hover:bg-sky-100 border border-sky-200'
+            : 'text-gray-700 hover:bg-black/[.04] border border-transparent'
+        }`}
+      >
+        <span className="inline-flex items-center gap-2.5">
+          <Bell className="w-4 h-4" strokeWidth={1.75} />
+          Notifications
+        </span>
+        {unread > 0 && (
+          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-rose-500 text-white">
+            {unread > 99 ? '99+' : unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-2 z-50 max-h-[70vh] overflow-hidden bg-white border border-gray-200 rounded-2xl shadow-2xl flex flex-col">
+          <Header theme="light" unread={unread} onMarkAll={markAll} onClose={() => setOpen(false)} />
+          <div className="overflow-y-auto flex-1">
+            {loading ? (
+              <div className="px-4 py-12 text-center text-xs text-gray-400">Loading…</div>
+            ) : items.length === 0 ? (
+              <div className="px-4 py-12 text-center text-xs text-gray-400">No notifications.</div>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {items.map((n) => (
+                  <NotifItem key={n.id} n={n} theme="light" onMarkRead={markOne} onClose={() => setOpen(false)} />
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Header({ theme, unread, onMarkAll, onClose }: {
   theme: Theme; unread: number; onMarkAll: () => void; onClose: () => void
 }) {
