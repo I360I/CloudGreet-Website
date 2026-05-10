@@ -131,7 +131,14 @@ export async function POST(request: NextRequest) {
  break
  }
 
- case 'invoice.payment_succeeded': {
+ // Stripe fires both `invoice.payment_succeeded` (legacy) and
+ // `invoice.paid` (newer) for the same event. Endpoints subscribed
+ // to either get the notification; we handle both so commission
+ // credit isn't dependent on which the dashboard happens to send.
+ // The webhook_events idempotency table de-dupes so we don't double
+ // credit when both fire.
+ case 'invoice.payment_succeeded':
+ case 'invoice.paid': {
  const invoice = event.data.object as Stripe.Invoice
  await handleInvoicePaymentSucceeded(invoice)
  break
