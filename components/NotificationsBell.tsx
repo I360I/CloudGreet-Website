@@ -14,8 +14,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Check, X, AlertCircle, CheckCircle2, AlertTriangle, Info } from 'lucide-react'
-import { Bell } from '@phosphor-icons/react'
+import {
+  Bell, Check, X, WarningCircle, CheckCircle, Warning, Info,
+} from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 type Severity = 'info' | 'success' | 'warning' | 'critical'
@@ -340,9 +341,9 @@ function NotifItem({ n, theme, onMarkRead, onClose }: {
 }
 
 function severityIcon(s: Severity) {
-  return s === 'critical' ? AlertCircle
-    : s === 'warning' ? AlertTriangle
-    : s === 'success' ? CheckCircle2
+  return s === 'critical' ? WarningCircle
+    : s === 'warning' ? Warning
+    : s === 'success' ? CheckCircle
     : Info
 }
 
