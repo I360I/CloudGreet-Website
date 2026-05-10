@@ -35,11 +35,8 @@ export const metadata: Metadata = {
  authors: [{ name: 'CloudGreet Team' }],
  creator: 'CloudGreet',
  publisher: 'CloudGreet',
- icons: {
- icon: '/favicon.ico',
- shortcut: '/favicon.ico',
- apple: '/icon-192.png',
- },
+ // Favicon + apple-touch icon are auto-detected from app/icon.png and
+ // app/apple-icon.png by Next.js — no need to declare them here.
  openGraph: {
  title: 'CloudGreet - Never Miss A Call Again',
  description: 'Professional AI receptionist for service contractors. Handle calls 24/7, schedule appointments, provide estimates.',
@@ -101,8 +98,6 @@ export default function RootLayout({
  return (
  <html lang="en" className="overscroll-none">
  <head>
- <link rel="icon" href="/favicon.ico" />
- <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
  <link rel="manifest" href="/manifest.json" />
  <meta name="mobile-web-app-capable" content="yes" />
  <meta name="apple-mobile-web-app-capable" content="yes" />
