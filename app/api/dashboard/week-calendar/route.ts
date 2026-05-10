@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { moderateRateLimit } from '@/lib/rate-limiting-redis'
+import { listBookings } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -57,19 +58,20 @@ export async function GET(request: NextRequest) {
  return end
  })()
 
- // Fetch business services for color mapping
+ // Fetch business services for color mapping (and the Cal.com api key
+ // so we can pull live bookings if the webhook missed any).
  const { data: business } = await supabaseAdmin
  .from('businesses')
- .select('services')
+ .select('services, cal_com_api_key, timezone')
  .eq('id', businessId)
  .single()
 
  const businessServices = business?.services || []
 
- // Fetch appointments for the week
- const { data: appointments, error: appointmentsError } = await supabaseAdmin
+ // Fetch local appointments for the week.
+ const { data: localRows, error: appointmentsError } = await supabaseAdmin
  .from('appointments')
- .select('id, scheduled_date, start_time, end_time, customer_name, service_type, status')
+ .select('id, scheduled_date, start_time, end_time, customer_name, service_type, status, cal_com_booking_uid')
  .eq('business_id', businessId)
  .gte('scheduled_date', startDate.toISOString().split('T')[0])
  .lte('scheduled_date', endDate.toISOString().split('T')[0])
@@ -84,6 +86,64 @@ export async function GET(request: NextRequest) {
  { success: false, error: 'Failed to fetch appointments' },
  { status: 500 }
  )
+ }
+
+ const appointments: Array<{
+  id: string
+  scheduled_date: string
+  start_time: string
+  end_time: string | null
+  customer_name: string | null
+  service_type: string | null
+  status: string | null
+ }> = (localRows || []).map((r) => ({
+  id: r.id,
+  scheduled_date: r.scheduled_date,
+  start_time: r.start_time,
+  end_time: r.end_time,
+  customer_name: r.customer_name,
+  service_type: r.service_type,
+  status: r.status,
+ }))
+
+ // Merge in any live Cal.com bookings the webhook didn't sync. This
+ // self-heals the calendar even when webhook registration silently
+ // failed at onboarding or got revoked. Failure here is non-fatal -
+ // we still return the local rows.
+ if (business?.cal_com_api_key) {
+  try {
+   const localUids = new Set(
+    (localRows || [])
+     .map((r) => r.cal_com_booking_uid)
+     .filter((u): u is string => !!u),
+   )
+   const live = await listBookings(business.cal_com_api_key, {
+    afterStart: startDate.toISOString(),
+    beforeEnd: endDate.toISOString(),
+   })
+   for (const b of live) {
+    if (!b?.uid || localUids.has(b.uid)) continue
+    if (b.status && /(cancel|reject)/i.test(b.status)) continue
+    const start = new Date(b.start)
+    if (isNaN(start.getTime())) continue
+    const attendee = b.attendees?.[0]
+    appointments.push({
+     id: `cal:${b.uid}`,
+     scheduled_date: start.toISOString().split('T')[0],
+     start_time: start.toISOString(),
+     end_time: b.end || null,
+     customer_name: attendee?.name || b.title || 'Cal.com booking',
+     service_type: b.eventType?.title || b.title || 'General',
+     status: b.status || 'confirmed',
+    })
+   }
+   appointments.sort((a, b) => a.start_time.localeCompare(b.start_time))
+  } catch (e) {
+   logger.warn('Cal.com live merge failed - showing local rows only', {
+    businessId,
+    error: e instanceof Error ? e.message : 'Unknown',
+   })
+  }
  }
 
  // Group appointments by day

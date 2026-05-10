@@ -118,13 +118,29 @@ export async function POST(request: NextRequest) {
   const subscriberUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/webhooks/cal/${authResult.businessId}`
   const webhookSecret = crypto.randomBytes(32).toString('hex')
   let webhookId: string | null = null
+  let webhookError: string | null = null
   try {
    const wh = await registerWebhook(apiKey, subscriberUrl, webhookSecret)
    webhookId = wh.id
   } catch (e) {
-   logger.warn('Cal.com webhook registration failed; continuing without webhook', {
-    error: e instanceof Error ? e.message : 'Unknown',
+   webhookError = e instanceof Error ? e.message : 'Unknown'
+   // Don't fail the connection - the dashboard now does a live Cal.com
+   // pull as a fallback, so the calendar still works without the
+   // webhook. But log loudly + admin-notify so this gets fixed.
+   logger.error('Cal.com webhook registration failed', {
+    businessId: authResult.businessId,
+    error: webhookError,
    })
+   try {
+    const { notifyAdmin } = await import('@/lib/notifications/notify')
+    await notifyAdmin({
+     type: 'calcom.webhook_register_failed',
+     severity: 'warning',
+     title: 'Cal.com webhook did not register',
+     body: `Business ${authResult.businessId} connected Cal.com but webhook registration failed (${webhookError}). Dashboard will fall back to live polling; reschedules made in Cal.com may show after a refresh but not in real time.`,
+     metadata: { business_id: authResult.businessId, error: webhookError },
+    })
+   } catch { /* non-fatal */ }
   }
 
   const { error: updateError } = await supabaseAdmin

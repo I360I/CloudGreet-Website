@@ -225,6 +225,52 @@ export async function createBooking(
  return res.data
 }
 
+export type CalcomBookingListItem = {
+ uid: string
+ id: number
+ status: string
+ start: string
+ end: string
+ title?: string
+ attendees?: Array<{ name?: string; email?: string; phoneNumber?: string }>
+ metadata?: Record<string, any>
+ eventType?: { id?: number; slug?: string; title?: string }
+}
+
+/**
+ * List bookings on the contractor's Cal.com account in a date range.
+ * Used by the dashboard calendar to display bookings made directly in
+ * Cal.com (manual additions, reschedules, third-party sync), not just
+ * the ones our webhook landed in the local appointments table.
+ *
+ * Cal.com paginates with `take` + `skip`; we walk pages so a busy
+ * contractor's week isn't capped at 100 events.
+ */
+export async function listBookings(
+ apiKey: string,
+ input: { afterStart: string; beforeEnd: string },
+): Promise<CalcomBookingListItem[]> {
+ const all: CalcomBookingListItem[] = []
+ const take = 100
+ for (let skip = 0; skip < 1000; skip += take) {
+  const qs = new URLSearchParams({
+   afterStart: input.afterStart,
+   beforeEnd: input.beforeEnd,
+   take: String(take),
+   skip: String(skip),
+  })
+  // /bookings is exposed under 2024-08-13 - the 2026-02-25 default we
+  // use for createBooking doesn't return the same shape on GET.
+  const res = await calFetch<{ status: string; data: CalcomBookingListItem[] }>(
+   apiKey, `/bookings?${qs.toString()}`, { version: '2024-08-13' },
+  )
+  const items = res?.data || []
+  all.push(...items)
+  if (items.length < take) break
+ }
+ return all
+}
+
 export async function cancelBooking(
  apiKey: string,
  bookingUid: string,

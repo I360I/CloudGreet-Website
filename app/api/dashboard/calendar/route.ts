@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { moderateRateLimit } from '@/lib/rate-limiting-redis'
+import { listBookings } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -51,17 +52,17 @@ export async function GET(request: NextRequest) {
  const startDate = new Date(startDateParam)
  const endDate = new Date(endDateParam)
 
- // Fetch business services
+ // Fetch business services + Cal.com api key (used for live merge).
  const { data: business } = await supabaseAdmin
  .from('businesses')
- .select('services')
+ .select('services, cal_com_api_key')
  .eq('id', businessId)
  .single()
 
  const businessServices = business?.services || []
 
- // Fetch appointments
- const { data: appointments, error: appointmentsError } = await supabaseAdmin
+ // Local appointments first.
+ const { data: localRows, error: appointmentsError } = await supabaseAdmin
  .from('appointments')
  .select('*')
  .eq('business_id', businessId)
@@ -78,6 +79,51 @@ export async function GET(request: NextRequest) {
  { success: false, error: 'Failed to fetch appointments' },
  { status: 500 }
  )
+ }
+
+ const appointments: any[] = [...(localRows || [])]
+
+ // Live Cal.com merge - same self-heal pattern as the week view.
+ // Cal.com bookings the webhook never landed get injected as synthetic
+ // rows so the dashboard reflects the contractor's actual calendar.
+ if (business?.cal_com_api_key) {
+  try {
+   const localUids = new Set(
+    (localRows || [])
+     .map((r: any) => r.cal_com_booking_uid)
+     .filter((u: any): u is string => !!u),
+   )
+   const live = await listBookings(business.cal_com_api_key, {
+    afterStart: startDate.toISOString(),
+    beforeEnd: endDate.toISOString(),
+   })
+   for (const b of live) {
+    if (!b?.uid || localUids.has(b.uid)) continue
+    if (b.status && /(cancel|reject)/i.test(b.status)) continue
+    const start = new Date(b.start)
+    if (isNaN(start.getTime())) continue
+    const attendee = b.attendees?.[0]
+    appointments.push({
+     id: `cal:${b.uid}`,
+     scheduled_date: start.toISOString().split('T')[0],
+     start_time: start.toISOString(),
+     end_time: b.end || null,
+     duration: null,
+     customer_name: attendee?.name || b.title || 'Cal.com booking',
+     service_type: b.eventType?.title || b.title || 'General',
+     status: b.status || 'confirmed',
+     estimated_value: null,
+     address: null,
+     notes: null,
+    })
+   }
+   appointments.sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)))
+  } catch (e) {
+   logger.warn('Cal.com live merge failed - showing local rows only', {
+    businessId,
+    error: e instanceof Error ? e.message : 'Unknown',
+   })
+  }
  }
 
  // Format response based on view
