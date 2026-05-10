@@ -40,10 +40,13 @@ export async function POST(request: NextRequest) {
     { headers: rl.headers },
   )
 
+  // Case-insensitive lookup so a "John@example.com" stored in the DB
+  // matches a "john@example.com" submission. Without ilike, mixed-case
+  // accounts silently never receive a reset email.
   const { data: user } = await supabaseAdmin
     .from('custom_users')
     .select('id, email, first_name')
-    .eq('email', email)
+    .ilike('email', email)
     .maybeSingle()
 
   if (!user) {
