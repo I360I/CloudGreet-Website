@@ -332,9 +332,6 @@ We don't onboard medical practices, dental, medspas, therapy, or any healthcare-
 We work with them but conservatively - the agent books and routes, doesn't give legal or financial advice. Frame it as a feature.
 
 **Refund situation (post-sale)**
-Refund policy is the 30-day, zero-bookings bar from Closing. Route any refund request to anthony@cloudgreet.com - reviewed and honored on my end, no expense to the rep (your commission isn't clawed back). Don't promise refunds you can't authorize, but you also don't need to fight one off to protect your earnings.
-
-**"AI just hung up on my customer" (post-sale escalation)**
-Pull the call from the dashboard, find the transcript, identify what tripped it. Edge cases can be added to the agent per business. If you can't ID the issue quickly, route to anthony@cloudgreet.com.`,
+Refund policy is the 30-day, zero-bookings bar from Closing. Route any refund request to anthony@cloudgreet.com - reviewed and honored on my end, no expense to the rep (your commission isn't clawed back). Don't promise refunds you can't authorize, but you also don't need to fight one off to protect your earnings.`,
   },
 ]
