@@ -218,3 +218,94 @@ Total code work above: ~75-90 min. Then product walkthrough (the actually-import
 ---
 
 *Audit run on cloudgreet.com main branch as of commit `d852efe`. Read-only — nothing was modified during the audit.*
+
+---
+
+# Pass 2 (UX copy + mobile + email)
+
+Run after the user asked for a follow-up audit on visible product surfaces. Format same as above. Live caught one P0 (4 AM callbacks) which is already fixed in commit `1b67c70`.
+
+## P0 — already fixed
+
+### 24. ✅ Sales rep follow-up callbacks scheduled at 4 AM
+
+**Where**: `app/api/sales/leads/[id]/route.ts:107` (was `setHours(9, 0, 0, 0)` on a `new Date()`).
+**Why**: `setHours()` uses the JS runtime's local timezone. Vercel runs UTC, so 9 UTC = 4 AM Central. Reps were seeing "Tmrw 4:00 AM" callbacks on real leads — visible in `/sales/leads`. Looks unprofessional, also literally impossible to call a contractor at that hour without ruining the relationship.
+**Fix shipped**: New `lib/sales/business-hours.ts` with TZ-aware helpers. Auto-voicemail callback now uses `nextBusinessSlot({ daysFromNow: 2 })`, which lands at 9 AM Central. Rep-set follow-up times are clamped to Mon-Fri 9am-6pm Central server-side. Live in commit `1b67c70`.
+
+## P1 — visible polish
+
+### 25. "Retell" leaks into client-facing copy in 7 places
+
+**Where**:
+- `app/dashboard/page.tsx:625` — empty state: *"Once your Retell number is forwarded to from your business line"*
+- `app/dashboard/calls/page.tsx:255` — same empty state
+- `app/dashboard/settings/page.tsx:211` — *"Saved settings won't reach Retell until an admin links your agent"*
+- `app/dashboard/settings/page.tsx:225` — *"no Retell phone number routes to it"*
+- `app/dashboard/settings/page.tsx:272, 364` — *"Retell didn't sync"*
+- `app/dashboard/settings/page.tsx:306` — `<summary>Retell trace</summary>`
+- `app/dashboard/settings/page.tsx:430` — button label *"Save & push to Retell"*
+
+**Why**: Contractors don't know what Retell is. Every mention of the underlying vendor breaks the brand illusion (CloudGreet looks like a thin wrapper instead of a product), and any contractor who Googles the term figures out your stack — both bad. Also: the empty-state grammar is clumsy ("forwarded to from your business line").
+
+**Fix**: Replace every visible "Retell" with "voice agent" / "agent" / "phone number" depending on context. Same audit needed for "Telnyx" anywhere in client-visible copy.
+
+### 26. Stale "Video coming soon" placeholder in sales onboarding
+
+**Where**: `app/sales/onboarding/page.tsx:527` — empty-state for video embeds.
+**Why**: Body says *"Video coming soon"* + *"The outline below covers everything until the recording lands."* We removed walkthrough videos from the roadmap entirely. Aaron + future reps see this and wait for videos that aren't coming.
+**Fix**: Either delete the `VideoEmbed` empty state and never render a video slot, or swap copy to *"This step doesn't have a video — the written outline below covers everything you need."*
+
+### 27. Em-dashes in user-visible copy (you said never)
+
+**Where**:
+- `app/dashboard/settings/page.tsx:1300` — review-request explainer body: *"…ask for consent on the call first — only customers who say yes…"*
+- `app/dashboard/settings/page.tsx:1123` — voice description: *"Riley — calm, friendly Texas accent"* (or whatever the description is)
+- `app/sales/leads/scrape/page.tsx:706,707` — section headers: *"Texas — license databases"* / *"Texas — Google Places"*
+
+**Why**: You explicitly do not want em-dashes anywhere. These are the only ones in user-facing dashboard / sales copy.
+**Fix**: Replace `—` with ` - ` (or restructure to drop the dash entirely — most read fine without it).
+
+## P2 — polish
+
+### 28. Stale comment in `lib/review-requests.ts`
+
+**Where**: `lib/review-requests.ts:15` — `*   3. Cron worker (every 15 min) reads queued rows where`
+**Why**: We dropped the cron to daily on the Hobby plan (commit `193d09d`). Comment still says 15-min, which will mislead future-you.
+**Fix**: Update to *"daily at 9 AM ET."*
+
+### 29. Mobile-breakpoint coverage looks fine, except one observation
+
+**Where**: Across `app/dashboard/`. Sampled `dashboard/page.tsx`, `calls/page.tsx`, `appointments/page.tsx`, `customize/page.tsx`, `settings/page.tsx`.
+**Why**: Every multi-column layout I checked has `grid-cols-1` as default with `md:` or `lg:` overrides. Calls list explicitly stacks on mobile and grids on `lg:`. Appointments uses `grid-cols-1 md:grid-cols-7`. No tables anywhere (all flexbox/grid). Sidebar collapses to a bottom-tab nav at `lg:hidden`. As far as code-reading goes, this is competent.
+**What I couldn't verify**: actual render quality on real screens. There's a real gap between "the breakpoint classes are correct" and "this looks good in production on a Galaxy A14." If you have time during the walkthrough, open the dashboard in Chrome DevTools device emulation (iPhone 14, Galaxy S23) and click through. I won't catch any visual layout bugs from code alone.
+
+### 30. Email templates — read-aloud check
+
+I read the four client-facing emails:
+- **Customize-your-agent invite** (`/api/sales/leads/[id]/send-customization`) — clean. Light theme, monospaced eyebrow, short sentence, single CTA. Good.
+- **Welcome email** (`/api/stripe/webhook` → `Your CloudGreet account`) — clean. *"Welcome to CloudGreet, {businessName}. Your AI receptionist is being set up - your sales rep will reach out shortly to wire up call forwarding + walk through the dashboard."* Reads natural.
+- **Payment-failed email** — fine. Subject uses regular hyphen. Body is direct, has invoice link.
+- **Onboarding email** (`/api/sales/leads/[id]/send-onboarding`) — didn't fully read but follows same template shape as customize email.
+
+**No real findings here**; emails are in good shape.
+
+### 31. `eval('require')('redis')` re-flag
+
+Re-flagging from pass 1 — `lib/cache/redis-cache.ts:12`. Still there. Not a security risk in current state but a tripwire for any future edit. Worth replacing with `await import('redis')` next time anyone's in that file.
+
+## Sections I could NOT cover from code alone (pass 2)
+
+1. **Whether emails actually render correctly across Gmail / Outlook / Apple Mail.** HTML email rendering is its own dark art. The templates use table-based layout which is the right pattern, but only sending one to yourself proves it.
+
+2. **Whether the dashboard actually looks good on iPhone / Android / iPad.** Class names look right. Render quality is a "look at it" check.
+
+3. **Whether the sales rep onboarding flow makes sense end-to-end.** Aaron will tell us.
+
+4. **Whether any new contractor signing up on a fresh account hits a confusing dead-end.** Walk-through-as-customer step from `LAUNCH-WEEKEND.md`.
+
+5. **Whether voice agent quality with the new universal layer is actually better.** Real call.
+
+---
+
+*Pass 2 run as of commit `1b67c70`. Pass 1 findings + this section = full audit deliverable for the weekend.*
