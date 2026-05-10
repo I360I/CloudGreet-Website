@@ -168,7 +168,8 @@ export default function AdminHome() {
       {[
        { label: 'Active', value: String(data?.kpis.activeClients ?? 0), accent: true,
         sub: data && data.kpis.totalClients ? `${Math.round((data.kpis.activeClients / data.kpis.totalClients) * 100)}% of total` : '-' },
-       { label: 'Trialing', value: String(data?.kpis.trialingClients ?? 0), accent: false },
+       { label: 'Comped', value: String(data?.kpis.trialingClients ?? 0), accent: false,
+        sub: '100%-off coupon active' },
        { label: 'In onboarding', value: String(data?.kpis.inOnboarding ?? 0), accent: false,
         sub: 'Cal.com or forwarding incomplete' },
       ].map((k) => (

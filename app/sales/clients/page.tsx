@@ -28,7 +28,7 @@ type Client = {
 function subscriptionPill(status: string | null) {
   if (!status) return null
   const s = status.toLowerCase()
-  if (s === 'trialing' || s === 'trial') return { label: 'trial', cls: 'bg-amber-50 text-amber-800 border-amber-200' }
+  if (s === 'trialing' || s === 'trial') return { label: 'comped', cls: 'bg-amber-50 text-amber-800 border-amber-200' }
   if (s === 'active') return { label: 'active', cls: 'bg-emerald-50 text-emerald-800 border-emerald-200' }
   if (s === 'past_due') return { label: 'past due', cls: 'bg-rose-50 text-rose-700 border-rose-200' }
   if (s === 'canceled' || s === 'cancelled') return { label: 'cancelled', cls: 'bg-gray-100 text-gray-600 border-gray-200' }

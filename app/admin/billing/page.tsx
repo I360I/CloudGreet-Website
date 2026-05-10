@@ -24,10 +24,10 @@ type PastDueInvoice = {
 type BillingSummary = {
  mrrCents: number
  paidMrrCents?: number
- trialingMrrCents?: number
+ compedMrrCents?: number
  pastDueMrrCents?: number
  paidCount?: number
- trialingCount?: number
+ compedCount?: number
  pastDueCount?: number
  bookingFeesCents: number
  creditsCents: number
@@ -92,13 +92,13 @@ export default function BillingDashboardPage() {
  return []
  }
 
- const trialBlurb =
-  summary.trialingCount && summary.trialingCount > 0
-   ? `Includes $${((summary.trialingMrrCents ?? 0) / 100).toFixed(0)} from ${summary.trialingCount} trial${summary.trialingCount === 1 ? '' : 's'}`
+ const compedBlurb =
+  summary.compedCount && summary.compedCount > 0
+   ? `Includes $${((summary.compedMrrCents ?? 0) / 100).toFixed(0)} from ${summary.compedCount} comped (100%-off)`
    : null
  const mrrDescription =
   summary.source === 'stripe-live'
-   ? `Live from Stripe - active + trialing + past_due. ${summary.paidCount ?? 0} paid${trialBlurb ? `. ${trialBlurb}` : ''}.`
+   ? `Live from Stripe - active + comped + past_due. ${summary.paidCount ?? 0} paid${compedBlurb ? `. ${compedBlurb}` : ''}.`
    : 'Subscription charges captured in the last 30 days.'
 
  return [
@@ -185,11 +185,11 @@ export default function BillingDashboardPage() {
  const mrrCents = summary?.mrrCents ?? 0
  const animatedMrrDollars = useCountUp(Math.floor(mrrCents / 100), 1100)
  const paidCount = summary?.paidCount ?? 0
- const trialingCount = summary?.trialingCount ?? 0
+ const compedCount = summary?.compedCount ?? 0
  const pastDueCount = summary?.pastDueCount ?? 0
- const totalCount = paidCount + trialingCount + pastDueCount
+ const totalCount = paidCount + compedCount + pastDueCount
  const paidMrrCents = summary?.paidMrrCents ?? 0
- const trialingMrrCents = summary?.trialingMrrCents ?? 0
+ const compedMrrCents = summary?.compedMrrCents ?? 0
  const pastDueMrrCents = summary?.pastDueMrrCents ?? 0
 
  const mrrDollars = Math.floor(mrrCents / 100)
@@ -277,9 +277,9 @@ export default function BillingDashboardPage() {
      tone="emerald"
     />
     <BreakdownPill
-     label="Trialing"
-     count={trialingCount}
-     amountCents={trialingMrrCents}
+     label="Comped"
+     count={compedCount}
+     amountCents={compedMrrCents}
      tone="sky"
     />
     {pastDueCount > 0 && (
@@ -330,11 +330,11 @@ export default function BillingDashboardPage() {
    delay={0.05}
   />
   <SecondaryStat
-   label="Conversion potential"
-   value={trialingCount > 0 ? `+$${Math.round(trialingMrrCents / 100).toLocaleString()}` : '-'}
-   hint={trialingCount > 0
-    ? `If all ${trialingCount} trial${trialingCount === 1 ? '' : 's'} convert to paid`
-    : 'No trials right now'}
+   label="Comped upside"
+   value={compedCount > 0 ? `+$${Math.round(compedMrrCents / 100).toLocaleString()}` : '-'}
+   hint={compedCount > 0
+    ? `If the ${compedCount} comped sub${compedCount === 1 ? '' : 's'} flip to full price`
+    : 'No comped subs right now'}
    icon={Sparkle}
    delay={0.1}
   />

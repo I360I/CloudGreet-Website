@@ -90,7 +90,7 @@ Would you like to see how this works for your business?
 
 {your_name}
 
-P.S. 30-day free trial - no setup fees, no contracts.`,
+P.S. 30-day money-back if we don't book a job - no setup fees, no contracts.`,
     businessType: ['Plumbing', 'Emergency Plumbing', 'Pipe Repair'],
     variables: ['owner_name', 'business_name', 'business_type', 'city', 'state', 'your_name'],
     followUpDays: 2,
@@ -120,7 +120,7 @@ Would you be interested in a quick demo?
 
 {your_name}
 
-P.S. Free 30-day trial - perfect timing for storm season preparation.`,
+P.S. 30-day money-back if we don't book a job - perfect timing for storm season preparation.`,
     businessType: ['Roofing', 'Roof Repair', 'Storm Damage'],
     variables: ['owner_name', 'business_name', 'business_type', 'city', 'state', 'your_name'],
     followUpDays: 1,
@@ -148,7 +148,7 @@ Would you be interested in a 15-minute demo?
 
 {your_name}
 
-P.S. 30-day free trial - no risk, no commitment.`,
+P.S. 30-day money-back if we don't book a job - no risk, no commitment.`,
     businessType: ['General Services', 'Contractor', 'Service Business'],
     variables: ['owner_name', 'business_name', 'business_type', 'city', 'state', 'your_name'],
     followUpDays: 3,
@@ -201,7 +201,7 @@ This is my final follow-up about the AI receptionist for {business_name}.
 I understand you're busy, but I don't want you to miss out on this opportunity.
 
 Here's what I'm offering:
-• 30-day free trial
+• 30-day money-back if we don't book a job
 • No setup fees
 • No contracts
 • Full support and training

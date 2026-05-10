@@ -4,13 +4,13 @@ import { getStripeClient } from '@/lib/billing/stripe-client'
 export type StripeMrrSummary = {
   totalMrrCents: number
   paidMrrCents: number
-  trialingMrrCents: number
+  compedMrrCents: number
   paidCount: number
-  trialingCount: number
+  compedCount: number
   pastDueCount: number
   pastDueMrrCents: number
   // For ops UI: list of subs with bare metadata so the dashboard can
-  // show "who's on trial" without a second round-trip.
+  // show who's currently being billed without a second round-trip.
   subscriptions: Array<{
     id: string
     customerId: string
@@ -30,11 +30,11 @@ export type StripeMrrSummary = {
  * Why we don't read from a local ledger: the local billing_usage_ledger
  * table is never written from the Stripe webhook, so any MRR value
  * derived from it is always 0. Pulling straight from Stripe is the only
- * source that's both accurate and trial-aware.
+ * source that's both accurate and discount-aware.
  *
- * Trials count toward MRR (the user wants visibility into committed
- * monthly value, not just collected cash) but are tracked separately so
- * the admin page can display "$X total · $Y paid · $Z trialing".
+ * Comped subs (100%-off coupons) count toward MRR for committed-value
+ * visibility but are tracked separately so the admin page can display
+ * "$X total · $Y paid · $Z comped".
  */
 export async function getStripeMrrSummary(): Promise<StripeMrrSummary> {
   const stripe = getStripeClient()
@@ -58,9 +58,9 @@ export async function getStripeMrrSummary(): Promise<StripeMrrSummary> {
   const summary: StripeMrrSummary = {
     totalMrrCents: 0,
     paidMrrCents: 0,
-    trialingMrrCents: 0,
+    compedMrrCents: 0,
     paidCount: 0,
-    trialingCount: 0,
+    compedCount: 0,
     pastDueCount: 0,
     pastDueMrrCents: 0,
     subscriptions: [],
@@ -85,9 +85,10 @@ export async function getStripeMrrSummary(): Promise<StripeMrrSummary> {
 
     // A 100%-off coupon makes Stripe report status='active' even though
     // the customer is paying nothing this period - counting that as
-    // "Paid" makes the dashboard lie. Recategorize as trialing so the
-    // headline still gets the MRR (committed value) but the breakdown
-    // honestly distinguishes paid from comped/trial.
+    // "Paid" makes the dashboard lie. Bucket those (and any genuine
+    // status='trialing' subs from older test data) as "Comped" so the
+    // headline still reflects committed MRR but the breakdown honestly
+    // separates collected cash from discounted seats.
     const effectivelyFree = isCurrentlyDiscountedToZero(sub)
 
     if (sub.status === 'active' && !effectivelyFree) {
@@ -96,8 +97,8 @@ export async function getStripeMrrSummary(): Promise<StripeMrrSummary> {
       summary.paidCount += 1
     } else if (sub.status === 'trialing' || (sub.status === 'active' && effectivelyFree)) {
       summary.totalMrrCents += monthlyCents
-      summary.trialingMrrCents += monthlyCents
-      summary.trialingCount += 1
+      summary.compedMrrCents += monthlyCents
+      summary.compedCount += 1
     } else if (sub.status === 'past_due') {
       summary.pastDueCount += 1
       summary.pastDueMrrCents += monthlyCents

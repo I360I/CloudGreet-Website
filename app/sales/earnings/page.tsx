@@ -242,7 +242,7 @@ export default function SalesEarningsPage() {
                             <>
                               <span className="tabular-nums line-through text-gray-400">{dollars(c.monthly_cents)}/mo</span>
                               <span className="text-[10px] font-mono uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 rounded-full px-1.5 py-0.5">
-                                trial
+                                comped
                               </span>
                             </>
                           ) : (

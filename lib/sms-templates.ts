@@ -53,7 +53,7 @@ export const smsTemplates: SMSTemplate[] = [
   {
     id: 'plumbing_emergency_sms',
     name: 'Plumbing Emergency SMS',
-    message: `Emergency calls don't wait. AI receptionist for {business_name} answers 24/7. Free trial. Reply YES.`,
+    message: `Emergency calls don't wait. AI receptionist for {business_name} answers 24/7. No contracts. Reply YES.`,
     businessType: ['Plumbing', 'Emergency Plumbing', 'Pipe Repair'],
     variables: ['business_name'],
     followUpDays: 2,
@@ -123,7 +123,7 @@ export const smsTemplates: SMSTemplate[] = [
   {
     id: 'urgent_follow_up_sms',
     name: 'Urgent Follow-up SMS',
-    message: `Last chance: AI receptionist for {business_name}. 30-day free trial. No risk. Reply YES or call {your_phone}.`,
+    message: `Last chance: AI receptionist for {business_name}. 30-day money-back if we don't book a job. Reply YES or call {your_phone}.`,
     businessType: ['All'],
     variables: ['business_name', 'your_phone'],
     followUpDays: 0,

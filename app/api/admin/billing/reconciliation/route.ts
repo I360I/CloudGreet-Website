@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
 
  try {
  // Admin (no businessId): aggregate MRR live from Stripe across every
- // subscription. Trials are counted into MRR but tracked separately so
- // the UI can show paid/trialing/past_due breakdown.
+ // subscription. Comped (100%-off) subs are counted into MRR but tracked
+ // separately so the UI can show paid/comped/past_due breakdown.
  if (!auth.businessId) {
   const stripeSummary = await getStripeMrrSummary()
   return NextResponse.json({
@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
    summary: {
     mrrCents: stripeSummary.totalMrrCents,
     paidMrrCents: stripeSummary.paidMrrCents,
-    trialingMrrCents: stripeSummary.trialingMrrCents,
+    compedMrrCents: stripeSummary.compedMrrCents,
     pastDueMrrCents: stripeSummary.pastDueMrrCents,
     paidCount: stripeSummary.paidCount,
-    trialingCount: stripeSummary.trialingCount,
+    compedCount: stripeSummary.compedCount,
     pastDueCount: stripeSummary.pastDueCount,
     bookingFeesCents: 0,
     creditsCents: 0,

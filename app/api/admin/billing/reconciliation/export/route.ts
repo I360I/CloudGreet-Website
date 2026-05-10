@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
   rows.push([])
   rows.push([
    'TOTAL',
-   `${summary.paidCount} paid · ${summary.trialingCount} trialing · ${summary.pastDueCount} past due`,
+   `${summary.paidCount} paid · ${summary.compedCount} comped · ${summary.pastDueCount} past due`,
    '',
    (summary.totalMrrCents / 100).toFixed(2),
    ((summary.totalMrrCents * 12) / 100).toFixed(2),
