@@ -139,7 +139,17 @@ export async function POST(request: NextRequest) {
   if (recordingUrl) baseRow.recording_url = recordingUrl
   if (sentiment) baseRow.sentiment = sentiment
   if (summary) baseRow.call_summary = summary
-  if (callAnalysis) baseRow.call_analysis = callAnalysis
+  // Flatten Retell's custom_analysis_data (the structured fields
+  // defined by post_call_analysis_data on the agent) into our
+  // call_extractions jsonb column. The calls table has no
+  // call_analysis column - writing to it 500'd every analyzed
+  // webhook and dropped all transcript saves for analyzed events.
+  if (callAnalysis) {
+   const extractions = callAnalysis.custom_analysis_data || callAnalysis
+   if (extractions && typeof extractions === 'object') {
+    baseRow.call_extractions = extractions
+   }
+  }
 
   if (existing) {
    const { error: upErr } = await supabaseAdmin

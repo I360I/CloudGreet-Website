@@ -747,7 +747,15 @@ function AgentCard({
    })
    const j = await res.json().catch(() => ({}))
    if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
-   setEditingAgent(false)
+   // The link succeeded; surface the tool-wire result so a silent failure
+   // there (which leaves the agent with NO tools and is why a test call
+   // hallucinates instead of booking) doesn't get hidden behind a green
+   // "saved" toast. toolsError comes back even on a successful link.
+   if (j.toolsError) {
+    setAgentErr(`Linked, but tool attach failed: ${j.toolsError}. Re-run "Re-wire tools" from this panel or call the agent test number to verify the Functions list in Retell.`)
+   } else {
+    setEditingAgent(false)
+   }
    onPhoneSaved() // re-fetches everything including the agent block
   } catch (e) {
    setAgentErr(e instanceof Error ? e.message : 'Save failed')
