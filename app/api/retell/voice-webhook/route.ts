@@ -604,14 +604,33 @@ export async function POST(request: NextRequest) {
  endIso = end.toISOString()
  }
 
- const slots = await listAvailableSlots(apiKey, {
+ const rawSlots = await listAvailableSlots(apiKey, {
  eventTypeId,
  startIso,
  endIso,
  timeZone: tz,
  })
 
- return NextResponse.json({ success: true, slots, source: 'calcom' })
+ // Cal.com's /slots returns ISO strings in whatever timezone the
+ // event type's schedule is configured in (often the contractor's
+ // profile TZ - which may differ from the business TZ). The agent
+ // reads "15:00" from a "-04:00" ISO and says "3pm" - wrong if the
+ // business is actually -05:00 (Chicago, where 15:00 EDT = 14:00
+ // CDT). We re-emit two views so the agent can read them verbatim
+ // without any timezone math:
+ //   - slots: ISO strings with the business TZ offset (same instant)
+ //   - slots_display: human-readable "Thu May 14, 2:00 PM" strings
+ //     in the business timezone
+ const slots = rawSlots.map((iso) => isoInZone(iso, tz))
+ const slots_display = rawSlots.map((iso) => formatHuman(iso, tz))
+
+ return NextResponse.json({
+ success: true,
+ slots,
+ slots_display,
+ timezone: tz,
+ source: 'calcom',
+ })
  }
  } catch (calErr) {
  logger.warn('lookup_availability: Cal.com slots failed, falling back to local', {
@@ -679,6 +698,70 @@ export async function POST(request: NextRequest) {
  } catch (error) {
  logger.error('Retell voice webhook error', { error: (error as Error).message })
  return NextResponse.json({ success: false }, { status: 500 })
+ }
+}
+
+/**
+ * Re-emit an ISO instant in the given IANA timezone. Preserves the
+ * absolute moment in time; just changes the displayed wall-clock + offset.
+ *
+ *   isoInZone('2026-05-14T15:00:00-04:00', 'America/Chicago')
+ *     => '2026-05-14T14:00:00-05:00'
+ *
+ * Uses Intl.DateTimeFormat parts (most reliable cross-runtime way to
+ * grab wall-clock components in a specific TZ without pulling in
+ * a heavy lib like luxon).
+ */
+function isoInZone(iso: string, tz: string): string {
+ try {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  const parts = new Intl.DateTimeFormat('en-US', {
+   timeZone: tz,
+   year: 'numeric', month: '2-digit', day: '2-digit',
+   hour: '2-digit', minute: '2-digit', second: '2-digit',
+   hour12: false,
+  }).formatToParts(d).reduce<Record<string, string>>((acc, p) => {
+   acc[p.type] = p.value
+   return acc
+  }, {})
+  const hour = parts.hour === '24' ? '00' : parts.hour
+  // Compute the offset for tz at that instant.
+  const utcMs = d.getTime()
+  const asLocal = new Date(`${parts.year}-${parts.month}-${parts.day}T${hour}:${parts.minute}:${parts.second}Z`).getTime()
+  const offsetMin = Math.round((asLocal - utcMs) / 60000)
+  const sign = offsetMin >= 0 ? '+' : '-'
+  const off = Math.abs(offsetMin)
+  const offH = String(Math.floor(off / 60)).padStart(2, '0')
+  const offM = String(off % 60).padStart(2, '0')
+  return `${parts.year}-${parts.month}-${parts.day}T${hour}:${parts.minute}:${parts.second}${sign}${offH}:${offM}`
+ } catch {
+  return iso
+ }
+}
+
+/**
+ * Human-readable slot rendering in the business's timezone, what the
+ * agent should literally read out loud.
+ *
+ *   formatHuman('2026-05-14T15:00:00-04:00', 'America/Chicago')
+ *     => 'Thu May 14, 2:00 PM'
+ */
+function formatHuman(iso: string, tz: string): string {
+ try {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  return new Intl.DateTimeFormat('en-US', {
+   timeZone: tz,
+   weekday: 'short',
+   month: 'short',
+   day: 'numeric',
+   hour: 'numeric',
+   minute: '2-digit',
+   hour12: true,
+  }).format(d).replace(',', '')
+ } catch {
+  return iso
  }
 }
 
