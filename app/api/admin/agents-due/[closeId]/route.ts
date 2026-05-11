@@ -40,7 +40,7 @@ export async function GET(
       ? supabaseAdmin
           .from('businesses')
           .select(
-            'id, business_name, address, services, business_hours, website, cal_com_username, cal_com_event_type_slug, cal_com_api_key, customization_status, customization_submitted_at',
+            'id, business_name, address, services, business_hours, website, retell_agent_id, cal_com_username, cal_com_event_type_slug, cal_com_api_key, customization_status, customization_submitted_at',
           )
           .eq('id', r.business_id)
           .maybeSingle()
@@ -132,6 +132,7 @@ export async function GET(
           has_cal_api_key: !!(biz as any).cal_com_api_key,
           customization_status: (biz as any).customization_status || 'not_sent',
           customization_submitted_at: (biz as any).customization_submitted_at || null,
+          retell_agent_id: (biz as any).retell_agent_id || null,
           google_rating: (lead as any)?.google_rating ?? null,
           google_review_count: (lead as any)?.google_review_count ?? null,
         }

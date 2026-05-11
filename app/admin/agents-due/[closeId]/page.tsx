@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { CircleNotch, ArrowLeft, ArrowSquareOut, Phone, Envelope, Calendar, Robot, Globe, Buildings, Star, PencilSimple, Check, X as XIcon, CaretDown, CaretRight, Sparkle } from '@phosphor-icons/react'
+import { CircleNotch, ArrowLeft, ArrowSquareOut, Phone, Envelope, Calendar, Robot, Globe, Buildings, Star, PencilSimple, Check, X as XIcon, CaretDown, CaretRight, Sparkle, Plugs } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import { Panel } from '../../_components/ui'
@@ -37,6 +37,7 @@ type Item = {
     login_email: string | null; cal_com_username: string | null
     cal_com_event_type_slug: string | null; has_cal_api_key: boolean
     customization_status: string; customization_submitted_at: string | null
+    retell_agent_id: string | null
     google_rating: number | null; google_review_count: number | null
   } | null
 }
@@ -132,6 +133,12 @@ function Workspace({ item, onChanged }: { item: Item; onChanged: () => void }) {
           <WebsiteCard
             closeId={item.close_id}
             currentWebsite={item.business?.website || null}
+            onChanged={onChanged}
+          />
+
+          <RetellAgentCard
+            businessId={item.business?.id || null}
+            currentAgentId={item.business?.retell_agent_id || null}
             onChanged={onChanged}
           />
 
@@ -410,6 +417,171 @@ function Side({ title, icon, children }: { title: string; icon?: React.ReactNode
       </div>
       <div className="space-y-1">{children}</div>
     </div>
+  )
+}
+
+/**
+ * Paste the Retell agent ID for this client. Saves to
+ * businesses.retell_agent_id and triggers the full wire-up:
+ *  - Validates the agent exists in Retell
+ *  - Patches post_call_analysis_data (8 extraction fields)
+ *  - Attaches all five tools (book_appointment, send_booking_sms,
+ *    lookup_availability, end_call, transfer_call) to the LLM
+ *  - Sets the agent's webhook_url
+ *  - Re-publishes + re-binds bound phone numbers
+ *
+ * Surface toolsError visibly when present so a silent wire-up failure
+ * can't go unnoticed (the previous version returned success: true even
+ * when the agent ended up with zero tools).
+ */
+function RetellAgentCard({ businessId, currentAgentId, onChanged }: {
+  businessId: string | null
+  currentAgentId: string | null
+  onChanged: () => void
+}) {
+  const [editing, setEditing] = useState(!currentAgentId)
+  const [draft, setDraft] = useState(currentAgentId || '')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [flash, setFlash] = useState('')
+
+  useEffect(() => {
+    setDraft(currentAgentId || '')
+    setEditing(!currentAgentId)
+  }, [currentAgentId])
+
+  const save = async () => {
+    if (!businessId) { setErr('No business linked to this close yet.'); return }
+    setBusy(true); setErr(''); setFlash('')
+    try {
+      const r = await fetchWithAuth(`/api/admin/clients/${businessId}/retell-agent`, {
+        method: 'PUT',
+        body: JSON.stringify({ agentId: draft.trim() || null }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setErr(j?.error || `Save failed (${r.status})`)
+      } else if (j.toolsError) {
+        setErr(`Linked, but tool attach failed: ${j.toolsError}`)
+        onChanged()
+      } else {
+        setFlash(`Linked${j.agentName ? ` to ${j.agentName}` : ''} - tools, extractions, webhook all wired`)
+        setEditing(false)
+        onChanged()
+        setTimeout(() => setFlash(''), 6000)
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Save failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const clear = async () => {
+    if (!window.confirm('Unlink this Retell agent? CloudGreet will lose its connection to the live agent (calls keep working in Retell, just disconnected from this client record).')) return
+    setBusy(true); setErr(''); setFlash('')
+    try {
+      const r = await fetchWithAuth(`/api/admin/clients/${businessId}/retell-agent`, {
+        method: 'PUT',
+        body: JSON.stringify({ agentId: null }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setErr(j?.error || 'Unlink failed')
+      } else {
+        setDraft('')
+        setEditing(true)
+        onChanged()
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Panel padding="none">
+      <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
+        <Plugs className="w-4 h-4 text-gray-500 shrink-0" />
+        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 shrink-0">
+          Retell agent ID
+        </div>
+        {editing ? (
+          <>
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void save() }}
+              placeholder="agent_..."
+              autoFocus
+              className="flex-1 min-w-[280px] bg-gray-950 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-mono text-gray-200 focus:border-fuchsia-400/40 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={save}
+              disabled={busy || !draft.trim() || !businessId}
+              className="inline-flex items-center gap-1.5 bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-200 px-3 py-1.5 rounded-lg text-xs hover:bg-fuchsia-500/30 disabled:opacity-50"
+            >
+              {busy ? <CircleNotch className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              Link + wire tools
+            </button>
+            {currentAgentId && (
+              <button
+                type="button"
+                onClick={() => { setEditing(false); setDraft(currentAgentId); setErr('') }}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-200 px-2 py-1.5 rounded-lg text-xs"
+              >
+                <XIcon className="w-3 h-3" /> Cancel
+              </button>
+            )}
+          </>
+        ) : currentAgentId ? (
+          <>
+            <a
+              href={`https://dashboard.retellai.com/agents/${currentAgentId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 truncate font-mono text-xs text-sky-300 hover:text-sky-200 inline-flex items-center gap-1 min-w-0"
+              title={currentAgentId}
+            >
+              {currentAgentId}
+              <ArrowSquareOut className="w-3 h-3 shrink-0" />
+            </a>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-200 px-2 py-1.5 rounded-lg text-xs"
+            >
+              <PencilSimple className="w-3 h-3" /> Edit
+            </button>
+            <button
+              type="button"
+              onClick={clear}
+              disabled={busy}
+              className="text-xs text-rose-400/70 hover:text-rose-300 disabled:opacity-50"
+            >
+              Unlink
+            </button>
+          </>
+        ) : (
+          <span className="flex-1 text-xs text-amber-300/80">
+            No agent linked yet — paste the Retell agent ID once you&apos;ve created it there.
+          </span>
+        )}
+      </div>
+      {err && (
+        <div className="px-4 pb-3 pt-0">
+          <div className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-2 py-1.5 whitespace-pre-wrap break-words">
+            {err}
+          </div>
+        </div>
+      )}
+      {flash && (
+        <div className="px-4 pb-3 pt-0">
+          <div className="text-xs text-emerald-300">{flash}</div>
+        </div>
+      )}
+    </Panel>
   )
 }
 
