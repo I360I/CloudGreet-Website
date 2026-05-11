@@ -150,25 +150,24 @@ export function getRetellGeneralTools(
     },
   ]
 
-  // transfer_call needs a destination - skip if the business hasn't set
-  // one yet OR if the saved phone isn't valid E.164. Pushing a malformed
-  // number to Retell results in the whole general_tools patch being
-  // rejected, which silently wipes the tool list.
-  if (opts.escalationPhone) {
-    const normalised = normaliseE164(opts.escalationPhone)
-    if (normalised) {
-      tools.push({
-        type: 'transfer_call',
-        name: 'transfer_call',
-        description:
-          "Warm-transfers the caller to the owner. Use only when the caller explicitly asks for a human, when there's a true emergency that needs a person on the line, or after multiple booking attempts have failed. Don't transfer just because the caller is skeptical or a slot is taken.",
-        transfer_destination: {
-          type: 'predefined',
-          number: normalised,
-        },
-      })
-    }
-  }
+  // NOTE: transfer_call is intentionally NOT auto-attached.
+  //
+  // Retell's API schema for the transfer_call tool inside the LLM's
+  // general_tools array shifts between versions (transfer_destination
+  // vs transfer_option vs transfer_destination_number). Sending the
+  // wrong shape causes the entire update-retell-llm patch to 400 and
+  // wipes ALL tools - including the four custom ones we DO control.
+  // We tried two formats, both blew up the LLM patch.
+  //
+  // Pragmatic move: keep the four reliable tools auto-attached, and
+  // have admins add transfer_call manually in Retell's dashboard
+  // (one-time per agent). This is what they were doing before this
+  // automation existed, so it's not a regression - it's a tradeoff
+  // against the whole tool list being broken.
+  //
+  // opts.escalationPhone is preserved on the API but unused for now.
+  // If/when Retell stabilises the schema, re-enable this block.
+  void opts.escalationPhone
 
   return tools
 }
