@@ -151,19 +151,41 @@ export function getRetellGeneralTools(
   ]
 
   // transfer_call needs a destination - skip if the business hasn't set
-  // one yet (otherwise the agent will offer transfers it can't fulfil).
+  // one yet OR if the saved phone isn't valid E.164. Pushing a malformed
+  // number to Retell results in the whole general_tools patch being
+  // rejected, which silently wipes the tool list.
   if (opts.escalationPhone) {
-    tools.push({
-      type: 'transfer_call',
-      name: 'transfer_call',
-      description:
-        "Warm-transfers the caller to the owner. Use only when the caller explicitly asks for a human, when there's a true emergency that needs a person on the line, or after multiple booking attempts have failed. Don't transfer just because the caller is skeptical or a slot is taken.",
-      transfer_destination: {
-        type: 'predefined',
-        number: opts.escalationPhone,
-      },
-    })
+    const normalised = normaliseE164(opts.escalationPhone)
+    if (normalised) {
+      tools.push({
+        type: 'transfer_call',
+        name: 'transfer_call',
+        description:
+          "Warm-transfers the caller to the owner. Use only when the caller explicitly asks for a human, when there's a true emergency that needs a person on the line, or after multiple booking attempts have failed. Don't transfer just because the caller is skeptical or a slot is taken.",
+        transfer_destination: {
+          type: 'predefined',
+          number: normalised,
+        },
+      })
+    }
   }
 
   return tools
+}
+
+/**
+ * Coerce a US-leaning phone string to strict E.164. Anything we can't
+ * confidently parse returns null so transfer_call gets skipped instead
+ * of poisoning the entire LLM patch.
+ */
+function normaliseE164(raw: string): string | null {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 10) return `+1${digits}`
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
+  // 12-digit numbers with non-1 country code are likely real international
+  // numbers - trust them.
+  if (digits.length >= 11 && digits.length <= 15 && raw.trim().startsWith('+')) {
+    return `+${digits}`
+  }
+  return null
 }

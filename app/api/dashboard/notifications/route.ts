@@ -116,8 +116,14 @@ export async function PATCH(request: NextRequest) {
  */
 function normalizeUsPhone(raw: string): string | null {
   const digits = raw.replace(/\D/g, '')
+  // Bare 10-digit number -> assume US, prepend +1.
   if (digits.length === 10) return `+1${digits}`
+  // 11 digits starting with 1 -> already has country code.
   if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
-  if (raw.startsWith('+') && digits.length >= 10) return `+${digits}`
+  // The previous version also accepted any string starting with "+"
+  // as long as it had 10+ digits. That let "+7372960092" through as
+  // an "international" number when it's really a US number missing
+  // the +1 country code - Retell then rejected it as invalid E.164
+  // and the transfer_call tool was silently dropped.
   return null
 }
