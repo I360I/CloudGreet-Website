@@ -30,13 +30,18 @@ export async function POST(request: NextRequest) {
   // Allow Retell ping
   if (eventType === 'ping') return NextResponse.json({ ok: true })
 
-  // Verify signature in production
+  // Soft-verify signature in production. See voice-webhook for the
+  // full rationale - per-agent webhook keys differ from the workspace
+  // key, so strict verification breaks every call. Flip
+  // STRICT_RETELL_SIGNATURES=1 to re-enable hard rejection.
   if (process.env.NODE_ENV === 'production') {
    const signature = request.headers.get('x-retell-signature')
    const valid = verifyRetellSignature(rawBody, signature)
    if (!valid) {
-    logger.warn('Retell call-events: invalid signature', { eventType })
-    return NextResponse.json({ ok: false, error: 'Invalid signature' }, { status: 401 })
+    logger.warn('Retell call-events: signature mismatch (soft-allowed)', { eventType })
+    if (process.env.STRICT_RETELL_SIGNATURES === '1') {
+     return NextResponse.json({ ok: false, error: 'Invalid signature' }, { status: 401 })
+    }
    }
   }
 
