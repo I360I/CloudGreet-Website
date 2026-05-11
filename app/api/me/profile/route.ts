@@ -60,5 +60,26 @@ export async function PATCH(request: NextRequest) {
   return NextResponse.json({ error: error.message }, { status: 500 })
  }
 
- return NextResponse.json({ success: true })
+ // If the owner changed their phone, the Retell agent's transfer_call
+ // destination is stale. The wiring code falls back to custom_users.phone
+ // when no business-level phone is set, so we re-push the tool set so
+ // transfers route to the new number. Synchronous so any Retell-side
+ // failure (rejected E.164, etc.) surfaces in the response rather than
+ // disappearing into logs.
+ let toolsError: string | null = null
+ let toolsTrace: string[] = []
+ if (typeof update.phone === 'string' && auth.businessId) {
+  try {
+   const { retellAgentManager } = await import('@/lib/retell-agent-manager')
+   toolsTrace = await retellAgentManager().ensureLLMToolsForBusiness(auth.businessId)
+  } catch (e) {
+   toolsError = e instanceof Error ? e.message : 'Unknown'
+   logger.warn('Re-wire tools after profile phone change failed', {
+    businessId: auth.businessId,
+    error: toolsError,
+   })
+  }
+ }
+
+ return NextResponse.json({ success: true, toolsError, toolsTrace })
 }

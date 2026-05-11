@@ -658,8 +658,16 @@ function OwnerNameSection() {
    const j = await res.json().catch(() => ({}))
    if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
    setInitial({ first: first.trim(), last: last.trim(), phone: phone.trim() })
-   setSavedFlag(true)
-   setTimeout(() => setSavedFlag(false), 2500)
+   // If the phone change couldn't be pushed onto the live agent (Retell
+   // rejected the format, agent isn't linked yet, etc.) the rest of the
+   // save still succeeded but transfer_call won't route correctly. Show
+   // the failure as a yellow warning instead of a silent green check.
+   if (j.toolsError) {
+    setError(`Saved, but couldn't sync to the agent: ${j.toolsError}`)
+   } else {
+    setSavedFlag(true)
+    setTimeout(() => setSavedFlag(false), 2500)
+   }
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Save failed')
   } finally {

@@ -73,23 +73,32 @@ class RetellAgentManager {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
       const webhookUrl = `${appUrl}/api/retell/voice-webhook`
 
-      // Pull a phone number for transfer_call destination. Prefer the
-      // explicit escalation_phone (set by admins), fall back to
-      // notifications_phone (the field exposed on the contractor's own
-      // dashboard - same number they use for booking-notification SMS).
+      // Pull a phone number for transfer_call destination. Try the
+      // business-level fields first (explicit admin / notifications),
+      // then fall back to the owner user's personal phone (the field
+      // labelled "Phone (for the AI to reach you on)" in the dashboard
+      // settings - which saves to custom_users.phone, not businesses).
       // We only attach transfer_call when one of these exists; otherwise
       // the agent would offer to transfer to a number that isn't there.
       let escalationPhone: string | null = null
       try {
         const { data: biz } = await supabaseAdmin
           .from('businesses')
-          .select('escalation_phone, notifications_phone')
+          .select('escalation_phone, notifications_phone, owner_id')
           .eq('id', mergedConfig.businessId)
           .maybeSingle()
         escalationPhone =
           (biz as any)?.escalation_phone ||
           (biz as any)?.notifications_phone ||
           null
+        if (!escalationPhone && (biz as any)?.owner_id) {
+          const { data: owner } = await supabaseAdmin
+            .from('custom_users')
+            .select('phone')
+            .eq('id', (biz as any).owner_id)
+            .maybeSingle()
+          escalationPhone = (owner as any)?.phone || null
+        }
       } catch { /* optional column, ignore */ }
 
       // Step 1: create a Retell-managed LLM with the prompt + greeting.
@@ -1112,25 +1121,34 @@ class RetellAgentManager {
     t(`llm ${llmId}`)
 
     // 3) Patch general_tools with our standard set. Pull a transfer
-    //    destination - prefer escalation_phone (admin-managed) and
-    //    fall back to notifications_phone (the field on the
-    //    contractor's own settings page). transfer_call is skipped
-    //    when neither is set so we never offer broken transfers.
+    //    destination - prefer admin-set escalation_phone, then
+    //    notifications_phone (booking SMS), then fall back to the
+    //    owner user's personal phone (custom_users.phone - the field
+    //    the contractor types into their own settings page).
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
     const webhookUrl = `${appUrl}/api/retell/voice-webhook`
     let escalationPhone: string | null = null
     try {
       const { data: biz } = await supabaseAdmin
         .from('businesses')
-        .select('escalation_phone, notifications_phone')
+        .select('escalation_phone, notifications_phone, owner_id')
         .eq('id', businessId)
         .maybeSingle()
       escalationPhone =
         (biz as any)?.escalation_phone ||
         (biz as any)?.notifications_phone ||
         null
+      if (!escalationPhone && (biz as any)?.owner_id) {
+        const { data: owner } = await supabaseAdmin
+          .from('custom_users')
+          .select('phone')
+          .eq('id', (biz as any).owner_id)
+          .maybeSingle()
+        escalationPhone = (owner as any)?.phone || null
+      }
     } catch { /* optional column, ignore */ }
     const tools = getRetellGeneralTools(webhookUrl, { escalationPhone })
+    t(`transfer destination: ${escalationPhone || '∅ (skipping transfer_call)'}`)
 
     const patchRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
       method: 'PATCH',

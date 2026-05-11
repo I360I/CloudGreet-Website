@@ -93,22 +93,24 @@ export async function PATCH(request: NextRequest) {
   // When the phone changes, the Retell agent's transfer_call destination
   // becomes stale - it was set the last time we wired tools. Push the
   // current tool set (which re-reads notifications_phone) so transfers
-  // route to the new number. Best-effort; failures don't break the save.
+  // route to the new number. Synchronous now so failures surface as
+  // toolsError in the response rather than vanishing into logs.
+  let toolsError: string | null = null
+  let toolsTrace: string[] = []
   if (body.notifications_phone !== undefined) {
-    void (async () => {
-      try {
-        const { retellAgentManager } = await import('@/lib/retell-agent-manager')
-        await retellAgentManager().ensureLLMToolsForBusiness(auth.businessId!)
-      } catch (e) {
-        logger.warn('Re-wire tools after phone change failed (non-fatal)', {
-          businessId: auth.businessId,
-          error: e instanceof Error ? e.message : 'Unknown',
-        })
-      }
-    })()
+    try {
+      const { retellAgentManager } = await import('@/lib/retell-agent-manager')
+      toolsTrace = await retellAgentManager().ensureLLMToolsForBusiness(auth.businessId!)
+    } catch (e) {
+      toolsError = e instanceof Error ? e.message : 'Unknown'
+      logger.warn('Re-wire tools after phone change failed', {
+        businessId: auth.businessId,
+        error: toolsError,
+      })
+    }
   }
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true, toolsError, toolsTrace })
 }
 
 /**
