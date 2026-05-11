@@ -192,6 +192,13 @@ export function Dialer() {
             setCallState('active')
             startedAtRef.current = Date.now()
           } else if (s === 'hangup' || s === 'destroy' || s === 'purge') {
+            // Release the mic stream we captured at dial time. Without
+            // this the browser keeps the mic active across calls and
+            // the next outbound call can fail to acquire a fresh stream.
+            try {
+              const ls = (c as any)?._cgLocalStream as MediaStream | undefined
+              ls?.getTracks().forEach((t) => t.stop())
+            } catch { /* non-fatal */ }
             const startedAt = startedAtRef.current
             const duration = startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0
             // Best-effort: classify the ending. Telnyx's cause codes
@@ -300,7 +307,7 @@ export function Dialer() {
     return () => clearInterval(t)
   }, [callState])
 
-  const dial = useCallback((rawNumber: string, leadId?: string) => {
+  const dial = useCallback(async (rawNumber: string, leadId?: string) => {
     const number = e164(rawNumber)
     if (!number) {
       setError(`Couldn't parse "${rawNumber}" as a US phone`)
@@ -322,6 +329,25 @@ export function Dialer() {
     setCallState('connecting')
     startedAtRef.current = null
 
+    // Capture a fresh mic stream right before placing the call. We
+    // rely on the SDK's audio:true under the hood, but in some Telnyx
+    // SDK versions / browser combos the internal getUserMedia silently
+    // ends up muted after the permission-priming stop() pattern -
+    // result: callee hears nothing while the rep hears them fine.
+    // Pre-capturing and passing localStream sidesteps that entirely.
+    let localStream: MediaStream | null = null
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: false,
+      })
+    } catch (err) {
+      console.error('dial: getUserMedia failed', err)
+      setCallState('idle')
+      setError(err instanceof Error ? err.message : 'Microphone unavailable')
+      return
+    }
+
     try {
       const call = clientRef.current.newCall({
         destinationNumber: number,
@@ -329,14 +355,19 @@ export function Dialer() {
         audio: true,
         video: false,
         // Pipe the remote (callee) audio stream into the hidden
-        // <audio> we render at the bottom of this component. Without
-        // this, the WebRTC connection is established but the rep
-        // hears silence on the other end - which is the bug we just
-        // shipped past. Telnyx SDK accepts either the element itself
-        // or its id; the element is more robust to mount order.
+        // <audio> we render at the bottom of this component.
         remoteElement: remoteAudioRef.current || undefined,
+        // Explicit localStream so the SDK uses our pre-captured mic
+        // tracks instead of silently grabbing its own (which has been
+        // the failure mode on the most recent SDK versions).
+        localStream,
+        // Belt and suspenders: micId hints work on some SDK versions.
+        micId: localStream.getAudioTracks()[0]?.getSettings().deviceId || undefined,
       })
       callRef.current = call
+
+      // Stop the local stream when the call ends to free the mic.
+      ;(call as any)._cgLocalStream = localStream
 
       // Safety net for SDK versions that ignore remoteElement: attach
       // the stream manually as soon as the call exposes one. Telnyx
