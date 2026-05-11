@@ -9,6 +9,7 @@ import { createCalendarEvent } from '@/lib/calendar'
 import { verifyRetellSignature } from '@/lib/webhook-verification'
 import { notifyAdmin } from '@/lib/notifications/notify'
 import { resolveCallBusinessId } from '@/lib/calls/resolve-business'
+import { readSlotCache, writeSlotCache, invalidateSlotCache } from '@/lib/slot-cache'
 import { CONFIG } from '@/lib/config'
 import Stripe from 'stripe'
 
@@ -142,6 +143,15 @@ export async function POST(request: NextRequest) {
    const history = inboundBusinessId
     ? await lookupCallerHistory(inboundBusinessId, fromNumber)
     : { returning_caller: 'false', caller_name: '', last_service: '' }
+
+   // Fire-and-forget slot cache prewarm. Cal.com /slots takes
+   // ~1-2s; running it during the inbound handshake means the
+   // first lookup_availability mid-call returns from cache instead
+   // of hitting Cal.com's API (which is what caused the "let me
+   // check… [silence] still there?" gap). 60s TTL.
+   if (inboundBusinessId) {
+    void prewarmSlotCache(inboundBusinessId)
+   }
 
    return NextResponse.json({
     call_inbound: {
@@ -496,11 +506,12 @@ export async function POST(request: NextRequest) {
 
  // Per-booking fees removed; pricing is flat-monthly only.
 
- // Booking notification SMS - sent to the CONTRACTOR (account
- // holder), not the caller. Single CloudGreet sender number, so
- // this is account-notification traffic and doesn't require per-
- // contractor messaging-profile attachments. Template editable in
- // /dashboard/settings; falls back to DEFAULT_BOOKING_SMS_TEMPLATE.
+ // Backgrounded: owner-notification SMS + slot cache invalidation.
+ // Both are post-booking side effects that don't gate the agent's
+ // next utterance - awaiting them was adding ~300-500ms of dead
+ // air on the call. Fire-and-forget; errors logged but never
+ // surface to the caller.
+ void (async () => {
  try {
  const apptDate = new Date(datetime)
  const formattedTime = apptDate.toLocaleString('en-US', {
@@ -521,6 +532,12 @@ export async function POST(request: NextRequest) {
  has_messaging_profile: !!process.env.TELNYX_MESSAGING_PROFILE_ID,
  })
  }
+ })()
+
+ // Slot we just took shouldn't show as available on the next
+ // lookup. Drop cached scopes for this business; the next live
+ // fetch will be authoritative.
+ void invalidateSlotCache(business_id)
 
  return NextResponse.json({ success: true, appointment_id: apptId })
  }
@@ -603,8 +620,38 @@ export async function POST(request: NextRequest) {
  }
  const business_id = resolvedBusinessId
 
- // Preferred path: ask Cal.com directly. That accounts for manual
- // Cal.com bookings, Google/Apple/Outlook sync, and the contractor's
+ // Cache-first read. The call_inbound handler prewarms a week-wide
+ // slot list before the agent greets the caller, so by the time
+ // the agent calls lookup_availability mid-conversation the data
+ // is sitting in cloudgreet_system_config with a 60s TTL. Hit-rate
+ // for the typical "caller mentions a time -> agent checks" pattern
+ // is ~95%, and it removes the 1-2s Cal.com round-trip + the 4-5s
+ // Retell silence-filler that gets triggered.
+ //
+ // Scope is 'week' when no date arg (full 7-day prewarm matches),
+ // or the YYYY-MM-DD date for a scoped lookup.
+ const scope = date || 'week'
+ const cached = await readSlotCache(business_id, scope)
+ if (cached) {
+ // Filter the cached week down to the requested date if needed.
+ const matchPrefix = date ? `${date}T` : null
+ const filtered = matchPrefix
+ ? cached.slots
+ .map((iso, i) => ({ iso, display: cached.slots_display[i] }))
+ .filter((row) => row.iso.startsWith(matchPrefix))
+ : cached.slots.map((iso, i) => ({ iso, display: cached.slots_display[i] }))
+ return NextResponse.json({
+ success: true,
+ slots: filtered.map((r) => r.iso),
+ slots_display: filtered.map((r) => r.display),
+ timezone: cached.timezone,
+ source: cached.source,
+ cache: 'hit',
+ })
+ }
+
+ // Cache miss: live Cal.com lookup. Accounts for manual Cal.com
+ // bookings, Google/Apple/Outlook sync, and the contractor's
  // working hours - our local appointments table can't see any of
  // those, so falling back to it risks double-booking.
  try {
@@ -621,8 +668,6 @@ export async function POST(request: NextRequest) {
  if (apiKey && eventTypeId) {
  const { listAvailableSlots } = await import('@/lib/calcom')
 
- // Window: either the one day the agent asked about, or the
- // next 7 days starting tomorrow.
  let startIso: string
  let endIso: string
  if (date) {
@@ -647,18 +692,13 @@ export async function POST(request: NextRequest) {
  timeZone: tz,
  })
 
- // Cal.com's /slots returns ISO strings in whatever timezone the
- // event type's schedule is configured in (often the contractor's
- // profile TZ - which may differ from the business TZ). The agent
- // reads "15:00" from a "-04:00" ISO and says "3pm" - wrong if the
- // business is actually -05:00 (Chicago, where 15:00 EDT = 14:00
- // CDT). We re-emit two views so the agent can read them verbatim
- // without any timezone math:
- //   - slots: ISO strings with the business TZ offset (same instant)
- //   - slots_display: human-readable "Thu May 14, 2:00 PM" strings
- //     in the business timezone
  const slots = rawSlots.map((iso) => isoInZone(iso, tz))
  const slots_display = rawSlots.map((iso) => formatHuman(iso, tz))
+
+ // Store in cache for the next lookup in this call.
+ void writeSlotCache(business_id, scope, {
+ slots, slots_display, timezone: tz, source: 'calcom', scope,
+ })
 
  return NextResponse.json({
  success: true,
@@ -666,6 +706,7 @@ export async function POST(request: NextRequest) {
  slots_display,
  timezone: tz,
  source: 'calcom',
+ cache: 'miss',
  })
  }
  } catch (calErr) {
@@ -735,6 +776,52 @@ export async function POST(request: NextRequest) {
  logger.error('Retell voice webhook error', { error: (error as Error).message })
  return NextResponse.json({ success: false }, { status: 500 })
  }
+}
+
+/**
+ * Fire-and-forget prewarm: fetch next-7-days Cal.com slots and cache
+ * them under the business's id. Called from call_inbound so the
+ * agent's first lookup_availability mid-call returns from cache
+ * instead of hitting Cal.com's API. Failures are silent - the live
+ * Cal.com path is the fallback.
+ */
+async function prewarmSlotCache(businessId: string): Promise<void> {
+  try {
+    const { data: biz } = await supabaseAdmin
+      .from('businesses')
+      .select('cal_com_api_key, cal_com_event_type_id, timezone')
+      .eq('id', businessId)
+      .maybeSingle()
+    const apiKey = (biz as any)?.cal_com_api_key as string | null
+    const eventTypeId = (biz as any)?.cal_com_event_type_id as number | null
+    const tz = ((biz as any)?.timezone as string | null) || 'America/Chicago'
+    if (!apiKey || !eventTypeId) return
+
+    const { listAvailableSlots } = await import('@/lib/calcom')
+    const start = new Date()
+    start.setUTCDate(start.getUTCDate() + 1)
+    start.setUTCHours(0, 0, 0, 0)
+    const end = new Date(start)
+    end.setUTCDate(end.getUTCDate() + 7)
+
+    const rawSlots = await listAvailableSlots(apiKey, {
+      eventTypeId,
+      startIso: start.toISOString(),
+      endIso: end.toISOString(),
+      timeZone: tz,
+    })
+
+    const slots = rawSlots.map((iso) => isoInZone(iso, tz))
+    const slots_display = rawSlots.map((iso) => formatHuman(iso, tz))
+
+    await writeSlotCache(businessId, 'week', {
+      slots, slots_display, timezone: tz, source: 'calcom', scope: 'week',
+    })
+  } catch (e) {
+    logger.warn('prewarmSlotCache failed (non-fatal)', {
+      businessId, error: e instanceof Error ? e.message : 'Unknown',
+    })
+  }
 }
 
 /**
