@@ -45,8 +45,9 @@ export type RetellTransferCallTool = {
     number: string
   }
   // Retell's validator requires this alongside transfer_destination.
-  // 'cold_transfer' hangs up the agent and rings the destination directly;
-  // 'sip_invite' is the standard SIP method most providers prefer.
+  // 'cold_transfer' hangs up the agent and rings the destination
+  // through Retell's PSTN gateway. We don't set cold_transfer_mode
+  // because pinning sip_invite makes regular phone numbers unreachable.
   transfer_option: {
     type: 'cold_transfer'
     show_transferee_as_caller?: boolean
@@ -174,15 +175,19 @@ export function getRetellGeneralTools(
         type: 'transfer_call',
         name: 'transfer_call',
         description:
-          "Warm-transfers the caller to the owner. Use only when the caller explicitly asks for a human, when there's a true emergency that needs a person on the line, or after multiple booking attempts have failed. Don't transfer just because the caller is skeptical or a slot is taken.",
+          "Cold-transfers the caller to the owner's number. Use only when the caller explicitly asks for a human, when there's a true emergency that needs a person on the line, or after multiple booking attempts have failed. Don't transfer just because the caller is skeptical or a slot is taken. The agent hangs up after dialing; the destination is called via Retell's PSTN gateway.",
         transfer_destination: {
           type: 'predefined',
           number: normalised,
         },
+        // We deliberately do NOT pin cold_transfer_mode. The earlier
+        // 'sip_invite' value routed via SIP INVITE which only works
+        // when the destination is itself a SIP endpoint - regular
+        // PSTN phones (which is every contractor) just hear a beep
+        // and the transfer fails silently. Omitting the field lets
+        // Retell pick the PSTN-correct routing.
         transfer_option: {
           type: 'cold_transfer',
-          show_transferee_as_caller: false,
-          cold_transfer_mode: 'sip_invite',
         },
       })
     }
