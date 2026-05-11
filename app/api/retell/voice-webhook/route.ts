@@ -70,8 +70,37 @@ export async function POST(request: NextRequest) {
  }
  }
 
- // Now process the verified body
- let tool: RetellToolCall | null = body.tool_call || null
+ // Now process the verified body. Retell has shipped at least three
+ // different shapes for function-call webhooks over the years:
+ //   - {tool_call: {name, arguments}}
+ //   - {name, args}                          (current shape from logs)
+ //   - {function_call: {name, arguments}}
+ // Normalise all of them into a single RetellToolCall shape so the
+ // switch below doesn't care which version Retell happens to be on.
+ let tool: RetellToolCall | null = null
+ if (body.tool_call?.name) {
+  tool = {
+   name: body.tool_call.name,
+   arguments: body.tool_call.arguments || body.tool_call.args || {},
+  }
+ } else if (body.function_call?.name) {
+  tool = {
+   name: body.function_call.name,
+   arguments: body.function_call.arguments || body.function_call.args || {},
+  }
+ } else if (typeof body.name === 'string' && body.name && eventType !== 'call_inbound') {
+  // Top-level {name, args} form. Guard against this being a regular
+  // lifecycle payload that also happens to have a `name` field.
+  const looksLikeTool =
+   body.args && typeof body.args === 'object'
+   || body.arguments && typeof body.arguments === 'object'
+  if (looksLikeTool) {
+   tool = {
+    name: body.name,
+    arguments: body.args || body.arguments || {},
+   }
+  }
+ }
  const tenantId: string | undefined = body.tenant_id || body.metadata?.tenant_id
 
  // Resolve the calling tenant from the Retell agent_id, NOT from the
