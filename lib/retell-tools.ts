@@ -44,6 +44,14 @@ export type RetellTransferCallTool = {
     type: 'predefined'
     number: string
   }
+  // Retell's validator requires this alongside transfer_destination.
+  // 'cold_transfer' hangs up the agent and rings the destination directly;
+  // 'sip_invite' is the standard SIP method most providers prefer.
+  transfer_option: {
+    type: 'cold_transfer'
+    show_transferee_as_caller?: boolean
+    cold_transfer_mode?: 'sip_invite' | 'sip_refer'
+  }
 }
 
 export type RetellGeneralTool = RetellCustomTool | RetellEndCallTool | RetellTransferCallTool
@@ -150,24 +158,35 @@ export function getRetellGeneralTools(
     },
   ]
 
-  // NOTE: transfer_call is intentionally NOT auto-attached.
+  // transfer_call needs BOTH transfer_destination AND transfer_option
+  // in Retell's current schema. Earlier attempts shipped only
+  // transfer_destination and got 400 with "must have required property
+  // transfer_option" - which wiped the whole general_tools patch and
+  // dropped the four custom tools as collateral damage. The correct
+  // shape (per the live API as of 2026-05) is below.
   //
-  // Retell's API schema for the transfer_call tool inside the LLM's
-  // general_tools array shifts between versions (transfer_destination
-  // vs transfer_option vs transfer_destination_number). Sending the
-  // wrong shape causes the entire update-retell-llm patch to 400 and
-  // wipes ALL tools - including the four custom ones we DO control.
-  // We tried two formats, both blew up the LLM patch.
-  //
-  // Pragmatic move: keep the four reliable tools auto-attached, and
-  // have admins add transfer_call manually in Retell's dashboard
-  // (one-time per agent). This is what they were doing before this
-  // automation existed, so it's not a regression - it's a tradeoff
-  // against the whole tool list being broken.
-  //
-  // opts.escalationPhone is preserved on the API but unused for now.
-  // If/when Retell stabilises the schema, re-enable this block.
-  void opts.escalationPhone
+  // Skipped entirely when no phone is on file OR when the saved phone
+  // isn't valid E.164, so a malformed number never poisons the patch.
+  if (opts.escalationPhone) {
+    const normalised = normaliseE164(opts.escalationPhone)
+    if (normalised) {
+      tools.push({
+        type: 'transfer_call',
+        name: 'transfer_call',
+        description:
+          "Warm-transfers the caller to the owner. Use only when the caller explicitly asks for a human, when there's a true emergency that needs a person on the line, or after multiple booking attempts have failed. Don't transfer just because the caller is skeptical or a slot is taken.",
+        transfer_destination: {
+          type: 'predefined',
+          number: normalised,
+        },
+        transfer_option: {
+          type: 'cold_transfer',
+          show_transferee_as_caller: false,
+          cold_transfer_mode: 'sip_invite',
+        },
+      })
+    }
+  }
 
   return tools
 }
