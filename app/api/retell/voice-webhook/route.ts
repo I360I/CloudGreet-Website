@@ -236,12 +236,29 @@ export async function POST(request: NextRequest) {
  })
 
  if (appointmentError || !appointmentId) {
- logger.error('book_appointment transaction failed', { 
+ logger.error('book_appointment transaction failed', {
  error: appointmentError?.message || 'No appointment ID returned',
+ detail: (appointmentError as any)?.details,
+ hint: (appointmentError as any)?.hint,
+ code: (appointmentError as any)?.code,
  business_id,
- customer_name: name
+ customer_name: name,
+ datetime,
+ service,
  })
- return NextResponse.json({ success: false, error: 'db_error' }, { status: 500 })
+ // Surface enough detail in the response that Retell's logs (and our
+ // own debugging) show *what* the DB rejected, not just "db_error".
+ // The agent reads this and may verbalise it - which is fine for a
+ // launch-grade error: better to say "looks like that didn't go
+ // through, what time were you thinking?" than to claim a booking
+ // that never happened.
+ return NextResponse.json({
+ success: false,
+ error: 'db_error',
+ detail: appointmentError?.message || 'No appointment ID returned',
+ hint: (appointmentError as any)?.hint || null,
+ code: (appointmentError as any)?.code || null,
+ }, { status: 500 })
  }
 
  const apptId = appointmentId
