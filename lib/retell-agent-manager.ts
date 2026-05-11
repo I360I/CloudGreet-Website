@@ -6,6 +6,7 @@ import { SmartAIPrompts, spliceEdgeCasesIntoPrompt, spliceReturningCallerIntoPro
 import { logger } from '@/lib/monitoring'
 import { normalizePhoneForStorage } from './phone-normalization'
 import { getRetellGeneralTools } from './retell-tools'
+import { DEFAULT_POST_CALL_FIELDS } from './retell-default-extractions'
 import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, ValidationResult, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, RateLimitConfig, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
 
 export interface BusinessAgentConfig {
@@ -126,6 +127,13 @@ class RetellAgentManager {
         response_engine: { type: 'retell-llm', llm_id: llmId },
         max_call_duration_ms: 900000, // 15 minutes
         webhook_url: webhookUrl,
+        // Tell Retell what structured fields to extract from each call's
+        // transcript. Without this, post_call_analysis fires but
+        // custom_analysis_data is empty - the dashboard tag and the
+        // customer_name / service_address / service_requested /
+        // booking_type fields would never populate. See
+        // lib/retell-default-extractions.ts for the field bundle.
+        post_call_analysis_data: DEFAULT_POST_CALL_FIELDS,
       };
 
       const response = await fetch('https://api.retellai.com/create-agent', {
@@ -1128,7 +1136,36 @@ class RetellAgentManager {
     }
     t(`wired ${tools.length} tools: ${tools.map(x => x.name).join(', ')}`)
 
-    // 4) Re-publish + re-bind phones so the new tools go live immediately.
+    // 4) Patch the agent's post-call extraction schema so structured
+    //    fields (customer_name, service_address, booking_type, etc.)
+    //    populate on every call's call_extractions. Without this the
+    //    transcript is captured but the dashboard tag stays empty.
+    try {
+      const extractRes = await fetch(
+        `https://api.retellai.com/update-agent/${retellAgentId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            post_call_analysis_data: DEFAULT_POST_CALL_FIELDS,
+            webhook_url: webhookUrl,
+          }),
+        },
+      )
+      if (extractRes.ok) {
+        t(`wired ${DEFAULT_POST_CALL_FIELDS.length} extraction fields + webhook_url`)
+      } else {
+        const txt = await extractRes.text().catch(() => extractRes.statusText)
+        t(`update-agent extractions ${extractRes.status}: ${txt.slice(0, 200)}`)
+      }
+    } catch (e) {
+      t(`update-agent extractions threw: ${e instanceof Error ? e.message : 'Unknown'}`)
+    }
+
+    // 5) Re-publish + re-bind phones so the new tools go live immediately.
     await this.maybePublish(retellAgentId, t)
     return trace
   }
