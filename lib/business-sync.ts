@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './supabase'
 import { logger } from './monitoring'
+import { timezoneForState } from './timezones'
 
 /**
  * Sync scraped fields from the originating lead row onto the linked
@@ -78,7 +79,7 @@ export async function syncBusinessFromLead(opts: {
 
     const { data: biz } = await supabaseAdmin
       .from('businesses')
-      .select('id, website, address, city, state, zip_code')
+      .select('id, website, address, city, state, zip_code, timezone')
       .eq('id', businessId)
       .maybeSingle()
     if (!biz) return result
@@ -90,6 +91,13 @@ export async function syncBusinessFromLead(opts: {
     if (lead.city && !biz.city) update.city = lead.city
     if (lead.state && !biz.state) update.state = lead.state
     if (lead.zip && !biz.zip_code) update.zip_code = lead.zip
+
+    // Derive timezone from state if we don't have one yet. Stops the
+    // agent from quoting Eastern times for a Texas business etc.
+    if (!biz.timezone) {
+      const tz = timezoneForState(lead.state || (update.state as string | undefined))
+      if (tz) update.timezone = tz
+    }
 
     if (Object.keys(update).length === 0) return result
 

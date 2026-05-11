@@ -143,6 +143,24 @@ export async function POST(request: NextRequest) {
    } catch { /* non-fatal */ }
   }
 
+  // Pull the business's state so we can derive a timezone that
+  // matches where the contractor actually operates - NOT Cal.com's
+  // profile timezone. Anthony's Cal.com is in NY but A1 is in
+  // Houston; using Cal.com's TZ caused the agent to offer Eastern
+  // times when the caller meant Central. State-derived TZ matches
+  // reality.
+  const { data: bizForTz } = await supabaseAdmin
+   .from('businesses')
+   .select('state, timezone')
+   .eq('id', authResult.businessId)
+   .maybeSingle()
+  const { resolveBusinessTimezone } = await import('@/lib/timezones')
+  const resolvedTz =
+   (bizForTz as any)?.timezone
+   || resolveBusinessTimezone({ state: (bizForTz as any)?.state })
+   || me.timeZone
+   || 'America/Chicago'
+
   const { error: updateError } = await supabaseAdmin
    .from('businesses')
    .update({
@@ -155,6 +173,7 @@ export async function POST(request: NextRequest) {
     cal_com_webhook_secret: webhookSecret,
     calcom_connected: true,
     calcom_connected_at: new Date().toISOString(),
+    timezone: resolvedTz,
     updated_at: new Date().toISOString(),
     // Note: deliberately not writing onboarding_step here. The UI derives
     // the step from calcom_connected + forwarding_verified_at flags, and

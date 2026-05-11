@@ -10,6 +10,7 @@ import { verifyRetellSignature } from '@/lib/webhook-verification'
 import { notifyAdmin } from '@/lib/notifications/notify'
 import { resolveCallBusinessId } from '@/lib/calls/resolve-business'
 import { readSlotCache, writeSlotCache, invalidateSlotCache } from '@/lib/slot-cache'
+import { resolveBusinessTimezone } from '@/lib/timezones'
 import { CONFIG } from '@/lib/config'
 import Stripe from 'stripe'
 
@@ -313,7 +314,12 @@ export async function POST(request: NextRequest) {
  // Cal.com booking - this is the path that lands on the contractor's
  // calendar (Google/Apple/Outlook via Cal.com). Without this, the
  // appointment exists in our DB but never appears on their actual
- // calendar feed.
+ // calendar feed. We HARD FAIL when Cal.com is connected but the
+ // sync fails - silently swallowing the error has been the source
+ // of "agent says booked, calendar is empty" false positives. The
+ // agent gets the error and tells the caller honestly that the
+ // booking didn't go through.
+ const sideEffects: string[] = ['db_inserted']
  if ((business as any)?.cal_com_api_key && (business as any)?.cal_com_event_type_id) {
  try {
   const { createBooking } = await import('@/lib/calcom')
@@ -323,7 +329,10 @@ export async function POST(request: NextRequest) {
    attendee: {
     name: name || 'Caller',
     email: `noemail+${apptId}@cloudgreet.com`,
-    timeZone: (business as any).timezone || 'America/Chicago',
+    timeZone: resolveBusinessTimezone({
+      explicit: (business as any).timezone,
+      state: (business as any).state,
+    }),
     phoneNumber: phone || undefined,
    },
    metadata: {
@@ -333,8 +342,6 @@ export async function POST(request: NextRequest) {
    },
    notes: `Booked by CloudGreet AI receptionist. Service requested: ${service || 'unspecified'}. Caller phone: ${phone || 'unknown'}.`,
   })
-  // Persist Cal.com booking ids on the appointment so cancel/reschedule
-  // flows can find it later.
   await supabaseAdmin
    .from('appointments')
    .update({
@@ -343,17 +350,38 @@ export async function POST(request: NextRequest) {
     updated_at: new Date().toISOString(),
    })
    .eq('id', apptId)
+  sideEffects.push('calcom_synced')
   logger.info('Cal.com booking created', {
    business_id, apptId, calBookingUid: booking.uid,
   })
  } catch (calErr) {
-  logger.error('Cal.com booking failed (DB appointment kept)', {
-   business_id, apptId,
-   error: calErr instanceof Error ? calErr.message : 'Unknown',
+  const msg = calErr instanceof Error ? calErr.message : 'Unknown'
+  logger.error('Cal.com booking failed', {
+   business_id, apptId, error: msg,
   })
+  // Mark the DB row as a failed sync so the contractor's dashboard
+  // can flag it (instead of showing a confirmed booking that doesn't
+  // exist on their actual calendar).
+  await supabaseAdmin
+   .from('appointments')
+   .update({
+    status: 'sync_failed',
+    notes: `Cal.com sync failed: ${msg.slice(0, 300)}`,
+    updated_at: new Date().toISOString(),
+   })
+   .eq('id', apptId)
+  return NextResponse.json({
+   success: false,
+   error: 'calcom_sync_failed',
+   detail: msg,
+   appointment_id: apptId,
+   did: sideEffects,
+   guidance: "Tell the caller the booking didn't go through and offer to take their info for a callback.",
+  }, { status: 502 })
  }
  } else {
  logger.warn('Skipping Cal.com booking - no cal.com config on business', { business_id })
+ sideEffects.push('calcom_skipped_not_configured')
  }
 
  // Legacy Google Calendar sync - kept for backward compatibility but
@@ -538,8 +566,13 @@ export async function POST(request: NextRequest) {
  // lookup. Drop cached scopes for this business; the next live
  // fetch will be authoritative.
  void invalidateSlotCache(business_id)
+ sideEffects.push('owner_notified_async', 'cache_invalidated')
 
- return NextResponse.json({ success: true, appointment_id: apptId })
+ return NextResponse.json({
+  success: true,
+  appointment_id: apptId,
+  did: sideEffects,
+ })
  }
  case 'send_booking_sms': {
  const { phone, appt_id } = tool.arguments || {}
@@ -573,7 +606,7 @@ export async function POST(request: NextRequest) {
  const [{ data: bizRow }, { data: apptRow }] = await Promise.all([
  supabaseAdmin
  .from('businesses')
- .select('business_name, timezone')
+ .select('business_name, timezone, state')
  .eq('id', resolvedBusinessId)
  .maybeSingle(),
  supabaseAdmin
@@ -583,17 +616,35 @@ export async function POST(request: NextRequest) {
  .maybeSingle(),
  ])
 
- const businessName = (bizRow as any)?.business_name || 'your appointment'
- const tz = ((bizRow as any)?.timezone as string | null) || 'America/Chicago'
+ // HARD FAIL when the appointment row doesn't exist or has no
+ // scheduled time. The previous fallback ("your appointment is
+ // confirmed") was the false-positive that sent a misleading SMS
+ // for ghost bookings - the caller got a text after a booking
+ // that never actually saved. Agent now gets a clear error and
+ // can tell the caller honestly.
+ if (!apptRow) {
+ return NextResponse.json({
+ success: false,
+ error: 'appointment_not_found',
+ detail: `No appointment row exists for id ${appt_id}. The book_appointment call before this may have failed.`,
+ }, { status: 404 })
+ }
  const isoTime = (apptRow as any)?.scheduled_date || (apptRow as any)?.start_time
+ if (!isoTime) {
+ return NextResponse.json({
+ success: false,
+ error: 'appointment_missing_time',
+ detail: `Appointment ${appt_id} has no scheduled_date or start_time.`,
+ }, { status: 422 })
+ }
+ const businessName = (bizRow as any)?.business_name || 'your appointment'
+ const tz = resolveBusinessTimezone({
+   explicit: (bizRow as any)?.timezone,
+   state: (bizRow as any)?.state,
+ })
  const service = (apptRow as any)?.service_type
- const whenText = isoTime
- ? formatHuman(isoTime, tz)
- : null
-
- const body = whenText
- ? `${businessName}: you're booked for ${service ? service + ' ' : ''}${whenText}. We'll see you then! Reply STOP to opt out.`
- : `${businessName}: your appointment is confirmed. We'll see you soon. Reply STOP to opt out.`
+ const whenText = formatHuman(isoTime, tz)
+ const body = `${businessName}: you're booked for ${service ? service + ' ' : ''}${whenText}. We'll see you then! Reply STOP to opt out.`
 
  try {
  await telnyxClient.sendSMS(phone, body, fromNum)
@@ -657,13 +708,16 @@ export async function POST(request: NextRequest) {
  try {
  const { data: biz } = await supabaseAdmin
  .from('businesses')
- .select('cal_com_api_key, cal_com_event_type_id, timezone')
+ .select('cal_com_api_key, cal_com_event_type_id, timezone, state')
  .eq('id', business_id)
  .maybeSingle()
 
  const apiKey = (biz as any)?.cal_com_api_key as string | null
  const eventTypeId = (biz as any)?.cal_com_event_type_id as number | null
- const tz = ((biz as any)?.timezone as string | null) || 'America/Chicago'
+ const tz = resolveBusinessTimezone({
+   explicit: (biz as any)?.timezone,
+   state: (biz as any)?.state,
+ })
 
  if (apiKey && eventTypeId) {
  const { listAvailableSlots } = await import('@/lib/calcom')
@@ -789,12 +843,15 @@ async function prewarmSlotCache(businessId: string): Promise<void> {
   try {
     const { data: biz } = await supabaseAdmin
       .from('businesses')
-      .select('cal_com_api_key, cal_com_event_type_id, timezone')
+      .select('cal_com_api_key, cal_com_event_type_id, timezone, state')
       .eq('id', businessId)
       .maybeSingle()
     const apiKey = (biz as any)?.cal_com_api_key as string | null
     const eventTypeId = (biz as any)?.cal_com_event_type_id as number | null
-    const tz = ((biz as any)?.timezone as string | null) || 'America/Chicago'
+    const tz = resolveBusinessTimezone({
+   explicit: (biz as any)?.timezone,
+   state: (biz as any)?.state,
+ })
     if (!apiKey || !eventTypeId) return
 
     const { listAvailableSlots } = await import('@/lib/calcom')
