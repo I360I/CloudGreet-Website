@@ -30,7 +30,7 @@ export async function GET(
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   if (!r) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const [{ data: rep }, biz, owner] = await Promise.all([
+  const [{ data: rep }, biz, owner, lead] = await Promise.all([
     supabaseAdmin
       .from('custom_users')
       .select('id, email, name, first_name, last_name')
@@ -55,7 +55,35 @@ export async function GET(
           .maybeSingle()
           .then((res) => res.data)
       : Promise.resolve(null),
+    // The originating lead (if any) often has scraped data the
+    // businesses row was created without - website, contact_name,
+    // address, even Google rating. Fall back to it so the workshop
+    // doesn't say "no website" when we literally scraped one.
+    r.business_id
+      ? supabaseAdmin
+          .from('leads')
+          .select('website, contact_name, address, city, state, google_rating, google_review_count, business_type')
+          .eq('business_id', r.business_id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+          .then((res) => res.data)
+      : Promise.resolve(null),
   ])
+
+  // Backfill: if the business has no website but the lead does, write
+  // it through so future queries (and the chat context block) see it
+  // on the business row directly. One-time fix per business; no-op
+  // after that. Best-effort - we still serve the merged value below
+  // even if the write fails.
+  if (r.business_id && (lead as any)?.website && !(biz as any)?.website) {
+    try {
+      await supabaseAdmin
+        .from('businesses')
+        .update({ website: (lead as any).website, updated_at: new Date().toISOString() })
+        .eq('id', r.business_id)
+    } catch { /* non-fatal */ }
+  }
 
   const repName =
     rep?.name ||
@@ -90,16 +118,22 @@ export async function GET(
       ? {
           id: r.business_id,
           business_name: (biz as any).business_name || r.prospect_business_name,
-          address: (biz as any).address || null,
+          // Layered fallbacks: business row -> originating lead row.
+          // Lead data is what the scraper found; reps don't always
+          // re-paste it during onboarding.
+          address: (biz as any).address || (lead as any)?.address || null,
           services: (biz as any).services || [],
           business_hours: (biz as any).business_hours || null,
-          website: (biz as any).website || null,
+          website: (biz as any).website || (lead as any)?.website || null,
+          owner_name: (lead as any)?.contact_name || null,
           login_email: (owner as any)?.email || null,
           cal_com_username: (biz as any).cal_com_username || null,
           cal_com_event_type_slug: (biz as any).cal_com_event_type_slug || null,
           has_cal_api_key: !!(biz as any).cal_com_api_key,
           customization_status: (biz as any).customization_status || 'not_sent',
           customization_submitted_at: (biz as any).customization_submitted_at || null,
+          google_rating: (lead as any)?.google_rating ?? null,
+          google_review_count: (lead as any)?.google_review_count ?? null,
         }
       : null,
   }
