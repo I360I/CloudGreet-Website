@@ -1161,7 +1161,9 @@ class RetellAgentManager {
     if (!patchRes.ok) {
       const txt = await patchRes.text().catch(() => patchRes.statusText)
       t(`update-retell-llm ${patchRes.status}: ${txt.slice(0, 200)}`)
-      throw new Error(`Failed to attach tools: ${patchRes.status}`)
+      // Include the body in the thrown message so the caller sees what
+      // Retell actually rejected (otherwise "Failed: 400" is useless).
+      throw new Error(`Failed to attach tools: ${patchRes.status} ${txt.slice(0, 400)}`)
     }
     t(`wired ${tools.length} tools: ${tools.map(x => x.name).join(', ')}`)
 
