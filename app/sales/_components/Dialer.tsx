@@ -191,6 +191,22 @@ export function Dialer() {
           else if (s === 'active') {
             setCallState('active')
             startedAtRef.current = Date.now()
+            // Telnyx SDK mutes the local mic on call start
+            // ("Muting local audio tracks on start" log in bundle.js).
+            // The moment the call flips to active, unmute so the
+            // callee can actually hear the rep.
+            try {
+              if (typeof (c as any).unmuteAudio === 'function') {
+                (c as any).unmuteAudio()
+              }
+              const senders: RTCRtpSender[] | undefined =
+                (c as any)?.peer?.peerConnection?.getSenders?.()
+              senders?.forEach((sndr) => {
+                if (sndr.track?.kind === 'audio' && !sndr.track.enabled) {
+                  sndr.track.enabled = true
+                }
+              })
+            } catch { /* non-fatal */ }
           } else if (s === 'hangup' || s === 'destroy' || s === 'purge') {
             // Release the mic stream we captured at dial time. Without
             // this the browser keeps the mic active across calls and
@@ -356,14 +372,15 @@ export function Dialer() {
       const call = clientRef.current.newCall({
         destinationNumber: number,
         callerNumber: fromNumberRef.current,
-        // The Telnyx SDK option is `mediaStream`, NOT `localStream`.
-        // When passed, the SDK skips its internal getUserMedia and
-        // uses our tracks directly. Previously we sent `localStream`
-        // which the SDK ignored entirely, so it tried to capture
-        // internally and ended up with a muted track on this SDK
-        // version. Outbound audio was never reaching the callee.
-        mediaStream: localStream,
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        // Correct option per @telnyx/webrtc 2.26.4 ICallOptions:
+        // it's `localStream`, not `mediaStream`. The previous attempt
+        // sent `mediaStream` (which the SDK silently ignored, fell
+        // back to internal getUserMedia) and `localStream` before
+        // that (correct name, but the SDK still muted it on start -
+        // see the unmute below for the actual reason audio wasn't
+        // getting through).
+        localStream,
+        audio: true,
         video: false,
         // Pipe the remote (callee) audio stream into the hidden
         // <audio> we render at the bottom of this component.
@@ -371,32 +388,46 @@ export function Dialer() {
       })
       callRef.current = call
 
-      // Verify the audio sender on the underlying RTCPeerConnection
-      // is actually active. If the SDK still ended up with a disabled
-      // track somehow, log it so we can see in the console why the
-      // callee hears nothing - and force-enable as a last resort.
-      setTimeout(() => {
+      // *** THE ACTUAL FIX ***
+      // The Telnyx SDK explicitly mutes the local audio tracks on
+      // call start (literal log line in bundle.js: "Muting local
+      // audio tracks on start"). That's why every attempt to make
+      // the callee hear us was failing - SDK was muting the mic
+      // the moment the call went active. We have to unmute via
+      // the call object's unmuteAudio() method once the call is
+      // established. Multiple attempts since we don't know exactly
+      // when "active" fires for this SDK version.
+      const tryUnmute = () => {
         try {
+          if (typeof (call as any).unmuteAudio === 'function') {
+            (call as any).unmuteAudio()
+          }
+          // Belt and suspenders: also force the captured track on.
+          localStream?.getAudioTracks().forEach((t) => { t.enabled = true })
+          // And the underlying RTCRtpSender if it's accessible.
           const senders: RTCRtpSender[] | undefined =
             (call as any)?.peer?.peerConnection?.getSenders?.()
           const audioSender = senders?.find((s) => s.track?.kind === 'audio')
-          if (audioSender?.track) {
-            // eslint-disable-next-line no-console
-            console.info('dialer outbound audio sender', {
-              enabled: audioSender.track.enabled,
-              muted: audioSender.track.muted,
-              readyState: audioSender.track.readyState,
-            })
-            if (!audioSender.track.enabled) audioSender.track.enabled = true
-          } else {
-            // eslint-disable-next-line no-console
-            console.warn('dialer: no audio sender on RTCPeerConnection - SDK did not attach mic')
+          if (audioSender?.track && !audioSender.track.enabled) {
+            audioSender.track.enabled = true
           }
+          // eslint-disable-next-line no-console
+          console.info('dialer: unmute attempt', {
+            hasMethod: typeof (call as any).unmuteAudio === 'function',
+            trackEnabled: localStream?.getAudioTracks()[0]?.enabled,
+            senderEnabled: audioSender?.track?.enabled,
+            isAudioMuted: (call as any)?.isAudioMuted,
+          })
         } catch (e) {
           // eslint-disable-next-line no-console
-          console.warn('dialer sender inspection threw', e)
+          console.warn('dialer unmute attempt threw', e)
         }
-      }, 1500)
+      }
+      // Fire multiple times to catch whichever state transition
+      // un-mutes us. Cheap operation, no harm in repeating.
+      setTimeout(tryUnmute, 500)
+      setTimeout(tryUnmute, 1500)
+      setTimeout(tryUnmute, 3000)
 
       // Stop the local stream when the call ends to free the mic.
       ;(call as any)._cgLocalStream = localStream
