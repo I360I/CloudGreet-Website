@@ -163,6 +163,13 @@ function Workspace({ item, onChanged }: { item: Item; onChanged: () => void }) {
             currentWebsite={item.business?.website || null}
             onChanged={onChanged}
           />
+
+          <SubmissionCard
+            closeId={item.close_id}
+            demo={item.demo}
+            prospectBusinessName={item.prospect.business_name || item.business?.business_name || null}
+            onChanged={onChanged}
+          />
         </div>
 
         {/* Sidebar - everything we know about this prospect, glanceable. */}
@@ -403,6 +410,207 @@ function Side({ title, icon, children }: { title: string; icon?: React.ReactNode
       </div>
       <div className="space-y-1">{children}</div>
     </div>
+  )
+}
+
+/**
+ * Final step in the workshop: paste the Retell test number, optionally
+ * add notes, hit "Mark agent ready". Triggers POST .../submit which:
+ *  - Saves the test phone on the close
+ *  - Propagates it to phone_numbers / ai_agents / businesses so the
+ *    contractor's dashboard onboarding flips from "agent being built"
+ *  - Slacks "Agent complete" and notifies the rep their demo is live
+ *
+ * After ready, the card switches to a status display showing the live
+ * test number and a "Re-edit" button if something changes.
+ */
+function SubmissionCard({ closeId, demo, prospectBusinessName, onChanged }: {
+  closeId: string
+  demo: Item['demo']
+  prospectBusinessName: string | null
+  onChanged: () => void
+}) {
+  const alreadyReady = demo.status === 'ready' && !!demo.test_phone
+  const [editing, setEditing] = useState(!alreadyReady)
+  const [testPhone, setTestPhone] = useState(demo.test_phone || '')
+  const [notes, setNotes] = useState(demo.notes || '')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [flash, setFlash] = useState('')
+
+  useEffect(() => {
+    setTestPhone(demo.test_phone || '')
+    setNotes(demo.notes || '')
+    setEditing(!(demo.status === 'ready' && !!demo.test_phone))
+  }, [demo.status, demo.test_phone, demo.notes])
+
+  const submit = async () => {
+    const tp = testPhone.trim()
+    if (!tp) { setErr('Paste the Retell test number first.'); return }
+    setBusy(true); setErr(''); setFlash('')
+    try {
+      const r = await fetchWithAuth(`/api/admin/agents-due/${closeId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ test_phone: tp, notes: notes.trim() || undefined }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setErr(j?.error || `Submit failed (${r.status})`)
+      } else {
+        setFlash(`Marked ready · Slack pinged · rep notified${prospectBusinessName ? ` for ${prospectBusinessName}` : ''}`)
+        setEditing(false)
+        onChanged()
+        setTimeout(() => setFlash(''), 6000)
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Submit failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const skip = async () => {
+    if (!window.confirm('Mark this agent as skipped? The rep will see it as not-built and the demo will proceed without a test number.')) return
+    setBusy(true); setErr(''); setFlash('')
+    try {
+      const r = await fetchWithAuth(`/api/admin/agents-due/${closeId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'skipped' }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setErr(j?.error || `Skip failed (${r.status})`)
+      } else {
+        onChanged()
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Panel padding="none">
+      <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between gap-2">
+        <div className="inline-flex items-center gap-2">
+          {alreadyReady && !editing ? (
+            <Check className="w-3.5 h-3.5 text-emerald-400" />
+          ) : (
+            <Phone className="w-3.5 h-3.5 text-fuchsia-300" />
+          )}
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-fuchsia-300">
+            {alreadyReady && !editing ? 'Agent ready · live for demo' : 'Submit · mark agent ready'}
+          </span>
+        </div>
+        <span className="text-[10px] font-mono text-gray-500">
+          test phone → flips status, pings rep
+        </span>
+      </div>
+
+      {alreadyReady && !editing ? (
+        <div className="px-4 py-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="text-gray-400">
+              <div className="text-[10px] uppercase tracking-wider mb-1">Test number</div>
+              <div className="font-mono text-emerald-300">{demo.test_phone}</div>
+            </div>
+            <div className="text-gray-400">
+              <div className="text-[10px] uppercase tracking-wider mb-1">Built</div>
+              <div className="text-gray-300">{demo.built_at ? new Date(demo.built_at).toLocaleString() : '-'}</div>
+            </div>
+          </div>
+          {demo.notes && (
+            <div className="text-xs">
+              <div className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Notes</div>
+              <div className="text-gray-300 whitespace-pre-wrap">{demo.notes}</div>
+            </div>
+          )}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="inline-flex items-center gap-1.5 text-gray-400 hover:text-gray-200 px-2 py-1.5 rounded-lg text-xs"
+            >
+              <PencilSimple className="w-3 h-3" /> Edit
+            </button>
+          </div>
+          {flash && <div className="text-xs text-emerald-300">{flash}</div>}
+        </div>
+      ) : (
+        <div className="px-4 py-4 space-y-3">
+          <div className="text-xs text-gray-400 leading-relaxed">
+            Paste the Retell test number that was assigned to this agent. Submitting flips the demo status to <span className="font-mono text-fuchsia-300">ready</span>, propagates the number into the contractor&apos;s dashboard, and Slacks the rep so they can run the demo.
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-[0.18em] text-gray-500 mb-1.5">
+              Retell test number
+            </label>
+            <input
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+              placeholder="+17372960084"
+              autoFocus
+              className="w-full bg-gray-950 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-gray-200 placeholder-gray-600 focus:border-fuchsia-400/40 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-[0.18em] text-gray-500 mb-1.5">
+              Notes (optional)
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="Anything the rep should know before calling…"
+              className="w-full bg-gray-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-200 placeholder-gray-600 focus:border-fuchsia-400/40 focus:outline-none resize-y"
+            />
+          </div>
+
+          {err && (
+            <div className="text-xs text-rose-300 bg-rose-500/10 border border-rose-500/30 rounded-lg px-2 py-1.5">
+              {err}
+            </div>
+          )}
+          {flash && <div className="text-xs text-emerald-300">{flash}</div>}
+
+          <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={submit}
+                disabled={busy || !testPhone.trim()}
+                className="inline-flex items-center gap-1.5 bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-200 px-4 py-2 rounded-lg text-xs font-medium hover:bg-fuchsia-500/30 disabled:opacity-50"
+              >
+                {busy ? <CircleNotch className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                Mark agent ready
+              </button>
+              {alreadyReady && (
+                <button
+                  type="button"
+                  onClick={() => { setEditing(false); setTestPhone(demo.test_phone || ''); setNotes(demo.notes || ''); setErr('') }}
+                  className="text-xs text-gray-500 hover:text-gray-200"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+            {!alreadyReady && (
+              <button
+                type="button"
+                onClick={skip}
+                disabled={busy}
+                className="text-[11px] text-gray-500 hover:text-rose-300"
+              >
+                Skip (don&apos;t build for this demo)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </Panel>
   )
 }
 
