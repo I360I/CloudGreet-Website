@@ -64,6 +64,31 @@ export async function POST(
     })
   }
 
+  // Pull the linked business row (if any) so we have website + address +
+  // services + business_hours to seed buildBusinessContext.
+  let linkedBiz: any = null
+  if ((close as any).business_id) {
+    const { data: b } = await supabaseAdmin
+      .from('businesses')
+      .select('business_name, address, services, business_hours, website, phone, phone_number, owner_name, city, state')
+      .eq('id', (close as any).business_id)
+      .maybeSingle()
+    linkedBiz = b
+  }
+
+  // Also pull the original lead row (if rep created the close from a
+  // scrape) - scrape data lives there: rating, review count, place_id,
+  // and the owner_name when the scraper found one.
+  let linkedLead: any = null
+  if ((close as any).business_id) {
+    const { data: l } = await supabaseAdmin
+      .from('leads')
+      .select('contact_name, website, business_name, city, state, google_rating, google_review_count, business_type, address, notes')
+      .eq('business_id', (close as any).business_id)
+      .maybeSingle()
+    linkedLead = l
+  }
+
   let sessionId = body.reset ? null : (close as any).agent_chat_session_id as string | null
   let isFreshSession = false
   if (!sessionId) {
@@ -92,10 +117,32 @@ export async function POST(
     let contextBlock = ''
     try {
       const ctx = await buildBusinessContext({
-        business_name: (close as any).prospect_business_name || undefined,
-        owner_name: (close as any).prospect_contact_name || undefined,
-        phone: (close as any).prospect_phone || undefined,
-        // address, website, services, business_hours filled in by buildBusinessContext from the linked business if any
+        business_name:
+          linkedBiz?.business_name ||
+          linkedLead?.business_name ||
+          (close as any).prospect_business_name ||
+          undefined,
+        owner_name:
+          linkedBiz?.owner_name ||
+          linkedLead?.contact_name ||
+          (close as any).prospect_contact_name ||
+          undefined,
+        phone:
+          linkedBiz?.phone ||
+          linkedBiz?.phone_number ||
+          (close as any).prospect_phone ||
+          undefined,
+        address:
+          linkedBiz?.address ||
+          linkedLead?.address ||
+          [linkedBiz?.city, linkedBiz?.state].filter(Boolean).join(', ') ||
+          undefined,
+        website:
+          linkedBiz?.website ||
+          linkedLead?.website ||
+          undefined,
+        services: Array.isArray(linkedBiz?.services) ? linkedBiz.services : undefined,
+        business_hours: linkedBiz?.business_hours || undefined,
       } as any)
       contextBlock = stringifyContext(ctx)
     } catch (ctxErr) {

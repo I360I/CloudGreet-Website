@@ -121,11 +121,21 @@ export function DraftBuilder({
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok || !j?.success) {
-        setErr(j?.error || 'Could not save website')
+        // Show the full server message (which now includes the
+        // underlying DB error if any) so the admin can debug instead
+        // of staring at a silent "doesn't save" UI.
+        const detail = j?.detail ? ` (${j.detail})` : ''
+        setErr(`${j?.error || `Save failed (${r.status})`}${detail}`)
       } else {
+        // Sync local input to the canonical, normalised URL the server
+        // wrote (so a paste of "tehvac.com" displays as "https://tehvac.com").
+        const savedUrl = j?.saved?.website
+        if (typeof savedUrl === 'string') setWebsiteDraft(savedUrl)
         setWebsiteEditing(false)
         onChanged()
       }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Save failed')
     } finally {
       setBusy(null)
     }

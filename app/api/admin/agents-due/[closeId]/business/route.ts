@@ -24,14 +24,25 @@ export async function PATCH(
   const auth = await requireAdmin(request)
   if (!auth.success) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Resolve the business id from the close.
+  // Resolve the business id from the close. The agents-due listing
+  // filters out closes with no business_id, so this should always have
+  // one - but if a close gets here without one (manual nav, race),
+  // we'd rather tell the admin what's wrong than silently 404.
   const { data: close, error: closeErr } = await supabaseAdmin
     .from('closes')
-    .select('business_id')
+    .select('id, business_id, prospect_business_name')
     .eq('id', params.closeId)
     .maybeSingle()
-  if (closeErr || !close?.business_id) {
-    return NextResponse.json({ error: 'No business linked to this close' }, { status: 404 })
+  if (closeErr) {
+    return NextResponse.json({ error: `Could not load close: ${closeErr.message}` }, { status: 500 })
+  }
+  if (!close) {
+    return NextResponse.json({ error: `Close ${params.closeId} not found` }, { status: 404 })
+  }
+  if (!close.business_id) {
+    return NextResponse.json({
+      error: `This close has no business row linked yet (close.business_id is null). The rep needs to convert the lead into a business before the workshop can edit it.`,
+    }, { status: 409 })
   }
 
   const body = await request.json().catch(() => ({})) as {
@@ -65,12 +76,29 @@ export async function PATCH(
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
   }
 
-  const { error: upErr } = await supabaseAdmin
+  const { data: updated, error: upErr } = await supabaseAdmin
     .from('businesses')
     .update(update)
     .eq('id', close.business_id)
+    .select('id, website, address')
+    .maybeSingle()
   if (upErr) {
-    return NextResponse.json({ error: upErr.message }, { status: 500 })
+    return NextResponse.json({
+      error: `Save failed: ${upErr.message}`,
+      detail: upErr.details || upErr.hint || upErr.code,
+    }, { status: 500 })
   }
-  return NextResponse.json({ success: true, business_id: close.business_id })
+  if (!updated) {
+    // The id exists but the row didn't update - usually means RLS or a
+    // wrong business_id pointer. Tell the admin instead of pretending
+    // success.
+    return NextResponse.json({
+      error: `Update on businesses(id=${close.business_id}) affected 0 rows. The row may not exist or RLS blocked the write.`,
+    }, { status: 500 })
+  }
+  return NextResponse.json({
+    success: true,
+    business_id: close.business_id,
+    saved: { website: (updated as any).website, address: (updated as any).address },
+  })
 }
