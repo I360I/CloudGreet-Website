@@ -527,34 +527,70 @@ export async function POST(request: NextRequest) {
  case 'send_booking_sms': {
  const { phone, appt_id } = tool.arguments || {}
  if (!phone || !appt_id) {
- return NextResponse.json({ success: false, error: 'missing_parameters' }, { status: 400 })
+ return NextResponse.json({
+ success: false,
+ error: 'missing_parameters',
+ detail: 'send_booking_sms needs phone and appt_id',
+ }, { status: 400 })
  }
- // Look up the business's outbound number so the SMS appears to
- // come from the same line the caller dialed.
- const { data: bizRow } = await supabaseAdmin
- .from('businesses')
- .select('phone_number, business_name')
- .eq('id', resolvedBusinessId)
- .maybeSingle()
- const fromNum = (bizRow as any)?.phone_number
+
+ // From-number must be a CloudGreet-managed Telnyx number with
+ // SMS enabled. business.phone_number is the inbound Retell
+ // number, which can't originate SMS - sending from it would
+ // 400 on Telnyx's side. We use the same sender as the owner
+ // booking notification so the contractor's caller and the
+ // contractor himself both get texts from the same line.
+ const fromNum = process.env.CLOUDGREET_NOTIFICATIONS_FROM
  if (!fromNum) {
- logger.warn('send_booking_sms skipped - no phone_number on business', { business_id: resolvedBusinessId })
- return NextResponse.json({ success: false, error: 'no_business_phone' }, { status: 400 })
+ logger.error('send_booking_sms skipped - CLOUDGREET_NOTIFICATIONS_FROM unset')
+ return NextResponse.json({
+ success: false,
+ error: 'no_sender_configured',
+ detail: 'Set CLOUDGREET_NOTIFICATIONS_FROM in Vercel env.',
+ }, { status: 500 })
  }
+
+ // Pull the real appointment so the SMS body has the actual
+ // time + service instead of a bare appt_id the caller can't
+ // act on. Plus the business name for the From label.
+ const [{ data: bizRow }, { data: apptRow }] = await Promise.all([
+ supabaseAdmin
+ .from('businesses')
+ .select('business_name, timezone')
+ .eq('id', resolvedBusinessId)
+ .maybeSingle(),
+ supabaseAdmin
+ .from('appointments')
+ .select('scheduled_date, start_time, service_type')
+ .eq('id', appt_id)
+ .maybeSingle(),
+ ])
+
+ const businessName = (bizRow as any)?.business_name || 'your appointment'
+ const tz = ((bizRow as any)?.timezone as string | null) || 'America/Chicago'
+ const isoTime = (apptRow as any)?.scheduled_date || (apptRow as any)?.start_time
+ const service = (apptRow as any)?.service_type
+ const whenText = isoTime
+ ? formatHuman(isoTime, tz)
+ : null
+
+ const body = whenText
+ ? `${businessName}: you're booked for ${service ? service + ' ' : ''}${whenText}. We'll see you then! Reply STOP to opt out.`
+ : `${businessName}: your appointment is confirmed. We'll see you soon. Reply STOP to opt out.`
+
  try {
- await telnyxClient.sendSMS(
- phone,
- `${(bizRow as any)?.business_name || 'Booking'}: confirmation for appointment ${appt_id}. Reply STOP to opt out; HELP for help.`,
- fromNum,
- )
+ await telnyxClient.sendSMS(phone, body, fromNum)
  return NextResponse.json({ success: true })
  } catch (smsError) {
+ const msg = smsError instanceof Error ? smsError.message : 'Unknown error'
  logger.error('send_booking_sms failed', {
- error: smsError instanceof Error ? smsError.message : 'Unknown error',
- phone,
- appt_id
+ error: msg, phone, appt_id, fromNum,
  })
- return NextResponse.json({ success: false, error: 'sms_send_failed' }, { status: 500 })
+ return NextResponse.json({
+ success: false,
+ error: 'sms_send_failed',
+ detail: msg.slice(0, 300),
+ }, { status: 500 })
  }
  }
  case 'lookup_availability': {
