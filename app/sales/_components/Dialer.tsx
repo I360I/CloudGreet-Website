@@ -90,6 +90,11 @@ export function Dialer() {
   const callRowIdRef = useRef<string | null>(null)
   const fromNumberRef = useRef<string | null>(null)
   const startedAtRef = useRef<number | null>(null)
+  // Telnyx WebRTC needs an <audio> element to pump the remote (callee)
+  // audio into. Without this you hear ringing but nothing else - the
+  // far end's voice has nowhere to go. Created as a hidden tag at the
+  // bottom of the component tree, kept stable across renders.
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
   const setupRef = useRef<((opts?: { fromUserGesture?: boolean }) => Promise<void>) | null>(null)
 
   // ---- Connect once on mount, tear down on unmount.
@@ -323,8 +328,42 @@ export function Dialer() {
         callerNumber: fromNumberRef.current,
         audio: true,
         video: false,
+        // Pipe the remote (callee) audio stream into the hidden
+        // <audio> we render at the bottom of this component. Without
+        // this, the WebRTC connection is established but the rep
+        // hears silence on the other end - which is the bug we just
+        // shipped past. Telnyx SDK accepts either the element itself
+        // or its id; the element is more robust to mount order.
+        remoteElement: remoteAudioRef.current || undefined,
       })
       callRef.current = call
+
+      // Safety net for SDK versions that ignore remoteElement: attach
+      // the stream manually as soon as the call exposes one. Telnyx
+      // emits the stream on the call object's peer or via the
+      // 'mediaStream' notification on the client. We poll briefly
+      // since the exact event name has varied across SDK versions.
+      const attachStream = () => {
+        const el = remoteAudioRef.current
+        if (!el) return false
+        const stream =
+          (call as any)?.remoteStream ||
+          (call as any)?.peer?.remoteStream ||
+          (call as any)?.options?.remoteStream
+        if (stream && el.srcObject !== stream) {
+          el.srcObject = stream
+          el.play().catch(() => { /* autoplay can be blocked - ignore */ })
+          return true
+        }
+        return false
+      }
+      // Try immediately, then poll for up to 5s. Once attached, stop.
+      if (!attachStream()) {
+        const iv = setInterval(() => {
+          if (attachStream() || !callRef.current) clearInterval(iv)
+        }, 200)
+        setTimeout(() => clearInterval(iv), 5000)
+      }
       // Open the server-side log row so we can update it on end.
       void (async () => {
         try {
@@ -543,6 +582,13 @@ export function Dialer() {
 
   return (
     <>
+      {/* Hidden audio sink for the remote (callee) WebRTC stream.
+          Must stay mounted whenever the dialer is mounted, even when
+          the panel is closed - the ref needs to exist before newCall
+          is invoked. autoPlay is on so playback starts the moment a
+          stream is attached; playsInline avoids mobile Safari going
+          fullscreen on video stream containers. */}
+      <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
       <AnimatePresence>
         {open && (
           <motion.div
