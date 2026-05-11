@@ -493,38 +493,93 @@ export async function POST(request: NextRequest) {
  }
  const business_id = resolvedBusinessId
 
+ // Preferred path: ask Cal.com directly. That accounts for manual
+ // Cal.com bookings, Google/Apple/Outlook sync, and the contractor's
+ // working hours - our local appointments table can't see any of
+ // those, so falling back to it risks double-booking.
  try {
- // Use real calendar availability logic
+ const { data: biz } = await supabaseAdmin
+ .from('businesses')
+ .select('cal_com_api_key, cal_com_event_type_id, timezone')
+ .eq('id', business_id)
+ .maybeSingle()
+
+ const apiKey = (biz as any)?.cal_com_api_key as string | null
+ const eventTypeId = (biz as any)?.cal_com_event_type_id as number | null
+ const tz = ((biz as any)?.timezone as string | null) || 'America/Chicago'
+
+ if (apiKey && eventTypeId) {
+ const { listAvailableSlots } = await import('@/lib/calcom')
+
+ // Window: either the one day the agent asked about, or the
+ // next 7 days starting tomorrow.
+ let startIso: string
+ let endIso: string
+ if (date) {
+ startIso = `${date}T00:00:00.000Z`
+ const end = new Date(`${date}T00:00:00.000Z`)
+ end.setUTCDate(end.getUTCDate() + 1)
+ endIso = end.toISOString()
+ } else {
+ const start = new Date()
+ start.setUTCDate(start.getUTCDate() + 1)
+ start.setUTCHours(0, 0, 0, 0)
+ const end = new Date(start)
+ end.setUTCDate(end.getUTCDate() + 7)
+ startIso = start.toISOString()
+ endIso = end.toISOString()
+ }
+
+ const slots = await listAvailableSlots(apiKey, {
+ eventTypeId,
+ startIso,
+ endIso,
+ timeZone: tz,
+ })
+
+ return NextResponse.json({ success: true, slots, source: 'calcom' })
+ }
+ } catch (calErr) {
+ logger.warn('lookup_availability: Cal.com slots failed, falling back to local', {
+ error: calErr instanceof Error ? calErr.message : 'Unknown error',
+ business_id,
+ })
+ // fall through to local
+ }
+
+ // Local fallback: business has no Cal.com connected yet (demo mode),
+ // or Cal.com is temporarily unreachable. Suggests slots based on our
+ // own appointments table and the business's hours.
+ try {
  const { getAvailableSlots } = await import('@/lib/calendar')
- 
- // If date provided, get slots for that date; otherwise get next 7 days
+
  if (date) {
  const slots = await getAvailableSlots(business_id, date, duration)
  const fullSlots = slots.map(slot => `${date}T${slot}:00`)
- return NextResponse.json({ success: true, slots: fullSlots })
+ return NextResponse.json({ success: true, slots: fullSlots, source: 'local' })
  } else {
- // Get next 7 days of available slots
  const allSlots: string[] = []
  const now = new Date()
- 
+
  for (let i = 1; i <= 7; i++) {
  const day = new Date(now)
  day.setDate(now.getDate() + i)
  const dateStr = day.toISOString().slice(0, 10)
- 
+
  const slots = await getAvailableSlots(business_id, dateStr, duration)
  const fullSlots = slots.map(slot => `${dateStr}T${slot}:00`)
  allSlots.push(...fullSlots)
  }
- 
- return NextResponse.json({ success: true, slots: allSlots })
+
+ return NextResponse.json({ success: true, slots: allSlots, source: 'local' })
  }
  } catch (error) {
- logger.error('lookup_availability failed', { 
+ logger.error('lookup_availability failed', {
  error: error instanceof Error ? error.message : 'Unknown error',
- business_id 
+ business_id
  })
- // Fallback to simple slots if calendar lookup fails
+ // Last-resort: synthesized slots so the agent never tells the
+ // caller "I can't see the calendar."
  const now = new Date()
  const fallbackSlots = [1, 2, 3].map((d) => {
  const day = new Date(now)
@@ -532,7 +587,7 @@ export async function POST(request: NextRequest) {
  const dayStr = day.toISOString().slice(0, 10)
  return [`${dayStr}T10:00:00Z`, `${dayStr}T14:00:00Z`]
  }).flat()
- return NextResponse.json({ success: true, slots: fallbackSlots })
+ return NextResponse.json({ success: true, slots: fallbackSlots, source: 'fallback' })
  }
  }
  default:

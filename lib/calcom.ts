@@ -271,6 +271,60 @@ export async function listBookings(
  return all
 }
 
+/* -------------------------------- Slots --------------------------------- */
+
+/**
+ * Returns slot start-times the contractor's Cal.com calendar reports as
+ * available for the given event type and window. This is the right
+ * source of truth (not our local appointments table) because it
+ * accounts for everything Cal.com knows about: manual Cal.com
+ * bookings, third-party calendar sync (Google/Apple/Outlook),
+ * blackout periods, and the contractor's working hours - things our
+ * own DB has no visibility into.
+ *
+ * Returns ISO start-time strings sorted ascending.
+ */
+export async function listAvailableSlots(
+ apiKey: string,
+ input: { eventTypeId: number; startIso: string; endIso: string; timeZone?: string },
+): Promise<string[]> {
+ const qs = new URLSearchParams({
+  eventTypeId: String(input.eventTypeId),
+  start: input.startIso,
+  end: input.endIso,
+ })
+ if (input.timeZone) qs.set('timeZone', input.timeZone)
+
+ // /slots is exposed under 2024-09-04. Older/newer versions either
+ // 404 or return a different shape. Pin explicitly so version
+ // drift on createBooking doesn't break availability lookup.
+ const res = await calFetch<{ status: string; data: any }>(
+  apiKey, `/slots?${qs.toString()}`, { version: '2024-09-04' },
+ )
+
+ // Cal.com 2024-09-04 returns one of two shapes:
+ //   { data: { '2026-05-14': [{ start: '2026-05-14T14:00:00.000Z' }, ...], ... } }
+ //   { data: [{ start: '...' }, ...] }
+ // Both flatten to the same array of start times.
+ const data = res?.data
+ const starts: string[] = []
+ if (Array.isArray(data)) {
+  for (const slot of data) {
+   const s = slot?.start || slot?.time
+   if (typeof s === 'string') starts.push(s)
+  }
+ } else if (data && typeof data === 'object') {
+  for (const day of Object.values(data as Record<string, any>)) {
+   if (!Array.isArray(day)) continue
+   for (const slot of day) {
+    const s = slot?.start || slot?.time
+    if (typeof s === 'string') starts.push(s)
+   }
+  }
+ }
+ return starts.sort()
+}
+
 export async function cancelBooking(
  apiKey: string,
  bookingUid: string,

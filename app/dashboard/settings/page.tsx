@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise } from '@phosphor-icons/react'
+import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise, Plug, Trash, ArrowSquareOut } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 
@@ -1526,6 +1526,8 @@ function CalendarConnectionSection() {
   webhookConfigured: boolean
  } | null>(null)
  const [resyncing, setResyncing] = useState(false)
+ const [disconnecting, setDisconnecting] = useState(false)
+ const [showConnectForm, setShowConnectForm] = useState(false)
  const [flash, setFlash] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
 
  const load = async () => {
@@ -1573,6 +1575,26 @@ function CalendarConnectionSection() {
   }
  }
 
+ const disconnect = async () => {
+  if (!window.confirm('Disconnect Cal.com? Future bookings the AI takes will save locally but won\'t sync to your calendar until you reconnect.')) return
+  setDisconnecting(true); setFlash(null)
+  try {
+   const r = await fetchWithAuth('/api/onboarding/calcom', { method: 'DELETE' })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setFlash({ tone: 'err', text: j?.error || 'Disconnect failed' })
+   } else {
+    setFlash({ tone: 'ok', text: 'Cal.com disconnected.' })
+    await load()
+   }
+  } catch (e) {
+   setFlash({ tone: 'err', text: e instanceof Error ? e.message : 'Disconnect failed' })
+  } finally {
+   setDisconnecting(false)
+   setTimeout(() => setFlash(null), 5000)
+  }
+ }
+
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
    <div className="flex items-center gap-2 mb-1">
@@ -1589,9 +1611,30 @@ function CalendarConnectionSection() {
      <CircleNotch className="w-4 h-4 animate-spin" /> Loading
     </div>
    ) : !info?.connected ? (
-    <div className="text-sm text-gray-600">
-     Cal.com isn&apos;t connected yet. Finish onboarding to link an event type.
-    </div>
+    showConnectForm ? (
+     <CalcomConnectForm
+      onDone={async () => { setShowConnectForm(false); await load(); setFlash({ tone: 'ok', text: 'Cal.com connected. Bookings will sync immediately.' }); setTimeout(() => setFlash(null), 5000) }}
+      onCancel={() => setShowConnectForm(false)}
+     />
+    ) : (
+     <div className="space-y-3">
+      <div className="text-sm text-gray-600">
+       Cal.com isn&apos;t connected yet. Until you connect it, the AI will still answer calls and save appointments locally, but they won&apos;t land on your real calendar.
+      </div>
+      <button
+       type="button"
+       onClick={() => { setShowConnectForm(true); setFlash(null) }}
+       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
+      >
+       <Plug className="w-4 h-4" /> Connect Cal.com
+      </button>
+     </div>
+    )
+   ) : showConnectForm ? (
+    <CalcomConnectForm
+     onDone={async () => { setShowConnectForm(false); await load(); setFlash({ tone: 'ok', text: 'Cal.com updated.' }); setTimeout(() => setFlash(null), 5000) }}
+     onCancel={() => setShowConnectForm(false)}
+    />
    ) : (
     <div className="space-y-4">
      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
@@ -1609,6 +1652,22 @@ function CalendarConnectionSection() {
        {resyncing ? <CircleNotch className="w-4 h-4 animate-spin" /> : <ArrowsClockwise className="w-4 h-4" />}
        {resyncing ? 'Re-syncing...' : 'Re-sync calendar'}
       </button>
+      <button
+       type="button"
+       onClick={() => { setShowConnectForm(true); setFlash(null) }}
+       className="inline-flex items-center gap-2 bg-white border border-gray-300 text-gray-800 px-4 py-2 rounded-xl text-sm font-medium hover:border-gray-400 transition-colors"
+      >
+       <Key className="w-4 h-4" /> Change key or event type
+      </button>
+      <button
+       type="button"
+       onClick={disconnect}
+       disabled={disconnecting}
+       className="inline-flex items-center gap-2 text-rose-700 hover:text-rose-900 text-sm font-medium disabled:opacity-50"
+      >
+       {disconnecting ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Trash className="w-4 h-4" />}
+       Disconnect
+      </button>
       {flash && (
        <span className={`text-sm ${flash.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>
         {flash.text}
@@ -1617,6 +1676,130 @@ function CalendarConnectionSection() {
      </div>
     </div>
    )}
+
+   {!loading && !info?.connected && flash && (
+    <div className={`text-sm mt-3 ${flash.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>{flash.text}</div>
+   )}
   </div>
+ )
+}
+
+function CalcomConnectForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+ type EventTypeOption = { id: number; title: string; slug: string; lengthInMinutes: number }
+ const [apiKey, setApiKey] = useState('')
+ const [eventTypeId, setEventTypeId] = useState<number | null>(null)
+ const [eventTypeOptions, setEventTypeOptions] = useState<EventTypeOption[] | null>(null)
+ const [submitting, setSubmitting] = useState(false)
+ const [error, setError] = useState('')
+ const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+ const fetchEventTypes = async (e?: React.FormEvent) => {
+  if (e) e.preventDefault()
+  setSubmitting(true); setError(''); setFieldErrors({})
+  try {
+   const res = await fetchWithAuth('/api/onboarding/calcom', {
+    method: 'POST',
+    body: JSON.stringify({ apiKey }),
+   })
+   const json = await res.json().catch(() => ({}))
+   if (json.needsEventType && Array.isArray(json.eventTypes)) {
+    setEventTypeOptions(json.eventTypes)
+    if (json.errors) setFieldErrors(json.errors)
+    if (json.eventTypes.length === 0) {
+     setError('No event types found on this account. Create one in Cal.com first.')
+    }
+    return
+   }
+   if (!res.ok || !json.success) {
+    if (json.errors) setFieldErrors(json.errors)
+    throw new Error(json.error || 'Connect failed')
+   }
+  } catch (err) {
+   setError(err instanceof Error ? err.message : 'Failed')
+  } finally {
+   setSubmitting(false)
+  }
+ }
+
+ const submit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  if (eventTypeId == null) { setError('Pick an event type first'); return }
+  setSubmitting(true); setError(''); setFieldErrors({})
+  try {
+   const res = await fetchWithAuth('/api/onboarding/calcom', {
+    method: 'POST',
+    body: JSON.stringify({ apiKey, eventTypeId }),
+   })
+   const json = await res.json().catch(() => ({}))
+   if (!res.ok || !json.success) {
+    if (json.errors) setFieldErrors(json.errors)
+    throw new Error(json.error || 'Connect failed')
+   }
+   onDone()
+  } catch (err) {
+   setError(err instanceof Error ? err.message : 'Failed')
+  } finally {
+   setSubmitting(false)
+  }
+ }
+
+ return (
+  <form onSubmit={eventTypeOptions ? submit : fetchEventTypes} className="space-y-4 pt-2">
+   <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+    Grab a key from{' '}
+    <a href="https://app.cal.com/settings/developer/api-keys" target="_blank" rel="noreferrer" className="text-sky-700 hover:underline inline-flex items-center gap-0.5">
+     Cal.com → Settings → API Keys <ArrowSquareOut className="w-3 h-3" />
+    </a>
+    . It starts with <code className="font-mono bg-white border border-gray-200 px-1 rounded">cal_live_</code>.
+   </div>
+
+   <div>
+    <label className="block text-xs font-medium text-gray-700 mb-1.5">Cal.com API key</label>
+    <input
+     type="password" required value={apiKey}
+     onChange={(e) => { setApiKey(e.target.value); setEventTypeOptions(null); setEventTypeId(null) }}
+     placeholder="cal_live_..."
+     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-500"
+    />
+    {fieldErrors.apiKey && <p className="mt-1 text-xs text-rose-700">{fieldErrors.apiKey}</p>}
+   </div>
+
+   {eventTypeOptions && eventTypeOptions.length > 0 && (
+    <div>
+     <label className="block text-xs font-medium text-gray-700 mb-1.5">Event type</label>
+     <select
+      required value={eventTypeId ?? ''}
+      onChange={(e) => setEventTypeId(parseInt(e.target.value, 10))}
+      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-500"
+     >
+      <option value="" disabled>Pick one…</option>
+      {eventTypeOptions.map((et) => (
+       <option key={et.id} value={et.id}>{et.title} ({et.lengthInMinutes} min)</option>
+      ))}
+     </select>
+     {fieldErrors.eventTypeId && <p className="mt-1 text-xs text-rose-700">{fieldErrors.eventTypeId}</p>}
+    </div>
+   )}
+
+   {error && (
+    <div className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1.5">{error}</div>
+   )}
+
+   <div className="flex items-center gap-3">
+    <button
+     type="submit" disabled={submitting || !apiKey.trim()}
+     className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+    >
+     {submitting && <CircleNotch className="w-4 h-4 animate-spin" />}
+     {eventTypeOptions ? 'Save connection' : 'Continue'}
+    </button>
+    <button
+     type="button" onClick={onCancel}
+     className="text-sm text-gray-500 hover:text-gray-900"
+    >
+     Cancel
+    </button>
+   </div>
+  </form>
  )
 }

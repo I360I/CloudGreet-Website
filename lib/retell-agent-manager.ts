@@ -5,6 +5,7 @@ import { supabaseAdmin } from './supabase';
 import { SmartAIPrompts, spliceEdgeCasesIntoPrompt, spliceReturningCallerIntoPrompt } from './smart-ai-prompts';
 import { logger } from '@/lib/monitoring'
 import { normalizePhoneForStorage } from './phone-normalization'
+import { getRetellGeneralTools } from './retell-tools'
 import type { JobDetails, PricingRule, Estimate, Lead, ContactInfo, Appointment, Business, AISettings, AIAgent, WebSocketMessage, SessionData, ValidationResult, QueryResult, RevenueOptimizedConfig, PricingScripts, ObjectionHandling, ClosingTechniques, AgentData, PhoneValidationResult, LeadScoringResult, ContactActivity, ReminderMessage, TestResult, WorkingPromptConfig, AgentConfiguration, ValidationFunction, ErrorDetails, APIError, APISuccess, APIResponse, PaginationParams, PaginatedResponse, FilterParams, SortParams, QueryParams, DatabaseError, SupabaseResponse, RateLimitConfig, SecurityHeaders, LogEntry, HealthCheckResult, ServiceHealth, MonitoringAlert, PerformanceMetrics, BusinessMetrics, CallMetrics, LeadMetrics, RevenueMetrics, DashboardData, ExportOptions, ImportResult, BackupConfig, MigrationResult, FeatureFlag, A_BTest, ComplianceConfig, AuditLog, SystemConfig } from '@/lib/types/common';
 
 export interface BusinessAgentConfig {
@@ -86,6 +87,12 @@ class RetellAgentManager {
           general_prompt: systemPrompt,
           begin_message: mergedConfig.greetingMessage || 'Hello, how can I help you today?',
           model: 'gpt-4o-mini',
+          // Attach the three webhook-backed tools so the agent can book,
+          // look up availability, and send confirmation SMS without any
+          // per-client wiring in Retell's dashboard. The webhook resolves
+          // the calling business from the signed agent_id, so the same
+          // URL works for every client.
+          general_tools: getRetellGeneralTools(webhookUrl),
         }),
       })
       if (!createLlmRes.ok) {
@@ -1019,6 +1026,85 @@ class RetellAgentManager {
           ? ((data as any).agent_edge_cases as Array<{ label?: string; instruction: string }>)
           : null),
     }
+  }
+
+  /**
+   * Attach (or refresh) the three webhook-backed tools on an existing
+   * agent's Retell-managed LLM. Used to retrofit agents that were
+   * created before tools were wired programmatically. Idempotent -
+   * Retell replaces general_tools wholesale on PATCH, so calling this
+   * twice is harmless.
+   *
+   * Returns a trace array describing what happened.
+   */
+  async ensureLLMToolsForBusiness(businessId: string): Promise<string[]> {
+    const trace: string[] = []
+    const t = (m: string) => trace.push(m)
+
+    // 1) Find the Retell agent for this business (ai_agents → businesses fallback).
+    let retellAgentId: string | null = null
+    const { data: aiAgent } = await supabaseAdmin
+      .from('ai_agents')
+      .select('retell_agent_id')
+      .eq('business_id', businessId)
+      .maybeSingle()
+    retellAgentId = (aiAgent as any)?.retell_agent_id || null
+    if (!retellAgentId) {
+      const { data: biz } = await supabaseAdmin
+        .from('businesses')
+        .select('retell_agent_id')
+        .eq('id', businessId)
+        .maybeSingle()
+      retellAgentId = (biz as any)?.retell_agent_id || null
+    }
+    if (!retellAgentId) {
+      t('no Retell agent linked to this business - nothing to wire')
+      throw new Error('No Retell agent linked to this business')
+    }
+    t(`agent ${retellAgentId}`)
+
+    // 2) Find the LLM behind the agent.
+    const agentRes = await fetch(
+      `https://api.retellai.com/get-agent/${retellAgentId}`,
+      { headers: { Authorization: `Bearer ${this.apiKey}` } },
+    )
+    if (!agentRes.ok) {
+      const txt = await agentRes.text().catch(() => agentRes.statusText)
+      t(`get-agent ${agentRes.status}: ${txt.slice(0, 120)}`)
+      throw new Error(`Retell get-agent failed: ${agentRes.status}`)
+    }
+    const agent = await agentRes.json().catch(() => ({}))
+    const engineType = agent?.response_engine?.type
+    const llmId = agent?.response_engine?.llm_id
+    if (engineType !== 'retell-llm' || !llmId) {
+      t(`agent uses '${engineType ?? 'unknown'}' engine - can't patch general_tools via Retell API`)
+      throw new Error('Agent is not on a Retell-managed LLM; tools must be wired in Retell dashboard')
+    }
+    t(`llm ${llmId}`)
+
+    // 3) Patch general_tools with our standard three.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
+    const webhookUrl = `${appUrl}/api/retell/voice-webhook`
+    const tools = getRetellGeneralTools(webhookUrl)
+
+    const patchRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ general_tools: tools }),
+    })
+    if (!patchRes.ok) {
+      const txt = await patchRes.text().catch(() => patchRes.statusText)
+      t(`update-retell-llm ${patchRes.status}: ${txt.slice(0, 200)}`)
+      throw new Error(`Failed to attach tools: ${patchRes.status}`)
+    }
+    t(`wired ${tools.length} tools: ${tools.map(x => x.name).join(', ')}`)
+
+    // 4) Re-publish + re-bind phones so the new tools go live immediately.
+    await this.maybePublish(retellAgentId, t)
+    return trace
   }
 
   /**
