@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import { DEFAULT_POST_CALL_FIELDS } from '@/lib/retell-default-extractions'
+import { retellAgentManager } from '@/lib/retell-agent-manager'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -116,11 +117,31 @@ export async function PUT(
    })
   }
 
+  // Wire the CloudGreet standard tool set (book_appointment,
+  // send_booking_sms, lookup_availability, end_call, optional
+  // transfer_call) onto the agent's LLM + repush extractions +
+  // webhook_url. Without this the linked agent has no booking
+  // capabilities until someone manually configures functions in Retell.
+  // Best-effort: if it fails we still return success on the link save
+  // and surface the error in the response so the admin can re-run.
+  let toolsTrace: string[] = []
+  let toolsError: string | null = null
+  try {
+   toolsTrace = await retellAgentManager().ensureLLMToolsForBusiness(params.id)
+  } catch (e) {
+   toolsError = e instanceof Error ? e.message : 'Unknown'
+   logger.warn('Tool attach on agent link failed (non-fatal)', {
+    clientId: params.id, error: toolsError,
+   })
+  }
+
   return NextResponse.json({
    success: true,
    agentId: raw,
    agentName,
    llmId,
+   toolsTrace,
+   toolsError,
   })
  } catch (e) {
   logger.error('Retell agent save failed', { error: e instanceof Error ? e.message : 'Unknown' })
