@@ -348,23 +348,55 @@ export function Dialer() {
       return
     }
 
+    // Sanity check: track must be enabled or the callee hears silence.
+    const audioTrack = localStream.getAudioTracks()[0]
+    if (audioTrack && !audioTrack.enabled) audioTrack.enabled = true
+
     try {
       const call = clientRef.current.newCall({
         destinationNumber: number,
         callerNumber: fromNumberRef.current,
-        audio: true,
+        // The Telnyx SDK option is `mediaStream`, NOT `localStream`.
+        // When passed, the SDK skips its internal getUserMedia and
+        // uses our tracks directly. Previously we sent `localStream`
+        // which the SDK ignored entirely, so it tried to capture
+        // internally and ended up with a muted track on this SDK
+        // version. Outbound audio was never reaching the callee.
+        mediaStream: localStream,
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: false,
         // Pipe the remote (callee) audio stream into the hidden
         // <audio> we render at the bottom of this component.
         remoteElement: remoteAudioRef.current || undefined,
-        // Explicit localStream so the SDK uses our pre-captured mic
-        // tracks instead of silently grabbing its own (which has been
-        // the failure mode on the most recent SDK versions).
-        localStream,
-        // Belt and suspenders: micId hints work on some SDK versions.
-        micId: localStream.getAudioTracks()[0]?.getSettings().deviceId || undefined,
       })
       callRef.current = call
+
+      // Verify the audio sender on the underlying RTCPeerConnection
+      // is actually active. If the SDK still ended up with a disabled
+      // track somehow, log it so we can see in the console why the
+      // callee hears nothing - and force-enable as a last resort.
+      setTimeout(() => {
+        try {
+          const senders: RTCRtpSender[] | undefined =
+            (call as any)?.peer?.peerConnection?.getSenders?.()
+          const audioSender = senders?.find((s) => s.track?.kind === 'audio')
+          if (audioSender?.track) {
+            // eslint-disable-next-line no-console
+            console.info('dialer outbound audio sender', {
+              enabled: audioSender.track.enabled,
+              muted: audioSender.track.muted,
+              readyState: audioSender.track.readyState,
+            })
+            if (!audioSender.track.enabled) audioSender.track.enabled = true
+          } else {
+            // eslint-disable-next-line no-console
+            console.warn('dialer: no audio sender on RTCPeerConnection - SDK did not attach mic')
+          }
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.warn('dialer sender inspection threw', e)
+        }
+      }, 1500)
 
       // Stop the local stream when the call ends to free the mic.
       ;(call as any)._cgLocalStream = localStream
