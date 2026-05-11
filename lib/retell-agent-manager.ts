@@ -67,10 +67,23 @@ class RetellAgentManager {
 
       // Generate revenue-optimized system prompt
       const systemPrompt = SmartAIPrompts.generateIndustrySpecificPrompt(mergedConfig.businessType, promptConfig);
-      
+
       // Get webhook URL for Retell events
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
       const webhookUrl = `${appUrl}/api/retell/voice-webhook`
+
+      // Pull escalation phone for transfer_call destination, if set. We
+      // only attach transfer_call when this exists - otherwise the
+      // agent would offer to transfer to a number that isn't there.
+      let escalationPhone: string | null = null
+      try {
+        const { data: biz } = await supabaseAdmin
+          .from('businesses')
+          .select('escalation_phone')
+          .eq('id', mergedConfig.businessId)
+          .maybeSingle()
+        escalationPhone = (biz as any)?.escalation_phone || null
+      } catch { /* optional column, ignore */ }
 
       // Step 1: create a Retell-managed LLM with the prompt + greeting.
       // This was previously a custom-llm pointed at a placeholder URL
@@ -87,12 +100,14 @@ class RetellAgentManager {
           general_prompt: systemPrompt,
           begin_message: mergedConfig.greetingMessage || 'Hello, how can I help you today?',
           model: 'gpt-4o-mini',
-          // Attach the three webhook-backed tools so the agent can book,
-          // look up availability, and send confirmation SMS without any
-          // per-client wiring in Retell's dashboard. The webhook resolves
-          // the calling business from the signed agent_id, so the same
-          // URL works for every client.
-          general_tools: getRetellGeneralTools(webhookUrl),
+          // Attach the standard CloudGreet tool set so the agent can
+          // book, look up availability, send confirmation SMS, end the
+          // call, and transfer to the owner without any per-client
+          // wiring in Retell's dashboard. The custom-tool webhook
+          // resolves the calling business from the signed agent_id, so
+          // the same URL works for every client; the transfer
+          // destination is pulled from the business's escalation_phone.
+          general_tools: getRetellGeneralTools(webhookUrl, { escalationPhone }),
         }),
       })
       if (!createLlmRes.ok) {
@@ -1082,10 +1097,21 @@ class RetellAgentManager {
     }
     t(`llm ${llmId}`)
 
-    // 3) Patch general_tools with our standard three.
+    // 3) Patch general_tools with our standard set. Pull
+    // escalation_phone so transfer_call gets the right destination
+    // (when set); skipped otherwise to avoid offering broken transfers.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
     const webhookUrl = `${appUrl}/api/retell/voice-webhook`
-    const tools = getRetellGeneralTools(webhookUrl)
+    let escalationPhone: string | null = null
+    try {
+      const { data: biz } = await supabaseAdmin
+        .from('businesses')
+        .select('escalation_phone')
+        .eq('id', businessId)
+        .maybeSingle()
+      escalationPhone = (biz as any)?.escalation_phone || null
+    } catch { /* optional column, ignore */ }
+    const tools = getRetellGeneralTools(webhookUrl, { escalationPhone })
 
     const patchRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
       method: 'PATCH',

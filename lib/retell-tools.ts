@@ -1,22 +1,22 @@
 /**
- * Retell custom-function tool definitions.
+ * Retell tool definitions auto-attached to every CloudGreet client's
+ * Retell LLM at creation time. With these in place a contractor never
+ * has to touch Retell's dashboard to wire functions - the agent can
+ * book, check availability, text confirmations, transfer to the owner,
+ * and end the call all out of the box.
  *
- * These are attached to every CloudGreet client's Retell LLM at creation
- * time so the agent can book, look up availability, and send confirmation
- * SMS without any per-client configuration in Retell's dashboard.
+ * Multi-tenancy for the custom tools lives in our webhook: the URL is
+ * the same for every client, and `/api/retell/voice-webhook` resolves
+ * the calling business from the signed agent_id Retell sends. The
+ * Cal.com API key + event-type id are read from `businesses.*` at
+ * call time, so a contractor can paste/change their key in settings
+ * without touching the agent.
  *
- * Multi-tenancy lives in our webhook: the URL is the same for every
- * client, and `/api/retell/voice-webhook` resolves the calling business
- * from the signed agent_id Retell sends in the envelope. The Cal.com API
- * key + event-type id are read from `businesses.*` at call time, so a
- * contractor can paste/change their key in settings without touching the
- * agent in Retell.
- *
- * Built-in tools (`end_call`, `transfer_call`) are NOT included here -
- * they're toggled per agent in Retell's dashboard since the transfer
- * destination is per-client.
+ * `transfer_call` is included only when the business has an
+ * escalation_phone on file (otherwise the agent would offer to
+ * transfer to a number that doesn't exist).
  */
-export type RetellGeneralTool = {
+export type RetellCustomTool = {
   type: 'custom'
   name: string
   description: string
@@ -30,8 +30,34 @@ export type RetellGeneralTool = {
   }
 }
 
-export function getRetellGeneralTools(webhookUrl: string): RetellGeneralTool[] {
-  return [
+export type RetellEndCallTool = {
+  type: 'end_call'
+  name: 'end_call'
+  description: string
+}
+
+export type RetellTransferCallTool = {
+  type: 'transfer_call'
+  name: 'transfer_call'
+  description: string
+  transfer_destination: {
+    type: 'predefined'
+    number: string
+  }
+}
+
+export type RetellGeneralTool = RetellCustomTool | RetellEndCallTool | RetellTransferCallTool
+
+export type GetToolsOptions = {
+  /** E.164 phone for transfer_call destination - omit to skip the tool. */
+  escalationPhone?: string | null
+}
+
+export function getRetellGeneralTools(
+  webhookUrl: string,
+  opts: GetToolsOptions = {},
+): RetellGeneralTool[] {
+  const tools: RetellGeneralTool[] = [
     {
       type: 'custom',
       name: 'book_appointment',
@@ -116,5 +142,28 @@ export function getRetellGeneralTools(webhookUrl: string): RetellGeneralTool[] {
         },
       },
     },
+    {
+      type: 'end_call',
+      name: 'end_call',
+      description:
+        "Ends the call cleanly. Use only when the caller has clearly wrapped up (\"thanks, bye\", \"I gotta go\") or you've already attempted handoff and given a clear next step. Never end while a question is unanswered or the caller is mid-thought.",
+    },
   ]
+
+  // transfer_call needs a destination - skip if the business hasn't set
+  // one yet (otherwise the agent will offer transfers it can't fulfil).
+  if (opts.escalationPhone) {
+    tools.push({
+      type: 'transfer_call',
+      name: 'transfer_call',
+      description:
+        "Warm-transfers the caller to the owner. Use only when the caller explicitly asks for a human, when there's a true emergency that needs a person on the line, or after multiple booking attempts have failed. Don't transfer just because the caller is skeptical or a slot is taken.",
+      transfer_destination: {
+        type: 'predefined',
+        number: opts.escalationPhone,
+      },
+    })
+  }
+
+  return tools
 }

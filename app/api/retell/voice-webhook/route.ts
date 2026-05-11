@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
  }
 
  // Now process the verified body
- const tool: RetellToolCall | null = body.tool_call || null
+ let tool: RetellToolCall | null = body.tool_call || null
  const tenantId: string | undefined = body.tenant_id || body.metadata?.tenant_id
 
  // Resolve the calling tenant from the Retell agent_id, NOT from the
@@ -122,6 +122,23 @@ export async function POST(request: NextRequest) {
  }
 
  if (tool) {
+ // Legacy alias: some clients have agents wired with the older
+ // `_cal`-suffixed tool names ("book_appointment_cal",
+ // "check_availability_cal") - those predate our programmatic
+ // attach, which uses the cleaner names. Normalise so both work
+ // and we don't return unknown_tool to the agent mid-call.
+ const aliasMap: Record<string, string> = {
+ book_appointment_cal: 'book_appointment',
+ check_availability_cal: 'lookup_availability',
+ check_availability: 'lookup_availability',
+ send_sms: 'send_booking_sms',
+ send_confirmation_sms: 'send_booking_sms',
+ }
+ const normalised = aliasMap[tool.name] || tool.name
+ if (normalised !== tool.name) {
+ logger.info('retell webhook: tool name alias', { from: tool.name, to: normalised })
+ tool = { ...tool, name: normalised }
+ }
  switch (tool.name) {
  case 'book_appointment': {
  const { name, phone, service, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw } = tool.arguments || {}
