@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
       subscription_status, account_status,
       retell_agent_id, agent_edge_cases,
       calcom_connected, cal_com_username, cal_com_event_type_slug,
+      website, address,
       created_at
     `)
     .eq('rep_id', auth.userId)
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
         subscription_status, account_status,
         retell_agent_id,
         calcom_connected, cal_com_username, cal_com_event_type_slug,
+        website, address,
         created_at
       `)
       .eq('rep_id', auth.userId)

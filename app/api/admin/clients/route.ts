@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { syncBusinessFromLead } from '@/lib/business-sync'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -226,6 +227,16 @@ export async function POST(request: NextRequest) {
     logger.warn('phone_numbers insert failed (non-fatal)', { error: pErr.message })
    }
   }
+
+  // 5) Pull website + address from the originating lead row if one
+  // exists. Lead-promotion paths populate the lead but not the
+  // business, so without this every newly-created client shows up
+  // with a blank website in admin/sales/dashboard.
+  void syncBusinessFromLead({
+   businessId: business.id,
+   phone: phone_number || null,
+   businessName: business_name,
+  })
 
   return NextResponse.json({
    success: true,

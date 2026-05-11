@@ -23,6 +23,8 @@ type Client = {
   created_at: string
   calcom_connected?: boolean | null
   cal_com_username?: string | null
+  website?: string | null
+  address?: string | null
 }
 
 function subscriptionPill(status: string | null) {
@@ -141,6 +143,21 @@ export default function SalesClientsPage() {
                           return <span className="tabular-nums">{priceLabel}</span>
                         })()}
                         {c.business_type && <><span className="text-gray-300">·</span><span>{c.business_type}</span></>}
+                        {c.website && (
+                          <>
+                            <span className="text-gray-300">·</span>
+                            <a
+                              href={c.website}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-sky-600 hover:text-sky-800 truncate max-w-[180px]"
+                              title={c.website}
+                            >
+                              {c.website.replace(/^https?:\/\/(www\.)?/, '')}
+                            </a>
+                          </>
+                        )}
                         {(() => {
                           const sub = subscriptionPill(c.subscription_status)
                           return sub ? (
