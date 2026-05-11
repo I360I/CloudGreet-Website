@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { CircleNotch, Sparkle, CheckCircle, WarningCircle, Copy, ArrowsClockwise, CaretDown, CaretUp, Globe } from '@phosphor-icons/react'
+import { CircleNotch, Sparkle, CheckCircle, WarningCircle, Copy, ArrowsClockwise, CaretDown, CaretUp, Globe, ChatCircle } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { PrimaryButton, GhostButton, Input } from '../_components/ui'
+import { AgentChat } from './_AgentChat'
 
 /**
  * Per-row "Build draft agent" panel for /admin/agents-due.
@@ -64,6 +65,13 @@ export function DraftBuilder({
   const [err, setErr] = useState('')
   const [showContext, setShowContext] = useState(false)
   const [copied, setCopied] = useState(false)
+  // 'pipeline' = the original one-shot Claude pipeline.
+  // 'chat'     = multi-turn chat with the managed agent (web_fetch + memory).
+  // Default to chat if there's no existing draft (cleaner first-run UX),
+  // pipeline if there is (so the admin lands back where their work lives).
+  const [mode, setMode] = useState<'pipeline' | 'chat'>(
+    initialStatus === 'none' ? 'chat' : 'pipeline',
+  )
 
   const reload = useCallback(async () => {
     setLoading(true); setErr('')
@@ -269,13 +277,49 @@ export function DraftBuilder({
             </div>
           </div>
 
-          {loading && !draft && (
+          {/* Mode toggle - chat (managed agent + web_fetch) vs pipeline (one-shot scrape + Claude). */}
+          <div className="mb-3 inline-flex items-center gap-1 rounded-lg border border-white/10 bg-black/30 p-0.5">
+            <button
+              type="button"
+              onClick={() => setMode('chat')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 transition-colors ${
+                mode === 'chat' ? 'bg-fuchsia-500/20 text-fuchsia-200' : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <ChatCircle className="w-3 h-3" /> Chat with AI
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('pipeline')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 transition-colors ${
+                mode === 'pipeline' ? 'bg-fuchsia-500/20 text-fuchsia-200' : 'text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <Sparkle className="w-3 h-3" /> One-shot pipeline
+            </button>
+          </div>
+
+          {mode === 'chat' && (
+            <div className="mb-3">
+              <AgentChat
+                closeId={closeId}
+                hasWebsite={hasWebsite}
+                onPromptAdopted={async () => {
+                  setMode('pipeline')
+                  await reload()
+                  onChanged()
+                }}
+              />
+            </div>
+          )}
+
+          {mode === 'pipeline' && loading && !draft && (
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <CircleNotch className="w-3.5 h-3.5 animate-spin" /> Loading draft…
             </div>
           )}
 
-          {(!draft || draft.status === 'none') && !loading && (
+          {mode === 'pipeline' && (!draft || draft.status === 'none') && !loading && (
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <p className="text-xs text-gray-400 max-w-md">
                 Scrape the website + Google Places, hand it to Claude, validate the output, store the prompt for review. ~30-60s, ~$1 in API cost.
@@ -292,7 +336,7 @@ export function DraftBuilder({
             </div>
           )}
 
-          {draft?.status === 'generating' && (
+          {mode === 'pipeline' && draft?.status === 'generating' && (
             <div className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/[0.06] px-4 py-5 flex items-center gap-3">
               <CircleNotch className="w-5 h-5 animate-spin text-fuchsia-300 shrink-0" />
               <div className="min-w-0">
@@ -308,7 +352,7 @@ export function DraftBuilder({
             </div>
           )}
 
-          {draft?.status === 'failed' && (
+          {mode === 'pipeline' && draft?.status === 'failed' && (
             <div className="space-y-3">
               <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-3 text-xs text-rose-300">
                 <div className="font-medium mb-0.5">Pipeline failed</div>
@@ -320,7 +364,7 @@ export function DraftBuilder({
             </div>
           )}
 
-          {(draft?.status === 'ready' || draft?.status === 'approved') && draft.prompt && (
+          {mode === 'pipeline' && (draft?.status === 'ready' || draft?.status === 'approved') && draft.prompt && (
             <div className="space-y-3">
               {draft.validation && (
                 <ValidationCard validation={draft.validation} costMicro={draft.cost_micro} />
