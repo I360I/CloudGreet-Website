@@ -73,17 +73,23 @@ class RetellAgentManager {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
       const webhookUrl = `${appUrl}/api/retell/voice-webhook`
 
-      // Pull escalation phone for transfer_call destination, if set. We
-      // only attach transfer_call when this exists - otherwise the
-      // agent would offer to transfer to a number that isn't there.
+      // Pull a phone number for transfer_call destination. Prefer the
+      // explicit escalation_phone (set by admins), fall back to
+      // notifications_phone (the field exposed on the contractor's own
+      // dashboard - same number they use for booking-notification SMS).
+      // We only attach transfer_call when one of these exists; otherwise
+      // the agent would offer to transfer to a number that isn't there.
       let escalationPhone: string | null = null
       try {
         const { data: biz } = await supabaseAdmin
           .from('businesses')
-          .select('escalation_phone')
+          .select('escalation_phone, notifications_phone')
           .eq('id', mergedConfig.businessId)
           .maybeSingle()
-        escalationPhone = (biz as any)?.escalation_phone || null
+        escalationPhone =
+          (biz as any)?.escalation_phone ||
+          (biz as any)?.notifications_phone ||
+          null
       } catch { /* optional column, ignore */ }
 
       // Step 1: create a Retell-managed LLM with the prompt + greeting.
@@ -1105,19 +1111,24 @@ class RetellAgentManager {
     }
     t(`llm ${llmId}`)
 
-    // 3) Patch general_tools with our standard set. Pull
-    // escalation_phone so transfer_call gets the right destination
-    // (when set); skipped otherwise to avoid offering broken transfers.
+    // 3) Patch general_tools with our standard set. Pull a transfer
+    //    destination - prefer escalation_phone (admin-managed) and
+    //    fall back to notifications_phone (the field on the
+    //    contractor's own settings page). transfer_call is skipped
+    //    when neither is set so we never offer broken transfers.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
     const webhookUrl = `${appUrl}/api/retell/voice-webhook`
     let escalationPhone: string | null = null
     try {
       const { data: biz } = await supabaseAdmin
         .from('businesses')
-        .select('escalation_phone')
+        .select('escalation_phone, notifications_phone')
         .eq('id', businessId)
         .maybeSingle()
-      escalationPhone = (biz as any)?.escalation_phone || null
+      escalationPhone =
+        (biz as any)?.escalation_phone ||
+        (biz as any)?.notifications_phone ||
+        null
     } catch { /* optional column, ignore */ }
     const tools = getRetellGeneralTools(webhookUrl, { escalationPhone })
 
