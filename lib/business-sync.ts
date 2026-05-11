@@ -33,18 +33,19 @@ export async function syncBusinessFromLead(opts: {
 
   try {
     // 1) Resolve a lead to copy from.
+    const LEAD_FIELDS = 'id, business_id, website, address, city, state, zip, contact_name'
     let lead: any = null
     if (opts.leadId) {
       const { data } = await supabaseAdmin
         .from('leads')
-        .select('id, business_id, website, address, contact_name')
+        .select(LEAD_FIELDS)
         .eq('id', opts.leadId)
         .maybeSingle()
       lead = data
     } else if (opts.businessId) {
       const { data } = await supabaseAdmin
         .from('leads')
-        .select('id, business_id, website, address, contact_name')
+        .select(LEAD_FIELDS)
         .eq('business_id', opts.businessId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -53,7 +54,7 @@ export async function syncBusinessFromLead(opts: {
     } else if (opts.phone) {
       const { data } = await supabaseAdmin
         .from('leads')
-        .select('id, business_id, website, address, contact_name')
+        .select(LEAD_FIELDS)
         .eq('phone', opts.phone)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -62,7 +63,7 @@ export async function syncBusinessFromLead(opts: {
     } else if (opts.businessName) {
       const { data } = await supabaseAdmin
         .from('leads')
-        .select('id, business_id, website, address, contact_name')
+        .select(LEAD_FIELDS)
         .ilike('business_name', opts.businessName)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -77,7 +78,7 @@ export async function syncBusinessFromLead(opts: {
 
     const { data: biz } = await supabaseAdmin
       .from('businesses')
-      .select('id, website, address')
+      .select('id, website, address, city, state, zip_code')
       .eq('id', businessId)
       .maybeSingle()
     if (!biz) return result
@@ -86,6 +87,9 @@ export async function syncBusinessFromLead(opts: {
     const update: Record<string, any> = {}
     if (lead.website && !biz.website) update.website = lead.website
     if (lead.address && !biz.address) update.address = lead.address
+    if (lead.city && !biz.city) update.city = lead.city
+    if (lead.state && !biz.state) update.state = lead.state
+    if (lead.zip && !biz.zip_code) update.zip_code = lead.zip
 
     if (Object.keys(update).length === 0) return result
 
