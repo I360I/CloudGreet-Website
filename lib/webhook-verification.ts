@@ -250,34 +250,63 @@ export function verifyRetellSignature(
     return false
   }
 
-  const webhookSecret = process.env.RETELL_WEBHOOK_SECRET
+  // Retell's signing key has shifted around between deployments and
+  // docs. They've used:
+  //   - a dedicated webhook secret (older)
+  //   - the workspace API key (current as of 2026)
+  // We try BOTH so a misconfigured RETELL_WEBHOOK_SECRET env doesn't
+  // break every call. And we try both hex and base64 encodings since
+  // some Retell builds emit the signature as base64.
+  const candidates = [
+    process.env.RETELL_WEBHOOK_SECRET,
+    process.env.RETELL_API_KEY,
+    process.env.NEXT_PUBLIC_RETELL_API_KEY,
+  ].filter((s): s is string => typeof s === 'string' && s.length > 0)
 
-  if (!webhookSecret) {
-    // Fail closed in production. Without the secret we can't verify
-    // call/booking events; allowing them through means anyone with
-    // the URL can write fake bookings into the system.
-    logger.error('RETELL_WEBHOOK_SECRET not configured - rejecting webhook')
+  if (candidates.length === 0) {
+    logger.error(
+      'No Retell signing secret configured (set RETELL_API_KEY or RETELL_WEBHOOK_SECRET) - rejecting webhook',
+    )
     return false
   }
 
+  // Strip any prefix like "sha256=" some signers prepend.
+  const sigRaw = signature.startsWith('sha256=') ? signature.slice(7) : signature
+
+  for (const secret of candidates) {
+    try {
+      const hmac = crypto.createHmac('sha256', secret).update(payload)
+      const hex = hmac.digest('hex')
+      // Recompute for base64 - .digest() consumes the HMAC, need a fresh one.
+      const base64 = crypto.createHmac('sha256', secret).update(payload).digest('base64')
+
+      if (safeEqual(sigRaw, hex)) return true
+      if (safeEqual(sigRaw, base64)) return true
+    } catch (e) {
+      logger.warn('Retell signature attempt threw', {
+        error: e instanceof Error ? e.message : 'Unknown',
+      })
+    }
+  }
+
+  logger.error('Retell webhook signature did not match any configured secret', {
+    signaturePreview: sigRaw.slice(0, 16) + '…',
+    triedKeys: candidates.length,
+  })
+  return false
+}
+
+/**
+ * Constant-time string compare that tolerates different lengths.
+ * crypto.timingSafeEqual throws on length mismatch which is a useful
+ * timing leak vector to avoid - we treat any length difference as
+ * non-match without leaking which side failed.
+ */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
   try {
-    // Retell uses HMAC SHA256 (similar to Stripe)
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(payload)
-      .digest('hex')
-
-    // Compare signatures securely (timing-safe)
-    // Retell sends signature as hex string in x-retell-signature header
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    )
-
-  } catch (error) {
-    logger.error('Retell signature verification error', {
-      error: error instanceof Error ? error.message : 'Unknown error'
-    })
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))
+  } catch {
     return false
   }
 }
