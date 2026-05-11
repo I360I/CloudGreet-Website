@@ -145,13 +145,24 @@ export async function POST(request: NextRequest) {
     ? await lookupCallerHistory(inboundBusinessId, fromNumber)
     : { returning_caller: 'false', caller_name: '', last_service: '' }
 
-   // Fire-and-forget slot cache prewarm. Cal.com /slots takes
-   // ~1-2s; running it during the inbound handshake means the
-   // first lookup_availability mid-call returns from cache instead
-   // of hitting Cal.com's API (which is what caused the "let me
-   // check… [silence] still there?" gap). 60s TTL.
+   // Slot cache prewarm. Kicked off as a fetch to a separate internal
+   // endpoint so it gets its own serverless invocation lifetime -
+   // `void prewarmSlotCache(...)` inline would get killed the instant
+   // this handler returns, which was leaving the cache cold and
+   // forcing every mid-call lookup_availability to pay the full
+   // Cal.com round-trip (~2s, the source of the "let me check…
+   // [silence]" gap callers complained about). Fire-and-forget; the
+   // prewarm endpoint runs independently for up to 10s.
    if (inboundBusinessId) {
-    void prewarmSlotCache(inboundBusinessId)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
+    fetch(`${appUrl}/api/internal/prewarm-slots`, {
+     method: 'POST',
+     headers: {
+      'content-type': 'application/json',
+      'x-cg-internal': process.env.INTERNAL_API_TOKEN || '',
+     },
+     body: JSON.stringify({ businessId: inboundBusinessId }),
+    }).catch(() => { /* fire and forget */ })
    }
 
    return NextResponse.json({
