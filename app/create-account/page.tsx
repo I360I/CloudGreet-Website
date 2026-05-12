@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { CircleNotch, CheckCircle, WarningCircle, Sparkle } from '@phosphor-icons/react'
+import { CircleNotch, CheckCircle, WarningCircle } from '@phosphor-icons/react'
 
 /**
  * Public self-serve account creation page. Rendered at
@@ -145,14 +145,11 @@ function CreateAccountInner() {
   return (
     <Shell>
       <div className="bg-white border border-gray-200 rounded-2xl p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Sparkle className="w-4 h-4 text-amber-500" />
-          <h2 className="text-xl font-medium text-gray-900">Create your account</h2>
-        </div>
-        <p className="text-sm text-gray-500 mb-5">
-          {invite.rep_name} set this up for{' '}
-          <strong className="text-gray-800">{invite.business_name || 'your business'}</strong>.
-          Pick a password and you're in.
+        <h2 className="text-xl font-medium text-gray-900 text-center mb-1">
+          Create account for {invite.business_name || 'your business'}
+        </h2>
+        <p className="text-sm text-gray-500 text-center mb-5">
+          {invite.rep_name} set this up for you. Pick a password and you&apos;re in.
         </p>
 
         <form onSubmit={onSubmit} className="space-y-4">
