@@ -199,49 +199,37 @@ async function loadSeenSets(repId?: string): Promise<SeenSets> {
   placeIds: new Set(),
   nameKeys: new Set(),
  }
- // Per-rep dedupe: only dedupe against leads THIS rep already has assigned
- // and scrape_results from THIS rep's prior jobs. The leads pool itself is
- // shared across reps - if rep A scraped a contractor last week, rep B
- // running the same scrape today should still see them. promote.ts handles
- // the actual leads-table dedupe (reuses the existing lead row and adds a
- // new lead_assignments row for rep B), so the runner shouldn't filter
- // them out before they reach promote.
+ // Global leads dedupe: every phone already in the `leads` table goes
+ // into the seen set, so the source pages past them and delivers the
+ // rep a full `limit` worth of fresh-to-the-system contractors instead
+ // of slots wasted on already-claimed leads marked "dup".
  //
- // Without a repId we fall back to no dedupe - admin/test scrapes have to
- // cope with their own dupes downstream.
- if (!repId) return sets
-
- // Leads this rep is already assigned to. Two-step query so we don't need
- // a SQL join through the supabase client.
+ // Earlier design was per-rep ("share the pool, rep B sees what rep A
+ // scraped, promote.ts reuses the row"). Reps complained that dupes
+ // ate slots that could've gone to non-dupes - flipped to global
+ // dedupe so the rep's scrape result list is always actionable.
+ //
+ // The seen set is still loaded even without a repId so admin/test
+ // scrapes also get a clean fresh list.
  try {
-  const { data: assigns } = await supabaseAdmin
-   .from('lead_assignments')
-   .select('lead_id')
-   .eq('rep_id', repId)
-   .limit(50_000)
-  const leadIds = (assigns || []).map((a) => a.lead_id).filter(Boolean)
-  if (leadIds.length > 0) {
-   // Chunk to avoid hitting the URL-length cap on .in() with 50k ids.
-   const CHUNK = 1000
-   for (let i = 0; i < leadIds.length; i += CHUNK) {
-    const slice = leadIds.slice(i, i + CHUNK)
-    const { data } = await supabaseAdmin
-     .from('leads')
-     .select('phone, website, business_name, city')
-     .in('id', slice)
-    for (const row of data || []) {
-     const p = normalizePhone(row.phone)
-     if (p) sets.phones.add(p)
-     const w = normalizeWebsite(row.website)
-     if (w) sets.websites.add(w)
-     const k = businessNameKey(row.business_name, row.city)
-     if (k) sets.nameKeys.add(k)
-    }
-   }
+  const { data } = await supabaseAdmin
+   .from('leads')
+   .select('phone, website, business_name, city')
+   .not('phone', 'is', null)
+   .limit(100_000)
+  for (const row of data || []) {
+   const p = normalizePhone(row.phone)
+   if (p) sets.phones.add(p)
+   const w = normalizeWebsite(row.website)
+   if (w) sets.websites.add(w)
+   const k = businessNameKey(row.business_name, row.city)
+   if (k) sets.nameKeys.add(k)
   }
  } catch (e) {
-  logger.warn('seen-set load: rep leads failed', { error: e instanceof Error ? e.message : 'Unknown' })
+  logger.warn('seen-set load: global leads failed', { error: e instanceof Error ? e.message : 'Unknown' })
  }
+
+ if (!repId) return sets
 
  // Scrape_results from THIS rep's prior jobs (last 30 days) - covers
  // in-flight rows that haven't promoted yet but are already targeted at
