@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Phone, EnvelopeSimple, ChatText, Link as LinkIcon, Copy, CheckCircle, CircleNotch, Trophy, ArrowSquareOut, Sparkle, ListChecks, GearSix } from '@phosphor-icons/react'
+import { X, Phone, EnvelopeSimple, ChatText, Link as LinkIcon, Copy, CheckCircle, CircleNotch, Trophy, ArrowSquareOut, Sparkle, ListChecks, GearSix, SignIn, Trash } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -658,13 +658,17 @@ function QuickEditsCard({ close }: { close: CloseRow }) {
             <div className="text-gray-800 line-clamp-2 italic">&ldquo;{close.business_greeting}&rdquo;</div>
           </div>
         )}
-        <Link
-          href={`/sales/clients/${close.business_id}`}
-          className="mt-1 inline-flex items-center gap-1.5 text-sm text-violet-700 hover:text-violet-900"
-        >
-          <GearSix className="w-4 h-4" /> Open full agent editor
-          <ArrowSquareOut className="w-3.5 h-3.5" />
-        </Link>
+        <div className="flex flex-wrap items-center gap-3 mt-1">
+          <Link
+            href={`/sales/clients/${close.business_id}`}
+            className="inline-flex items-center gap-1.5 text-sm text-violet-700 hover:text-violet-900"
+          >
+            <GearSix className="w-4 h-4" /> Open full agent editor
+            <ArrowSquareOut className="w-3.5 h-3.5" />
+          </Link>
+          <LoginAsClientLink businessId={close.business_id!} businessName={close.prospect_business_name} />
+          <DeleteClientLink businessId={close.business_id!} businessName={close.prospect_business_name} />
+        </div>
       </div>
       <NextStepHint>
         Voice, greeting, edge cases, and Cal.com all editable in the full editor.
@@ -698,5 +702,85 @@ function NextStepHint({ children }: { children: React.ReactNode }) {
       <span className="text-gray-400 font-mono uppercase tracking-wider mr-1.5">Next:</span>
       {children}
     </div>
+  )
+}
+
+
+/**
+ * Inline-link versions of LoginAsClient / DeleteClient for the
+ * closes detail Quick edits card. Same endpoints as the lead page
+ * buttons; rendered as text links since they sit next to "Open full
+ * agent editor" rather than in a button row.
+ */
+function LoginAsClientLink({ businessId, businessName }: { businessId: string; businessName: string }) {
+  const [busy, setBusy] = useState(false)
+  const onClick = async () => {
+    setBusy(true)
+    try {
+      const r = await fetch(`/api/sales/clients/${businessId}/impersonate`, {
+        method: 'POST', credentials: 'include',
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j?.success) window.location.href = j.redirect_url || '/dashboard'
+      else alert(j?.error || 'Could not sign in as this client')
+    } catch { alert('Could not sign in as this client') }
+    finally { setBusy(false) }
+  }
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className="inline-flex items-center gap-1.5 text-sm text-sky-700 hover:text-sky-900 disabled:opacity-60"
+      title={`Sign in as ${businessName}`}
+    >
+      {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <SignIn className="w-4 h-4" />} Login as client
+    </button>
+  )
+}
+
+function DeleteClientLink({ businessId, businessName }: { businessId: string; businessName: string }) {
+  const [busy, setBusy] = useState(false)
+  const onClick = async () => {
+    const ok = confirm(`Delete "${businessName}"?
+
+Wipes account, calls, appointments, and AI agent. Lead is reset so you can re-pitch.`)
+    if (!ok) return
+    const reason = window.prompt('Reason for audit trail:', 'rep deleted client')
+    if (!reason || reason.trim().length < 4) return
+    setBusy(true)
+    try {
+      const r = await fetch(`/api/sales/clients/${businessId}/delete`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason.trim() }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j?.success) window.location.href = '/sales/closes'
+      else if (j?.error === 'subscription_active') {
+        const force = confirm(`${j.detail || 'Active subscription'}
+
+Delete anyway?`)
+        if (!force) return
+        const r2 = await fetch(`/api/sales/clients/${businessId}/delete`, {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: reason.trim(), force: true }),
+        })
+        const j2 = await r2.json().catch(() => ({}))
+        if (r2.ok && j2?.success) window.location.href = '/sales/closes'
+        else alert(j2?.error || 'Delete failed')
+      } else alert(j?.error || 'Delete failed')
+    } catch { alert('Delete failed') }
+    finally { setBusy(false) }
+  }
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className="inline-flex items-center gap-1.5 text-sm text-rose-700 hover:text-rose-900 disabled:opacity-60"
+      title={`Fully delete ${businessName}`}
+    >
+      {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Trash className="w-4 h-4" />} Delete client
+    </button>
   )
 }

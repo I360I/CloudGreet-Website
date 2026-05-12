@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, EnvelopeSimple, ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Trash, CalendarBlank, ChatCircle, Trophy, Hash, MapPin, X, Copy, CurrencyDollar, Link as LinkIcon, UserPlus } from '@phosphor-icons/react'
+import { Phone, EnvelopeSimple, ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Trash, CalendarBlank, ChatCircle, Trophy, Hash, MapPin, X, Copy, CurrencyDollar, Link as LinkIcon, UserPlus, SignIn, Trash as TrashIcon } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 import { Modal } from '../../_components/Modal'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -57,6 +57,7 @@ export default function LeadDetailPage() {
   const [lead, setLead] = useState<Lead | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
   const [bookingUrl, setBookingUrl] = useState<string | null>(null)
+  const [linkedBusiness, setLinkedBusiness] = useState<{ id: string; business_name: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
   const [working, setWorking] = useState<string | null>(null)
@@ -97,6 +98,7 @@ export default function LeadDetailPage() {
         setLead(j.lead)
         setNotes(j.notes || [])
         setBookingUrl(j.booking_url || null)
+        setLinkedBusiness(j.linked_business || null)
       }
     } finally {
       setLoading(false)
@@ -326,6 +328,12 @@ export default function LeadDetailPage() {
               </button>
               <SendCustomizationButton leadId={lead.id} />
               <CreateAccountButton leadId={lead.id} leadEmail={lead.email || ''} onCreated={() => { void load() }} />
+              {linkedBusiness && (
+                <LoginAsClientButton businessId={linkedBusiness.id} businessName={linkedBusiness.business_name} />
+              )}
+              {linkedBusiness && (
+                <DeleteClientButton businessId={linkedBusiness.id} businessName={linkedBusiness.business_name} onDeleted={() => { setLinkedBusiness(null); void load() }} />
+              )}
               <a
                 href="/sales/customization-template"
                 target="_blank"
@@ -963,6 +971,120 @@ function CreateAccountButton({ leadId, leadEmail, onCreated }: {
       title="Create a CloudGreet account for this client (no booking link)"
     >
       <UserPlus weight="fill" className="w-4 h-4" /> Create account
+    </button>
+  )
+}
+
+/**
+ * Sign-in-as-client button. POSTs to the rep impersonation endpoint
+ * (which only lets the rep into businesses they own), stashes the
+ * rep's own token in `impersonator_token`, swaps the auth cookie to
+ * the client's session, and lands on /dashboard. The rep can return
+ * to their own account via the impersonation banner / end endpoint.
+ */
+function LoginAsClientButton({ businessId, businessName }: {
+  businessId: string
+  businessName: string
+}) {
+  const [busy, setBusy] = useState(false)
+  const onClick = async () => {
+    setBusy(true)
+    try {
+      const r = await fetch(`/api/sales/clients/${businessId}/impersonate`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j?.success) {
+        window.location.href = j.redirect_url || '/dashboard'
+      } else {
+        alert(j?.error || 'Could not sign in as this client')
+      }
+    } catch {
+      alert('Could not sign in as this client')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-sky-50 border border-sky-200 text-sky-800 text-sm font-medium rounded-xl hover:bg-sky-100 hover:border-sky-300 active:scale-[0.98] transition-all disabled:opacity-60"
+      title={`Open ${businessName}'s dashboard as them`}
+    >
+      {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <SignIn weight="fill" className="w-4 h-4" />}
+      Login as client
+    </button>
+  )
+}
+
+/**
+ * Delete-client button. Fully disconnects the rep's client - wipes
+ * their calls/appointments/agents/phone, deletes the owner user +
+ * business row, marks closes cancelled, resets the lead so the rep
+ * can re-pitch later. Refuses if the client has an active Stripe
+ * subscription (force flag overrides; admin path for safety).
+ */
+function DeleteClientButton({ businessId, businessName, onDeleted }: {
+  businessId: string
+  businessName: string
+  onDeleted: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const onClick = async () => {
+    const ok = confirm(
+      `Delete "${businessName}"?\n\n` +
+      `This wipes the client's account, calls, appointments, and AI agent.\n` +
+      `The lead is reset so you can re-pitch later.\n\n` +
+      `If they have an active subscription, cancel in Stripe first.`,
+    )
+    if (!ok) return
+    const reason = window.prompt('Reason for the audit trail (e.g. "lost", "wrong account"):', 'rep deleted client')
+    if (!reason || reason.trim().length < 4) return
+    setBusy(true)
+    try {
+      const r = await fetch(`/api/sales/clients/${businessId}/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reason: reason.trim() }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j?.success) {
+        onDeleted()
+      } else if (j?.error === 'subscription_active') {
+        const forceOk = confirm(
+          `${j.detail || 'Active subscription'}\n\nDelete anyway?`,
+        )
+        if (!forceOk) return
+        const r2 = await fetch(`/api/sales/clients/${businessId}/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ reason: reason.trim(), force: true }),
+        })
+        const j2 = await r2.json().catch(() => ({}))
+        if (r2.ok && j2?.success) onDeleted()
+        else alert(j2?.error || 'Delete failed')
+      } else {
+        alert(j?.error || 'Delete failed')
+      }
+    } catch {
+      alert('Delete failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium rounded-xl hover:bg-rose-100 hover:border-rose-300 active:scale-[0.98] transition-all disabled:opacity-60"
+      title="Fully delete this client - the lead becomes available to re-pitch"
+    >
+      {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <TrashIcon weight="fill" className="w-4 h-4" />}
+      Delete client
     </button>
   )
 }

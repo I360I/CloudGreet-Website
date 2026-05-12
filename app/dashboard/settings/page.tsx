@@ -114,7 +114,6 @@ export default function SettingsPage() {
        <CalendarConnectionSection />
        <ReviewRequestsSection />
        <PasswordSection />
-       <ProfileSection profile={profile} onSaved={reload} />
       </div>
      )}
     </div>
@@ -686,9 +685,9 @@ function OwnerNameSection() {
 
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
-   <h2 className="text-sm font-medium text-gray-700 mb-1">Your name</h2>
+   <h2 className="text-sm font-medium text-gray-700 mb-1">Call transfer destination</h2>
    <p className="text-xs text-gray-500 mb-4">
-    Used in confirmations and shared with your AI receptionist so it can refer to you by name.
+    When a caller asks to speak with the owner, the AI will say your name and transfer the call to this phone number. Use the cell or office line you actually want calls forwarded to.
    </p>
    {loading ? (
     <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -696,6 +695,7 @@ function OwnerNameSection() {
     </div>
    ) : (
     <>
+     <label className="block text-[11px] font-medium text-gray-600 mb-1.5">Your name (what the AI calls you)</label>
      <div className="grid sm:grid-cols-2 gap-3">
       <input
        type="text" value={first} onChange={(e) => setFirst(e.target.value)}
@@ -708,11 +708,17 @@ function OwnerNameSection() {
        className="px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-900"
       />
      </div>
+     <label className="block text-[11px] font-medium text-gray-600 mt-4 mb-1.5">
+      Transfer phone number
+     </label>
      <input
       type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-      placeholder="Phone (for the AI to reach you on)"
-      className="mt-3 w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-900"
+      placeholder="+1 555 555 1212"
+      className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-900"
      />
+     <p className="text-[11px] text-gray-500 mt-1.5">
+      Where the AI sends calls when the caller asks for you. Test it after saving — call your business number and ask the AI to transfer you.
+     </p>
      <div className="flex justify-end mt-4">
       <SaveButton disabled={!dirty} saving={saving} onClick={onSave} />
      </div>

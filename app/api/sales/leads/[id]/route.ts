@@ -49,6 +49,27 @@ export async function GET(
   ])
   if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
 
+  // Linked business lookup so the UI can show a "Login as client" button
+  // once an account has been created for this prospect. Match by close
+  // belonging to this rep with prospect_email = lead.email and a populated
+  // business_id (set by convertCloseToClient).
+  let linkedBusiness: { id: string; business_name: string } | null = null
+  if (lead.email) {
+    const { data: close } = await supabaseAdmin
+      .from('closes')
+      .select('business_id, businesses:business_id(id, business_name)')
+      .eq('rep_id', auth.userId)
+      .eq('prospect_email', String(lead.email).toLowerCase())
+      .not('business_id', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const biz = (close as any)?.businesses
+    if (biz?.id) {
+      linkedBusiness = { id: biz.id, business_name: biz.business_name || 'Client' }
+    }
+  }
+
   return NextResponse.json({
     success: true,
     lead: {
@@ -62,6 +83,7 @@ export async function GET(
     },
     notes: notes ?? [],
     booking_url: rep?.booking_url || null,
+    linked_business: linkedBusiness,
   })
 }
 
