@@ -30,13 +30,13 @@ interface ROICalculatorProps {
 }
 
 export default function ROICalculator({ businessId, className = '' }: ROICalculatorProps) {
- const { theme, businessConfig } = useBusinessData()
+ const { theme, business } = useBusinessData()
  const [roiData, setRoiData] = useState<ROIData | null>(null)
  const [loading, setLoading] = useState(true)
 
  const primaryColor = theme?.primaryColor || '#8b5cf6'
- const revenueColor = getServiceColor('revenue', businessConfig?.services || []) || '#10b981'
- const callColor = getServiceColor('call', businessConfig?.services || []) || '#3b82f6'
+ const revenueColor = getServiceColor('revenue', business?.type || '') || '#10b981'
+ const callColor = getServiceColor('call', business?.type || '') || '#3b82f6'
 
  useEffect(() => {
  loadRealROIData()

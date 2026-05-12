@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     customerName: body?.customer_name || null,
   })
 
-  if (!result.ok) {
+  if (result.ok === false) {
     logger.info('review test SMS denied', { businessId: auth.businessId, reason: result.reason })
     const message = ({
       notifications_from_unset: 'SMS sender not configured. Contact support.',

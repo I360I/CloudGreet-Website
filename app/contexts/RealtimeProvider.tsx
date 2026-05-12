@@ -238,10 +238,11 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
  setLastActivity(new Date())
  }, 30000) // Ping every 30 seconds
 
- // Add error handlers to channels
- callsChannel.on('error', handleConnectionError)
- appointmentsChannel.on('error', handleConnectionError)
- messagesChannel.on('error', handleConnectionError)
+ // Note: Supabase Realtime exposes errors via the .subscribe callback,
+ // not a separate .on('error'). These handlers were never firing.
+ // Real error path is handled by the connectionCheck timeout below
+ // (falls back to polling if status stays 'connecting').
+ void handleConnectionError
 
  // Check connection status after 5 seconds - if not connected, start polling
  const connectionCheck = setTimeout(() => {

@@ -318,7 +318,6 @@ export function EditAppointmentModal({
  value={formData.customer_name}
  onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
  className="w-full px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white focus:outline-none focus:ring-2"
- style={{ focusRingColor: primaryColor }}
  maxLength={100}
  aria-label="Customer name"
  aria-describedby={errors.customer_name ? 'customer_name-error' : undefined}
@@ -503,7 +502,7 @@ export function EditAppointmentModal({
  title="Delete Appointment"
  message="Are you sure you want to delete this appointment? This action cannot be undone."
  confirmText="Delete"
- confirmVariant="danger"
+ variant="destructive"
  loading={deleting}
  />
  </>

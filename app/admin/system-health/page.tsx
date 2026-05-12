@@ -26,7 +26,7 @@ type Health = {
   pipeline: {
     closes_by_status: Section<Record<string, number>>
     closes_pending_agent: Section<number>
-    closes_stuck_after_paid: Section<Array<{ close_id: string; business_name: string; updated_at: string; missing: string[] }>>
+    closes_stuck_after_paid: Section<Array<{ close_id: string; business_id: string | null; business_name: string; updated_at: string; missing: string[] }>>
     onboardings_abandoned: Section<Array<{ business_id: string; business_name: string; created_at: string; calcom_done: boolean; forwarding_done: boolean }>>
     active_businesses: Section<number>
   }
@@ -345,7 +345,7 @@ export default function SystemHealthPage() {
 /* -------------------- helpers -------------------- */
 
 function SectionRender<T>({ section, children }: { section: Section<T>; children: (data: T) => React.ReactNode }) {
-  if (!section.available) {
+  if (section.available === false) {
     return (
       <div className="text-[11px] text-gray-500 inline-flex items-center gap-1.5">
         <WarningCircle className="w-3 h-3 text-amber-400" />

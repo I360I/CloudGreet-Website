@@ -347,7 +347,7 @@ export function AppointmentDetailsModal({
  title="Delete Appointment"
  message="Are you sure you want to delete this appointment? This action cannot be undone."
  confirmText="Delete"
- confirmVariant="danger"
+ variant="destructive"
  loading={deleting}
  />
  </>

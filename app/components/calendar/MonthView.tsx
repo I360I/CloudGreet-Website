@@ -268,7 +268,6 @@ export function MonthView({ currentDate, onDayClick, selectedDate, onDateChange 
  `}
  style={{
  borderColor: dayIsToday ? primaryColor : 'transparent',
- ringColor: dayIsToday ? `${primaryColor}50` : 'transparent',
  backgroundColor: dayIsSelected ? `${primaryColor}20` : undefined,
  boxShadow: dayIsToday ? `0 2px 8px ${primaryColor}30` : '0 1px 3px rgba(0, 0, 0, 0.1)'
  }}

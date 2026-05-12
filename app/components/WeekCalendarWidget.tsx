@@ -169,7 +169,6 @@ export function WeekCalendarWidget({
  )}
  style={{
  borderColor: isToday ? primaryColor : undefined,
- ringColor: isToday ? `${primaryColor}50` : undefined,
  boxShadow: isToday ? `0 2px 8px ${primaryColor}30` : '0 1px 3px rgba(0, 0, 0, 0.1)'
  }}
  aria-label={`${day.dayName}, ${day.dayName} ${day.dayNumber} - ${day.count} appointments`}

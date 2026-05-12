@@ -105,7 +105,6 @@ export default function SMSReplyModal({ isOpen, onClose, contact, businessId }: 
  onChange={(e) => setMessage(e.target.value)}
  placeholder="Type your message..."
  className="w-full p-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 resize-none"
- style={{ focusRingColor: primaryColor }}
  rows={4}
  maxLength={160}
  aria-label="SMS message text"

@@ -85,12 +85,12 @@ export function useRealtimeDashboard(options: RealtimeDashboardOptions = {}) {
  
  if (data.type === 'appointment_created' || data.type === 'appointment_updated' || data.type === 'appointment_deleted') {
  // Refresh appointments
- refreshAll({ silent: true })
+ refreshAll()
  }
  
  if (data.type === 'call_received' || data.type === 'call_completed') {
  // Refresh metrics
- refreshAll({ silent: true })
+ refreshAll()
  }
  } catch (error) {
  console.error('Failed to parse WebSocket message:', error)
@@ -142,7 +142,7 @@ export function useRealtimeDashboard(options: RealtimeDashboardOptions = {}) {
  }
 
  pollingIntervalRef.current = setInterval(() => {
- refreshAll({ silent: true })
+ refreshAll()
  }, fallbackPollingInterval)
  }, [fallbackPollingInterval, refreshAll])
 

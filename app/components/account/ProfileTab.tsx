@@ -54,7 +54,6 @@ export default function ProfileTab({ profile, setProfile, saving, setSaving, onS
  value={formData.name}
  onChange={(e) => handleInputChange('name', e.target.value)}
  className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2"
- style={{ focusRingColor: primaryColor }}
  placeholder="Enter your full name"
  aria-label="Full name"
  />
@@ -66,7 +65,6 @@ export default function ProfileTab({ profile, setProfile, saving, setSaving, onS
  value={formData.email}
  onChange={(e) => handleInputChange('email', e.target.value)}
  className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2"
- style={{ focusRingColor: primaryColor }}
  placeholder="Enter your email"
  aria-label="Email address"
  />
@@ -78,7 +76,6 @@ export default function ProfileTab({ profile, setProfile, saving, setSaving, onS
  value={formData.phone}
  onChange={(e) => handleInputChange('phone', e.target.value)}
  className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2"
- style={{ focusRingColor: primaryColor }}
  placeholder="Enter your phone number"
  aria-label="Phone number"
  />
@@ -90,7 +87,6 @@ export default function ProfileTab({ profile, setProfile, saving, setSaving, onS
  value={formData.businessName}
  onChange={(e) => handleInputChange('businessName', e.target.value)}
  className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2"
- style={{ focusRingColor: primaryColor }}
  placeholder="Enter your business name"
  aria-label="Business name"
  />
@@ -103,7 +99,6 @@ export default function ProfileTab({ profile, setProfile, saving, setSaving, onS
  value={formData.address}
  onChange={(e) => handleInputChange('address', e.target.value)}
  className="w-full px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2"
- style={{ focusRingColor: primaryColor }}
  placeholder="Enter your business address"
  aria-label="Business address"
  />

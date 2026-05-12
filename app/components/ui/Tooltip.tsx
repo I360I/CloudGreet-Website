@@ -49,7 +49,7 @@ export function Tooltip({
 
  // Auto-adjust if tooltip would go off-screen
  let adjustedPosition = position
- const positionMap: Record<string, { top?: number; bottom?: number; left?: number; right?: number }> = {}
+ const positionMap: { top?: number; bottom?: number; left?: number; right?: number } = {}
 
  if (position === 'top' && rect.top < 0) {
  adjustedPosition = 'bottom'

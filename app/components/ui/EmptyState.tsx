@@ -9,9 +9,13 @@ import { cn } from '@/lib/utils'
 interface EmptyStateProps {
  icon: Icon
  title: string
- message: string
+ message?: string
+ /** Alias for message - callers can use either. */
+ description?: string
  actionLabel?: string
  onAction?: () => void
+ /** Optional custom action node (renders in place of actionLabel button). */
+ action?: React.ReactNode
  className?: string
  iconColor?: string // Business primary color
 }
@@ -20,11 +24,14 @@ export function EmptyState({
  icon: Icon,
  title,
  message,
+ description,
  actionLabel,
  onAction,
+ action,
  className = '',
  iconColor
 }: EmptyStateProps) {
+ const text = description ?? message ?? ''
  return (
  <motion.div
  initial={{ opacity: 0, y: 20 }}
@@ -57,19 +64,21 @@ export function EmptyState({
  {title}
  </h3>
  
- <p className="text-slate-400 text-sm mb-6 max-w-md">
- {message}
- </p>
- 
- {actionLabel && onAction && (
- <Button
- onClick={onAction}
- className="px-6 py-2"
- style={iconColor ? { backgroundColor: iconColor } : undefined}
- >
- {actionLabel}
- </Button>
+ {text && (
+  <p className="text-slate-400 text-sm mb-6 max-w-md">
+   {text}
+  </p>
  )}
+
+ {action ?? (actionLabel && onAction && (
+  <Button
+   onClick={onAction}
+   className="px-6 py-2"
+   style={iconColor ? { backgroundColor: iconColor } : undefined}
+  >
+   {actionLabel}
+  </Button>
+ ))}
  </motion.div>
  )
 }

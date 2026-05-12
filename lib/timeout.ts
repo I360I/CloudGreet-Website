@@ -11,12 +11,12 @@ import { TIMEOUTS } from './constants/timeouts'
  * Returns the promise result if it completes within timeout, otherwise rejects
  */
 export function withTimeout<T>(
-  promise: Promise<T>,
+  promise: PromiseLike<T>,
   timeoutMs: number = TIMEOUTS.API_REQUEST,
   errorMessage: string = 'Request timeout'
 ): Promise<T> {
   return Promise.race([
-    promise,
+    Promise.resolve(promise),
     new Promise<T>((_, reject) =>
       setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
     )

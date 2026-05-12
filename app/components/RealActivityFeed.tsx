@@ -24,13 +24,13 @@ interface RealActivityFeedProps {
 }
 
 export default function RealActivityFeed({ businessId, businessName }: RealActivityFeedProps) {
- const { theme, businessConfig } = useBusinessData()
+ const { theme, business } = useBusinessData()
  const [activities, setActivities] = useState<ActivityItem[]>([])
  const { data: realtimeData, isLoading, error } = useRealtimeMetrics(businessId)
 
  const primaryColor = theme?.primaryColor || '#8b5cf6'
- const callColor = getServiceColor('call', businessConfig?.services || []) || '#3b82f6'
- const appointmentColor = getServiceColor('appointment', businessConfig?.services || []) || '#8b5cf6'
+ const callColor = getServiceColor('call', business?.type || '') || '#3b82f6'
+ const appointmentColor = getServiceColor('appointment', business?.type || '') || '#8b5cf6'
 
  useEffect(() => {
  if (realtimeData) {

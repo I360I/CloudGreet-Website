@@ -126,7 +126,7 @@ export async function requireEmployee(
     .single()
 
   if (error || !user) {
-    logger.warn('Employee verification failed', { error })
+    logger.warn('Employee verification failed', { error: error?.message })
     return { success: false, error: 'User not found' }
   }
 
