@@ -155,6 +155,9 @@ export function CloseDetailPanel({
                 onCopy={onCopy}
                 error={paymentError}
               />
+              {!close.business_id && (
+                <AccountLinkCard closeId={close.id} prospectEmail={close.prospect_email} />
+              )}
               <DemoCard close={close} />
             </>
           )}
@@ -785,5 +788,84 @@ Delete anyway?`)
     >
       {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Trash className="w-4 h-4" />} Delete client
     </button>
+  )
+}
+
+/**
+ * Account-link card for the closes detail. Mints a self-serve invite
+ * via the closes account-link endpoint and gives the rep both an
+ * "email it" button and a "copy it" button. Use during a demo when
+ * the prospect can create their account live on the call.
+ */
+function AccountLinkCard({ closeId, prospectEmail }: {
+  closeId: string
+  prospectEmail: string | null
+}) {
+  const [busy, setBusy] = useState<'send' | 'copy' | null>(null)
+  const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+
+  const generate = async (sendEmail: boolean) => {
+    if (!prospectEmail) { setMsg({ tone: 'err', text: 'No prospect email on this close' }); return }
+    setBusy(sendEmail ? 'send' : 'copy'); setMsg(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/closes/${closeId}/account-link`, {
+        method: 'POST',
+        body: JSON.stringify({ email: prospectEmail, send_email: sendEmail }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setMsg({ tone: 'err', text: j?.error || `Failed (${r.status})` })
+        return
+      }
+      if (sendEmail) {
+        setMsg({ tone: 'ok', text: j.email_sent ? 'Emailed!' : 'Link ready (email failed)' })
+      } else {
+        try {
+          await navigator.clipboard.writeText(j.url)
+          setMsg({ tone: 'ok', text: 'Copied!' })
+        } catch {
+          setMsg({ tone: 'err', text: `Copy blocked. Link: ${j.url}` })
+        }
+      }
+    } catch {
+      setMsg({ tone: 'err', text: 'Failed' })
+    } finally {
+      setBusy(null)
+      if (msg) setTimeout(() => setMsg(null), 4000)
+    }
+  }
+
+  return (
+    <Card
+      title="Self-serve account link"
+      icon={<Sparkle weight="fill" className="w-4 h-4 text-indigo-600" />}
+    >
+      <p className="text-xs text-gray-600 mb-3">
+        Give the prospect a link to set up their own account during the demo - they pick the password, no follow-up needed.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => generate(true)}
+          disabled={busy !== null || !prospectEmail}
+          className="inline-flex items-center gap-2 bg-indigo-600 text-white text-sm rounded-lg px-3 py-2 hover:bg-indigo-700 disabled:opacity-60"
+        >
+          {busy === 'send' ? <CircleNotch className="w-4 h-4 animate-spin" /> : <EnvelopeSimple weight="fill" className="w-4 h-4" />}
+          Send create-account link
+        </button>
+        <button
+          onClick={() => generate(false)}
+          disabled={busy !== null || !prospectEmail}
+          className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm rounded-lg px-3 py-2 hover:bg-gray-50 disabled:opacity-60"
+        >
+          {busy === 'copy' ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Copy weight="fill" className="w-4 h-4 text-gray-400" />}
+          Copy create-account link
+        </button>
+        {msg && (
+          <span className={`text-[11px] ${msg.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>
+            {msg.text}
+          </span>
+        )}
+      </div>
+    </Card>
   )
 }

@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X, Robot, Lightning, ChatCircle, Phone, CalendarBlank } from '@phosphor-icons/react'
+import { ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X, Robot, Lightning, ChatCircle, Phone, CalendarBlank, Trash, Play, SpeakerHigh } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -31,6 +31,7 @@ type Voice = {
   voice_name?: string | null
   gender?: string | null
   accent?: string | null
+  preview_audio_url?: string | null
 }
 
 type EdgeCase = {
@@ -477,6 +478,8 @@ export default function SalesClientDetailPage() {
           Changes sync to the live agent within seconds. The base prompt + greeting
           stay locked - these rules layer on top under a SPECIAL HANDLING section.
         </p>
+
+        <DeleteClientSection businessId={id} businessName={business.business_name} />
       </section>
     </SalesShell>
   )
@@ -589,20 +592,25 @@ function VoicePanel({
             <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
               Voice
             </div>
-            <select
-              value={voiceId}
-              onChange={(e) => setVoiceId(e.target.value)}
-              className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
-            >
-              <option value="">- Default -</option>
-              {voices.map((v) => (
-                <option key={v.voice_id} value={v.voice_id}>
-                  {v.voice_name || v.voice_id}
-                  {v.gender ? ` · ${v.gender}` : ''}
-                  {v.accent ? ` · ${v.accent}` : ''}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={voiceId}
+                onChange={(e) => setVoiceId(e.target.value)}
+                className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+              >
+                <option value="">- Default -</option>
+                {voices.map((v) => (
+                  <option key={v.voice_id} value={v.voice_id}>
+                    {v.voice_name || v.voice_id}
+                    {v.gender ? ` · ${v.gender}` : ''}
+                    {v.accent ? ` · ${v.accent}` : ''}
+                  </option>
+                ))}
+              </select>
+              <VoicePreviewButton
+                url={voices.find((v) => v.voice_id === voiceId)?.preview_audio_url || null}
+              />
+            </div>
           </label>
         </div>
         <div>
@@ -799,6 +807,150 @@ function CalcomPanel({
             </div>
           )}
         </>
+      )}
+    </motion.div>
+  )
+}
+
+/**
+ * Play the Retell voice's preview clip. Single shared <audio> element
+ * is created on first use so multiple presses don't pile up overlapping
+ * playback. Defensive against missing/blocked autoplay - if the browser
+ * refuses, we just no-op.
+ */
+function VoicePreviewButton({ url }: { url: string | null }) {
+  const [playing, setPlaying] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
+
+  const onClick = () => {
+    if (!url) return
+    if (audioRef.current && playing) {
+      audioRef.current.pause()
+      setPlaying(false)
+      return
+    }
+    if (!audioRef.current) {
+      audioRef.current = new Audio()
+      audioRef.current.onended = () => setPlaying(false)
+      audioRef.current.onerror = () => setPlaying(false)
+    }
+    audioRef.current.src = url
+    audioRef.current.currentTime = 0
+    audioRef.current.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!url}
+      className="inline-flex items-center justify-center gap-1.5 h-[38px] px-3 bg-sky-50 border border-sky-200 text-sky-700 text-xs font-medium rounded-lg hover:bg-sky-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+      title={url ? (playing ? 'Stop preview' : 'Preview voice') : 'No preview available for this voice'}
+    >
+      {playing ? <SpeakerHigh className="w-3.5 h-3.5" /> : <Play weight="fill" className="w-3 h-3" />}
+      {playing ? 'Stop' : 'Preview'}
+    </button>
+  )
+}
+
+/**
+ * Danger-zone: fully delete the client. Calls the rep delete endpoint
+ * which wipes calls, appointments, agents, phone, user, business and
+ * resets the originating lead. Refuses if subscription is active unless
+ * the rep explicitly forces. After success, routes back to /sales/closes.
+ */
+function DeleteClientSection({ businessId, businessName }: {
+  businessId: string
+  businessName: string
+}) {
+  const router = useRouter()
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  const onDelete = async () => {
+    const ok = confirm(
+      `Delete "${businessName}"?\n\n` +
+      `This wipes the client's account, calls, appointments, and AI agent. ` +
+      `The originating lead is reset so you can re-pitch later.\n\n` +
+      `If they have an active subscription, cancel in Stripe first.`,
+    )
+    if (!ok) return
+    const reason = window.prompt('Reason for the audit trail (e.g. "no-pay after demo"):', 'no-pay after demo')
+    if (!reason || reason.trim().length < 4) return
+    setBusy(true); setErr('')
+    try {
+      const r = await fetch(`/api/sales/clients/${businessId}/delete`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason.trim() }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j?.success) {
+        router.replace('/sales/clients')
+        return
+      }
+      if (j?.error === 'subscription_active') {
+        const force = confirm(`${j.detail || 'Active subscription'}\n\nDelete anyway?`)
+        if (!force) { setBusy(false); return }
+        const r2 = await fetch(`/api/sales/clients/${businessId}/delete`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: reason.trim(), force: true }),
+        })
+        const j2 = await r2.json().catch(() => ({}))
+        if (r2.ok && j2?.success) router.replace('/sales/clients')
+        else setErr(j2?.error || 'Delete failed')
+      } else {
+        setErr(j?.error || 'Delete failed')
+      }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Delete failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: EASE, delay: 0.1 }}
+      className="mt-5 bg-rose-50/60 border border-rose-200 rounded-2xl p-5"
+    >
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <Trash weight="duotone" className="w-4 h-4 text-rose-600" />
+            <span className="text-sm font-medium text-rose-900">Delete client</span>
+          </div>
+          <p className="text-xs text-rose-800/80 max-w-md">
+            Permanently removes the account, AI agent, phone number, calls, and appointments.
+            The lead is reset so you can re-pitch later. Use when a prospect doesn&apos;t pay after the demo.
+          </p>
+        </div>
+        <button
+          onClick={onDelete}
+          disabled={busy}
+          className="inline-flex items-center gap-2 bg-rose-600 text-white text-sm font-medium rounded-xl px-4 py-2 hover:bg-rose-700 active:scale-[0.98] disabled:opacity-60 transition-all"
+        >
+          {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Trash weight="fill" className="w-4 h-4" />}
+          Delete client
+        </button>
+      </div>
+      {err && (
+        <div className="mt-3 bg-white border border-rose-200 rounded-lg p-2.5 text-xs text-rose-700">
+          {err}
+        </div>
       )}
     </motion.div>
   )

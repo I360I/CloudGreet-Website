@@ -328,6 +328,8 @@ export default function LeadDetailPage() {
               </button>
               <SendCustomizationButton leadId={lead.id} />
               <CreateAccountButton leadId={lead.id} leadEmail={lead.email || ''} onCreated={() => { void load() }} />
+              <SendAccountLinkButton leadId={lead.id} leadEmail={lead.email || ''} />
+              <CopyAccountLinkButton leadId={lead.id} leadEmail={lead.email || ''} />
               {linkedBusiness && (
                 <LoginAsClientButton businessId={linkedBusiness.id} businessName={linkedBusiness.business_name} />
               )}
@@ -1090,5 +1092,106 @@ function DeleteClientButton({ businessId, businessName, onDeleted }: {
       {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <TrashIcon weight="fill" className="w-4 h-4" />}
       Delete client
     </button>
+  )
+}
+
+/**
+ * Send + Copy buttons that mint a self-serve account-creation invite for
+ * the prospect. The invite link goes to /create-account?token=…; the
+ * prospect picks their password and lands in /dashboard/onboarding
+ * signed in - no rep involvement after sending.
+ *
+ * Idempotent: the API reuses a fresh unconsumed invite for the same
+ * (rep, email) pair, so re-clicking returns the same link.
+ */
+function SendAccountLinkButton({ leadId, leadEmail }: { leadId: string; leadEmail: string }) {
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+  const send = async () => {
+    if (!leadEmail) { setMsg({ tone: 'err', text: 'Lead has no email' }); return }
+    setBusy(true); setMsg(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/account-link`, {
+        method: 'POST',
+        body: JSON.stringify({ email: leadEmail, send_email: true }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j?.success) {
+        setMsg({ tone: 'ok', text: j.email_sent ? 'Emailed!' : 'Link ready (email failed)' })
+      } else {
+        setMsg({ tone: 'err', text: j?.error || `Failed (${r.status})` })
+      }
+    } catch {
+      setMsg({ tone: 'err', text: 'Failed' })
+    } finally {
+      setBusy(false)
+      setTimeout(() => setMsg(null), 4000)
+    }
+  }
+  return (
+    <div className="inline-flex flex-col gap-1">
+      <button
+        onClick={send}
+        disabled={busy || !leadEmail}
+        className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-indigo-50 border border-indigo-200 text-indigo-800 text-sm font-medium rounded-xl hover:bg-indigo-100 hover:border-indigo-300 active:scale-[0.98] disabled:opacity-50 transition-all"
+        title="Email the prospect a self-serve account-creation link"
+      >
+        {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <EnvelopeSimple weight="fill" className="w-4 h-4" />}
+        Send create-account link
+      </button>
+      {msg && (
+        <span className={`text-[11px] ${msg.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>
+          {msg.text}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function CopyAccountLinkButton({ leadId, leadEmail }: { leadId: string; leadEmail: string }) {
+  const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const copy = async () => {
+    if (!leadEmail) { setErr('Lead has no email'); return }
+    setBusy(true); setErr(null); setCopied(false)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/account-link`, {
+        method: 'POST',
+        body: JSON.stringify({ email: leadEmail, send_email: false }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success || !j.url) {
+        setErr(j?.error || `Failed (${r.status})`)
+        return
+      }
+      try {
+        await navigator.clipboard.writeText(j.url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2500)
+      } catch {
+        setErr('Copy blocked - link: ' + j.url)
+      }
+    } catch {
+      setErr('Failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="inline-flex flex-col gap-1">
+      <button
+        onClick={copy}
+        disabled={busy || !leadEmail}
+        className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] disabled:opacity-50 transition-all"
+        title="Copy the self-serve account-creation link to share live"
+      >
+        {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> :
+          copied ? <CheckCircle weight="fill" className="w-4 h-4 text-emerald-500" /> :
+          <Copy weight="fill" className="w-4 h-4 text-gray-400" />}
+        {copied ? 'Copied!' : 'Copy create-account link'}
+      </button>
+      {err && <span className="text-[11px] text-rose-700">{err}</span>}
+    </div>
   )
 }
