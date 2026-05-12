@@ -72,6 +72,9 @@ export default function SalesLeadsPage() {
   const [sortBy, setSortBy] = useState<'quality' | 'newest' | 'untouched'>('quality')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
+  // Page-scoped modal so any row can pop the demo-set picker without
+  // each row having to own its own state.
+  const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
 
   const toggleSelected = (id: string) => {
@@ -637,6 +640,15 @@ export default function SalesLeadsPage() {
                               <Phone weight="bold" className="w-4 h-4" />
                             </a>
                           )}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDemoModalLeadId(l.id) }}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
+                            aria-label="Mark demo set"
+                            title="Mark demo set - pings Anthony + Slack"
+                          >
+                            <CheckCircle weight="fill" className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
 
@@ -684,7 +696,113 @@ export default function SalesLeadsPage() {
           </motion.div>
         )}
       </section>
+      {demoModalLeadId && (
+        <LeadsDemoSetModal
+          leadId={demoModalLeadId}
+          onClose={() => setDemoModalLeadId(null)}
+          onSaved={() => {
+            const lid = demoModalLeadId
+            setDemoModalLeadId(null)
+            // Bump the row's status in-place so the user sees the change
+            // immediately. Background refetch keeps the rest in sync.
+            setLeads((prev) => prev.map((l) => l.id === lid ? { ...l, status: 'demo_scheduled' } : l))
+            setFlash('Demo set - Anthony pinged.')
+            setTimeout(() => setFlash(''), 3500)
+          }}
+        />
+      )}
     </SalesShell>
+  )
+}
+
+/**
+ * Tiny self-contained datetime modal used by the leads list checkmark.
+ * Same endpoint as the lead detail "Demo set" button - keeps both
+ * surfaces consistent (status flip + founder email + Slack ping).
+ */
+function LeadsDemoSetModal({ leadId, onClose, onSaved }: {
+  leadId: string
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const initial = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    d.setHours(10, 0, 0, 0)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  })()
+  const [when, setWhen] = useState(initial)
+  const [notes, setNotes] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const save = async () => {
+    if (!when) { setErr('Pick a date/time'); return }
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/mark-demo`, {
+        method: 'POST',
+        body: JSON.stringify({
+          scheduled_at: new Date(when).toISOString(),
+          notes: notes.trim() || undefined,
+        }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) { setErr(j?.error || `Failed (${r.status})`); return }
+      onSaved()
+    } catch {
+      setErr('Failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4" onClick={onClose}>
+      <div
+        className="bg-white border border-gray-200 rounded-2xl shadow-xl w-full max-w-md p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <CalendarBlank weight="fill" className="w-4 h-4 text-amber-500" />
+          <h3 className="text-base font-medium text-gray-900">Mark demo set</h3>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">
+          Status flips to demo_scheduled. Anthony + Slack get pinged so the agent gets built in time.
+        </p>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">When?</label>
+        <input
+          type="datetime-local"
+          value={when}
+          onChange={(e) => setWhen(e.target.value)}
+          autoFocus
+          className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900"
+        />
+        <label className="block text-xs font-medium text-gray-700 mt-3 mb-1.5">Notes (optional)</label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="anything for the build"
+          className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900 resize-none"
+        />
+        {err && (
+          <div className="mt-3 bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-xs text-rose-700">{err}</div>
+        )}
+        <div className="flex justify-end gap-2 mt-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
+          <button
+            onClick={save}
+            disabled={busy || !when}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-xl hover:bg-amber-600 disabled:opacity-60"
+          >
+            {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle weight="fill" className="w-4 h-4" />}
+            Mark demo set
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 

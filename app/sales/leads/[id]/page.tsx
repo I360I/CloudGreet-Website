@@ -326,10 +326,11 @@ export default function LeadDetailPage() {
               >
                 <CurrencyDollar weight="fill" className="w-4 h-4" /> Send payment link
               </button>
+              <CopyAccountLinkPrimary leadId={lead.id} leadEmail={lead.email || ''} />
+              <MarkDemoButton leadId={lead.id} onSet={() => { void load() }} />
               <SendCustomizationButton leadId={lead.id} />
               <CreateAccountButton leadId={lead.id} leadEmail={lead.email || ''} onCreated={() => { void load() }} />
               <SendAccountLinkButton leadId={lead.id} leadEmail={lead.email || ''} />
-              <CopyAccountLinkButton leadId={lead.id} leadEmail={lead.email || ''} />
               {linkedBusiness && (
                 <LoginAsClientButton businessId={linkedBusiness.id} businessName={linkedBusiness.business_name} />
               )}
@@ -1202,6 +1203,189 @@ function CopyAccountLinkButton({ leadId, leadEmail }: { leadId: string; leadEmai
         {copied ? 'Copied!' : 'Copy create-account link'}
       </button>
       {err && <span className="text-[11px] text-rose-700">{err}</span>}
+    </div>
+  )
+}
+
+/**
+ * Top-row blue button version of the copy-account-link action. Same
+ * endpoint as CopyAccountLinkButton, just styled as a primary CTA so
+ * it sits at the same visual weight as Call / Send booking / Send
+ * payment. No email required - the prospect supplies one on the
+ * create-account page if we don't have it.
+ */
+function CopyAccountLinkPrimary({ leadId, leadEmail }: { leadId: string; leadEmail: string }) {
+  const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    setBusy(true); setCopied(false)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/account-link`, {
+        method: 'POST',
+        body: JSON.stringify({ email: leadEmail || undefined, send_email: false }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success || !j.url) {
+        alert(j?.error || `Failed (${r.status})`)
+        return
+      }
+      try {
+        await navigator.clipboard.writeText(j.url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2500)
+      } catch {
+        alert('Copy blocked - link: ' + j.url)
+      }
+    } catch {
+      alert('Failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <button
+      onClick={copy}
+      disabled={busy}
+      className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-sky-600 text-white text-sm font-medium rounded-xl hover:bg-sky-700 active:scale-[0.98] shadow-sm shadow-sky-600/10 disabled:opacity-60 transition-all"
+      title="Copy the self-serve account-creation link - works even without an email"
+    >
+      {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> :
+        copied ? <CheckCircle weight="fill" className="w-4 h-4" /> :
+        <Copy weight="fill" className="w-4 h-4" />}
+      {copied ? 'Copied!' : 'Copy create-account link'}
+    </button>
+  )
+}
+
+/**
+ * Mark-demo button: opens a small popup asking when the demo is set
+ * for, then POSTs /api/sales/leads/[id]/mark-demo which:
+ *   - flips the lead status to demo_scheduled
+ *   - stamps follow_up_at = demo time
+ *   - emails Anthony + pings Slack
+ *
+ * Same hook used from the leads list row (DemoCheckButton) so both
+ * surfaces stay consistent.
+ */
+function MarkDemoButton({ leadId, onSet }: { leadId: string; onSet: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-amber-500 text-white text-sm font-medium rounded-xl hover:bg-amber-600 active:scale-[0.98] shadow-sm shadow-amber-500/10 transition-all"
+        title="Mark a demo as scheduled - pings Anthony + Slack"
+      >
+        <CalendarBlank weight="fill" className="w-4 h-4" /> Demo set
+      </button>
+      {open && (
+        <DemoSetModal leadId={leadId} onClose={() => setOpen(false)} onSaved={() => { setOpen(false); onSet() }} />
+      )}
+    </>
+  )
+}
+
+/**
+ * Datetime picker modal used by both the lead detail "Demo set" button
+ * and the leads-list checkmark. Local-tz datetime input -> ISO -> POST.
+ */
+function DemoSetModal({ leadId, onClose, onSaved }: {
+  leadId: string
+  onClose: () => void
+  onSaved: () => void
+}) {
+  // Default to next business day 10am local for fast-path "yeah, tomorrow".
+  const initial = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    d.setHours(10, 0, 0, 0)
+    // Format for input[type=datetime-local]: YYYY-MM-DDTHH:mm
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  })()
+  const [when, setWhen] = useState(initial)
+  const [notes, setNotes] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const save = async () => {
+    if (!when) { setErr('Pick a date/time'); return }
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/mark-demo`, {
+        method: 'POST',
+        body: JSON.stringify({
+          scheduled_at: new Date(when).toISOString(),
+          notes: notes.trim() || undefined,
+        }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setErr(j?.error || `Failed (${r.status})`)
+        return
+      }
+      onSaved()
+    } catch {
+      setErr('Failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white border border-gray-200 rounded-2xl shadow-xl w-full max-w-md p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <CalendarBlank weight="fill" className="w-4 h-4 text-amber-500" />
+          <h3 className="text-base font-medium text-gray-900">Mark demo set</h3>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">
+          Sends a heads-up to Anthony + Slack so the demo agent gets built before the call.
+        </p>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">When?</label>
+        <input
+          type="datetime-local"
+          value={when}
+          onChange={(e) => setWhen(e.target.value)}
+          autoFocus
+          className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900"
+        />
+        <label className="block text-xs font-medium text-gray-700 mt-3 mb-1.5">Notes (optional)</label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="anything for the build (e.g. emergency keywords, special transfers)"
+          className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900 resize-none"
+        />
+        {err && (
+          <div className="mt-3 bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-xs text-rose-700">
+            {err}
+          </div>
+        )}
+        <div className="flex justify-end gap-2 mt-5">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            disabled={busy || !when}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-xl hover:bg-amber-600 disabled:opacity-60"
+          >
+            {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle weight="fill" className="w-4 h-4" />}
+            Mark demo set
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
