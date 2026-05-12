@@ -71,6 +71,66 @@ export async function POST(
     return NextResponse.json({ error: updErr.message }, { status: 500 })
   }
 
+  // Push into admin's agents-due queue by creating (or updating) a
+  // close row with demo_scheduled_at set. The queue surfaces both
+  // paid clients (business_id NOT NULL) and rep-flagged upcoming
+  // demos (demo_scheduled_at NOT NULL) so Anthony can prep the
+  // agent before the demo call.
+  //
+  // Idempotent: if a close already exists for this rep + this
+  // prospect email, update its demo time instead of stacking rows.
+  let closeId: string | null = null
+  const businessName = lead.business_name || 'Unknown'
+  const prospectEmail = lead.email ? String(lead.email).toLowerCase() : null
+  const closeMatcher = supabaseAdmin
+    .from('closes')
+    .select('id')
+    .eq('rep_id', auth.userId)
+    .eq('prospect_business_name', businessName)
+    .order('created_at', { ascending: false })
+    .limit(1)
+  const { data: existingClose } = await (prospectEmail
+    ? closeMatcher.eq('prospect_email', prospectEmail)
+    : closeMatcher).maybeSingle()
+
+  if (existingClose?.id) {
+    closeId = existingClose.id
+    await supabaseAdmin
+      .from('closes')
+      .update({
+        demo_scheduled_at: scheduledAtIso,
+        updated_at: new Date().toISOString(),
+        ...(notes ? { notes: `Demo set: ${notes}` } : {}),
+      })
+      .eq('id', existingClose.id)
+  } else {
+    const { data: newClose, error: closeErr } = await supabaseAdmin
+      .from('closes')
+      .insert({
+        rep_id: auth.userId,
+        prospect_business_name: businessName,
+        prospect_contact_name: lead.contact_name || null,
+        prospect_email: prospectEmail,
+        prospect_phone: lead.phone || null,
+        agreed_monthly_cents: 0,
+        agreed_setup_fee_cents: 0,
+        status: 'pending',
+        demo_scheduled_at: scheduledAtIso,
+        notes: notes ? `Demo set: ${notes}` : `Demo set from lead ${lead.id}`,
+      })
+      .select('id')
+      .single()
+    if (closeErr) {
+      // Non-fatal: assignment update already succeeded. Log loud so
+      // admin notices the queue won't surface this one.
+      logger.warn('mark-demo: close insert failed (assignment still updated)', {
+        leadId: lead.id, error: closeErr.message,
+      })
+    } else {
+      closeId = newClose?.id || null
+    }
+  }
+
   // Pull rep info for the notification.
   const { data: rep } = await supabaseAdmin
     .from('custom_users')
@@ -145,6 +205,7 @@ export async function POST(
   return NextResponse.json({
     success: true,
     lead_id: lead.id,
+    close_id: closeId,
     scheduled_at: scheduledAtIso,
     slack_configured: !!slackUrl,
   })

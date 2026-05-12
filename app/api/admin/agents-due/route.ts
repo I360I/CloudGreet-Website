@@ -35,12 +35,17 @@ export async function GET(request: NextRequest) {
   if (!auth.success) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
+    // Surface two kinds of rows:
+    //   (a) closes with a business attached (paid clients waiting for agent build)
+    //   (b) closes with demo_scheduled_at set (rep flagged "demo set" so admin
+    //       can build the agent before the demo call - business may not exist yet)
+    // .or() builds: business_id NOT NULL OR demo_scheduled_at NOT NULL.
     const { data: closes, error } = await supabaseAdmin
       .from('closes')
       .select(
         'id, rep_id, business_id, prospect_business_name, prospect_contact_name, prospect_email, prospect_phone, status, demo_scheduled_at, demo_agent_status, demo_agent_test_phone, demo_agent_built_at, demo_agent_notes, agent_draft_status, agent_draft_generated_at, created_at, updated_at',
       )
-      .not('business_id', 'is', null)
+      .or('business_id.not.is.null,demo_scheduled_at.not.is.null')
       .neq('demo_agent_status', 'ready')
       .neq('demo_agent_status', 'skipped')
       .order('demo_scheduled_at', { ascending: true, nullsFirst: false })
