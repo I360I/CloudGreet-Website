@@ -70,6 +70,10 @@ export async function GET(request: NextRequest) {
  voiceId: business.voice_id || null,
  voiceSpeed: business.voice_speed != null ? Number(business.voice_speed) : null,
  retellAgentId: business.retell_agent_id || null,
+ forwardingCarrier: business.forwarding_carrier || null,
+ forwardingLineType: business.forwarding_line_type || null,
+ forwardingMode: business.forwarding_mode || null,
+ forwardingVerifiedAt: business.forwarding_verified_at || null,
  }
  })
  } catch (error) {

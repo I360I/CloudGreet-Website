@@ -57,7 +57,9 @@ export async function GET(request: NextRequest) {
   }
 
   const since = request.nextUrl.searchParams.get('since')
-  const sinceIso = since ? new Date(since).toISOString() : new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const sinceDate = since ? new Date(since) : new Date(Date.now() - 5 * 60 * 1000)
+  const sinceIso = sinceDate.toISOString()
+  const sinceMs = sinceDate.getTime()
 
   const { data: calls } = await supabaseAdmin
    .from('calls')
@@ -67,7 +69,52 @@ export async function GET(request: NextRequest) {
    .order('created_at', { ascending: false })
    .limit(1)
 
-  const verified = !!(calls && calls.length > 0)
+  let verified = !!(calls && calls.length > 0)
+  let retellFallback = false
+
+  // Webhook delivery can lag (call_started fires when the call connects,
+  // and call_ended only after the caller hangs up). If our DB hasn't
+  // picked anything up yet, ask Retell directly - the call exists on
+  // their side as soon as it routes through, even before our webhook
+  // lands. This is what fixes the "27 checks so far" stall when the
+  // forwarding clearly worked but we can't see it.
+  if (!verified) {
+   try {
+    const { data: biz } = await supabaseAdmin
+     .from('businesses')
+     .select('retell_agent_id')
+     .eq('id', authResult.businessId)
+     .maybeSingle()
+    const agentId = biz?.retell_agent_id
+    const apiKey = process.env.RETELL_API_KEY
+    if (agentId && apiKey) {
+     const resp = await fetch('https://api.retellai.com/v2/list-calls', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+       filter_criteria: {
+        agent_id: [agentId],
+        start_timestamp: { lower_threshold: sinceMs },
+       },
+       sort_order: 'descending',
+       limit: 5,
+      }),
+     })
+     if (resp.ok) {
+      const json = await resp.json().catch(() => ({}))
+      const items: any[] = Array.isArray(json) ? json : (json.calls || json.data || [])
+      if (items.length > 0) {
+       verified = true
+       retellFallback = true
+      }
+     }
+    }
+   } catch (e) {
+    logger.warn('verify fallback to Retell list-calls failed', {
+     error: e instanceof Error ? e.message : 'Unknown',
+    })
+   }
+  }
 
   // Subscription gate: a contractor can technically complete the test
   // call even without paying. Don't flip onboarding_completed (and don't
@@ -112,6 +159,7 @@ export async function GET(request: NextRequest) {
    paid,
    subscriptionStatus,
    call: calls?.[0] || null,
+   source: verified ? (retellFallback ? 'retell' : 'db') : null,
   })
  } catch (e) {
   logger.error('Forwarding verify error', { error: e instanceof Error ? e.message : 'Unknown' })

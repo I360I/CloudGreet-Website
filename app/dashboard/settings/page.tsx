@@ -1,9 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise, Plug, Trash, ArrowSquareOut } from '@phosphor-icons/react'
+import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise, Plug, Trash, ArrowSquareOut, Phone, Copy } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
+import {
+ LINE_TYPES, carriersForLineType, findCarrier,
+ type CarrierId, type ForwardingMode, type LineType,
+} from '@/lib/forwarding-codes'
 
 type Profile = {
  businessName: string
@@ -20,6 +24,10 @@ type Profile = {
  voiceId: string | null
  voiceSpeed: number | null
  retellAgentId?: string | null
+ forwardingCarrier?: string | null
+ forwardingLineType?: string | null
+ forwardingMode?: string | null
+ forwardingVerifiedAt?: string | null
 }
 
 type AgentState = {
@@ -102,6 +110,7 @@ export default function SettingsPage() {
        <VoiceSection profile={profile} state={agentState} onSaved={reload} />
        <SpeedSection profile={profile} state={agentState} onSaved={reload} />
        <BookingNotificationsSection />
+       <ForwardingSection profile={profile} onSaved={reload} />
        <CalendarConnectionSection />
        <ReviewRequestsSection />
        <PasswordSection />
@@ -1809,5 +1818,239 @@ function CalcomConnectForm({ onDone, onCancel }: { onDone: () => void; onCancel:
     </button>
    </div>
   </form>
+ )
+}
+
+/* ------------------------- Call forwarding ------------------------ */
+
+/**
+ * Always-visible reference for the contractor's call forwarding setup.
+ * Shows the destination Retell number, current carrier/mode, the exact
+ * dial code to activate forwarding, and the cancel code so they can
+ * turn it off later (or switch carriers without calling support).
+ *
+ * Initial setup happens in the onboarding wizard - this section is the
+ * persistent home for those instructions afterwards.
+ */
+function ForwardingSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
+ const [retellNumber, setRetellNumber] = useState<string | null>(null)
+ const [editing, setEditing] = useState(false)
+ const [lineType, setLineType] = useState<LineType | null>(
+  (profile.forwardingLineType as LineType | null) || null,
+ )
+ const [carrier, setCarrier] = useState<CarrierId | null>(
+  (profile.forwardingCarrier as CarrierId | null) || null,
+ )
+ const [mode, setMode] = useState<ForwardingMode>(
+  (profile.forwardingMode as ForwardingMode | null) || 'missed_only',
+ )
+ const [saving, setSaving] = useState(false)
+
+ useEffect(() => {
+  fetchWithAuth('/api/dashboard/phone')
+   .then((r) => r.json().catch(() => ({})))
+   .then((j) => setRetellNumber(typeof j?.phone === 'string' ? j.phone : null))
+   .catch(() => {})
+ }, [])
+
+ useEffect(() => {
+  setLineType((profile.forwardingLineType as LineType | null) || null)
+  setCarrier((profile.forwardingCarrier as CarrierId | null) || null)
+  setMode((profile.forwardingMode as ForwardingMode | null) || 'missed_only')
+ }, [profile.forwardingCarrier, profile.forwardingLineType, profile.forwardingMode])
+
+ const carrierGuide = findCarrier(carrier || undefined)
+ const instructions = carrierGuide && retellNumber ? carrierGuide.instructions(retellNumber, mode) : []
+ const carriers = lineType ? carriersForLineType(lineType) : []
+
+ const persist = async () => {
+  if (!lineType || !carrier) return
+  setSaving(true)
+  try {
+   await fetchWithAuth('/api/onboarding/forwarding', {
+    method: 'POST',
+    body: JSON.stringify({ lineType, carrier, mode }),
+   })
+   setEditing(false)
+   onSaved()
+  } finally {
+   setSaving(false)
+  }
+ }
+
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+   <div className="flex items-start justify-between gap-3">
+    <div>
+     <h2 className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+      <Phone className="w-4 h-4 text-sky-500" /> Call forwarding
+     </h2>
+     <p className="text-xs text-gray-500 mt-1">
+      Dial these codes to forward your business line to the AI. Use the cancel code to stop forwarding.
+     </p>
+    </div>
+    {!editing && carrier && (
+     <button
+      onClick={() => setEditing(true)}
+      className="text-xs text-gray-500 hover:text-gray-900 transition-colors"
+     >
+      Change carrier
+     </button>
+    )}
+   </div>
+
+   {retellNumber ? (
+    <div className="bg-sky-50/60 border border-sky-100 rounded-xl px-4 py-3 flex items-center gap-3">
+     <span className="text-xs font-mono text-sky-700 uppercase tracking-wider">Forward to</span>
+     <span className="font-mono text-sm text-gray-900">{retellNumber}</span>
+     <button
+      onClick={() => navigator.clipboard?.writeText(retellNumber)}
+      className="ml-auto text-xs text-gray-500 hover:text-gray-900 inline-flex items-center gap-1 transition-colors"
+     >
+      <Copy className="w-3 h-3" /> Copy
+     </button>
+    </div>
+   ) : (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-900">
+     No Retell number provisioned yet. Codes will appear once your number is live.
+    </div>
+   )}
+
+   {!editing && carrierGuide && retellNumber && (
+    <div className="space-y-3">
+     <div className="text-xs text-gray-500">
+      {carrierGuide.name} · {mode === 'always' ? 'always forward' : 'forward only when missed'}
+     </div>
+     {carrierGuide.manualNote ? (
+      <div className="text-sm text-gray-700">
+       {carrierGuide.manualNote}
+       {carrierGuide.portalUrl && (
+        <a
+         href={carrierGuide.portalUrl} target="_blank" rel="noreferrer"
+         className="ml-2 inline-flex items-center gap-1 text-sky-600 hover:underline"
+        >
+         Open portal <ArrowSquareOut className="w-3 h-3" />
+        </a>
+       )}
+      </div>
+     ) : (
+      <>
+       {instructions.map((ins, i) => (
+        <div key={i} className="bg-sky-50 border border-sky-200 rounded-xl px-4 py-3">
+         <div className="text-[10px] uppercase tracking-wider text-sky-700 font-semibold mb-0.5">
+          {ins.label}
+         </div>
+         <div className="flex items-center justify-between gap-3">
+          <span className="font-mono text-lg text-gray-900">{ins.dialString}</span>
+          <a
+           href={`tel:${encodeURIComponent(ins.dialString)}`}
+           className="text-xs font-medium text-sky-700 hover:underline"
+          >
+           Tap to dial
+          </a>
+         </div>
+        </div>
+       ))}
+       {instructions[0] && (
+        <p className="text-xs text-gray-500">
+         To cancel: dial{' '}
+         <code className="font-mono bg-gray-100 px-1.5 rounded">
+          {instructions[0].cancelString}
+         </code>
+         {instructions.length > 1 && instructions[1].cancelString !== instructions[0].cancelString && (
+          <> and <code className="font-mono bg-gray-100 px-1.5 rounded">{instructions[1].cancelString}</code></>
+         )}.
+        </p>
+       )}
+      </>
+     )}
+    </div>
+   )}
+
+   {!editing && !carrierGuide && (
+    <div className="text-xs text-gray-500">
+     No carrier saved yet.{' '}
+     <button onClick={() => setEditing(true)} className="text-sky-600 hover:underline">
+      Pick a carrier
+     </button>
+    </div>
+   )}
+
+   {editing && (
+    <div className="space-y-4 pt-2 border-t border-gray-100">
+     <div>
+      <label className="block text-xs font-medium text-gray-700 mb-2">Where does your number live?</label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+       {LINE_TYPES.map((lt) => (
+        <button
+         key={lt.id}
+         onClick={() => { setLineType(lt.id); setCarrier(null) }}
+         className={`text-left p-3 rounded-xl border transition-colors ${
+          lineType === lt.id ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400'
+         }`}
+        >
+         <div className="text-sm font-medium text-gray-900">{lt.label}</div>
+         <div className="text-xs text-gray-500 mt-0.5">{lt.description}</div>
+        </button>
+       ))}
+      </div>
+     </div>
+     {lineType && (
+      <div>
+       <label className="block text-xs font-medium text-gray-700 mb-1.5">Provider</label>
+       <select
+        value={carrier || ''}
+        onChange={(e) => setCarrier((e.target.value || null) as CarrierId | null)}
+        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-gray-900"
+       >
+        <option value="" disabled>Choose a provider…</option>
+        {carriers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+       </select>
+      </div>
+     )}
+     {lineType && carrier && (
+      <div>
+       <label className="block text-xs font-medium text-gray-700 mb-1.5">When the AI takes over</label>
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <button
+         onClick={() => setMode('missed_only')}
+         className={`text-left p-3 rounded-xl border transition-colors ${
+          mode === 'missed_only' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400'
+         }`}
+        >
+         <div className="text-sm font-medium text-gray-900">Only when I miss it</div>
+         <div className="text-xs text-gray-500 mt-0.5">Your phone rings first.</div>
+        </button>
+        <button
+         onClick={() => setMode('always')}
+         className={`text-left p-3 rounded-xl border transition-colors ${
+          mode === 'always' ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400'
+         }`}
+        >
+         <div className="text-sm font-medium text-gray-900">Always send to AI</div>
+         <div className="text-xs text-gray-500 mt-0.5">Every call hits the AI.</div>
+        </button>
+       </div>
+      </div>
+     )}
+     <div className="flex items-center gap-2 pt-1">
+      <button
+       onClick={persist}
+       disabled={!lineType || !carrier || saving}
+       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+      >
+       {saving && <CircleNotch className="w-4 h-4 animate-spin" />}
+       Save
+      </button>
+      <button
+       onClick={() => setEditing(false)}
+       className="text-sm text-gray-500 hover:text-gray-900"
+      >
+       Cancel
+      </button>
+     </div>
+    </div>
+   )}
+  </div>
  )
 }
