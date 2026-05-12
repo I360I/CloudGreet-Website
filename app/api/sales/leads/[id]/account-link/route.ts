@@ -48,25 +48,35 @@ export async function POST(
   if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
 
   const body = await request.json().catch(() => ({} as any))
-  const email = String(body?.email || lead.email || '').trim().toLowerCase()
-  if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
-    return NextResponse.json({ error: 'Valid prospect email required' }, { status: 400 })
-  }
+  const emailRaw = String(body?.email || lead.email || '').trim().toLowerCase()
   const sendEmail = body?.send_email === true
+  // Email is required to *send* the link, but Copy works without it -
+  // the prospect supplies their email on the public create-account
+  // page when they accept. This is the cold-call path.
+  if (sendEmail && (!emailRaw || !/^[^@]+@[^@]+\.[^@]+$/.test(emailRaw))) {
+    return NextResponse.json({ error: 'Email required to send the invite' }, { status: 400 })
+  }
+  if (emailRaw && !/^[^@]+@[^@]+\.[^@]+$/.test(emailRaw)) {
+    return NextResponse.json({ error: 'Email looks invalid' }, { status: 400 })
+  }
+  const email: string | null = emailRaw || null
 
-  // Reuse a fresh invite if one already exists for this rep+email so the
-  // rep can copy the same link twice without stacking rows.
+  // Reuse a fresh invite if one already exists for this rep+email (or
+  // rep+lead if we don't have an email yet) so the rep can copy the
+  // same link twice without stacking rows.
   const nowIso = new Date().toISOString()
-  const { data: existing } = await supabaseAdmin
+  let existingQ = supabaseAdmin
     .from('client_account_invites')
     .select('id, token, expires_at, consumed_at')
     .eq('rep_id', auth.userId)
-    .eq('prospect_email', email)
     .is('consumed_at', null)
     .gte('expires_at', nowIso)
     .order('created_at', { ascending: false })
     .limit(1)
-    .maybeSingle()
+  existingQ = email
+    ? existingQ.eq('prospect_email', email)
+    : existingQ.is('prospect_email', null).eq('lead_id', lead.id)
+  const { data: existing } = await existingQ.maybeSingle()
 
   let token = existing?.token || ''
   let inviteId = existing?.id || ''
@@ -82,7 +92,7 @@ export async function POST(
         prospect_business_name: lead.business_name || null,
         prospect_contact_name: lead.contact_name || null,
         prospect_phone: lead.phone || null,
-      })
+      } as any)
       .select('id')
       .single()
     if (insErr || !inserted) {
@@ -158,7 +168,7 @@ export async function POST(
 
         await resend.emails.send({
           from: `CloudGreet <${fromEmail}>`,
-          to: email,
+          to: email as string,
           replyTo,
           subject: 'Create your CloudGreet account',
           text,

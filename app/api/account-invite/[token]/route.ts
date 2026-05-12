@@ -71,6 +71,7 @@ export async function POST(
   const password = String(body?.password || '').trim()
   const firstName = String(body?.first_name || '').trim()
   const lastName = String(body?.last_name || '').trim()
+  const bodyEmail = String(body?.email || '').trim().toLowerCase()
   if (password.length < 8) {
     return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
   }
@@ -90,6 +91,14 @@ export async function POST(
     return NextResponse.json({ error: 'invite_expired' }, { status: 410 })
   }
 
+  // Invite may have been minted without a prospect email (cold-call
+  // path - rep had phone but not email). In that case the prospect
+  // supplies one here.
+  const effectiveEmail: string = invite.prospect_email || bodyEmail
+  if (!effectiveEmail || !/^[^@]+@[^@]+\.[^@]+$/.test(effectiveEmail)) {
+    return NextResponse.json({ error: 'Valid email required' }, { status: 400 })
+  }
+
   // Create the close that anchors this conversion - same shape as the
   // rep-initiated send-onboarding / create-account flows, but with
   // $0 pricing (the rep sets pricing later when they send the payment
@@ -101,7 +110,7 @@ export async function POST(
       rep_id: invite.rep_id,
       prospect_business_name: businessName,
       prospect_contact_name: invite.prospect_contact_name || null,
-      prospect_email: invite.prospect_email,
+      prospect_email: effectiveEmail,
       prospect_phone: invite.prospect_phone || null,
       agreed_monthly_cents: 0,
       agreed_setup_fee_cents: 0,
@@ -117,7 +126,7 @@ export async function POST(
 
   const convert = await convertCloseToClient({
     closeId: close.id,
-    email: invite.prospect_email,
+    email: effectiveEmail,
     password,
     first_name: firstName || undefined,
     last_name: lastName || undefined,
@@ -182,7 +191,7 @@ export async function POST(
       const { emailFounderAlert } = await import('@/lib/notifications/founder-alert')
       await emailFounderAlert({
         subject: `Self-serve client created: ${business.business_name}`,
-        body: `${invite.prospect_email} accepted a self-serve invite from rep ${invite.rep_id} and created their CloudGreet account.`,
+        body: `${effectiveEmail} accepted a self-serve invite from rep ${invite.rep_id} and created their CloudGreet account.`,
         metadata: {
           business_id: business.id,
           business_name: business.business_name,

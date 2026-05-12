@@ -1108,12 +1108,21 @@ function SendAccountLinkButton({ leadId, leadEmail }: { leadId: string; leadEmai
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
   const send = async () => {
-    if (!leadEmail) { setMsg({ tone: 'err', text: 'Lead has no email' }); return }
+    let target = leadEmail
+    if (!target) {
+      const entered = window.prompt('Email to send the create-account link to:')
+      if (!entered) return
+      target = entered.trim().toLowerCase()
+      if (!/^[^@]+@[^@]+\.[^@]+$/.test(target)) {
+        setMsg({ tone: 'err', text: 'Invalid email' })
+        return
+      }
+    }
     setBusy(true); setMsg(null)
     try {
       const r = await fetchWithAuth(`/api/sales/leads/${leadId}/account-link`, {
         method: 'POST',
-        body: JSON.stringify({ email: leadEmail, send_email: true }),
+        body: JSON.stringify({ email: target, send_email: true }),
       })
       const j = await r.json().catch(() => ({}))
       if (r.ok && j?.success) {
@@ -1132,9 +1141,9 @@ function SendAccountLinkButton({ leadId, leadEmail }: { leadId: string; leadEmai
     <div className="inline-flex flex-col gap-1">
       <button
         onClick={send}
-        disabled={busy || !leadEmail}
+        disabled={busy}
         className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-indigo-50 border border-indigo-200 text-indigo-800 text-sm font-medium rounded-xl hover:bg-indigo-100 hover:border-indigo-300 active:scale-[0.98] disabled:opacity-50 transition-all"
-        title="Email the prospect a self-serve account-creation link"
+        title={leadEmail ? `Email ${leadEmail} a self-serve account-creation link` : 'No email on file - you will be prompted for one'}
       >
         {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <EnvelopeSimple weight="fill" className="w-4 h-4" />}
         Send create-account link
@@ -1153,12 +1162,13 @@ function CopyAccountLinkButton({ leadId, leadEmail }: { leadId: string; leadEmai
   const [copied, setCopied] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const copy = async () => {
-    if (!leadEmail) { setErr('Lead has no email'); return }
     setBusy(true); setErr(null); setCopied(false)
     try {
+      // Email is optional for copy - the prospect can supply it on the
+      // create-account page itself if we don't have it yet.
       const r = await fetchWithAuth(`/api/sales/leads/${leadId}/account-link`, {
         method: 'POST',
-        body: JSON.stringify({ email: leadEmail, send_email: false }),
+        body: JSON.stringify({ email: leadEmail || undefined, send_email: false }),
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok || !j?.success || !j.url) {
@@ -1182,9 +1192,9 @@ function CopyAccountLinkButton({ leadId, leadEmail }: { leadId: string; leadEmai
     <div className="inline-flex flex-col gap-1">
       <button
         onClick={copy}
-        disabled={busy || !leadEmail}
+        disabled={busy}
         className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] disabled:opacity-50 transition-all"
-        title="Copy the self-serve account-creation link to share live"
+        title="Copy the self-serve account-creation link - works even without the prospect's email"
       >
         {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> :
           copied ? <CheckCircle weight="fill" className="w-4 h-4 text-emerald-500" /> :

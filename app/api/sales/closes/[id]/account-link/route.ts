@@ -38,23 +38,29 @@ export async function POST(
   }
 
   const body = await request.json().catch(() => ({} as any))
-  const email = String(body?.email || close.prospect_email || '').trim().toLowerCase()
-  if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
-    return NextResponse.json({ error: 'Valid prospect email required' }, { status: 400 })
-  }
+  const emailRaw = String(body?.email || close.prospect_email || '').trim().toLowerCase()
   const sendEmail = body?.send_email === true
+  if (sendEmail && (!emailRaw || !/^[^@]+@[^@]+\.[^@]+$/.test(emailRaw))) {
+    return NextResponse.json({ error: 'Email required to send the invite' }, { status: 400 })
+  }
+  if (emailRaw && !/^[^@]+@[^@]+\.[^@]+$/.test(emailRaw)) {
+    return NextResponse.json({ error: 'Email looks invalid' }, { status: 400 })
+  }
+  const email: string | null = emailRaw || null
 
   const nowIso = new Date().toISOString()
-  const { data: existing } = await supabaseAdmin
+  let existingQ = supabaseAdmin
     .from('client_account_invites')
     .select('id, token')
     .eq('rep_id', auth.userId)
-    .eq('prospect_email', email)
     .is('consumed_at', null)
     .gte('expires_at', nowIso)
     .order('created_at', { ascending: false })
     .limit(1)
-    .maybeSingle()
+  existingQ = email
+    ? existingQ.eq('prospect_email', email)
+    : existingQ.is('prospect_email', null)
+  const { data: existing } = await existingQ.maybeSingle()
 
   let token = existing?.token || ''
   let inviteId = existing?.id || ''
@@ -70,7 +76,7 @@ export async function POST(
         prospect_business_name: close.prospect_business_name || null,
         prospect_contact_name: close.prospect_contact_name || null,
         prospect_phone: close.prospect_phone || null,
-      })
+      } as any)
       .select('id')
       .single()
     if (insErr || !inserted) {
@@ -143,7 +149,7 @@ export async function POST(
 
         await resend.emails.send({
           from: `CloudGreet <${fromEmail}>`,
-          to: email,
+          to: email as string,
           replyTo,
           subject: 'Create your CloudGreet account',
           text,

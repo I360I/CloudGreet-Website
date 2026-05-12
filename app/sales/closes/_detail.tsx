@@ -805,12 +805,21 @@ function AccountLinkCard({ closeId, prospectEmail }: {
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
 
   const generate = async (sendEmail: boolean) => {
-    if (!prospectEmail) { setMsg({ tone: 'err', text: 'No prospect email on this close' }); return }
+    let target = prospectEmail || ''
+    if (sendEmail && !target) {
+      const entered = window.prompt('Email to send the create-account link to:')
+      if (!entered) return
+      target = entered.trim().toLowerCase()
+      if (!/^[^@]+@[^@]+\.[^@]+$/.test(target)) {
+        setMsg({ tone: 'err', text: 'Invalid email' })
+        return
+      }
+    }
     setBusy(sendEmail ? 'send' : 'copy'); setMsg(null)
     try {
       const r = await fetchWithAuth(`/api/sales/closes/${closeId}/account-link`, {
         method: 'POST',
-        body: JSON.stringify({ email: prospectEmail, send_email: sendEmail }),
+        body: JSON.stringify({ email: target || undefined, send_email: sendEmail }),
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok || !j?.success) {
@@ -846,16 +855,18 @@ function AccountLinkCard({ closeId, prospectEmail }: {
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => generate(true)}
-          disabled={busy !== null || !prospectEmail}
+          disabled={busy !== null}
           className="inline-flex items-center gap-2 bg-indigo-600 text-white text-sm rounded-lg px-3 py-2 hover:bg-indigo-700 disabled:opacity-60"
+          title={prospectEmail ? `Email ${prospectEmail}` : 'No email on file - you will be prompted'}
         >
           {busy === 'send' ? <CircleNotch className="w-4 h-4 animate-spin" /> : <EnvelopeSimple weight="fill" className="w-4 h-4" />}
           Send create-account link
         </button>
         <button
           onClick={() => generate(false)}
-          disabled={busy !== null || !prospectEmail}
+          disabled={busy !== null}
           className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm rounded-lg px-3 py-2 hover:bg-gray-50 disabled:opacity-60"
+          title="Copy the create-account link - works even without an email on file"
         >
           {busy === 'copy' ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Copy weight="fill" className="w-4 h-4 text-gray-400" />}
           Copy create-account link

@@ -24,7 +24,7 @@ export default function CreateAccountPage() {
 }
 
 type InviteInfo = {
-  email: string
+  email: string | null
   business_name: string | null
   contact_name: string | null
   rep_name: string
@@ -41,6 +41,7 @@ function CreateAccountInner() {
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [emailInput, setEmailInput] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -79,9 +80,14 @@ function CreateAccountInner() {
     return () => { cancelled = true }
   }, [token])
 
+  const needsEmail = !invite?.email
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError(null)
+    if (needsEmail && !/^[^@]+@[^@]+\.[^@]+$/.test(emailInput.trim())) {
+      setSubmitError('Enter a valid email.')
+      return
+    }
     if (password.length < 8) { setSubmitError('Password must be at least 8 characters.'); return }
     if (password !== confirmPassword) { setSubmitError("Passwords don't match."); return }
     setSubmitting(true)
@@ -99,6 +105,7 @@ function CreateAccountInner() {
           password,
           first_name: firstName.trim() || undefined,
           last_name: lastName.trim() || undefined,
+          email: needsEmail ? emailInput.trim().toLowerCase() : undefined,
         }),
       })
       const j = await r.json().catch(() => ({}))
@@ -151,9 +158,20 @@ function CreateAccountInner() {
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1.5">Email</label>
-            <div className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 font-mono">
-              {invite.email}
-            </div>
+            {invite.email ? (
+              <div className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 font-mono">
+                {invite.email}
+              </div>
+            ) : (
+              <input
+                type="email"
+                required
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="you@yourbusiness.com"
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900"
+              />
+            )}
           </div>
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
