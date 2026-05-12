@@ -1501,6 +1501,33 @@ function AdminActions({
    await onPatch({}) // triggers a fresh load via the parent
   })
 
+ // Full reset to first-login state. Wipes onboarding flags + Cal.com
+ // connection + calls/appointments/review_requests/notifications.
+ // Keeps the account itself, login credentials, billing, Retell agent,
+ // phone number, and agent personality (greeting/voice/speed).
+ const resetOnboarding = () =>
+  run('reset', async () => {
+   const ok = confirm(
+    `Reset "${client.business_name}" to first-login state?\n\n` +
+    `This will:\n` +
+    `  • Clear onboarding progress (calcom + forwarding + verify)\n` +
+    `  • Disconnect Cal.com\n` +
+    `  • Delete all calls, appointments, review requests, notifications\n\n` +
+    `Login, billing, Retell agent, phone number, and agent voice/greeting are KEPT.`
+   )
+   if (!ok) throw new Error('cancelled')
+   const reason = window.prompt('Reason for the audit trail (e.g. "demo reset"):', 'demo reset')
+   if (!reason || reason.trim().length < 4) throw new Error('reason_required')
+   const res = await fetchWithAuth(`/api/admin/clients/${client.id}/reset-onboarding`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: reason.trim() }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j?.success) throw new Error(j?.error || 'reset failed')
+   await onPatch({}) // refresh
+  })
+
  const saveName = () =>
   run('name', async () => {
    const trimmed = name.trim()
@@ -1618,6 +1645,9 @@ function AdminActions({
        <LinkBreak className="w-4 h-4" /> Disconnect Cal.com
       </GhostButton>
      )}
+     <DangerButton onClick={resetOnboarding} disabled={busy === 'reset'}>
+      <Trash className="w-4 h-4" /> Reset to first login
+     </DangerButton>
     </div>
 
     {customPwOpen && (
