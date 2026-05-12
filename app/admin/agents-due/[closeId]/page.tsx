@@ -64,7 +64,7 @@ export default function AgentWorkspacePage({ params }: { params: { closeId: stri
 
   return (
     <AdminShell activeLabel="Agents Due">
-      <div className="px-5 sm:px-8 py-6 sm:py-8 max-w-5xl">
+      <div className="px-5 sm:px-8 py-6 sm:py-8 max-w-[1600px]">
         <Link
           href="/admin/agents-due"
           className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-200 mb-6"
@@ -126,22 +126,26 @@ function Workspace({ item, onChanged }: { item: Item; onChanged: () => void }) {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_320px] gap-4">
-        {/* Main column - chat is the star, pipeline is a collapsible
-            advanced tool below it. */}
+      {/* Top action bar: website + retell agent ID in a horizontal row
+          so they don't eat the chat's vertical real estate. */}
+      <div className="grid md:grid-cols-2 gap-3 mb-3">
+        <WebsiteCard
+          closeId={item.close_id}
+          currentWebsite={item.business?.website || null}
+          onChanged={onChanged}
+        />
+        <RetellAgentCard
+          businessId={item.business?.id || null}
+          currentAgentId={item.business?.retell_agent_id || null}
+          onChanged={onChanged}
+        />
+      </div>
+
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_340px] gap-4">
+        {/* Main column - chat is the star. Takes most of viewport
+            height; pipeline + submission live below it as compact
+            footer sections. */}
         <div className="space-y-3 min-w-0">
-          <WebsiteCard
-            closeId={item.close_id}
-            currentWebsite={item.business?.website || null}
-            onChanged={onChanged}
-          />
-
-          <RetellAgentCard
-            businessId={item.business?.id || null}
-            currentAgentId={item.business?.retell_agent_id || null}
-            onChanged={onChanged}
-          />
-
           <Panel padding="none">
             <div className="px-4 pt-3 pb-2 border-b border-white/5 flex items-center justify-between gap-2">
               <div className="inline-flex items-center gap-2">

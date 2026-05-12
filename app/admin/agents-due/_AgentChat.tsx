@@ -269,7 +269,7 @@ export function AgentChat({
 
       <div
         ref={scrollerRef}
-        className="h-[60vh] min-h-[420px] overflow-y-auto px-4 py-4 space-y-4 bg-black/20"
+        className="h-[72vh] min-h-[560px] overflow-y-auto px-4 py-4 space-y-4 bg-black/20"
       >
         {empty && (
           <div className="text-xs text-gray-400 space-y-2">
