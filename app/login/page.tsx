@@ -44,11 +44,21 @@ function LoginInner() {
     setError(result.message || `Login failed (${res.status})`)
     return
    }
+   // Scrub any prior-user blobs BEFORE writing the new ones. Otherwise
+   // stale cg.session.* / business / user keys from a previous login on
+   // the same browser persist and can show up in components that read
+   // them before the API responds. (This is the shared-workstation
+   // "wrong account showed up" defense.)
+   const { clearClientAuthState } = await import('@/lib/auth/session-guard')
+   clearClientAuthState()
    await setAuthToken(result.data.token)
    localStorage.setItem('token', result.data.token)
    localStorage.setItem('user', JSON.stringify(result.data.user))
    if (result.data.business) {
     localStorage.setItem('business', JSON.stringify(result.data.business))
+   }
+   if (result.data.user?.id) {
+    localStorage.setItem('cg.session.uid', String(result.data.user.id))
    }
    // Route by role: sales reps land on /sales, admins on /admin,
    // owners on /dashboard. login-simple already resolves the role.

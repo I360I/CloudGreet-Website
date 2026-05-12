@@ -721,8 +721,11 @@ function LoginAsClientLink({ businessId, businessName }: { businessId: string; b
         method: 'POST', credentials: 'include',
       })
       const j = await r.json().catch(() => ({}))
-      if (r.ok && j?.success) window.location.href = j.redirect_url || '/dashboard'
-      else alert(j?.error || 'Could not sign in as this client')
+      if (r.ok && j?.success) {
+        const { clearClientAuthState } = await import('@/lib/auth/session-guard')
+        clearClientAuthState()
+        window.location.href = j.redirect_url || '/dashboard'
+      } else alert(j?.error || 'Could not sign in as this client')
     } catch { alert('Could not sign in as this client') }
     finally { setBusy(false) }
   }

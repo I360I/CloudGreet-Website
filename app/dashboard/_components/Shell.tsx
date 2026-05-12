@@ -9,6 +9,7 @@ import { Sidebar, SidebarSkeleton } from './Sidebar'
 import { TopBar } from './TopBar'
 import { ImpersonationBanner } from './ImpersonationBanner'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { OnboardingProvider } from './onboarding-context'
 
 const PAGE_EASE = [0.22, 1, 0.36, 1] as const
@@ -26,6 +27,12 @@ export function DashShell({
  const [redirecting, setRedirecting] = useState(false)
 
  const [needsSetup, setNeedsSetup] = useState(false)
+
+ // Detect cross-tab session swaps and identity mismatches. If another
+ // user logged in via a sibling tab (shared workstation) or the JWT
+ // identity no longer matches what the server returns, this hook
+ // reloads / signs out before we render anything else.
+ useSessionGuard({ expectedRole: 'owner' })
 
  // Source the business name from the API (which is JWT-scoped) rather
  // than localStorage. Reading from localStorage was a cross-tenant leak
@@ -64,7 +71,7 @@ export function DashShell({
 
  const handleSignOut = async () => {
   try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
-  localStorage.removeItem('user'); localStorage.removeItem('business'); localStorage.removeItem('token')
+  clearClientAuthState()
   router.replace('/login')
  }
 

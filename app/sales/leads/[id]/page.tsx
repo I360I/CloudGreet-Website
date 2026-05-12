@@ -996,6 +996,10 @@ function LoginAsClientButton({ businessId, businessName }: {
       })
       const j = await r.json().catch(() => ({}))
       if (r.ok && j?.success) {
+        // Scrub the rep's own localStorage so the impersonated dashboard
+        // doesn't inherit stale cg.session.* / user / business blobs.
+        const { clearClientAuthState } = await import('@/lib/auth/session-guard')
+        clearClientAuthState()
         window.location.href = j.redirect_url || '/dashboard'
       } else {
         alert(j?.error || 'Could not sign in as this client')

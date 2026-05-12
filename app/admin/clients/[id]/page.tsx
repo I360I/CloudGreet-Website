@@ -1609,6 +1609,11 @@ function AdminActions({
         })
         const j = await r.json().catch(() => ({}))
         if (r.ok && j?.success) {
+         // Scrub the admin's own localStorage so the impersonated
+         // dashboard doesn't read stale cg.session.uid / user / business
+         // blobs and trigger the session-guard reload loop.
+         const { clearClientAuthState } = await import('@/lib/auth/session-guard')
+         clearClientAuthState()
          window.location.href = j.redirect_url || '/dashboard'
         } else {
          alert(j?.error || 'Could not impersonate this client')

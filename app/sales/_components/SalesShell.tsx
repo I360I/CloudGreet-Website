@@ -14,6 +14,7 @@ const Dialer = dynamicImport(
 )
 import { SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch, Gear, Users, GraduationCap, BookOpen, Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { NotificationsBell } from '@/components/NotificationsBell'
 
 type ActiveLabel = 'Overview' | 'Leads' | 'Closes' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook'
@@ -51,6 +52,10 @@ export function SalesShell({
   const [name, setName] = useState<string | null>(null)
   const [payoutsReady, setPayoutsReady] = useState<boolean | null>(null)
 
+  // Defense against shared-browser session swaps + cross-tab identity
+  // contamination - reloads / kicks to login on mismatch.
+  useSessionGuard({ expectedRole: 'sales' })
+
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -72,16 +77,7 @@ export function SalesShell({
 
   const signOut = async () => {
     try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
-    try {
-      // Scrub every key the auth fallback chain might pull from. Missing
-      // any one of these caused the "signed in as Anthony" stale-name
-      // bug when testing the rep flow on a shared computer - the cookie
-      // had been overwritten but localStorage still had the old token.
-      localStorage.removeItem('user')
-      localStorage.removeItem('business')
-      localStorage.removeItem('token')
-      localStorage.removeItem('auth_token')
-    } catch {}
+    clearClientAuthState()
     router.replace('/login')
   }
 
