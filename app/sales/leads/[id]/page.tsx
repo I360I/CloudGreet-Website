@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, EnvelopeSimple, ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Trash, CalendarBlank, ChatCircle, Trophy, Hash, MapPin, X, Copy, CurrencyDollar, Link as LinkIcon } from '@phosphor-icons/react'
+import { Phone, EnvelopeSimple, ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Trash, CalendarBlank, ChatCircle, Trophy, Hash, MapPin, X, Copy, CurrencyDollar, Link as LinkIcon, UserPlus } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 import { Modal } from '../../_components/Modal'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -325,6 +325,7 @@ export default function LeadDetailPage() {
                 <CurrencyDollar weight="fill" className="w-4 h-4" /> Send payment link
               </button>
               <SendCustomizationButton leadId={lead.id} />
+              <CreateAccountButton leadId={lead.id} leadEmail={lead.email || ''} onCreated={() => { void load() }} />
               <a
                 href="/sales/customization-template"
                 target="_blank"
@@ -836,5 +837,132 @@ function SendCustomizationButton({ leadId }: { leadId: string }) {
         </span>
       )}
     </div>
+  )
+}
+
+/**
+ * Create-account button. Use when the lead has already booked or paid
+ * outside the booking-link flow (called in, manual close) and the rep
+ * just needs a CloudGreet account spun up so the client can log in.
+ *
+ * Behind the scenes: creates a close, converts it to a real client
+ * (custom_users + businesses), emails login + temp password. Idempotent -
+ * clicking twice doesn't make duplicate accounts. Shows the temp
+ * password inline so the rep can read it to the client on the phone
+ * before the email lands.
+ */
+function CreateAccountButton({ leadId, leadEmail, onCreated }: {
+  leadId: string
+  leadEmail: string
+  onCreated: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<{
+    email: string
+    password: string
+    emailed: boolean
+    already: boolean
+  } | null>(null)
+  const [err, setErr] = useState('')
+  const [emailOverride, setEmailOverride] = useState('')
+  const [showForm, setShowForm] = useState(false)
+
+  const submit = async () => {
+    const email = (emailOverride.trim() || leadEmail).toLowerCase()
+    if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
+      setErr('Enter a valid email')
+      return
+    }
+    setBusy(true); setErr(''); setResult(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/create-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setErr(j?.error || `Failed (${r.status})`)
+        return
+      }
+      setResult({
+        email: j.user_email || email,
+        password: j.temp_password || '',
+        emailed: !!j.email_sent,
+        already: !!j.already_existed,
+      })
+      setShowForm(false)
+      onCreated()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (result) {
+    return (
+      <div className="inline-flex flex-col gap-1 max-w-[320px]">
+        <div className="inline-flex items-center gap-2 h-10 px-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-medium rounded-xl">
+          <CheckCircle weight="fill" className="w-4 h-4" />
+          {result.already ? 'Account exists' : 'Account created'}
+        </div>
+        {!result.already && (
+          <div className="text-[11px] text-gray-600 font-mono leading-tight bg-gray-50 border border-gray-200 rounded px-2 py-1.5">
+            <div>{result.email}</div>
+            {result.password && <div>{result.password}</div>}
+            <div className="font-sans text-gray-500 mt-0.5">
+              {result.emailed ? 'Emailed' : 'Email failed - read it to them'}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (showForm) {
+    return (
+      <div className="inline-flex flex-col gap-1 max-w-[280px]">
+        <div className="bg-white border border-gray-200 rounded-xl p-2 flex flex-col gap-1.5">
+          <input
+            type="email"
+            value={emailOverride}
+            onChange={(e) => setEmailOverride(e.target.value)}
+            placeholder={leadEmail || 'email@business.com'}
+            autoFocus
+            className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:border-gray-400"
+            onKeyDown={(e) => { if (e.key === 'Enter') void submit() }}
+          />
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={submit}
+              disabled={busy}
+              className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-3 bg-slate-800 text-white text-xs font-medium rounded hover:bg-slate-700 disabled:opacity-60"
+            >
+              {busy ? <CircleNotch className="w-3 h-3 animate-spin" /> : <UserPlus weight="fill" className="w-3 h-3" />}
+              Create
+            </button>
+            <button
+              onClick={() => { setShowForm(false); setErr('') }}
+              disabled={busy}
+              className="text-xs text-gray-500 hover:text-gray-800 px-2"
+            >
+              Cancel
+            </button>
+          </div>
+          {err && <div className="text-[11px] text-rose-700">{err}</div>}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => { setShowForm(true); setEmailOverride(leadEmail) }}
+      className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-slate-50 border border-slate-200 text-slate-800 text-sm font-medium rounded-xl hover:bg-slate-100 hover:border-slate-300 active:scale-[0.98] transition-all"
+      title="Create a CloudGreet account for this client (no booking link)"
+    >
+      <UserPlus weight="fill" className="w-4 h-4" /> Create account
+    </button>
   )
 }
