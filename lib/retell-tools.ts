@@ -73,8 +73,13 @@ export function getRetellGeneralTools(
       description:
         "Books an appointment on the business's calendar. Call this once you have the caller's name, phone, the service they need, and the date/time they agreed to. Returns success + an appointment id. After it succeeds, follow with send_booking_sms to text the caller a confirmation.",
       url: webhookUrl,
+      // speak_during covers TTS while the tool runs; speak_after covers
+      // the LLM-thinking gap between tool result and the agent's next
+      // utterance. Without speak_after, the agent goes silent for
+      // 1-2s after every successful book - which is what triggered
+      // Retell's "Still there?" filler.
       speak_during_execution: true,
-      speak_after_execution: false,
+      speak_after_execution: true,
       parameters: {
         type: 'object',
         properties: {
@@ -112,8 +117,12 @@ export function getRetellGeneralTools(
       description:
         "Texts the caller a confirmation SMS with the booked date/time. Call this immediately after book_appointment returns a successful appt_id. Pass the same phone you used to book.",
       url: webhookUrl,
-      speak_during_execution: false,
-      speak_after_execution: false,
+      // Both true: speak during the actual SMS send (~300ms but
+      // enough to register as a pause without filler) AND after,
+      // so the LLM-thinking gap before the agent's wrap-up doesn't
+      // leave dead air.
+      speak_during_execution: true,
+      speak_after_execution: true,
       parameters: {
         type: 'object',
         properties: {
@@ -136,7 +145,7 @@ export function getRetellGeneralTools(
         "Returns open appointment slots on the business's calendar. Call this BEFORE proposing times to the caller so you only offer slots that are actually free. With no arguments it returns the next 7 days. Pass `date` (YYYY-MM-DD) to scope to a single day.",
       url: webhookUrl,
       speak_during_execution: true,
-      speak_after_execution: false,
+      speak_after_execution: true,
       parameters: {
         type: 'object',
         properties: {
