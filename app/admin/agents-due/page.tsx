@@ -68,8 +68,13 @@ export default function AgentsDuePage() {
 
   useEffect(() => { reload() }, [])
 
-  // Sort: not-ready/not-skipped first, then by demo time ascending
-  // (soonest first), then by created_at as tiebreaker. Skipped sinks.
+  // Sort: pending/building first (newest at top), then ready, then
+  // skipped. Within each status group, newest-created at the top so
+  // the row a rep just provisioned shows up immediately - which is
+  // what an admin glancing at this queue actually wants to see. Demo
+  // time is shown on the row as info, not used for sorting (the
+  // previous "soonest demo first" sort buried fresh provisions
+  // under stale rows).
   const sorted = useMemo(() => {
     const order = (s: Item['demo']['status']) =>
       s === 'skipped' ? 3 : s === 'ready' ? 2 : 0
@@ -77,12 +82,10 @@ export default function AgentsDuePage() {
       const oa = order(a.demo.status)
       const ob = order(b.demo.status)
       if (oa !== ob) return oa - ob
-      const da = a.demo.scheduled_at ? new Date(a.demo.scheduled_at).getTime() : Number.POSITIVE_INFINITY
-      const db = b.demo.scheduled_at ? new Date(b.demo.scheduled_at).getTime() : Number.POSITIVE_INFINITY
-      if (da !== db) return da - db
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
   }, [items])
+
 
   return (
     <AdminShell activeLabel="Agents Due">
@@ -132,6 +135,25 @@ export default function AgentsDuePage() {
   )
 }
 
+/**
+ * Compact "5m ago", "3h ago", "2d ago" for the time-since-arrival
+ * column. The admin needs to glance at the queue and see at-a-glance
+ * which agents just landed vs which have been sitting there a while.
+ */
+function ago(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  if (Number.isNaN(diff) || diff < 0) return ''
+  const sec = Math.floor(diff / 1000)
+  if (sec < 60) return 'just now'
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min}m ago`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr}h ago`
+  const day = Math.floor(hr / 24)
+  if (day < 7) return `${day}d ago`
+  return `${Math.floor(day / 7)}w ago`
+}
+
 function Row({ item }: { item: Item }) {
   const tone = STATUS_TONE[item.demo.status]
   const countdown = useCountdown(item.demo.scheduled_at)
@@ -171,6 +193,7 @@ function Row({ item }: { item: Item }) {
             {item.agent_draft.status === 'ready' && (
               <span className="text-emerald-400/80"> · draft ready</span>
             )}
+            <span className="text-gray-600"> · added {ago(item.created_at)}</span>
           </div>
         </div>
 

@@ -429,37 +429,13 @@ function ForwardingStep({
  const [saving, setSaving] = useState(false)
 
  if (!retellNumber) {
-  if (pollExpired) {
-   // Two minutes elapsed and the agent provisioning never finished.
-   // The previous screen spun forever which left contractors stuck
-   // with no clear next step.
-   return (
-    <div className="bg-white border border-amber-200 rounded-2xl p-6">
-     <div className="flex items-center gap-2 mb-1">
-      <WarningCircle className="w-4 h-4 text-amber-500" />
-      <h2 className="text-xl font-medium text-gray-900">This is taking longer than usual</h2>
-     </div>
-     <p className="text-sm text-gray-500 mt-1">
-      Your dedicated number should be ready by now. Reach out so we can finish the handoff - it usually takes us a couple minutes once we see the message.
-     </p>
-     <div className="mt-4 flex flex-wrap gap-3">
-      <a
-       href="mailto:support@cloudgreet.com?subject=Onboarding%20stuck%20-%20no%20phone%20number"
-       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors"
-      >
-       Email support
-      </a>
-      <button
-       type="button"
-       onClick={() => window.location.reload()}
-       className="inline-flex items-center gap-2 border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
-      >
-       Try again
-      </button>
-     </div>
-    </div>
-   )
-  }
+  // Single calm message regardless of how long it's been. Previous
+  // version flipped to a "this is taking longer than usual" panic
+  // panel after a few minutes, which is wrong - agents can take up
+  // to a day to build and test, and implying urgency just makes
+  // contractors anxious and ping support. No spinner either; nothing
+  // is "loading" on this screen, the team is working in the
+  // background.
   return (
    <div className="bg-white border border-gray-200 rounded-2xl p-6">
     <div className="flex items-center gap-2 mb-1">
@@ -467,11 +443,18 @@ function ForwardingStep({
      <h2 className="text-xl font-medium text-gray-900">Your agent is being built</h2>
     </div>
     <p className="text-sm text-gray-500 mt-1">
-     We&apos;re setting up your dedicated AI receptionist - scraping your site, tuning the script for your services, and provisioning your phone number. We&apos;ll drop your forwarding code right here the moment it&apos;s ready, before your demo. If you don&apos;t see it by then, tap the support link below.
+     Our team is building and testing your AI receptionist. We&apos;ll connect it to your dedicated phone number once it&apos;s ready - your forwarding code will appear here automatically and you can finish setup then. No action needed right now.
     </p>
-    <div className="mt-5 flex items-center gap-2 text-xs text-gray-500">
-     <CircleNotch className="w-3.5 h-3.5 animate-spin" />
-     Building your agent…
+    <p className="text-sm text-gray-500 mt-3">
+     Most agents are ready within a business day. Feel free to close this tab - we&apos;ll email you the moment it&apos;s live.
+    </p>
+    <div className="mt-5">
+     <a
+      href="mailto:support@cloudgreet.com?subject=Onboarding%20question"
+      className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 underline-offset-4 hover:underline"
+     >
+      Questions? Email support.
+     </a>
     </div>
    </div>
   )

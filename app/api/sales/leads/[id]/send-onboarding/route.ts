@@ -241,6 +241,28 @@ export async function POST(
     repId: auth.userId, leadId: lead.id, businessId: business.id, email, emailSent,
   })
 
+  // FYI to Anthony - rep just spun up a new client + sent booking link.
+  void (async () => {
+    try {
+      const { emailFounderAlert } = await import('@/lib/notifications/founder-alert')
+      await emailFounderAlert({
+        subject: `Rep sent booking link: ${business.business_name}`,
+        body: `${repName} sent a booking link to ${business.business_name}. Account was provisioned at the same time.`,
+        replyTo: rep?.email || undefined,
+        metadata: {
+          business_id: business.id,
+          business_name: business.business_name,
+          client_email: user.email,
+          rep: repName,
+          rep_email: rep?.email,
+          lead_id: lead.id,
+          scheduled_demo: scheduledAt ? scheduledAt.toISOString() : 'none',
+          email_sent: emailSent,
+        },
+      })
+    } catch { /* non-fatal */ }
+  })()
+
   return NextResponse.json({
     success: true,
     business: { id: business.id, business_name: business.business_name },

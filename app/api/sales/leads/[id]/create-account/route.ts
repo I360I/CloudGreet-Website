@@ -213,6 +213,37 @@ export async function POST(
     }
   }
 
+  // FYI to Anthony - reps direct-creating accounts is a moment he
+  // wants visibility into without having to check /admin/clients.
+  void (async () => {
+    try {
+      const { data: rep } = await supabaseAdmin
+        .from('custom_users')
+        .select('email, name, first_name, last_name')
+        .eq('id', auth.userId)
+        .maybeSingle()
+      const repName =
+        rep?.name ||
+        [rep?.first_name, rep?.last_name].filter(Boolean).join(' ').trim() ||
+        rep?.email ||
+        'a rep'
+      const { emailFounderAlert } = await import('@/lib/notifications/founder-alert')
+      await emailFounderAlert({
+        subject: `Rep created client account: ${business.business_name}`,
+        body: `${repName} just spun up a CloudGreet account for ${business.business_name} directly from a lead (no booking-link flow).`,
+        replyTo: rep?.email || undefined,
+        metadata: {
+          business_id: business.id,
+          business_name: business.business_name,
+          client_email: user.email,
+          rep: repName,
+          rep_email: rep?.email,
+          lead_id: lead.id,
+        },
+      })
+    } catch { /* non-fatal */ }
+  })()
+
   return NextResponse.json({
     success: true,
     business_id: business.id,
