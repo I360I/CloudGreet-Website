@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { scheduleReviewRequest } from '@/lib/review-requests'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -156,21 +157,48 @@ async function upsertFromBooking(
   return
  }
 
- await supabaseAdmin.from('appointments').insert({
-  business_id: businessId,
-  customer_name,
-  customer_email,
-  customer_phone,
-  service_type,
-  scheduled_date: startIso.slice(0, 10),
-  start_time: start.toISOString(),
-  end_time: end.toISOString(),
-  duration,
-  status,
-  cal_com_booking_uid: uid,
-  cal_com_booking_id: payload?.id || null,
-  notes: payload?.responses?.notes || null,
- })
+ const { data: inserted } = await supabaseAdmin
+  .from('appointments')
+  .insert({
+   business_id: businessId,
+   customer_name,
+   customer_email,
+   customer_phone,
+   service_type,
+   scheduled_date: startIso.slice(0, 10),
+   start_time: start.toISOString(),
+   end_time: end.toISOString(),
+   duration,
+   status,
+   cal_com_booking_uid: uid,
+   cal_com_booking_id: payload?.id || null,
+   notes: payload?.responses?.notes || null,
+  })
+  .select('id')
+  .single()
+
+ // Schedule a follow-up review SMS. The customer booked directly on
+ // the contractor's Cal.com page; the contractor's global review
+ // toggle is their opt-in. scheduleReviewRequest no-ops when the
+ // feature is off, the phone is missing or opted out, or we already
+ // sent within 90 days.
+ if (inserted?.id && customer_phone) {
+  try {
+   await scheduleReviewRequest({
+    appointmentId: inserted.id,
+    businessId,
+    customerPhone: customer_phone,
+    customerName: customer_name,
+    appointmentStart: start,
+    reviewConsent: true,
+   })
+  } catch (e) {
+   logger.warn('scheduleReviewRequest (cal webhook) threw', {
+    appointmentId: inserted.id,
+    error: e instanceof Error ? e.message : 'Unknown',
+   })
+  }
+ }
 }
 
 async function markCancelled(businessId: string, payload: any) {

@@ -18,7 +18,7 @@
     },
     {
       "path": "/api/cron/send-review-requests",
-      "schedule": "0 14 * * *"
+      "schedule": "0 * * * *"
     },
     {
       "path": "/api/cron/calcom-sync",

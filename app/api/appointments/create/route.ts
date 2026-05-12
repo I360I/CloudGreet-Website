@@ -6,6 +6,7 @@ import { moderateRateLimit } from '@/lib/rate-limiting-redis'
 import { z } from 'zod'
 import { validateAndFormatPhone } from '@/lib/phone-validation'
 import { createBooking, CalcomError } from '@/lib/calcom'
+import { scheduleReviewRequest } from '@/lib/review-requests'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -185,6 +186,28 @@ export async function POST(request: NextRequest) {
     status, appointmentId: appointment.id, businessId,
    })
   }
+ }
+
+ // Schedule review SMS for this manual booking. The contractor is
+ // creating this row themselves and the business-wide review-requests
+ // toggle is their global opt-in, so we treat consent as granted.
+ // scheduleReviewRequest itself no-ops when the feature is disabled,
+ // the URL is missing, the phone is opted out, or the 90-day frequency
+ // cap has hit.
+ try {
+  await scheduleReviewRequest({
+   appointmentId: appointment.id,
+   businessId,
+   customerPhone: formattedPhone,
+   customerName: validated.customer_name,
+   appointmentStart: startTime,
+   reviewConsent: true,
+  })
+ } catch (e) {
+  logger.warn('scheduleReviewRequest (manual create) threw', {
+   appointmentId: appointment.id,
+   error: e instanceof Error ? e.message : 'Unknown',
+  })
  }
 
  return NextResponse.json({
