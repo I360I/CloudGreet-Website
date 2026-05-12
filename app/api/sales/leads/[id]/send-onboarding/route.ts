@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import { convertCloseToClient } from '@/lib/sales/convert-close'
+import { proxyBookingUrl } from '@/lib/booking-url'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -128,7 +129,11 @@ export async function POST(
     || [rep?.first_name, rep?.last_name].filter(Boolean).join(' ')
     || rep?.email
     || 'your CloudGreet rep'
-  const bookingUrl = repProfile?.booking_url || ''
+  // Raw cal.com URL stays in the close/response for tracking; the
+  // proxied version is what we put in the email body to dodge mail.com
+  // / Outlook URL filters that flag bare cal.com links as suspicious.
+  const rawBookingUrl = repProfile?.booking_url || ''
+  const bookingUrl = proxyBookingUrl(rawBookingUrl)
 
   // 4. Bump lead workflow + log a touch.
   await supabaseAdmin
