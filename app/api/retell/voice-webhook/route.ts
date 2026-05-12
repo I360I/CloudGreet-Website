@@ -685,17 +685,16 @@ export async function POST(request: NextRequest) {
  // Cache-first read. The call_inbound handler prewarms a week-wide
  // slot list before the agent greets the caller, so by the time
  // the agent calls lookup_availability mid-conversation the data
- // is sitting in cloudgreet_system_config with a 60s TTL. Hit-rate
- // for the typical "caller mentions a time -> agent checks" pattern
- // is ~95%, and it removes the 1-2s Cal.com round-trip + the 4-5s
- // Retell silence-filler that gets triggered.
+ // is sitting in cloudgreet_system_config with a 60s TTL.
  //
- // Scope is 'week' when no date arg (full 7-day prewarm matches),
- // or the YYYY-MM-DD date for a scoped lookup.
- const scope = date || 'week'
- const cached = await readSlotCache(business_id, scope)
+ // Always read the 'week' cache (which is what the prewarm writes),
+ // then filter down to the requested date if the agent scoped one.
+ // The previous version tried to read scope-specific keys like
+ // 'slot_cache:{id}:2026-05-14' which the prewarm never writes -
+ // every date-scoped query was a guaranteed miss, defeating the
+ // entire prewarm.
+ const cached = await readSlotCache(business_id, 'week')
  if (cached) {
- // Filter the cached week down to the requested date if needed.
  const matchPrefix = date ? `${date}T` : null
  const filtered = matchPrefix
  ? cached.slots
@@ -760,9 +759,11 @@ export async function POST(request: NextRequest) {
  const slots = rawSlots.map((iso) => isoInZone(iso, tz))
  const slots_display = rawSlots.map((iso) => formatHuman(iso, tz))
 
- // Store in cache for the next lookup in this call.
- void writeSlotCache(business_id, scope, {
- slots, slots_display, timezone: tz, source: 'calcom', scope,
+ // Always write under 'week' so the prewarm key and live-fetch
+ // key are consistent. Subsequent lookups (scoped or not) hit
+ // this cache and filter client-side.
+ void writeSlotCache(business_id, 'week', {
+ slots, slots_display, timezone: tz, source: 'calcom', scope: 'week',
  })
 
  return NextResponse.json({
