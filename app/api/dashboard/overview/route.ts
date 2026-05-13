@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { listBookings } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   const { data: business } = await supabaseAdmin
    .from('businesses')
-   .select('id, business_name')
+   .select('id, business_name, cal_com_api_key')
    .eq('id', businessId)
    .maybeSingle()
 
@@ -131,17 +132,60 @@ export async function GET(request: NextRequest) {
    outcome: c.outcome,
   }))
 
-  // Upcoming appointments (next 14 days)
+  // Upcoming appointments (next 14 days). Pull both local rows AND live
+  // Cal.com bookings - contractors using Cal.com never have rows in our
+  // appointments table because bookings come straight from Cal's calendar.
+  // Without the live merge this card always shows zero for them, which is
+  // exactly what the user reported on the R&R dashboard.
   const nowIso = new Date(now).toISOString()
   const twoWeeksOut = new Date(now + 14 * 24 * 60 * 60 * 1000).toISOString()
-  const { data: appts } = await supabaseAdmin
+  const { data: localAppts } = await supabaseAdmin
    .from('appointments')
-   .select('id, customer_name, customer_phone, service_type, scheduled_date, start_time, status, notes')
+   .select('id, customer_name, customer_phone, service_type, scheduled_date, start_time, status, notes, cal_com_booking_uid')
    .eq('business_id', businessId)
-   .gte('scheduled_date', nowIso)
-   .lte('scheduled_date', twoWeeksOut)
-   .order('scheduled_date', { ascending: true })
+   .gte('scheduled_date', nowIso.split('T')[0])
+   .lte('scheduled_date', twoWeeksOut.split('T')[0])
+   .order('start_time', { ascending: true })
    .limit(20)
+
+  const apptList: any[] = [...(localAppts || [])]
+  if (business?.cal_com_api_key) {
+   try {
+    const localUids = new Set(
+     (localAppts || [])
+      .map((r: any) => r.cal_com_booking_uid)
+      .filter((u: any): u is string => !!u),
+    )
+    const live = await listBookings(business.cal_com_api_key, {
+     afterStart: nowIso,
+     beforeEnd: twoWeeksOut,
+    })
+    for (const b of live) {
+     if (!b?.uid || localUids.has(b.uid)) continue
+     if (b.status && /(cancel|reject)/i.test(b.status)) continue
+     const start = new Date(b.start)
+     if (isNaN(start.getTime())) continue
+     const attendee = b.attendees?.[0]
+     apptList.push({
+      id: `cal:${b.uid}`,
+      customer_name: attendee?.name || b.title || 'Cal.com booking',
+      customer_phone: null,
+      service_type: b.eventType?.title || b.title || 'General',
+      scheduled_date: start.toISOString().split('T')[0],
+      start_time: start.toISOString(),
+      status: b.status || 'confirmed',
+      notes: null,
+     })
+    }
+    apptList.sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)))
+   } catch (e) {
+    logger.warn('Overview Cal.com live merge failed', {
+     businessId,
+     error: e instanceof Error ? e.message : 'Unknown',
+    })
+   }
+  }
+  const appts = apptList.slice(0, 20)
 
   // Sparkline data for KPI cards (last 14 days regardless of range)
   const sparkDays = Math.min(14, range)
