@@ -963,6 +963,43 @@ function formatHuman(iso: string, tz: string): string {
  * call_analyzed once the post-call analysis pass completes (extracted
  * fields per the agent's post_call_analysis_data definition).
  */
+/**
+ * Map Retell's disconnection_reason to the small enum the calls.status
+ * CHECK constraint allows. Defaults to 'completed' for anything else
+ * so the row still inserts.
+ */
+function mapDisconnectionToStatus(reason: string): string {
+ switch (reason) {
+  case 'dial_busy': return 'busy'
+  case 'dial_no_answer': return 'no-answer'
+  case 'dial_failed':
+  case 'error_no_audio_received':
+  case 'error_unknown':
+  case 'error_llm_websocket_open':
+  case 'error_llm_websocket_lost_connection':
+  case 'error_llm_websocket_runtime':
+  case 'error_llm_websocket_corrupt_payload':
+  case 'error_frontend_corrupted_payload':
+  case 'error_twilio':
+  case 'error_inbound_webhook':
+  case 'error_retell':
+  case 'error_user_not_joined':
+   return 'failed'
+  case 'user_hangup':
+  case 'agent_hangup':
+  case 'call_transfer':
+  case 'voicemail_reached':
+  case 'inactivity':
+  case 'machine_detected':
+  case 'max_duration_reached':
+  case 'concurrency_limit_reached':
+  case 'no_valid_payment':
+  case 'scam_detected':
+  default:
+   return 'completed'
+ }
+}
+
 async function handleCallEvent(
  eventType: string,
  body: any,
@@ -984,7 +1021,15 @@ async function handleCallEvent(
   if (typeof call?.from_number === 'string') patch.from_number = call.from_number
   if (typeof call?.to_number === 'string') patch.to_number = call.to_number
   if (typeof call?.duration_ms === 'number') patch.duration = Math.round(call.duration_ms / 1000)
-  if (typeof call?.disconnection_reason === 'string') patch.status = call.disconnection_reason
+  // calls.status has a CHECK constraint limiting it to a known enum.
+  // Retell's disconnection_reason (user_hangup, agent_hangup, dial_busy,
+  // dial_no_answer, machine_detected, etc.) maps onto that set; anything
+  // unrecognized falls back to 'completed' so the row still saves.
+  if (typeof call?.disconnection_reason === 'string') {
+   patch.status = mapDisconnectionToStatus(call.disconnection_reason)
+  } else if (eventType === 'call_ended' || eventType === 'call_analyzed') {
+   patch.status = 'completed'
+  }
 
   // post_call_analysis_data is the headline feature. Retell returns
   // it as either an object keyed by field name or an array of
@@ -1012,7 +1057,12 @@ async function handleCallEvent(
    patch.call_summary = call.call_analysis.call_summary
   }
   if (call?.call_analysis?.user_sentiment && !patch.sentiment) {
-   patch.sentiment = call.call_analysis.user_sentiment
+   // calls.sentiment has a CHECK constraint (lowercase positive/neutral/
+   // negative/unknown). Retell sends 'Positive'/'Neutral'/'Negative'.
+   const raw = String(call.call_analysis.user_sentiment).toLowerCase()
+   if (raw === 'positive' || raw === 'neutral' || raw === 'negative') {
+    patch.sentiment = raw
+   }
   }
 
   if (Object.keys(patch).length === 0) {
