@@ -78,6 +78,54 @@ export type CalcomEventType = {
  slug: string
  lengthInMinutes: number
  hidden: boolean
+ locations?: CalcomLocation[]
+}
+
+/**
+ * Cal.com v2 location shape. Common types:
+ *   { type: 'integrations:google:meet' }      → Google Meet
+ *   { type: 'integrations:zoom_video' }       → Zoom
+ *   { type: 'integrations:daily' }            → Cal Video
+ *   { type: 'attendeePhoneNumber' }           → Phone (attendee number)
+ *   { type: 'attendeeAddress' }               → In person at attendee address
+ *   { type: 'address', address: '123 Main' }  → Fixed address
+ *   { type: 'link', link: 'https://...' }     → Custom link
+ */
+export type CalcomLocation = {
+ type: string
+ address?: string
+ link?: string
+ phone?: string
+}
+
+export type EventTypeLocationPreset = 'google_meet' | 'zoom' | 'cal_video' | 'attendee_phone' | 'attendee_address'
+
+export function locationFromPreset(preset: EventTypeLocationPreset): CalcomLocation {
+ switch (preset) {
+  case 'google_meet': return { type: 'integrations:google:meet' }
+  case 'zoom': return { type: 'integrations:zoom_video' }
+  case 'cal_video': return { type: 'integrations:daily' }
+  case 'attendee_phone': return { type: 'attendeePhoneNumber' }
+  case 'attendee_address': return { type: 'attendeeAddress' }
+ }
+}
+
+/**
+ * Update an event type's title / slug / location via Cal.com v2 API.
+ * Used by the CloudGreet settings page so contractors can rename and
+ * re-locate their event types without leaving our UI.
+ */
+export async function updateEventType(
+ apiKey: string,
+ eventTypeId: number,
+ patch: { title?: string; slug?: string; locations?: CalcomLocation[]; lengthInMinutes?: number },
+): Promise<CalcomEventType> {
+ const res = await calFetch<{ status: string; data: CalcomEventType }>(
+  apiKey,
+  `/event-types/${eventTypeId}`,
+  { version: '2024-06-14', method: 'PATCH', body: JSON.stringify(patch) },
+ )
+ return res.data
 }
 
 export async function getEventType(apiKey: string, eventTypeId: number): Promise<CalcomEventType> {

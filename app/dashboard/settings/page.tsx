@@ -1685,12 +1685,142 @@ function CalendarConnectionSection() {
        </span>
       )}
      </div>
+     <EventTypeEditor onSaved={load} />
     </div>
    )}
 
    {!loading && !info?.connected && flash && (
     <div className={`text-sm mt-3 ${flash.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>{flash.text}</div>
    )}
+  </div>
+ )
+}
+
+/**
+ * Inline editor for the currently connected Cal.com event type. Lets
+ * the contractor (or rep during onboarding) rename the event and pick
+ * a meeting location (Google Meet / Zoom / phone / in-person) without
+ * leaving CloudGreet and hunting through Cal.com's settings.
+ */
+function EventTypeEditor({ onSaved }: { onSaved: () => void }) {
+ const [open, setOpen] = useState(false)
+ const [title, setTitle] = useState('')
+ const [preset, setPreset] = useState<'google_meet' | 'zoom' | 'cal_video' | 'attendee_phone' | 'attendee_address'>('attendee_phone')
+ const [address, setAddress] = useState('')
+ const [saving, setSaving] = useState(false)
+ const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+
+ const save = async () => {
+  setSaving(true); setMsg(null)
+  try {
+   const body: any = { locationPreset: preset }
+   if (title.trim()) body.title = title.trim()
+   if (preset === 'attendee_address' && address.trim()) body.locationAddress = address.trim()
+   const r = await fetchWithAuth('/api/dashboard/calcom/event-type', {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j.success) {
+    setMsg({ tone: 'err', text: j?.error || `Failed (${r.status})` })
+   } else {
+    setMsg({ tone: 'ok', text: 'Event type updated.' })
+    onSaved()
+    setTimeout(() => { setMsg(null); setOpen(false) }, 1500)
+   }
+  } catch (e) {
+   setMsg({ tone: 'err', text: e instanceof Error ? e.message : 'Failed' })
+  } finally {
+   setSaving(false)
+  }
+ }
+
+ if (!open) {
+  return (
+   <button
+    type="button"
+    onClick={() => setOpen(true)}
+    className="text-xs text-sky-700 hover:text-sky-900 font-medium"
+   >
+    Edit event name &amp; location →
+   </button>
+  )
+ }
+
+ return (
+  <div className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50/40">
+   <div className="text-xs font-medium text-gray-700">Edit event type</div>
+
+   <div>
+    <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">New name (optional)</label>
+    <input
+     value={title}
+     onChange={(e) => setTitle(e.target.value)}
+     placeholder="e.g. AC Service Call"
+     className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-900"
+    />
+   </div>
+
+   <div>
+    <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">Meeting location</label>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+     {([
+      { value: 'attendee_phone', label: 'Customer phone (we call them)' },
+      { value: 'google_meet', label: 'Google Meet (video link)' },
+      { value: 'zoom', label: 'Zoom (video link)' },
+      { value: 'cal_video', label: 'Cal Video' },
+      { value: 'attendee_address', label: 'In person (their address)' },
+     ] as const).map((opt) => (
+      <button
+       key={opt.value}
+       type="button"
+       onClick={() => setPreset(opt.value)}
+       className={`text-left px-3 py-2 rounded-lg text-sm border transition-colors ${
+        preset === opt.value
+         ? 'border-gray-900 bg-gray-900 text-white'
+         : 'border-gray-200 bg-white text-gray-800 hover:border-gray-400'
+       }`}
+      >
+       {opt.label}
+      </button>
+     ))}
+    </div>
+   </div>
+
+   {preset === 'attendee_address' && (
+    <div>
+     <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">Customer's address goes here at booking</label>
+     <input
+      value={address}
+      onChange={(e) => setAddress(e.target.value)}
+      placeholder="Leave blank to ask at booking"
+      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-900"
+     />
+    </div>
+   )}
+
+   <div className="flex items-center gap-3 pt-1">
+    <button
+     type="button"
+     onClick={save}
+     disabled={saving}
+     className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+    >
+     {saving ? <CircleNotch className="w-4 h-4 animate-spin" /> : null}
+     {saving ? 'Saving...' : 'Save'}
+    </button>
+    <button
+     type="button"
+     onClick={() => { setOpen(false); setMsg(null) }}
+     className="text-sm text-gray-500 hover:text-gray-900"
+    >
+     Cancel
+    </button>
+    {msg && (
+     <span className={`text-sm ${msg.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>{msg.text}</span>
+    )}
+   </div>
   </div>
  )
 }
