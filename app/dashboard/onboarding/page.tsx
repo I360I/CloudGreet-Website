@@ -674,7 +674,6 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
  const [since] = useState(() => new Date().toISOString())
  const [polling, setPolling] = useState(true)
  const [verified, setVerified] = useState(false)
- const [paid, setPaid] = useState(true)
  const [tries, setTries] = useState(0)
 
  useEffect(() => {
@@ -686,11 +685,7 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
     setTries((t) => t + 1)
     if (json?.verified) {
      setVerified(true); setPolling(false)
-     // Only let the wizard advance if Stripe shows them paid. Otherwise
-     // keep them on this step with the upgrade card so they don't go
-     // "live" without a subscription.
-     setPaid(json.paid !== false)
-     if (json.paid !== false) setTimeout(onVerified, 1200)
+     setTimeout(onVerified, 1200)
     }
    } catch { /* keep trying */ }
   }, 4000)
@@ -752,22 +747,6 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
      >
       Skip verification (override)
      </button>
-    </div>
-   )}
-
-   {verified && !paid && (
-    <div className="mt-4 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
-     <div className="text-sm font-medium text-amber-900">Forwarding works - one more thing</div>
-     <p className="text-xs text-amber-800 mt-1">
-      We won&apos;t flip your account to live until your subscription is active.
-      Head to billing to add a payment method.
-     </p>
-     <a
-      href="/dashboard/billing"
-      className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-amber-900 hover:text-amber-700"
-     >
-      Open billing →
-     </a>
     </div>
    )}
 

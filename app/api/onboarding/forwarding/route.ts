@@ -132,22 +132,16 @@ export async function GET(request: NextRequest) {
   }
   const paid = subscriptionStatus === 'active' || subscriptionStatus === 'trialing'
 
-  if (verified && paid) {
+  if (verified) {
+   // Flip onboarding_completed regardless of paid status so the
+   // contractor (and the rep doing the demo) can immediately see the
+   // test call replay on /dashboard/calls. Billing gating happens in
+   // the call-routing layer, not here.
    await supabaseAdmin
     .from('businesses')
     .update({
      forwarding_verified_at: new Date().toISOString(),
      onboarding_completed: true,
-     updated_at: new Date().toISOString(),
-    })
-    .eq('id', authResult.businessId)
-  } else if (verified && !paid) {
-   // Save the verification timestamp so we don't re-test forever, but
-   // hold off on onboarding_completed until they pay.
-   await supabaseAdmin
-    .from('businesses')
-    .update({
-     forwarding_verified_at: new Date().toISOString(),
      updated_at: new Date().toISOString(),
     })
     .eq('id', authResult.businessId)
