@@ -1068,10 +1068,19 @@ async function handleCallEvent(
    .maybeSingle()
 
   if (existing?.id) {
-   await supabaseAdmin
+   const upd = await supabaseAdmin
     .from('calls')
     .update({ ...patch, updated_at: new Date().toISOString() })
     .eq('id', existing.id)
+   if (upd.error) {
+    await notifyAdmin({
+     type: 'call.update_failed',
+     severity: 'critical',
+     title: `calls UPDATE failed on ${eventType}`,
+     body: `${upd.error.message}. row id ${existing.id}, retell_call_id ${retellCallId}. patch keys: [${Object.keys(patch).join(',')}].`,
+     metadata: { error: upd.error.message, patch_keys: Object.keys(patch), retell_call_id: retellCallId },
+    }).catch(() => {})
+   }
    return
   }
 
@@ -1082,7 +1091,7 @@ async function handleCallEvent(
    resolvedBusinessId || (await resolveCallBusinessId(callingAgentId, call?.to_number))
 
   if (finalBusinessId) {
-   await supabaseAdmin
+   const ins = await supabaseAdmin
     .from('calls')
     .insert({
      business_id: finalBusinessId,
@@ -1090,6 +1099,15 @@ async function handleCallEvent(
      ...patch,
      created_at: new Date().toISOString(),
     })
+   if (ins.error) {
+    await notifyAdmin({
+     type: 'call.insert_failed',
+     severity: 'critical',
+     title: `calls INSERT failed on ${eventType}`,
+     body: `${ins.error.message}. business_id ${finalBusinessId}, retell_call_id ${retellCallId}. patch keys: [${Object.keys(patch).join(',')}].`,
+     metadata: { error: ins.error.message, patch_keys: Object.keys(patch), retell_call_id: retellCallId, business_id: finalBusinessId },
+    }).catch(() => {})
+   }
    return
   }
 
@@ -1126,8 +1144,16 @@ async function handleCallEvent(
    },
   })
  } catch (e) {
-  logger.error('handleCallEvent failed', {
-   error: e instanceof Error ? e.message : 'Unknown', eventType,
-  })
+  const msg = e instanceof Error ? e.message : 'Unknown'
+  const stack = e instanceof Error ? e.stack || '' : ''
+  logger.error('handleCallEvent failed', { error: msg, eventType })
+  // TEMP: surface the actual error so we stop losing calls silently.
+  await notifyAdmin({
+   type: 'call.handler_threw',
+   severity: 'critical',
+   title: `handleCallEvent threw on ${eventType}`,
+   body: `${msg}. ${stack.split('\n').slice(0, 4).join(' | ').slice(0, 1500)}`,
+   metadata: { error: msg, stack: stack.slice(0, 2000), event_type: eventType },
+  }).catch(() => {})
  }
 }
