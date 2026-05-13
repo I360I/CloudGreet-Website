@@ -361,7 +361,7 @@ function RepEventTypeSection() {
             <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">Meeting location</label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {([
-                { value: 'google_meet', label: 'Google Meet (recommended)' },
+                { value: 'google_meet', label: 'Google Meet' },
                 { value: 'zoom', label: 'Zoom' },
               ] as const).map((opt) => (
                 <button
