@@ -239,6 +239,15 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
  const [success, setSuccess] = useState<{ username: string | null; eventTypeTitle: string } | null>(null)
 
+ // Inline event-type customization: lets the contractor (or rep during
+ // the demo) rename the event and lock its meeting location BEFORE
+ // wiring it up - so they never have to leave the onboarding flow to
+ // hop into Cal.com's settings.
+ const [newTitle, setNewTitle] = useState('')
+ const [locationPreset, setLocationPreset] = useState<'attendee_address' | 'attendee_phone' | 'google_meet' | 'zoom' | 'cal_video'>('attendee_address')
+ const [showOtherLocations, setShowOtherLocations] = useState(false)
+ const [fixedAddress, setFixedAddress] = useState('')
+
  const fetchEventTypes = async (e?: React.FormEvent) => {
   if (e) e.preventDefault()
   setSubmitting(true); setError(''); setFieldErrors({})
@@ -287,7 +296,28 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
     if (json.errors) setFieldErrors(json.errors)
     throw new Error(json.error || 'Connect failed')
    }
-   setSuccess({ username: json.account.username, eventTypeTitle: json.eventType.title })
+
+   // Apply rename + meeting-location override now, before advancing.
+   // Best-effort: if Cal.com rejects (e.g. the location type isn't
+   // installed for that user), we still let onboarding proceed and
+   // surface the issue via the settings editor later.
+   const editBody: any = { locationPreset }
+   if (newTitle.trim()) editBody.title = newTitle.trim()
+   if (locationPreset === 'attendee_address' && fixedAddress.trim()) {
+    editBody.locationAddress = fixedAddress.trim()
+   }
+   try {
+    await fetchWithAuth('/api/dashboard/calcom/event-type', {
+     method: 'PATCH',
+     headers: { 'content-type': 'application/json' },
+     body: JSON.stringify(editBody),
+    })
+   } catch { /* non-fatal */ }
+
+   setSuccess({
+    username: json.account.username,
+    eventTypeTitle: newTitle.trim() || json.eventType.title,
+   })
    setTimeout(onConnected, 800)
   } catch (err) {
    setError(err instanceof Error ? err.message : 'Failed')
@@ -362,6 +392,82 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
        ))}
       </div>
       {fieldErrors.eventTypeId && <p className="text-xs text-red-600 mt-1">{fieldErrors.eventTypeId}</p>}
+     </div>
+    )}
+
+    {eventTypeId != null && !success && (
+     <div className="space-y-3 pt-1">
+      <div>
+       <label className="block text-xs font-medium text-gray-700 mb-1.5">Rename event (optional)</label>
+       <input
+        value={newTitle}
+        onChange={(e) => setNewTitle(e.target.value)}
+        placeholder="e.g. AC Service Call"
+        className="form-input"
+       />
+      </div>
+
+      <div>
+       <label className="block text-xs font-medium text-gray-700 mb-1.5">Meeting location</label>
+       <button
+        type="button"
+        onClick={() => setLocationPreset('attendee_address')}
+        className={`w-full text-left px-4 py-3 rounded-lg text-sm border-2 transition-colors ${
+         locationPreset === 'attendee_address'
+          ? 'border-gray-900 bg-gray-900 text-white'
+          : 'border-gray-300 bg-white text-gray-900 hover:border-gray-900'
+        }`}
+       >
+        <div className="font-semibold">In person — customer&apos;s address</div>
+        <div className={`text-xs mt-0.5 ${locationPreset === 'attendee_address' ? 'text-white/70' : 'text-gray-500'}`}>
+         Best for HVAC, roofing, plumbing, electrical. The AI collects the address at booking.
+        </div>
+       </button>
+
+       {!showOtherLocations ? (
+        <button
+         type="button"
+         onClick={() => setShowOtherLocations(true)}
+         className="mt-2 text-xs text-gray-500 hover:text-gray-900 underline-offset-2 hover:underline"
+        >
+         Need a video call or phone instead? Show other formats →
+        </button>
+       ) : (
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+         {([
+          { value: 'attendee_phone', label: 'Customer phone (we call them)' },
+          { value: 'google_meet', label: 'Google Meet (video link)' },
+          { value: 'zoom', label: 'Zoom (video link)' },
+          { value: 'cal_video', label: 'Cal Video' },
+         ] as const).map((opt) => (
+          <button
+           key={opt.value}
+           type="button"
+           onClick={() => setLocationPreset(opt.value)}
+           className={`text-left px-3 py-2 rounded-lg text-sm border transition-colors ${
+            locationPreset === opt.value
+             ? 'border-gray-900 bg-gray-900 text-white'
+             : 'border-gray-200 bg-white text-gray-800 hover:border-gray-400'
+           }`}
+          >
+           {opt.label}
+          </button>
+         ))}
+        </div>
+       )}
+      </div>
+
+      {locationPreset === 'attendee_address' && (
+       <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">Fixed address (optional)</label>
+        <input
+         value={fixedAddress}
+         onChange={(e) => setFixedAddress(e.target.value)}
+         placeholder="Leave blank to ask the customer at booking"
+         className="form-input"
+        />
+       </div>
+      )}
      </div>
     )}
 
