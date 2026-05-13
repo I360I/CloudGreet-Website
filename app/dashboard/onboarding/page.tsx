@@ -384,7 +384,12 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
     {success && (
      <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-lg px-3 py-2 text-sm flex items-start gap-2">
       <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-      <span>Connected as <strong>{success.username || 'Cal.com user'}</strong> · event: {success.eventTypeTitle}</span>
+      <div>
+       <div>Connected as <strong>{success.username || 'Cal.com user'}</strong> · event: {success.eventTypeTitle}</div>
+       <div className="text-xs text-emerald-800/80 mt-1">
+        Heads up: after onboarding, head to <strong>Settings → Cal.com</strong> to rename the event and pick a meeting location (Google Meet, phone, in-person). Default is Cal Video which most customers won&apos;t use.
+       </div>
+      </div>
      </div>
     )}
 
