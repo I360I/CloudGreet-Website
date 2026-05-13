@@ -165,12 +165,12 @@ export default function AppointmentsPage() {
   : null
 
  return (
-  <DashShell activeLabel="Appointments">
+  <DashShell activeLabel="Bookings">
    <section className="px-4 lg:px-8 py-6 lg:py-10">
     <div className="max-w-7xl">
      <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
       <div>
-       <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Appointments</h1>
+       <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Bookings</h1>
        <p className="text-sm text-gray-500 mt-1">
         Click a day to see what&apos;s on it. Click an empty day to book.
        </p>
@@ -235,7 +235,7 @@ export default function AppointmentsPage() {
              </div>
              <h3 className="text-base font-medium text-gray-900">{fmtFullDate(selectedDay.date)}</h3>
              <p className="text-xs text-gray-500 mt-0.5">
-              {selectedDay.appointments.length} appointment{selectedDay.appointments.length === 1 ? '' : 's'}
+              {selectedDay.appointments.length} booking{selectedDay.appointments.length === 1 ? '' : 's'}
              </p>
             </div>
             <button

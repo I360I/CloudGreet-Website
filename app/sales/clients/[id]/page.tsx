@@ -782,7 +782,7 @@ function CalcomPanel({
       </div>
       <p className="text-xs text-gray-500 mb-4">
         Paste your client&apos;s Cal.com personal API key, pick the event type to use,
-        and the agent starts booking real appointments on their calendar.{' '}
+        and the agent starts booking real jobs on their calendar.{' '}
         <a
           href="https://app.cal.com/settings/developer/api-keys"
           target="_blank"
@@ -1106,7 +1106,7 @@ function DeleteClientSection({ businessId, businessName }: {
   const onDelete = async () => {
     const ok = confirm(
       `Delete "${businessName}"?\n\n` +
-      `This wipes the client's account, calls, appointments, and AI agent. ` +
+      `This wipes the client's account, calls, bookings, and AI agent. ` +
       `The originating lead is reset so you can re-pitch later.\n\n` +
       `If they have an active subscription, cancel in Stripe first.`,
     )

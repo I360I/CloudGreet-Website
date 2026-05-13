@@ -11,7 +11,7 @@ type Item = { icon: React.ElementType; label: string; href: string; match: (path
 const items: Item[] = [
  { icon: SquaresFour, label: 'Overview', href: '/dashboard', match: (p) => p === '/dashboard' },
  { icon: PhoneCall, label: 'Calls', href: '/dashboard/calls', match: (p) => p.startsWith('/dashboard/calls') },
- { icon: Calendar, label: 'Appointments', href: '/dashboard/appointments', match: (p) => p.startsWith('/dashboard/appointments') },
+ { icon: Calendar, label: 'Bookings', href: '/dashboard/appointments', match: (p) => p.startsWith('/dashboard/appointments') },
  { icon: Gear, label: 'Settings', href: '/dashboard/settings', match: (p) => p.startsWith('/dashboard/settings') },
  { icon: CreditCard, label: 'Billing', href: '/dashboard/billing', match: (p) => p.startsWith('/dashboard/billing') },
  { icon: MagicWand, label: 'Setup', href: '/dashboard/onboarding', match: (p) => p.startsWith('/dashboard/onboarding') },
@@ -20,7 +20,7 @@ const items: Item[] = [
 export function Sidebar({ businessName, onSignOut, activeLabel }: {
  businessName: string
  onSignOut: () => void
- activeLabel?: 'Overview' | 'Calls' | 'Appointments' | 'Settings' | 'Billing' | 'Setup'
+ activeLabel?: 'Overview' | 'Calls' | 'Bookings' | 'Settings' | 'Billing' | 'Setup'
 }) {
  const pathname = usePathname() || '/dashboard'
 

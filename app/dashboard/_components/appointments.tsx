@@ -534,7 +534,7 @@ export function AppointmentDrawer({
     className="relative bg-white w-full max-w-lg h-full overflow-y-auto shadow-2xl flex flex-col"
    >
     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-     <div className="text-sm font-semibold text-gray-900">Appointment</div>
+     <div className="text-sm font-semibold text-gray-900">Booking</div>
      <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition-all duration-300 ease-out">
       <X className="w-4 h-4 text-gray-500" />
      </button>

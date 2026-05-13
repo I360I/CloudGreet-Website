@@ -1116,7 +1116,7 @@ function BookingNotificationsSection() {
  const VARS: { name: string; description: string; sample: string }[] = [
   { name: 'name',     description: "caller's name",         sample: 'John Smith' },
   { name: 'phone',    description: "caller's phone",        sample: '+1 (555) 123-4567' },
-  { name: 'time',     description: 'appointment date/time', sample: 'Tue Jul 8, 2:00 PM' },
+  { name: 'time',     description: 'booking date/time', sample: 'Tue Jul 8, 2:00 PM' },
   { name: 'service',  description: 'what they booked',      sample: 'AC repair' },
   { name: 'address',  description: 'service address',       sample: '123 Main St' },
   { name: 'business', description: "the business's name",   sample: 'Mike\'s HVAC' },
@@ -1435,7 +1435,7 @@ function ReviewRequestsSection() {
     <div>
      <h2 className="text-sm font-medium text-gray-700">Review requests</h2>
      <p className="text-xs text-gray-500 mt-1 max-w-prose leading-relaxed">
-      After every appointment your AI books, automatically text the customer asking for a Google review. The AI asks for consent on the call first - only customers who say yes get the text. 90-day cap per customer, sends only between 9am-7pm local, STOP-to-opt-out is automatic.
+      After every booking your AI completes, automatically text the customer asking for a Google review. The AI asks for consent on the call first - only customers who say yes get the text. 90-day cap per customer, sends only between 9am-7pm local, STOP-to-opt-out is automatic.
      </p>
     </div>
     <Toggle checked={enabled} onChange={setEnabled} />
@@ -1460,7 +1460,7 @@ function ReviewRequestsSection() {
      <label className="block text-xs font-medium text-gray-700 mb-1.5">When to send</label>
      <div className="flex flex-wrap gap-2">
       {[
-       { value: '1h_after',           label: '1 hour after appointment' },
+       { value: '1h_after',           label: '1 hour after the booking' },
        { value: 'evening_same_day',   label: 'Evening of (6pm)' },
        { value: 'next_morning',       label: 'Next morning (10am)' },
       ].map((opt) => (

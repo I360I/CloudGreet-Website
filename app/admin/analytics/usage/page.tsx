@@ -163,7 +163,7 @@ export default function UsageAnalyticsPage() {
 
  <article className="rounded-2xl border border-white/10 bg-white/5 p-5">
  <div className="flex items-center justify-between">
- <h2 className="text-xs uppercase tracking-[0.3em] text-slate-400">Appointments (30d)</h2>
+ <h2 className="text-xs uppercase tracking-[0.3em] text-slate-400">Bookings (30d)</h2>
  <CalendarCheck className="h-5 w-5 text-blue-300" />
  </div>
  <p className="mt-3 text-4xl font-semibold text-white">{analytics.summary.appointments30}</p>

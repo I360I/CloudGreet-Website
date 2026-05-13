@@ -1042,7 +1042,7 @@ function DeleteClientButton({ businessId, businessName, onDeleted }: {
   const onClick = async () => {
     const ok = confirm(
       `Delete "${businessName}"?\n\n` +
-      `This wipes the client's account, calls, appointments, and AI agent.\n` +
+      `This wipes the client's account, calls, bookings, and AI agent.\n` +
       `The lead is reset so you can re-pitch later.\n\n` +
       `If they have an active subscription, cancel in Stripe first.`,
     )

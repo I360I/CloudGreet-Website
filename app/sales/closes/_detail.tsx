@@ -749,7 +749,7 @@ function DeleteClientLink({ businessId, businessName }: { businessId: string; bu
   const onClick = async () => {
     const ok = confirm(`Delete "${businessName}"?
 
-Wipes account, calls, appointments, and AI agent. Lead is reset so you can re-pitch.`)
+Wipes account, calls, bookings, and AI agent. Lead is reset so you can re-pitch.`)
     if (!ok) return
     const reason = window.prompt('Reason for audit trail:', 'rep deleted client')
     if (!reason || reason.trim().length < 4) return

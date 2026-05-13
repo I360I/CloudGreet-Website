@@ -118,7 +118,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
  
  const appointment = payload.new as any
  showSuccess(
- 'Appointment Booked!',
+ 'New booking!',
  `${appointment.customer_name} scheduled for ${new Date(appointment.scheduled_date).toLocaleDateString()}`
  )
  }
@@ -138,13 +138,13 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
  const appointment = payload.new as any
  if (appointment.status === 'cancelled') {
  showInfo(
- 'Appointment Cancelled',
- `${appointment.customer_name}'s appointment was cancelled`
+ 'Booking cancelled',
+ `${appointment.customer_name}'s booking was cancelled`
  )
  } else if (appointment.status === 'completed') {
  showSuccess(
- 'Appointment Completed',
- `${appointment.customer_name}'s appointment is done`
+ 'Booking completed',
+ `${appointment.customer_name}'s booking is done`
  )
  }
  }

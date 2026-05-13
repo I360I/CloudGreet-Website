@@ -374,7 +374,7 @@ export default function DashboardPage() {
        <div id="appointments" className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px] scroll-mt-20">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
          <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-sky-500" /> Today&apos;s appointments
+          <Calendar className="w-4 h-4 text-sky-500" /> Today&apos;s bookings
          </h3>
          <span className="text-xs text-gray-400">{displayData.upcomingAppointments.length}</span>
         </div>
@@ -392,7 +392,7 @@ export default function DashboardPage() {
                <span className="text-xs text-gray-400 flex-shrink-0">{fmtDateTime(a.scheduled_date)}</span>
               </div>
               <p className="text-xs text-gray-500 mt-0.5 truncate">
-               {a.service_type || 'Appointment'}{a.notes ? ` · ${a.notes}` : ''}
+               {a.service_type || 'Booking'}{a.notes ? ` · ${a.notes}` : ''}
               </p>
              </div>
             </li>

@@ -164,7 +164,7 @@ export default function ClientDetailPage() {
 
  const onDelete = async () => {
   if (!data) return
-  if (!confirm(`Delete "${data.client.business_name}"? This permanently removes the business, owner login, and all calls/appointments. Cannot be undone.`)) return
+  if (!confirm(`Delete "${data.client.business_name}"? This permanently removes the business, owner login, and all calls/bookings. Cannot be undone.`)) return
   try {
    const res = await fetchWithAuth(`/api/admin/clients/${id}`, { method: 'DELETE' })
    const j = await res.json().catch(() => ({}))
@@ -267,7 +267,7 @@ export default function ClientDetailPage() {
       {[
        { label: 'Total calls', value: callTotal.toLocaleString(),
         sub: callTotal > 0 ? `${callAnswerRate}% answered` : 'No call activity', accent: false },
-       { label: 'Appointments', value: apptTotal.toLocaleString(),
+       { label: 'Bookings', value: apptTotal.toLocaleString(),
         sub: apptTotal > 0 ? `${apptCompleteRate}% completed` : '-', accent: true },
        { label: 'Estimated revenue', value: fmtCurrency(activity.revenue.total),
         sub: 'From recorded values', accent: false },
@@ -552,10 +552,10 @@ function RecentAppointments({ appts }: { appts: ClientDetail['activity']['appoin
  return (
   <Panel padding="none">
    <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-white/[0.06]">
-    <PanelHeader title="Recent appointments" eyebrow={`${appts.length} shown`} />
+    <PanelHeader title="Recent bookings" eyebrow={`${appts.length} shown`} />
    </div>
    {appts.length === 0 ? (
-    <div className="px-6 py-10 text-sm text-gray-500">No appointments yet.</div>
+    <div className="px-6 py-10 text-sm text-gray-500">No bookings yet.</div>
    ) : (
     <ul className="divide-y divide-white/[0.04] max-h-[420px] overflow-y-auto">
      {appts.map((a) => (
@@ -1583,7 +1583,7 @@ function AdminActions({
     `This will:\n` +
     `  • Clear onboarding progress (calcom + forwarding + verify)\n` +
     `  • Disconnect Cal.com\n` +
-    `  • Delete all calls, appointments, review requests, notifications\n\n` +
+    `  • Delete all calls, bookings, review requests, notifications\n\n` +
     `Login, billing, Retell agent, phone number, and agent voice/greeting are KEPT.`
    )
    if (!ok) throw new Error('cancelled')
