@@ -263,7 +263,6 @@ function GreetingSection({ profile, state, onSaved }: { profile: Profile; state:
  const [saving, setSaving] = useState(false)
  const [error, setError] = useState('')
  const [savedFlag, setSavedFlag] = useState(false)
- const [trace, setTrace] = useState<string[] | null>(null)
 
  // Re-sync when profile or live state changes (e.g. after a reload).
  useEffect(() => { setValue(state?.beginMessage ?? profile.greetingMessage ?? '') },
@@ -272,16 +271,13 @@ function GreetingSection({ profile, state, onSaved }: { profile: Profile; state:
  const dirty = value !== initialGreeting && value.trim().length > 0
 
  const onSave = async () => {
-  setSaving(true); setError(''); setSavedFlag(false); setTrace(null)
+  setSaving(true); setError(''); setSavedFlag(false)
   try {
    const r = await patchBusiness({ greeting_message: value, greeting: value })
    setSavedFlag(true)
    setTimeout(() => setSavedFlag(false), 2500)
    if (r.agentSyncError) {
     setError(`Saved, but the agent didn't sync: ${r.agentSyncError}`)
-    setTrace(Array.isArray(r.retellTrace) ? r.retellTrace : null)
-   } else if (Array.isArray(r.retellTrace)) {
-    setTrace(r.retellTrace)
    }
    onSaved({ delay: 800 })
   } catch (e) {
@@ -310,14 +306,6 @@ function GreetingSection({ profile, state, onSaved }: { profile: Profile; state:
    </div>
    {savedFlag && <SavedHint />}
    {error && <ErrorHint message={error} />}
-   {trace && trace.length > 0 && (
-    <details className="mt-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs">
-     <summary className="cursor-pointer text-gray-700 font-medium">Sync trace ({trace.length} steps)</summary>
-     <ul className="mt-2 space-y-1 font-mono text-gray-600">
-      {trace.map((line, i) => <li key={i}>· {line}</li>)}
-     </ul>
-    </details>
-   )}
   </div>
  )
 }
