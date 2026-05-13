@@ -256,6 +256,7 @@ function RepEventTypeSection() {
   const [title, setTitle] = useState('')
   const [preset, setPreset] = useState<'google_meet' | 'zoom' | 'cal_video' | 'attendee_phone' | 'attendee_address'>('google_meet')
   const [showOthers, setShowOthers] = useState(false)
+  const [link, setLink] = useState('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
@@ -287,6 +288,7 @@ function RepEventTypeSection() {
     try {
       const body: any = { eventTypeId: picked, locationPreset: preset }
       if (title.trim()) body.title = title.trim()
+      if ((preset === 'google_meet' || preset === 'zoom') && link.trim()) body.locationLink = link.trim()
       const r = await fetchWithAuth('/api/sales/me/calcom/event-type', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
@@ -409,6 +411,24 @@ function RepEventTypeSection() {
               </div>
             )}
           </div>
+
+          {(preset === 'google_meet' || preset === 'zoom') && (
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">
+                {preset === 'google_meet' ? 'Your Google Meet link' : 'Your Zoom link'}
+              </label>
+              <input
+                type="url"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder={preset === 'google_meet' ? 'https://meet.google.com/abc-defg-hij' : 'https://zoom.us/j/0123456789'}
+                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
+              />
+              <div className="text-[10px] text-gray-500 mt-1">
+                Same link is shared with every prospect that books this event. Use your personal {preset === 'google_meet' ? 'Meet room' : 'PMI'} if you want a static URL.
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-3 pt-1">
             <button

@@ -100,13 +100,32 @@ export type CalcomLocation = {
 
 export type EventTypeLocationPreset = 'google_meet' | 'zoom' | 'cal_video' | 'attendee_phone' | 'attendee_address'
 
-export function locationFromPreset(preset: EventTypeLocationPreset): CalcomLocation {
+/**
+ * Build a Cal.com v2 location. Note that Cal.com v2 PATCH /event-types
+ * only accepts these `type` values: `address`, `link`, `integration`,
+ * `phone`, plus `attendeeAddress` and `attendeePhoneNumber` shorthands.
+ * The older `integrations:google:meet` / `integrations:zoom_video`
+ * values are v1-only and get rejected.
+ *
+ * For Meet/Zoom we therefore route through `{ type: 'link', link }`
+ * with whatever URL the rep pastes in (their personal Meet room, their
+ * Zoom PMI, etc). For Cal Video we use the `integration` type with the
+ * `daily` slug.
+ */
+export function locationFromPreset(
+ preset: EventTypeLocationPreset,
+ opts?: { link?: string; address?: string; phone?: string },
+): CalcomLocation {
  switch (preset) {
-  case 'google_meet': return { type: 'integrations:google:meet' }
-  case 'zoom': return { type: 'integrations:zoom_video' }
-  case 'cal_video': return { type: 'integrations:daily' }
+  case 'google_meet':
+  case 'zoom':
+   return { type: 'link', link: opts?.link || '' }
+  case 'cal_video': return { type: 'integration', link: 'daily' }
   case 'attendee_phone': return { type: 'attendeePhoneNumber' }
-  case 'attendee_address': return { type: 'attendeeAddress' }
+  case 'attendee_address':
+   return opts?.address
+    ? { type: 'address', address: opts.address }
+    : { type: 'attendeeAddress' }
  }
 }
 

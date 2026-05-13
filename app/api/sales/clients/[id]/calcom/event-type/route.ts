@@ -47,6 +47,7 @@ export async function PATCH(
   slug?: string
   locationPreset?: EventTypeLocationPreset
   locationAddress?: string
+  locationLink?: string
   lengthInMinutes?: number
  }
 
@@ -59,10 +60,16 @@ export async function PATCH(
   patch.lengthInMinutes = body.lengthInMinutes
  }
  if (body.locationPreset) {
-  const loc: CalcomLocation = body.locationPreset === 'attendee_address' && body.locationAddress
-   ? { type: 'address', address: body.locationAddress.trim().slice(0, 200) }
-   : locationFromPreset(body.locationPreset)
-  patch.locations = [loc]
+  if ((body.locationPreset === 'google_meet' || body.locationPreset === 'zoom') && !body.locationLink?.trim()) {
+   return NextResponse.json(
+    { error: `Paste your ${body.locationPreset === 'google_meet' ? 'Google Meet' : 'Zoom'} link first.` },
+    { status: 400 },
+   )
+  }
+  patch.locations = [locationFromPreset(body.locationPreset, {
+   link: body.locationLink?.trim(),
+   address: body.locationAddress?.trim(),
+  })]
  }
  if (Object.keys(patch).length === 0) {
   return NextResponse.json({ error: 'No editable fields provided' }, { status: 400 })

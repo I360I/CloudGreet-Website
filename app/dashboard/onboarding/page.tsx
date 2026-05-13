@@ -247,6 +247,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  const [locationPreset, setLocationPreset] = useState<'attendee_address' | 'attendee_phone' | 'google_meet' | 'zoom' | 'cal_video'>('attendee_address')
  const [showOtherLocations, setShowOtherLocations] = useState(false)
  const [fixedAddress, setFixedAddress] = useState('')
+ const [locationLink, setLocationLink] = useState('')
 
  const fetchEventTypes = async (e?: React.FormEvent) => {
   if (e) e.preventDefault()
@@ -305,6 +306,9 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
    if (newTitle.trim()) editBody.title = newTitle.trim()
    if (locationPreset === 'attendee_address' && fixedAddress.trim()) {
     editBody.locationAddress = fixedAddress.trim()
+   }
+   if ((locationPreset === 'google_meet' || locationPreset === 'zoom') && locationLink.trim()) {
+    editBody.locationLink = locationLink.trim()
    }
    try {
     await fetchWithAuth('/api/dashboard/calcom/event-type', {
@@ -465,6 +469,21 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
          onChange={(e) => setFixedAddress(e.target.value)}
          placeholder="Leave blank to ask the customer at booking"
          className="form-input"
+        />
+       </div>
+      )}
+
+      {(locationPreset === 'google_meet' || locationPreset === 'zoom') && (
+       <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+         {locationPreset === 'google_meet' ? 'Google Meet link' : 'Zoom link'}
+        </label>
+        <input
+         type="url"
+         value={locationLink}
+         onChange={(e) => setLocationLink(e.target.value)}
+         placeholder={locationPreset === 'google_meet' ? 'https://meet.google.com/abc-defg-hij' : 'https://zoom.us/j/0123456789'}
+         className="form-input font-mono"
         />
        </div>
       )}

@@ -883,6 +883,7 @@ function RepEventTypeEditor({ businessId }: { businessId: string }) {
   const [preset, setPreset] = useState<'google_meet' | 'zoom' | 'cal_video' | 'attendee_phone' | 'attendee_address'>('attendee_address')
   const [showOthers, setShowOthers] = useState(false)
   const [address, setAddress] = useState('')
+  const [link, setLink] = useState('')
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
 
@@ -892,6 +893,7 @@ function RepEventTypeEditor({ businessId }: { businessId: string }) {
       const body: any = { locationPreset: preset }
       if (title.trim()) body.title = title.trim()
       if (preset === 'attendee_address' && address.trim()) body.locationAddress = address.trim()
+      if ((preset === 'google_meet' || preset === 'zoom') && link.trim()) body.locationLink = link.trim()
       const r = await fetchWithAuth(`/api/sales/clients/${businessId}/calcom/event-type`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
@@ -994,6 +996,21 @@ function RepEventTypeEditor({ businessId }: { businessId: string }) {
             onChange={(e) => setAddress(e.target.value)}
             placeholder="Leave blank to ask the customer at booking"
             className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-900"
+          />
+        </div>
+      )}
+
+      {(preset === 'google_meet' || preset === 'zoom') && (
+        <div>
+          <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">
+            {preset === 'google_meet' ? 'Google Meet link' : 'Zoom link'}
+          </label>
+          <input
+            type="url"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            placeholder={preset === 'google_meet' ? 'https://meet.google.com/abc-defg-hij' : 'https://zoom.us/j/0123456789'}
+            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-gray-900"
           />
         </div>
       )}
