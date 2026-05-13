@@ -2,45 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CaretLeft, CaretRight, CircleNotch, WarningCircle, Clock, Plus } from '@phosphor-icons/react'
+import { CircleNotch, WarningCircle, Plus, Clock, CalendarBlank, ArrowRight } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
-import { demoMonthDays, demoWeekDays } from '../_components/demo-data'
+import { demoMonthDays } from '../_components/demo-data'
 import {
  MonthGrid, BookingFormModal, AppointmentDrawer,
  type MonthDay,
 } from '../_components/appointments'
 
 const EASE = [0.22, 1, 0.36, 1] as const
-
-type Appt = {
- id: string
- time: string
- customer: string
- serviceType: string
-}
-
-type Day = {
- date: string
- dayName: string
- dayNumber: number
- isToday: boolean
- appointments: Appt[]
- count: number
-}
-
-function startOfWeek(d: Date) {
- const out = new Date(d)
- out.setDate(out.getDate() - out.getDay())
- out.setHours(0, 0, 0, 0)
- return out
-}
-
-function addDays(d: Date, n: number) {
- const out = new Date(d)
- out.setDate(out.getDate() + n)
- return out
-}
 
 function startOfMonth(d: Date) {
  return new Date(d.getFullYear(), d.getMonth(), 1)
@@ -50,28 +21,29 @@ function isoDate(d: Date) {
  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function fmtRange(start: Date, end: Date) {
- const sameMonth = start.getMonth() === end.getMonth()
- const sameYear = start.getFullYear() === end.getFullYear()
- const monthFmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short' })
- if (sameMonth) {
-  return `${monthFmt(start)} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`
- }
- if (sameYear) {
-  return `${monthFmt(start)} ${start.getDate()} – ${monthFmt(end)} ${end.getDate()}, ${end.getFullYear()}`
- }
- return `${monthFmt(start)} ${start.getDate()}, ${start.getFullYear()} – ${monthFmt(end)} ${end.getDate()}, ${end.getFullYear()}`
+function fmtTime(iso: string) {
+ const d = new Date(iso)
+ const h = d.getHours()
+ const m = d.getMinutes()
+ const ampm = h >= 12 ? 'pm' : 'am'
+ const hh = h % 12 || 12
+ return `${hh}:${String(m).padStart(2, '0')} ${ampm}`
+}
+
+function fmtFullDate(iso: string) {
+ const [y, mo, d] = iso.split('-').map((n) => parseInt(n, 10))
+ const dt = new Date(y, mo - 1, d)
+ return dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
 export default function AppointmentsPage() {
- const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()))
  const [monthStart, setMonthStart] = useState<Date>(() => startOfMonth(new Date()))
- const [days, setDays] = useState<Day[] | null>(null)
  const [monthDays, setMonthDays] = useState<MonthDay[] | null>(null)
  const [services, setServices] = useState<string[]>([])
  const [loading, setLoading] = useState(true)
  const [error, setError] = useState('')
 
+ const [selectedIso, setSelectedIso] = useState<string | null>(null)
  const [createDate, setCreateDate] = useState<string | null>(null)
  const [openApptId, setOpenApptId] = useState<string | null>(null)
  const [refreshTick, setRefreshTick] = useState(0)
@@ -92,8 +64,6 @@ export default function AppointmentsPage() {
   return () => { cancelled = true }
  }, [])
 
- const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
-
  useEffect(() => {
   ;(async () => {
    try {
@@ -109,27 +79,6 @@ export default function AppointmentsPage() {
   ;(async () => {
    setLoading(true); setError('')
    try {
-    const params = new URLSearchParams({
-     startDate: weekStart.toISOString(),
-     endDate: addDays(weekStart, 6).toISOString(),
-    })
-    const res = await fetchWithAuth(`/api/dashboard/week-calendar?${params.toString()}`)
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok || !json.success) throw new Error(json?.error || `Failed (${res.status})`)
-    if (!cancelled) setDays(json.days || [])
-   } catch (e) {
-    if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load calendar')
-   } finally {
-    if (!cancelled) setLoading(false)
-   }
-  })()
-  return () => { cancelled = true }
- }, [weekStart, refreshTick])
-
- useEffect(() => {
-  let cancelled = false
-  ;(async () => {
-   try {
     const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0)
     const params = new URLSearchParams({
      view: 'month',
@@ -138,75 +87,77 @@ export default function AppointmentsPage() {
     })
     const res = await fetchWithAuth(`/api/dashboard/calendar?${params.toString()}`)
     const json = await res.json().catch(() => ({}))
-    if (!res.ok || !json.success) return
+    if (!res.ok || !json.success) throw new Error(json?.error || `Failed (${res.status})`)
     if (!cancelled) setMonthDays(json.days || [])
-   } catch { /* ignore - week view is the primary surface */ }
+   } catch (e) {
+    if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load calendar')
+   } finally {
+    if (!cancelled) setLoading(false)
+   }
   })()
   return () => { cancelled = true }
  }, [monthStart, refreshTick])
 
  const refresh = useCallback(() => setRefreshTick((n) => n + 1), [])
 
- // Substitute demo data when onboarding is incomplete and no real data exists.
- const realWeek = days?.reduce((s, d) => s + d.count, 0) ?? 0
- const isWeekDemo = needsSetup && realWeek === 0 && !!days
- const rawDays = isWeekDemo ? demoWeekDays(weekStart) : days
- // Server returns isToday based on UTC; recompute against the user's local
- // clock so a Friday-evening user doesn't see Saturday flagged as today.
- const localTodayIso = (() => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
- })()
- const displayDays = rawDays?.map((d) => ({ ...d, isToday: d.date === localTodayIso }))
- const totalThisWeek = displayDays?.reduce((s, d) => s + d.count, 0) ?? 0
-
  const realMonthCount = monthDays?.reduce((s, d) => s + d.appointments.length, 0) ?? 0
  const isMonthDemo = needsSetup && realMonthCount === 0 && !!monthDays
  const displayMonthDays = isMonthDemo ? demoMonthDays(monthStart) : monthDays
+
+ // Day picked from grid: if it has appointments, just select it for the rail.
+ // If it's empty, jump straight to the booking form.
+ const handlePickDate = (iso: string) => {
+  const day = displayMonthDays?.find((d) => d.date === iso)
+  if (day && day.appointments.length > 0) {
+   setSelectedIso(iso)
+  } else {
+   setCreateDate(iso)
+  }
+ }
+
+ // Upcoming appointments: flatten + filter to future, sorted ascending.
+ const upcoming = useMemo(() => {
+  if (!displayMonthDays) return []
+  const now = Date.now()
+  const all: Array<{ id: string; date: string; start: string; customer: string; service: string }> = []
+  for (const day of displayMonthDays) {
+   for (const a of day.appointments) {
+    all.push({
+     id: a.id, date: day.date, start: a.start_time,
+     customer: a.customer_name, service: a.service_type,
+    })
+   }
+  }
+  return all
+   .filter((a) => new Date(a.start).getTime() >= now - 60 * 60 * 1000) // include in-progress
+   .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+   .slice(0, 6)
+ }, [displayMonthDays])
+
+ const selectedDay = selectedIso
+  ? displayMonthDays?.find((d) => d.date === selectedIso) || null
+  : null
 
  return (
   <DashShell activeLabel="Appointments">
    <section className="px-4 lg:px-8 py-6 lg:py-10">
     <div className="max-w-7xl">
-     <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-      <div className="flex items-baseline gap-4">
+     <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
+      <div>
        <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Appointments</h1>
-       {totalThisWeek > 0 && <span className="text-sm text-gray-500 font-mono">{totalThisWeek} this week</span>}
+       <p className="text-sm text-gray-500 mt-1">
+        Click a day to see what&apos;s on it. Click an empty day to book.
+       </p>
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
-       <button
-        onClick={() => setCreateDate(isoDate(new Date()))}
-        className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-xs font-medium hover:bg-gray-800 transition-all duration-300 ease-out"
-       >
-        <Plus className="w-3.5 h-3.5" /> New booking
-       </button>
-       <div className="flex items-center gap-1 ml-2">
-        <button
-         onClick={() => setWeekStart(addDays(weekStart, -7))}
-         className="p-2 rounded-lg border border-gray-200 hover:bg-white transition-all duration-300 ease-out"
-         aria-label="Previous week"
-        >
-         <CaretLeft className="w-4 h-4 text-gray-600" />
-        </button>
-        <button
-         onClick={() => setWeekStart(startOfWeek(new Date()))}
-         className="px-3 py-2 text-xs font-medium rounded-lg border border-gray-200 hover:bg-white text-gray-700 transition-all duration-300 ease-out"
-        >
-         Today
-        </button>
-        <button
-         onClick={() => setWeekStart(addDays(weekStart, 7))}
-         className="p-2 rounded-lg border border-gray-200 hover:bg-white transition-all duration-300 ease-out"
-         aria-label="Next week"
-        >
-         <CaretRight className="w-4 h-4 text-gray-600" />
-        </button>
-       </div>
-       <span className="ml-2 text-sm text-gray-700 font-medium">{fmtRange(weekStart, weekEnd)}</span>
-      </div>
+      <button
+       onClick={() => setCreateDate(isoDate(new Date()))}
+       className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-all duration-300 ease-out shadow-sm"
+      >
+       <Plus className="w-4 h-4" /> New booking
+      </button>
      </div>
 
-     {loading && (
+     {loading && !monthDays && (
       <div className="bg-white border border-gray-200 rounded-2xl p-16 flex items-center justify-center">
        <CircleNotch className="w-5 h-5 animate-spin text-gray-400" />
       </div>
@@ -222,99 +173,156 @@ export default function AppointmentsPage() {
       </div>
      )}
 
-     <AnimatePresence mode="wait">
-      {!loading && !error && displayDays && (
+     {!error && (loading ? monthDays : true) && (
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr,360px] gap-4">
        <motion.div
-        key={displayDays[0]?.date || 'empty'}
-        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-        transition={{ duration: 0.35, ease: EASE }}
-        className="grid grid-cols-1 md:grid-cols-7 gap-2"
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: EASE }}
        >
-        {displayDays.map((day, i) => (
-         <motion.div
-          key={day.date}
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE, delay: 0.03 * i }}
-          onClick={() => setCreateDate(day.date)}
-          className={`bg-white border rounded-2xl overflow-hidden flex flex-col cursor-pointer transition-all duration-300 ease-out hover:border-sky-300 ${
-           day.appointments.length === 0 ? 'min-h-[112px]' : 'min-h-[180px]'
-          } ${day.appointments.length > 0 ? 'max-h-[260px]' : ''} ${
-           day.isToday ? 'border-sky-300 ring-1 ring-sky-200' : 'border-gray-200'
-          }`}
-         >
-          <div className={`px-3 py-2.5 border-b border-gray-100 ${day.isToday ? 'bg-sky-50/60' : ''}`}>
-           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500">{day.dayName.slice(0, 3)}</span>
-            <span className={`text-xs font-mono ${day.isToday ? 'text-sky-700 font-semibold' : 'text-gray-400'}`}>
-             {day.count > 0 ? `${day.count}` : ''}
-            </span>
-           </div>
-           <div className={`text-lg font-mono font-medium mt-0.5 ${day.isToday ? 'text-sky-700' : 'text-gray-900'}`}>
-            {day.dayNumber}
-           </div>
-          </div>
-          {day.appointments.length > 0 && (
-           <div className="flex-1 px-2 py-2 space-y-1">
-            {day.appointments.slice(0, 2).map((a, idx) => (
-             <motion.div
-              key={a.id}
-              initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, ease: EASE, delay: 0.03 * i + 0.04 * idx }}
-              onClick={(e) => { e.stopPropagation(); setOpenApptId(a.id) }}
-              className="bg-sky-50 border border-sky-100 rounded-lg px-2.5 py-2 text-left hover:border-sky-300 hover:bg-sky-100/60 transition-all duration-300"
-             >
-              <div className="flex items-center gap-1 text-[10px] text-sky-700 font-mono mb-1">
-               <Clock className="w-2.5 h-2.5" /> {a.time}
-              </div>
-              <div className="text-xs font-medium text-gray-900 truncate leading-tight">{a.customer}</div>
-              <div className="text-[10px] text-gray-500 truncate mt-0.5">{a.serviceType}</div>
-             </motion.div>
-            ))}
-            {day.appointments.length > 2 && (
-             <button
-              onClick={(e) => {
-               e.stopPropagation()
-               // Open the third (next overflow) booking; users can advance via the drawer
-               setOpenApptId(day.appointments[2].id)
-              }}
-              className="w-full text-[11px] font-medium text-sky-700 hover:text-sky-900 px-2.5 py-1.5 rounded-lg hover:bg-sky-50 transition-colors text-center"
-             >
-              + {day.appointments.length - 2} more
-             </button>
-            )}
-           </div>
-          )}
-         </motion.div>
-        ))}
+        <MonthGrid
+         monthStart={monthStart}
+         monthDays={displayMonthDays}
+         selectedIso={selectedIso}
+         onPrev={() => { setSelectedIso(null); setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1)) }}
+         onNext={() => { setSelectedIso(null); setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1)) }}
+         onToday={() => { setSelectedIso(null); setMonthStart(startOfMonth(new Date())) }}
+         onPickDate={handlePickDate}
+         onPickAppt={(id) => setOpenApptId(id)}
+        />
        </motion.div>
-      )}
-     </AnimatePresence>
 
-     {!loading && !error && displayDays && totalThisWeek === 0 && (
-      <motion.p
-       initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.3, ease: EASE }}
-       className="text-sm text-gray-500 mt-4"
-      >
-       No appointments this week.
-      </motion.p>
+       <div className="relative">
+        <AnimatePresence mode="wait">
+         {selectedDay ? (
+          <motion.div
+           key={`day-${selectedDay.date}`}
+           initial={{ opacity: 0, x: 20 }}
+           animate={{ opacity: 1, x: 0 }}
+           exit={{ opacity: 0, x: 20 }}
+           transition={{ duration: 0.3, ease: EASE }}
+           className="bg-white border border-gray-200 rounded-2xl overflow-hidden lg:sticky lg:top-6"
+          >
+           <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100">
+            <div>
+             <div className="text-[10px] uppercase tracking-wider font-semibold text-sky-700 mb-0.5">
+              Selected day
+             </div>
+             <h3 className="text-base font-medium text-gray-900">{fmtFullDate(selectedDay.date)}</h3>
+             <p className="text-xs text-gray-500 mt-0.5">
+              {selectedDay.appointments.length} appointment{selectedDay.appointments.length === 1 ? '' : 's'}
+             </p>
+            </div>
+            <button
+             onClick={() => setSelectedIso(null)}
+             className="text-xs text-gray-500 hover:text-gray-900 transition-colors"
+            >
+             Clear
+            </button>
+           </div>
+           <ul className="divide-y divide-gray-100 max-h-[520px] overflow-y-auto">
+            {selectedDay.appointments
+             .slice()
+             .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+             .map((a, idx) => (
+              <motion.li
+               key={a.id}
+               initial={{ opacity: 0, y: 6 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ duration: 0.25, ease: EASE, delay: idx * 0.04 }}
+              >
+               <button
+                onClick={() => setOpenApptId(a.id)}
+                className="w-full text-left px-5 py-3.5 hover:bg-sky-50/40 transition-colors flex items-center gap-3 group"
+               >
+                <div className="flex flex-col items-center justify-center w-14 flex-shrink-0">
+                 <div className="text-sm font-mono font-medium text-gray-900">
+                  {fmtTime(a.start_time).replace(/\s.*/, '')}
+                 </div>
+                 <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                  {fmtTime(a.start_time).split(' ')[1]}
+                 </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                 <div className="text-sm font-medium text-gray-900 truncate">{a.customer_name}</div>
+                 <div className="text-xs text-gray-500 truncate mt-0.5">{a.service_type || 'Service TBD'}</div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all duration-200" />
+               </button>
+              </motion.li>
+             ))}
+           </ul>
+           <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/60">
+            <button
+             onClick={() => setCreateDate(selectedDay.date)}
+             className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-medium text-gray-700 hover:text-gray-900 py-1.5 rounded-md hover:bg-white transition-colors"
+            >
+             <Plus className="w-3.5 h-3.5" /> Add another booking
+            </button>
+           </div>
+          </motion.div>
+         ) : (
+          <motion.div
+           key="upcoming"
+           initial={{ opacity: 0, x: -10 }}
+           animate={{ opacity: 1, x: 0 }}
+           exit={{ opacity: 0, x: -10 }}
+           transition={{ duration: 0.3, ease: EASE }}
+           className="bg-white border border-gray-200 rounded-2xl overflow-hidden lg:sticky lg:top-6"
+          >
+           <div className="px-5 py-4 border-b border-gray-100">
+            <div className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-0.5">
+             Up next
+            </div>
+            <h3 className="text-base font-medium text-gray-900">Upcoming bookings</h3>
+           </div>
+           {upcoming.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+             <CalendarBlank className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+             <p className="text-sm text-gray-500">No upcoming bookings.</p>
+             <button
+              onClick={() => setCreateDate(isoDate(new Date()))}
+              className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 hover:text-sky-800"
+             >
+              <Plus className="w-3.5 h-3.5" /> Add one
+             </button>
+            </div>
+           ) : (
+            <ul className="divide-y divide-gray-100">
+             {upcoming.map((a, idx) => (
+              <motion.li
+               key={a.id}
+               initial={{ opacity: 0, y: 6 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ duration: 0.3, ease: EASE, delay: idx * 0.04 }}
+              >
+               <button
+                onClick={() => setOpenApptId(a.id)}
+                className="w-full text-left px-5 py-3.5 hover:bg-sky-50/40 transition-colors group"
+               >
+                <div className="flex items-center justify-between gap-3">
+                 <div className="text-xs font-mono text-sky-700 flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> {fmtTime(a.start)}
+                 </div>
+                 <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                  {(() => {
+                   const [y, mo, d] = a.date.split('-').map((n) => parseInt(n, 10))
+                   return new Date(y, mo - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                  })()}
+                 </div>
+                </div>
+                <div className="text-sm font-medium text-gray-900 truncate mt-1">{a.customer}</div>
+                <div className="text-xs text-gray-500 truncate mt-0.5">{a.service || 'Service TBD'}</div>
+               </button>
+              </motion.li>
+             ))}
+            </ul>
+           )}
+          </motion.div>
+         )}
+        </AnimatePresence>
+       </div>
+      </div>
      )}
-
-     {/* Month grid */}
-     <motion.div
-      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2, ease: EASE }}
-      className="mt-6"
-     >
-      <MonthGrid
-       monthStart={monthStart}
-       monthDays={displayMonthDays}
-       onPrev={() => setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1))}
-       onNext={() => setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1))}
-       onToday={() => setMonthStart(startOfMonth(new Date()))}
-       onPickDate={(iso) => setCreateDate(iso)}
-       onPickAppt={(id) => setOpenApptId(id)}
-      />
-     </motion.div>
     </div>
    </section>
 

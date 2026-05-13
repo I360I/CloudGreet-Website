@@ -22,10 +22,11 @@ export type MonthDay = {
 }
 
 export function MonthGrid({
- monthStart, monthDays, onPrev, onNext, onToday, onPickDate, onPickAppt,
+ monthStart, monthDays, selectedIso, onPrev, onNext, onToday, onPickDate, onPickAppt,
 }: {
  monthStart: Date
  monthDays: MonthDay[] | null
+ selectedIso: string | null
  onPrev: () => void
  onNext: () => void
  onToday: () => void
@@ -33,12 +34,19 @@ export function MonthGrid({
  onPickAppt: (id: string) => void
 }) {
  const cells = buildMonthCells(monthStart, monthDays || [])
+ const monthKey = `${monthStart.getFullYear()}-${monthStart.getMonth()}`
  const monthLabel = monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+ const total = (monthDays || []).reduce((s, d) => s + d.appointments.length, 0)
 
  return (
   <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-    <h2 className="text-sm font-medium text-gray-700">{monthLabel}</h2>
+    <div className="flex items-baseline gap-3">
+     <h2 className="text-base font-medium text-gray-900">{monthLabel}</h2>
+     {total > 0 && (
+      <span className="text-xs text-gray-500 font-mono">{total} booking{total === 1 ? '' : 's'}</span>
+     )}
+    </div>
     <div className="flex items-center gap-1">
      <NavBtn onClick={onPrev} label="Previous month">‹</NavBtn>
      <button
@@ -57,61 +65,81 @@ export function MonthGrid({
     ))}
    </div>
 
-   <div className="grid grid-cols-7">
-    {cells.map((cell, i) => {
-     const isWeekStart = i % 7 === 0
-     const isLastRow = i >= cells.length - 7
-     return (
-      <button
-       key={cell.iso}
-       onClick={() => cell.inMonth && onPickDate(cell.iso)}
-       disabled={!cell.inMonth}
-       className={`relative text-left min-h-[64px] sm:min-h-[96px] px-1 sm:px-2 py-1.5 sm:py-2 border-r border-b border-gray-100 last:border-r-0 transition-all duration-300 ease-out ${
-        isLastRow ? 'border-b-0' : ''
-       } ${
-        cell.inMonth
-         ? 'hover:bg-sky-50/60 cursor-pointer'
-         : 'bg-gray-50/40 cursor-default'
-       } ${cell.isToday ? 'bg-sky-50/80' : ''}`}
-      >
-       <div className="flex items-center justify-between mb-1 sm:mb-1.5">
-        <span className={`text-[11px] sm:text-xs font-mono ${
-         cell.isToday
-          ? 'text-sky-700 font-semibold'
-          : cell.inMonth ? 'text-gray-900' : 'text-gray-300'
-        }`}>
-         {cell.dayNumber}
-        </span>
-        {cell.appointments.length > 0 && (
-         <span className="text-[9px] sm:text-[10px] font-mono text-sky-600">{cell.appointments.length}</span>
-        )}
-       </div>
-       {/* On mobile we collapse the chips into a single dot - there's no room
-           to render times. Tap the cell to see the day's bookings. */}
-       <div className="sm:hidden">
-        {cell.appointments.length > 0 && (
-         <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-        )}
-       </div>
-       <div className="hidden sm:block space-y-0.5">
-        {cell.appointments.slice(0, 3).map((a) => (
-         <div
-          key={a.id}
-          onClick={(e) => { e.stopPropagation(); onPickAppt(a.id) }}
-          className="text-[10px] bg-sky-100/70 hover:bg-sky-200/70 text-sky-800 rounded px-1.5 py-0.5 truncate transition-all duration-300 ease-out"
-         >
-          <span className="font-mono mr-1">{fmtTime(a.start_time)}</span>
-          {a.customer_name}
-         </div>
-        ))}
-        {cell.appointments.length > 3 && (
-         <div className="text-[10px] text-gray-500 px-1.5">+{cell.appointments.length - 3} more</div>
-        )}
-       </div>
-      </button>
-     )
-    })}
-   </div>
+   <AnimatePresence mode="wait">
+    <motion.div
+     key={monthKey}
+     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+     transition={{ duration: 0.25, ease: EASE }}
+     className="grid grid-cols-7"
+    >
+     {cells.map((cell, i) => {
+      const isLastRow = i >= cells.length - 7
+      const isSelected = cell.inMonth && selectedIso === cell.iso
+      const hasAppts = cell.appointments.length > 0
+      const row = Math.floor(i / 7)
+      return (
+       <motion.button
+        key={cell.iso}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: EASE, delay: row * 0.04 + (i % 7) * 0.008 }}
+        onClick={() => cell.inMonth && onPickDate(cell.iso)}
+        disabled={!cell.inMonth}
+        className={`relative text-left min-h-[88px] sm:min-h-[112px] px-1.5 sm:px-2.5 py-2 border-r border-b border-gray-100 last:border-r-0 transition-all duration-300 ease-out ${
+         isLastRow ? 'border-b-0' : ''
+        } ${
+         cell.inMonth
+          ? hasAppts
+           ? 'hover:bg-sky-50/70 hover:-translate-y-0.5 hover:shadow-sm cursor-pointer'
+           : 'hover:bg-gray-50 cursor-pointer'
+          : 'bg-gray-50/40 cursor-default'
+        } ${cell.isToday && !isSelected ? 'bg-sky-50/60' : ''} ${
+         isSelected ? 'bg-sky-100/70 ring-2 ring-inset ring-sky-400' : ''
+        }`}
+       >
+        <div className="flex items-center justify-between mb-1.5">
+         <span className={`inline-flex items-center justify-center text-[11px] sm:text-xs font-mono ${
+          cell.isToday
+           ? 'bg-sky-600 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 font-semibold'
+           : cell.inMonth ? 'text-gray-900' : 'text-gray-300'
+         }`}>
+          {cell.dayNumber}
+         </span>
+         {hasAppts && (
+          <span className="text-[9px] sm:text-[10px] font-mono text-sky-700 bg-sky-100 px-1.5 rounded-full">
+           {cell.appointments.length}
+          </span>
+         )}
+        </div>
+        {/* Mobile: collapsed dot row */}
+        <div className="sm:hidden flex gap-0.5">
+         {cell.appointments.slice(0, 4).map((a) => (
+          <div key={a.id} className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+         ))}
+        </div>
+        {/* Desktop: appointment chips */}
+        <div className="hidden sm:block space-y-1">
+         {cell.appointments.slice(0, 3).map((a) => (
+          <div
+           key={a.id}
+           onClick={(e) => { e.stopPropagation(); onPickAppt(a.id) }}
+           className="text-[10px] bg-sky-100/80 hover:bg-sky-200 text-sky-900 rounded-md px-1.5 py-1 truncate transition-all duration-200"
+          >
+           <span className="font-mono font-medium mr-1">{fmtTime(a.start_time)}</span>
+           <span className="text-sky-800">{a.customer_name}</span>
+          </div>
+         ))}
+         {cell.appointments.length > 3 && (
+          <div className="text-[10px] font-medium text-sky-700 px-1.5">
+           +{cell.appointments.length - 3} more
+          </div>
+         )}
+        </div>
+       </motion.button>
+      )
+     })}
+    </motion.div>
+   </AnimatePresence>
   </div>
  )
 }
