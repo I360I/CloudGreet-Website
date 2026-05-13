@@ -45,6 +45,13 @@ export async function GET(request: NextRequest) {
    ).catch(() => {})
   }
 
+  // Self-heal: parse state + derive timezone from address when missing.
+  if (!(business as any).state || !(business as any).timezone) {
+   void import('@/lib/business-tz-heal').then(({ healBusinessTimezone }) =>
+    healBusinessTimezone(authResult.businessId!)
+   ).catch(() => {})
+  }
+
   // Backfill: any business that already passed the test-call check should
   // be onboarding_completed regardless of pay status. Older verify flow
   // gated this on Stripe; this self-heals businesses that got stuck on

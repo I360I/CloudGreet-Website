@@ -57,6 +57,13 @@ export async function GET(
    ).catch(() => {})
   }
 
+  // Self-heal: parse state + derive timezone from address when missing.
+  if (!(business as any).state || !(business as any).timezone) {
+   void import('@/lib/business-tz-heal').then(({ healBusinessTimezone }) =>
+    healBusinessTimezone(clientId)
+   ).catch(() => {})
+  }
+
   // Owner - auth lives in custom_users.
   let owner: any = null
   try {

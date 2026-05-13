@@ -84,3 +84,24 @@ export function timezoneForState(state: string | null | undefined): string | nul
   const code = state.trim().toUpperCase().slice(0, 2)
   return STATE_TZ[code] || null
 }
+
+/**
+ * Parse a US two-letter state code from a free-text address.
+ * Recognises the standard "..., City, ST [ZIP]" tail. Returns the
+ * uppercase code or null when nothing matches.
+ *
+ *   parseUsStateFromAddress('1234 Main St, Houston, TX 77001') => 'TX'
+ *   parseUsStateFromAddress('5 Pine Rd, Brooklyn NY')           => 'NY'
+ *   parseUsStateFromAddress('Mexico City, Mexico')              => null
+ */
+export function parseUsStateFromAddress(address: string | null | undefined): string | null {
+  if (!address || typeof address !== 'string') return null
+  // Match a 2-letter state followed by optional 5/9 digit ZIP at end-of-string.
+  // Allow comma or whitespace separator. Anchored to the end so we don't pick
+  // up letters in street/city names by accident.
+  const m = address.match(/[,\s]([A-Z]{2})(?:[,\s]+\d{5}(?:-\d{4})?)?\s*$/i)
+  if (!m) return null
+  const code = m[1].toUpperCase()
+  return STATE_TZ[code] ? code : null
+}
+
