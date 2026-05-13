@@ -1015,7 +1015,28 @@ async function handleCallEvent(
    patch.sentiment = call.call_analysis.user_sentiment
   }
 
-  if (Object.keys(patch).length === 0) return
+  if (Object.keys(patch).length === 0) {
+   // Diagnostic: this is the silent-skip path. If transcript/recording/
+   // from_number/to_number/analysis are all missing, the patch is empty
+   // and we'd otherwise return without a trace. Fire a critical admin
+   // notification with the body shape so we can see *why* the call
+   // can't be persisted.
+   await notifyAdmin({
+    type: 'call.empty_patch',
+    severity: 'critical',
+    title: 'Retell webhook had nothing to persist',
+    body: `${eventType} for ${retellCallId} (agent ${callingAgentId || 'none'}) had no patch fields. body keys: [${Object.keys(body || {}).join(',')}]. call keys: [${Object.keys(body?.call || {}).join(',')}].`,
+    metadata: {
+     retell_call_id: retellCallId,
+     event_type: eventType,
+     agent_id: callingAgentId || null,
+     body_keys: Object.keys(body || {}),
+     call_keys: Object.keys(body?.call || {}),
+     sample: JSON.stringify(body).slice(0, 1500),
+    },
+   })
+   return
+  }
 
   // Try matching on retell_call_id first; fall back to inserting if
   // we never saw call_started (Retell can fire analyzed without it).
