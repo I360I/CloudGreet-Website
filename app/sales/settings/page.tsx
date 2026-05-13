@@ -231,6 +231,8 @@ export default function SalesSettingsPage() {
                   <span>Saved.</span>
                 </div>
               )}
+
+              {calKeySet && <RepEventTypeSection />}
             </div>
 
             <PasswordSection />
@@ -238,6 +240,208 @@ export default function SalesSettingsPage() {
         )}
       </section>
     </SalesShell>
+  )
+}
+
+/**
+ * Lets the rep pick one of their Cal.com event types and edit it
+ * (rename + meeting location). Meet/Zoom focused since reps run their
+ * own demos over video; the in-person option is hidden under "show
+ * other formats" for the rare case they want it.
+ */
+function RepEventTypeSection() {
+  type EventType = { id: number; title: string; slug: string; lengthInMinutes: number }
+  const [eventTypes, setEventTypes] = useState<EventType[] | null>(null)
+  const [picked, setPicked] = useState<number | null>(null)
+  const [title, setTitle] = useState('')
+  const [preset, setPreset] = useState<'google_meet' | 'zoom' | 'cal_video' | 'attendee_phone' | 'attendee_address'>('google_meet')
+  const [showOthers, setShowOthers] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+
+  const load = async () => {
+    setLoading(true); setMsg(null)
+    try {
+      const r = await fetchWithAuth('/api/sales/me/calcom/event-type')
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j.success) {
+        setMsg({ tone: 'err', text: j?.error || `Load failed (${r.status})` })
+        return
+      }
+      setEventTypes(j.eventTypes || [])
+      if (j.eventTypes?.[0]) {
+        setPicked(j.eventTypes[0].id)
+        setTitle(j.eventTypes[0].title || '')
+      }
+    } catch (e) {
+      setMsg({ tone: 'err', text: e instanceof Error ? e.message : 'Failed' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const save = async () => {
+    if (!picked) return
+    setSaving(true); setMsg(null)
+    try {
+      const body: any = { eventTypeId: picked, locationPreset: preset }
+      if (title.trim()) body.title = title.trim()
+      const r = await fetchWithAuth('/api/sales/me/calcom/event-type', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j.success) {
+        setMsg({ tone: 'err', text: j?.error || `Save failed (${r.status})` })
+      } else {
+        setMsg({ tone: 'ok', text: 'Updated on Cal.com.' })
+        setTimeout(() => setMsg(null), 3000)
+      }
+    } catch (e) {
+      setMsg({ tone: 'err', text: e instanceof Error ? e.message : 'Failed' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mt-4 border border-gray-200 rounded-xl p-4 bg-gray-50/40 space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <div className="text-sm font-medium text-gray-900">Your demo event type</div>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Rename your booking event and pick the meeting location (Google Meet / Zoom).
+          </p>
+        </div>
+        {!eventTypes && (
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
+            className="text-xs bg-gray-900 text-white rounded-lg px-3 py-1.5 hover:bg-gray-800 disabled:opacity-50"
+          >
+            {loading ? 'Loading…' : 'Load my event types'}
+          </button>
+        )}
+      </div>
+
+      {eventTypes && eventTypes.length > 0 && (
+        <>
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">Pick event type</label>
+            <select
+              value={picked ?? ''}
+              onChange={(e) => {
+                const id = parseInt(e.target.value, 10)
+                setPicked(id)
+                const et = eventTypes.find((x) => x.id === id)
+                setTitle(et?.title || '')
+              }}
+              className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            >
+              {eventTypes.map((et) => (
+                <option key={et.id} value={et.id}>{et.title} · /{et.slug} · {et.lengthInMinutes}m</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">Rename (optional)</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. CloudGreet Demo"
+              className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">Meeting location</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {([
+                { value: 'google_meet', label: 'Google Meet (recommended)' },
+                { value: 'zoom', label: 'Zoom' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPreset(opt.value)}
+                  className={`text-left px-3 py-2 rounded-lg text-sm border-2 transition-colors ${
+                    preset === opt.value
+                      ? 'border-gray-900 bg-gray-900 text-white'
+                      : 'border-gray-300 bg-white text-gray-900 hover:border-gray-900'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            {!showOthers ? (
+              <button
+                type="button"
+                onClick={() => setShowOthers(true)}
+                className="mt-2 text-xs text-gray-500 hover:text-gray-900 underline-offset-2 hover:underline"
+              >
+                Need a phone or in-person option? Show other formats →
+              </button>
+            ) : (
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {([
+                  { value: 'cal_video', label: 'Cal Video' },
+                  { value: 'attendee_phone', label: 'Phone (we call them)' },
+                  { value: 'attendee_address', label: 'In person (their address)' },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setPreset(opt.value)}
+                    className={`text-left px-3 py-2 rounded-lg text-sm border transition-colors ${
+                      preset === opt.value
+                        ? 'border-gray-900 bg-gray-900 text-white'
+                        : 'border-gray-200 bg-white text-gray-800 hover:border-gray-400'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              type="button"
+              onClick={load}
+              disabled={loading || saving}
+              className="text-xs text-gray-500 hover:text-gray-900"
+            >
+              Refresh list
+            </button>
+            {msg && (
+              <span className={`text-sm ${msg.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>{msg.text}</span>
+            )}
+          </div>
+        </>
+      )}
+
+      {eventTypes && eventTypes.length === 0 && (
+        <div className="text-xs text-gray-500">No event types found on this Cal.com account.</div>
+      )}
+
+      {msg && !eventTypes && (
+        <div className={`text-sm ${msg.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>{msg.text}</div>
+      )}
+    </div>
   )
 }
 
