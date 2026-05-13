@@ -149,15 +149,20 @@ export async function POST(request: NextRequest) {
   // Houston; using Cal.com's TZ caused the agent to offer Eastern
   // times when the caller meant Central. State-derived TZ matches
   // reality.
+  // Re-derive timezone from state on every connect. We do NOT trust the
+  // existing businesses.timezone value here - it may have been stamped
+  // with a stale value (e.g. an earlier connect when cal.com's user TZ
+  // resolved to NY). State mapping is the source of truth; only fall
+  // back to cal.com user TZ when we have no state at all.
   const { data: bizForTz } = await supabaseAdmin
    .from('businesses')
-   .select('state, timezone')
+   .select('state')
    .eq('id', authResult.businessId)
    .maybeSingle()
-  const { resolveBusinessTimezone } = await import('@/lib/timezones')
+  const { resolveBusinessTimezone, timezoneForState } = await import('@/lib/timezones')
+  const stateTz = timezoneForState((bizForTz as any)?.state || null)
   const resolvedTz =
-   (bizForTz as any)?.timezone
-   || resolveBusinessTimezone({ state: (bizForTz as any)?.state })
+   stateTz
    || me.timeZone
    || 'America/Chicago'
 

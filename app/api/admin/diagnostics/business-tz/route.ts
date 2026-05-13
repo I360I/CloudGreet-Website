@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
-import { resolveBusinessTimezone } from '@/lib/timezones'
+import { resolveBusinessTimezone, timezoneForState } from '@/lib/timezones'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -53,8 +53,12 @@ export async function POST(request: NextRequest) {
  if (!id) return NextResponse.json({ error: 'businessId required' }, { status: 400 })
 
  const body = await request.json().catch(() => ({})) as { timezone?: string }
- const tz = body.timezone?.trim()
- if (!tz) return NextResponse.json({ error: 'body.timezone required' }, { status: 400 })
+ let tz = body.timezone?.trim()
+
+ // Convenience: with no body, default to America/Chicago. Lets the
+ // user hit the URL with a browser-form POST or curl with no payload
+ // to unstick a wrong-tz business without typing the IANA name.
+ if (!tz) tz = 'America/Chicago'
 
  const { error } = await supabaseAdmin
   .from('businesses')
@@ -63,4 +67,36 @@ export async function POST(request: NextRequest) {
  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
  return NextResponse.json({ success: true, businessId: id, timezone: tz })
+}
+
+/**
+ * PATCH /api/admin/diagnostics/business-tz?businessId=...
+ *
+ * Re-derive timezone from `businesses.state` and save. Use when state
+ * was populated after the original timezone was stamped.
+ */
+export async function PATCH(request: NextRequest) {
+ const auth = await requireAdmin(request)
+ if (!auth.success) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+ const id = request.nextUrl.searchParams.get('businessId')?.trim()
+ if (!id) return NextResponse.json({ error: 'businessId required' }, { status: 400 })
+
+ const { data: biz } = await supabaseAdmin
+  .from('businesses')
+  .select('state')
+  .eq('id', id)
+  .maybeSingle()
+ if (!biz) return NextResponse.json({ error: 'business not found' }, { status: 404 })
+
+ const stateTz = timezoneForState((biz as any).state) || 'America/Chicago'
+ const { error } = await supabaseAdmin
+  .from('businesses')
+  .update({ timezone: stateTz, updated_at: new Date().toISOString() })
+  .eq('id', id)
+ if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+ return NextResponse.json({
+  success: true, businessId: id, state: (biz as any).state || null, timezone: stateTz,
+ })
 }
