@@ -1705,7 +1705,11 @@ function CalendarConnectionSection() {
 function EventTypeEditor({ onSaved }: { onSaved: () => void }) {
  const [open, setOpen] = useState(false)
  const [title, setTitle] = useState('')
- const [preset, setPreset] = useState<'google_meet' | 'zoom' | 'cal_video' | 'attendee_phone' | 'attendee_address'>('attendee_phone')
+ // Default to "in person, their address" - that's the right answer for
+ // 95% of contractors (HVAC, roofing, plumbing). Other options live
+ // behind a "show other formats" toggle so the demo flow is one tap.
+ const [preset, setPreset] = useState<'google_meet' | 'zoom' | 'cal_video' | 'attendee_phone' | 'attendee_address'>('attendee_address')
+ const [showOthers, setShowOthers] = useState(false)
  const [address, setAddress] = useState('')
  const [saving, setSaving] = useState(false)
  const [msg, setMsg] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
@@ -1764,37 +1768,63 @@ function EventTypeEditor({ onSaved }: { onSaved: () => void }) {
 
    <div>
     <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">Meeting location</label>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-     {([
-      { value: 'attendee_phone', label: 'Customer phone (we call them)' },
-      { value: 'google_meet', label: 'Google Meet (video link)' },
-      { value: 'zoom', label: 'Zoom (video link)' },
-      { value: 'cal_video', label: 'Cal Video' },
-      { value: 'attendee_address', label: 'In person (their address)' },
-     ] as const).map((opt) => (
-      <button
-       key={opt.value}
-       type="button"
-       onClick={() => setPreset(opt.value)}
-       className={`text-left px-3 py-2 rounded-lg text-sm border transition-colors ${
-        preset === opt.value
-         ? 'border-gray-900 bg-gray-900 text-white'
-         : 'border-gray-200 bg-white text-gray-800 hover:border-gray-400'
-       }`}
-      >
-       {opt.label}
-      </button>
-     ))}
-    </div>
+    {/* Primary option, always shown big. Defaults selected. */}
+    <button
+     type="button"
+     onClick={() => setPreset('attendee_address')}
+     className={`w-full text-left px-4 py-3 rounded-lg text-sm border-2 transition-colors ${
+      preset === 'attendee_address'
+       ? 'border-gray-900 bg-gray-900 text-white'
+       : 'border-gray-300 bg-white text-gray-900 hover:border-gray-900'
+     }`}
+    >
+     <div className="font-semibold">In person — customer&apos;s address</div>
+     <div className={`text-xs mt-0.5 ${preset === 'attendee_address' ? 'text-white/70' : 'text-gray-500'}`}>
+      Best for HVAC, roofing, plumbing, electrical. The AI collects the address at booking.
+     </div>
+    </button>
+
+    {/* Secondary options collapsed behind a toggle. */}
+    {!showOthers ? (
+     <button
+      type="button"
+      onClick={() => setShowOthers(true)}
+      className="mt-2 text-xs text-gray-500 hover:text-gray-900 underline-offset-2 hover:underline"
+     >
+      Need a video call or phone instead? Show other formats →
+     </button>
+    ) : (
+     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {([
+       { value: 'attendee_phone', label: 'Customer phone (we call them)' },
+       { value: 'google_meet', label: 'Google Meet (video link)' },
+       { value: 'zoom', label: 'Zoom (video link)' },
+       { value: 'cal_video', label: 'Cal Video' },
+      ] as const).map((opt) => (
+       <button
+        key={opt.value}
+        type="button"
+        onClick={() => setPreset(opt.value)}
+        className={`text-left px-3 py-2 rounded-lg text-sm border transition-colors ${
+         preset === opt.value
+          ? 'border-gray-900 bg-gray-900 text-white'
+          : 'border-gray-200 bg-white text-gray-800 hover:border-gray-400'
+        }`}
+       >
+        {opt.label}
+       </button>
+      ))}
+     </div>
+    )}
    </div>
 
    {preset === 'attendee_address' && (
     <div>
-     <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">Customer's address goes here at booking</label>
+     <label className="block text-[11px] uppercase tracking-wider text-gray-500 mb-1">Fixed address (optional)</label>
      <input
       value={address}
       onChange={(e) => setAddress(e.target.value)}
-      placeholder="Leave blank to ask at booking"
+      placeholder="Leave blank to ask the customer at booking"
       className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-900"
      />
     </div>
