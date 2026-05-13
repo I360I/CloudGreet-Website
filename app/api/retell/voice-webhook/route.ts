@@ -1120,9 +1120,12 @@ async function handleCallEvent(
    resolvedBusinessId || (await resolveCallBusinessId(callingAgentId, call?.to_number))
 
   if (finalBusinessId) {
+   // Upsert on the unique call_id constraint. call_ended and call_analyzed
+   // fire near-simultaneously from Retell; without upsert the second one
+   // races, misses the existing-row check, and dies on the unique key.
    const ins = await supabaseAdmin
     .from('calls')
-    .insert({
+    .upsert({
      business_id: finalBusinessId,
      // calls.call_id is NOT NULL in the schema (legacy column from before
      // retell_call_id existed). Populate it with the Retell id so the
@@ -1131,12 +1134,13 @@ async function handleCallEvent(
      retell_call_id: retellCallId,
      ...patch,
      created_at: new Date().toISOString(),
-    })
+     updated_at: new Date().toISOString(),
+    }, { onConflict: 'call_id' })
    if (ins.error) {
     await notifyAdmin({
      type: 'call.insert_failed',
      severity: 'critical',
-     title: `calls INSERT failed on ${eventType}`,
+     title: `calls UPSERT failed on ${eventType}`,
      body: `${ins.error.message}. business_id ${finalBusinessId}, retell_call_id ${retellCallId}. patch keys: [${Object.keys(patch).join(',')}].`,
      metadata: { error: ins.error.message, patch_keys: Object.keys(patch), retell_call_id: retellCallId, business_id: finalBusinessId },
     }).catch(() => {})
