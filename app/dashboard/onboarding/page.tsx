@@ -249,6 +249,52 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  const [fixedAddress, setFixedAddress] = useState('')
  const [locationLink, setLocationLink] = useState('')
 
+ // Booking-notification number: capture right after Cal.com saves so the
+ // SMS confirmation actually lands on the owner's phone during the demo
+ // test call. Pre-fills from whatever's already on file.
+ const [notifyPhone, setNotifyPhone] = useState('')
+ const [notifySaved, setNotifySaved] = useState(false)
+ const [notifySaving, setNotifySaving] = useState(false)
+ const [notifyErr, setNotifyErr] = useState('')
+
+ useEffect(() => {
+  let cancelled = false
+  ;(async () => {
+   try {
+    const r = await fetchWithAuth('/api/dashboard/notifications')
+    const j = await r.json().catch(() => ({}))
+    if (!cancelled && j?.notifications_phone) {
+     setNotifyPhone(j.notifications_phone)
+     setNotifySaved(true)
+    }
+   } catch { /* non-fatal */ }
+  })()
+  return () => { cancelled = true }
+ }, [])
+
+ const saveNotifyPhone = async () => {
+  const v = notifyPhone.trim()
+  if (!v) { setNotifyErr('Enter a US number first.'); return }
+  setNotifySaving(true); setNotifyErr('')
+  try {
+   const r = await fetchWithAuth('/api/dashboard/notifications', {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ notifications_phone: v }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setNotifyErr(j?.error || `Failed (${r.status})`)
+    return
+   }
+   setNotifySaved(true)
+  } catch (e) {
+   setNotifyErr(e instanceof Error ? e.message : 'Failed')
+  } finally {
+   setNotifySaving(false)
+  }
+ }
+
  const fetchEventTypes = async (e?: React.FormEvent) => {
   if (e) e.preventDefault()
   setSubmitting(true); setError(''); setFieldErrors({})
@@ -322,7 +368,6 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
     username: json.account.username,
     eventTypeTitle: newTitle.trim() || json.eventType.title,
    })
-   setTimeout(onConnected, 800)
   } catch (err) {
    setError(err instanceof Error ? err.message : 'Failed')
   } finally {
@@ -507,26 +552,59 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
     )}
 
     {success && (
-     <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-lg px-3 py-2 text-sm flex items-start gap-2">
-      <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-      <div>
+     <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-lg px-3 py-3 text-sm space-y-3">
+      <div className="flex items-start gap-2">
+       <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
        <div>Connected as <strong>{success.username || 'Cal.com user'}</strong> · event: {success.eventTypeTitle}</div>
-       <div className="text-xs text-emerald-800/80 mt-1">
-        Heads up: after onboarding, head to <strong>Settings → Cal.com</strong> to rename the event and pick a meeting location (Google Meet, phone, in-person). Default is Cal Video which most customers won&apos;t use.
+      </div>
+
+      <div className="border-t border-emerald-200 pt-3">
+       <div className="text-sm font-medium text-gray-900 mb-1">Where should we text booking alerts?</div>
+       <div className="text-xs text-gray-600 mb-3">
+        The owner&apos;s cell. As soon as the AI books a job, we text a summary to this number. Set it now so the booking SMS from the test call lands on the right phone.
        </div>
+       <div className="flex flex-wrap items-center gap-2">
+        <input
+         type="tel"
+         value={notifyPhone}
+         onChange={(e) => { setNotifyPhone(e.target.value); setNotifySaved(false); setNotifyErr('') }}
+         placeholder="+1 555 123 4567"
+         className="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-gray-900"
+        />
+        <button
+         type="button"
+         onClick={saveNotifyPhone}
+         disabled={notifySaving || !notifyPhone.trim()}
+         className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+        >
+         {notifySaving ? 'Saving…' : notifySaved ? 'Saved ✓' : 'Save'}
+        </button>
+       </div>
+       {notifyErr && <div className="mt-2 text-xs text-rose-700">{notifyErr}</div>}
       </div>
      </div>
     )}
 
     <div className="flex justify-end pt-1">
-     <button
-      type="submit"
-      disabled={submitting || !!success || (!!eventTypeOptions && eventTypeOptions.length > 0 && eventTypeId == null)}
-      className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-all duration-300 ease-out disabled:opacity-50"
-     >
-      {submitting && <CircleNotch className="w-4 h-4 animate-spin" />}
-      {success ? 'Connected' : eventTypeOptions ? 'Connect this event type' : 'Load my event types'}
-     </button>
+     {success ? (
+      <button
+       type="button"
+       onClick={onConnected}
+       disabled={!notifySaved}
+       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-all duration-300 ease-out disabled:opacity-50"
+      >
+       {notifySaved ? 'Continue to forwarding' : 'Save notify number to continue'}
+      </button>
+     ) : (
+      <button
+       type="submit"
+       disabled={submitting || (!!eventTypeOptions && eventTypeOptions.length > 0 && eventTypeId == null)}
+       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-800 transition-all duration-300 ease-out disabled:opacity-50"
+      >
+       {submitting && <CircleNotch className="w-4 h-4 animate-spin" />}
+       {eventTypeOptions ? 'Connect this event type' : 'Load my event types'}
+      </button>
+     )}
     </div>
 
     <style jsx>{`
@@ -806,53 +884,6 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
  const [verified, setVerified] = useState(false)
  const [tries, setTries] = useState(0)
 
- // Booking-notification number: capture before the test call so the
- // SMS confirmation actually lands on the owner's phone during the
- // demo. Pre-fills from whatever's already saved (e.g. the rep typed
- // it in during a previous step).
- const [notifyPhone, setNotifyPhone] = useState('')
- const [notifySaved, setNotifySaved] = useState(false)
- const [notifySaving, setNotifySaving] = useState(false)
- const [notifyErr, setNotifyErr] = useState('')
-
- useEffect(() => {
-  let cancelled = false
-  ;(async () => {
-   try {
-    const r = await fetchWithAuth('/api/dashboard/notifications')
-    const j = await r.json().catch(() => ({}))
-    if (!cancelled && j?.notifications_phone) {
-     setNotifyPhone(j.notifications_phone)
-     setNotifySaved(true)
-    }
-   } catch { /* non-fatal */ }
-  })()
-  return () => { cancelled = true }
- }, [])
-
- const saveNotifyPhone = async () => {
-  const v = notifyPhone.trim()
-  if (!v) { setNotifyErr('Enter a US number first.'); return }
-  setNotifySaving(true); setNotifyErr('')
-  try {
-   const r = await fetchWithAuth('/api/dashboard/notifications', {
-    method: 'PATCH',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ notifications_phone: v }),
-   })
-   const j = await r.json().catch(() => ({}))
-   if (!r.ok || !j?.success) {
-    setNotifyErr(j?.error || `Failed (${r.status})`)
-    return
-   }
-   setNotifySaved(true)
-  } catch (e) {
-   setNotifyErr(e instanceof Error ? e.message : 'Failed')
-  } finally {
-   setNotifySaving(false)
-  }
- }
-
  useEffect(() => {
   if (!polling) return
   const id = setInterval(async () => {
@@ -878,34 +909,6 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
    <p className="text-sm text-gray-500 mb-5">
     Grab a different phone - your spouse&apos;s, a friend&apos;s, anything other than your business line - and call your business number. Let it ring. Don&apos;t pick up.
    </p>
-
-   <div className="mb-5 border border-gray-200 rounded-xl p-4 bg-gray-50/40">
-    <div className="text-sm font-medium text-gray-900 mb-1">Where should we text booking alerts?</div>
-    <div className="text-xs text-gray-500 mb-3">
-     The owner&apos;s cell. As soon as the AI books a job, we text a summary to this number. Confirm it before the test call so the booking SMS lands on the right phone.
-    </div>
-    <div className="flex flex-wrap items-center gap-2">
-     <input
-      type="tel"
-      value={notifyPhone}
-      onChange={(e) => { setNotifyPhone(e.target.value); setNotifySaved(false); setNotifyErr('') }}
-      placeholder="+1 555 123 4567"
-      className="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-gray-900"
-     />
-     <button
-      type="button"
-      onClick={saveNotifyPhone}
-      disabled={notifySaving || !notifyPhone.trim()}
-      className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
-     >
-      {notifySaving ? 'Saving…' : notifySaved ? 'Saved ✓' : 'Save'}
-     </button>
-    </div>
-    {notifyErr && <div className="mt-2 text-xs text-rose-700">{notifyErr}</div>}
-    {notifySaved && !notifyErr && (
-     <div className="mt-2 text-xs text-emerald-700">Booking alerts will text this number.</div>
-    )}
-   </div>
 
    <div className={`border rounded-xl px-4 py-4 transition-all duration-500 ease-out ${
     verified
