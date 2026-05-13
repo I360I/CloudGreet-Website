@@ -103,23 +103,11 @@ export default function SettingsPage() {
      )}
 
      {!loading && profile && (
-      <div className="space-y-3">
-       <LiveAgentBanner state={agentState} />
-       <SettingsAccordion
-        sections={[
-         { key: 'name', label: 'Business name', icon: Robot, render: () => <NameSection profile={profile} onSaved={reload} /> },
-         { key: 'owner', label: 'Call transfer destination', icon: Phone, render: () => <OwnerNameSection /> },
-         { key: 'greeting', label: 'AI greeting', icon: Robot, render: () => <GreetingSection profile={profile} state={agentState} onSaved={reload} /> },
-         { key: 'voice', label: 'AI voice', icon: Play, render: () => <VoiceSection profile={profile} state={agentState} onSaved={reload} /> },
-         { key: 'speed', label: 'Speech speed', icon: Gauge, render: () => <SpeedSection profile={profile} state={agentState} onSaved={reload} /> },
-         { key: 'notifications', label: 'Booking notifications', icon: CheckCircle, render: () => <BookingNotificationsSection /> },
-         { key: 'forwarding', label: 'Call forwarding', icon: Phone, render: () => <ForwardingSection profile={profile} onSaved={reload} /> },
-         { key: 'calcom', label: 'Cal.com calendar', icon: CalendarBlank, render: () => <CalendarConnectionSection /> },
-         { key: 'reviews', label: 'Review requests', icon: CheckCircle, render: () => <ReviewRequestsSection /> },
-         { key: 'password', label: 'Change password', icon: Key, render: () => <PasswordSection /> },
-        ]}
-       />
-      </div>
+      <SettingsGroups
+       agentState={agentState}
+       profile={profile}
+       reload={reload}
+      />
      )}
     </div>
    </section>
@@ -131,49 +119,109 @@ export default function SettingsPage() {
 
 const ACCORDION_EASE = [0.22, 1, 0.36, 1] as const
 
-function SettingsAccordion({
- sections,
+type SettingRow = {
+ key: string
+ label: string
+ subtitle?: string
+ icon: React.ElementType
+ render: () => React.ReactNode
+}
+
+function SettingsGroups({
+ agentState, profile, reload,
 }: {
- sections: Array<{ key: string; label: string; icon: React.ElementType; render: () => React.ReactNode }>
+ agentState: AgentState | null
+ profile: Profile
+ reload: (opts?: { delay?: number }) => void
 }) {
  const [openKey, setOpenKey] = useState<string | null>(null)
+
+ const groups: Array<{ title: string; subtitle: string; rows: SettingRow[] }> = [
+  {
+   title: 'Customize AI',
+   subtitle: 'Voice, greeting, speed and what the AI says about the business.',
+   rows: [
+    { key: 'name', label: 'Business name', subtitle: 'How the AI refers to your business on every call.', icon: Robot, render: () => <NameSection profile={profile} onSaved={reload} /> },
+    { key: 'greeting', label: 'AI greeting', subtitle: 'The first line callers hear.', icon: Robot, render: () => <GreetingSection profile={profile} state={agentState} onSaved={reload} /> },
+    { key: 'voice', label: 'AI voice', subtitle: 'Pick the voice and tone.', icon: Play, render: () => <VoiceSection profile={profile} state={agentState} onSaved={reload} /> },
+    { key: 'speed', label: 'Speech speed', subtitle: 'Faster, slower, natural.', icon: Gauge, render: () => <SpeedSection profile={profile} state={agentState} onSaved={reload} /> },
+    { key: 'owner', label: 'Call transfer destination', subtitle: 'Who the AI hands off to when a caller asks for the owner.', icon: Phone, render: () => <OwnerNameSection /> },
+   ],
+  },
+  {
+   title: 'SMS settings',
+   subtitle: 'Texts the AI sends after a call.',
+   rows: [
+    { key: 'notifications', label: 'Booking notifications', subtitle: 'Where booking summary texts get sent.', icon: CheckCircle, render: () => <BookingNotificationsSection /> },
+    { key: 'reviews', label: 'Review requests', subtitle: 'Auto-text customers a review link after the job.', icon: CheckCircle, render: () => <ReviewRequestsSection /> },
+   ],
+  },
+  {
+   title: 'Calendar & forwarding',
+   subtitle: 'Where calls land and where bookings go.',
+   rows: [
+    { key: 'calcom', label: 'Cal.com calendar', subtitle: 'Connect, change event type, re-sync.', icon: CalendarBlank, render: () => <CalendarConnectionSection /> },
+    { key: 'forwarding', label: 'Call forwarding', subtitle: 'How your existing line points to CloudGreet.', icon: Phone, render: () => <ForwardingSection profile={profile} onSaved={reload} /> },
+   ],
+  },
+  {
+   title: 'Account',
+   subtitle: 'Your CloudGreet login.',
+   rows: [
+    { key: 'password', label: 'Change password', subtitle: 'Update your login password.', icon: Key, render: () => <PasswordSection /> },
+   ],
+  },
+ ]
+
  return (
-  <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-   {sections.map((s, i) => {
-    const isOpen = openKey === s.key
-    const Icon = s.icon
-    return (
-     <div key={s.key} className={i > 0 ? 'border-t border-gray-100' : ''}>
-      <button
-       onClick={() => setOpenKey(isOpen ? null : s.key)}
-       className="w-full flex items-center gap-3 px-4 sm:px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
-      >
-       <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
-        <Icon className="w-4 h-4 text-sky-500" />
-       </div>
-       <div className="flex-1 min-w-0 text-left">
-        <h2 className="text-sm font-medium text-gray-900 truncate">{s.label}</h2>
-       </div>
-       <CaretDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ease-out ${isOpen ? 'rotate-180 text-sky-500' : ''}`} />
-      </button>
-      <AnimatePresence initial={false}>
-       {isOpen && (
-        <motion.div
-         initial={{ height: 0, opacity: 0 }}
-         animate={{ height: 'auto', opacity: 1 }}
-         exit={{ height: 0, opacity: 0 }}
-         transition={{ duration: 0.25, ease: ACCORDION_EASE }}
-         className="overflow-hidden"
-        >
-         <div className="px-3 sm:px-4 pb-4 pt-1">
-          {s.render()}
-         </div>
-        </motion.div>
-       )}
-      </AnimatePresence>
+  <div className="space-y-4">
+   <LiveAgentBanner state={agentState} />
+   {groups.map((g) => (
+    <div key={g.title}>
+     <div className="mb-2 px-1">
+      <div className="text-[10px] uppercase tracking-[0.2em] font-semibold text-gray-500">{g.title}</div>
+      <p className="text-xs text-gray-400 mt-0.5">{g.subtitle}</p>
      </div>
-    )
-   })}
+     <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+      {g.rows.map((s, i) => {
+       const isOpen = openKey === s.key
+       const Icon = s.icon
+       return (
+        <div key={s.key} className={i > 0 ? 'border-t border-gray-100' : ''}>
+         <button
+          onClick={() => setOpenKey(isOpen ? null : s.key)}
+          className="w-full flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-gray-50/60 transition-colors"
+         >
+          <div className="w-9 h-9 rounded-lg bg-sky-50 border border-sky-100 flex items-center justify-center flex-shrink-0">
+           <Icon className="w-4 h-4 text-sky-500" />
+          </div>
+          <div className="flex-1 min-w-0 text-left">
+           <h2 className="text-sm font-medium text-gray-900 truncate">{s.label}</h2>
+           {s.subtitle && <p className="text-xs text-gray-500 truncate mt-0.5">{s.subtitle}</p>}
+          </div>
+          <CaretDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ease-out ${isOpen ? 'rotate-180 text-sky-500' : ''}`} />
+         </button>
+         <AnimatePresence initial={false}>
+          {isOpen && (
+           <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: ACCORDION_EASE }}
+            className="overflow-hidden"
+           >
+            <div className="px-3 sm:px-4 pb-4 pt-1">
+             {s.render()}
+            </div>
+           </motion.div>
+          )}
+         </AnimatePresence>
+        </div>
+       )
+      })}
+     </div>
+    </div>
+   ))}
   </div>
  )
 }
