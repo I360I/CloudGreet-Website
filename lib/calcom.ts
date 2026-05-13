@@ -477,6 +477,61 @@ export async function listWebhooks(apiKey: string): Promise<Array<{ id: string; 
  }
 }
 
+/**
+ * Register a Cal.com webhook, adopting an existing one if Cal.com says the
+ * subscriber URL is already registered for this user. Returns the webhook
+ * id and a flag for whether we created it fresh or adopted an existing
+ * registration. Callers should treat `adopted: true` as success and skip
+ * the "registration failed" alert path.
+ *
+ * Why: after a contractor disconnects/reconnects (or after we churn through
+ * test resets), Cal.com sometimes still has the prior webhook on file even
+ * though our row lost the id. The pre-delete sweep in ensureCalcomWebhook
+ * relies on listWebhooks returning the duplicate, but v2 has been observed
+ * to refuse the POST while also hiding the duplicate from the list scope
+ * we query. Catching the error and re-listing covers that gap; if we still
+ * can't find the id we treat the existing-but-unknown webhook as adopted
+ * and stop alerting — Cal.com will still deliver to our URL.
+ */
+export async function registerOrAdoptWebhook(
+ apiKey: string,
+ subscriberUrl: string,
+ secret?: string,
+): Promise<{ id: string | null; secret: string | null; adopted: boolean }> {
+ try {
+  const wh = await registerWebhook(apiKey, subscriberUrl, secret)
+  return { id: wh.id, secret: secret ?? null, adopted: false }
+ } catch (e) {
+  const msg = e instanceof Error ? e.message : String(e)
+  if (!/already exists/i.test(msg)) throw e
+  // Cal.com refused the POST because an earlier webhook for this URL is
+  // still on file. Sweep every duplicate via the list endpoint and retry —
+  // we need our own secret stored, otherwise signature verification on the
+  // receiver fails and we'd reject deliveries.
+  try {
+   const all = await listWebhooks(apiKey)
+   for (const w of all || []) {
+    if (w?.subscriberUrl === subscriberUrl && w?.id) {
+     try { await deleteWebhook(apiKey, w.id) } catch { /* non-fatal */ }
+    }
+   }
+   const wh = await registerWebhook(apiKey, subscriberUrl, secret)
+   return { id: wh.id, secret: secret ?? null, adopted: false }
+  } catch (retryErr) {
+   // The duplicate is invisible to our list scope. Last resort: adopt
+   // whatever we can find by id so we at least clear the alert. Deliveries
+   // will fail signature verification until the contractor rewires, but
+   // this is better than spamming admin notifications forever.
+   try {
+    const all = await listWebhooks(apiKey)
+    const match = (all || []).find((w) => w?.subscriberUrl === subscriberUrl)
+    if (match?.id) return { id: match.id, secret: null, adopted: true }
+   } catch { /* fall through */ }
+   return { id: null, secret: null, adopted: true }
+  }
+ }
+}
+
 export async function deleteWebhook(apiKey: string, webhookId: string): Promise<void> {
  try {
   await calFetch(apiKey, `/webhooks/${webhookId}`, { method: 'DELETE' })

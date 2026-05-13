@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { validateConnection, registerWebhook, deleteWebhook, listEventTypesDetailed, getMe, CalcomError } from '@/lib/calcom'
+import { validateConnection, registerOrAdoptWebhook, deleteWebhook, listEventTypesDetailed, getMe, CalcomError } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -118,15 +118,21 @@ export async function POST(request: NextRequest) {
   const subscriberUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/webhooks/cal/${authResult.businessId}`
   const webhookSecret = crypto.randomBytes(32).toString('hex')
   let webhookId: string | null = null
+  let webhookSecretToStore: string | null = webhookSecret
   let webhookError: string | null = null
   try {
-   const wh = await registerWebhook(apiKey, subscriberUrl, webhookSecret)
+   const wh = await registerOrAdoptWebhook(apiKey, subscriberUrl, webhookSecret)
    webhookId = wh.id
+   webhookSecretToStore = wh.secret
+   if (wh.adopted && !wh.secret) {
+    // Cal.com had a stale registration we couldn't sweep; deliveries will
+    // fail signature verification until the contractor rewires from admin.
+    logger.warn('Cal.com webhook adopted without secret', {
+     businessId: authResult.businessId,
+    })
+   }
   } catch (e) {
    webhookError = e instanceof Error ? e.message : 'Unknown'
-   // Don't fail the connection - the dashboard now does a live Cal.com
-   // pull as a fallback, so the calendar still works without the
-   // webhook. But log loudly + admin-notify so this gets fixed.
    logger.error('Cal.com webhook registration failed', {
     businessId: authResult.businessId,
     error: webhookError,
@@ -175,7 +181,7 @@ export async function POST(request: NextRequest) {
     cal_com_event_type_id: eventType.id,
     cal_com_event_type_slug: eventType.slug,
     cal_com_webhook_id: webhookId,
-    cal_com_webhook_secret: webhookSecret,
+    cal_com_webhook_secret: webhookSecretToStore,
     calcom_connected: true,
     calcom_connected_at: new Date().toISOString(),
     timezone: resolvedTz,

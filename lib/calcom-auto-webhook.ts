@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { registerWebhook, deleteWebhook, listWebhooks } from '@/lib/calcom'
+import { registerOrAdoptWebhook, deleteWebhook, listWebhooks } from '@/lib/calcom'
 
 /**
  * Register the Cal.com BOOKING_CREATED webhook for a business if it has
@@ -43,12 +43,12 @@ export async function ensureCalcomWebhookForBusiness(businessId: string): Promis
  }
 
  try {
-  const wh = await registerWebhook(business.cal_com_api_key, subscriberUrl, webhookSecret)
+  const wh = await registerOrAdoptWebhook(business.cal_com_api_key, subscriberUrl, webhookSecret)
   await supabaseAdmin
    .from('businesses')
    .update({
-    cal_com_webhook_id: wh.id,
-    cal_com_webhook_secret: webhookSecret,
+    cal_com_webhook_id: wh.id ?? 'adopted',
+    cal_com_webhook_secret: wh.adopted ? null : webhookSecret,
     updated_at: new Date().toISOString(),
    })
    .eq('id', business.id)

@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import {
-  validateConnection, registerWebhook, deleteWebhook,
+  validateConnection, registerOrAdoptWebhook, deleteWebhook,
   listEventTypesDetailed, getMe, CalcomError,
 } from '@/lib/calcom'
 
@@ -104,10 +104,17 @@ export async function POST(
   const subscriberUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/api/webhooks/cal/${ownership.id}`
   const webhookSecret = crypto.randomBytes(32).toString('hex')
   let webhookId: string | null = null
+  let webhookSecretToStore: string | null = webhookSecret
   let webhookError: string | null = null
   try {
-    const wh = await registerWebhook(apiKey, subscriberUrl, webhookSecret)
+    const wh = await registerOrAdoptWebhook(apiKey, subscriberUrl, webhookSecret)
     webhookId = wh.id
+    webhookSecretToStore = wh.secret
+    if (wh.adopted && !wh.secret) {
+      logger.warn('Cal.com webhook adopted without secret (rep path)', {
+        businessId: ownership.id,
+      })
+    }
   } catch (e) {
     webhookError = e instanceof Error ? e.message : 'Unknown'
     // Don't kill the connection - the dashboard's live-merge fallback
@@ -138,7 +145,7 @@ export async function POST(
       cal_com_event_type_id: eventType.id,
       cal_com_event_type_slug: eventType.slug,
       cal_com_webhook_id: webhookId,
-      cal_com_webhook_secret: webhookSecret,
+      cal_com_webhook_secret: webhookSecretToStore,
       calcom_connected: true,
       calcom_connected_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

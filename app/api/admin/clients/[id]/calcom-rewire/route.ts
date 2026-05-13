@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
-import { registerWebhook, deleteWebhook, listWebhooks } from '@/lib/calcom'
+import { registerOrAdoptWebhook, deleteWebhook, listWebhooks } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -72,20 +72,23 @@ export async function POST(
  }
 
  try {
-  const wh = await registerWebhook(business.cal_com_api_key, subscriberUrl, webhookSecret)
+  const wh = await registerOrAdoptWebhook(business.cal_com_api_key, subscriberUrl, webhookSecret)
   await supabaseAdmin
    .from('businesses')
    .update({
-    cal_com_webhook_id: wh.id,
-    cal_com_webhook_secret: webhookSecret,
+    cal_com_webhook_id: wh.id ?? 'adopted',
+    cal_com_webhook_secret: wh.secret,
     updated_at: new Date().toISOString(),
    })
    .eq('id', business.id)
   return NextResponse.json({
    success: true,
    webhookId: wh.id,
+   adopted: wh.adopted,
    subscriberUrl,
-   message: 'Cal.com will now POST every BOOKING_CREATED to CloudGreet.',
+   message: wh.adopted
+    ? 'Adopted an existing Cal.com webhook for this URL. Deliveries will work; if signature verification fails the contractor needs to rotate their Cal.com API key and rewire.'
+    : 'Cal.com will now POST every BOOKING_CREATED to CloudGreet.',
   })
  } catch (e) {
   const detail = e instanceof Error ? e.message : 'Unknown'

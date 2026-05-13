@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { requireAuth } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { registerWebhook, deleteWebhook, listWebhooks } from '@/lib/calcom'
+import { registerOrAdoptWebhook, deleteWebhook, listWebhooks } from '@/lib/calcom'
 import { syncBusinessCalendar } from '@/lib/calcom-sync'
 
 export const dynamic = 'force-dynamic'
@@ -58,9 +58,11 @@ export async function POST(request: NextRequest) {
 
   const newSecret = crypto.randomBytes(32).toString('hex')
   let webhookId: string | null = null
+  let secretToStore: string | null = newSecret
   try {
-    const wh = await registerWebhook(apiKey, subscriberUrl, newSecret)
+    const wh = await registerOrAdoptWebhook(apiKey, subscriberUrl, newSecret)
     webhookId = wh.id
+    secretToStore = wh.secret
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown'
     logger.error('Cal.com webhook re-register failed', { businessId, error: msg })
@@ -73,8 +75,8 @@ export async function POST(request: NextRequest) {
   await supabaseAdmin
     .from('businesses')
     .update({
-      cal_com_webhook_id: webhookId,
-      cal_com_webhook_secret: newSecret,
+      cal_com_webhook_id: webhookId ?? 'adopted',
+      cal_com_webhook_secret: secretToStore,
       updated_at: new Date().toISOString(),
     })
     .eq('id', businessId)
