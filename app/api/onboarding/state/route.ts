@@ -35,13 +35,26 @@ export async function GET(request: NextRequest) {
    return NextResponse.json({ success: false, error: 'Business not found' }, { status: 404 })
   }
 
+  // Backfill: any business that already passed the test-call check should
+  // be onboarding_completed regardless of pay status. Older verify flow
+  // gated this on Stripe; this self-heals businesses that got stuck on
+  // "Demo data shown" after verifying but before paying.
+  let onboardingCompleted = (business as any).onboarding_completed
+  if (!onboardingCompleted && (business as any).forwarding_verified_at) {
+   onboardingCompleted = true
+   await supabaseAdmin
+    .from('businesses')
+    .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
+    .eq('id', authResult.businessId)
+  }
+
   // Derive: if there's an API key on file, the integration is connected.
   // The dedicated column may be missing in older deployments.
   const calcomConnected = !!(business as any).cal_com_api_key
 
   return NextResponse.json({
    success: true,
-   business: { ...business, calcom_connected: calcomConnected },
+   business: { ...business, onboarding_completed: onboardingCompleted, calcom_connected: calcomConnected },
   })
  } catch (e) {
   logger.error('Onboarding state error', { error: e instanceof Error ? e.message : 'Unknown' })
