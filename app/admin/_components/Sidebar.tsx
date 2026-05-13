@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { SquaresFour, Phone, CurrencyDollar, ListChecks, MagicWand, SignOut, Users, FileText, Robot } from '@phosphor-icons/react'
+import { SquaresFour, Phone, CurrencyDollar, ListChecks, MagicWand, SignOut, Users, FileText, Robot, PhoneOutgoing } from '@phosphor-icons/react'
 
 type Item = {
  icon: React.ElementType
@@ -17,6 +17,7 @@ const items: Item[] = [
  { icon: Phone, label: 'Calls', href: '/admin/calls', match: (p) => p.startsWith('/admin/calls') },
  { icon: CurrencyDollar, label: 'Billing', href: '/admin/billing', match: (p) => p.startsWith('/admin/billing') },
  { icon: Users, label: 'Sales', href: '/admin/sales', match: (p) => p.startsWith('/admin/sales') },
+ { icon: PhoneOutgoing, label: 'Dialer', href: '/admin/dialer', match: (p) => p.startsWith('/admin/dialer') },
  { icon: Robot, label: 'Agents Due', href: '/admin/agents-due', match: (p) => p.startsWith('/admin/agents-due') },
  { icon: FileText, label: 'Applications', href: '/admin/applications', match: (p) => p.startsWith('/admin/applications') },
  { icon: ListChecks, label: 'Leads', href: '/admin/leads', match: (p) => p.startsWith('/admin/leads') },
@@ -24,7 +25,7 @@ const items: Item[] = [
 ]
 
 export type AdminActiveLabel =
- | 'Overview' | 'Calls' | 'Billing' | 'Sales' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due'
+ | 'Overview' | 'Calls' | 'Billing' | 'Sales' | 'Dialer' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due'
 
 export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
  adminEmail: string
