@@ -35,6 +35,16 @@ export async function GET(request: NextRequest) {
    return NextResponse.json({ success: false, error: 'Business not found' }, { status: 404 })
   }
 
+  // Self-heal: if Cal.com API key is on file but no booking webhook is
+  // registered, fire the registration in the background. Same fix as
+  // the admin auto-rewire; runs on every client dashboard load so the
+  // contractor never has to do anything.
+  if ((business as any).cal_com_api_key && !(business as any).cal_com_webhook_id) {
+   void import('@/lib/calcom-auto-webhook').then(({ ensureCalcomWebhookForBusiness }) =>
+    ensureCalcomWebhookForBusiness(authResult.businessId!)
+   ).catch(() => {})
+  }
+
   // Backfill: any business that already passed the test-call check should
   // be onboarding_completed regardless of pay status. Older verify flow
   // gated this on Stripe; this self-heals businesses that got stuck on

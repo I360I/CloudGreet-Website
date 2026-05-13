@@ -46,6 +46,17 @@ export async function GET(
    )
   }
 
+  // Self-heal: if this business has a Cal.com API key but no booking
+  // webhook registered, fire the registration in the background. Means
+  // admins never have to click the yellow "Register now" button - just
+  // loading the client page auto-fixes it. Fire-and-forget so the page
+  // returns immediately even if Cal.com is slow.
+  if ((business as any).cal_com_api_key && !(business as any).cal_com_webhook_id) {
+   void import('@/lib/calcom-auto-webhook').then(({ ensureCalcomWebhookForBusiness }) =>
+    ensureCalcomWebhookForBusiness(clientId)
+   ).catch(() => {})
+  }
+
   // Owner - auth lives in custom_users.
   let owner: any = null
   try {
