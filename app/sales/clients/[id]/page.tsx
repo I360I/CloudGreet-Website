@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X, Robot, Lightning, ChatCircle, Phone, CalendarBlank, Trash, Play, SpeakerHigh } from '@phosphor-icons/react'
+import { ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X, Robot, Lightning, ChatCircle, Phone, CalendarBlank, Trash, Play, SpeakerHigh, SignIn } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { clearClientAuthState } from '@/lib/auth/session-guard'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -479,9 +480,63 @@ export default function SalesClientDetailPage() {
           stay locked - these rules layer on top under a SPECIAL HANDLING section.
         </p>
 
+        <LoginAsClientSection businessId={id} businessName={business.business_name} />
         <DeleteClientSection businessId={id} businessName={business.business_name} />
       </section>
     </SalesShell>
+  )
+}
+
+/**
+ * Drop the rep into the client's dashboard with one click so they can
+ * demo from inside the contractor's actual environment. Stashes the
+ * rep's own token in `impersonator_token` so they can exit back to
+ * their sales console without re-logging in.
+ */
+function LoginAsClientSection({ businessId, businessName }: {
+  businessId: string
+  businessName: string
+}) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  const go = async () => {
+    setBusy(true); setErr('')
+    try {
+      const r = await fetch(`/api/sales/clients/${businessId}/impersonate`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) throw new Error(j?.error || `Failed (${r.status})`)
+      try { clearClientAuthState() } catch { /* non-fatal */ }
+      window.location.href = '/dashboard'
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to start session')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-6 border border-sky-200 bg-sky-50/50 rounded-2xl p-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <div className="text-sm font-medium text-sky-900">Login as {businessName}</div>
+          <div className="text-xs text-sky-800/80 mt-0.5">
+            Opens this client&apos;s dashboard in your browser. Useful for live demos. You can exit back to your sales console anytime.
+          </div>
+        </div>
+        <button
+          onClick={go}
+          disabled={busy}
+          className="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors"
+        >
+          <SignIn className="w-4 h-4" weight="fill" />
+          {busy ? 'Starting...' : 'Login as client'}
+        </button>
+      </div>
+      {err && <div className="text-xs text-rose-700 mt-2">{err}</div>}
+    </div>
   )
 }
 

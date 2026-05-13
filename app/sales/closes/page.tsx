@@ -285,9 +285,18 @@ export default function SalesClosesPage() {
                         {/* Quick badges - the detail panel has the full picture. */}
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
                           {c.demo_agent_status === 'ready' && c.demo_agent_test_phone && (
-                            <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-2 py-0.5">
-                              <Trophy className="w-3 h-3" weight="fill" /> Demo ready
-                            </span>
+                            <>
+                              <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-2 py-0.5">
+                                <Trophy className="w-3 h-3" weight="fill" /> Demo ready
+                              </span>
+                              <a
+                                href={`tel:${c.demo_agent_test_phone}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1 text-[11px] bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg px-2 py-0.5 font-mono"
+                              >
+                                {c.demo_agent_test_phone}
+                              </a>
+                            </>
                           )}
                           {c.demo_agent_status === 'building' && (
                             <span className="text-[11px] bg-sky-50 border border-sky-200 text-sky-800 rounded-lg px-2 py-0.5">
