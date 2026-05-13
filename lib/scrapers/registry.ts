@@ -8,6 +8,7 @@ import {
 import { placesSources } from './google-places-discovery'
 import { qualityModeSource } from './quality-mode'
 import { ohioModeSource } from './ohio-mode'
+import { arizonaModeSource } from './arizona-mode'
 import { placesLaw } from './places-law'
 
 /**
@@ -29,6 +30,8 @@ export const SCRAPER_SOURCES: SourceDefinition[] = [
  // Ohio mode - statewide multi-trade sweep. Built for Aaron's onboarding
  // demo; can ship per-state versions of this same shape on request.
  ohioModeSource,
+ // Arizona mode - same shape as Ohio mode, Phoenix/Tucson/etc.
+ arizonaModeSource,
  // Solo & small law firms - non-contractor vertical, kept near top
  // because legal is a strong fit for the AI receptionist pitch.
  placesLaw,
