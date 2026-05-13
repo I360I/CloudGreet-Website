@@ -97,13 +97,22 @@ export function MonthGrid({
          isSelected ? 'bg-sky-100/70 ring-2 ring-inset ring-sky-400' : ''
         }`}
        >
-        <div className="flex items-center justify-between mb-1.5">
-         <span className={`inline-flex items-center justify-center text-[11px] sm:text-xs font-mono ${
-          cell.isToday
-           ? 'bg-sky-600 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 font-semibold'
-           : cell.inMonth ? 'text-gray-900' : 'text-gray-300'
-         }`}>
-          {cell.dayNumber}
+        <div className="flex items-start justify-between mb-1.5">
+         {/* Day number sits flush top-left across every cell. Today gets a
+             color + weight bump and a small dot underneath instead of a
+             filled circle (the circle shifted today's number a few pixels
+             versus every other day, which read as misalignment). */}
+         <span className="relative inline-flex flex-col items-start leading-none">
+          <span className={`text-[11px] sm:text-xs font-mono tabular-nums ${
+           cell.isToday
+            ? 'text-sky-700 font-semibold'
+            : cell.inMonth ? 'text-gray-900' : 'text-gray-300'
+          }`}>
+           {cell.dayNumber}
+          </span>
+          {cell.isToday && (
+           <span className="mt-1 block w-1 h-1 rounded-full bg-sky-600" />
+          )}
          </span>
          {hasAppts && (
           <span className="text-[9px] sm:text-[10px] font-mono text-sky-700 bg-sky-100 px-1.5 rounded-full">
