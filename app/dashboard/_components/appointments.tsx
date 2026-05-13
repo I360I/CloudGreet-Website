@@ -85,7 +85,7 @@ export function MonthGrid({
         transition={{ duration: 0.35, ease: EASE, delay: row * 0.04 + (i % 7) * 0.008 }}
         onClick={() => cell.inMonth && onPickDate(cell.iso)}
         disabled={!cell.inMonth}
-        className={`relative text-left min-h-[88px] sm:min-h-[112px] px-1.5 sm:px-2.5 py-2 border-r border-b border-gray-100 last:border-r-0 transition-all duration-300 ease-out ${
+        className={`relative text-left min-h-[88px] sm:min-h-[112px] pt-7 sm:pt-8 px-1.5 sm:px-2.5 pb-2 border-r border-b border-gray-100 last:border-r-0 transition-all duration-300 ease-out ${
          isLastRow ? 'border-b-0' : ''
         } ${
          cell.inMonth
@@ -97,29 +97,27 @@ export function MonthGrid({
          isSelected ? 'bg-sky-100/70 ring-2 ring-inset ring-sky-400' : ''
         }`}
        >
-        <div className="flex items-start justify-between mb-1.5">
-         {/* Day number sits flush top-left across every cell. Today gets a
-             color + weight bump and a small dot underneath instead of a
-             filled circle (the circle shifted today's number a few pixels
-             versus every other day, which read as misalignment). */}
-         <span className="relative inline-flex flex-col items-start leading-none">
-          <span className={`text-[11px] sm:text-xs font-mono tabular-nums ${
-           cell.isToday
-            ? 'text-sky-700 font-semibold'
-            : cell.inMonth ? 'text-gray-900' : 'text-gray-300'
-          }`}>
-           {cell.dayNumber}
-          </span>
-          {cell.isToday && (
-           <span className="mt-1 block w-1 h-1 rounded-full bg-sky-600" />
-          )}
+        {/* Day number is absolutely positioned at the top-left of every
+            cell so it never shifts based on cell contents (today markers,
+            count badges, chip width, anything). Count badge is absolutely
+            positioned at the top-right for the same reason. */}
+        <span
+         className={`absolute top-1.5 sm:top-2 left-1.5 sm:left-2.5 text-[11px] sm:text-xs font-mono tabular-nums leading-none ${
+          cell.isToday
+           ? 'text-sky-700 font-semibold'
+           : cell.inMonth ? 'text-gray-900' : 'text-gray-300'
+         }`}
+        >
+         {cell.dayNumber}
+        </span>
+        {cell.isToday && (
+         <span className="absolute top-[22px] sm:top-[26px] left-2 sm:left-3 block w-1 h-1 rounded-full bg-sky-600" />
+        )}
+        {hasAppts && (
+         <span className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 text-[9px] sm:text-[10px] font-mono text-sky-700 bg-sky-100 px-1.5 rounded-full leading-[14px] sm:leading-[16px]">
+          {cell.appointments.length}
          </span>
-         {hasAppts && (
-          <span className="text-[9px] sm:text-[10px] font-mono text-sky-700 bg-sky-100 px-1.5 rounded-full">
-           {cell.appointments.length}
-          </span>
-         )}
-        </div>
+        )}
         {/* Mobile: collapsed dot row */}
         <div className="sm:hidden flex gap-0.5">
          {cell.appointments.slice(0, 4).map((a) => (
