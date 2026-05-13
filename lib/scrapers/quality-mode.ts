@@ -132,7 +132,11 @@ async function* runQualityMode(
   // results spread across the country.
   const limitForCap = Math.max(1, Math.min(200, params.limit ?? 30))
   const totalCells = QUALITY_METROS.length * QUALITY_TRADES.length
-  const maxPerCell = Math.max(2, Math.ceil(limitForCap / totalCells) + 1)
+  // At small limits (≤ totalCells) we want EVERY cell to yield at most
+  // 1 before any cell yields a second, so no single metro dominates.
+  // At larger limits we step up gradually. The +1 is a small buffer so
+  // a cell that returns no qualifying results doesn't starve the run.
+  const maxPerCell = Math.max(1, Math.ceil(limitForCap / totalCells))
 
   // Per-run dedupe across the metro × trade matrix. A national chain
   // hits both Houston and Dallas; we should yield it once.
@@ -147,8 +151,23 @@ async function* runQualityMode(
   // website, phone) ensure every yielded record is high quality;
   // we trade global score ranking for resilience and visible progress.
 
-  outer: for (const metro of QUALITY_METROS) {
-    for (const cfg of QUALITY_TRADES) {
+  // Build the cell list and shuffle so NYC isn't always first. Without
+  // a shuffle, even after the per-cell cap, the early cells get first
+  // crack at a constant set of leads each run; the same NYC plumbers
+  // surface batch after batch. Shuffling per-run keeps the demo varied.
+  type Cell = { metro: typeof QUALITY_METROS[number]; cfg: typeof QUALITY_TRADES[number] }
+  const cells: Cell[] = []
+  for (const metro of QUALITY_METROS) {
+    for (const cfg of QUALITY_TRADES) cells.push({ metro, cfg })
+  }
+  // Fisher-Yates shuffle.
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[cells[i], cells[j]] = [cells[j], cells[i]]
+  }
+
+  outer: for (const { metro, cfg } of cells) {
+    {
       if (totalYielded >= limit) break outer
       const query = `${cfg.textQuery} near ${metro.name} ${metro.state}`
       let kept = 0
