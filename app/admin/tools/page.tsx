@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { Database, MagicWand, ArrowUpRight, Plug, ChatCircle, ShoppingCart, ArrowsClockwise, FileText, Pulse, Gauge, Lifebuoy } from '@phosphor-icons/react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Database, ArrowUpRight, Plug, ChatCircle, ShoppingCart, ArrowsClockwise, FileText, Pulse, Gauge, Lifebuoy, CaretDown } from '@phosphor-icons/react'
 import { AdminShell } from '../_components/Shell'
-import { Panel } from '../_components/ui'
+
+const EASE = [0.22, 1, 0.36, 1] as const
 
 const TOOLS: { href: string; label: string; description: string; icon: React.ElementType }[] = [
  {
@@ -69,6 +72,8 @@ const TOOLS: { href: string; label: string; description: string; icon: React.Ele
 ]
 
 export default function AdminToolsPage() {
+ const [openHref, setOpenHref] = useState<string | null>(null)
+
  return (
   <AdminShell activeLabel="Tools">
    <section className="px-4 lg:px-8 py-6 lg:py-10">
@@ -78,25 +83,50 @@ export default function AdminToolsPage() {
        Operator utilities
       </div>
       <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight text-white">Tools</h1>
+      <p className="text-sm text-gray-500 mt-2">Tap a tool to see what it does, then open it.</p>
      </div>
 
-     <div className="space-y-3">
-      {TOOLS.map((t) => (
-       <Link key={t.href} href={t.href} className="block group">
-        <Panel className="hover:border-sky-400/30 transition-colors duration-300">
-         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
+     <div className="bg-[#101015] border border-white/[0.06] rounded-2xl overflow-hidden">
+      {TOOLS.map((t, i) => {
+       const isOpen = openHref === t.href
+       return (
+        <div key={t.href} className={i > 0 ? 'border-t border-white/[0.04]' : ''}>
+         <button
+          onClick={() => setOpenHref(isOpen ? null : t.href)}
+          className="w-full flex items-center gap-3 px-4 sm:px-5 py-3.5 hover:bg-white/[0.02] transition-colors group"
+         >
+          <div className="w-9 h-9 rounded-lg bg-white/[0.04] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
            <t.icon className="w-4 h-4 text-sky-400" />
           </div>
-          <div className="flex-1 min-w-0">
-           <h2 className="text-base font-medium text-white">{t.label}</h2>
-           <p className="text-sm text-gray-500 mt-1">{t.description}</p>
+          <div className="flex-1 min-w-0 text-left">
+           <h2 className="text-sm font-medium text-white truncate">{t.label}</h2>
           </div>
-          <ArrowUpRight className="w-4 h-4 text-gray-600 group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all duration-300 ease-out" />
-         </div>
-        </Panel>
-       </Link>
-      ))}
+          <CaretDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ease-out ${isOpen ? 'rotate-180 text-sky-400' : ''}`} />
+         </button>
+         <AnimatePresence initial={false}>
+          {isOpen && (
+           <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: EASE }}
+            className="overflow-hidden"
+           >
+            <div className="px-4 sm:px-5 pb-4 pl-[68px] sm:pl-[72px]">
+             <p className="text-sm text-gray-400 leading-relaxed">{t.description}</p>
+             <Link
+              href={t.href}
+              className="mt-3 inline-flex items-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 hover:text-sky-200 border border-sky-400/20 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+             >
+              Open {t.label} <ArrowUpRight className="w-3.5 h-3.5" />
+             </Link>
+            </div>
+           </motion.div>
+          )}
+         </AnimatePresence>
+        </div>
+       )
+      })}
      </div>
     </div>
    </section>
