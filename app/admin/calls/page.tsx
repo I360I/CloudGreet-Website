@@ -46,7 +46,10 @@ export default function AdminCallsPage() {
     offset: String(page * PAGE_SIZE),
    })
    if (search.trim()) params.set('q', search.trim())
-   const res = await fetchWithAuth(`/api/admin/calls?${params.toString()}`)
+   // Cache-bust + no-store so Safari/Vercel don't hand back a stale
+   // cross-tenant call list after a new call lands.
+   params.set('_', String(Date.now()))
+   const res = await fetchWithAuth(`/api/admin/calls?${params.toString()}`, { cache: 'no-store' })
    if (signal?.aborted) return
    const json = await res.json().catch(() => ({}))
    if (!res.ok || !json.success) throw new Error(json?.error || `Failed (${res.status})`)
@@ -63,7 +66,15 @@ export default function AdminCallsPage() {
  useEffect(() => {
   const ctrl = new AbortController()
   load(ctrl.signal)
-  return () => ctrl.abort()
+  // Auto-refresh every 15s while on page 0 with no search filter, so a
+  // fresh call appears without the user having to mash refresh.
+  const poll = page === 0 && !search.trim()
+   ? setInterval(() => { load() }, 15000)
+   : null
+  return () => {
+   ctrl.abort()
+   if (poll) clearInterval(poll)
+  }
   // eslint-disable-next-line react-hooks/exhaustive-deps
  }, [page])
 

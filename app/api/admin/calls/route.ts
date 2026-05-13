@@ -71,6 +71,8 @@ export async function GET(request: NextRequest) {
    limit,
    offset,
    calls: enriched,
+  }, {
+   headers: { 'cache-control': 'no-store, no-cache, must-revalidate' },
   })
  } catch (e) {
   logger.error('Admin calls failed', { error: e instanceof Error ? e.message : 'Unknown' })
