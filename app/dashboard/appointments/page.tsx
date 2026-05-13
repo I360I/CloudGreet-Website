@@ -115,9 +115,11 @@ export default function AppointmentsPage() {
   }
  }
 
- // Upcoming appointments: flatten + filter to future, sorted ascending.
- const upcoming = useMemo(() => {
-  if (!displayMonthDays) return []
+ // Upcoming appointments, grouped by day. Each group has a date header
+ // (Today / Tomorrow / Wed May 14) plus a list of bookings under it.
+ // Cap to 8 events total so the rail stays one viewport tall.
+ const upcomingGroups = useMemo(() => {
+  if (!displayMonthDays) return [] as Array<{ date: string; label: string; items: Array<{ id: string; start: string; customer: string; service: string }> }>
   const now = Date.now()
   const all: Array<{ id: string; date: string; start: string; customer: string; service: string }> = []
   for (const day of displayMonthDays) {
@@ -128,10 +130,34 @@ export default function AppointmentsPage() {
     })
    }
   }
-  return all
-   .filter((a) => new Date(a.start).getTime() >= now - 60 * 60 * 1000) // include in-progress
+  const sorted = all
+   .filter((a) => new Date(a.start).getTime() >= now - 60 * 60 * 1000)
    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-   .slice(0, 6)
+   .slice(0, 8)
+
+  const todayIso = (() => {
+   const d = new Date()
+   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })()
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowIso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+
+  const groupsMap = new Map<string, Array<{ id: string; start: string; customer: string; service: string }>>()
+  for (const a of sorted) {
+   const list = groupsMap.get(a.date) || []
+   list.push({ id: a.id, start: a.start, customer: a.customer, service: a.service })
+   groupsMap.set(a.date, list)
+  }
+  return Array.from(groupsMap.entries()).map(([date, items]) => {
+   let label: string
+   if (date === todayIso) label = 'Today'
+   else if (date === tomorrowIso) label = 'Tomorrow'
+   else {
+    const [y, mo, d] = date.split('-').map((n) => parseInt(n, 10))
+    label = new Date(y, mo - 1, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+   }
+   return { date, label, items }
+  })
  }, [displayMonthDays])
 
  const selectedDay = selectedIso
@@ -226,27 +252,28 @@ export default function AppointmentsPage() {
              .map((a, idx) => (
               <motion.li
                key={a.id}
-               initial={{ opacity: 0, y: 6 }}
+               initial={{ opacity: 0, y: 4 }}
                animate={{ opacity: 1, y: 0 }}
-               transition={{ duration: 0.25, ease: EASE, delay: idx * 0.04 }}
+               transition={{ duration: 0.25, ease: EASE, delay: idx * 0.03 }}
               >
                <button
                 onClick={() => setOpenApptId(a.id)}
-                className="w-full text-left px-5 py-3.5 hover:bg-sky-50/40 transition-colors flex items-center gap-3 group"
+                className="w-full text-left px-5 py-2.5 hover:bg-sky-50/40 transition-colors flex items-center gap-3 group"
                >
-                <div className="flex flex-col items-center justify-center w-14 flex-shrink-0">
-                 <div className="text-sm font-mono font-medium text-gray-900">
+                <div className="w-12 flex-shrink-0 text-right">
+                 <div className="text-sm font-mono font-medium text-sky-700 leading-none">
                   {fmtTime(a.start_time).replace(/\s.*/, '')}
                  </div>
-                 <div className="text-[10px] uppercase tracking-wider text-gray-400">
+                 <div className="text-[9px] uppercase tracking-wider text-sky-400 mt-0.5">
                   {fmtTime(a.start_time).split(' ')[1]}
                  </div>
                 </div>
+                <div className="w-px h-7 bg-gray-200 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                 <div className="text-sm font-medium text-gray-900 truncate">{a.customer_name}</div>
+                 <div className="text-sm font-medium text-gray-900 truncate leading-tight">{a.customer_name}</div>
                  <div className="text-xs text-gray-500 truncate mt-0.5">{a.service_type || 'Service TBD'}</div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all duration-200" />
+                <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0" />
                </button>
               </motion.li>
              ))}
@@ -269,13 +296,18 @@ export default function AppointmentsPage() {
            transition={{ duration: 0.3, ease: EASE }}
            className="bg-white border border-gray-200 rounded-2xl overflow-hidden lg:sticky lg:top-6"
           >
-           <div className="px-5 py-4 border-b border-gray-100">
-            <div className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-0.5">
-             Up next
+           <div className="px-5 py-4 border-b border-gray-100 flex items-baseline justify-between">
+            <div>
+             <div className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mb-0.5">
+              Up next
+             </div>
+             <h3 className="text-base font-medium text-gray-900">Upcoming bookings</h3>
             </div>
-            <h3 className="text-base font-medium text-gray-900">Upcoming bookings</h3>
+            <span className="text-xs font-mono text-gray-400">
+             {upcomingGroups.reduce((s, g) => s + g.items.length, 0)}
+            </span>
            </div>
-           {upcoming.length === 0 ? (
+           {upcomingGroups.length === 0 ? (
             <div className="px-5 py-10 text-center">
              <CalendarBlank className="w-8 h-8 text-gray-300 mx-auto mb-2" />
              <p className="text-sm text-gray-500">No upcoming bookings.</p>
@@ -287,35 +319,49 @@ export default function AppointmentsPage() {
              </button>
             </div>
            ) : (
-            <ul className="divide-y divide-gray-100">
-             {upcoming.map((a, idx) => (
-              <motion.li
-               key={a.id}
-               initial={{ opacity: 0, y: 6 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ duration: 0.3, ease: EASE, delay: idx * 0.04 }}
-              >
-               <button
-                onClick={() => setOpenApptId(a.id)}
-                className="w-full text-left px-5 py-3.5 hover:bg-sky-50/40 transition-colors group"
-               >
-                <div className="flex items-center justify-between gap-3">
-                 <div className="text-xs font-mono text-sky-700 flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> {fmtTime(a.start)}
-                 </div>
-                 <div className="text-[10px] uppercase tracking-wider text-gray-400">
-                  {(() => {
-                   const [y, mo, d] = a.date.split('-').map((n) => parseInt(n, 10))
-                   return new Date(y, mo - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                  })()}
-                 </div>
-                </div>
-                <div className="text-sm font-medium text-gray-900 truncate mt-1">{a.customer}</div>
-                <div className="text-xs text-gray-500 truncate mt-0.5">{a.service || 'Service TBD'}</div>
-               </button>
-              </motion.li>
+            <div className="max-h-[560px] overflow-y-auto">
+             {upcomingGroups.map((g, gi) => (
+              <div key={g.date}>
+               <div className="px-5 pt-3 pb-1.5 sticky top-0 bg-white/95 backdrop-blur-sm z-10 flex items-baseline justify-between">
+                <span className="text-[10px] uppercase tracking-[0.15em] font-semibold text-gray-500">
+                 {g.label}
+                </span>
+                <span className="text-[10px] font-mono text-gray-400">{g.items.length}</span>
+               </div>
+               <ul>
+                {g.items.map((a, idx) => (
+                 <motion.li
+                  key={a.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, ease: EASE, delay: (gi * 0.04) + (idx * 0.02) }}
+                 >
+                  <button
+                   onClick={() => setOpenApptId(a.id)}
+                   className="w-full text-left px-5 py-2.5 hover:bg-sky-50/40 transition-colors flex items-center gap-3 group"
+                  >
+                   <div className="w-12 flex-shrink-0 text-right">
+                    <div className="text-sm font-mono font-medium text-sky-700 leading-none">
+                     {fmtTime(a.start).replace(/\s.*/, '')}
+                    </div>
+                    <div className="text-[9px] uppercase tracking-wider text-sky-400 mt-0.5">
+                     {fmtTime(a.start).split(' ')[1]}
+                    </div>
+                   </div>
+                   <div className="w-px h-7 bg-gray-200 flex-shrink-0" />
+                   <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate leading-tight">{a.customer}</div>
+                    <div className="text-xs text-gray-500 truncate mt-0.5">{a.service || 'Service TBD'}</div>
+                   </div>
+                   <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0" />
+                  </button>
+                 </motion.li>
+                ))}
+               </ul>
+               {gi < upcomingGroups.length - 1 && <div className="mx-5 border-t border-gray-100" />}
+              </div>
              ))}
-            </ul>
+            </div>
            )}
           </motion.div>
          )}

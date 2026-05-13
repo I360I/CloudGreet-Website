@@ -117,20 +117,27 @@ export function MonthGrid({
           <div key={a.id} className="w-1.5 h-1.5 rounded-full bg-sky-500" />
          ))}
         </div>
-        {/* Desktop: appointment chips */}
+        {/* Desktop: appointment chips. Colored left bar + tight padding +
+            customer name takes priority so truncation reads as a name,
+            not "Anth..." with a time prefix. Time is right-aligned and
+            tabular so consecutive rows line up. */}
         <div className="hidden sm:block space-y-1">
          {cell.appointments.slice(0, 3).map((a) => (
           <div
            key={a.id}
            onClick={(e) => { e.stopPropagation(); onPickAppt(a.id) }}
-           className="text-[10px] bg-sky-100/80 hover:bg-sky-200 text-sky-900 rounded-md px-1.5 py-1 truncate transition-all duration-200"
+           className="group/chip flex items-center gap-1.5 bg-sky-50 hover:bg-sky-100 border-l-2 border-sky-400 rounded-r-md pl-1.5 pr-1 py-0.5 transition-all duration-200 overflow-hidden"
           >
-           <span className="font-mono font-medium mr-1">{fmtTime(a.start_time)}</span>
-           <span className="text-sky-800">{a.customer_name}</span>
+           <span className="text-[10px] font-medium text-sky-900 truncate flex-1 min-w-0 leading-tight">
+            {a.customer_name}
+           </span>
+           <span className="text-[9px] font-mono tabular-nums text-sky-600 flex-shrink-0">
+            {fmtTime(a.start_time)}
+           </span>
           </div>
          ))}
          {cell.appointments.length > 3 && (
-          <div className="text-[10px] font-medium text-sky-700 px-1.5">
+          <div className="text-[10px] font-medium text-sky-700 px-1.5 leading-tight">
            +{cell.appointments.length - 3} more
           </div>
          )}
