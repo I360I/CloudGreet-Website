@@ -609,6 +609,7 @@ function SubmissionCard({ closeId, demo, prospectBusinessName, onChanged }: {
   const alreadyReady = demo.status === 'ready' && !!demo.test_phone
   const [editing, setEditing] = useState(!alreadyReady)
   const [testPhone, setTestPhone] = useState(demo.test_phone || '')
+  const [agentId, setAgentId] = useState('')
   const [notes, setNotes] = useState(demo.notes || '')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -623,12 +624,17 @@ function SubmissionCard({ closeId, demo, prospectBusinessName, onChanged }: {
   const submit = async () => {
     const tp = testPhone.trim()
     if (!tp) { setErr('Paste the Retell test number first.'); return }
+    const aid = agentId.trim()
     setBusy(true); setErr(''); setFlash('')
     try {
       const r = await fetchWithAuth(`/api/admin/agents-due/${closeId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ test_phone: tp, notes: notes.trim() || undefined }),
+        body: JSON.stringify({
+          test_phone: tp,
+          agent_id: aid || undefined,
+          notes: notes.trim() || undefined,
+        }),
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok || !j?.success) {
@@ -730,6 +736,21 @@ function SubmissionCard({ closeId, demo, prospectBusinessName, onChanged }: {
               autoFocus
               className="w-full bg-gray-950 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-gray-200 placeholder-gray-600 focus:border-fuchsia-400/40 focus:outline-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-mono uppercase tracking-[0.18em] text-gray-500 mb-1.5">
+              Retell agent ID
+            </label>
+            <input
+              value={agentId}
+              onChange={(e) => setAgentId(e.target.value)}
+              placeholder="agent_xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              className="w-full bg-gray-950 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-gray-200 placeholder-gray-600 focus:border-fuchsia-400/40 focus:outline-none"
+            />
+            <div className="text-[10px] text-gray-500 mt-1 leading-relaxed">
+              Optional. Pasting here also stamps it on the business + wires the webhook/tools so calls log to the client dashboard.
+            </div>
           </div>
 
           <div>

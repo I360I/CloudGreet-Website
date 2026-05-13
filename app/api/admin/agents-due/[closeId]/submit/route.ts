@@ -30,10 +30,12 @@ export async function POST(
 
   const body = await request.json().catch(() => ({})) as {
     test_phone?: string; notes?: string; status?: string; scheduled_at?: string
+    agent_id?: string
   }
 
   const update: Record<string, any> = { updated_at: new Date().toISOString() }
   let touchedReady = false
+  const agentIdRaw = typeof body.agent_id === 'string' ? body.agent_id.trim() : ''
 
   if (body.test_phone !== undefined) {
     const tp = String(body.test_phone || '').trim()
@@ -92,6 +94,55 @@ export async function POST(
             .maybeSingle()
           const businessId = (closeRow as any)?.business_id as string | null
           if (!businessId) return  // unprovisioned close, nothing to propagate to
+
+          // 0. Agent ID propagation. If the admin pasted a Retell agent ID
+          //    on this submit, stamp it onto businesses + mirror to
+          //    ai_agents and re-fire ensureLLMToolsForBusiness so the
+          //    webhook + tools are wired without a second trip to
+          //    /admin/clients/[id]. This is the "one paste, everywhere"
+          //    bit that closes the call-logging gap reps were hitting.
+          if (agentIdRaw) {
+            try {
+              await supabaseAdmin
+                .from('businesses')
+                .update({ retell_agent_id: agentIdRaw, updated_at: new Date().toISOString() })
+                .eq('id', businessId)
+
+              const { data: existingAA } = await supabaseAdmin
+                .from('ai_agents')
+                .select('id')
+                .eq('business_id', businessId)
+                .maybeSingle()
+              if (existingAA) {
+                await supabaseAdmin
+                  .from('ai_agents')
+                  .update({ retell_agent_id: agentIdRaw, status: 'connected', updated_at: new Date().toISOString() })
+                  .eq('id', (existingAA as any).id)
+              } else {
+                await supabaseAdmin
+                  .from('ai_agents')
+                  .insert({
+                    business_id: businessId,
+                    retell_agent_id: agentIdRaw,
+                    status: 'connected',
+                    updated_at: new Date().toISOString(),
+                  })
+              }
+
+              try {
+                const { retellAgentManager } = await import('@/lib/retell-agent-manager')
+                await retellAgentManager().ensureLLMToolsForBusiness(businessId)
+              } catch (e) {
+                logger.warn('ensureLLMToolsForBusiness after workshop link failed', {
+                  businessId, error: e instanceof Error ? e.message : 'Unknown',
+                })
+              }
+            } catch (e) {
+              logger.warn('workshop agent_id stamp failed', {
+                closeId: params.closeId, error: e instanceof Error ? e.message : 'Unknown',
+              })
+            }
+          }
 
           // 1. phone_numbers (provider='retell') - the primary source the
           //    dashboard's TopBar + onboarding wizard read from.
