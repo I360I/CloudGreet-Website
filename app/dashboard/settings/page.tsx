@@ -80,7 +80,7 @@ export default function SettingsPage() {
  return (
   <DashShell activeLabel="Settings">
    <section className="px-4 lg:px-8 py-6 lg:py-10">
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
      <div className="mb-8">
       <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Settings</h1>
      </div>
@@ -104,16 +104,28 @@ export default function SettingsPage() {
      {!loading && profile && (
       <div className="space-y-3">
        <LiveAgentBanner state={agentState} />
-       <NameSection profile={profile} onSaved={reload} />
-       <OwnerNameSection />
-       <GreetingSection profile={profile} state={agentState} onSaved={reload} />
-       <VoiceSection profile={profile} state={agentState} onSaved={reload} />
-       <SpeedSection profile={profile} state={agentState} onSaved={reload} />
-       <BookingNotificationsSection />
-       <ForwardingSection profile={profile} onSaved={reload} />
-       <CalendarConnectionSection />
-       <ReviewRequestsSection />
-       <PasswordSection />
+       {/* Two-column layout on large screens. Left column = identity +
+           AI behavior (business name, owner/transfer, greeting, voice,
+           speed). Right column = ops + integrations + account
+           (notifications, forwarding, calendar, reviews, password).
+           Stacks to single column under lg so the page stays usable on
+           tablets/phones. */}
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+        <div className="space-y-3">
+         <NameSection profile={profile} onSaved={reload} />
+         <OwnerNameSection />
+         <GreetingSection profile={profile} state={agentState} onSaved={reload} />
+         <VoiceSection profile={profile} state={agentState} onSaved={reload} />
+         <SpeedSection profile={profile} state={agentState} onSaved={reload} />
+        </div>
+        <div className="space-y-3">
+         <BookingNotificationsSection />
+         <ForwardingSection profile={profile} onSaved={reload} />
+         <CalendarConnectionSection />
+         <ReviewRequestsSection />
+         <PasswordSection />
+        </div>
+       </div>
       </div>
      )}
     </div>
