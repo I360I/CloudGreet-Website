@@ -737,6 +737,24 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
     </div>
    )}
 
+   {!verified && (
+    <div className="mt-4">
+     <button
+      onClick={async () => {
+       try {
+        const res = await fetchWithAuth('/api/onboarding/forwarding/override', { method: 'POST' })
+        if (!res.ok) throw new Error(await res.text())
+        setVerified(true); setPolling(false)
+        setTimeout(onVerified, 800)
+       } catch { /* swallow */ }
+      }}
+      className="text-xs text-gray-400 hover:text-gray-700 underline underline-offset-2 transition-colors"
+     >
+      Skip verification (override)
+     </button>
+    </div>
+   )}
+
    {verified && !paid && (
     <div className="mt-4 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
      <div className="text-sm font-medium text-amber-900">Forwarding works - one more thing</div>
