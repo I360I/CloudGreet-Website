@@ -143,10 +143,46 @@ export async function GET(
  .eq('id', businessId)
  .single()
 
+ // Attach the booking call's transcript + recording so the drawer can
+ // render "listen to the call that booked this". Linked via the
+ // appointments.retell_call_id stamped by book_appointment. Falls back
+ // to time-window match (same business, call started <= booking + 30m)
+ // for older appointments that pre-date that stamp.
+ let bookingCall: any = null
+ try {
+  const linkedCallId = (appointment as any).retell_call_id as string | null
+  if (linkedCallId) {
+   const { data } = await supabaseAdmin
+    .from('calls')
+    .select('id, retell_call_id, recording_url, transcript, call_summary, from_number, created_at, duration')
+    .eq('business_id', businessId)
+    .eq('retell_call_id', linkedCallId)
+    .maybeSingle()
+   bookingCall = data || null
+  }
+  if (!bookingCall) {
+   const apptCreated = (appointment as any).created_at as string | null
+   if (apptCreated) {
+    const after = new Date(new Date(apptCreated).getTime() - 30 * 60_000).toISOString()
+    const before = new Date(new Date(apptCreated).getTime() + 5 * 60_000).toISOString()
+    const { data } = await supabaseAdmin
+     .from('calls')
+     .select('id, retell_call_id, recording_url, transcript, call_summary, from_number, created_at, duration')
+     .eq('business_id', businessId)
+     .gte('created_at', after)
+     .lte('created_at', before)
+     .order('created_at', { ascending: false })
+     .limit(1)
+    bookingCall = data?.[0] || null
+   }
+  }
+ } catch { /* non-fatal */ }
+
  return NextResponse.json({
  success: true,
  appointment,
- businessServices: business?.services || []
+ businessServices: business?.services || [],
+ bookingCall,
  }, {
  headers: {
  'Cache-Control': 'private, max-age=60',

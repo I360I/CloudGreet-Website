@@ -412,6 +412,14 @@ export function AppointmentDrawer({
  onChanged: () => void
 }) {
  const [appt, setAppt] = useState<AppointmentDetail | null>(null)
+ const [bookingCall, setBookingCall] = useState<{
+  id: string
+  retell_call_id: string | null
+  recording_url: string | null
+  transcript: string | null
+  call_summary: string | null
+  duration: number | null
+ } | null>(null)
  const [loading, setLoading] = useState(true)
  const [error, setError] = useState('')
  const [busy, setBusy] = useState(false)
@@ -439,7 +447,10 @@ export function AppointmentDrawer({
     const res = await fetchWithAuth(`/api/appointments/${apptId}`)
     const json = await res.json().catch(() => ({}))
     if (!res.ok || !json.success) throw new Error(json?.error || `Failed (${res.status})`)
-    if (!cancelled) setAppt(json.appointment)
+    if (!cancelled) {
+     setAppt(json.appointment)
+     setBookingCall(json.bookingCall || null)
+    }
    } catch (e) {
     if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load')
    } finally {
@@ -536,6 +547,35 @@ export function AppointmentDrawer({
         <p className="text-xs text-gray-400 mt-3">Synced to Google Calendar</p>
        )}
       </div>
+
+      {bookingCall && (
+       <div className="border-t border-gray-100 pt-4">
+        <div className="text-[11px] uppercase tracking-wider text-gray-500 mb-2">Booking call</div>
+        {bookingCall.call_summary && (
+         <p className="text-sm text-gray-700 mb-3">{bookingCall.call_summary}</p>
+        )}
+        {bookingCall.recording_url && (
+         <audio
+          controls
+          src={bookingCall.recording_url}
+          className="w-full h-9 mb-3"
+         />
+        )}
+        {bookingCall.transcript && (
+         <details className="rounded-lg border border-gray-200 bg-gray-50/60">
+          <summary className="cursor-pointer text-xs font-medium text-gray-700 px-3 py-2">
+           Show transcript
+          </summary>
+          <pre className="whitespace-pre-wrap text-xs text-gray-700 px-3 pb-3 pt-1 max-h-72 overflow-y-auto font-sans">
+{bookingCall.transcript}
+          </pre>
+         </details>
+        )}
+        {!bookingCall.recording_url && !bookingCall.transcript && !bookingCall.call_summary && (
+         <p className="text-xs text-gray-400">Call linked but recording + transcript not yet processed.</p>
+        )}
+       </div>
+      )}
 
       {error && (
        <div className="bg-red-50 border border-red-200 text-red-900 rounded-lg px-3 py-2 text-sm">{error}</div>

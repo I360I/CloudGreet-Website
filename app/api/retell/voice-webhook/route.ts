@@ -285,6 +285,20 @@ export async function POST(request: NextRequest) {
 
  const apptId = appointmentId
 
+ // Link the appointment row to the Retell call that booked it so the
+ // dashboard's appointment drawer can render the call transcript +
+ // recording alongside the booking details.
+ const bookingCallId =
+   body?.call?.call_id || body?.call_id || callingAgentId && (body as any)?.call_id || null
+ if (bookingCallId) {
+   try {
+     await supabaseAdmin
+       .from('appointments')
+       .update({ retell_call_id: bookingCallId, updated_at: new Date().toISOString() })
+       .eq('id', apptId)
+   } catch { /* non-fatal */ }
+ }
+
  // Persist review_consent on the appointment so we have an audit trail
  // alongside the appointment row (independent of whether scheduling
  // succeeds). Errors here are non-fatal - the booking is the priority.
