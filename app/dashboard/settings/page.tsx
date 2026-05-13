@@ -2151,6 +2151,23 @@ function ForwardingSection({ profile, onSaved }: { profile: Profile; onSaved: ()
   }
  }
 
+ // Quick toggle from the main view - flips mode and saves without
+ // making the user re-pick line type + carrier.
+ const setModeAndSave = async (next: ForwardingMode) => {
+  if (next === mode || !lineType || !carrier) { setMode(next); return }
+  setMode(next)
+  setSaving(true)
+  try {
+   await fetchWithAuth('/api/onboarding/forwarding', {
+    method: 'POST',
+    body: JSON.stringify({ lineType, carrier, mode: next }),
+   })
+   onSaved()
+  } finally {
+   setSaving(false)
+  }
+ }
+
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
    <div className="flex items-start justify-between gap-3">
@@ -2191,8 +2208,34 @@ function ForwardingSection({ profile, onSaved }: { profile: Profile; onSaved: ()
 
    {!editing && carrierGuide && retellNumber && (
     <div className="space-y-3">
-     <div className="text-xs text-gray-500">
-      {carrierGuide.name} · {mode === 'always' ? 'always forward' : 'forward only when missed'}
+     <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="text-xs text-gray-500">
+       {carrierGuide.name}
+      </div>
+      <div className="inline-flex bg-gray-100 rounded-lg p-0.5 text-xs font-medium">
+       <button
+        onClick={() => setModeAndSave('missed_only')}
+        disabled={saving}
+        className={`px-3 py-1.5 rounded-md transition-all duration-200 ${
+         mode === 'missed_only'
+          ? 'bg-white text-gray-900 shadow-sm'
+          : 'text-gray-500 hover:text-gray-900'
+        }`}
+       >
+        Forward when missed
+       </button>
+       <button
+        onClick={() => setModeAndSave('always')}
+        disabled={saving}
+        className={`px-3 py-1.5 rounded-md transition-all duration-200 ${
+         mode === 'always'
+          ? 'bg-white text-gray-900 shadow-sm'
+          : 'text-gray-500 hover:text-gray-900'
+        }`}
+       >
+        Always forward
+       </button>
+      </div>
      </div>
      {carrierGuide.manualNote ? (
       <div className="text-sm text-gray-700">
