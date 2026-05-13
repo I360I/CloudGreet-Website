@@ -1060,17 +1060,27 @@ async function handleCallEvent(
    toNumber: call?.to_number,
    fromNumber: call?.from_number,
   })
+  // Capture the body shape so we can see which fields Retell actually
+  // sent (the unmatched notification was reporting "unknown -> unknown"
+  // even on real phone calls, meaning to_number was missing - the body
+  // dump shows whether it's nested under a different key in newer
+  // Retell webhook versions).
+  const bodyKeys = Object.keys(body || {})
+  const callKeys = Object.keys(body?.call || {})
   await notifyAdmin({
    type: 'call.unmatched',
    severity: 'critical',
    title: 'Inbound call not linked to a business',
-   body: `Retell ${eventType} fired but no business matched. ${call?.from_number || 'unknown'} -> ${call?.to_number || 'unknown'}, agent ${callingAgentId || 'none'}, call ${retellCallId}.`,
+   body: `Retell ${eventType} fired but no business matched. ${call?.from_number || 'unknown'} -> ${call?.to_number || 'unknown'}, agent ${callingAgentId || 'none'}, call ${retellCallId}. body keys: [${bodyKeys.join(',')}]. call keys: [${callKeys.join(',')}].`,
    metadata: {
     retell_call_id: retellCallId,
     event_type: eventType,
     agent_id: callingAgentId || null,
     to_number: call?.to_number || null,
     from_number: call?.from_number || null,
+    body_keys: bodyKeys,
+    call_keys: callKeys,
+    sample: JSON.stringify(body).slice(0, 1500),
    },
   })
  } catch (e) {
