@@ -60,12 +60,37 @@ export async function PATCH(request: NextRequest) {
   return NextResponse.json({ error: error.message }, { status: 500 })
  }
 
- // If the owner changed their phone, the Retell agent's transfer_call
- // destination is stale. The wiring code falls back to custom_users.phone
- // when no business-level phone is set, so we re-push the tool set so
- // transfers route to the new number. Synchronous so any Retell-side
- // failure (rejected E.164, etc.) surfaces in the response rather than
- // disappearing into logs.
+ // If the owner changed their phone, that IS the transfer destination
+ // they want callers routed to (the settings UI is labeled "Call
+ // transfer destination"). The agent wiring code falls through a
+ // precedence chain: businesses.escalation_phone -> notifications_phone
+ // -> custom_users.phone. If notifications_phone or escalation_phone
+ // was already set from onboarding, the contractor's edit to their
+ // own phone would be silently shadowed - this is the bug a customer
+ // hit where the first save worked but every subsequent edit didn't.
+ //
+ // Stamp businesses.escalation_phone with the same value so the
+ // precedence chain always reads the contractor's latest edit.
+ if (typeof update.phone === 'string' && auth.businessId) {
+  await supabaseAdmin
+   .from('businesses')
+   .update({
+    escalation_phone: update.phone || null,
+    updated_at: new Date().toISOString(),
+   })
+   .eq('id', auth.businessId)
+   .then(undefined, (e) => {
+    logger.warn('escalation_phone mirror update failed', {
+     businessId: auth.businessId,
+     error: e instanceof Error ? e.message : 'Unknown',
+    })
+    return null
+   })
+ }
+
+ // Re-push the tool set so transfers route to the new number.
+ // Synchronous so any Retell-side failure (rejected E.164, etc.)
+ // surfaces in the response rather than disappearing into logs.
  let toolsError: string | null = null
  let toolsTrace: string[] = []
  if (typeof update.phone === 'string' && auth.businessId) {
