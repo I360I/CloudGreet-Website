@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise, Plug, Trash, ArrowSquareOut, Phone, Copy } from '@phosphor-icons/react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise, Plug, Trash, ArrowSquareOut, Phone, Copy, CaretDown } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 import {
@@ -80,7 +81,7 @@ export default function SettingsPage() {
  return (
   <DashShell activeLabel="Settings">
    <section className="px-4 lg:px-8 py-6 lg:py-10">
-    <div className="max-w-6xl">
+    <div className="max-w-3xl">
      <div className="mb-8">
       <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Settings</h1>
      </div>
@@ -104,28 +105,20 @@ export default function SettingsPage() {
      {!loading && profile && (
       <div className="space-y-3">
        <LiveAgentBanner state={agentState} />
-       {/* Two-column layout on large screens. Left column = identity +
-           AI behavior (business name, owner/transfer, greeting, voice,
-           speed). Right column = ops + integrations + account
-           (notifications, forwarding, calendar, reviews, password).
-           Stacks to single column under lg so the page stays usable on
-           tablets/phones. */}
-       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
-        <div className="space-y-3">
-         <NameSection profile={profile} onSaved={reload} />
-         <OwnerNameSection />
-         <GreetingSection profile={profile} state={agentState} onSaved={reload} />
-         <VoiceSection profile={profile} state={agentState} onSaved={reload} />
-         <SpeedSection profile={profile} state={agentState} onSaved={reload} />
-        </div>
-        <div className="space-y-3">
-         <BookingNotificationsSection />
-         <ForwardingSection profile={profile} onSaved={reload} />
-         <CalendarConnectionSection />
-         <ReviewRequestsSection />
-         <PasswordSection />
-        </div>
-       </div>
+       <SettingsAccordion
+        sections={[
+         { key: 'name', label: 'Business name', icon: Robot, render: () => <NameSection profile={profile} onSaved={reload} /> },
+         { key: 'owner', label: 'Call transfer destination', icon: Phone, render: () => <OwnerNameSection /> },
+         { key: 'greeting', label: 'AI greeting', icon: Robot, render: () => <GreetingSection profile={profile} state={agentState} onSaved={reload} /> },
+         { key: 'voice', label: 'AI voice', icon: Play, render: () => <VoiceSection profile={profile} state={agentState} onSaved={reload} /> },
+         { key: 'speed', label: 'Speech speed', icon: Gauge, render: () => <SpeedSection profile={profile} state={agentState} onSaved={reload} /> },
+         { key: 'notifications', label: 'Booking notifications', icon: CheckCircle, render: () => <BookingNotificationsSection /> },
+         { key: 'forwarding', label: 'Call forwarding', icon: Phone, render: () => <ForwardingSection profile={profile} onSaved={reload} /> },
+         { key: 'calcom', label: 'Cal.com calendar', icon: CalendarBlank, render: () => <CalendarConnectionSection /> },
+         { key: 'reviews', label: 'Review requests', icon: CheckCircle, render: () => <ReviewRequestsSection /> },
+         { key: 'password', label: 'Change password', icon: Key, render: () => <PasswordSection /> },
+        ]}
+       />
       </div>
      )}
     </div>
@@ -135,6 +128,55 @@ export default function SettingsPage() {
 }
 
 /* ----------------------------- shared ----------------------------- */
+
+const ACCORDION_EASE = [0.22, 1, 0.36, 1] as const
+
+function SettingsAccordion({
+ sections,
+}: {
+ sections: Array<{ key: string; label: string; icon: React.ElementType; render: () => React.ReactNode }>
+}) {
+ const [openKey, setOpenKey] = useState<string | null>(null)
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+   {sections.map((s, i) => {
+    const isOpen = openKey === s.key
+    const Icon = s.icon
+    return (
+     <div key={s.key} className={i > 0 ? 'border-t border-gray-100' : ''}>
+      <button
+       onClick={() => setOpenKey(isOpen ? null : s.key)}
+       className="w-full flex items-center gap-3 px-4 sm:px-5 py-3.5 hover:bg-gray-50/60 transition-colors"
+      >
+       <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4 text-sky-500" />
+       </div>
+       <div className="flex-1 min-w-0 text-left">
+        <h2 className="text-sm font-medium text-gray-900 truncate">{s.label}</h2>
+       </div>
+       <CaretDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ease-out ${isOpen ? 'rotate-180 text-sky-500' : ''}`} />
+      </button>
+      <AnimatePresence initial={false}>
+       {isOpen && (
+        <motion.div
+         initial={{ height: 0, opacity: 0 }}
+         animate={{ height: 'auto', opacity: 1 }}
+         exit={{ height: 0, opacity: 0 }}
+         transition={{ duration: 0.25, ease: ACCORDION_EASE }}
+         className="overflow-hidden"
+        >
+         <div className="px-3 sm:px-4 pb-4 pt-1">
+          {s.render()}
+         </div>
+        </motion.div>
+       )}
+      </AnimatePresence>
+     </div>
+    )
+   })}
+  </div>
+ )
+}
 
 async function patchBusiness(updates: Record<string, any>) {
  // Server scopes by JWT - no need to send businessId from the client.
