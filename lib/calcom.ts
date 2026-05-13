@@ -271,6 +271,26 @@ export async function listBookings(
  return all
 }
 
+/**
+ * Fetch a single Cal.com booking by its UID. Used by the appointment
+ * detail drawer when the dashboard's week-calendar merged a live
+ * Cal.com booking that hasn't been synced to our DB yet - clicking it
+ * needs to render real info instead of failing the local DB lookup.
+ */
+export async function getBookingByUid(
+ apiKey: string,
+ uid: string,
+): Promise<CalcomBookingListItem | null> {
+ try {
+  const res = await calFetch<{ status: string; data: CalcomBookingListItem }>(
+   apiKey, `/bookings/${encodeURIComponent(uid)}`, { version: '2024-08-13' },
+  )
+  return res?.data || null
+ } catch {
+  return null
+ }
+}
+
 /* -------------------------------- Slots --------------------------------- */
 
 /**

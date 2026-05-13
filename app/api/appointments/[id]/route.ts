@@ -54,6 +54,67 @@ export async function GET(
  const businessId = authResult.businessId
  const appointmentId = params.id
 
+ // Synthetic "cal:<uid>" IDs come from the week-calendar live merge
+ // of Cal.com bookings that haven't been synced to our DB yet (webhook
+ // missed it, etc.). Resolve those by fetching from Cal.com directly
+ // so the detail drawer shows real info instead of "unauthorized".
+ if (appointmentId.startsWith('cal:')) {
+  const uid = appointmentId.slice(4)
+  const { data: biz } = await supabaseAdmin
+   .from('businesses')
+   .select('cal_com_api_key, services')
+   .eq('id', businessId)
+   .maybeSingle()
+  const apiKey = (biz as any)?.cal_com_api_key as string | null
+  if (!apiKey) {
+   return NextResponse.json(
+    { success: false, error: 'Cal.com is not connected for this business' },
+    { status: 404 },
+   )
+  }
+  try {
+   const { getBookingByUid } = await import('@/lib/calcom')
+   const b = await getBookingByUid(apiKey, uid)
+   if (!b) {
+    return NextResponse.json(
+     { success: false, error: 'Appointment not found on Cal.com' },
+     { status: 404 },
+    )
+   }
+   const attendee = (b as any).attendees?.[0]
+   const start = new Date((b as any).start)
+   const end = (b as any).end ? new Date((b as any).end) : null
+   const appointment = {
+    id: appointmentId,
+    business_id: businessId,
+    cal_com_booking_uid: uid,
+    customer_name: attendee?.name || (b as any).title || 'Cal.com booking',
+    customer_email: attendee?.email || null,
+    customer_phone: attendee?.phoneNumber || null,
+    service_type: (b as any).eventType?.title || (b as any).title || 'General',
+    scheduled_date: start.toISOString().split('T')[0],
+    start_time: start.toISOString(),
+    end_time: end?.toISOString() || null,
+    status: (b as any).status || 'confirmed',
+    notes: (b as any).description || null,
+    source: 'cal.com (not yet synced locally)',
+   }
+   return NextResponse.json({
+    success: true,
+    appointment,
+    businessServices: (biz as any)?.services || [],
+   })
+  } catch (e) {
+   logger.warn('appointments detail: cal.com fetch failed', {
+    uid, error: e instanceof Error ? e.message : 'Unknown',
+   })
+   return NextResponse.json(
+    { success: false, error: 'Failed to load Cal.com booking' },
+    { status: 502 },
+   )
+  }
+ }
+
  // Fetch appointment with multi-tenant check
  const { data: appointment, error: appointmentError } = await supabaseAdmin
  .from('appointments')
