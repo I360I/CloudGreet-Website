@@ -38,27 +38,6 @@ export async function POST(request: NextRequest) {
 
  const eventType: string = body.event || body.type || body.event_type || 'unknown'
 
- // TEMP DIAGNOSTIC: fire-and-forget beacon for every non-ping webhook so
- // we can prove Retell is actually hitting this endpoint and see the
- // exact body shape we're getting. Remove after the call-logging issue
- // is resolved.
- if (eventType !== 'ping') {
-  void notifyAdmin({
-   type: 'webhook.beacon',
-   severity: 'info',
-   title: `Retell webhook: ${eventType}`,
-   body: `top keys: [${Object.keys(body || {}).join(',')}]. call keys: [${Object.keys(body?.call || {}).join(',')}].`,
-   metadata: {
-    event_type: eventType,
-    top_keys: Object.keys(body || {}),
-    call_keys: Object.keys(body?.call || {}),
-    agent_id: body?.call?.agent_id || body?.agent_id || null,
-    call_id: body?.call?.call_id || body?.call_id || null,
-    sample: rawBody.slice(0, 2000),
-   },
-  }).catch(() => { /* don't let logging break the webhook */ })
- }
-
  // Allow ping events without signature verification (Retell health checks)
  if (eventType === 'ping') {
  return NextResponse.json({ ok: true })
@@ -1095,6 +1074,10 @@ async function handleCallEvent(
     .from('calls')
     .insert({
      business_id: finalBusinessId,
+     // calls.call_id is NOT NULL in the schema (legacy column from before
+     // retell_call_id existed). Populate it with the Retell id so the
+     // insert doesn't fail the constraint.
+     call_id: retellCallId,
      retell_call_id: retellCallId,
      ...patch,
      created_at: new Date().toISOString(),
