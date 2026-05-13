@@ -374,7 +374,7 @@ export default function DashboardPage() {
        <div id="appointments" className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px] scroll-mt-20">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
          <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-sky-500" /> Upcoming appointments
+          <Calendar className="w-4 h-4 text-sky-500" /> Today&apos;s appointments
          </h3>
          <span className="text-xs text-gray-400">{displayData.upcomingAppointments.length}</span>
         </div>
@@ -626,7 +626,7 @@ function CallsEmpty({ hasAnyData }: { hasAnyData: boolean }) {
 function ApptsEmpty() {
  return (
   <div className="px-6 py-6">
-   <p className="text-sm text-gray-500">No appointments yet.</p>
+   <p className="text-sm text-gray-500">Nothing on the books for today.</p>
   </div>
  )
 }

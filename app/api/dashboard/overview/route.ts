@@ -132,19 +132,22 @@ export async function GET(request: NextRequest) {
    outcome: c.outcome,
   }))
 
-  // Upcoming appointments (next 14 days). Pull both local rows AND live
-  // Cal.com bookings - contractors using Cal.com never have rows in our
+  // Today's appointments only. Pull both local rows AND live Cal.com
+  // bookings - contractors using Cal.com never have rows in our
   // appointments table because bookings come straight from Cal's calendar.
-  // Without the live merge this card always shows zero for them, which is
-  // exactly what the user reported on the R&R dashboard.
-  const nowIso = new Date(now).toISOString()
-  const twoWeeksOut = new Date(now + 14 * 24 * 60 * 60 * 1000).toISOString()
+  // Bound the window to start-of-today through end-of-today in UTC; the
+  // dashboard card is "what's on the agenda for today" so multi-day
+  // lookahead is intentionally dropped.
+  const startOfDay = new Date(now)
+  startOfDay.setUTCHours(0, 0, 0, 0)
+  const endOfDay = new Date(now)
+  endOfDay.setUTCHours(23, 59, 59, 999)
+  const todayIso = startOfDay.toISOString().split('T')[0]
   const { data: localAppts } = await supabaseAdmin
    .from('appointments')
    .select('id, customer_name, customer_phone, service_type, scheduled_date, start_time, status, notes, cal_com_booking_uid')
    .eq('business_id', businessId)
-   .gte('scheduled_date', nowIso.split('T')[0])
-   .lte('scheduled_date', twoWeeksOut.split('T')[0])
+   .eq('scheduled_date', todayIso)
    .order('start_time', { ascending: true })
    .limit(20)
 
@@ -157,8 +160,8 @@ export async function GET(request: NextRequest) {
       .filter((u: any): u is string => !!u),
     )
     const live = await listBookings(business.cal_com_api_key, {
-     afterStart: nowIso,
-     beforeEnd: twoWeeksOut,
+     afterStart: startOfDay.toISOString(),
+     beforeEnd: endOfDay.toISOString(),
     })
     for (const b of live) {
      if (!b?.uid || localUids.has(b.uid)) continue
