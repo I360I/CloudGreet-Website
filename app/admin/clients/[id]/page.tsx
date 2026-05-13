@@ -891,10 +891,81 @@ function AgentCard({
        clientId={clientId}
        webhookId={(client as any).cal_com_webhook_id || null}
       />
+      <TimezoneFixer
+       clientId={clientId}
+       currentTz={(client as any).timezone || null}
+       state={(client as any).state || null}
+      />
      </div>
     )}
    </div>
   </Panel>
+ )
+}
+
+function TimezoneFixer({ clientId, currentTz, state }: { clientId: string; currentTz: string | null; state: string | null }) {
+ const [busy, setBusy] = useState(false)
+ const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+ const setTz = async (tz: string) => {
+  setBusy(true); setResult(null)
+  try {
+   const res = await fetchWithAuth(
+    `/api/admin/diagnostics/business-tz?businessId=${clientId}`,
+    {
+     method: 'POST',
+     headers: { 'content-type': 'application/json' },
+     body: JSON.stringify({ timezone: tz }),
+    },
+   )
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) {
+    setResult({ ok: false, msg: j?.error || `Failed (${res.status})` })
+    return
+   }
+   setResult({ ok: true, msg: `Timezone set to ${tz}` })
+   setTimeout(() => location.reload(), 800)
+  } catch (e) {
+   setResult({ ok: false, msg: e instanceof Error ? e.message : 'Unknown' })
+  } finally {
+   setBusy(false)
+  }
+ }
+
+ const ZONES: { label: string; tz: string }[] = [
+  { label: 'CT', tz: 'America/Chicago' },
+  { label: 'ET', tz: 'America/New_York' },
+  { label: 'MT', tz: 'America/Denver' },
+  { label: 'PT', tz: 'America/Los_Angeles' },
+  { label: 'AZ', tz: 'America/Phoenix' },
+ ]
+
+ return (
+  <div className="flex items-center gap-2 flex-wrap text-[11px] text-gray-400">
+   <span>
+    Timezone: <span className="font-mono text-gray-300">{currentTz || '∅'}</span>
+    {state && <span className="ml-1.5 text-gray-500">(state: {state})</span>}
+   </span>
+   <span className="text-gray-600">|</span>
+   <span className="text-gray-500">set to:</span>
+   {ZONES.map((z) => (
+    <button
+     key={z.tz}
+     onClick={() => setTz(z.tz)}
+     disabled={busy}
+     className={`px-1.5 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider transition-colors ${
+      currentTz === z.tz
+       ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+       : 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10 border border-transparent'
+     } disabled:opacity-50`}
+    >
+     {z.label}
+    </button>
+   ))}
+   {result && (
+    <span className={`text-[11px] ${result.ok ? 'text-emerald-300' : 'text-rose-300'}`}>{result.msg}</span>
+   )}
+  </div>
  )
 }
 
