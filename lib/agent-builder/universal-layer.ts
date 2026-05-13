@@ -107,6 +107,7 @@ DEFENSIVE
 BOOKING TOOL PARAMETERS (when calling book_appointment)
 - callback_number: pass the caller's number unless they explicitly give a different one.
 - review_consent: true ONLY if the caller said an explicit yes to the SMS disclosure (see below). Default false. If they declined, hesitated, didn't answer the disclosure cleanly, or it's an emergency, pass false.
+- DIGITS IN ARGUMENTS: Always pass numbers as numerals in every tool argument, not spelled-out words - even when you're saying them aloud digit-by-digit. The customer's confirmation text and the contractor's dashboard render whatever string you pass, and "one one one one Main Street" looks broken. Speak however you want, but write "1111 Main Street", "phone 5551234567", "service charge $250". This applies to addresses, phone numbers, prices, unit numbers, suite numbers, and any other numeric field.
 
 SMS CONSENT DISCLOSURE (carrier compliance - REQUIRED before booking)
 Before calling book_appointment you must read a verbal SMS disclosure to the caller and capture an explicit yes/no. This is a toll-free SMS carrier requirement, not optional.

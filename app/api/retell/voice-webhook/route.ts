@@ -203,7 +203,15 @@ export async function POST(request: NextRequest) {
  }
  switch (tool.name) {
  case 'book_appointment': {
- const { name, phone, service, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw } = tool.arguments || {}
+ const { name: rawName, phone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw } = tool.arguments || {}
+ // Retell's LLM often passes the verbalized form of any digits the
+ // agent spoke aloud - "AC leaking at one one one one Main Street"
+ // instead of "1111". Compress runs of digit words back to numerals
+ // so the SMS confirmation, calendar entry, and dashboard all read
+ // cleanly. Idempotent: leaves already-numeric values alone.
+ const { compressDigitWords } = await import('@/lib/digit-words')
+ const name = compressDigitWords(rawName)
+ const service = compressDigitWords(rawService)
  // Coerce review_consent to a strict boolean - the agent may pass true/false,
  // "true"/"false", "yes"/"no", or omit entirely. Anything ambiguous = false
  // so we never text without an explicit yes.
