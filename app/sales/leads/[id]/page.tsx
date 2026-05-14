@@ -328,12 +328,12 @@ export default function LeadDetailPage() {
               </button>
               <CopyAccountLinkPrimary leadId={lead.id} leadEmail={lead.email || ''} />
               <MarkDemoButton leadId={lead.id} onSet={() => { void load() }} />
-              <SendCustomizationButton leadId={lead.id} />
-              <CreateAccountButton leadId={lead.id} leadEmail={lead.email || ''} onCreated={() => { void load() }} />
-              <SendAccountLinkButton leadId={lead.id} leadEmail={lead.email || ''} />
               {linkedBusiness && (
                 <LoginAsClientButton businessId={linkedBusiness.id} businessName={linkedBusiness.business_name} />
               )}
+              <SendCustomizationButton leadId={lead.id} />
+              <CreateAccountButton leadId={lead.id} leadEmail={lead.email || ''} onCreated={() => { void load() }} />
+              <SendAccountLinkButton leadId={lead.id} leadEmail={lead.email || ''} />
               {linkedBusiness && (
                 <DeleteClientButton businessId={linkedBusiness.id} businessName={linkedBusiness.business_name} onDeleted={() => { setLinkedBusiness(null); void load() }} />
               )}
@@ -1017,7 +1017,7 @@ function LoginAsClientButton({ businessId, businessName }: {
     <button
       onClick={onClick}
       disabled={busy}
-      className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-sky-50 border border-sky-200 text-sky-800 text-sm font-medium rounded-xl hover:bg-sky-100 hover:border-sky-300 active:scale-[0.98] transition-all disabled:opacity-60"
+      className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-blue-700 text-white text-sm font-medium rounded-xl hover:bg-blue-800 active:scale-[0.98] shadow-sm shadow-blue-700/20 transition-all disabled:opacity-60"
       title={`Open ${businessName}'s dashboard as them`}
     >
       {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <SignIn weight="fill" className="w-4 h-4" />}
