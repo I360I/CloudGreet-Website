@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
  // so we can pull live bookings if the webhook missed any).
  const { data: business } = await supabaseAdmin
  .from('businesses')
- .select('services, cal_com_api_key, timezone')
+ .select('services, cal_com_api_key, timezone, calcom_connected')
  .eq('id', businessId)
  .single()
 
@@ -110,7 +110,10 @@ export async function GET(request: NextRequest) {
  // self-heals the calendar even when webhook registration silently
  // failed at onboarding or got revoked. Failure here is non-fatal -
  // we still return the local rows.
- if (business?.cal_com_api_key) {
+ // Require both the key AND the calcom_connected flag so a half-reset
+ // business (key still in row but flag flipped off by admin reset) never
+ // leaks Cal.com bookings back to the dashboard.
+ if (business?.cal_com_api_key && (business as any)?.calcom_connected) {
   try {
    const localUids = new Set(
     (localRows || [])

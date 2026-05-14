@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   const { data: business } = await supabaseAdmin
    .from('businesses')
-   .select('id, business_name, cal_com_api_key')
+   .select('id, business_name, cal_com_api_key, calcom_connected')
    .eq('id', businessId)
    .maybeSingle()
 
@@ -152,7 +152,11 @@ export async function GET(request: NextRequest) {
    .limit(20)
 
   const apptList: any[] = [...(localAppts || [])]
-  if (business?.cal_com_api_key) {
+  // Defense-in-depth: require BOTH a key AND the calcom_connected flag.
+  // Admin reset-onboarding sets calcom_connected=false even if some other
+  // code path leaves a stale key behind; with both checks, a half-cleared
+  // business will never leak Cal.com bookings back to the dashboard.
+  if (business?.cal_com_api_key && (business as any)?.calcom_connected) {
    try {
     const localUids = new Set(
      (localAppts || [])
@@ -215,6 +219,8 @@ export async function GET(request: NextRequest) {
    dailyVolume,
    recentCalls,
    upcomingAppointments: appts || [],
+  }, {
+   headers: { 'cache-control': 'no-store, no-cache, must-revalidate' },
   })
  } catch (error) {
   logger.error('Dashboard overview error', {

@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
  // Fetch business services + Cal.com api key (used for live merge).
  const { data: business } = await supabaseAdmin
  .from('businesses')
- .select('services, cal_com_api_key')
+ .select('services, cal_com_api_key, calcom_connected')
  .eq('id', businessId)
  .single()
 
@@ -86,7 +86,10 @@ export async function GET(request: NextRequest) {
  // Live Cal.com merge - same self-heal pattern as the week view.
  // Cal.com bookings the webhook never landed get injected as synthetic
  // rows so the dashboard reflects the contractor's actual calendar.
- if (business?.cal_com_api_key) {
+ // Require BOTH a key AND the calcom_connected flag so an admin reset
+ // that flips connected=false (but leaves a stale key for any reason)
+ // can't leak Cal.com bookings back to the dashboard.
+ if (business?.cal_com_api_key && (business as any)?.calcom_connected) {
   try {
    const localUids = new Set(
     (localRows || [])

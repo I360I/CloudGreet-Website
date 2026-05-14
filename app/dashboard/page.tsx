@@ -74,7 +74,7 @@ export default function DashboardPage() {
   ;(async () => {
    setLoading(true)
    try {
-    let res = await fetchWithAuth(`/api/dashboard/overview?range=${range}`)
+    let res = await fetchWithAuth(`/api/dashboard/overview?range=${range}&_=${Date.now()}`, { cache: 'no-store' })
     if (cancelled) return
     let json = await res.json().catch(() => ({}))
 
@@ -86,7 +86,7 @@ export default function DashboardPage() {
       const refresh = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
       const refreshJson = await refresh.json().catch(() => ({}))
       if (refresh.ok && refreshJson?.success) {
-       res = await fetchWithAuth(`/api/dashboard/overview?range=${range}`)
+       res = await fetchWithAuth(`/api/dashboard/overview?range=${range}&_=${Date.now()}`, { cache: 'no-store' })
        json = await res.json().catch(() => ({}))
       } else if (refreshJson?.error) {
        // Refresh told us the underlying problem (typically: no
