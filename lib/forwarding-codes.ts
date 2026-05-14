@@ -227,7 +227,7 @@ export const CARRIERS: CarrierGuide[] = [
   supportsLineTypes: ['cell_main', 'cell_second_sim', 'desk_landline', 'voip'],
   instructions: () => [],
   manualNote:
-   "We'll set this up with you on a quick call. Tap the support link below.",
+   "Credentials / manual setup required. We'll walk you through it on a quick call - tap the support link below.",
  },
 ]
 
