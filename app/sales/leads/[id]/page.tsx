@@ -328,9 +328,7 @@ export default function LeadDetailPage() {
               </button>
               <CopyAccountLinkPrimary leadId={lead.id} leadEmail={lead.email || ''} />
               <MarkDemoButton leadId={lead.id} onSet={() => { void load() }} />
-              {linkedBusiness && (
-                <LoginAsClientButton businessId={linkedBusiness.id} businessName={linkedBusiness.business_name} />
-              )}
+              <LoginAsClientButton business={linkedBusiness} />
               <SendCustomizationButton leadId={lead.id} />
               <CreateAccountButton leadId={lead.id} leadEmail={lead.email || ''} onCreated={() => { void load() }} />
               <SendAccountLinkButton leadId={lead.id} leadEmail={lead.email || ''} />
@@ -985,22 +983,21 @@ function CreateAccountButton({ leadId, leadEmail, onCreated }: {
  * the client's session, and lands on /dashboard. The rep can return
  * to their own account via the impersonation banner / end endpoint.
  */
-function LoginAsClientButton({ businessId, businessName }: {
-  businessId: string
-  businessName: string
+function LoginAsClientButton({ business }: {
+  business: { id: string; business_name: string } | null
 }) {
   const [busy, setBusy] = useState(false)
+  const hasAccount = !!business
   const onClick = async () => {
+    if (!business) return
     setBusy(true)
     try {
-      const r = await fetch(`/api/sales/clients/${businessId}/impersonate`, {
+      const r = await fetch(`/api/sales/clients/${business.id}/impersonate`, {
         method: 'POST',
         credentials: 'include',
       })
       const j = await r.json().catch(() => ({}))
       if (r.ok && j?.success) {
-        // Scrub the rep's own localStorage so the impersonated dashboard
-        // doesn't inherit stale cg.session.* / user / business blobs.
         const { clearClientAuthState } = await import('@/lib/auth/session-guard')
         clearClientAuthState()
         window.location.href = j.redirect_url || '/dashboard'
@@ -1016,11 +1013,15 @@ function LoginAsClientButton({ businessId, businessName }: {
   return (
     <button
       onClick={onClick}
-      disabled={busy}
-      className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-blue-700 text-white text-sm font-medium rounded-xl hover:bg-blue-800 active:scale-[0.98] shadow-sm shadow-blue-700/20 transition-all disabled:opacity-60"
-      title={`Open ${businessName}'s dashboard as them`}
+      disabled={busy || !hasAccount}
+      className={
+        hasAccount
+          ? 'inline-flex items-center justify-center gap-2 h-10 px-4 bg-blue-700 text-white text-sm font-medium rounded-xl hover:bg-blue-800 active:scale-[0.98] shadow-sm shadow-blue-700/20 transition-all disabled:opacity-60'
+          : 'inline-flex items-center justify-center gap-2 h-10 px-4 bg-gray-100 border border-gray-200 text-gray-400 text-sm font-medium rounded-xl cursor-not-allowed transition-all'
+      }
+      title={hasAccount ? `Open ${business!.business_name}'s dashboard as them` : 'No client account yet - create one first'}
     >
-      {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <SignIn weight="fill" className="w-4 h-4" />}
+      {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <SignIn weight={hasAccount ? 'fill' : 'regular'} className="w-4 h-4" />}
       Login as client
     </button>
   )
