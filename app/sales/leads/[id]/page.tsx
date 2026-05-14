@@ -297,7 +297,7 @@ export default function LeadDetailPage() {
           eyebrow="lead"
           title={lead.business_name}
           action={
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="grid grid-cols-3 gap-2 w-full max-w-3xl [&>*]:w-full">
               {lead.phone && (
                 <a
                   href={`tel:${lead.phone}`}
@@ -326,11 +326,9 @@ export default function LeadDetailPage() {
               >
                 <CurrencyDollar weight="fill" className="w-4 h-4" /> Send payment link
               </button>
-              <div className="inline-flex items-center gap-2">
-                <MarkDemoButton leadId={lead.id} onSet={() => { void load() }} />
-                <LoginAsClientButton business={linkedBusiness} />
-              </div>
               <CopyAccountLinkPrimary leadId={lead.id} leadEmail={lead.email || ''} />
+              <MarkDemoButton leadId={lead.id} onSet={() => { void load() }} />
+              <LoginAsClientButton business={linkedBusiness} />
               <SendCustomizationButton leadId={lead.id} />
               <CreateAccountButton leadId={lead.id} leadEmail={lead.email || ''} onCreated={() => { void load() }} />
               <SendAccountLinkButton leadId={lead.id} leadEmail={lead.email || ''} />
