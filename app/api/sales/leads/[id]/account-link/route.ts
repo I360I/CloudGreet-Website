@@ -61,21 +61,27 @@ export async function POST(
   }
   const email: string | null = emailRaw || null
 
-  // Reuse a fresh invite if one already exists for this rep+email (or
-  // rep+lead if we don't have an email yet) so the rep can copy the
-  // same link twice without stacking rows.
+  // Reuse a fresh invite ONLY for the same (rep, lead, email) triple
+  // so the rep can copy the same link twice without stacking rows.
+  // The old reuse-by-email-alone was a cross-lead leak: if the rep
+  // had ever generated an invite using `prospect@example.com` for a
+  // different lead (or even for the same prospect under a different
+  // business name), this query returned that stale invite and the
+  // create-account page rendered the WRONG business name to the
+  // current prospect. lead_id is part of the key now - always.
   const nowIso = new Date().toISOString()
   let existingQ = supabaseAdmin
     .from('client_account_invites')
     .select('id, token, expires_at, consumed_at')
     .eq('rep_id', auth.userId)
+    .eq('lead_id', lead.id)
     .is('consumed_at', null)
     .gte('expires_at', nowIso)
     .order('created_at', { ascending: false })
     .limit(1)
   existingQ = email
     ? existingQ.eq('prospect_email', email)
-    : existingQ.is('prospect_email', null).eq('lead_id', lead.id)
+    : existingQ.is('prospect_email', null)
   const { data: existing } = await existingQ.maybeSingle()
 
   let token = existing?.token || ''
