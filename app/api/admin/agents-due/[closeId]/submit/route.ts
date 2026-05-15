@@ -93,11 +93,40 @@ export async function POST(
         try {
           const { data: closeRow } = await supabaseAdmin
             .from('closes')
-            .select('business_id')
+            .select('business_id, lead_id, prospect_phone')
             .eq('id', params.closeId)
             .maybeSingle()
-          const businessId = (closeRow as any)?.business_id as string | null
-          if (!businessId) return  // unprovisioned close, nothing to propagate to
+          // Resolve a business to propagate to, even if close.business_id
+          // is null (pre-build path): check lead.business_id, then
+          // businesses by phone match. Without this the workshop's
+          // "Mark ready" silently no-ops when admin runs it before the
+          // client has accepted the invite.
+          let businessId = (closeRow as any)?.business_id as string | null
+          if (!businessId && (closeRow as any)?.lead_id) {
+            const { data: lead } = await supabaseAdmin
+              .from('leads')
+              .select('business_id')
+              .eq('id', (closeRow as any).lead_id)
+              .maybeSingle()
+            businessId = (lead as any)?.business_id || null
+          }
+          if (!businessId && (closeRow as any)?.prospect_phone) {
+            const { data: biz } = await supabaseAdmin
+              .from('businesses')
+              .select('id')
+              .eq('phone_number', (closeRow as any).prospect_phone)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            businessId = (biz as any)?.id || null
+          }
+          if (!businessId) return  // pre-build, deferred path will pick this up at conversion
+          // Mirror onto the close for future lookups + status accuracy.
+          await supabaseAdmin
+            .from('closes')
+            .update({ business_id: businessId, updated_at: new Date().toISOString() })
+            .eq('id', params.closeId)
+            .then(undefined, () => null)
 
           // 0. Agent ID propagation. If the admin pasted a Retell agent ID
           //    on this submit, stamp it onto businesses + mirror to

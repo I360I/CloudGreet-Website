@@ -35,16 +35,11 @@ export async function PUT(
 
   const { data: close, error: closeErr } = await supabaseAdmin
     .from('closes')
-    .select('id, business_id')
+    .select('id, business_id, lead_id, prospect_phone, prospect_business_name')
     .eq('id', params.closeId)
     .maybeSingle()
   if (closeErr || !close) {
     return NextResponse.json({ error: 'Close not found' }, { status: 404 })
-  }
-  if (close.business_id) {
-    return NextResponse.json({
-      error: 'This close already has a business - use /api/admin/clients/[id]/retell-agent so tools get wired immediately.',
-    }, { status: 409 })
   }
 
   // Unlink path.
@@ -57,23 +52,9 @@ export async function PUT(
     return NextResponse.json({ success: true, agentId: null })
   }
 
-  // Verify against Retell so a typo can't sit on the close until
-  // conversion and then blow up the auto-attach.
-  const apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'RETELL_API_KEY is not set' }, { status: 500 })
-
-  const verifyRes = await fetch(`https://api.retellai.com/get-agent/${encodeURIComponent(raw)}`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  })
-  if (!verifyRes.ok) {
-    const text = await verifyRes.text().catch(() => verifyRes.statusText)
-    return NextResponse.json({
-      error: `Retell didn't recognize that agent: ${verifyRes.status} ${text.slice(0, 200)}`,
-    }, { status: 400 })
-  }
-  const agent = await verifyRes.json().catch(() => ({} as any))
-  const agentName = (agent?.agent_name as string) || 'Retell agent'
-
+  // Save on the close first (always) so the deferred-attach path on
+  // convertCloseToClient stays a safety net if the live attach below
+  // doesn't find a business yet.
   const { error: upErr } = await supabaseAdmin
     .from('closes')
     .update({ retell_agent_id: raw, updated_at: new Date().toISOString() })
@@ -83,11 +64,94 @@ export async function PUT(
     return NextResponse.json({ error: upErr.message }, { status: 500 })
   }
 
+  // Try to resolve a business to attach to RIGHT NOW. The chain we
+  // search, in order:
+  //   1. close.business_id (workshop opened post-conversion)
+  //   2. lead.business_id - rep's lead linked to a business already
+  //   3. businesses by phone match - covers cases where the lead
+  //      lookup failed but a business exists with the same phone
+  // If anything matches, do the full wire-up immediately instead of
+  // waiting for convertCloseToClient. This is the "if it's in admin,
+  // it's connected the moment any account for this contractor is
+  // active" expectation.
+  let resolvedBusinessId: string | null = (close as any).business_id || null
+  if (!resolvedBusinessId && (close as any).lead_id) {
+    const { data: lead } = await supabaseAdmin
+      .from('leads')
+      .select('business_id')
+      .eq('id', (close as any).lead_id)
+      .maybeSingle()
+    resolvedBusinessId = (lead as any)?.business_id || null
+  }
+  if (!resolvedBusinessId && (close as any).prospect_phone) {
+    const { data: biz } = await supabaseAdmin
+      .from('businesses')
+      .select('id')
+      .eq('phone_number', (close as any).prospect_phone)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    resolvedBusinessId = (biz as any)?.id || null
+  }
+
+  if (resolvedBusinessId) {
+    const { attachRetellAgentToBusiness } = await import('@/lib/admin/attach-retell-agent')
+    const result = await attachRetellAgentToBusiness({
+      businessId: resolvedBusinessId,
+      agentId: raw,
+    })
+    if (result.ok === false) {
+      return NextResponse.json({
+        error: `Saved on close, but live-attach to existing business failed: ${result.error}`,
+      }, { status: result.status })
+    }
+    // Also stamp the close so we have a permanent record + the
+    // deferred path stays consistent if the business is ever recreated.
+    await supabaseAdmin
+      .from('closes')
+      .update({ business_id: resolvedBusinessId, updated_at: new Date().toISOString() })
+      .eq('id', close.id)
+      .then(undefined, () => null)
+    return NextResponse.json({
+      success: true,
+      agentId: raw,
+      agentName: result.agentName,
+      attached_business_id: resolvedBusinessId,
+      toolsTrace: result.toolsTrace,
+      toolsError: result.toolsError,
+      deferred: false,
+    })
+  }
+
+  // Verify with Retell (we deferred verification to here for the
+  // pre-conversion case so a typo doesn't sit unflagged on the close
+  // until conversion).
+  const apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY
+  if (apiKey) {
+    const verifyRes = await fetch(`https://api.retellai.com/get-agent/${encodeURIComponent(raw)}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+    if (!verifyRes.ok) {
+      const text = await verifyRes.text().catch(() => verifyRes.statusText)
+      return NextResponse.json({
+        error: `Retell didn't recognize that agent: ${verifyRes.status} ${text.slice(0, 200)}`,
+      }, { status: 400 })
+    }
+    const agent = await verifyRes.json().catch(() => ({} as any))
+    const agentName = (agent?.agent_name as string) || 'Retell agent'
+    return NextResponse.json({
+      success: true,
+      agentId: raw,
+      agentName,
+      deferred: true,
+      note: 'Agent saved on close - will auto-attach when the client account is created.',
+    })
+  }
+
   return NextResponse.json({
     success: true,
     agentId: raw,
-    agentName,
     deferred: true,
-    note: 'Agent will auto-attach to the business when the client creates their account.',
+    note: 'Agent saved on close - will auto-attach when the client account is created.',
   })
 }
