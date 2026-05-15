@@ -31,7 +31,8 @@ type Item = {
     business_name: string | null
   }
   business: {
-    id: string; business_name: string | null; address: string | null
+    /** null pre-conversion: the workshop runs against close.* + lead.* instead. */
+    id: string | null; business_name: string | null; address: string | null
     services: string[] | null; business_hours: any; website: string | null
     owner_name: string | null
     login_email: string | null; cal_com_username: string | null
@@ -39,6 +40,7 @@ type Item = {
     customization_status: string; customization_submitted_at: string | null
     retell_agent_id: string | null
     google_rating: number | null; google_review_count: number | null
+    pending_conversion?: boolean
   } | null
 }
 
@@ -135,6 +137,7 @@ function Workspace({ item, onChanged }: { item: Item; onChanged: () => void }) {
           onChanged={onChanged}
         />
         <RetellAgentCard
+          closeId={item.close_id}
           businessId={item.business?.id || null}
           currentAgentId={item.business?.retell_agent_id || null}
           onChanged={onChanged}
@@ -438,7 +441,8 @@ function Side({ title, icon, children }: { title: string; icon?: React.ReactNode
  * can't go unnoticed (the previous version returned success: true even
  * when the agent ended up with zero tools).
  */
-function RetellAgentCard({ businessId, currentAgentId, onChanged }: {
+function RetellAgentCard({ closeId, businessId, currentAgentId, onChanged }: {
+  closeId: string
   businessId: string | null
   currentAgentId: string | null
   onChanged: () => void
@@ -454,11 +458,17 @@ function RetellAgentCard({ businessId, currentAgentId, onChanged }: {
     setEditing(!currentAgentId)
   }, [currentAgentId])
 
+  // Endpoint switches on whether the close has been converted yet.
+  // Pre-conversion: save to closes.retell_agent_id (deferred attach).
+  // Post-conversion: full immediate wire-up to the business.
+  const endpoint = businessId
+    ? `/api/admin/clients/${businessId}/retell-agent`
+    : `/api/admin/agents-due/${closeId}/retell-agent`
+
   const save = async () => {
-    if (!businessId) { setErr('No business linked to this close yet.'); return }
     setBusy(true); setErr(''); setFlash('')
     try {
-      const r = await fetchWithAuth(`/api/admin/clients/${businessId}/retell-agent`, {
+      const r = await fetchWithAuth(endpoint, {
         method: 'PUT',
         body: JSON.stringify({ agentId: draft.trim() || null }),
       })
@@ -469,7 +479,11 @@ function RetellAgentCard({ businessId, currentAgentId, onChanged }: {
         setErr(`Linked, but tool attach failed: ${j.toolsError}`)
         onChanged()
       } else {
-        setFlash(`Linked${j.agentName ? ` to ${j.agentName}` : ''} - tools, extractions, webhook all wired`)
+        setFlash(
+          j.deferred
+            ? `Saved${j.agentName ? ` (${j.agentName})` : ''} - will auto-attach when client creates their account`
+            : `Linked${j.agentName ? ` to ${j.agentName}` : ''} - tools, extractions, webhook all wired`,
+        )
         setEditing(false)
         onChanged()
         setTimeout(() => setFlash(''), 6000)
@@ -485,7 +499,7 @@ function RetellAgentCard({ businessId, currentAgentId, onChanged }: {
     if (!window.confirm('Unlink this Retell agent? CloudGreet will lose its connection to the live agent (calls keep working in Retell, just disconnected from this client record).')) return
     setBusy(true); setErr(''); setFlash('')
     try {
-      const r = await fetchWithAuth(`/api/admin/clients/${businessId}/retell-agent`, {
+      const r = await fetchWithAuth(endpoint, {
         method: 'PUT',
         body: JSON.stringify({ agentId: null }),
       })
@@ -522,7 +536,7 @@ function RetellAgentCard({ businessId, currentAgentId, onChanged }: {
             <button
               type="button"
               onClick={save}
-              disabled={busy || !draft.trim() || !businessId}
+              disabled={busy || !draft.trim()}
               className="inline-flex items-center gap-1.5 bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-200 px-3 py-1.5 rounded-lg text-xs hover:bg-fuchsia-500/30 disabled:opacity-50"
             >
               {busy ? <CircleNotch className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}

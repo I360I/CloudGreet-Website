@@ -36,6 +36,10 @@ export async function POST(
   const update: Record<string, any> = { updated_at: new Date().toISOString() }
   let touchedReady = false
   const agentIdRaw = typeof body.agent_id === 'string' ? body.agent_id.trim() : ''
+  // Always persist the agent_id on the close itself, even pre-conversion.
+  // convertCloseToClient reads this back on conversion to auto-attach
+  // the agent to the new business without admin re-paste.
+  if (agentIdRaw) update.retell_agent_id = agentIdRaw
 
   if (body.test_phone !== undefined) {
     const tp = String(body.test_phone || '').trim()

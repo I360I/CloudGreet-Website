@@ -29,7 +29,7 @@ export async function GET(
   let { data: business, error } = await supabaseAdmin
     .from('businesses')
     .select(`
-      id, business_name, business_type, phone_number, email,
+      id, business_name, business_type, phone_number, email, website,
       greeting_message, voice_id, voice_speed,
       retell_agent_id, agent_edge_cases,
       subscription_status, account_status,

@@ -69,7 +69,7 @@ export default function SalesLeadsPage() {
   const [importing, setImporting] = useState(false)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
-  const [sortBy, setSortBy] = useState<'quality' | 'newest' | 'untouched'>('quality')
+  const [sortBy, setSortBy] = useState<'quality' | 'newest' | 'untouched'>('newest')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
   // Page-scoped modal so any row can pop the demo-set picker without

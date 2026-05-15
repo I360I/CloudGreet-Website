@@ -23,7 +23,7 @@ export async function GET(
   const { data: r, error } = await supabaseAdmin
     .from('closes')
     .select(
-      'id, rep_id, business_id, prospect_business_name, prospect_contact_name, prospect_email, prospect_phone, status, demo_scheduled_at, demo_agent_status, demo_agent_test_phone, demo_agent_built_at, demo_agent_notes, agent_draft_status, agent_draft_generated_at, agent_draft_approved_at, created_at, updated_at',
+      'id, rep_id, business_id, prospect_business_name, prospect_contact_name, prospect_email, prospect_phone, status, demo_scheduled_at, demo_agent_status, demo_agent_test_phone, demo_agent_built_at, demo_agent_notes, agent_draft_status, agent_draft_generated_at, agent_draft_approved_at, website, retell_agent_id, created_at, updated_at',
     )
     .eq('id', params.closeId)
     .maybeSingle()
@@ -59,6 +59,10 @@ export async function GET(
     // businesses row was created without - website, contact_name,
     // address, even Google rating. Fall back to it so the workshop
     // doesn't say "no website" when we literally scraped one.
+    // Lead lookup: when we have a business, key off business_id. When
+    // we don't (close hasn't been converted yet - the new pre-build
+    // flow), fall back to matching by phone so the workshop still
+    // sees the scraped website / owner / rating.
     r.business_id
       ? supabaseAdmin
           .from('leads')
@@ -68,7 +72,16 @@ export async function GET(
           .limit(1)
           .maybeSingle()
           .then((res) => res.data)
-      : Promise.resolve(null),
+      : r.prospect_phone
+        ? supabaseAdmin
+            .from('leads')
+            .select('website, contact_name, address, city, state, google_rating, google_review_count, business_type')
+            .eq('phone', r.prospect_phone)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then((res) => res.data)
+        : Promise.resolve(null),
   ])
 
   // Backfill: if the business has no website but the lead does, write
@@ -114,17 +127,19 @@ export async function GET(
       phone: r.prospect_phone,
       business_name: r.prospect_business_name,
     },
+    // Synthesize a business stub even pre-conversion so the workshop
+    // works against close.website + lead.* data. id: null is the
+    // sentinel for the UI - it greys out anything that genuinely
+    // needs a business row (Cal.com hookup, customization status)
+    // but keeps the prompt builder fully usable.
     business: r.business_id && biz
       ? {
           id: r.business_id,
           business_name: (biz as any).business_name || r.prospect_business_name,
-          // Layered fallbacks: business row -> originating lead row.
-          // Lead data is what the scraper found; reps don't always
-          // re-paste it during onboarding.
           address: (biz as any).address || (lead as any)?.address || null,
           services: (biz as any).services || [],
           business_hours: (biz as any).business_hours || null,
-          website: (biz as any).website || (lead as any)?.website || null,
+          website: (biz as any).website || (r as any).website || (lead as any)?.website || null,
           owner_name: (lead as any)?.contact_name || null,
           login_email: (owner as any)?.email || null,
           cal_com_username: (biz as any).cal_com_username || null,
@@ -132,11 +147,29 @@ export async function GET(
           has_cal_api_key: !!(biz as any).cal_com_api_key,
           customization_status: (biz as any).customization_status || 'not_sent',
           customization_submitted_at: (biz as any).customization_submitted_at || null,
-          retell_agent_id: (biz as any).retell_agent_id || null,
+          retell_agent_id: (biz as any).retell_agent_id || (r as any).retell_agent_id || null,
           google_rating: (lead as any)?.google_rating ?? null,
           google_review_count: (lead as any)?.google_review_count ?? null,
         }
-      : null,
+      : {
+          id: null,
+          business_name: r.prospect_business_name,
+          address: (lead as any)?.address || null,
+          services: [],
+          business_hours: null,
+          website: (r as any).website || (lead as any)?.website || null,
+          owner_name: (lead as any)?.contact_name || null,
+          login_email: null,
+          cal_com_username: null,
+          cal_com_event_type_slug: null,
+          has_cal_api_key: false,
+          customization_status: 'not_sent',
+          customization_submitted_at: null,
+          retell_agent_id: (r as any).retell_agent_id || null,
+          google_rating: (lead as any)?.google_rating ?? null,
+          google_review_count: (lead as any)?.google_review_count ?? null,
+          pending_conversion: true,
+        },
   }
 
   return NextResponse.json({ success: true, item })

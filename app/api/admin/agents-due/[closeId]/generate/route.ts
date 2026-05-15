@@ -51,7 +51,7 @@ export async function POST(
     // 1. Load the close + business.
     const { data: close, error: closeErr } = await supabaseAdmin
       .from('closes')
-      .select('id, business_id, prospect_business_name, prospect_contact_name, prospect_phone, prospect_email')
+      .select('id, business_id, prospect_business_name, prospect_contact_name, prospect_phone, prospect_email, website')
       .eq('id', params.closeId)
       .single()
     if (closeErr || !close) {
@@ -69,18 +69,35 @@ export async function POST(
       business = data
     }
 
+    // Pre-conversion fallback: scrape data from the originating lead
+    // by phone match. Same logic the [closeId] GET uses for the UI -
+    // keeps prompt generation honest when there's no business row yet.
+    let leadFallback: any = null
+    if (!business && close.prospect_phone) {
+      const { data } = await supabaseAdmin
+        .from('leads')
+        .select('website, address, city, state, business_type')
+        .eq('phone', close.prospect_phone)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      leadFallback = data
+    }
+
     // 2. Build the context document.
     const seed = {
       business_name: business?.business_name || close.prospect_business_name,
       owner_name: close.prospect_contact_name,
       phone: business?.phone || business?.phone_number || close.prospect_phone,
-      address: business?.address,
-      website: business?.website,
+      address: business?.address || leadFallback?.address,
+      website: business?.website || (close as any).website || leadFallback?.website,
       services: business?.services,
       business_hours: business?.business_hours,
-      city_state_hint: business?.city && business?.state
+      city_state_hint: (business?.city && business?.state)
         ? `${business.city}, ${business.state}`
-        : null,
+        : (leadFallback?.city && leadFallback?.state)
+          ? `${leadFallback.city}, ${leadFallback.state}`
+          : null,
     }
     const ctx = await buildBusinessContext({ seed })
 

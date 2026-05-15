@@ -17,6 +17,7 @@ type Lead = {
   contact_name: string | null
   phone: string | null
   email: string | null
+  website: string | null
   source: string | null
   notes: string | null
   status: string
@@ -390,6 +391,18 @@ export default function LeadDetailPage() {
             <div>
               <a href={`mailto:${lead.email}`} className="text-gray-900 hover:underline">
                 {lead.email}
+              </a>
+            </div>
+          )}
+          {lead.website && (
+            <div>
+              <a
+                href={/^https?:\/\//i.test(lead.website) ? lead.website : `https://${lead.website}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sky-700 hover:underline"
+              >
+                {lead.website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
               </a>
             </div>
           )}

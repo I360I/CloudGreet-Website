@@ -39,12 +39,6 @@ export async function PATCH(
   if (!close) {
     return NextResponse.json({ error: `Close ${params.closeId} not found` }, { status: 404 })
   }
-  if (!close.business_id) {
-    return NextResponse.json({
-      error: `This close has no business row linked yet (close.business_id is null). The rep needs to convert the lead into a business before the workshop can edit it.`,
-    }, { status: 409 })
-  }
-
   const body = await request.json().catch(() => ({})) as {
     website?: string
     address?: string
@@ -52,28 +46,69 @@ export async function PATCH(
     business_hours?: any
   }
 
-  const update: Record<string, any> = { updated_at: new Date().toISOString() }
+  // Normalise website up-front - same rule whether we're saving to
+  // businesses or to closes pre-conversion.
+  let normalisedWebsite: string | null | undefined = undefined
   if (body.website !== undefined) {
     const w = body.website.trim()
-    if (!w) {
-      update.website = null
-    } else {
-      // Normalise: prepend https:// if missing, validate parseable.
+    if (!w) normalisedWebsite = null
+    else {
       const candidate = /^https?:\/\//i.test(w) ? w : `https://${w}`
       try {
-        const u = new URL(candidate)
-        update.website = u.toString()
+        normalisedWebsite = new URL(candidate).toString()
       } catch {
         return NextResponse.json({ error: `"${w}" doesn't look like a valid URL` }, { status: 400 })
       }
     }
   }
+
+  // Pre-conversion path: no business row yet, save what we can on the
+  // close itself so the workshop can keep moving. convertCloseToClient
+  // later sync's website over to businesses.website via the existing
+  // syncBusinessFromLead flow plus an explicit copy at convert time.
+  if (!close.business_id) {
+    if (normalisedWebsite === undefined) {
+      return NextResponse.json({
+        error: 'Only website can be saved before the client creates their account. The rest is editable post-conversion.',
+      }, { status: 400 })
+    }
+    const { error: upErr } = await supabaseAdmin
+      .from('closes')
+      .update({ website: normalisedWebsite, updated_at: new Date().toISOString() })
+      .eq('id', close.id)
+    if (upErr) {
+      return NextResponse.json({
+        error: `Save failed: ${upErr.message}`,
+        detail: upErr.details || upErr.hint || upErr.code,
+      }, { status: 500 })
+    }
+    return NextResponse.json({
+      success: true,
+      business_id: null,
+      saved: { website: normalisedWebsite },
+      pending_conversion: true,
+    })
+  }
+
+  const update: Record<string, any> = { updated_at: new Date().toISOString() }
+  if (normalisedWebsite !== undefined) update.website = normalisedWebsite
   if (body.address !== undefined) update.address = body.address.trim() || null
   if (body.services !== undefined) update.services = Array.isArray(body.services) ? body.services : null
   if (body.business_hours !== undefined) update.business_hours = body.business_hours
 
   if (Object.keys(update).length === 1) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
+  }
+
+  // Mirror website onto the close so re-runs of the workshop after a
+  // potential reset (admin resets onboarding -> business is wiped ->
+  // close still exists) keep the website around. Cheap, idempotent.
+  if (normalisedWebsite !== undefined) {
+    await supabaseAdmin
+      .from('closes')
+      .update({ website: normalisedWebsite, updated_at: new Date().toISOString() })
+      .eq('id', close.id)
+      .then(undefined, () => null)
   }
 
   const { data: updated, error: upErr } = await supabaseAdmin

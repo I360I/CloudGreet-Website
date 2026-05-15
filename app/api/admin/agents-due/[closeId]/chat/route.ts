@@ -55,7 +55,7 @@ export async function POST(
   // 1) Resolve / create the session for this close.
   const { data: close, error: closeErr } = await supabaseAdmin
     .from('closes')
-    .select('id, business_id, agent_chat_session_id, prospect_business_name, prospect_contact_name, prospect_phone, prospect_email')
+    .select('id, business_id, agent_chat_session_id, prospect_business_name, prospect_contact_name, prospect_phone, prospect_email, website')
     .eq('id', params.closeId)
     .maybeSingle()
   if (closeErr || !close) {
@@ -85,6 +85,18 @@ export async function POST(
       .from('leads')
       .select('contact_name, website, business_name, city, state, google_rating, google_review_count, business_type, address, notes')
       .eq('business_id', (close as any).business_id)
+      .maybeSingle()
+    linkedLead = l
+  } else if ((close as any).prospect_phone) {
+    // Pre-conversion path: match by phone since there's no business_id
+    // to key off yet. Otherwise the workshop chat fires with zero
+    // scrape context even though we already have it on the lead.
+    const { data: l } = await supabaseAdmin
+      .from('leads')
+      .select('contact_name, website, business_name, city, state, google_rating, google_review_count, business_type, address, notes')
+      .eq('phone', (close as any).prospect_phone)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
     linkedLead = l
   }
@@ -139,6 +151,7 @@ export async function POST(
           undefined,
         website:
           linkedBiz?.website ||
+          (close as any).website ||
           linkedLead?.website ||
           undefined,
         services: Array.isArray(linkedBiz?.services) ? linkedBiz.services : undefined,

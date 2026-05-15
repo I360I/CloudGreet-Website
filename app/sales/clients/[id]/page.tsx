@@ -17,6 +17,7 @@ type Business = {
   business_type: string | null
   phone_number: string | null
   email: string | null
+  website?: string | null
   greeting_message: string | null
   voice_id: string | null
   voice_speed?: number | null
@@ -277,6 +278,19 @@ export default function SalesClientDetailPage() {
             )}
             {business.email && (
               <Field label="Email" value={business.email} />
+            )}
+            {business.website && (
+              <div className="flex items-center justify-between text-xs gap-3">
+                <div className="text-gray-500">Website</div>
+                <a
+                  href={/^https?:\/\//i.test(business.website) ? business.website : `https://${business.website}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sky-700 hover:underline truncate"
+                >
+                  {business.website.replace(/^https?:\/\//i, '').replace(/\/$/, '')}
+                </a>
+              </div>
             )}
             {business.greeting_message && (
               <Field label="Greeting" value={business.greeting_message} truncate />

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
-import { DEFAULT_POST_CALL_FIELDS } from '@/lib/retell-default-extractions'
-import { retellAgentManager } from '@/lib/retell-agent-manager'
+import { attachRetellAgentToBusiness } from '@/lib/admin/attach-retell-agent'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -43,105 +42,17 @@ export async function PUT(
    return NextResponse.json({ success: true, agentId: null })
   }
 
-  // Validate against Retell so a typo can't be saved.
-  const apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY
-  if (!apiKey) {
-   return NextResponse.json(
-    { error: 'RETELL_API_KEY is not set in this deployment.' },
-    { status: 500 },
-   )
+  const result = await attachRetellAgentToBusiness({ businessId: params.id, agentId: raw })
+  if (result.ok === false) {
+   return NextResponse.json({ error: result.error }, { status: result.status })
   }
-
-  const verifyRes = await fetch(`https://api.retellai.com/get-agent/${encodeURIComponent(raw)}`, {
-   headers: { Authorization: `Bearer ${apiKey}` },
-  })
-  if (!verifyRes.ok) {
-   const text = await verifyRes.text().catch(() => verifyRes.statusText)
-   return NextResponse.json(
-    {
-     error: `Retell didn't recognize that agent: ${verifyRes.status} ${text.slice(0, 200)}`,
-    },
-    { status: 400 },
-   )
-  }
-  const agent = await verifyRes.json().catch(() => ({} as any))
-  const agentName = (agent?.agent_name as string) || 'Retell agent'
-  const llmId = agent?.response_engine?.llm_id || null
-
-  // Push the default extraction schema onto the agent so every call
-  // gets the same structured capture (summary, booking_type, etc).
-  // Best-effort: if Retell rejects the patch we still save the link.
-  try {
-   await fetch(`https://api.retellai.com/update-agent/${encodeURIComponent(raw)}`, {
-    method: 'PATCH',
-    headers: {
-     Authorization: `Bearer ${apiKey}`,
-     'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ post_call_analysis_data: DEFAULT_POST_CALL_FIELDS }),
-   })
-  } catch (e) {
-   logger.warn('Default extraction schema push failed (non-fatal)', {
-    clientId: params.id, error: e instanceof Error ? e.message : 'Unknown',
-   })
-  }
-
-  // Save canonical column on businesses.
-  const { error: bizErr } = await supabaseAdmin
-   .from('businesses')
-   .update({ retell_agent_id: raw, updated_at: new Date().toISOString() })
-   .eq('id', params.id)
-  if (bizErr) {
-   logger.error('Failed to save retell_agent_id on businesses', {
-    clientId: params.id, error: bizErr.message,
-   })
-   return NextResponse.json({ error: bizErr.message }, { status: 500 })
-  }
-
-  // Mirror onto ai_agents. Delete-then-insert so stale rows from a
-  // previous agent don't survive (upsert assumed a unique constraint
-  // on business_id that may not exist, so old agent_ids could linger
-  // and the detail GET would re-render them).
-  try {
-   await supabaseAdmin.from('ai_agents').delete().eq('business_id', params.id)
-   await supabaseAdmin.from('ai_agents').insert({
-    business_id: params.id,
-    retell_agent_id: raw,
-    agent_name: agentName,
-    status: 'connected',
-    updated_at: new Date().toISOString(),
-   })
-  } catch (e) {
-   logger.warn('ai_agents mirror failed (non-fatal)', {
-    clientId: params.id, error: e instanceof Error ? e.message : 'Unknown',
-   })
-  }
-
-  // Wire the CloudGreet standard tool set (book_appointment,
-  // send_booking_sms, lookup_availability, end_call, optional
-  // transfer_call) onto the agent's LLM + repush extractions +
-  // webhook_url. Without this the linked agent has no booking
-  // capabilities until someone manually configures functions in Retell.
-  // Best-effort: if it fails we still return success on the link save
-  // and surface the error in the response so the admin can re-run.
-  let toolsTrace: string[] = []
-  let toolsError: string | null = null
-  try {
-   toolsTrace = await retellAgentManager().ensureLLMToolsForBusiness(params.id)
-  } catch (e) {
-   toolsError = e instanceof Error ? e.message : 'Unknown'
-   logger.warn('Tool attach on agent link failed (non-fatal)', {
-    clientId: params.id, error: toolsError,
-   })
-  }
-
   return NextResponse.json({
    success: true,
    agentId: raw,
-   agentName,
-   llmId,
-   toolsTrace,
-   toolsError,
+   agentName: result.agentName,
+   llmId: result.llmId,
+   toolsTrace: result.toolsTrace,
+   toolsError: result.toolsError,
   })
  } catch (e) {
   logger.error('Retell agent save failed', { error: e instanceof Error ? e.message : 'Unknown' })

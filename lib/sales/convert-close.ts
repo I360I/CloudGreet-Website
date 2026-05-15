@@ -263,6 +263,87 @@ export async function convertCloseToClient(
     })
     .eq('id', close.id)
 
+  // Copy any workshop-saved website over from the close so the agent
+  // builder + dashboard see it immediately. syncBusinessFromLead handles
+  // the same field from leads.* - this is the close-side mirror.
+  if ((close as any).website) {
+    await supabaseAdmin
+      .from('businesses')
+      .update({ website: (close as any).website, updated_at: new Date().toISOString() })
+      .eq('id', business.id)
+      .then(undefined, () => null)
+  }
+
+  // The pre-build flow: admin set close.retell_agent_id in the workshop
+  // before this business existed. Now that we have a business, run the
+  // same wire-up that /api/admin/clients/[id]/retell-agent would have
+  // done at paste time: stamp businesses.retell_agent_id, mirror onto
+  // ai_agents, push default extractions, ensure LLM tools. Best-effort:
+  // logged but never blocks the conversion.
+  if ((close as any).retell_agent_id) {
+    try {
+      const { attachRetellAgentToBusiness } = await import('../admin/attach-retell-agent')
+      const result = await attachRetellAgentToBusiness({
+        businessId: business.id,
+        agentId: (close as any).retell_agent_id,
+      })
+      if (result.ok === false) {
+        logger.warn('Deferred Retell agent attach failed on conversion', {
+          closeId: close.id, businessId: business.id, error: result.error,
+        })
+      } else if (result.toolsError) {
+        logger.warn('Deferred Retell tools wire failed on conversion', {
+          closeId: close.id, businessId: business.id, error: result.toolsError,
+        })
+      } else {
+        logger.info('Deferred Retell agent attached on conversion', {
+          closeId: close.id, businessId: business.id, agentName: result.agentName,
+        })
+      }
+    } catch (e) {
+      logger.warn('Deferred Retell agent attach threw on conversion', {
+        closeId: close.id, businessId: business.id,
+        error: e instanceof Error ? e.message : 'Unknown',
+      })
+    }
+  }
+
+  // Mirror demo_agent_test_phone onto phone_numbers / ai_agents /
+  // businesses.phone_number too - same propagation the workshop submit
+  // route does when business already exists. So a fully pre-built close
+  // (agent + test phone) is "demo-ready" the instant conversion lands,
+  // with zero admin re-touch.
+  if ((close as any).demo_agent_test_phone) {
+    const testPhone = (close as any).demo_agent_test_phone as string
+    try {
+      const { data: existingPN } = await supabaseAdmin
+        .from('phone_numbers')
+        .select('id')
+        .eq('business_id', business.id)
+        .eq('provider', 'retell')
+        .maybeSingle()
+      if (existingPN) {
+        await supabaseAdmin
+          .from('phone_numbers')
+          .update({ phone_number: testPhone, updated_at: new Date().toISOString() })
+          .eq('id', (existingPN as any).id)
+      } else {
+        await supabaseAdmin
+          .from('phone_numbers')
+          .insert({ business_id: business.id, provider: 'retell', phone_number: testPhone })
+      }
+      await supabaseAdmin
+        .from('businesses')
+        .update({ phone_number: testPhone, updated_at: new Date().toISOString() })
+        .eq('id', business.id)
+    } catch (e) {
+      logger.warn('Deferred test-phone propagation failed on conversion', {
+        closeId: close.id, businessId: business.id,
+        error: e instanceof Error ? e.message : 'Unknown',
+      })
+    }
+  }
+
   return {
     ok: true,
     data: {
