@@ -1,7 +1,8 @@
 import { logger } from '../monitoring'
 import { enrichWithGooglePlaces, isGooglePlacesConfigured } from './google-places'
 import { preFilterContractor, googleConfirmsTrade, phoneMatchesMetro } from './quality'
-import type { ScrapeParams, ScrapeRecord, SourceDefinition } from './types'
+import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
+import type { ScrapeParams, ScrapeRecord, SourceDefinition, SourceRunOpts } from './types'
 
 /**
  * Texas Department of Licensing and Regulation public license search.
@@ -33,7 +34,15 @@ const STATUS_CODE: Record<TdlrTrade, string> = {
 async function* runTdlr(
  trade: TdlrTrade,
  params: ScrapeParams,
+ opts: SourceRunOpts,
 ): AsyncGenerator<ScrapeRecord, void, void> {
+ // Honor the runner's cross-run seen-set so we (a) don't burn Google
+ // enrichment budget on contractors that already exist in `leads` and
+ // (b) keep paging until we hand the runner `limit` fresh records.
+ // Without this, sources that look at TDLR's raw list yielded
+ // everything, the runner silently dropped dupes downstream, and the
+ // rep got fewer rows than they asked for - a spot wasted.
+ const seen = opts.seen
  const sourceId = trade === 'HVAC' ? 'tdlr_hvac' : 'tdlr_electrical'
  const limit = Math.max(1, Math.min(2000, params.limit ?? 100))
 
@@ -117,6 +126,14 @@ async function* runTdlr(
     if (drop) { droppedPre++; continue }
    }
 
+   // Cheap pre-enrichment dedupe: if name+city already matches an
+   // existing lead, skip without ever calling Google. Saves API budget
+   // when the same TDLR row resurfaces under a slightly different phone.
+   if (seen) {
+    const nameKey = businessNameKey(record.business_name, record.city)
+    if (nameKey && seen.nameKeys.has(nameKey)) { droppedPre++; continue }
+   }
+
    // Always enrich when configured. Even if TDLR already gave us a phone,
    // we want Google's rating + review count so reps can see at a glance
    // whether a lead is worth calling. Cost is ~$0.035/call - bounded by
@@ -191,6 +208,23 @@ async function* runTdlr(
    if (strict && params.location && !phoneMatchesMetro(record.phone, params.location)) {
     droppedPost++
     continue
+   }
+
+   // Post-enrichment dedupe: phone/website may have been filled in by
+   // Google Places after the pre-check. If any matches the seen set,
+   // drop here so the runner's downstream filter doesn't have to (and
+   // so our `yielded` count stays honest - we keep paging if needed).
+   if (seen) {
+    const p = normalizePhone(record.phone)
+    if (p && seen.phones.has(p)) { droppedPost++; continue }
+    const w = normalizeWebsite(record.website)
+    if (w && seen.websites.has(w)) { droppedPost++; continue }
+    // Track yielded keys so the in-loop dedupe within this run also
+    // catches mid-page collisions.
+    if (p) seen.phones.add(p)
+    if (w) seen.websites.add(w)
+    const nk = businessNameKey(record.business_name, record.city)
+    if (nk) seen.nameKeys.add(nk)
    }
 
    yield record
@@ -362,16 +396,6 @@ function stripTrailingState(city: string | null): string | null {
  return t.replace(/\s+TX$/i, '').trim() || null
 }
 
-/** Normalize "(512) 454-0550" or "5124540550" to "+15124540550". */
-function normalizePhone(p: string | null | undefined): string | null {
- if (!p) return null
- const digits = p.replace(/[^0-9]/g, '')
- if (!digits) return null
- if (digits.length === 10) return `+1${digits}`
- if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
- return null
-}
-
 /* ------------------------ Source definitions ------------------------ */
 
 export const tdlrHvac: SourceDefinition = {
@@ -380,7 +404,7 @@ export const tdlrHvac: SourceDefinition = {
  description:
   'Licensed Texas HVAC contractors with owner name and license number from TDLR, cross-referenced with Google for current phone, website, star rating, and review count. Sub-3-star shops dropped automatically.',
  trade: 'HVAC',
- run: (params, _opts) => runTdlr('HVAC', params),
+ run: (params, opts) => runTdlr('HVAC', params, opts),
 }
 
 export const tdlrElectrical: SourceDefinition = {
@@ -389,5 +413,5 @@ export const tdlrElectrical: SourceDefinition = {
  description:
   'Licensed Texas electricians from TDLR (license + business + city), enriched with Google phone, website, star rating, and review count. Sub-3-star shops dropped automatically.',
  trade: 'Electrical',
- run: (params, _opts) => runTdlr('Electrical', params),
+ run: (params, opts) => runTdlr('Electrical', params, opts),
 }

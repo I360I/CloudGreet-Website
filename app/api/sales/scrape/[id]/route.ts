@@ -32,31 +32,44 @@ export async function GET(
     .eq('job_id', params.id)
     .order('created_at', { ascending: true })
 
+  // Drop any result row whose phone is already in `leads` - don't just
+  // flag them as dup. Marking-but-keeping them ate visible scrape slots
+  // and made reps feel they were scraping garbage (even when promote
+  // would have correctly reused the existing lead row). The runner
+  // already dedupes at insert time; this is the belt-and-suspenders
+  // pass for older scrape_jobs predating that filter.
   const phones = Array.from(new Set(
     (results || [])
       .map((r) => normalizePhone(r.phone))
       .filter((p): p is string => !!p),
   ))
-
-  let existingPhonesInLeads: string[] = []
+  const dupePhones = new Set<string>()
   if (phones.length > 0) {
     const { data: existing } = await supabaseAdmin
       .from('leads')
       .select('phone')
       .not('phone', 'is', null)
-    const set = new Set(
+    const leadsSet = new Set(
       (existing || [])
         .map((e) => normalizePhone(e.phone))
         .filter((p): p is string => !!p),
     )
-    existingPhonesInLeads = phones.filter((p) => set.has(p))
+    for (const p of phones) {
+      if (leadsSet.has(p)) dupePhones.add(p)
+    }
   }
+  const filtered = (results || []).filter((r) => {
+    const p = normalizePhone(r.phone)
+    return !p || !dupePhones.has(p)
+  })
 
   return NextResponse.json({
     success: true,
     job,
-    results: results || [],
-    existing_phones_in_leads: existingPhonesInLeads,
+    results: filtered,
+    // Retain the field for any UI still reading it - empty by design now.
+    existing_phones_in_leads: [],
+    dropped_as_existing_in_leads: (results?.length || 0) - filtered.length,
   })
 }
 
