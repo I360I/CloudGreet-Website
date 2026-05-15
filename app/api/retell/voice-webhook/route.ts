@@ -715,8 +715,38 @@ export async function POST(request: NextRequest) {
  // 'slot_cache:{id}:2026-05-14' which the prewarm never writes -
  // every date-scoped query was a guaranteed miss, defeating the
  // entire prewarm.
+ // Try the per-date cache first when a date is specified - this is
+ // what catches "asked about the same day twice in one call" without
+ // paying Cal.com latency again.
+ if (date) {
+ const dateCache = await readSlotCache(business_id, date)
+ if (dateCache) {
+ return NextResponse.json({
+ success: true,
+ slots: dateCache.slots,
+ slots_display: dateCache.slots_display,
+ timezone: dateCache.timezone,
+ source: dateCache.source,
+ cache: 'hit',
+ })
+ }
+ }
  const cached = await readSlotCache(business_id, 'week')
  if (cached) {
+ // Critical check: only filter the cache if the requested date
+ // actually falls inside the window we prewarmed. Otherwise we
+ // confidently return [] for any date past the horizon, and the
+ // agent tells the caller "no openings" when in reality we just
+ // never looked. coverage_*_iso were added so this check is
+ // explicit rather than implicit-via-array-contents.
+ const inCoverage = !date || (() => {
+ if (!cached.coverage_start_iso || !cached.coverage_end_iso) return true
+ const d = new Date(`${date}T00:00:00.000Z`).getTime()
+ const start = new Date(cached.coverage_start_iso).getTime()
+ const end = new Date(cached.coverage_end_iso).getTime()
+ return d >= start && d < end
+ })()
+ if (inCoverage) {
  const matchPrefix = date ? `${date}T` : null
  const filtered = matchPrefix
  ? cached.slots
@@ -731,6 +761,9 @@ export async function POST(request: NextRequest) {
  source: cached.source,
  cache: 'hit',
  })
+ }
+ // date is outside the prewarmed window - fall through to a live
+ // per-date lookup below.
  }
 
  // Cache miss: live Cal.com lookup. Accounts for manual Cal.com
@@ -781,12 +814,23 @@ export async function POST(request: NextRequest) {
  const slots = rawSlots.map((iso) => isoInZone(iso, tz))
  const slots_display = rawSlots.map((iso) => formatHuman(iso, tz))
 
- // Always write under 'week' so the prewarm key and live-fetch
- // key are consistent. Subsequent lookups (scoped or not) hit
- // this cache and filter client-side.
+ // If a specific date was requested, cache under that date so a
+ // repeat ask in the same call is instant. Otherwise refresh the
+ // 'week' cache (with coverage range so out-of-window reads can
+ // detect themselves and re-fetch instead of returning empty).
+ if (date) {
+ void writeSlotCache(business_id, date, {
+ slots, slots_display, timezone: tz, source: 'calcom', scope: date,
+ coverage_start_iso: startIso,
+ coverage_end_iso: endIso,
+ })
+ } else {
  void writeSlotCache(business_id, 'week', {
  slots, slots_display, timezone: tz, source: 'calcom', scope: 'week',
+ coverage_start_iso: startIso,
+ coverage_end_iso: endIso,
  })
+ }
 
  return NextResponse.json({
  success: true,

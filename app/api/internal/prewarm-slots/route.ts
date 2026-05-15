@@ -58,11 +58,13 @@ export async function POST(request: NextRequest) {
     })
 
     const { listAvailableSlots } = await import('@/lib/calcom')
+    // Prewarm a 14-day window. Callers routinely ask for "next Friday"
+    // or "two weeks from now" - a 7-day horizon meant anything past
+    // that fell out of cache and got falsely reported as fully booked.
     const start = new Date()
-    start.setUTCDate(start.getUTCDate() + 1)
     start.setUTCHours(0, 0, 0, 0)
     const end = new Date(start)
-    end.setUTCDate(end.getUTCDate() + 7)
+    end.setUTCDate(end.getUTCDate() + 14)
 
     const rawSlots = await listAvailableSlots(apiKey, {
       eventTypeId,
@@ -77,6 +79,8 @@ export async function POST(request: NextRequest) {
 
     await writeSlotCache(businessId, 'week', {
       slots, slots_display, timezone: tz, source: 'calcom', scope: 'week',
+      coverage_start_iso: start.toISOString(),
+      coverage_end_iso: end.toISOString(),
     })
 
     return NextResponse.json({ ok: true, count: slots.length })

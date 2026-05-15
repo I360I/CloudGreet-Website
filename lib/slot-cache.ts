@@ -30,8 +30,17 @@ export type SlotCacheValue = {
   timezone: string
   fetched_at: number
   source: 'calcom' | 'local' | 'fallback'
-  /** Cache scope - 'week' for the next-7-days prewarm, or a YYYY-MM-DD date. */
+  /** Cache scope - 'week' for the multi-day prewarm, or a YYYY-MM-DD date. */
   scope: string
+  /**
+   * UTC ISO range the cache actually covers. Without this the reader
+   * has no way to tell "I have data and there's nothing on that day"
+   * apart from "the date is outside what I fetched" - which was the
+   * exact bug that made the agent confidently report "no slots" for
+   * any date past the prewarm horizon.
+   */
+  coverage_start_iso?: string
+  coverage_end_iso?: string
 }
 
 function key(businessId: string, scope: string): string {
