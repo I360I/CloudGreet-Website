@@ -48,12 +48,20 @@ export default function CallsPage() {
   ;(async () => {
    setLoading(true); setError('')
    try {
-    const businessRaw = localStorage.getItem('business')
-    const businessId = businessRaw ? JSON.parse(businessRaw).id : null
-    if (!businessId) throw new Error('Missing business id - please sign in again.')
+    // The server reads business_id from the JWT and IGNORES this
+    // query param (it was the cross-tenant leak vector). We pass a
+    // best-effort id from localStorage just to keep older route
+    // contracts happy, but it isn't required - and we no longer
+    // fail the page when localStorage is empty (e.g. fresh
+    // create-account session that hasn't hydrated it yet).
+    let businessId = ''
+    try {
+     const raw = localStorage.getItem('business')
+     if (raw) businessId = JSON.parse(raw)?.id || ''
+    } catch { /* localStorage disabled or malformed - rely on JWT */ }
 
     const params = new URLSearchParams({
-     businessId,
+     ...(businessId ? { businessId } : {}),
      limit: String(PAGE_SIZE),
      offset: String(page * PAGE_SIZE),
     })
