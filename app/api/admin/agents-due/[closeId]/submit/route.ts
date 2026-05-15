@@ -93,20 +93,23 @@ export async function POST(
         try {
           const { data: closeRow } = await supabaseAdmin
             .from('closes')
-            .select('business_id, lead_id, prospect_phone')
+            .select('business_id, prospect_phone')
             .eq('id', params.closeId)
             .maybeSingle()
           // Resolve a business to propagate to, even if close.business_id
-          // is null (pre-build path): check lead.business_id, then
-          // businesses by phone match. Without this the workshop's
-          // "Mark ready" silently no-ops when admin runs it before the
+          // is null (pre-build path): match a lead by phone, then
+          // businesses by phone. Without this the workshop's "Mark
+          // ready" silently no-ops when admin runs it before the
           // client has accepted the invite.
           let businessId = (closeRow as any)?.business_id as string | null
-          if (!businessId && (closeRow as any)?.lead_id) {
+          if (!businessId && (closeRow as any)?.prospect_phone) {
             const { data: lead } = await supabaseAdmin
               .from('leads')
               .select('business_id')
-              .eq('id', (closeRow as any).lead_id)
+              .eq('phone', (closeRow as any).prospect_phone)
+              .not('business_id', 'is', null)
+              .order('updated_at', { ascending: false })
+              .limit(1)
               .maybeSingle()
             businessId = (lead as any)?.business_id || null
           }

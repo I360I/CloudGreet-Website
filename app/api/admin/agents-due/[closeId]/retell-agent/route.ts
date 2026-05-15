@@ -35,7 +35,7 @@ export async function PUT(
 
   const { data: close, error: closeErr } = await supabaseAdmin
     .from('closes')
-    .select('id, business_id, lead_id, prospect_phone, prospect_business_name')
+    .select('id, business_id, prospect_phone, prospect_business_name')
     .eq('id', params.closeId)
     .maybeSingle()
   if (closeErr || !close) {
@@ -67,19 +67,23 @@ export async function PUT(
   // Try to resolve a business to attach to RIGHT NOW. The chain we
   // search, in order:
   //   1. close.business_id (workshop opened post-conversion)
-  //   2. lead.business_id - rep's lead linked to a business already
-  //   3. businesses by phone match - covers cases where the lead
-  //      lookup failed but a business exists with the same phone
+  //   2. leads.business_id via prospect_phone match (the rep's lead
+  //      got converted; the business is reachable through it)
+  //   3. businesses by phone match (covers cases where the lead
+  //      lookup failed but a business exists with the same phone)
   // If anything matches, do the full wire-up immediately instead of
   // waiting for convertCloseToClient. This is the "if it's in admin,
   // it's connected the moment any account for this contractor is
   // active" expectation.
   let resolvedBusinessId: string | null = (close as any).business_id || null
-  if (!resolvedBusinessId && (close as any).lead_id) {
+  if (!resolvedBusinessId && (close as any).prospect_phone) {
     const { data: lead } = await supabaseAdmin
       .from('leads')
       .select('business_id')
-      .eq('id', (close as any).lead_id)
+      .eq('phone', (close as any).prospect_phone)
+      .not('business_id', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
     resolvedBusinessId = (lead as any)?.business_id || null
   }

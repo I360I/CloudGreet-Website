@@ -108,52 +108,34 @@ export async function POST(
   const businessName = invite.prospect_business_name || 'Unknown'
   let closeId: string | null = null
   let weCreatedTheClose = false
-  if (invite.lead_id) {
-    const { data: existing } = await supabaseAdmin
-      .from('closes')
-      .select('id')
-      .eq('rep_id', invite.rep_id)
-      .eq('lead_id', invite.lead_id)
-      .is('business_id', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if ((existing as any)?.id) {
-      closeId = (existing as any).id
-      // Backfill email on the existing close so convert-close can match.
-      await supabaseAdmin
-        .from('closes')
-        .update({
-          prospect_email: effectiveEmail,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', closeId)
-        .then(undefined, () => null)
-    }
+
+  // Look up an existing unconverted close for this (rep, prospect)
+  // pair so we reuse the close the rep made via "Demo set" and the
+  // admin ran the agent workshop against. closes table doesn't have
+  // a lead_id column, so we match on rep_id + business name (the
+  // prospect's phone is a tighter check when available).
+  let existingCloseQ = supabaseAdmin
+    .from('closes')
+    .select('id')
+    .eq('rep_id', invite.rep_id)
+    .eq('prospect_business_name', businessName)
+    .is('business_id', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+  if (invite.prospect_phone) {
+    existingCloseQ = existingCloseQ.eq('prospect_phone', invite.prospect_phone)
   }
-  // Fall back: also look up by (rep, prospect_business_name) for
-  // closes that were created pre-lead_id-on-close (older paths).
-  if (!closeId) {
-    const { data: existing } = await supabaseAdmin
+  const { data: existingClose } = await existingCloseQ.maybeSingle()
+  if ((existingClose as any)?.id) {
+    closeId = (existingClose as any).id
+    await supabaseAdmin
       .from('closes')
-      .select('id, retell_agent_id')
-      .eq('rep_id', invite.rep_id)
-      .eq('prospect_business_name', businessName)
-      .is('business_id', null)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if ((existing as any)?.id) {
-      closeId = (existing as any).id
-      await supabaseAdmin
-        .from('closes')
-        .update({
-          prospect_email: effectiveEmail,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', closeId)
-        .then(undefined, () => null)
-    }
+      .update({
+        prospect_email: effectiveEmail,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', closeId)
+      .then(undefined, () => null)
   }
 
   // No existing close - create one. This is the cold path (rep never
@@ -163,7 +145,6 @@ export async function POST(
       .from('closes')
       .insert({
         rep_id: invite.rep_id,
-        lead_id: invite.lead_id || null,
         prospect_business_name: businessName,
         prospect_contact_name: invite.prospect_contact_name || null,
         prospect_email: effectiveEmail,
