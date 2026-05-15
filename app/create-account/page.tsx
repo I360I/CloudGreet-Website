@@ -113,6 +113,17 @@ function CreateAccountInner() {
         setSubmitError(prettyError(j?.error) || `Sign-up failed (${r.status})`)
         return
       }
+      // Populate localStorage the way /login does. Dashboard pages read
+      // `business` from localStorage to scope their API calls - without
+      // this, every page after this redirect threw "Missing business id".
+      try {
+        if (j.business?.id) {
+          localStorage.setItem('business', JSON.stringify(j.business))
+        }
+        if (j.user?.id) {
+          localStorage.setItem('user', JSON.stringify(j.user))
+        }
+      } catch { /* localStorage disabled - dashboard will recover via JWT refresh */ }
       // Hard navigate so the new cookie + session-guard fingerprint are
       // picked up cleanly on the dashboard route.
       window.location.href = j.redirect_url || '/dashboard/onboarding'

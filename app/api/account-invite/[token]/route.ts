@@ -99,30 +99,90 @@ export async function POST(
     return NextResponse.json({ error: 'Valid email required' }, { status: 400 })
   }
 
-  // Create the close that anchors this conversion - same shape as the
-  // rep-initiated send-onboarding / create-account flows, but with
-  // $0 pricing (the rep sets pricing later when they send the payment
-  // link).
+  // Reuse a pre-existing close for this (rep, lead) if one exists -
+  // typically the close the rep made via "Demo set" and the admin ran
+  // the agent workshop against. Without this we'd insert a brand-new
+  // close that has none of the workshop's pre-build data
+  // (retell_agent_id, demo_agent_test_phone, website) and the
+  // auto-attach on conversion never fires.
   const businessName = invite.prospect_business_name || 'Unknown'
-  const { data: close, error: closeErr } = await supabaseAdmin
-    .from('closes')
-    .insert({
-      rep_id: invite.rep_id,
-      prospect_business_name: businessName,
-      prospect_contact_name: invite.prospect_contact_name || null,
-      prospect_email: effectiveEmail,
-      prospect_phone: invite.prospect_phone || null,
-      agreed_monthly_cents: 0,
-      agreed_setup_fee_cents: 0,
-      status: 'pending',
-      notes: `Self-serve account via invite ${invite.id}`,
-    })
-    .select('id')
-    .single()
-  if (closeErr || !close) {
-    logger.error('account-invite: close insert failed', { error: closeErr?.message })
-    return NextResponse.json({ error: closeErr?.message || 'Failed to create close' }, { status: 500 })
+  let closeId: string | null = null
+  let weCreatedTheClose = false
+  if (invite.lead_id) {
+    const { data: existing } = await supabaseAdmin
+      .from('closes')
+      .select('id')
+      .eq('rep_id', invite.rep_id)
+      .eq('lead_id', invite.lead_id)
+      .is('business_id', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if ((existing as any)?.id) {
+      closeId = (existing as any).id
+      // Backfill email on the existing close so convert-close can match.
+      await supabaseAdmin
+        .from('closes')
+        .update({
+          prospect_email: effectiveEmail,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', closeId)
+        .then(undefined, () => null)
+    }
   }
+  // Fall back: also look up by (rep, prospect_business_name) for
+  // closes that were created pre-lead_id-on-close (older paths).
+  if (!closeId) {
+    const { data: existing } = await supabaseAdmin
+      .from('closes')
+      .select('id, retell_agent_id')
+      .eq('rep_id', invite.rep_id)
+      .eq('prospect_business_name', businessName)
+      .is('business_id', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if ((existing as any)?.id) {
+      closeId = (existing as any).id
+      await supabaseAdmin
+        .from('closes')
+        .update({
+          prospect_email: effectiveEmail,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', closeId)
+        .then(undefined, () => null)
+    }
+  }
+
+  // No existing close - create one. This is the cold path (rep never
+  // touched the workshop) so there's nothing to preserve.
+  if (!closeId) {
+    const { data: close, error: closeErr } = await supabaseAdmin
+      .from('closes')
+      .insert({
+        rep_id: invite.rep_id,
+        lead_id: invite.lead_id || null,
+        prospect_business_name: businessName,
+        prospect_contact_name: invite.prospect_contact_name || null,
+        prospect_email: effectiveEmail,
+        prospect_phone: invite.prospect_phone || null,
+        agreed_monthly_cents: 0,
+        agreed_setup_fee_cents: 0,
+        status: 'pending',
+        notes: `Self-serve account via invite ${invite.id}`,
+      })
+      .select('id')
+      .single()
+    if (closeErr || !close) {
+      logger.error('account-invite: close insert failed', { error: closeErr?.message })
+      return NextResponse.json({ error: closeErr?.message || 'Failed to create close' }, { status: 500 })
+    }
+    closeId = close.id
+    weCreatedTheClose = true
+  }
+  const close = { id: closeId! }
 
   const convert = await convertCloseToClient({
     closeId: close.id,
@@ -132,8 +192,13 @@ export async function POST(
     last_name: lastName || undefined,
   })
   if (convert.ok === false) {
-    // Roll back the close so the invite can be re-tried.
-    await supabaseAdmin.from('closes').delete().eq('id', close.id)
+    // Only roll back the close if WE created it on this request. If we
+    // reused a workshop close, deleting it would wipe pre-build data
+    // (retell_agent_id, demo_agent_test_phone, website) the admin set
+    // earlier.
+    if (weCreatedTheClose) {
+      await supabaseAdmin.from('closes').delete().eq('id', close.id)
+    }
     return NextResponse.json({ error: convert.error }, { status: convert.status })
   }
   const { business, user } = convert.data
