@@ -968,11 +968,12 @@ export function Dialer() {
                     <button
                       type="button"
                       onClick={() => setPickerOpen(true)}
-                      className="mt-3 mx-auto flex items-center gap-1 text-[10px] font-mono text-gray-500 hover:text-gray-900 transition-colors"
+                      className="mt-3 mx-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300 transition-colors"
                       title="Switch which number you call from"
                     >
-                      from · <span className="text-gray-700">{fromNumberRef.current}</span>
-                      <CaretDown weight="bold" className="w-2.5 h-2.5" />
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">from</span>
+                      <span className="text-sm font-medium text-gray-900 tabular-nums">{formatFromNumber(fromNumberRef.current)}</span>
+                      <CaretDown weight="bold" className="w-3 h-3 text-gray-500" />
                     </button>
                   )}
                 </>
@@ -1042,6 +1043,22 @@ function SessionPill({ status }: { status: SessionStatus }) {
 // US-shaped E.164 normalization. Mirrors lib/scrapers/normalize.ts so
 // the dialer accepts whatever's stored on the lead row without UX
 // friction. Returns null for inputs we can't reasonably interpret.
+/**
+ * Format an E.164 number to "(214) 555-1234" so the rep can read at a
+ * glance which line they're dialing from. Falls back to raw input for
+ * anything that doesn't parse as US.
+ */
+function formatFromNumber(raw: string): string {
+  const digits = String(raw).replace(/[^0-9]/g, '')
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+  }
+  return raw
+}
+
 function e164(raw: string): string | null {
   if (!raw) return null
   const digits = String(raw).replace(/[^0-9]/g, '')
