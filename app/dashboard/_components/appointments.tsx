@@ -18,6 +18,8 @@ export type MonthDay = {
   start_time: string
   end_time: string
   status: string
+  /** Flagged by the AI agent (or detected via Cal.com emergency event type). */
+  is_emergency?: boolean
  }>
 }
 
@@ -133,12 +135,23 @@ export function MonthGrid({
           <div
            key={a.id}
            onClick={(e) => { e.stopPropagation(); onPickAppt(a.id) }}
-           className="group/chip flex items-center gap-1.5 bg-sky-50 hover:bg-sky-100 border-l-2 border-sky-400 rounded-r-md pl-1.5 pr-1 py-0.5 transition-all duration-200 overflow-hidden"
+           className={`group/chip flex items-center gap-1.5 rounded-r-md pl-1.5 pr-1 py-0.5 transition-all duration-200 overflow-hidden border-l-2 ${
+            a.is_emergency
+             ? 'bg-rose-50 hover:bg-rose-100 border-rose-500'
+             : 'bg-sky-50 hover:bg-sky-100 border-sky-400'
+           }`}
           >
-           <span className="text-[10px] font-medium text-sky-900 truncate flex-1 min-w-0 leading-tight">
+           {a.is_emergency && (
+            <span className="text-[9px] flex-shrink-0" aria-label="emergency">🚨</span>
+           )}
+           <span className={`text-[10px] font-medium truncate flex-1 min-w-0 leading-tight ${
+            a.is_emergency ? 'text-rose-900' : 'text-sky-900'
+           }`}>
             {a.customer_name}
            </span>
-           <span className="text-[9px] font-mono tabular-nums text-sky-600 flex-shrink-0">
+           <span className={`text-[9px] font-mono tabular-nums flex-shrink-0 ${
+            a.is_emergency ? 'text-rose-600' : 'text-sky-600'
+           }`}>
             {fmtTime(a.start_time)}
            </span>
           </div>
@@ -436,6 +449,7 @@ export type AppointmentDetail = {
  notes: string | null
  google_calendar_event_id: string | null
  created_at: string
+ is_emergency?: boolean
 }
 
 const STATUS_TONE: Record<string, { dot: string; text: string; label: string }> = {
@@ -566,6 +580,11 @@ export function AppointmentDrawer({
        <div className="flex items-center gap-2 mb-2">
         <span className={`w-2 h-2 rounded-full ${tone.dot}`} />
         <span className={`text-xs font-medium ${tone.text}`}>{tone.label}</span>
+        {appt.is_emergency && (
+         <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 border border-rose-200 text-[10px] font-medium text-rose-700 uppercase tracking-wider">
+          <span aria-hidden>🚨</span> Emergency
+         </span>
+        )}
        </div>
        <div className="text-2xl font-medium text-gray-900">{appt.customer_name}</div>
        <div className="text-sm text-gray-500 mt-1 font-mono">

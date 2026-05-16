@@ -161,6 +161,7 @@ function SettingsGroups({
    subtitle: 'Where calls land and where bookings go.',
    rows: [
     { key: 'calcom', label: 'Cal.com calendar', subtitle: 'Connect, change event type, re-sync.', icon: CalendarBlank, render: () => <CalendarConnectionSection /> },
+    { key: 'emergency_event', label: 'Emergency event type', subtitle: 'Pick a Cal.com event type for urgent bookings.', icon: CalendarBlank, render: () => <EmergencyEventTypeSection /> },
     { key: 'forwarding', label: 'Call forwarding', subtitle: 'How your existing line points to CloudGreet.', icon: Phone, render: () => <ForwardingSection profile={profile} onSaved={reload} /> },
    ],
   },
@@ -2163,6 +2164,167 @@ function CalcomConnectForm({ onDone, onCancel }: { onDone: () => void; onCancel:
  * Initial setup happens in the onboarding wizard - this section is the
  * persistent home for those instructions afterwards.
  */
+
+/* ----------------- EMERGENCY EVENT TYPE ----------------- */
+/**
+ * Lets the contractor designate one of their Cal.com event types as
+ * the emergency dispatch type. When set, bookings the AI flags with
+ * is_emergency=true land on this event type instead of the primary -
+ * so emergencies can have their own colour / availability / reminders
+ * in Cal.com. When unset, emergencies fall through to the primary.
+ */
+function EmergencyEventTypeSection() {
+ const [loading, setLoading] = useState(true)
+ const [saving, setSaving] = useState(false)
+ const [primaryId, setPrimaryId] = useState<number | null>(null)
+ const [emergencyId, setEmergencyId] = useState<number | null>(null)
+ const [eventTypes, setEventTypes] = useState<Array<{ id: number; title: string; slug: string; lengthInMinutes: number | null }>>([])
+ const [error, setError] = useState<string | null>(null)
+ const [flash, setFlash] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
+
+ const load = async () => {
+  setLoading(true); setError(null)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/calcom/event-type')
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setError(j?.error || 'Could not load event types')
+    return
+   }
+   setPrimaryId(j.primary_event_type_id)
+   setEmergencyId(j.emergency_event_type_id)
+   setEventTypes(j.event_types || [])
+  } finally {
+   setLoading(false)
+  }
+ }
+ useEffect(() => { load() }, [])
+
+ const save = async (newId: number | null) => {
+  setSaving(true); setFlash(null)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/calcom/event-type', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ emergency_event_type_id: newId }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setFlash({ tone: 'err', text: j?.error || 'Save failed' })
+   } else {
+    setEmergencyId(newId)
+    setFlash({ tone: 'ok', text: newId ? 'Emergency event type saved' : 'Emergency event type cleared' })
+   }
+  } finally {
+   setSaving(false)
+   setTimeout(() => setFlash(null), 4000)
+  }
+ }
+
+ if (loading) {
+  return (
+   <div className="bg-white border border-gray-200 rounded-2xl p-6">
+    <div className="flex items-center gap-2 text-gray-500 text-sm">
+     <CircleNotch className="w-4 h-4 animate-spin" /> Loading event types…
+    </div>
+   </div>
+  )
+ }
+ if (error) {
+  return (
+   <div className="bg-white border border-gray-200 rounded-2xl p-6">
+    <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-3">
+     {error}
+    </div>
+    <p className="text-xs text-gray-500 mt-3">Connect Cal.com first under the Cal.com calendar section above.</p>
+   </div>
+  )
+ }
+
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl p-6">
+   <div className="mb-4">
+    <h2 className="text-lg font-medium text-gray-900">Emergency event type</h2>
+    <p className="text-sm text-gray-500 mt-1">
+     Pick which Cal.com event type emergency bookings land on. The AI flags a call as urgent (gas leak, no AC with kids, flooding, sparks, etc.) and the booking goes to this event type so you can give it its own colour, availability rules, and reminders in Cal.com.
+    </p>
+    <p className="text-[11px] text-gray-400 mt-1">
+     Leave blank to send emergencies to your primary event type.
+    </p>
+   </div>
+
+   <div className="space-y-2">
+    <button
+     type="button"
+     onClick={() => save(null)}
+     disabled={saving || emergencyId === null}
+     className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+      emergencyId === null
+       ? 'border-rose-300 bg-rose-50/60 text-rose-900'
+       : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+     } disabled:opacity-60`}
+    >
+     <div className="flex items-center justify-between gap-3">
+      <div>
+       <div className="font-medium">None — use primary for emergencies</div>
+       <div className="text-[11px] text-gray-500 mt-0.5">Emergencies fall through to your primary event type.</div>
+      </div>
+      {emergencyId === null && <span className="text-[10px] font-mono uppercase tracking-wider text-rose-600">selected</span>}
+     </div>
+    </button>
+
+    {eventTypes.map((t) => {
+     const isPrimary = t.id === primaryId
+     const isEmergency = t.id === emergencyId
+     return (
+      <button
+       key={t.id}
+       type="button"
+       onClick={() => save(t.id)}
+       disabled={saving || isPrimary || isEmergency}
+       className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+        isEmergency
+         ? 'border-rose-400 bg-rose-50 text-rose-900'
+         : isPrimary
+          ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+          : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+       } disabled:opacity-${isPrimary ? '100' : '60'}`}
+       title={isPrimary ? 'Already your primary event type - pick a different one for emergencies.' : undefined}
+      >
+       <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+         <div className="font-medium truncate">{t.title}</div>
+         <div className="text-[11px] text-gray-500 mt-0.5 font-mono truncate">
+          {t.slug}{t.lengthInMinutes ? ` · ${t.lengthInMinutes} min` : ''}
+         </div>
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+         {isPrimary && <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400">primary</span>}
+         {isEmergency && <span className="text-[10px] font-mono uppercase tracking-wider text-rose-600">🚨 emergency</span>}
+        </div>
+       </div>
+      </button>
+     )
+    })}
+   </div>
+
+   {flash && (
+    <div className={`mt-3 text-xs px-3 py-2 rounded-lg ${
+     flash.tone === 'ok'
+      ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+      : 'bg-rose-50 border border-rose-200 text-rose-800'
+    }`}>
+     {flash.text}
+    </div>
+   )}
+
+   <p className="text-[11px] text-gray-400 mt-4">
+    Don&apos;t see the event type you want? Create it in Cal.com first (suggestions: shorter buffer time, more aggressive reminders, distinct colour), then refresh this page.
+   </p>
+  </div>
+ )
+}
+
 function ForwardingSection({ profile, onSaved }: { profile: Profile; onSaved: () => void }) {
  const [retellNumber, setRetellNumber] = useState<string | null>(null)
  const [editing, setEditing] = useState(false)

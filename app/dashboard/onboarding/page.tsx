@@ -238,6 +238,11 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  const [error, setError] = useState('')
  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
  const [success, setSuccess] = useState<{ username: string | null; eventTypeTitle: string } | null>(null)
+ // Emergency event type picker - optional, only shown after primary
+ // is set AND the contractor has more than one event type in Cal.com.
+ const [emergencyEventTypeId, setEmergencyEventTypeId] = useState<number | null>(null)
+ const [emergencySaving, setEmergencySaving] = useState(false)
+ const [emergencyErr, setEmergencyErr] = useState('')
 
  // Inline event-type customization: lets the contractor (or rep during
  // the demo) rename the event and lock its meeting location BEFORE
@@ -557,6 +562,86 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
        <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
        <div>Connected as <strong>{success.username || 'Cal.com user'}</strong> · event: {success.eventTypeTitle}</div>
       </div>
+
+      {/* Optional: pick an emergency event type from the contractor's
+          other Cal.com event types. Only shown when they have more
+          than one - otherwise this slot stays hidden to keep the
+          flow short. */}
+      {eventTypeOptions && eventTypeOptions.filter((et) => et.id !== eventTypeId).length > 0 && (
+       <div className="border-t border-emerald-200 pt-3">
+        <div className="text-sm font-medium text-gray-900 mb-1">Emergency dispatch event type <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 ml-1">optional</span></div>
+        <div className="text-xs text-gray-600 mb-3">
+         When the AI flags a call as a true emergency (gas leak, no AC with kids, flooding), the booking lands on this event type instead of your primary - so emergencies can have their own colour, availability, and reminders in Cal.com.
+        </div>
+        <div className="space-y-1.5">
+         {eventTypeOptions
+          .filter((et) => et.id !== eventTypeId)
+          .map((et) => (
+           <button
+            key={et.id}
+            type="button"
+            onClick={async () => {
+             setEmergencySaving(true); setEmergencyErr('')
+             try {
+              const r = await fetchWithAuth('/api/dashboard/calcom/event-type', {
+               method: 'POST',
+               headers: { 'content-type': 'application/json' },
+               body: JSON.stringify({ emergency_event_type_id: et.id }),
+              })
+              const j = await r.json().catch(() => ({}))
+              if (!r.ok || !j?.success) {
+               setEmergencyErr(j?.error || `Save failed (${r.status})`)
+              } else {
+               setEmergencyEventTypeId(et.id)
+              }
+             } finally {
+              setEmergencySaving(false)
+             }
+            }}
+            disabled={emergencySaving}
+            className={`w-full text-left px-3 py-2 rounded-lg border text-xs font-mono transition-colors ${
+             emergencyEventTypeId === et.id
+              ? 'border-rose-400 bg-rose-50 text-rose-900'
+              : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+            } disabled:opacity-60`}
+           >
+            <div className="flex items-center justify-between gap-3">
+             <div className="min-w-0">
+              <div className="text-sm font-medium truncate">{et.title}</div>
+              <div className="text-[11px] text-gray-500 mt-0.5">{et.slug} · {et.lengthInMinutes} min</div>
+             </div>
+             {emergencyEventTypeId === et.id && (
+              <span className="text-[10px] font-mono uppercase tracking-wider text-rose-600 flex-shrink-0">🚨 emergency</span>
+             )}
+            </div>
+           </button>
+          ))}
+         {emergencyEventTypeId && (
+          <button
+           type="button"
+           onClick={async () => {
+            setEmergencySaving(true); setEmergencyErr('')
+            try {
+             await fetchWithAuth('/api/dashboard/calcom/event-type', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ emergency_event_type_id: null }),
+             })
+             setEmergencyEventTypeId(null)
+            } finally {
+             setEmergencySaving(false)
+            }
+           }}
+           disabled={emergencySaving}
+           className="text-[11px] text-gray-500 hover:text-gray-900 underline-offset-2 hover:underline"
+          >
+           Clear emergency type — use primary for emergencies
+          </button>
+         )}
+        </div>
+        {emergencyErr && <div className="mt-2 text-xs text-rose-700">{emergencyErr}</div>}
+       </div>
+      )}
 
       <div className="border-t border-emerald-200 pt-3">
        <div className="text-sm font-medium text-gray-900 mb-1">Where should we text booking alerts?</div>

@@ -24,6 +24,7 @@ type Appt = {
  id: string; customer_name: string; customer_phone: string | null
  service_type: string | null; scheduled_date: string; start_time: string | null
  status: string | null; notes: string | null
+ is_emergency?: boolean
 }
 type Overview = {
  business: { id: string; business_name: string }
@@ -384,14 +385,21 @@ export default function DashboardPage() {
          ) : (
           <ul className="divide-y divide-gray-100">
            {displayData.upcomingAppointments.map((a) => (
-            <li key={a.id} className="px-6 py-3.5 flex items-start gap-3">
-             <div className="w-2 h-2 rounded-full mt-2 flex-shrink-0 bg-sky-500" />
+            <li key={a.id} className={`px-6 py-3.5 flex items-start gap-3 ${a.is_emergency ? 'bg-rose-50/40' : ''}`}>
+             <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${a.is_emergency ? 'bg-rose-500' : 'bg-sky-500'}`} />
              <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-2">
-               <span className="text-sm font-medium text-gray-900 truncate">{a.customer_name}</span>
+               <div className="flex items-center gap-1.5 min-w-0">
+                {a.is_emergency && (
+                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-100 text-[10px] font-medium text-rose-700 uppercase tracking-wider flex-shrink-0" aria-label="emergency">
+                  🚨 Urgent
+                 </span>
+                )}
+                <span className={`text-sm font-medium truncate ${a.is_emergency ? 'text-rose-900' : 'text-gray-900'}`}>{a.customer_name}</span>
+               </div>
                <span className="text-xs text-gray-400 flex-shrink-0">{fmtDateTime(a.scheduled_date)}</span>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5 truncate">
+              <p className={`text-xs mt-0.5 truncate ${a.is_emergency ? 'text-rose-700/80' : 'text-gray-500'}`}>
                {a.service_type || 'Booking'}{a.notes ? ` · ${a.notes}` : ''}
               </p>
              </div>

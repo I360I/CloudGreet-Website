@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   const { data: business } = await supabaseAdmin
    .from('businesses')
-   .select('id, business_name, cal_com_api_key, calcom_connected')
+   .select('id, business_name, cal_com_api_key, calcom_connected, cal_com_event_type_id_emergency')
    .eq('id', businessId)
    .maybeSingle()
 
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
   const todayIso = startOfDay.toISOString().split('T')[0]
   const { data: localAppts } = await supabaseAdmin
    .from('appointments')
-   .select('id, customer_name, customer_phone, service_type, scheduled_date, start_time, status, notes, cal_com_booking_uid')
+   .select('id, customer_name, customer_phone, service_type, scheduled_date, start_time, status, notes, cal_com_booking_uid, is_emergency')
    .eq('business_id', businessId)
    .eq('scheduled_date', todayIso)
    .order('start_time', { ascending: true })
@@ -167,12 +167,18 @@ export async function GET(request: NextRequest) {
      afterStart: startOfDay.toISOString(),
      beforeEnd: endOfDay.toISOString(),
     })
+    // Infer emergency from the event type id when we have an
+    // emergency type configured. Manual Cal.com bookings (no
+    // is_emergency flag because they didn't go through our agent)
+    // still get the badge when they land on the emergency event type.
+    const emergencyEtId = (business as any)?.cal_com_event_type_id_emergency || null
     for (const b of live) {
      if (!b?.uid || localUids.has(b.uid)) continue
      if (b.status && /(cancel|reject)/i.test(b.status)) continue
      const start = new Date(b.start)
      if (isNaN(start.getTime())) continue
      const attendee = b.attendees?.[0]
+     const liveEventTypeId = (b as any)?.eventType?.id || (b as any)?.eventTypeId || null
      apptList.push({
       id: `cal:${b.uid}`,
       customer_name: attendee?.name || b.title || 'Cal.com booking',
@@ -182,6 +188,7 @@ export async function GET(request: NextRequest) {
       start_time: start.toISOString(),
       status: b.status || 'confirmed',
       notes: null,
+      is_emergency: !!(emergencyEtId && liveEventTypeId && Number(liveEventTypeId) === Number(emergencyEtId)),
      })
     }
     apptList.sort((a, b) => String(a.start_time).localeCompare(String(b.start_time)))

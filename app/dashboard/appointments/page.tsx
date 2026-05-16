@@ -119,14 +119,15 @@ export default function AppointmentsPage() {
  // (Today / Tomorrow / Wed May 14) plus a list of bookings under it.
  // Cap to 8 events total so the rail stays one viewport tall.
  const upcomingGroups = useMemo(() => {
-  if (!displayMonthDays) return [] as Array<{ date: string; label: string; items: Array<{ id: string; start: string; customer: string; service: string }> }>
+  if (!displayMonthDays) return [] as Array<{ date: string; label: string; items: Array<{ id: string; start: string; customer: string; service: string; isEmergency: boolean }> }>
   const now = Date.now()
-  const all: Array<{ id: string; date: string; start: string; customer: string; service: string }> = []
+  const all: Array<{ id: string; date: string; start: string; customer: string; service: string; isEmergency: boolean }> = []
   for (const day of displayMonthDays) {
    for (const a of day.appointments) {
     all.push({
      id: a.id, date: day.date, start: a.start_time,
      customer: a.customer_name, service: a.service_type,
+     isEmergency: !!a.is_emergency,
     })
    }
   }
@@ -142,10 +143,10 @@ export default function AppointmentsPage() {
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowIso = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
 
-  const groupsMap = new Map<string, Array<{ id: string; start: string; customer: string; service: string }>>()
+  const groupsMap = new Map<string, Array<{ id: string; start: string; customer: string; service: string; isEmergency: boolean }>>()
   for (const a of sorted) {
    const list = groupsMap.get(a.date) || []
-   list.push({ id: a.id, start: a.start, customer: a.customer, service: a.service })
+   list.push({ id: a.id, start: a.start, customer: a.customer, service: a.service, isEmergency: a.isEmergency })
    groupsMap.set(a.date, list)
   }
   return Array.from(groupsMap.entries()).map(([date, items]) => {
@@ -258,22 +259,33 @@ export default function AppointmentsPage() {
               >
                <button
                 onClick={() => setOpenApptId(a.id)}
-                className="w-full text-left px-5 py-2.5 hover:bg-sky-50/40 transition-colors flex items-center gap-3 group"
+                className={`w-full text-left px-5 py-2.5 transition-colors flex items-center gap-3 group ${
+                 a.is_emergency ? 'bg-rose-50/40 hover:bg-rose-50/70' : 'hover:bg-sky-50/40'
+                }`}
                >
                 <div className="w-12 flex-shrink-0 text-right">
-                 <div className="text-sm font-mono font-medium text-sky-700 leading-none">
+                 <div className={`text-sm font-mono font-medium leading-none ${a.is_emergency ? 'text-rose-700' : 'text-sky-700'}`}>
                   {fmtTime(a.start_time).replace(/\s.*/, '')}
                  </div>
-                 <div className="text-[9px] uppercase tracking-wider text-sky-400 mt-0.5">
+                 <div className={`text-[9px] uppercase tracking-wider mt-0.5 ${a.is_emergency ? 'text-rose-400' : 'text-sky-400'}`}>
                   {fmtTime(a.start_time).split(' ')[1]}
                  </div>
                 </div>
-                <div className="w-px h-7 bg-gray-200 flex-shrink-0" />
+                <div className={`w-px h-7 flex-shrink-0 ${a.is_emergency ? 'bg-rose-200' : 'bg-gray-200'}`} />
                 <div className="flex-1 min-w-0">
-                 <div className="text-sm font-medium text-gray-900 truncate leading-tight">{a.customer_name}</div>
-                 <div className="text-xs text-gray-500 truncate mt-0.5">{a.service_type || 'Service TBD'}</div>
+                 <div className="flex items-center gap-1.5 min-w-0">
+                  {a.is_emergency && (
+                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-rose-100 text-[9px] font-medium text-rose-700 uppercase tracking-wider flex-shrink-0" aria-label="emergency">
+                    🚨 Urgent
+                   </span>
+                  )}
+                  <div className={`text-sm font-medium truncate leading-tight ${a.is_emergency ? 'text-rose-900' : 'text-gray-900'}`}>{a.customer_name}</div>
+                 </div>
+                 <div className={`text-xs truncate mt-0.5 ${a.is_emergency ? 'text-rose-700/80' : 'text-gray-500'}`}>{a.service_type || 'Service TBD'}</div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0" />
+                <ArrowRight className={`w-4 h-4 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0 ${
+                 a.is_emergency ? 'text-rose-300 group-hover:text-rose-500' : 'text-gray-300 group-hover:text-sky-500'
+                }`} />
                </button>
               </motion.li>
              ))}
@@ -338,22 +350,33 @@ export default function AppointmentsPage() {
                  >
                   <button
                    onClick={() => setOpenApptId(a.id)}
-                   className="w-full text-left px-5 py-2.5 hover:bg-sky-50/40 transition-colors flex items-center gap-3 group"
+                   className={`w-full text-left px-5 py-2.5 transition-colors flex items-center gap-3 group ${
+                    a.isEmergency ? 'bg-rose-50/40 hover:bg-rose-50/70' : 'hover:bg-sky-50/40'
+                   }`}
                   >
                    <div className="w-12 flex-shrink-0 text-right">
-                    <div className="text-sm font-mono font-medium text-sky-700 leading-none">
+                    <div className={`text-sm font-mono font-medium leading-none ${a.isEmergency ? 'text-rose-700' : 'text-sky-700'}`}>
                      {fmtTime(a.start).replace(/\s.*/, '')}
                     </div>
-                    <div className="text-[9px] uppercase tracking-wider text-sky-400 mt-0.5">
+                    <div className={`text-[9px] uppercase tracking-wider mt-0.5 ${a.isEmergency ? 'text-rose-400' : 'text-sky-400'}`}>
                      {fmtTime(a.start).split(' ')[1]}
                     </div>
                    </div>
-                   <div className="w-px h-7 bg-gray-200 flex-shrink-0" />
+                   <div className={`w-px h-7 flex-shrink-0 ${a.isEmergency ? 'bg-rose-200' : 'bg-gray-200'}`} />
                    <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate leading-tight">{a.customer}</div>
-                    <div className="text-xs text-gray-500 truncate mt-0.5">{a.service || 'Service TBD'}</div>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                     {a.isEmergency && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-rose-100 text-[9px] font-medium text-rose-700 uppercase tracking-wider flex-shrink-0" aria-label="emergency">
+                       🚨 Urgent
+                      </span>
+                     )}
+                     <div className={`text-sm font-medium truncate leading-tight ${a.isEmergency ? 'text-rose-900' : 'text-gray-900'}`}>{a.customer}</div>
+                    </div>
+                    <div className={`text-xs truncate mt-0.5 ${a.isEmergency ? 'text-rose-700/80' : 'text-gray-500'}`}>{a.service || 'Service TBD'}</div>
                    </div>
-                   <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-sky-500 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0" />
+                   <ArrowRight className={`w-4 h-4 group-hover:translate-x-0.5 transition-all duration-200 flex-shrink-0 ${
+                    a.isEmergency ? 'text-rose-300 group-hover:text-rose-500' : 'text-gray-300 group-hover:text-sky-500'
+                   }`} />
                   </button>
                  </motion.li>
                 ))}

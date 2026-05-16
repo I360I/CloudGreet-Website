@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
  // so we can pull live bookings if the webhook missed any).
  const { data: business } = await supabaseAdmin
  .from('businesses')
- .select('services, cal_com_api_key, timezone, calcom_connected')
+ .select('services, cal_com_api_key, timezone, calcom_connected, cal_com_event_type_id_emergency')
  .eq('id', businessId)
  .single()
 
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
  // Fetch local appointments for the week.
  const { data: localRows, error: appointmentsError } = await supabaseAdmin
  .from('appointments')
- .select('id, scheduled_date, start_time, end_time, customer_name, service_type, status, cal_com_booking_uid')
+ .select('id, scheduled_date, start_time, end_time, customer_name, service_type, status, cal_com_booking_uid, is_emergency')
  .eq('business_id', businessId)
  .gte('scheduled_date', startDate.toISOString().split('T')[0])
  .lte('scheduled_date', endDate.toISOString().split('T')[0])
@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
   customer_name: string | null
   service_type: string | null
   status: string | null
+  is_emergency: boolean
  }> = (localRows || []).map((r) => ({
   id: r.id,
   scheduled_date: r.scheduled_date,
@@ -104,6 +105,7 @@ export async function GET(request: NextRequest) {
   customer_name: r.customer_name,
   service_type: r.service_type,
   status: r.status,
+  is_emergency: !!(r as any).is_emergency,
  }))
 
  // Merge in any live Cal.com bookings the webhook didn't sync. This
@@ -124,12 +126,17 @@ export async function GET(request: NextRequest) {
     afterStart: startDate.toISOString(),
     beforeEnd: endDate.toISOString(),
    })
+   // Same emergency inference as overview - any live booking landing
+   // on the emergency event type gets the badge even if it didn't
+   // originate from our agent.
+   const emergencyEtId = (business as any)?.cal_com_event_type_id_emergency || null
    for (const b of live) {
     if (!b?.uid || localUids.has(b.uid)) continue
     if (b.status && /(cancel|reject)/i.test(b.status)) continue
     const start = new Date(b.start)
     if (isNaN(start.getTime())) continue
     const attendee = b.attendees?.[0]
+    const liveEventTypeId = (b as any)?.eventType?.id || (b as any)?.eventTypeId || null
     appointments.push({
      id: `cal:${b.uid}`,
      scheduled_date: start.toISOString().split('T')[0],
@@ -138,6 +145,7 @@ export async function GET(request: NextRequest) {
      customer_name: attendee?.name || b.title || 'Cal.com booking',
      service_type: b.eventType?.title || b.title || 'General',
      status: b.status || 'confirmed',
+     is_emergency: !!(emergencyEtId && liveEventTypeId && Number(liveEventTypeId) === Number(emergencyEtId)),
     })
    }
    appointments.sort((a, b) => a.start_time.localeCompare(b.start_time))
@@ -160,6 +168,7 @@ export async function GET(request: NextRequest) {
  time: string
  customer: string
  serviceType: string
+ isEmergency: boolean
  }>
  count: number
  }>()
@@ -198,7 +207,8 @@ export async function GET(request: NextRequest) {
  id: apt.id,
  time: timeStr,
  customer: apt.customer_name,
- serviceType: apt.service_type || 'General'
+ serviceType: apt.service_type || 'General',
+ isEmergency: !!apt.is_emergency,
  })
  dayData.count = dayData.appointments.length
  }
