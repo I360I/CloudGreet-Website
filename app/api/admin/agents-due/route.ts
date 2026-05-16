@@ -34,23 +34,41 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request)
   if (!auth.success) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // ?view=archived returns rows the admin has archived (moved out of
+  // the active queue). Default is the live workspace - everything
+  // unarchived. Archive is a soft-delete; deleting from the archive
+  // drops only the close row, not the linked business.
+  const url = new URL(request.url)
+  const view = url.searchParams.get('view') === 'archived' ? 'archived' : 'active'
+
   try {
-    // Surface two kinds of rows:
-    //   (a) closes with a business attached (paid clients waiting for agent build)
-    //   (b) closes with demo_scheduled_at set (rep flagged "demo set" so admin
-    //       can build the agent before the demo call - business may not exist yet)
-    // .or() builds: business_id NOT NULL OR demo_scheduled_at NOT NULL.
-    const { data: closes, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('closes')
       .select(
-        'id, rep_id, business_id, prospect_business_name, prospect_contact_name, prospect_email, prospect_phone, status, demo_scheduled_at, demo_agent_status, demo_agent_test_phone, demo_agent_built_at, demo_agent_notes, agent_draft_status, agent_draft_generated_at, created_at, updated_at',
+        'id, rep_id, business_id, prospect_business_name, prospect_contact_name, prospect_email, prospect_phone, status, demo_scheduled_at, demo_agent_status, demo_agent_test_phone, demo_agent_built_at, demo_agent_notes, agent_draft_status, agent_draft_generated_at, workshop_archived_at, created_at, updated_at',
       )
+      // Surface two kinds of rows:
+      //   (a) closes with a business attached
+      //   (b) closes with demo_scheduled_at set (pre-build path)
       .or('business_id.not.is.null,demo_scheduled_at.not.is.null')
-      .neq('demo_agent_status', 'ready')
-      .neq('demo_agent_status', 'skipped')
-      .order('demo_scheduled_at', { ascending: true, nullsFirst: false })
-      .order('created_at', { ascending: false })
-      .limit(200)
+
+    if (view === 'archived') {
+      query = query
+        .not('workshop_archived_at', 'is', null)
+        .order('workshop_archived_at', { ascending: false })
+    } else {
+      query = query
+        .is('workshop_archived_at', null)
+        // Hide ready / skipped rows in the active queue - they're done
+        // and just add noise. Admin moves them to the archive
+        // explicitly to keep a record (and then optionally deletes).
+        .neq('demo_agent_status', 'ready')
+        .neq('demo_agent_status', 'skipped')
+        .order('demo_scheduled_at', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: false })
+    }
+
+    const { data: closes, error } = await query.limit(200)
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
@@ -129,6 +147,7 @@ export async function GET(request: NextRequest) {
         close_id: r.id,
         created_at: r.created_at,
         updated_at: r.updated_at,
+        archived_at: (r as any).workshop_archived_at || null,
         agent_draft: {
           status: (r as any).agent_draft_status || 'none',
           generated_at: (r as any).agent_draft_generated_at || null,
@@ -168,7 +187,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ success: true, items })
+    return NextResponse.json({ success: true, view, items })
   } catch (e) {
     logger.error('admin agents-due failed', {
       error: e instanceof Error ? e.message : 'Unknown',

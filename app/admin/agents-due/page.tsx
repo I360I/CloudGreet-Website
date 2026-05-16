@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { CircleNotch, Clock, Calendar, ArrowSquareOut, Robot } from '@phosphor-icons/react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { CircleNotch, Clock, Calendar, ArrowSquareOut, Robot, Archive, ArrowUUpLeft, Trash } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
@@ -20,6 +21,7 @@ type Item = {
   close_id: string
   created_at: string
   updated_at: string
+  archived_at: string | null
   demo: {
     scheduled_at: string | null
     status: 'pending' | 'building' | 'ready' | 'skipped'
@@ -54,10 +56,15 @@ export default function AgentsDuePage() {
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [view, setView] = useState<'active' | 'archived'>('active')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [busy, setBusy] = useState(false)
 
-  const reload = async () => {
+  const reload = async (nextView: 'active' | 'archived' = view) => {
+    setLoading(true)
+    setError('')
     try {
-      const r = await fetchWithAuth('/api/admin/agents-due')
+      const r = await fetchWithAuth(`/api/admin/agents-due?view=${nextView}`)
       const j = await r.json().catch(() => ({}))
       if (j?.success) setItems(j.items || [])
       else setError(j?.error || 'Could not load')
@@ -66,7 +73,43 @@ export default function AgentsDuePage() {
     }
   }
 
-  useEffect(() => { reload() }, [])
+  useEffect(() => { reload(view) /* eslint-disable-next-line */ }, [view])
+
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  const clearSelected = () => setSelected(new Set())
+
+  const bulk = async (action: 'archive' | 'unarchive' | 'delete') => {
+    if (selected.size === 0) return
+    if (action === 'delete') {
+      if (!confirm(`Delete ${selected.size} archived workshop${selected.size === 1 ? '' : 's'}? Only the close row is removed - the client account, calls, and agent stay intact.`)) return
+    }
+    setBusy(true)
+    try {
+      const ids = Array.from(selected)
+      const r = await fetchWithAuth('/api/admin/agents-due/bulk', {
+        method: 'POST',
+        body: JSON.stringify({ action, close_ids: ids }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setError(j?.error || `Bulk ${action} failed (${r.status})`)
+      } else {
+        clearSelected()
+        await reload(view)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   // Sort: pending/building first (newest at top), then ready, then
   // skipped. Within each status group, newest-created at the top so
@@ -101,10 +144,26 @@ export default function AgentsDuePage() {
             </p>
           </div>
           <div className="text-xs text-gray-500 font-mono tabular-nums">
-            {sorted.filter((i) => i.demo.status !== 'ready' && i.demo.status !== 'skipped').length} open
-            <span className="text-gray-700"> · </span>
-            {sorted.length} total
+            {sorted.length} {view === 'archived' ? 'archived' : 'in queue'}
           </div>
+        </div>
+
+        {/* View tabs */}
+        <div className="mb-3 flex items-center gap-1 text-[11px] font-mono uppercase tracking-[0.18em]">
+          {(['active', 'archived'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => { if (v !== view) { clearSelected(); setView(v) } }}
+              className={
+                v === view
+                  ? 'px-3 py-1.5 rounded-lg bg-white/10 text-white'
+                  : 'px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+              }
+            >
+              {v === 'active' ? 'Active' : 'Archive'}
+            </button>
+          ))}
         </div>
 
         {error && (
@@ -113,6 +172,68 @@ export default function AgentsDuePage() {
           </div>
         )}
 
+        {/* Bulk action bar - appears when any row is selected. Mirrors
+            the rep leads list pattern so admins use the same muscle
+            memory. */}
+        <AnimatePresence>
+          {selected.size > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="mb-3 px-3 py-2 bg-fuchsia-500/[0.08] border border-fuchsia-500/20 rounded-xl flex items-center gap-3 flex-wrap"
+            >
+              <span className="text-sm font-medium text-fuchsia-200 inline-flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-fuchsia-500 text-white rounded-full text-[10px] font-mono tabular-nums">{selected.size}</span>
+                selected
+              </span>
+              <button
+                onClick={() => {
+                  if (selected.size === sorted.length) clearSelected()
+                  else setSelected(new Set(sorted.map((s) => s.close_id)))
+                }}
+                className="text-xs text-fuchsia-200/80 hover:text-fuchsia-100 underline-offset-2 hover:underline"
+              >
+                {selected.size === sorted.length ? 'Deselect all' : `Select all ${sorted.length}`}
+              </button>
+              <div className="flex-1" />
+              {view === 'active' ? (
+                <button
+                  onClick={() => bulk('archive')}
+                  disabled={busy}
+                  className="inline-flex items-center gap-1.5 text-xs text-fuchsia-100 bg-fuchsia-500/20 border border-fuchsia-500/30 hover:bg-fuchsia-500/30 rounded-lg px-3 py-1.5 disabled:opacity-50"
+                >
+                  <Archive className="w-3.5 h-3.5" /> Archive
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => bulk('unarchive')}
+                    disabled={busy}
+                    className="inline-flex items-center gap-1.5 text-xs text-gray-200 bg-white/10 border border-white/20 hover:bg-white/15 rounded-lg px-3 py-1.5 disabled:opacity-50"
+                  >
+                    <ArrowUUpLeft className="w-3.5 h-3.5" /> Unarchive
+                  </button>
+                  <button
+                    onClick={() => bulk('delete')}
+                    disabled={busy}
+                    className="inline-flex items-center gap-1.5 text-xs text-rose-200 bg-rose-500/15 border border-rose-500/30 hover:bg-rose-500/25 rounded-lg px-3 py-1.5 disabled:opacity-50"
+                  >
+                    <Trash className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </>
+              )}
+              <button
+                onClick={clearSelected}
+                className="text-xs text-gray-400 hover:text-gray-200 px-2 py-1.5"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <CircleNotch className="w-5 h-5 animate-spin text-gray-500" />
@@ -120,13 +241,20 @@ export default function AgentsDuePage() {
         ) : sorted.length === 0 ? (
           <Panel>
             <div className="px-6 py-12 text-center text-sm text-gray-500">
-              No agents due. When a rep submits a close, it lands here for build.
+              {view === 'archived'
+                ? 'Nothing in the archive. Archived closes show up here so you can restore or delete them.'
+                : 'No agents due. When a rep submits a close, it lands here for build.'}
             </div>
           </Panel>
         ) : (
           <ul className="bg-white/[0.02] border border-white/10 rounded-2xl divide-y divide-white/5 overflow-hidden">
             {sorted.map((it) => (
-              <Row key={it.close_id} item={it} />
+              <Row
+                key={it.close_id}
+                item={it}
+                selected={selected.has(it.close_id)}
+                onToggle={() => toggleSelected(it.close_id)}
+              />
             ))}
           </ul>
         )}
@@ -154,7 +282,11 @@ function ago(iso: string): string {
   return `${Math.floor(day / 7)}w ago`
 }
 
-function Row({ item }: { item: Item }) {
+function Row({ item, selected, onToggle }: {
+  item: Item
+  selected: boolean
+  onToggle: () => void
+}) {
   const tone = STATUS_TONE[item.demo.status]
   const countdown = useCountdown(item.demo.scheduled_at)
   const businessName =
@@ -162,10 +294,23 @@ function Row({ item }: { item: Item }) {
   const isSkippedOrReady = item.demo.status === 'skipped' || item.demo.status === 'ready'
 
   return (
-    <li>
+    <li className={selected ? 'bg-fuchsia-500/[0.08]' : ''}>
+      <div className="flex items-stretch">
+        <label
+          className="flex items-center pl-5 pr-1 cursor-pointer"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggle}
+            className="w-4 h-4 rounded border-white/20 bg-white/5 text-fuchsia-500 focus:ring-fuchsia-500 cursor-pointer"
+            aria-label="Select close"
+          />
+        </label>
       <Link
         href={`/admin/agents-due/${item.close_id}`}
-        className="group flex items-center gap-4 px-5 py-3.5 hover:bg-white/[0.03] transition-colors"
+        className="group flex-1 flex items-center gap-4 pl-3 pr-5 py-3.5 hover:bg-white/[0.03] transition-colors"
       >
         {/* Status pill */}
         <span
@@ -210,6 +355,7 @@ function Row({ item }: { item: Item }) {
           <ArrowSquareOut className="w-3 h-3" />
         </span>
       </Link>
+      </div>
     </li>
   )
 }
