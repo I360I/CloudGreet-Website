@@ -176,6 +176,29 @@ export function resolveUsMetro(raw: string): UsMetro | null {
  return US_METROS.find((m) => m.name === cleaned) || null
 }
 
+/**
+ * Resolve a bare state input (full name "michigan" or abbreviation
+ * "MI") to every metro entry we know in that state. Returns [] for
+ * non-state input. Used by sources so the rep can type just a state
+ * and the fan-out stays in-state instead of defaulting to the
+ * NATIONAL_FANOUT (which leads with NYC / LA).
+ */
+export function resolveUsState(raw: string): UsMetro[] {
+ if (!raw) return []
+ const cleaned = raw.trim().toLowerCase().replace(/[,]/g, '').replace(/\s+/g, ' ').trim()
+ if (!cleaned) return []
+ let stateAbbr: string | null = null
+ // Two-letter abbreviation
+ if (cleaned.length === 2 && STATE_ABBRS.has(cleaned.toUpperCase())) {
+  stateAbbr = cleaned.toUpperCase()
+ } else {
+  const upper = cleaned.toUpperCase()
+  if (SPELLED_TO_ABBR[upper]) stateAbbr = SPELLED_TO_ABBR[upper]
+ }
+ if (!stateAbbr) return []
+ return US_METROS.filter((m) => m.state === stateAbbr)
+}
+
 const SPELLED_TO_ABBR: Record<string, string> = {
  ALABAMA: 'AL', ALASKA: 'AK', ARIZONA: 'AZ', ARKANSAS: 'AR', CALIFORNIA: 'CA',
  COLORADO: 'CO', CONNECTICUT: 'CT', DELAWARE: 'DE', FLORIDA: 'FL', GEORGIA: 'GA',

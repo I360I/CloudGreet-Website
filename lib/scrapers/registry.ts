@@ -6,6 +6,16 @@ import {
  googleRoofing, googlePainting, googleHandyman, googleLandscaping,
 } from './google-trades'
 import { placesSources } from './google-places-discovery'
+
+/**
+ * placesSources (google-places-discovery.ts) duplicate the
+ * google-trades.ts entries for Roofing/Painting/Landscaping but with
+ * TX-only fan-out. We keep them imported for the HVAC/Plumbing/
+ * Electrical/Pest entries (which the TDLR/TSBPE/TDA sources already
+ * cover via enrichment), but their roofing/painting/landscaping
+ * duplicates are filtered out below so the dropdown stops showing
+ * "Roofing" and "Roofers" as two separate options.
+ */
 import { qualityModeSource } from './quality-mode'
 import { ohioModeSource } from './ohio-mode'
 import { arizonaModeSource } from './arizona-mode'
@@ -45,12 +55,18 @@ export const SCRAPER_SOURCES: SourceDefinition[] = [
  googlePainting,
  googleHandyman,
  googleLandscaping,
- // Google Places-only sources for trades that don't have a Texas
- // license database (roofing, painting, etc). HVAC/Plumbing/Electrical/
- // Pest are intentionally hidden here - the TDLR/TSBPE/TDA sources
- // above already enrich with the same Google data and add the owner's
- // legal name + license number, so showing both confused reps.
- ...placesSources.filter((s) => !['places_hvac', 'places_plumbing', 'places_electrical', 'places_pest'].includes(s.id)),
+ // placesSources are TX-only forks of google-trades. The non-trade-
+ // duplicate entries (HVAC/plumb/elec/pest) are hidden because the
+ // license-database sources above already enrich them. The trade
+ // duplicates (places_roofing/painting/landscaping) are hidden too -
+ // they duplicate googleRoofing/googlePainting/googleLandscaping
+ // which are nationwide-capable. Nothing from placesSources currently
+ // ships to the UI; kept imported in case a future TX-only variant
+ // is wanted.
+ ...placesSources.filter((s) => ![
+  'places_hvac', 'places_plumbing', 'places_electrical', 'places_pest',
+  'places_roofing', 'places_painting', 'places_landscaping',
+ ].includes(s.id)),
 ]
 
 export function getSource(id: string): SourceDefinition | undefined {

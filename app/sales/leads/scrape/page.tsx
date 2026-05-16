@@ -698,24 +698,30 @@ function JobDrawer({
  * registry stays in code, but UX lives here.
  */
 function groupSources(sources: Source[]): { label: string; items: Source[] }[] {
+  // Order in this Record IS the dropdown order.
+  //   Recommended  -> Texas license databases. They're free, include
+  //                   the owner's legal name + license number, and are
+  //                   the most reliable for a Texas-focused rep team.
+  //   Google Places -> nationwide quality_mode + per-trade google_*
+  //                   sources. Less reliable outside major metros but
+  //                   the only option for non-TX or for trades without
+  //                   a public license database.
+  //   State sweeps  -> Ohio / Arizona statewide. Built for specific
+  //                   onboarding demos; can ship per-state versions.
   const groups: Record<string, Source[]> = {
     'Recommended': [],
-    'Texas - license databases': [],
-    'Texas - Google Places': [],
-    'National sweeps': [],
+    'Google Places': [],
+    'State sweeps': [],
   }
   for (const s of sources) {
-    if (s.id === 'quality_mode' || s.id === 'ohio_mode' || s.id === 'arizona_mode') groups['Recommended'].push(s)
-    // places_law goes in the first labeled group right under Recommended
-    // so reps see it at the top, even though the source itself is now
-    // nationwide rather than TX-licensed-only.
-    else if (s.id === 'places_law') groups['Texas - license databases'].push(s)
-    else if (s.id.startsWith('tdlr_') || s.id.startsWith('tsbpe') || s.id.startsWith('tda_')) {
-      groups['Texas - license databases'].push(s)
-    } else if (s.id.startsWith('places_') || s.id.startsWith('google_')) {
-      groups['Texas - Google Places'].push(s)
+    if (s.id.startsWith('tdlr_') || s.id.startsWith('tsbpe') || s.id.startsWith('tda_') || s.id === 'places_law') {
+      groups['Recommended'].push(s)
+    } else if (s.id === 'ohio_mode' || s.id === 'arizona_mode') {
+      groups['State sweeps'].push(s)
+    } else if (s.id === 'quality_mode' || s.id.startsWith('google_') || s.id.startsWith('places_')) {
+      groups['Google Places'].push(s)
     } else {
-      groups['Texas - Google Places'].push(s) // fallback bucket
+      groups['Google Places'].push(s) // fallback
     }
   }
   return Object.entries(groups)

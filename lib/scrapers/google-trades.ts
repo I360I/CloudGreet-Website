@@ -1,6 +1,6 @@
 import { discoverPlaces, txCityCoords, TX_CITY_COORDS } from './google-places'
 import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
-import { resolveUsMetro, NATIONAL_FANOUT } from './us-metros'
+import { resolveUsMetro, resolveUsState, NATIONAL_FANOUT } from './us-metros'
 import { logger } from '../monitoring'
 import type { ScrapeParams, ScrapeRecord, SeenSets, SourceDefinition, SourceRunOpts } from './types'
 
@@ -92,10 +92,14 @@ function buildSource(id: TradeId): SourceDefinition {
    const requireWebsite = qualityLevel === 'strict'
    diag?.push(`google-trades start: city=${cityRaw || '(fanout)'} strictness=${qualityLevel} minRating=${minRating} minReviews=${minReviewCount}`)
 
-   // Three-tier resolution:
+   // Four-tier resolution:
    //   1. specific TX city -> just that city (existing behavior)
    //   2. specific non-TX US metro (resolveUsMetro hits) -> just that metro
-   //   3. blank or unrecognized -> national fan-out across top US metros
+   //   3. bare state name / abbrev ("michigan" / "MI") -> all metros in
+   //      that state. Without this, "michigan" fell through to the
+   //      NATIONAL_FANOUT which leads with NYC / LA / Chicago, so reps
+   //      typing a state got results from the wrong state entirely.
+   //   4. blank or unrecognized -> national fan-out across top US metros
    type Target = { name: string; state: string; lat: number; lng: number }
    let targets: Target[] = []
    if (isSpecificCity(cityRaw)) {
@@ -106,7 +110,12 @@ function buildSource(id: TradeId): SourceDefinition {
     if (us) {
      targets = [us]
     } else {
-     targets = NATIONAL_FANOUT
+     const stateMetros = resolveUsState(cityRaw)
+     if (stateMetros.length > 0) {
+      targets = stateMetros
+     } else {
+      targets = NATIONAL_FANOUT
+     }
     }
    }
    const seen = opts.seen

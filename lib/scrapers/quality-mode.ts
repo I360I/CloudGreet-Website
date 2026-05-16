@@ -30,6 +30,7 @@
 import { logger } from '../monitoring'
 import { discoverPlaces, isGooglePlacesConfigured } from './google-places'
 import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
+import { resolveUsMetro, resolveUsState } from './us-metros'
 import type { ScrapeParams, ScrapeRecord, SeenSets, SourceDefinition, SourceRunOpts } from './types'
 
 type TradeKey = 'HVAC' | 'Plumbing' | 'Electrical' | 'Roofing' | 'Law'
@@ -126,12 +127,44 @@ async function* runQualityMode(
   const requireWebsite = qualityLevel === 'strict'
   diag?.push(`strictness=${qualityLevel} minRating=${minRating} minReviews=${minReviews} requireWebsite=${requireWebsite}`)
 
-  // Geographic diversity cap. Without this, NYC (first in QUALITY_METROS)
-  // hogs the first ~100 yields because every metro is asked for 20
-  // results before we move to the next. Cap per-metro/trade yield so
-  // results spread across the country.
+  // Location filter. The historical behavior was "ignore location -
+  // always nationwide" which made reps think the source was broken
+  // when they typed Austin and got Chicago results. Now:
+  //   - bare state ("michigan" / "MI") -> only metros in that state
+  //   - specific city / "city ST" -> just that metro (looked up via
+  //     resolveUsMetro). Falls back to QUALITY_METROS if not in our
+  //     curated set, then narrows by state if the parse gave us one.
+  //   - blank or unrecognized -> full nationwide sweep (original)
+  const locationRaw = (params.location || '').trim()
+  type Metro = typeof QUALITY_METROS[number]
+  let activeMetros: Metro[] = QUALITY_METROS
+  if (locationRaw) {
+    const stateMetros = resolveUsState(locationRaw)
+    const cityMetro = resolveUsMetro(locationRaw)
+    if (cityMetro) {
+      activeMetros = [{
+        name: cityMetro.name, state: cityMetro.state,
+        lat: cityMetro.lat, lng: cityMetro.lng,
+      }]
+    } else if (stateMetros.length > 0) {
+      activeMetros = stateMetros.map((m) => ({
+        name: m.name, state: m.state, lat: m.lat, lng: m.lng,
+      }))
+    } else {
+      // Unknown city/state - keep QUALITY_METROS but log so reps see
+      // why they got nationwide results when they expected scoped.
+      diag?.push(`quality mode: location "${locationRaw}" not recognized, using nationwide sweep`)
+    }
+  }
+  diag?.push(`quality mode active metros: ${activeMetros.length} (${locationRaw || 'nationwide'})`)
+
+  // Geographic diversity cap. Without this, the first metro in the
+  // active set hogs the first ~100 yields because every metro is
+  // asked for 20 results before we move to the next. Cap per-
+  // metro/trade yield so results spread across whatever set we're
+  // actually sweeping (single state, single city, or full nationwide).
   const limitForCap = Math.max(1, Math.min(200, params.limit ?? 30))
-  const totalCells = QUALITY_METROS.length * QUALITY_TRADES.length
+  const totalCells = Math.max(1, activeMetros.length * QUALITY_TRADES.length)
   // At small limits (≤ totalCells) we want EVERY cell to yield at most
   // 1 before any cell yields a second, so no single metro dominates.
   // At larger limits we step up gradually. The +1 is a small buffer so
@@ -145,19 +178,14 @@ async function* runQualityMode(
 
   let totalYielded = 0
   let totalDropped = 0
-  // Stream records as we find them. The runner persists each one
-  // immediately so partial results survive mid-sweep failures or
-  // function timeouts. Hard quality gates (4.5+ rating, 30+ reviews,
-  // website, phone) ensure every yielded record is high quality;
-  // we trade global score ranking for resilience and visible progress.
 
   // Build the cell list and shuffle so NYC isn't always first. Without
   // a shuffle, even after the per-cell cap, the early cells get first
   // crack at a constant set of leads each run; the same NYC plumbers
   // surface batch after batch. Shuffling per-run keeps the demo varied.
-  type Cell = { metro: typeof QUALITY_METROS[number]; cfg: typeof QUALITY_TRADES[number] }
+  type Cell = { metro: Metro; cfg: typeof QUALITY_TRADES[number] }
   const cells: Cell[] = []
-  for (const metro of QUALITY_METROS) {
+  for (const metro of activeMetros) {
     for (const cfg of QUALITY_TRADES) cells.push({ metro, cfg })
   }
   // Fisher-Yates shuffle.
@@ -277,8 +305,8 @@ async function* runQualityMode(
 
 export const qualityModeSource: SourceDefinition = {
   id: 'quality_mode',
-  label: 'Quality mode · top contractors nationwide',
-  description: 'Sweeps top US metros across HVAC, plumbing, electrical, and roofing. Drops anything below 4.5 stars or 30 reviews, requires a website and phone, then ranks by rating × review-volume. Smaller batches than the state scrapers, but every lead is obviously worth a call. Ignores city/state inputs - it goes nationwide on purpose.',
+  label: 'Google Places · nationwide',
+  description: 'Sweeps top US metros across HVAC, plumbing, electrical, and roofing. Drops anything below 4.0 stars or 10 reviews, requires a phone, then ranks by rating × review-volume. Type a city or state to scope the sweep (e.g. "Austin", "Michigan", "Phoenix AZ") - leave blank for nationwide.',
   trade: 'HVAC', // arbitrary - results span trades; UI uses the per-record business_type
   run: runQualityMode,
 }
