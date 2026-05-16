@@ -107,6 +107,11 @@ export function getRetellGeneralTools(
             description:
               "true if the caller explicitly agreed to receive a follow-up review request text after the appointment. Leave false if they declined or you didn't ask.",
           },
+          is_emergency: {
+            type: 'boolean',
+            description:
+              "true if this is a true emergency per the business's EMERGENCY_DEFINITION (e.g. no AC in heat with kids/elderly, no heat in freezing weather, water leak / flood, gas smell, sparks, smoke, sewage backup, anything dangerous). When true, the system routes the booking through emergency dispatch: the owner gets a distinct urgent SMS, the booking can land on a separate emergency Cal.com event type if the business set one up, and the dashboard tags the appointment as emergency. Default false. Don't set true for routine 'I need this fixed soon' urgency - reserve for actual emergencies the caller is alarmed about.",
+          },
         },
         required: ['name', 'phone', 'service', 'datetime'],
       },

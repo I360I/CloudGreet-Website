@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
  }
  switch (tool.name) {
  case 'book_appointment': {
- const { name: rawName, phone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw } = tool.arguments || {}
+ const { name: rawName, phone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw, is_emergency: isEmergencyRaw } = tool.arguments || {}
  // Retell's LLM often passes the verbalized form of any digits the
  // agent spoke aloud - "AC leaking at one one one one Main Street"
  // instead of "1111". Compress runs of digit words back to numerals
@@ -220,6 +220,13 @@ export async function POST(request: NextRequest) {
    reviewConsentRaw === 'true' ||
    reviewConsentRaw === 'yes' ||
    reviewConsentRaw === 'y'
+ // Same strict-boolean coercion as review_consent. Default false so a
+ // missing arg never accidentally trips the emergency dispatch path.
+ const isEmergency =
+   isEmergencyRaw === true ||
+   isEmergencyRaw === 'true' ||
+   isEmergencyRaw === 'yes' ||
+   isEmergencyRaw === 'y'
 
  // Reject if we couldn't resolve a business from the agent. Falling
  // back to tool args would re-introduce the spoofing risk.
@@ -237,7 +244,7 @@ export async function POST(request: NextRequest) {
  // Get business info - need cal.com config for the booking too.
  const { data: business, error: businessError } = await supabaseAdmin
  .from('businesses')
- .select('id, stripe_customer_id, subscription_status, timezone, cal_com_api_key, cal_com_event_type_id, business_name, email, phone_number')
+ .select('id, stripe_customer_id, subscription_status, timezone, cal_com_api_key, cal_com_event_type_id, cal_com_event_type_id_emergency, business_name, email, phone_number')
  .eq('id', business_id)
  .single()
 
@@ -262,7 +269,8 @@ export async function POST(request: NextRequest) {
  p_end_time: endTime.toISOString(),
  p_duration: 60,
  p_notes: null,
- p_estimated_value: null
+ p_estimated_value: null,
+ p_is_emergency: isEmergency,
  })
 
  if (appointmentError || !appointmentId) {
@@ -356,9 +364,18 @@ export async function POST(request: NextRequest) {
  if ((business as any)?.cal_com_api_key && (business as any)?.cal_com_event_type_id) {
  try {
   const { createBooking } = await import('@/lib/calcom')
+  // Route emergencies through the dedicated emergency Cal.com event
+  // type when the contractor configured one. That event type can have
+  // its own availability rules / colour / reminder cadence in Cal so
+  // emergencies show up visually distinct on the contractor's
+  // calendar. Falls through to the normal event type otherwise.
+  const emergencyEventTypeId = (business as any)?.cal_com_event_type_id_emergency
+  const effectiveEventTypeId = isEmergency && emergencyEventTypeId
+   ? Number(emergencyEventTypeId)
+   : Number((business as any).cal_com_event_type_id)
   const booking = await createBooking((business as any).cal_com_api_key, {
    startIso: startTime.toISOString(),
-   eventTypeId: Number((business as any).cal_com_event_type_id),
+   eventTypeId: effectiveEventTypeId,
    attendee: {
     name: name || 'Caller',
     email: `noemail+${apptId}@cloudgreet.com`,
@@ -372,8 +389,9 @@ export async function POST(request: NextRequest) {
     cloudgreet_business_id: String(business_id),
     cloudgreet_appointment_id: String(apptId),
     customer_phone: phone || '',
+    is_emergency: isEmergency ? 'true' : 'false',
    },
-   notes: `Booked by CloudGreet AI receptionist. Service requested: ${service || 'unspecified'}. Caller phone: ${phone || 'unknown'}.`,
+   notes: `${isEmergency ? '🚨 EMERGENCY · ' : ''}Booked by CloudGreet AI receptionist. Service requested: ${service || 'unspecified'}. Caller phone: ${phone || 'unknown'}.`,
   })
   await supabaseAdmin
    .from('appointments')
@@ -585,6 +603,7 @@ export async function POST(request: NextRequest) {
  time: formattedTime,
  service,
  business: (business as any).business_name || null,
+ is_emergency: isEmergency,
  })
  } catch (e) {
  logger.warn('booking notification failed', {
@@ -604,6 +623,7 @@ export async function POST(request: NextRequest) {
  return NextResponse.json({
   success: true,
   appointment_id: apptId,
+  is_emergency: isEmergency,
   did: sideEffects,
  })
  }

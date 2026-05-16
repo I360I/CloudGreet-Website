@@ -1106,10 +1106,13 @@ function BookingNotificationsSection() {
  const [loading, setLoading] = useState(true)
  const [saving, setSaving] = useState(false)
  const [testing, setTesting] = useState(false)
+ const [testingEmergency, setTestingEmergency] = useState(false)
  const [phone, setPhone] = useState('')
  const [template, setTemplate] = useState('')
+ const [emergencyTemplate, setEmergencyTemplate] = useState('')
  const [businessName, setBusinessName] = useState('')
  const [defaultTemplate, setDefaultTemplate] = useState('')
+ const [defaultEmergencyTemplate, setDefaultEmergencyTemplate] = useState('')
  const [maxLen, setMaxLen] = useState(320)
  const [flash, setFlash] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
 
@@ -1130,7 +1133,9 @@ function BookingNotificationsSection() {
    if (r.ok && j?.success) {
     setPhone(j.notifications_phone || '')
     setTemplate(j.booking_sms_template || j.default_template || '')
+    setEmergencyTemplate(j.booking_sms_template_emergency || j.default_emergency_template || '')
     setDefaultTemplate(j.default_template || '')
+    setDefaultEmergencyTemplate(j.default_emergency_template || '')
     setBusinessName(j.business_name || '')
     setMaxLen(j.template_max_length || 320)
    }
@@ -1150,6 +1155,7 @@ function BookingNotificationsSection() {
     body: JSON.stringify({
      notifications_phone: phone,
      booking_sms_template: template,
+     booking_sms_template_emergency: emergencyTemplate,
     }),
    })
    const j = await r.json().catch(() => ({}))
@@ -1164,8 +1170,9 @@ function BookingNotificationsSection() {
   }
  }
 
- const sendTest = async () => {
-  setTesting(true); setFlash(null)
+ const sendTest = async (emergency: boolean = false) => {
+  if (emergency) setTestingEmergency(true); else setTesting(true)
+  setFlash(null)
   try {
    // Save first so the test uses the latest template + phone.
    await fetchWithAuth('/api/dashboard/notifications', {
@@ -1174,28 +1181,34 @@ function BookingNotificationsSection() {
     body: JSON.stringify({
      notifications_phone: phone,
      booking_sms_template: template,
+     booking_sms_template_emergency: emergencyTemplate,
     }),
    })
    const r = await fetchWithAuth('/api/dashboard/notifications/test', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ template }),
+    body: JSON.stringify({
+     template: emergency ? emergencyTemplate : template,
+     emergency,
+    }),
    })
    const j = await r.json().catch(() => ({}))
    if (!r.ok || !j?.success) {
     setFlash({ tone: 'err', text: j?.error || 'Test send failed' })
    } else {
-    setFlash({ tone: 'ok', text: `Test sent to ${j.sent_to}` })
+    setFlash({ tone: 'ok', text: `${emergency ? 'Emergency test' : 'Test'} sent to ${j.sent_to}` })
    }
   } finally {
-   setTesting(false)
+   if (emergency) setTestingEmergency(false); else setTesting(false)
    setTimeout(() => setFlash(null), 5000)
   }
  }
 
  const reset = () => setTemplate(defaultTemplate)
+ const resetEmergency = () => setEmergencyTemplate(defaultEmergencyTemplate)
 
  const preview = renderPreview(template || defaultTemplate, businessName)
+ const emergencyPreview = renderPreview(emergencyTemplate || defaultEmergencyTemplate, businessName)
 
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-6">
@@ -1273,6 +1286,42 @@ function BookingNotificationsSection() {
       </div>
      </div>
 
+     {/* Emergency template - separate from the routine template so the
+         lockscreen ping for an actual emergency looks visually
+         distinct. The AI agent flips between the two via the
+         book_appointment is_emergency arg. Defaults to a hardcoded
+         🚨 URGENT prefix if the contractor doesn't customise it. */}
+     <div className="pt-2 border-t border-gray-200">
+      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+       Emergency message template
+       <span className="ml-2 text-[10px] font-mono uppercase tracking-wider text-rose-600">used when the AI flags a call as urgent</span>
+      </label>
+      <textarea
+       value={emergencyTemplate}
+       onChange={(e) => setEmergencyTemplate(e.target.value)}
+       rows={3}
+       maxLength={maxLen}
+       className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-rose-400 resize-y"
+      />
+      <div className="flex items-center justify-between mt-1">
+       <span className="text-[11px] text-gray-400">{emergencyTemplate.length}/{maxLen}</span>
+       {emergencyTemplate !== defaultEmergencyTemplate && (
+        <button onClick={resetEmergency} className="text-[11px] text-gray-500 hover:text-gray-900">
+         Reset to default
+        </button>
+       )}
+      </div>
+     </div>
+
+     <div>
+      <div className="text-[10px] font-mono uppercase tracking-wider text-rose-600 mb-1.5">
+       Emergency preview
+      </div>
+      <div className="bg-rose-50 border border-rose-200 rounded-lg p-3 text-sm font-mono text-rose-900 whitespace-pre-wrap">
+       {emergencyPreview}
+      </div>
+     </div>
+
      {flash && (
       <div className={`text-xs px-3 py-2 rounded-lg ${
        flash.tone === 'ok'
@@ -1293,13 +1342,22 @@ function BookingNotificationsSection() {
        Save
       </button>
       <button
-       onClick={sendTest}
-       disabled={testing || !phone.trim()}
+       onClick={() => sendTest(false)}
+       disabled={testing || testingEmergency || !phone.trim()}
        className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg px-4 py-2 disabled:opacity-60"
        title={!phone.trim() ? 'Save a phone number first' : 'Fire a real test SMS to your phone'}
       >
        {testing ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
        Send test
+      </button>
+      <button
+       onClick={() => sendTest(true)}
+       disabled={testing || testingEmergency || !phone.trim()}
+       className="inline-flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-900 text-sm rounded-lg px-4 py-2 disabled:opacity-60"
+       title={!phone.trim() ? 'Save a phone number first' : 'Fire the emergency-template test SMS'}
+      >
+       {testingEmergency ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+       Send emergency test
       </button>
      </div>
     </div>

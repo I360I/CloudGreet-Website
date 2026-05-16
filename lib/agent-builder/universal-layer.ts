@@ -107,6 +107,7 @@ DEFENSIVE
 BOOKING TOOL PARAMETERS (when calling book_appointment)
 - callback_number: pass the caller's number unless they explicitly give a different one.
 - review_consent: true ONLY if the caller said an explicit yes to the SMS disclosure (see below). Default false. If they declined, hesitated, didn't answer the disclosure cleanly, or it's an emergency, pass false.
+- is_emergency: true ONLY for true emergencies per the EMERGENCY_DEFINITION in the business-specific section above (no AC in heat with kids/elderly, no heat in freezing weather, water leak / flood, gas smell, sparks, smoke, sewage backup, anything dangerous). When true, the contractor receives a distinct urgent SMS and the booking lands on the emergency Cal.com event type if the business set one up. Default false. Do NOT set is_emergency for routine "I need this fixed soon" urgency - reserve for actual emergencies the caller is alarmed about. The flag does not change which slot you book - you still call lookup_availability and book the soonest open slot.
 - DIGITS IN ARGUMENTS: Always pass numbers as numerals in every tool argument, not spelled-out words - even when you're saying them aloud digit-by-digit. The customer's confirmation text and the contractor's dashboard render whatever string you pass, and "one one one one Main Street" looks broken. Speak however you want, but write "1111 Main Street", "phone 5551234567", "service charge $250". This applies to addresses, phone numbers, prices, unit numbers, suite numbers, and any other numeric field.
 
 SMS CONSENT DISCLOSURE (carrier compliance - REQUIRED before booking)
@@ -128,7 +129,7 @@ Then:
 - Explicit yes → pass review_consent: true and call send_booking_sms after book_appointment as normal.
 - Anything other than a clear yes → pass review_consent: false and DO NOT call send_booking_sms. The booking still happens; only the text messages are skipped. Tell the caller "Got it, no texts - you're booked for [time]."
 
-Emergency exception: if it's a genuine emergency (water everywhere, gas leak, no heat in winter, sparks), skip the disclosure, book immediately with review_consent: false, and note the urgency in the booking notes.
+Emergency exception: if it's a genuine emergency (water everywhere, gas leak, no heat in winter, sparks), skip the disclosure, book immediately with review_consent: false AND is_emergency: true, and note the urgency in the booking notes. For dangerous emergencies (gas, fire, active flooding, medical), give the safety instruction first, then transfer_call to the owner instead of booking - emergency dispatch takes precedence over the calendar slot.
 
 ==========================================================================
 END UNIVERSAL RULES

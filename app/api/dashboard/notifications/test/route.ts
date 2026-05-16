@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import {
   DEFAULT_BOOKING_SMS_TEMPLATE,
+  DEFAULT_EMERGENCY_SMS_TEMPLATE,
   SAMPLE_CONTEXT,
   renderTemplate,
 } from '@/lib/booking-notifications'
@@ -35,11 +36,15 @@ export async function POST(request: NextRequest) {
     }, { status: 503 })
   }
 
-  const body = await request.json().catch(() => ({})) as { template?: string }
+  const body = await request.json().catch(() => ({})) as {
+    template?: string
+    /** Set true to preview the emergency template instead of the routine one. */
+    emergency?: boolean
+  }
 
   const { data: biz } = await supabaseAdmin
     .from('businesses')
-    .select('notifications_phone, booking_sms_template, business_name')
+    .select('notifications_phone, booking_sms_template, booking_sms_template_emergency, business_name')
     .eq('id', auth.businessId)
     .maybeSingle()
 
@@ -51,9 +56,13 @@ export async function POST(request: NextRequest) {
     }, { status: 400 })
   }
 
+  // Same priority chain as a live send: explicit override first, then
+  // the contractor's saved template, then the hardcoded default.
+  // The emergency flag toggles which template gets used at every step.
   const template = body.template
-    ?? (biz as any).booking_sms_template
-    ?? DEFAULT_BOOKING_SMS_TEMPLATE
+    ?? (body.emergency
+      ? ((biz as any).booking_sms_template_emergency || DEFAULT_EMERGENCY_SMS_TEMPLATE)
+      : ((biz as any).booking_sms_template || DEFAULT_BOOKING_SMS_TEMPLATE))
   const message = renderTemplate(template, {
     ...SAMPLE_CONTEXT,
     business: (biz as any).business_name || SAMPLE_CONTEXT.business,

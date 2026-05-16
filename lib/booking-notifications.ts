@@ -24,6 +24,15 @@ import { notifyAdmin } from '@/lib/notifications/notify'
 export const DEFAULT_BOOKING_SMS_TEMPLATE =
   '[CloudGreet] New booking: {name}, {time}. Service: {service}. Caller: {phone}'
 
+/**
+ * Hard default for emergency bookings. Visually distinct prefix so the
+ * contractor's lockscreen makes it impossible to confuse with a routine
+ * new-booking ping. Contractors can override this in dashboard
+ * settings (businesses.booking_sms_template_emergency).
+ */
+export const DEFAULT_EMERGENCY_SMS_TEMPLATE =
+  '🚨 URGENT — {name} at {address}. {service}. Phone: {phone}. Booked {time}. Reach out ASAP.'
+
 export const TEMPLATE_MAX_LENGTH = 320
 
 /**
@@ -46,6 +55,13 @@ export type BookingNotificationContext = {
   service?: string | null
   address?: string | null
   business?: string | null
+  /**
+   * When true, sendBookingNotification picks the emergency template
+   * (custom businesses.booking_sms_template_emergency, falling back to
+   * DEFAULT_EMERGENCY_SMS_TEMPLATE) instead of the routine template.
+   * Set by the agent via the book_appointment `is_emergency` arg.
+   */
+  is_emergency?: boolean
 }
 
 /**
@@ -108,7 +124,7 @@ export async function sendBookingNotification(
 
   const { data: biz } = await supabaseAdmin
     .from('businesses')
-    .select('notifications_phone, booking_sms_template, business_name')
+    .select('notifications_phone, booking_sms_template, booking_sms_template_emergency, business_name')
     .eq('id', businessId)
     .maybeSingle()
 
@@ -138,7 +154,13 @@ export async function sendBookingNotification(
     return { sent: false, reason: 'recipient is opted out (STOP)' }
   }
 
-  const template = (biz as any).booking_sms_template || DEFAULT_BOOKING_SMS_TEMPLATE
+  // Emergency bookings get a separate (and visually-distinct-by-default)
+  // template. Contractors can customise it in dashboard settings; the
+  // hardcoded fallback ensures the contractor sees an obvious URGENT
+  // marker even before they touch the setting.
+  const template = ctx.is_emergency
+    ? ((biz as any).booking_sms_template_emergency || DEFAULT_EMERGENCY_SMS_TEMPLATE)
+    : ((biz as any).booking_sms_template || DEFAULT_BOOKING_SMS_TEMPLATE)
   const finalCtx: BookingNotificationContext = {
     ...ctx,
     business: ctx.business || (biz as any).business_name || null,

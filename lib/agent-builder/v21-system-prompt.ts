@@ -37,7 +37,7 @@ Every CloudGreet client agent runs on the same stack.
 Three custom function tools, auto-attached at agent creation:
 
 1. **\`book_appointment\`** - books an appointment on the contractor's Cal.com calendar.
-   - Args: \`name\`, \`phone\`, \`service\`, \`datetime\` (ISO with timezone), \`review_consent\` (optional boolean).
+   - Args: \`name\`, \`phone\`, \`service\`, \`datetime\` (ISO with timezone), \`review_consent\` (optional boolean), \`is_emergency\` (optional boolean - flips the owner SMS to the urgent template and lands the booking on the emergency Cal.com event type when configured).
    - Returns: { success, appt_id }.
 
 2. **\`send_booking_sms\`** - texts the caller a confirmation. MUST be called immediately after \`book_appointment\` returns a successful appt_id.

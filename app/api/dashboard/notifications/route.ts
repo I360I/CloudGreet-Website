@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import {
   DEFAULT_BOOKING_SMS_TEMPLATE,
+  DEFAULT_EMERGENCY_SMS_TEMPLATE,
   TEMPLATE_MAX_LENGTH,
 } from '@/lib/booking-notifications'
 
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
   const { data, error } = await supabaseAdmin
     .from('businesses')
-    .select('notifications_phone, booking_sms_template, business_name')
+    .select('notifications_phone, booking_sms_template, booking_sms_template_emergency, business_name')
     .eq('id', auth.businessId)
     .maybeSingle()
   if (error || !data) {
@@ -32,8 +33,11 @@ export async function GET(request: NextRequest) {
     success: true,
     notifications_phone: (data as any).notifications_phone || '',
     booking_sms_template: (data as any).booking_sms_template || DEFAULT_BOOKING_SMS_TEMPLATE,
+    booking_sms_template_emergency:
+      (data as any).booking_sms_template_emergency || DEFAULT_EMERGENCY_SMS_TEMPLATE,
     business_name: (data as any).business_name || '',
     default_template: DEFAULT_BOOKING_SMS_TEMPLATE,
+    default_emergency_template: DEFAULT_EMERGENCY_SMS_TEMPLATE,
     template_max_length: TEMPLATE_MAX_LENGTH,
   })
 }
@@ -46,6 +50,7 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json().catch(() => ({})) as {
     notifications_phone?: string | null
     booking_sms_template?: string | null
+    booking_sms_template_emergency?: string | null
   }
   const update: Record<string, any> = { updated_at: new Date().toISOString() }
 
@@ -71,6 +76,15 @@ export async function PATCH(request: NextRequest) {
     }
     // Empty string -> null so we fall back to the default at send time.
     update.booking_sms_template = tpl.trim() ? tpl : null
+  }
+  if (body.booking_sms_template_emergency !== undefined) {
+    const tpl = (body.booking_sms_template_emergency || '').toString()
+    if (tpl.length > TEMPLATE_MAX_LENGTH) {
+      return NextResponse.json({
+        error: `Emergency template must be ${TEMPLATE_MAX_LENGTH} chars or fewer (yours is ${tpl.length}).`,
+      }, { status: 400 })
+    }
+    update.booking_sms_template_emergency = tpl.trim() ? tpl : null
   }
 
   if (Object.keys(update).length === 1) {
