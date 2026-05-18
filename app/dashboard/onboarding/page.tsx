@@ -240,7 +240,12 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  const [success, setSuccess] = useState<{ username: string | null; eventTypeTitle: string } | null>(null)
  // Emergency event type picker - optional, only shown after primary
  // is set AND the contractor has more than one event type in Cal.com.
+ // Collapsed behind a toggle (default off) since most contractors won't
+ // need a separate emergency dispatch event type on day one.
+ const [emergencyEnabled, setEmergencyEnabled] = useState(false)
  const [emergencyEventTypeId, setEmergencyEventTypeId] = useState<number | null>(null)
+ const [emergencyTitle, setEmergencyTitle] = useState('')
+ const [emergencyTitleSaving, setEmergencyTitleSaving] = useState(false)
  const [emergencySaving, setEmergencySaving] = useState(false)
  const [emergencyErr, setEmergencyErr] = useState('')
 
@@ -262,15 +267,30 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  const [notifySaving, setNotifySaving] = useState(false)
  const [notifyErr, setNotifyErr] = useState('')
 
+ // Transfer-call destination - what number the AI dials when a caller
+ // asks for the owner. Stored as escalation_phone, exposed here as
+ // transfer_phone. Independent from the booking-SMS phone so contractors
+ // can have alerts go to one cell and live calls go to another (or to
+ // a shared business line).
+ const [transferPhone, setTransferPhone] = useState('')
+ const [transferSaved, setTransferSaved] = useState(false)
+ const [transferSaving, setTransferSaving] = useState(false)
+ const [transferErr, setTransferErr] = useState('')
+
  useEffect(() => {
   let cancelled = false
   ;(async () => {
    try {
     const r = await fetchWithAuth('/api/dashboard/notifications')
     const j = await r.json().catch(() => ({}))
-    if (!cancelled && j?.notifications_phone) {
+    if (cancelled) return
+    if (j?.notifications_phone) {
      setNotifyPhone(j.notifications_phone)
      setNotifySaved(true)
+    }
+    if (j?.transfer_phone) {
+     setTransferPhone(j.transfer_phone)
+     setTransferSaved(true)
     }
    } catch { /* non-fatal */ }
   })()
@@ -297,6 +317,29 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
    setNotifyErr(e instanceof Error ? e.message : 'Failed')
   } finally {
    setNotifySaving(false)
+  }
+ }
+
+ const saveTransferPhone = async () => {
+  const v = transferPhone.trim()
+  if (!v) { setTransferErr('Enter a US number first.'); return }
+  setTransferSaving(true); setTransferErr('')
+  try {
+   const r = await fetchWithAuth('/api/dashboard/notifications', {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ transfer_phone: v }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setTransferErr(j?.error || `Failed (${r.status})`)
+    return
+   }
+   setTransferSaved(true)
+  } catch (e) {
+   setTransferErr(e instanceof Error ? e.message : 'Failed')
+  } finally {
+   setTransferSaving(false)
   }
  }
 
@@ -563,85 +606,30 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
        <div>Connected as <strong>{success.username || 'Cal.com user'}</strong> · event: {success.eventTypeTitle}</div>
       </div>
 
-      {/* Optional: pick an emergency event type from the contractor's
-          other Cal.com event types. Only shown when they have more
-          than one - otherwise this slot stays hidden to keep the
-          flow short. */}
-      {eventTypeOptions && eventTypeOptions.filter((et) => et.id !== eventTypeId).length > 0 && (
-       <div className="border-t border-emerald-200 pt-3">
-        <div className="text-sm font-medium text-gray-900 mb-1">Emergency dispatch event type <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 ml-1">optional</span></div>
-        <div className="text-xs text-gray-600 mb-3">
-         When the AI flags a call as a true emergency (gas leak, no AC with kids, flooding), the booking lands on this event type instead of your primary - so emergencies can have their own colour, availability, and reminders in Cal.com.
-        </div>
-        <div className="space-y-1.5">
-         {eventTypeOptions
-          .filter((et) => et.id !== eventTypeId)
-          .map((et) => (
-           <button
-            key={et.id}
-            type="button"
-            onClick={async () => {
-             setEmergencySaving(true); setEmergencyErr('')
-             try {
-              const r = await fetchWithAuth('/api/dashboard/calcom/event-type', {
-               method: 'POST',
-               headers: { 'content-type': 'application/json' },
-               body: JSON.stringify({ emergency_event_type_id: et.id }),
-              })
-              const j = await r.json().catch(() => ({}))
-              if (!r.ok || !j?.success) {
-               setEmergencyErr(j?.error || `Save failed (${r.status})`)
-              } else {
-               setEmergencyEventTypeId(et.id)
-              }
-             } finally {
-              setEmergencySaving(false)
-             }
-            }}
-            disabled={emergencySaving}
-            className={`w-full text-left px-3 py-2 rounded-lg border text-xs font-mono transition-colors ${
-             emergencyEventTypeId === et.id
-              ? 'border-rose-400 bg-rose-50 text-rose-900'
-              : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
-            } disabled:opacity-60`}
-           >
-            <div className="flex items-center justify-between gap-3">
-             <div className="min-w-0">
-              <div className="text-sm font-medium truncate">{et.title}</div>
-              <div className="text-[11px] text-gray-500 mt-0.5">{et.slug} · {et.lengthInMinutes} min</div>
-             </div>
-             {emergencyEventTypeId === et.id && (
-              <span className="text-[10px] font-mono uppercase tracking-wider text-rose-600 flex-shrink-0">🚨 emergency</span>
-             )}
-            </div>
-           </button>
-          ))}
-         {emergencyEventTypeId && (
-          <button
-           type="button"
-           onClick={async () => {
-            setEmergencySaving(true); setEmergencyErr('')
-            try {
-             await fetchWithAuth('/api/dashboard/calcom/event-type', {
-              method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ emergency_event_type_id: null }),
-             })
-             setEmergencyEventTypeId(null)
-            } finally {
-             setEmergencySaving(false)
-            }
-           }}
-           disabled={emergencySaving}
-           className="text-[11px] text-gray-500 hover:text-gray-900 underline-offset-2 hover:underline"
-          >
-           Clear emergency type — use primary for emergencies
-          </button>
-         )}
-        </div>
-        {emergencyErr && <div className="mt-2 text-xs text-rose-700">{emergencyErr}</div>}
+      <div className="border-t border-emerald-200 pt-3">
+       <div className="text-sm font-medium text-gray-900 mb-1">Transfer calls to</div>
+       <div className="text-xs text-gray-600 mb-3">
+        When a caller asks for the owner, the AI warm-transfers the live call to this number. Use the cell or office line you actually want ringing.
        </div>
-      )}
+       <div className="flex flex-wrap items-center gap-2">
+        <input
+         type="tel"
+         value={transferPhone}
+         onChange={(e) => { setTransferPhone(e.target.value); setTransferSaved(false); setTransferErr('') }}
+         placeholder="+1 555 123 4567"
+         className="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-gray-900"
+        />
+        <button
+         type="button"
+         onClick={saveTransferPhone}
+         disabled={transferSaving || !transferPhone.trim()}
+         className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+        >
+         {transferSaving ? 'Saving…' : transferSaved ? 'Saved ✓' : 'Save'}
+        </button>
+       </div>
+       {transferErr && <div className="mt-2 text-xs text-rose-700">{transferErr}</div>}
+      </div>
 
       <div className="border-t border-emerald-200 pt-3">
        <div className="text-sm font-medium text-gray-900 mb-1">Where should we text booking alerts?</div>
@@ -667,6 +655,179 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
        </div>
        {notifyErr && <div className="mt-2 text-xs text-rose-700">{notifyErr}</div>}
       </div>
+
+      {/* Emergency dispatch event type - collapsed by default. Most
+          contractors won't set this up on day one; flipping the switch
+          expands the picker + rename so the AI can route true
+          emergencies (gas leak, no AC with kids, flooding) onto a
+          separate Cal.com event type with its own colour and
+          availability. */}
+      {eventTypeOptions && eventTypeOptions.filter((et) => et.id !== eventTypeId).length > 0 && (
+       <div className="border-t border-emerald-200 pt-3">
+        <div className="flex items-center justify-between gap-3">
+         <div className="min-w-0">
+          <div className="text-sm font-medium text-gray-900">Emergency dispatch event type <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 ml-1">optional</span></div>
+          <div className="text-xs text-gray-600 mt-0.5">
+           Route true emergencies onto a dedicated Cal.com event type with its own colour, hours, and reminders.
+          </div>
+         </div>
+         <button
+          type="button"
+          role="switch"
+          aria-checked={emergencyEnabled}
+          onClick={async () => {
+           const next = !emergencyEnabled
+           setEmergencyEnabled(next)
+           if (!next && emergencyEventTypeId) {
+            // Toggling off clears the saved emergency type so we don't
+            // silently route to a hidden setting.
+            setEmergencySaving(true); setEmergencyErr('')
+            try {
+             await fetchWithAuth('/api/dashboard/calcom/event-type', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ emergency_event_type_id: null }),
+             })
+             setEmergencyEventTypeId(null)
+             setEmergencyTitle('')
+            } finally {
+             setEmergencySaving(false)
+            }
+           }
+          }}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+           emergencyEnabled ? 'bg-rose-500' : 'bg-gray-300'
+          }`}
+         >
+          <span
+           className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+            emergencyEnabled ? 'translate-x-5' : 'translate-x-0'
+           }`}
+          />
+         </button>
+        </div>
+
+        <AnimatePresence initial={false}>
+         {emergencyEnabled && (
+          <motion.div
+           key="emergency-body"
+           initial={{ opacity: 0, height: 0 }}
+           animate={{ opacity: 1, height: 'auto' }}
+           exit={{ opacity: 0, height: 0 }}
+           transition={{ duration: 0.25, ease: EASE }}
+           className="overflow-hidden"
+          >
+           <div className="mt-3 space-y-1.5">
+            {eventTypeOptions
+             .filter((et) => et.id !== eventTypeId)
+             .map((et) => (
+              <button
+               key={et.id}
+               type="button"
+               onClick={async () => {
+                setEmergencySaving(true); setEmergencyErr('')
+                try {
+                 const r = await fetchWithAuth('/api/dashboard/calcom/event-type', {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json' },
+                  body: JSON.stringify({ emergency_event_type_id: et.id }),
+                 })
+                 const j = await r.json().catch(() => ({}))
+                 if (!r.ok || !j?.success) {
+                  setEmergencyErr(j?.error || `Save failed (${r.status})`)
+                  return
+                 }
+                 setEmergencyEventTypeId(et.id)
+                 setEmergencyTitle(et.title)
+                 // Auto-set location on the emergency event type to
+                 // in-person at the customer's address. Emergencies
+                 // are physical dispatch by definition - we don't
+                 // want the AI booking a Zoom call for a gas leak.
+                 // Best-effort; surface failure but don't block.
+                 try {
+                  await fetchWithAuth('/api/dashboard/calcom/event-type', {
+                   method: 'PATCH',
+                   headers: { 'content-type': 'application/json' },
+                   body: JSON.stringify({
+                    target: 'emergency',
+                    locationPreset: 'attendee_address',
+                   }),
+                  })
+                 } catch { /* non-fatal */ }
+                } finally {
+                 setEmergencySaving(false)
+                }
+               }}
+               disabled={emergencySaving}
+               className={`w-full text-left px-3 py-2 rounded-lg border text-xs font-mono transition-colors ${
+                emergencyEventTypeId === et.id
+                 ? 'border-rose-400 bg-rose-50 text-rose-900'
+                 : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+               } disabled:opacity-60`}
+              >
+               <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                 <div className="text-sm font-medium truncate">{et.title}</div>
+                 <div className="text-[11px] text-gray-500 mt-0.5">{et.slug} · {et.lengthInMinutes} min</div>
+                </div>
+                {emergencyEventTypeId === et.id && (
+                 <span className="text-[10px] font-mono uppercase tracking-wider text-rose-600 flex-shrink-0">🚨 emergency</span>
+                )}
+               </div>
+              </button>
+             ))}
+           </div>
+
+           {emergencyEventTypeId && (
+            <div className="mt-3 space-y-2">
+             <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Rename emergency event (optional)</label>
+              <div className="flex flex-wrap items-center gap-2">
+               <input
+                value={emergencyTitle}
+                onChange={(e) => setEmergencyTitle(e.target.value)}
+                placeholder="e.g. Emergency Dispatch"
+                className="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-900"
+               />
+               <button
+                type="button"
+                onClick={async () => {
+                 const t = emergencyTitle.trim()
+                 if (!t) return
+                 setEmergencyTitleSaving(true); setEmergencyErr('')
+                 try {
+                  const r = await fetchWithAuth('/api/dashboard/calcom/event-type', {
+                   method: 'PATCH',
+                   headers: { 'content-type': 'application/json' },
+                   body: JSON.stringify({ target: 'emergency', title: t }),
+                  })
+                  const j = await r.json().catch(() => ({}))
+                  if (!r.ok || !j?.success) {
+                   setEmergencyErr(j?.error || `Rename failed (${r.status})`)
+                  }
+                 } finally {
+                  setEmergencyTitleSaving(false)
+                 }
+                }}
+                disabled={emergencyTitleSaving || !emergencyTitle.trim()}
+                className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+               >
+                {emergencyTitleSaving ? 'Saving…' : 'Rename'}
+               </button>
+              </div>
+             </div>
+             <div className="text-[11px] text-gray-600 bg-white border border-rose-200 rounded-lg px-3 py-2">
+              Location auto-set to <strong>in person — customer&apos;s address</strong>. Emergencies are physical dispatch, so the AI will collect the address at booking.
+             </div>
+            </div>
+           )}
+
+           {emergencyErr && <div className="mt-2 text-xs text-rose-700">{emergencyErr}</div>}
+          </motion.div>
+         )}
+        </AnimatePresence>
+       </div>
+      )}
      </div>
     )}
 

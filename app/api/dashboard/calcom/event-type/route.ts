@@ -152,17 +152,24 @@ export async function PATCH(request: NextRequest) {
   locationAddress?: string
   locationLink?: string
   lengthInMinutes?: number
+  target?: 'primary' | 'emergency'
  }
 
  const { data: biz } = await supabaseAdmin
   .from('businesses')
-  .select('cal_com_api_key, cal_com_event_type_id')
+  .select('cal_com_api_key, cal_com_event_type_id, cal_com_event_type_id_emergency')
   .eq('id', auth.businessId)
   .maybeSingle()
  const apiKey = (biz as any)?.cal_com_api_key as string | null
- const eventTypeId = (biz as any)?.cal_com_event_type_id as number | null
+ const eventTypeId = body.target === 'emergency'
+  ? ((biz as any)?.cal_com_event_type_id_emergency as number | null)
+  : ((biz as any)?.cal_com_event_type_id as number | null)
  if (!apiKey || !eventTypeId) {
-  return NextResponse.json({ error: 'Cal.com is not connected for this business' }, { status: 400 })
+  return NextResponse.json({
+   error: body.target === 'emergency'
+    ? 'No emergency event type is set yet.'
+    : 'Cal.com is not connected for this business',
+  }, { status: 400 })
  }
 
  const patch: Record<string, any> = {}
@@ -192,7 +199,7 @@ export async function PATCH(request: NextRequest) {
  try {
   const updated = await updateEventType(apiKey, eventTypeId, patch)
   // Mirror the slug onto businesses so booking URLs we render stay in sync.
-  if (patch.slug) {
+  if (patch.slug && body.target !== 'emergency') {
    await supabaseAdmin
     .from('businesses')
     .update({ cal_com_event_type_slug: patch.slug, updated_at: new Date().toISOString() })

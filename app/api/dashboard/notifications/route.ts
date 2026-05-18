@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
   const { data, error } = await supabaseAdmin
     .from('businesses')
-    .select('notifications_phone, booking_sms_template, booking_sms_template_emergency, business_name')
+    .select('notifications_phone, escalation_phone, booking_sms_template, booking_sms_template_emergency, business_name')
     .eq('id', auth.businessId)
     .maybeSingle()
   if (error || !data) {
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: true,
     notifications_phone: (data as any).notifications_phone || '',
+    transfer_phone: (data as any).escalation_phone || '',
     booking_sms_template: (data as any).booking_sms_template || DEFAULT_BOOKING_SMS_TEMPLATE,
     booking_sms_template_emergency:
       (data as any).booking_sms_template_emergency || DEFAULT_EMERGENCY_SMS_TEMPLATE,
@@ -49,6 +50,7 @@ export async function PATCH(request: NextRequest) {
   }
   const body = await request.json().catch(() => ({})) as {
     notifications_phone?: string | null
+    transfer_phone?: string | null
     booking_sms_template?: string | null
     booking_sms_template_emergency?: string | null
   }
@@ -64,6 +66,19 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: 'Phone must be a US number with 10 digits.' }, { status: 400 })
       }
       update.notifications_phone = norm
+    }
+  }
+
+  if (body.transfer_phone !== undefined) {
+    const raw = (body.transfer_phone || '').toString().trim()
+    if (raw === '') {
+      update.escalation_phone = null
+    } else {
+      const norm = normalizeUsPhone(raw)
+      if (!norm) {
+        return NextResponse.json({ error: 'Transfer phone must be a US number with 10 digits.' }, { status: 400 })
+      }
+      update.escalation_phone = norm
     }
   }
 
@@ -111,7 +126,7 @@ export async function PATCH(request: NextRequest) {
   // toolsError in the response rather than vanishing into logs.
   let toolsError: string | null = null
   let toolsTrace: string[] = []
-  if (body.notifications_phone !== undefined) {
+  if (body.notifications_phone !== undefined || body.transfer_phone !== undefined) {
     try {
       const { retellAgentManager } = await import('@/lib/retell-agent-manager')
       toolsTrace = await retellAgentManager().ensureLLMToolsForBusiness(auth.businessId!)
