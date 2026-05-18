@@ -50,23 +50,52 @@ export async function GET(
   if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
 
   // Linked business lookup so the UI can show a "Login as client" button
-  // once an account has been created for this prospect. Match by close
-  // belonging to this rep with prospect_email = lead.email and a populated
-  // business_id (set by convertCloseToClient).
+  // once an account has been created for this prospect. We try to match
+  // a converted close (business_id set by convertCloseToClient) against
+  // any of the prospect's contact fields. Email-only was too brittle -
+  // case differences, missing emails on the close, or accounts created
+  // without a normalized email on the close row all left the button
+  // gray even though the account existed.
   let linkedBusiness: { id: string; business_name: string } | null = null
-  if (lead.email) {
-    const { data: close } = await supabaseAdmin
-      .from('closes')
-      .select('business_id, businesses:business_id(id, business_name)')
-      .eq('rep_id', auth.userId)
-      .eq('prospect_email', String(lead.email).toLowerCase())
-      .not('business_id', 'is', null)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    const biz = (close as any)?.businesses
-    if (biz?.id) {
-      linkedBusiness = { id: biz.id, business_name: biz.business_name || 'Client' }
+  {
+    const leadEmail = lead.email ? String(lead.email).toLowerCase() : null
+    const leadPhone = lead.phone ? String(lead.phone) : null
+    const orParts: string[] = []
+    if (leadEmail) orParts.push(`prospect_email.ilike.${leadEmail}`)
+    if (leadPhone) orParts.push(`prospect_phone.eq.${leadPhone}`)
+    if (orParts.length > 0) {
+      const { data: close } = await supabaseAdmin
+        .from('closes')
+        .select('business_id, businesses:business_id(id, business_name)')
+        .eq('rep_id', auth.userId)
+        .not('business_id', 'is', null)
+        .or(orParts.join(','))
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const biz = (close as any)?.businesses
+      if (biz?.id) {
+        linkedBusiness = { id: biz.id, business_name: biz.business_name || 'Client' }
+      }
+    }
+    // Last-ditch fallback: any close that this rep claimed for this
+    // lead's business name. Helps when prospect_email/phone weren't
+    // populated on the close (legacy rows from before the prebuild
+    // workshop migration).
+    if (!linkedBusiness && lead.business_name) {
+      const { data: close } = await supabaseAdmin
+        .from('closes')
+        .select('business_id, businesses:business_id(id, business_name)')
+        .eq('rep_id', auth.userId)
+        .not('business_id', 'is', null)
+        .ilike('prospect_business_name', String(lead.business_name))
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const biz = (close as any)?.businesses
+      if (biz?.id) {
+        linkedBusiness = { id: biz.id, business_name: biz.business_name || 'Client' }
+      }
     }
   }
 
