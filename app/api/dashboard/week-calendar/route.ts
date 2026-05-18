@@ -112,10 +112,11 @@ export async function GET(request: NextRequest) {
  // self-heals the calendar even when webhook registration silently
  // failed at onboarding or got revoked. Failure here is non-fatal -
  // we still return the local rows.
- // Require both the key AND the calcom_connected flag so a half-reset
- // business (key still in row but flag flipped off by admin reset) never
- // leaks Cal.com bookings back to the dashboard.
- if (business?.cal_com_api_key && (business as any)?.calcom_connected) {
+ // Gate on api_key alone: the calcom_connected flag was masking real
+ // bookings on freshly-onboarded accounts where the flag hadn't
+ // propagated yet. The key itself is the kill-switch - if an admin
+ // wants to stop syncing, they clear the key.
+ if (business?.cal_com_api_key) {
   try {
    const localUids = new Set(
     (localRows || [])

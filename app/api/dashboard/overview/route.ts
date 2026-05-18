@@ -152,11 +152,10 @@ export async function GET(request: NextRequest) {
    .limit(20)
 
   const apptList: any[] = [...(localAppts || [])]
-  // Defense-in-depth: require BOTH a key AND the calcom_connected flag.
-  // Admin reset-onboarding sets calcom_connected=false even if some other
-  // code path leaves a stale key behind; with both checks, a half-cleared
-  // business will never leak Cal.com bookings back to the dashboard.
-  if (business?.cal_com_api_key && (business as any)?.calcom_connected) {
+  // Gate on api_key alone: the calcom_connected flag was masking real
+  // bookings on freshly-onboarded accounts where the flag hadn't
+  // propagated yet. The key itself is the kill-switch.
+  if (business?.cal_com_api_key) {
    try {
     const localUids = new Set(
      (localAppts || [])

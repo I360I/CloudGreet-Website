@@ -86,10 +86,11 @@ export async function GET(request: NextRequest) {
  // Live Cal.com merge - same self-heal pattern as the week view.
  // Cal.com bookings the webhook never landed get injected as synthetic
  // rows so the dashboard reflects the contractor's actual calendar.
- // Require BOTH a key AND the calcom_connected flag so an admin reset
- // that flips connected=false (but leaves a stale key for any reason)
- // can't leak Cal.com bookings back to the dashboard.
- if (business?.cal_com_api_key && (business as any)?.calcom_connected) {
+ // Gate on api_key alone: the calcom_connected flag was masking real
+ // bookings on freshly-onboarded accounts where the flag hadn't
+ // propagated yet. If we have the key on file, the contractor handed
+ // it to us; an admin clearing the key entirely is the kill-switch.
+ if (business?.cal_com_api_key) {
   try {
    const localUids = new Set(
     (localRows || [])

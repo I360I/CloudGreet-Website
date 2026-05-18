@@ -255,6 +255,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  // wiring it up - so they never have to leave the onboarding flow to
  // hop into Cal.com's settings.
  const [newTitle, setNewTitle] = useState('')
+ const [newLengthInMinutes, setNewLengthInMinutes] = useState<number | ''>('')
  const [locationPreset, setLocationPreset] = useState<'attendee_address' | 'attendee_phone' | 'google_meet' | 'zoom' | 'cal_video'>('attendee_address')
  const [showOtherLocations, setShowOtherLocations] = useState(false)
  const [fixedAddress, setFixedAddress] = useState('')
@@ -399,6 +400,9 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
    // surface the issue via the settings editor later.
    const editBody: any = { locationPreset }
    if (newTitle.trim()) editBody.title = newTitle.trim()
+   if (typeof newLengthInMinutes === 'number' && newLengthInMinutes >= 5 && newLengthInMinutes <= 480) {
+    editBody.lengthInMinutes = newLengthInMinutes
+   }
    if (locationPreset === 'attendee_address' && fixedAddress.trim()) {
     editBody.locationAddress = fixedAddress.trim()
    }
@@ -495,14 +499,31 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
 
     {eventTypeId != null && !success && (
      <div className="space-y-3 pt-1">
-      <div>
-       <label className="block text-xs font-medium text-gray-700 mb-1.5">Rename event (optional)</label>
-       <input
-        value={newTitle}
-        onChange={(e) => setNewTitle(e.target.value)}
-        placeholder="e.g. AC Service Call"
-        className="form-input"
-       />
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-3">
+       <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">Rename event (optional)</label>
+        <input
+         value={newTitle}
+         onChange={(e) => setNewTitle(e.target.value)}
+         placeholder="e.g. AC Service Call"
+         className="form-input"
+        />
+       </div>
+       <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">Duration (minutes)</label>
+        <input
+         type="number"
+         min={5}
+         max={480}
+         value={newLengthInMinutes}
+         onChange={(e) => {
+          const v = e.target.value
+          setNewLengthInMinutes(v === '' ? '' : Math.max(5, Math.min(480, Number(v) || 0)))
+         }}
+         placeholder={eventTypeOptions?.find((et) => et.id === eventTypeId)?.lengthInMinutes?.toString() || '60'}
+         className="form-input"
+        />
+       </div>
       </div>
 
       <div>
