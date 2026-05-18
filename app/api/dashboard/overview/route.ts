@@ -73,28 +73,44 @@ export async function GET(request: NextRequest) {
   const allCallsBoth = (callsAll || []) as any[]
 
   // Backfill outcome on the fly for calls that don't have one stored
-  // yet but DO have a linked appointment. This catches rows from
-  // before the webhook started populating calls.outcome and any rows
-  // where post-call analysis was skipped/lost. Without this, every
-  // booked test call counts as 'message' on the Outcomes pie.
-  const needsDerivation = allCallsBoth.filter((c) => !c.outcome && c.retell_call_id)
+  // yet but DO have a linked appointment. Two-pass match: first by
+  // retell_call_id (most precise), then by from_number <-> customer_phone
+  // (last-10-digit fuzzy) so calls where the linkage column was never
+  // stamped still get the right tag.
+  const needsDerivation = allCallsBoth.filter((c) => !c.outcome)
   if (needsDerivation.length > 0) {
-   const retellIds = needsDerivation.map((c) => c.retell_call_id)
+   const retellIds = needsDerivation.map((c) => c.retell_call_id).filter(Boolean)
+   const callDigits = new Set<string>()
+   for (const c of needsDerivation) {
+    const d = (c.from_number || '').toString().replace(/\D/g, '').slice(-10)
+    if (d) callDigits.add(d)
+   }
+   const since = new Date(now - range * 2 * 24 * 60 * 60 * 1000).toISOString()
    const { data: appts } = await supabaseAdmin
     .from('appointments')
-    .select('retell_call_id, is_emergency')
+    .select('retell_call_id, customer_phone, is_emergency, created_at')
     .eq('business_id', businessId)
-    .in('retell_call_id', retellIds)
+    .gte('created_at', since)
     .not('status', 'in', '(cancelled)')
    const byCallId = new Map<string, { is_emergency: boolean }>()
+   const byDigits = new Map<string, { is_emergency: boolean }>()
    for (const a of (appts || []) as any[]) {
     if (a.retell_call_id) byCallId.set(a.retell_call_id, { is_emergency: !!a.is_emergency })
+    const d = (a.customer_phone || '').toString().replace(/\D/g, '').slice(-10)
+    if (d && !byDigits.has(d)) byDigits.set(d, { is_emergency: !!a.is_emergency })
    }
    for (const c of allCallsBoth) {
-    if (c.outcome || !c.retell_call_id) continue
-    const a = byCallId.get(c.retell_call_id)
-    if (a) c.outcome = a.is_emergency ? 'emergency' : 'booked'
+    if (c.outcome) continue
+    let hit: { is_emergency: boolean } | undefined
+    if (c.retell_call_id) hit = byCallId.get(c.retell_call_id)
+    if (!hit) {
+     const d = (c.from_number || '').toString().replace(/\D/g, '').slice(-10)
+     if (d) hit = byDigits.get(d)
+    }
+    if (hit) c.outcome = hit.is_emergency ? 'emergency' : 'booked'
    }
+   void retellIds
+   void callDigits
   }
 
   const allCalls = allCallsBoth.filter((c) => new Date(c.created_at).toISOString() >= startCurrent)

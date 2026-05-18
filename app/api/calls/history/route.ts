@@ -86,23 +86,34 @@ export async function GET(request: NextRequest) {
  // rows from before the webhook started stamping calls.outcome and
  // keeps the calls list accurate even if a webhook event was lost.
  const callList = (calls || []) as any[]
- const needsOutcomeDerivation = callList.filter((c) => !c.outcome && c.retell_call_id)
+ const needsOutcomeDerivation = callList.filter((c) => !c.outcome)
  if (needsOutcomeDerivation.length > 0) {
-  const retellIds = needsOutcomeDerivation.map((c) => c.retell_call_id)
+  // Lookback window large enough to cover the page of calls we returned;
+  // appointment created_at is usually within seconds of the call, so a
+  // 90-day window is plenty.
+  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
   const { data: appts } = await supabaseAdmin
    .from('appointments')
-   .select('retell_call_id, is_emergency')
+   .select('retell_call_id, customer_phone, is_emergency, created_at')
    .eq('business_id', businessId)
-   .in('retell_call_id', retellIds)
+   .gte('created_at', since)
    .not('status', 'in', '(cancelled)')
   const byCallId = new Map<string, { is_emergency: boolean }>()
+  const byDigits = new Map<string, { is_emergency: boolean }>()
   for (const a of (appts || []) as any[]) {
    if (a.retell_call_id) byCallId.set(a.retell_call_id, { is_emergency: !!a.is_emergency })
+   const d = (a.customer_phone || '').toString().replace(/\D/g, '').slice(-10)
+   if (d && !byDigits.has(d)) byDigits.set(d, { is_emergency: !!a.is_emergency })
   }
   for (const c of callList) {
-   if (c.outcome || !c.retell_call_id) continue
-   const a = byCallId.get(c.retell_call_id)
-   if (a) c.outcome = a.is_emergency ? 'emergency' : 'booked'
+   if (c.outcome) continue
+   let hit: { is_emergency: boolean } | undefined
+   if (c.retell_call_id) hit = byCallId.get(c.retell_call_id)
+   if (!hit) {
+    const d = (c.from_number || '').toString().replace(/\D/g, '').slice(-10)
+    if (d) hit = byDigits.get(d)
+   }
+   if (hit) c.outcome = hit.is_emergency ? 'emergency' : 'booked'
   }
  }
 

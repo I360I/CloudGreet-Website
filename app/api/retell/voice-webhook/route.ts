@@ -253,18 +253,30 @@ export async function POST(request: NextRequest) {
  return NextResponse.json({ success: false, error: 'business_not_found' }, { status: 404 })
  }
 
- // Parse datetime and calculate end time (default 1 hour duration)
- const startTime = new Date(datetime)
+ // Parse datetime and calculate end time (default 1 hour duration).
+ // Defensive: if the agent gave us a naive datetime (no 'Z' and no
+ // +/-HH:MM offset), JavaScript's Date interprets it in the server's
+ // local timezone (UTC on Vercel), which silently shifts the booking
+ // by 5-8 hours from what the caller agreed to. Treat naive
+ // datetimes as the BUSINESS's local time and convert to UTC via the
+ // business timezone.
+ const businessTz = resolveBusinessTimezone({
+   explicit: (business as any).timezone,
+   state: (business as any).state,
+ })
+ const startTime = parseAgentDatetime(datetime, businessTz)
  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000) // Add 1 hour
 
  // Create appointment in database using transaction function for atomicity
+ // Both scheduled_date and start_time stamped from the normalized
+ // startTime so the local DB stays consistent with Cal.com.
  const { data: appointmentId, error: appointmentError } = await supabaseAdmin.rpc('create_appointment_safe', {
  p_business_id: business_id,
  p_customer_name: name,
  p_customer_phone: phone,
  p_customer_email: null, // Email not available from voice call
  p_service_type: service,
- p_scheduled_date: datetime,
+ p_scheduled_date: startTime.toISOString(),
  p_start_time: startTime.toISOString(),
  p_end_time: endTime.toISOString(),
  p_duration: 60,
@@ -1229,6 +1241,91 @@ function isoInZone(iso: string, tz: string): string {
  *   formatHuman('2026-05-14T15:00:00-04:00', 'America/Chicago')
  *     => 'Thu May 14, 2:00 PM'
  */
+/**
+ * Parse the `datetime` argument the Retell agent passes to
+ * book_appointment, robust to the common cases the LLM emits:
+ *
+ *   - 2026-05-19T13:00:00-05:00 → trusted as-is (proper ISO with offset)
+ *   - 2026-05-19T13:00:00Z      → trusted as-is (proper ISO in UTC)
+ *   - 2026-05-19T13:00:00       → NAIVE - we treat as business-local time
+ *                                  and shift into UTC using the business
+ *                                  timezone offset at that instant.
+ *   - 2026-05-19                → date-only, assume 9 AM business-local
+ *                                  (rare but not catastrophic - better
+ *                                  than midnight UTC which shows up as
+ *                                  the previous evening on the dashboard)
+ *
+ * Returns a real Date object in UTC. Falls back to plain Date(input)
+ * for anything we can't pattern-match so we never throw mid-tool-call.
+ */
+function parseAgentDatetime(input: string, tz: string): Date {
+ const s = (input || '').trim()
+ const isoWithOffset = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(Z|[+-]\d{2}:?\d{2})$/i
+ const isoNaive = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/
+ const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/
+
+ if (isoWithOffset.test(s)) {
+  const d = new Date(s)
+  if (!isNaN(d.getTime())) return d
+ }
+
+ const naive = s.match(isoNaive)
+ const dateMatch = !naive ? s.match(dateOnly) : null
+ if (naive || dateMatch) {
+  const y = Number(naive ? naive[1] : dateMatch![1])
+  const mo = Number(naive ? naive[2] : dateMatch![2])
+  const day = Number(naive ? naive[3] : dateMatch![3])
+  const hr = Number(naive ? naive[4] : '9')
+  const min = Number(naive ? naive[5] : '0')
+  const sec = Number(naive ? (naive[6] || '0') : '0')
+  // Treat (y, mo, day, hr, min) as wall-clock time in the business
+  // timezone. Compute the UTC instant that, when rendered in tz,
+  // reads as those wall-clock components.
+  return wallClockToUtc(y, mo, day, hr, min, sec, tz)
+ }
+
+ // Fallback - hand whatever it was to Date and hope it parses.
+ const d = new Date(s)
+ return isNaN(d.getTime()) ? new Date() : d
+}
+
+/**
+ * Convert wall-clock components in `tz` to the corresponding UTC Date.
+ * Uses Intl.DateTimeFormat to discover the tz offset at that instant
+ * (handles DST automatically). Iterates once because the offset itself
+ * depends on the target UTC instant, and a fall-back-DST hour can
+ * shift it.
+ */
+function wallClockToUtc(
+ y: number, mo: number, day: number, hr: number, min: number, sec: number, tz: string,
+): Date {
+ // Start by pretending the wall clock IS UTC, then learn how wrong
+ // that is by formatting that pretend-UTC instant in the target tz.
+ const guessUtc = Date.UTC(y, mo - 1, day, hr, min, sec)
+ const offsetMs = tzOffsetMs(new Date(guessUtc), tz)
+ const realUtc = guessUtc - offsetMs
+ // One refinement pass covers DST transition edge cases.
+ const offset2 = tzOffsetMs(new Date(realUtc), tz)
+ return new Date(guessUtc - offset2)
+}
+
+/** Offset, in ms, between the given instant's wall-clock in `tz` and UTC. */
+function tzOffsetMs(at: Date, tz: string): number {
+ const dtf = new Intl.DateTimeFormat('en-US', {
+  timeZone: tz,
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+  hour12: false,
+ })
+ const parts: Record<string, string> = {}
+ for (const p of dtf.formatToParts(at)) if (p.type !== 'literal') parts[p.type] = p.value
+ const asIfUtc = Date.UTC(
+  Number(parts.year), Number(parts.month) - 1, Number(parts.day),
+  Number(parts.hour === '24' ? '0' : parts.hour), Number(parts.minute), Number(parts.second),
+ )
+ return asIfUtc - at.getTime()
+}
+
 function formatHuman(iso: string, tz: string): string {
  try {
   const d = new Date(iso)

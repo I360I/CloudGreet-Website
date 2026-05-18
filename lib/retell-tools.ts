@@ -100,7 +100,7 @@ export function getRetellGeneralTools(
           datetime: {
             type: 'string',
             description:
-              "ISO-8601 start time with timezone, e.g., '2026-05-14T14:00:00-05:00'. Use the business's timezone, not UTC.",
+              "ISO-8601 start time WITH the explicit timezone offset for the business, e.g., '2026-05-14T14:00:00-05:00' for 2 PM Central. MUST include both the date AND the time AND the offset - never pass a date-only string like '2026-05-14', never pass a time without offset like '2026-05-14T14:00:00'. The offset must reflect the contractor's local timezone, not UTC. A missing offset will silently shift the booking by several hours.",
           },
           review_consent: {
             type: 'boolean',
