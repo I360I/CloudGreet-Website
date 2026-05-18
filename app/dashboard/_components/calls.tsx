@@ -32,7 +32,7 @@ function formatExtraction(v: any): string {
 
 export function tagOutcome(c: Pick<Call, 'outcome' | 'status' | 'duration'>): Outcome {
  const o = (c.outcome || '').toLowerCase()
- if (o.includes('book') || o.includes('appoint')) return 'booked'
+ if (o.includes('book') || o.includes('appoint') || o === 'emergency') return 'booked'
  if (o.includes('message') || o.includes('voicemail')) return 'message'
  if (c.status === 'failed' || (c.duration ?? 0) < 5) return 'dropped'
  return 'message'

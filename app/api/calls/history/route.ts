@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
  // Build query
  let query = supabaseAdmin
  .from('calls')
- .select('id, call_id, from_number, to_number, status, duration, recording_url, transcript, created_at, caller_name, call_extractions, call_summary', { count: 'exact' })
+ .select('id, call_id, retell_call_id, from_number, to_number, status, duration, recording_url, transcript, created_at, caller_name, call_extractions, call_summary, outcome, sentiment', { count: 'exact' })
  .eq('business_id', businessId)
  .order('created_at', { ascending: false })
  .range(offset, offset + limit - 1)
@@ -79,8 +79,35 @@ export async function GET(request: NextRequest) {
  )
  }
 
+ // Derive a real outcome for rows that don't have one stored yet.
+ // Calls that booked an appointment have a matching row in appointments
+ // keyed by retell_call_id - if one exists, the call is 'booked' (or
+ // 'emergency' if the appointment was flagged). This rescues legacy
+ // rows from before the webhook started stamping calls.outcome and
+ // keeps the calls list accurate even if a webhook event was lost.
+ const callList = (calls || []) as any[]
+ const needsOutcomeDerivation = callList.filter((c) => !c.outcome && c.retell_call_id)
+ if (needsOutcomeDerivation.length > 0) {
+  const retellIds = needsOutcomeDerivation.map((c) => c.retell_call_id)
+  const { data: appts } = await supabaseAdmin
+   .from('appointments')
+   .select('retell_call_id, is_emergency')
+   .eq('business_id', businessId)
+   .in('retell_call_id', retellIds)
+   .not('status', 'in', '(cancelled)')
+  const byCallId = new Map<string, { is_emergency: boolean }>()
+  for (const a of (appts || []) as any[]) {
+   if (a.retell_call_id) byCallId.set(a.retell_call_id, { is_emergency: !!a.is_emergency })
+  }
+  for (const c of callList) {
+   if (c.outcome || !c.retell_call_id) continue
+   const a = byCallId.get(c.retell_call_id)
+   if (a) c.outcome = a.is_emergency ? 'emergency' : 'booked'
+  }
+ }
+
  return NextResponse.json({
- calls: calls || [],
+ calls: callList,
  total: count || 0,
  limit,
  offset

@@ -70,7 +70,33 @@ export async function GET(request: NextRequest) {
    .gte('created_at', startPrevious)
    .order('created_at', { ascending: false })
 
-  const allCallsBoth = callsAll || []
+  const allCallsBoth = (callsAll || []) as any[]
+
+  // Backfill outcome on the fly for calls that don't have one stored
+  // yet but DO have a linked appointment. This catches rows from
+  // before the webhook started populating calls.outcome and any rows
+  // where post-call analysis was skipped/lost. Without this, every
+  // booked test call counts as 'message' on the Outcomes pie.
+  const needsDerivation = allCallsBoth.filter((c) => !c.outcome && c.retell_call_id)
+  if (needsDerivation.length > 0) {
+   const retellIds = needsDerivation.map((c) => c.retell_call_id)
+   const { data: appts } = await supabaseAdmin
+    .from('appointments')
+    .select('retell_call_id, is_emergency')
+    .eq('business_id', businessId)
+    .in('retell_call_id', retellIds)
+    .not('status', 'in', '(cancelled)')
+   const byCallId = new Map<string, { is_emergency: boolean }>()
+   for (const a of (appts || []) as any[]) {
+    if (a.retell_call_id) byCallId.set(a.retell_call_id, { is_emergency: !!a.is_emergency })
+   }
+   for (const c of allCallsBoth) {
+    if (c.outcome || !c.retell_call_id) continue
+    const a = byCallId.get(c.retell_call_id)
+    if (a) c.outcome = a.is_emergency ? 'emergency' : 'booked'
+   }
+  }
+
   const allCalls = allCallsBoth.filter((c) => new Date(c.created_at).toISOString() >= startCurrent)
   const prevCalls = allCallsBoth.filter((c) => new Date(c.created_at).toISOString() < startCurrent)
 
@@ -86,7 +112,7 @@ export async function GET(request: NextRequest) {
 
   const tagOutcome = (c: any): 'booked' | 'message' | 'dropped' => {
    const o = (c.outcome || '').toLowerCase()
-   if (o.includes('book') || o.includes('appoint')) return 'booked'
+   if (o.includes('book') || o.includes('appoint') || o === 'emergency') return 'booked'
    if (o.includes('message') || o.includes('voicemail')) return 'message'
    if (c.status === 'failed' || (c.duration ?? 0) < 5) return 'dropped'
    return 'message'
