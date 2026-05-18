@@ -631,9 +631,41 @@ async function creditRepCommission(
  }
  const totalGross = mrrGross + setupGross
  const actualPaid = invoice.amount_paid || 0
- // If amount_paid is 0 (fully discounted invoice that Stripe still
- // marks paid), no commission. If gross was 0, fall through to skip.
- const scale = totalGross > 0 ? actualPaid / totalGross : 0
+
+ // Walk from gross sticker → amount_paid (post-discount) → net deposit
+ // (post-Stripe-fees). Commission has to be computed off the NET,
+ // because the platform never sees the Stripe fee. With a 50/50 split
+ // on a $20 sale that nets $18.97, the rep should earn $9.485 — not
+ // $10 (which would have us losing money on every sale).
+ //
+ // Pull the charge's balance_transaction; that's the only place Stripe
+ // exposes the fee at webhook time. If the BT isn't available yet
+ // (rare for invoice.payment_succeeded but possible right at the
+ // billing-engine boundary) we fall back to amount_paid - a small
+ // overpayment is better than zeroing out the rep.
+ let netCents = actualPaid
+ try {
+  const chargeRef = (invoice as any).charge as string | Stripe.Charge | null | undefined
+  const chargeId = typeof chargeRef === 'string' ? chargeRef : chargeRef?.id || null
+  if (chargeId) {
+   const charge = await stripe.charges.retrieve(chargeId, {
+    expand: ['balance_transaction'],
+   })
+   const bt = charge.balance_transaction as Stripe.BalanceTransaction | null
+   if (bt && typeof bt.net === 'number' && bt.net > 0) {
+    netCents = bt.net
+   }
+  }
+ } catch (e) {
+  logger.warn('balance_transaction lookup failed - commissioning on amount_paid', {
+   invoiceId: invoice.id,
+   error: e instanceof Error ? e.message : 'Unknown',
+  })
+ }
+
+ // If net is 0 (fully discounted invoice that Stripe still marks
+ // paid), no commission. If gross was 0, fall through to skip.
+ const scale = totalGross > 0 ? netCents / totalGross : 0
  const mrrCents = Math.round(mrrGross * scale)
  const setupCents = Math.round(setupGross * scale)
 
