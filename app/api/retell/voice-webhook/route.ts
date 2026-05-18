@@ -313,6 +313,20 @@ export async function POST(request: NextRequest) {
        .update({ retell_call_id: bookingCallId, updated_at: new Date().toISOString() })
        .eq('id', apptId)
    } catch { /* non-fatal */ }
+   // Also stamp caller_name onto the call row immediately. Without
+   // this, the calls list shows just the phone number until
+   // call_analyzed fires (sometimes 30s+ after the call ends, and
+   // missing entirely if Retell never runs the post-call analysis).
+   // The agent already collected the name to make the booking, so
+   // this is the freshest source.
+   if (name && typeof name === 'string' && name.trim()) {
+    try {
+      await supabaseAdmin
+        .from('calls')
+        .update({ caller_name: name.trim().slice(0, 120), updated_at: new Date().toISOString() })
+        .eq('retell_call_id', bookingCallId)
+    } catch { /* non-fatal */ }
+   }
  }
 
  // Persist review_consent on the appointment so we have an audit trail
@@ -1321,6 +1335,18 @@ async function handleCallEvent(
     Object.assign(flat, analysis)
    }
    if (Object.keys(flat).length > 0) patch.call_extractions = flat
+   // Promote the extracted name into the top-level caller_name column
+   // so the dashboard calls list can render it without parsing JSON.
+   // Try the most likely keys in order; an empty string from Retell
+   // (caller never gave a name) leaves the column null.
+   const extractedName =
+    (flat.customer_name as string | undefined) ||
+    (flat.caller_name as string | undefined) ||
+    (flat.name as string | undefined) ||
+    null
+   if (extractedName && typeof extractedName === 'string' && extractedName.trim()) {
+    patch.caller_name = extractedName.trim().slice(0, 120)
+   }
   }
 
   // Retell's general analysis (sentiment, summary, success indicator).
