@@ -725,16 +725,27 @@ function OwnerNameSection() {
   let cancelled = false
   ;(async () => {
    try {
-    const res = await fetchWithAuth('/api/me/profile')
-    const j = await res.json().catch(() => ({}))
-    if (!cancelled && j?.success) {
-     const p = j.profile || {}
-     const nameParts = (p.name || '').split(/\s+/).filter(Boolean)
-     const f = p.first_name || nameParts[0] || ''
-     const l = p.last_name || nameParts.slice(1).join(' ') || ''
-     setFirst(f); setLast(l); setPhone(p.phone || '')
-     setInitial({ first: f, last: l, phone: p.phone || '' })
-    }
+    // Name comes from the user profile, but the transfer phone is
+    // read straight from businesses.escalation_phone (via the
+    // notifications endpoint) - that's the field Retell's transfer_call
+    // destination is actually wired to, so it stays the source of truth.
+    // Reading from profile.phone here let the settings page drift out
+    // of sync with Retell whenever onboarding set escalation_phone
+    // directly without touching the profile row.
+    const [profileRes, notifRes] = await Promise.all([
+     fetchWithAuth('/api/me/profile'),
+     fetchWithAuth('/api/dashboard/notifications'),
+    ])
+    const profileJson = await profileRes.json().catch(() => ({}))
+    const notifJson = await notifRes.json().catch(() => ({}))
+    if (cancelled) return
+    const p = profileJson?.profile || {}
+    const nameParts = (p.name || '').split(/\s+/).filter(Boolean)
+    const f = p.first_name || nameParts[0] || ''
+    const l = p.last_name || nameParts.slice(1).join(' ') || ''
+    const ph = (notifJson?.transfer_phone as string) || ''
+    setFirst(f); setLast(l); setPhone(ph)
+    setInitial({ first: f, last: l, phone: ph })
    } catch { /* non-fatal */ }
    finally { if (!cancelled) setLoading(false) }
   })()
@@ -746,23 +757,36 @@ function OwnerNameSection() {
  const onSave = async () => {
   setSaving(true); setError(''); setSavedFlag(false)
   try {
-   const res = await fetchWithAuth('/api/me/profile', {
-    method: 'PATCH',
-    body: JSON.stringify({
-     first_name: first.trim(),
-     last_name: last.trim(),
-     phone: phone.trim() || null,
-    }),
-   })
-   const j = await res.json().catch(() => ({}))
-   if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
+   const nameChanged = first.trim() !== initial.first || last.trim() !== initial.last
+   const phoneChanged = phone.trim() !== initial.phone
+
+   if (nameChanged) {
+    const res = await fetchWithAuth('/api/me/profile', {
+     method: 'PATCH',
+     body: JSON.stringify({
+      first_name: first.trim(),
+      last_name: last.trim(),
+     }),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
+   }
+
+   let toolsError: string | null = null
+   if (phoneChanged) {
+    const res = await fetchWithAuth('/api/dashboard/notifications', {
+     method: 'PATCH',
+     headers: { 'content-type': 'application/json' },
+     body: JSON.stringify({ transfer_phone: phone.trim() || null }),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
+    toolsError = j?.toolsError || null
+   }
+
    setInitial({ first: first.trim(), last: last.trim(), phone: phone.trim() })
-   // If the phone change couldn't be pushed onto the live agent (Retell
-   // rejected the format, agent isn't linked yet, etc.) the rest of the
-   // save still succeeded but transfer_call won't route correctly. Show
-   // the failure as a yellow warning instead of a silent green check.
-   if (j.toolsError) {
-    setError(`Saved, but couldn't sync to the agent: ${j.toolsError}`)
+   if (toolsError) {
+    setError(`Saved, but couldn't sync to the agent: ${toolsError}`)
    } else {
     setSavedFlag(true)
     setTimeout(() => setSavedFlag(false), 2500)
