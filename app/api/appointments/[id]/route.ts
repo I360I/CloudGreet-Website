@@ -254,10 +254,14 @@ export async function PUT(
  const body = await request.json()
  const validated = updateAppointmentSchema.parse(body)
 
- // Fetch business for validation
+ // Fetch business for validation. Earlier versions of this select
+ // included `calendar_connected, google_calendar_id` which don't exist
+ // on the current businesses schema - the query errored out and every
+ // PUT (status updates included) returned a misleading "Business not
+ // found". Stick to the columns actually used in this handler.
  const { data: business, error: businessError } = await supabaseAdmin
  .from('businesses')
- .select('services, business_hours, timezone, calendar_connected, google_calendar_id')
+ .select('services, business_hours, timezone')
  .eq('id', businessId)
  .single()
 
@@ -370,12 +374,14 @@ export async function PUT(
  )
  }
 
- // Sync Google Calendar if calendar connected
- if (business.calendar_connected) {
+ // Sync Google Calendar if calendar connected. Schema no longer
+ // tracks calendar_connected directly; we run sync from the calendar
+ // module which short-circuits if Google isn't actually wired up.
+ if ((business as any).calendar_connected) {
  try {
  if (validated.status === 'cancelled' && existingAppointment.google_calendar_event_id) {
  // Delete from Google Calendar
- const calendarId = business.google_calendar_id || 'primary'
+ const calendarId = (business as any).google_calendar_id || 'primary'
  await deleteGoogleCalendarEvent(
  calendarId,
  existingAppointment.google_calendar_event_id
@@ -388,7 +394,7 @@ export async function PUT(
  .eq('id', appointmentId)
  } else if (existingAppointment.google_calendar_event_id) {
  // Update Google Calendar event
- const calendarId = business.google_calendar_id || 'primary'
+ const calendarId = (business as any).google_calendar_id || 'primary'
  const eventId = await syncGoogleCalendarEvent(
  calendarId,
  updatedAppointment,
@@ -524,7 +530,7 @@ export async function DELETE(
  // Delete Google Calendar event if exists
  if (business?.calendar_connected && existingAppointment.google_calendar_event_id) {
  try {
- const calendarId = business.google_calendar_id || 'primary'
+ const calendarId = (business as any).google_calendar_id || 'primary'
  await deleteGoogleCalendarEvent(
  calendarId,
  existingAppointment.google_calendar_event_id

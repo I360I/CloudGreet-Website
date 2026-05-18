@@ -516,7 +516,7 @@ export function AppointmentDrawer({
   return () => { cancelled = true }
  }, [apptId, isDemoId])
 
- const setStatus = async (status: 'cancelled' | 'confirmed' | 'completed') => {
+ const setStatus = async (status: 'cancelled' | 'confirmed' | 'completed' | 'no_show') => {
   if (!appt) return
   if (isDemoId) {
    // Demo bookings live entirely client-side - just reflect the change.
@@ -644,22 +644,22 @@ export function AppointmentDrawer({
       )}
 
       <div className="border-t border-gray-100 pt-4 flex items-center gap-2 flex-wrap">
-       {appt.status === 'scheduled' && (
-        <button
-         onClick={() => setStatus('confirmed')}
-         disabled={busy}
-         className="text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-all duration-300 ease-out disabled:opacity-50"
-        >
-         Mark confirmed
-        </button>
-       )}
-       {(appt.status === 'scheduled' || appt.status === 'confirmed') && (
+       {appt.status !== 'completed' && appt.status !== 'cancelled' && appt.status !== 'no_show' && (
         <button
          onClick={() => setStatus('completed')}
          disabled={busy}
-         className="text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 transition-all duration-300 ease-out disabled:opacity-50"
+         className="text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-all duration-300 ease-out disabled:opacity-50"
         >
          Mark completed
+        </button>
+       )}
+       {appt.status !== 'completed' && appt.status !== 'cancelled' && appt.status !== 'no_show' && (
+        <button
+         onClick={() => setStatus('no_show')}
+         disabled={busy}
+         className="text-xs font-medium px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-all duration-300 ease-out disabled:opacity-50"
+        >
+         Mark dropped
         </button>
        )}
        {appt.status !== 'cancelled' && appt.status !== 'completed' && (
