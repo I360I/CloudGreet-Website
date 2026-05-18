@@ -247,6 +247,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  const [emergencyTitle, setEmergencyTitle] = useState('')
  const [emergencyTitleSaving, setEmergencyTitleSaving] = useState(false)
  const [emergencyTitleSaved, setEmergencyTitleSaved] = useState(false)
+ const [emergency24x7, setEmergency24x7] = useState(false)
  const [emergencySaving, setEmergencySaving] = useState(false)
  const [emergencyErr, setEmergencyErr] = useState('')
 
@@ -256,6 +257,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  // hop into Cal.com's settings.
  const [newTitle, setNewTitle] = useState('')
  const [newLengthInMinutes, setNewLengthInMinutes] = useState<number | ''>('')
+ const [newMinNoticeHours, setNewMinNoticeHours] = useState<number | ''>('')
  const [locationPreset, setLocationPreset] = useState<'attendee_address' | 'attendee_phone' | 'google_meet' | 'zoom' | 'cal_video'>('attendee_address')
  const [showOtherLocations, setShowOtherLocations] = useState(false)
  const [fixedAddress, setFixedAddress] = useState('')
@@ -403,6 +405,9 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
    if (typeof newLengthInMinutes === 'number' && newLengthInMinutes >= 5 && newLengthInMinutes <= 480) {
     editBody.lengthInMinutes = newLengthInMinutes
    }
+   if (typeof newMinNoticeHours === 'number' && newMinNoticeHours >= 0 && newMinNoticeHours <= 168) {
+    editBody.minimumBookingNotice = Math.round(newMinNoticeHours * 60)
+   }
    if (locationPreset === 'attendee_address' && fixedAddress.trim()) {
     editBody.locationAddress = fixedAddress.trim()
    }
@@ -499,7 +504,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
 
     {eventTypeId != null && !success && (
      <div className="space-y-3 pt-1">
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_110px_140px] gap-3">
        <div>
         <label className="block text-xs font-medium text-gray-700 mb-1.5">Rename event (optional)</label>
         <input
@@ -510,7 +515,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
         />
        </div>
        <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1.5">Duration (minutes)</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">Duration (min)</label>
         <input
          type="number"
          min={5}
@@ -521,6 +526,21 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
           setNewLengthInMinutes(v === '' ? '' : Math.max(5, Math.min(480, Number(v) || 0)))
          }}
          placeholder={eventTypeOptions?.find((et) => et.id === eventTypeId)?.lengthInMinutes?.toString() || '60'}
+         className="form-input"
+        />
+       </div>
+       <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5" title="Lead-time the AI has to leave before offering a slot. Set to 0 for same-hour booking. Cal.com's default is often 2 hours - if the AI is refusing same-day bookings, lower this.">Min notice (hrs)</label>
+        <input
+         type="number"
+         min={0}
+         max={168}
+         value={newMinNoticeHours}
+         onChange={(e) => {
+          const v = e.target.value
+          setNewMinNoticeHours(v === '' ? '' : Math.max(0, Math.min(168, Number(v) || 0)))
+         }}
+         placeholder="2"
          className="form-input"
         />
        </div>
@@ -739,6 +759,19 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
            transition={{ duration: 0.25, ease: EASE }}
            className="overflow-hidden"
           >
+           <label className="mt-3 flex items-start gap-2.5 text-xs text-gray-700 cursor-pointer select-none">
+            <input
+             type="checkbox"
+             checked={emergency24x7}
+             onChange={(e) => setEmergency24x7(e.target.checked)}
+             className="mt-0.5 h-4 w-4 rounded border-gray-300 text-rose-500 focus:ring-rose-400"
+            />
+            <span>
+             <span className="font-medium text-gray-900">Available 24/7</span>
+             {' '}— attach an always-on schedule to this event type when you pick it, so emergencies can land at 3am. Cal.com will treat this event type independently of your normal hours.
+            </span>
+           </label>
+
            <div className="mt-3 space-y-1.5">
             {eventTypeOptions
              .filter((et) => et.id !== eventTypeId)
@@ -752,7 +785,10 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
                  const r = await fetchWithAuth('/api/dashboard/calcom/event-type', {
                   method: 'POST',
                   headers: { 'content-type': 'application/json' },
-                  body: JSON.stringify({ emergency_event_type_id: et.id }),
+                  body: JSON.stringify({
+                   emergency_event_type_id: et.id,
+                   available_24_7: emergency24x7,
+                  }),
                  })
                  const j = await r.json().catch(() => ({}))
                  if (!r.ok || !j?.success) {

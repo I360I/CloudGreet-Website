@@ -6,9 +6,11 @@ import {
  updateEventType,
  locationFromPreset,
  listEventTypes,
+ create24x7Schedule,
  type EventTypeLocationPreset,
  type CalcomLocation,
 } from '@/lib/calcom'
+import { resolveBusinessTimezone } from '@/lib/timezones'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -72,6 +74,8 @@ export async function POST(request: NextRequest) {
  }
  const body = await request.json().catch(() => ({})) as {
   emergency_event_type_id?: number | null
+  /** When true, also create and attach a 24/7 schedule to the emergency event type. */
+  available_24_7?: boolean
  }
  const newId = body.emergency_event_type_id
 
@@ -89,7 +93,7 @@ export async function POST(request: NextRequest) {
 
  const { data: biz } = await supabaseAdmin
   .from('businesses')
-  .select('cal_com_api_key, cal_com_event_type_id')
+  .select('cal_com_api_key, cal_com_event_type_id, timezone, state')
   .eq('id', auth.businessId)
   .maybeSingle()
  const apiKey = (biz as any)?.cal_com_api_key as string | null
@@ -113,10 +117,44 @@ export async function POST(request: NextRequest) {
    .from('businesses')
    .update({ cal_com_event_type_id_emergency: newId, updated_at: new Date().toISOString() })
    .eq('id', auth.businessId)
+
+  // Selecting an emergency event type implies "use this for ASAP
+  // dispatch", so zero out the booking notice on it - the default
+  // 2-hour buffer most contractors have on their primary blocks the
+  // AI from booking same-hour even when the slot is open. We also
+  // lock the location to in-person (already done client-side, but
+  // belt-and-suspenders here in case the toggle was set via API).
+  // 24/7 schedule is opt-in via the `available_24_7` flag.
+  let twentyFourSeven: { scheduleId: number } | null = null
+  try {
+   const patch: Record<string, any> = { minimumBookingNotice: 0 }
+   if (body.available_24_7) {
+    const tz = resolveBusinessTimezone({
+     explicit: (biz as any)?.timezone,
+     state: (biz as any)?.state,
+    })
+    const sched = await create24x7Schedule(apiKey, {
+     name: `CloudGreet Emergency 24/7 · ${match.title}`,
+     timeZone: tz,
+    })
+    twentyFourSeven = { scheduleId: sched.id }
+    patch.scheduleId = sched.id
+   }
+   await updateEventType(apiKey, newId, patch)
+  } catch (e) {
+   logger.warn('Emergency event-type post-select patch failed', {
+    businessId: auth.businessId,
+    error: e instanceof Error ? e.message : 'Unknown',
+   })
+   // Non-fatal: the selection still saved. The 24/7 toggle may have
+   // failed but the contractor can retry from settings.
+  }
+
   return NextResponse.json({
    success: true,
    emergency_event_type_id: newId,
    event_type: { id: match.id, title: match.title, slug: match.slug },
+   schedule_24_7_id: twentyFourSeven?.scheduleId || null,
   })
  } catch (e) {
   const msg = e instanceof Error ? e.message : 'Unknown'
@@ -152,6 +190,8 @@ export async function PATCH(request: NextRequest) {
   locationAddress?: string
   locationLink?: string
   lengthInMinutes?: number
+  /** Minutes of lead time. 0 = same-minute (right for emergencies). */
+  minimumBookingNotice?: number
   target?: 'primary' | 'emergency'
  }
 
@@ -179,6 +219,9 @@ export async function PATCH(request: NextRequest) {
  }
  if (typeof body.lengthInMinutes === 'number' && body.lengthInMinutes >= 5 && body.lengthInMinutes <= 480) {
   patch.lengthInMinutes = body.lengthInMinutes
+ }
+ if (typeof body.minimumBookingNotice === 'number' && body.minimumBookingNotice >= 0 && body.minimumBookingNotice <= 60 * 24 * 30) {
+  patch.minimumBookingNotice = Math.round(body.minimumBookingNotice)
  }
  if (body.locationPreset) {
   if ((body.locationPreset === 'google_meet' || body.locationPreset === 'zoom') && !body.locationLink?.trim()) {

@@ -137,12 +137,51 @@ export function locationFromPreset(
 export async function updateEventType(
  apiKey: string,
  eventTypeId: number,
- patch: { title?: string; slug?: string; locations?: CalcomLocation[]; lengthInMinutes?: number },
+ patch: {
+  title?: string
+  slug?: string
+  locations?: CalcomLocation[]
+  lengthInMinutes?: number
+  /** Minutes of lead time required before a slot is offered to the caller. 0 = same-minute. */
+  minimumBookingNotice?: number
+  /** Cal.com schedule id to attach. Use this to put the emergency event type on a 24/7 schedule. */
+  scheduleId?: number
+ },
 ): Promise<CalcomEventType> {
  const res = await calFetch<{ status: string; data: CalcomEventType }>(
   apiKey,
   `/event-types/${eventTypeId}`,
   { version: '2024-06-14', method: 'PATCH', body: JSON.stringify(patch) },
+ )
+ return res.data
+}
+
+/**
+ * Create a Cal.com schedule with 24/7 availability and return its id.
+ * Used to put the emergency event type on always-on hours - regular
+ * business hours don't work for a real emergency.
+ */
+export async function create24x7Schedule(
+ apiKey: string,
+ input: { name?: string; timeZone: string },
+): Promise<{ id: number }> {
+ const res = await calFetch<{ status: string; data: { id: number } }>(
+  apiKey,
+  `/schedules`,
+  {
+   version: '2024-06-11',
+   method: 'POST',
+   body: JSON.stringify({
+    name: input.name || 'CloudGreet Emergency 24/7',
+    timeZone: input.timeZone,
+    isDefault: false,
+    availability: [{
+     days: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+     startTime: '00:00',
+     endTime: '23:59',
+    }],
+   }),
+  },
  )
  return res.data
 }
