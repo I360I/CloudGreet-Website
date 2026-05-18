@@ -133,12 +133,25 @@ export async function GET(request: NextRequest) {
  // Format response based on view
  let responseData: any
 
+ // The `scheduled_date` column is timestamptz, not date — Supabase
+ // returns it as a full ISO string ("2026-05-27T13:00:00+00:00"). The
+ // live-merge code above produces just the date part ("2026-05-27").
+ // Without this normalization, those two bucket into different keys
+ // and the calendar grid silently hides every locally-stored
+ // appointment (only the synthetic Cal.com rows render). Truncate to
+ // the YYYY-MM-DD prefix everywhere we bucket by date string.
+ const toDateKey = (v: any): string => {
+  if (!v) return ''
+  const s = String(v)
+  return s.length >= 10 ? s.slice(0, 10) : s
+ }
+
  switch (view) {
  case 'month': {
  // Group by date
  const daysMap = new Map<string, any[]>()
  appointments?.forEach(apt => {
- const dateStr = apt.scheduled_date
+ const dateStr = toDateKey(apt.scheduled_date)
  if (!daysMap.has(dateStr)) {
  daysMap.set(dateStr, [])
  }
@@ -166,7 +179,7 @@ export async function GET(request: NextRequest) {
  const daysMap = new Map<string, Map<string, any[]>>()
  
  appointments?.forEach(apt => {
- const dateStr = apt.scheduled_date
+ const dateStr = toDateKey(apt.scheduled_date)
  const startTime = new Date(apt.start_time)
  const timeStr = `${String(startTime.getHours()).padStart(2, '0')}:${String(startTime.getMinutes()).padStart(2, '0')}`
 

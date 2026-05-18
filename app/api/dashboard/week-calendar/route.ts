@@ -196,7 +196,12 @@ export async function GET(request: NextRequest) {
 
  // Populate appointments
  appointments?.forEach(apt => {
- const dateStr = apt.scheduled_date
+ // scheduled_date is timestamptz, so Supabase returns a full ISO
+ // string for local rows ("2026-05-27T13:00:00+00:00") while the
+ // live-merge synthetic rows use just the date prefix ("2026-05-27").
+ // Truncate to YYYY-MM-DD so both bucket into the same day cell.
+ const rawDate = apt.scheduled_date ? String(apt.scheduled_date) : ''
+ const dateStr = rawDate.length >= 10 ? rawDate.slice(0, 10) : rawDate
  const dayData = daysMap.get(dateStr)
  
  if (dayData) {
