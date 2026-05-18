@@ -246,6 +246,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
  const [emergencyEventTypeId, setEmergencyEventTypeId] = useState<number | null>(null)
  const [emergencyTitle, setEmergencyTitle] = useState('')
  const [emergencyTitleSaving, setEmergencyTitleSaving] = useState(false)
+ const [emergencyTitleSaved, setEmergencyTitleSaved] = useState(false)
  const [emergencySaving, setEmergencySaving] = useState(false)
  const [emergencyErr, setEmergencyErr] = useState('')
 
@@ -695,12 +696,12 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
             }
            }
           }}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${
+          className={`relative inline-block h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
            emergencyEnabled ? 'bg-rose-500' : 'bg-gray-300'
           }`}
          >
           <span
-           className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+           className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
             emergencyEnabled ? 'translate-x-5' : 'translate-x-0'
            }`}
           />
@@ -785,7 +786,7 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
               <div className="flex flex-wrap items-center gap-2">
                <input
                 value={emergencyTitle}
-                onChange={(e) => setEmergencyTitle(e.target.value)}
+                onChange={(e) => { setEmergencyTitle(e.target.value); setEmergencyTitleSaved(false) }}
                 placeholder="e.g. Emergency Dispatch"
                 className="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-900"
                />
@@ -804,6 +805,8 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
                   const j = await r.json().catch(() => ({}))
                   if (!r.ok || !j?.success) {
                    setEmergencyErr(j?.error || `Rename failed (${r.status})`)
+                  } else {
+                   setEmergencyTitleSaved(true)
                   }
                  } finally {
                   setEmergencyTitleSaving(false)
@@ -812,12 +815,9 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
                 disabled={emergencyTitleSaving || !emergencyTitle.trim()}
                 className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
                >
-                {emergencyTitleSaving ? 'Saving…' : 'Rename'}
+                {emergencyTitleSaving ? 'Saving…' : emergencyTitleSaved ? 'Renamed ✓' : 'Rename'}
                </button>
               </div>
-             </div>
-             <div className="text-[11px] text-gray-600 bg-white border border-rose-200 rounded-lg px-3 py-2">
-              Location auto-set to <strong>in person — customer&apos;s address</strong>. Emergencies are physical dispatch, so the AI will collect the address at booking.
              </div>
             </div>
            )}
