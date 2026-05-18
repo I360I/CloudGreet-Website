@@ -339,6 +339,34 @@ export async function listBookings(
 }
 
 /**
+ * Reschedule a Cal.com booking by UID to a new start time. Cal.com
+ * computes the end from the event-type's lengthInMinutes, so we only
+ * pass the new start. The endpoint returns a *new* booking (Cal.com
+ * cancels the old uid and creates a fresh one) - we hand the new uid
+ * back so the caller can stamp it onto our local appointment row.
+ */
+export async function rescheduleBooking(
+ apiKey: string,
+ uid: string,
+ newStartIso: string,
+ reason?: string,
+): Promise<CalcomBooking> {
+ const res = await calFetch<{ status: string; data: CalcomBooking }>(
+  apiKey,
+  `/bookings/${encodeURIComponent(uid)}/reschedule`,
+  {
+   method: 'POST',
+   body: JSON.stringify({
+    start: newStartIso,
+    reschedulingReason: reason || 'Rescheduled by caller via CloudGreet AI',
+   }),
+   version: '2024-08-13',
+  },
+ )
+ return res.data
+}
+
+/**
  * Fetch a single Cal.com booking by its UID. Used by the appointment
  * detail drawer when the dashboard's week-calendar merged a live
  * Cal.com booking that hasn't been synced to our DB yet - clicking it

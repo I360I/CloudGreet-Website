@@ -714,6 +714,191 @@ export async function POST(request: NextRequest) {
  }, { status: 500 })
  }
  }
+ case 'cancel_appointment': {
+ const { phone: rawPhone, reason } = tool.arguments || {}
+ if (!resolvedBusinessId) {
+  return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
+ }
+ const business_id = resolvedBusinessId
+ const phone = (rawPhone || '').toString().trim()
+ if (!phone) {
+  return NextResponse.json({
+   success: false,
+   error: 'missing_phone',
+   guidance: "Ask the caller for the phone number their appointment is under.",
+  }, { status: 400 })
+ }
+
+ // Find the caller's most recent upcoming appointment. Loose phone
+ // match (last 10 digits) so "+1 555 123 4567" / "555-123-4567" /
+ // "5551234567" all resolve to the same row.
+ const digits = phone.replace(/\D/g, '').slice(-10)
+ const { data: candidates } = await supabaseAdmin
+  .from('appointments')
+  .select('id, cal_com_booking_uid, start_time, customer_phone, status, service_type')
+  .eq('business_id', business_id)
+  .gte('start_time', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+  .not('status', 'in', '(cancelled,completed,no_show)')
+  .order('start_time', { ascending: true })
+  .limit(50)
+
+ const match = (candidates || []).find((r) => {
+  const rowDigits = (r.customer_phone || '').replace(/\D/g, '').slice(-10)
+  return rowDigits && rowDigits === digits
+ })
+ if (!match) {
+  return NextResponse.json({
+   success: false,
+   error: 'no_upcoming_appointment',
+   guidance: "Tell the caller you can't find an upcoming appointment under that number, and offer to book a new one.",
+  }, { status: 404 })
+ }
+
+ // Cancel on Cal.com first; only mark local cancelled if Cal accepts.
+ // Otherwise the contractor's calendar still shows the booking and
+ // the customer thinks they cancelled.
+ const { data: biz } = await supabaseAdmin
+  .from('businesses')
+  .select('cal_com_api_key')
+  .eq('id', business_id)
+  .maybeSingle()
+ const apiKey = (biz as any)?.cal_com_api_key as string | null
+ if (apiKey && match.cal_com_booking_uid) {
+  try {
+   const { cancelBooking } = await import('@/lib/calcom')
+   await cancelBooking(apiKey, match.cal_com_booking_uid, reason)
+  } catch (e) {
+   const msg = e instanceof Error ? e.message : 'Unknown'
+   logger.error('cancel_appointment Cal.com cancel failed', {
+    business_id, apptId: match.id, error: msg,
+   })
+   return NextResponse.json({
+    success: false,
+    error: 'calcom_cancel_failed',
+    detail: msg,
+    guidance: "Tell the caller the cancellation didn't go through and offer to transfer them or take a message.",
+   }, { status: 502 })
+  }
+ }
+
+ await supabaseAdmin
+  .from('appointments')
+  .update({
+   status: 'cancelled',
+   notes: reason ? `Cancelled by caller via AI: ${String(reason).slice(0, 200)}` : 'Cancelled by caller via AI',
+   updated_at: new Date().toISOString(),
+  })
+  .eq('id', match.id)
+
+ return NextResponse.json({
+  success: true,
+  appt_id: match.id,
+  cancelled_start_time: match.start_time,
+  service: match.service_type,
+ })
+ }
+ case 'reschedule_appointment': {
+ const { phone: rawPhone, new_datetime, reason } = tool.arguments || {}
+ if (!resolvedBusinessId) {
+  return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
+ }
+ const business_id = resolvedBusinessId
+ const phone = (rawPhone || '').toString().trim()
+ if (!phone || !new_datetime) {
+  return NextResponse.json({
+   success: false,
+   error: 'missing_args',
+   guidance: "Confirm the caller's phone and the new date/time, then call again.",
+  }, { status: 400 })
+ }
+ const newStart = new Date(new_datetime)
+ if (isNaN(newStart.getTime()) || newStart.getTime() < Date.now()) {
+  return NextResponse.json({
+   success: false,
+   error: 'invalid_new_datetime',
+   guidance: "The new time has to be in the future. Confirm the date/time with the caller and try again.",
+  }, { status: 400 })
+ }
+
+ const digits = phone.replace(/\D/g, '').slice(-10)
+ const { data: candidates } = await supabaseAdmin
+  .from('appointments')
+  .select('id, cal_com_booking_uid, start_time, end_time, duration, customer_phone, status, service_type')
+  .eq('business_id', business_id)
+  .gte('start_time', new Date(Date.now() - 60 * 60 * 1000).toISOString())
+  .not('status', 'in', '(cancelled,completed,no_show)')
+  .order('start_time', { ascending: true })
+  .limit(50)
+
+ const match = (candidates || []).find((r) => {
+  const rowDigits = (r.customer_phone || '').replace(/\D/g, '').slice(-10)
+  return rowDigits && rowDigits === digits
+ })
+ if (!match) {
+  return NextResponse.json({
+   success: false,
+   error: 'no_upcoming_appointment',
+   guidance: "Tell the caller you can't find an upcoming appointment under that number, and offer to book a new one.",
+  }, { status: 404 })
+ }
+
+ const { data: biz } = await supabaseAdmin
+  .from('businesses')
+  .select('cal_com_api_key')
+  .eq('id', business_id)
+  .maybeSingle()
+ const apiKey = (biz as any)?.cal_com_api_key as string | null
+
+ // Reschedule on Cal.com first; persist locally only on success.
+ // Cal.com returns a NEW uid (it cancels the old and creates fresh).
+ // We update the local row to point at the new uid so the dashboard
+ // and any future cancel/reschedule lookups stay correct.
+ let newUid: string | null = null
+ let newEndIso: string | null = null
+ if (apiKey && match.cal_com_booking_uid) {
+  try {
+   const { rescheduleBooking } = await import('@/lib/calcom')
+   const updated = await rescheduleBooking(apiKey, match.cal_com_booking_uid, newStart.toISOString(), reason)
+   newUid = updated.uid
+   newEndIso = updated.end || null
+  } catch (e) {
+   const msg = e instanceof Error ? e.message : 'Unknown'
+   logger.error('reschedule_appointment Cal.com reschedule failed', {
+    business_id, apptId: match.id, error: msg,
+   })
+   return NextResponse.json({
+    success: false,
+    error: 'calcom_reschedule_failed',
+    detail: msg,
+    guidance: "Tell the caller the new time didn't take. Offer another slot or transfer them.",
+   }, { status: 502 })
+  }
+ }
+
+ const durationMin = match.duration || 60
+ const computedEnd = newEndIso || new Date(newStart.getTime() + durationMin * 60 * 1000).toISOString()
+ const update: Record<string, any> = {
+  start_time: newStart.toISOString(),
+  end_time: computedEnd,
+  scheduled_date: newStart.toISOString().slice(0, 10),
+  status: 'scheduled',
+  updated_at: new Date().toISOString(),
+ }
+ if (newUid) update.cal_com_booking_uid = newUid
+ if (reason) update.notes = `Rescheduled by caller via AI: ${String(reason).slice(0, 200)}`
+
+ await supabaseAdmin
+  .from('appointments')
+  .update(update)
+  .eq('id', match.id)
+
+ return NextResponse.json({
+  success: true,
+  appt_id: match.id,
+  new_start_time: newStart.toISOString(),
+  service: match.service_type,
+ })
+ }
  case 'lookup_availability': {
  const { date, duration = 60 } = tool.arguments || {}
 

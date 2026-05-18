@@ -145,6 +145,61 @@ export function getRetellGeneralTools(
     },
     {
       type: 'custom',
+      name: 'cancel_appointment',
+      description:
+        "Cancels the caller's existing appointment on the business's calendar. Look up by the caller's phone number - we'll find their most recent upcoming booking automatically. Confirm the appointment details with the caller out loud BEFORE calling this so you don't cancel the wrong one. Returns success + the cancelled appointment's date/time so you can confirm the cancellation back to the caller.",
+      url: webhookUrl,
+      speak_during_execution: true,
+      speak_after_execution: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          phone: {
+            type: 'string',
+            description:
+              "Caller's phone number in E.164 if available, otherwise as spoken. Default to the inbound caller_id when the caller doesn't provide one - their booking is keyed off this.",
+          },
+          reason: {
+            type: 'string',
+            description:
+              "Optional. Brief reason the caller gave (e.g. 'job already handled', 'scheduling conflict'). Shows up on the contractor's dashboard so they know why.",
+          },
+        },
+        required: ['phone'],
+      },
+    },
+    {
+      type: 'custom',
+      name: 'reschedule_appointment',
+      description:
+        "Moves the caller's existing appointment to a new date/time on the business's calendar. Look up by the caller's phone number - we'll find their most recent upcoming booking automatically. ALWAYS call lookup_availability first to confirm the new time is actually open, then confirm BOTH the old and new times with the caller out loud before calling this. Returns success + the new date/time.",
+      url: webhookUrl,
+      speak_during_execution: true,
+      speak_after_execution: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          phone: {
+            type: 'string',
+            description:
+              "Caller's phone number in E.164 if available, otherwise as spoken. Default to the inbound caller_id when the caller doesn't provide one - their booking is keyed off this.",
+          },
+          new_datetime: {
+            type: 'string',
+            description:
+              "ISO-8601 start time with timezone, e.g., '2026-05-21T10:00:00-05:00'. Use the business's timezone, not UTC. Must be in the future.",
+          },
+          reason: {
+            type: 'string',
+            description:
+              "Optional. Brief reason for the reschedule. Shows up on the contractor's dashboard.",
+          },
+        },
+        required: ['phone', 'new_datetime'],
+      },
+    },
+    {
+      type: 'custom',
       name: 'lookup_availability',
       description:
         "Returns open appointment slots on the business's calendar. Call this BEFORE proposing times to the caller so you only offer slots that are actually free. With no arguments it returns the next 7 days. Pass `date` (YYYY-MM-DD) to scope to a single day.",
