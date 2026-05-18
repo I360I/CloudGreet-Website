@@ -161,7 +161,12 @@ export function CallDrawer({ call, onClose }: { call: Call; onClose: () => void 
         <Play className="w-3.5 h-3.5 text-gray-500" />
         <span className="text-xs text-gray-500 font-medium">Recording</span>
        </div>
-       <audio controls src={call.recording_url} className="w-full">
+       <audio
+        controls
+        preload="metadata"
+        src={`/api/calls/${call.id}/audio`}
+        className="w-full"
+       >
         Your browser does not support audio playback.
        </audio>
       </div>

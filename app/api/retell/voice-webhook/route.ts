@@ -319,14 +319,19 @@ export async function POST(request: NextRequest) {
    // missing entirely if Retell never runs the post-call analysis).
    // The agent already collected the name to make the booking, so
    // this is the freshest source.
-   if (name && typeof name === 'string' && name.trim()) {
-    try {
-      await supabaseAdmin
-        .from('calls')
-        .update({ caller_name: name.trim().slice(0, 120), updated_at: new Date().toISOString() })
-        .eq('retell_call_id', bookingCallId)
-    } catch { /* non-fatal */ }
-   }
+   try {
+    const callPatch: Record<string, any> = {
+     outcome: isEmergency ? 'emergency' : 'booked',
+     updated_at: new Date().toISOString(),
+    }
+    if (name && typeof name === 'string' && name.trim()) {
+     callPatch.caller_name = name.trim().slice(0, 120)
+    }
+    await supabaseAdmin
+      .from('calls')
+      .update(callPatch)
+      .eq('retell_call_id', bookingCallId)
+   } catch { /* non-fatal */ }
  }
 
  // Persist review_consent on the appointment so we have an audit trail
@@ -1346,6 +1351,15 @@ async function handleCallEvent(
     null
    if (extractedName && typeof extractedName === 'string' && extractedName.trim()) {
     patch.caller_name = extractedName.trim().slice(0, 120)
+   }
+   // Promote booking_type into the top-level outcome column. The calls
+   // list reads outcome to render the BOOKED / MESSAGE / DROPPED tag;
+   // without this every booked call defaulted to MESSAGE because we
+   // had the answer in call_extractions.booking_type but never
+   // surfaced it to the column the UI reads.
+   const bookingType = flat.booking_type
+   if (typeof bookingType === 'string' && bookingType.trim()) {
+    patch.outcome = bookingType.trim().toLowerCase()
    }
   }
 

@@ -618,7 +618,8 @@ export function AppointmentDrawer({
         {bookingCall.recording_url && (
          <audio
           controls
-          src={bookingCall.recording_url}
+          preload="metadata"
+          src={`/api/calls/${bookingCall.id}/audio`}
           className="w-full h-9 mb-3"
          />
         )}
