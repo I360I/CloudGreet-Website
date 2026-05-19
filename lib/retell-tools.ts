@@ -54,6 +54,18 @@ export type RetellTransferCallTool = {
     type: 'cold_transfer' | 'warm_transfer'
     show_transferee_as_caller?: boolean
     cold_transfer_mode?: 'sip_invite' | 'sip_refer'
+    // Private whisper played only to the contractor right before the
+    // caller is bridged. Stops the handoff from feeling like a random
+    // scam call - the contractor hears "CloudGreet transfer for ..."
+    // and knows it's legit. Dynamic so it can include actual context
+    // (caller name, reason) when the agent has it.
+    private_handoff_option?: {
+      type: 'prompt'
+      prompt: string
+    } | {
+      type: 'static_message'
+      message: string
+    }
   }
 }
 
@@ -259,6 +271,16 @@ export function getRetellGeneralTools(
         // killed the call entirely with nothing for the caller.
         transfer_option: {
           type: 'warm_transfer',
+          // Whisper context to the contractor before bridging. The
+          // prompt is intentionally short - Retell injects call
+          // context automatically, and the explicit "CloudGreet
+          // transfer" prefix is what makes the recipient recognize
+          // this isn't a random scam call.
+          private_handoff_option: {
+            type: 'prompt',
+            prompt:
+              "Briefly announce yourself in one sentence, starting with 'CloudGreet transfer.' Then summarize who is calling and why in plain words. Example: 'CloudGreet transfer. John on the line, his AC stopped cooling.' Keep it under 12 words.",
+          },
         },
       })
     }
