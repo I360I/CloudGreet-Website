@@ -45,11 +45,13 @@ export type RetellTransferCallTool = {
     number: string
   }
   // Retell's validator requires this alongside transfer_destination.
-  // 'cold_transfer' hangs up the agent and rings the destination
-  // through Retell's PSTN gateway. We don't set cold_transfer_mode
-  // because pinning sip_invite makes regular phone numbers unreachable.
+  // 'warm_transfer' keeps the agent on the line during the dial and
+  // runs human-detection: voicemail / no-answer rolls back to the
+  // agent so the conversation can continue (e.g. take a message).
+  // We don't set cold_transfer_mode because pinning sip_invite makes
+  // regular phone numbers unreachable; same idea applies here.
   transfer_option: {
-    type: 'cold_transfer'
+    type: 'cold_transfer' | 'warm_transfer'
     show_transferee_as_caller?: boolean
     cold_transfer_mode?: 'sip_invite' | 'sip_refer'
   }
@@ -244,19 +246,19 @@ export function getRetellGeneralTools(
         type: 'transfer_call',
         name: 'transfer_call',
         description:
-          "Cold-transfers the caller to the owner's number. Use only when the caller explicitly asks for a human, when there's a true emergency that needs a person on the line, or after multiple booking attempts have failed. Don't transfer just because the caller is skeptical or a slot is taken. The agent hangs up after dialing; the destination is called via Retell's PSTN gateway.",
+          "Warm-transfers the caller to the owner's number. Use only when the caller explicitly asks for a human, when there's a true emergency that needs a person on the line, or after multiple booking attempts have failed. Don't transfer just because the caller is skeptical or a slot is taken. Retell does human detection - the caller is only bridged once a real person picks up; if the dial goes to voicemail or no-answer, the call comes back to you and you should offer to take a message.",
         transfer_destination: {
           type: 'predefined',
           number: normalised,
         },
-        // We deliberately do NOT pin cold_transfer_mode. The earlier
-        // 'sip_invite' value routed via SIP INVITE which only works
-        // when the destination is itself a SIP endpoint - regular
-        // PSTN phones (which is every contractor) just hear a beep
-        // and the transfer fails silently. Omitting the field lets
-        // Retell pick the PSTN-correct routing.
+        // warm_transfer (vs cold_transfer) keeps the agent on the call
+        // during the dial and runs Retell's human-detection: if the
+        // destination doesn't answer or hits voicemail, control snaps
+        // back to the agent and the conversation continues. Previously
+        // cold_transfer just dialed-and-disconnected so a no-answer
+        // killed the call entirely with nothing for the caller.
         transfer_option: {
-          type: 'cold_transfer',
+          type: 'warm_transfer',
         },
       })
     }
