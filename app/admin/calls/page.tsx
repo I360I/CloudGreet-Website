@@ -266,7 +266,7 @@ function CallDrawer({ call, onClose }: { call: AdminCall; onClose: () => void })
         <Play className="w-3.5 h-3.5 text-gray-400" />
         <span className="text-xs text-gray-400 font-medium">Recording</span>
        </div>
-       <audio controls src={call.recording_url} className="w-full" />
+       <audio controls src={`/api/admin/calls/${call.id}/audio`} className="w-full" />
       </div>
      )}
 
