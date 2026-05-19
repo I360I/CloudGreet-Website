@@ -1531,6 +1531,11 @@ async function handleCallEvent(
    // Upsert on the unique call_id constraint. call_ended and call_analyzed
    // fire near-simultaneously from Retell; without upsert the second one
    // races, misses the existing-row check, and dies on the unique key.
+   // calls.from_number / to_number / status are NOT NULL. When call_ended
+   // or call_analyzed fires without a matching call_started row, Retell's
+   // payload sometimes omits these (analysis-only events). Supply safe
+   // defaults so the insert doesn't fail and the transcript/recording/
+   // outcome still get persisted.
    const ins = await supabaseAdmin
     .from('calls')
     .upsert({
@@ -1540,6 +1545,9 @@ async function handleCallEvent(
      // insert doesn't fail the constraint.
      call_id: retellCallId,
      retell_call_id: retellCallId,
+     from_number: patch.from_number || call?.from_number || 'unknown',
+     to_number: patch.to_number || call?.to_number || 'unknown',
+     status: patch.status || 'completed',
      ...patch,
      created_at: new Date().toISOString(),
      updated_at: new Date().toISOString(),

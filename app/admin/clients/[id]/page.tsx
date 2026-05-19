@@ -1842,12 +1842,6 @@ function TempPasswordModal({
 
 /* --------------------------- Checkout link modal --------------------------- */
 
-const CHECKOUT_PLANS: { id: 'starter' | 'full' | 'custom'; label: string; sub: string; amount: string }[] = [
- { id: 'starter', label: 'Starter', sub: 'After-hours coverage', amount: '$499/mo' },
- { id: 'full', label: 'Full 24/7', sub: 'Round-the-clock', amount: '$899/mo' },
- { id: 'custom', label: 'Custom', sub: 'Negotiated rate (e.g. law firm, multi-loc)', amount: '$ / mo' },
-]
-
 function CheckoutLinkModal({
  clientId, businessName, onClose,
 }: {
@@ -1855,7 +1849,6 @@ function CheckoutLinkModal({
  businessName: string
  onClose: () => void
 }) {
- const [plan, setPlan] = useState<'starter' | 'full' | 'custom'>('starter')
  const [customMonthly, setCustomMonthly] = useState<string>('')
  const [setupFee, setSetupFee] = useState<string>('')
  const [busy, setBusy] = useState(false)
@@ -1874,13 +1867,13 @@ function CheckoutLinkModal({
  const generate = async () => {
   setBusy(true); setError('')
   try {
-   const body: Record<string, any> = { plan }
-   if (plan === 'custom') {
-    const dollars = parseFloat(customMonthly)
-    if (!Number.isFinite(dollars) || dollars < 50) {
-     throw new Error('Enter a custom monthly amount (minimum $50).')
-    }
-    body.monthly_cents = Math.round(dollars * 100)
+   const dollars = parseFloat(customMonthly)
+   if (!Number.isFinite(dollars) || dollars < 50) {
+    throw new Error('Enter a monthly amount (minimum $50).')
+   }
+   const body: Record<string, any> = {
+    plan: 'custom',
+    monthly_cents: Math.round(dollars * 100),
    }
    const fee = parseFloat(setupFee || '0')
    if (Number.isFinite(fee) && fee > 0) {
@@ -1945,43 +1938,18 @@ function CheckoutLinkModal({
        </p>
 
        <div>
-        <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">Plan</div>
-        <div className="grid sm:grid-cols-2 gap-2">
-         {CHECKOUT_PLANS.map((p) => (
-          <button
-           key={p.id}
-           onClick={() => setPlan(p.id)}
-           className={`text-left p-3 rounded-xl border transition-all duration-300 ease-out ${
-            plan === p.id
-             ? 'border-sky-400/40 bg-sky-400/5'
-             : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]'
-           }`}
-          >
-           <div className="flex items-baseline justify-between">
-            <div className="text-sm font-medium text-white">{p.label}</div>
-            <div className="text-sm font-mono text-sky-300">{p.amount}</div>
-           </div>
-           <div className="text-xs text-gray-500 mt-1">{p.sub}</div>
-          </button>
-         ))}
+        <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">
+         Monthly amount (USD)
         </div>
+        <Input
+         value={customMonthly}
+         onChange={(e) => setCustomMonthly(e.target.value.replace(/[^0-9.]/g, ''))}
+         placeholder="2000"
+        />
+        <p className="text-[10px] text-gray-500 mt-1">
+         Whole dollars, e.g. 2000 for $2,000/mo. Min $50. Negotiated per client.
+        </p>
        </div>
-
-       {plan === 'custom' && (
-        <div>
-         <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">
-          Monthly amount (USD)
-         </div>
-         <Input
-          value={customMonthly}
-          onChange={(e) => setCustomMonthly(e.target.value.replace(/[^0-9.]/g, ''))}
-          placeholder="2000"
-         />
-         <p className="text-[10px] text-gray-500 mt-1">
-          Whole dollars, e.g. 2000 for $2,000/mo. Min $50.
-         </p>
-        </div>
-       )}
 
        <div>
         <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-2">

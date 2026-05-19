@@ -2,7 +2,7 @@
 
 ## What CloudGreet is
 
-A SaaS AI receptionist for service businesses (HVAC, plumbing, electrical, roofing, painting, landscaping, legal, auto, etc.). Customers call the business's number, an AI agent (Retell + GPT) answers, qualifies the caller, captures intent (and optionally books on their Cal.com), and produces a structured summary that lands in the client's dashboard. Pricing is flexible - typically $499/mo + $899 one-time setup, but reps can negotiate any amount. Healthcare and HIPAA-adjacent businesses are out of scope.
+A SaaS AI receptionist for service businesses (HVAC, plumbing, electrical, roofing, painting, landscaping, legal, auto, etc.). Customers call the business's number, an AI agent (Retell + GPT) answers, qualifies the caller, captures intent (and optionally books on their Cal.com), and produces a structured summary that lands in the client's dashboard. Pricing is fully rep-negotiated per deal (monthly + optional one-time setup), with no advertised default tiers. Healthcare and HIPAA-adjacent businesses are out of scope.
 
 Stack: Next.js 14 App Router, Supabase (Postgres), Retell AI for voice, Stripe (Connect Express for rep payouts, regular subscriptions for client billing), Resend for email, Cal.com for calendar.
 
@@ -230,7 +230,6 @@ Migrations applied (run in Supabase):
 - `CRON_SECRET` - Vercel cron auth (Friday payouts)
 - `GCP_BILLING_PROJECT_ID`, `GCP_BILLING_DATASET`, `GCP_BILLING_SA_JSON` - for the admin Places-spend tracker
 - `NEXT_PUBLIC_APP_URL` - base URL (e.g. https://cloudgreet.com)
-- `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_FULL` - for legacy preset pricing on admin checkout-link
 
 ---
 

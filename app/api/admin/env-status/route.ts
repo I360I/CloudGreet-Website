@@ -59,21 +59,6 @@ const CHECKS = (): EnvCheck[] => [
   group: 'billing',
   doc: 'https://dashboard.stripe.com/webhooks',
  },
- {
-  name: 'STRIPE_PRICE_STARTER',
-  configured: !!process.env.STRIPE_PRICE_STARTER,
-  purpose: 'Price ID for the $499/mo Starter plan - used by "Send checkout link".',
-  group: 'billing',
-  doc: 'https://dashboard.stripe.com/products',
- },
- {
-  name: 'STRIPE_PRICE_FULL',
-  configured: !!process.env.STRIPE_PRICE_FULL,
-  purpose: 'Price ID for the $899/mo Full 24/7 plan - used by "Send checkout link".',
-  group: 'billing',
-  doc: 'https://dashboard.stripe.com/products',
- },
-
  // Leads
  {
   name: 'GOOGLE_PLACES_API_KEY',

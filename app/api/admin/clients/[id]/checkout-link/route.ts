@@ -10,27 +10,15 @@ export const runtime = 'nodejs'
 /**
  * POST /api/admin/clients/[id]/checkout-link
  *
- * body: { plan: 'starter' | 'full' }
+ * body: { monthly_cents: number, setup_fee_cents?: number }
  *
- * Bridges "client said yes" → "client paid":
- *  1. Ensures the business has a Stripe Customer (creates + persists one
- *     against businesses.stripe_customer_id when missing).
- *  2. Creates a Stripe Checkout Session in subscription mode with the
- *     plan's price ID.
- *  3. Returns the checkout URL for the admin to copy + send to the
- *     client (Signal, SMS, email).
+ * Pricing is rep-negotiated per close. We never ship a fixed-tier
+ * Price, so every checkout uses Stripe inline `price_data` for the
+ * recurring monthly amount plus an optional one-time setup-fee line.
  *
- * The existing /api/stripe/webhook handler picks up checkout.session.completed
- * and flips subscription_status to active, so no extra wiring needed
- * after the client pays.
+ * The existing /api/stripe/webhook handler picks up
+ * checkout.session.completed and flips subscription_status to active.
  */
-
-type Plan = 'starter' | 'full' | 'custom'
-
-const PLAN_META: Record<Exclude<Plan, 'custom'>, { priceEnv: string; label: string; amount: string }> = {
- starter: { priceEnv: 'STRIPE_PRICE_STARTER', label: 'Starter (after-hours)', amount: '$499/mo' },
- full:    { priceEnv: 'STRIPE_PRICE_FULL',    label: 'Full 24/7',             amount: '$899/mo' },
-}
 
 export async function POST(
  request: NextRequest,
@@ -42,53 +30,23 @@ export async function POST(
    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Body now accepts either:
-  //   { plan: 'starter' | 'full' }                  - legacy preset
-  //   { plan: 'custom', monthly_cents, setup_fee_cents } - variable pricing
-  // The custom path lets a sales rep negotiate any monthly amount
-  // (e.g., $2,000 for a law firm) plus an optional one-time setup
-  // fee. We use Stripe's inline price_data so we don't have to
-  // pre-create a Price for every variant.
   const body = await request.json().catch(() => ({})) as {
-   plan?: 'starter' | 'full' | 'custom'
    monthly_cents?: number
    setup_fee_cents?: number
   }
-  const plan: Plan = body.plan === 'full' ? 'full' : body.plan === 'custom' ? 'custom' : 'starter'
 
-  let priceId: string | null = null
-  let monthlyCents = 0
-  let label = ''
-  let amountStr = ''
-
-  if (plan === 'custom') {
-   const m = Math.round(Number(body.monthly_cents))
-   if (!Number.isFinite(m) || m < 5000) {
-    return NextResponse.json({
-     error: 'Custom monthly amount must be at least $50 (5000 cents).',
-    }, { status: 400 })
-   }
-   if (m > 5000000) {
-    return NextResponse.json({
-     error: 'Custom monthly amount looks too high (>$50,000). Double-check the value.',
-    }, { status: 400 })
-   }
-   monthlyCents = m
-   label = `Custom - $${(m / 100).toFixed(0)}/mo`
-   amountStr = `$${(m / 100).toFixed(0)}/mo`
-  } else {
-   priceId = process.env[PLAN_META[plan].priceEnv] ?? null
-   if (!priceId) {
-    return NextResponse.json({
-     error: `Missing env var ${PLAN_META[plan].priceEnv}. Set the Stripe Price ID for the ${PLAN_META[plan].label} plan in Vercel and redeploy.`,
-    }, { status: 500 })
-   }
-   label = PLAN_META[plan].label
-   amountStr = PLAN_META[plan].amount
+  const monthlyCents = Math.round(Number(body.monthly_cents))
+  if (!Number.isFinite(monthlyCents) || monthlyCents < 5000) {
+   return NextResponse.json({
+    error: 'Monthly amount must be at least $50 (5000 cents).',
+   }, { status: 400 })
+  }
+  if (monthlyCents > 5000000) {
+   return NextResponse.json({
+    error: 'Monthly amount looks too high (>$50,000). Double-check the value.',
+   }, { status: 400 })
   }
 
-  // Setup fee is optional on every plan path. Validates same range
-  // as monthly to catch typos.
   const setupFeeCents = Math.round(Number(body.setup_fee_cents || 0))
   if (!Number.isFinite(setupFeeCents) || setupFeeCents < 0) {
    return NextResponse.json({ error: 'Setup fee must be a non-negative number.' }, { status: 400 })
@@ -96,6 +54,9 @@ export async function POST(
   if (setupFeeCents > 1000000) {
    return NextResponse.json({ error: 'Setup fee looks too high (>$10,000). Double-check.' }, { status: 400 })
   }
+
+  const label = `CloudGreet - $${(monthlyCents / 100).toFixed(0)}/mo`
+  const amountStr = `$${(monthlyCents / 100).toFixed(0)}/mo`
 
   const { data: business } = await supabaseAdmin
    .from('businesses')
@@ -109,10 +70,8 @@ export async function POST(
 
   const stripe = getStripeClient()
 
-  // Ensure a Stripe Customer exists for this business.
   let stripeCustomerId = business.stripe_customer_id
   if (!stripeCustomerId) {
-   // Owner email is a better contact than the business email field.
    let ownerEmail = business.email || null
    if (business.owner_id) {
     const { data: owner } = await supabaseAdmin
@@ -147,24 +106,15 @@ export async function POST(
   const successUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/dashboard/billing?stripe=success`
   const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'}/dashboard/billing?stripe=cancel`
 
-  // Build line_items based on plan type. Custom plans use inline
-  // price_data so we don't have to pre-create a Stripe Price for
-  // every negotiated rate. Setup fee (if any) gets added as a
-  // separate one-time line item.
-  const lineItems: any[] = []
-  if (plan === 'custom') {
-   lineItems.push({
-    price_data: {
-     currency: 'usd',
-     product_data: { name: 'CloudGreet AI Receptionist (custom)' },
-     unit_amount: monthlyCents,
-     recurring: { interval: 'month' },
-    },
-    quantity: 1,
-   })
-  } else {
-   lineItems.push({ price: priceId!, quantity: 1 })
-  }
+  const lineItems: any[] = [{
+   price_data: {
+    currency: 'usd',
+    product_data: { name: 'CloudGreet AI Receptionist' },
+    unit_amount: monthlyCents,
+    recurring: { interval: 'month' },
+   },
+   quantity: 1,
+  }]
 
   if (setupFeeCents > 0) {
    lineItems.push({
@@ -187,29 +137,23 @@ export async function POST(
    subscription_data: {
     metadata: {
      cloudgreet_business_id: business.id,
-     plan,
-     // Persist negotiated amounts on the subscription so the
-     // commission engine can split correctly when invoices pay.
-     monthly_cents: String(plan === 'custom' ? monthlyCents : (plan === 'full' ? 89900 : 49900)),
+     plan: 'custom',
+     monthly_cents: String(monthlyCents),
      setup_fee_cents: String(setupFeeCents),
      rep_id: business.rep_id || '',
     },
    },
    metadata: {
     cloudgreet_business_id: business.id,
-    plan,
+    plan: 'custom',
     rep_id: business.rep_id || '',
    },
   })
 
-  // Persist the negotiated price on the business immediately so the
-  // admin UI shows what was offered (regardless of whether the client
-  // ever completes checkout). Updated again on invoice.paid by the
-  // webhook to record actual paid amounts.
   await supabaseAdmin
    .from('businesses')
    .update({
-    monthly_price_cents: plan === 'custom' ? monthlyCents : (plan === 'full' ? 89900 : 49900),
+    monthly_price_cents: monthlyCents,
     setup_fee_cents: setupFeeCents || null,
     updated_at: new Date().toISOString(),
    })
@@ -220,13 +164,13 @@ export async function POST(
   }
 
   logger.info('Admin generated Stripe checkout link', {
-   businessId: business.id, plan, sessionId: session.id,
+   businessId: business.id, monthlyCents, setupFeeCents, sessionId: session.id,
   })
 
   return NextResponse.json({
    success: true,
    url: session.url,
-   plan,
+   plan: 'custom',
    plan_label: label,
    amount: amountStr,
    setup_fee_cents: setupFeeCents,

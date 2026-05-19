@@ -20,8 +20,9 @@ export const runtime = 'nodejs'
  *   2. Pick a slot on the rep's calendar
  *   3. Walk through Cal.com / call-forwarding setup live with the rep
  *
- * Defaults monthly=$499 / setup=$899 if not provided. Prospect can
- * still pay later via /api/sales/leads/[id]/payment-link or
+ * Monthly + setup default to 0 if not provided; reps negotiate the
+ * actual amount per close. Prospect can still pay later via
+ * /api/sales/leads/[id]/payment-link or
  * /api/sales/closes/[id]/payment-link - we just leave the close
  * in 'pending' status until money lands.
  */

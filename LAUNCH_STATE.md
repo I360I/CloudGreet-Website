@@ -220,7 +220,7 @@ Hidden `<audio autoPlay playsInline>` element stays mounted (`Dialer.tsx:685`).
 
 ### Payment links
 
-- Default $499/mo + $899 setup; rep adjusts per deal.
+- Monthly + setup are rep-negotiated per deal (no advertised default).
 - Stripe checkout `mode: 'subscription'`.
 - Metadata: `cloudgreet_close_id`, `cloudgreet_rep_id`, `cloudgreet_lead_id`, `cloudgreet_source`.
 - **Idempotency** (`closes/[id]/payment-link/route.ts:137-164`): caches `latest_payment_session_*` on the close; returns cached URL unless pricing changed, expired, or `force: true`.
@@ -480,7 +480,6 @@ All require `Authorization: Bearer ${CRON_SECRET}` header (`lib/cron-auth.ts`). 
 
 - `STRICT_RETELL_SIGNATURES=1` (hard-reject invalid Retell signatures; only if secret matches)
 - `NEXT_PUBLIC_SUPPORT_PHONE` (default `+1 (737) 937-0084`)
-- `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_FULL` (pricing IDs)
 - `SLACK_WEBHOOK_URL` (health-check alerts)
 - `SENTRY_DSN` (error reporting)
 - `GOOGLE_CLIENT_ID/SECRET` (OAuth)
