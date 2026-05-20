@@ -255,7 +255,14 @@ async function persistResult(s: SupabaseClient | null, runId: string | null, sco
   const { count } = await s.from('prompt_eval_results').select('id', { count: 'exact', head: true }).eq('run_id', runId)
   const { data: rows } = await s.from('prompt_eval_results').select('cost_micro').eq('run_id', runId)
   const costSum = (rows || []).reduce((a, r: any) => a + (Number(r.cost_micro) || 0), 0)
-  await s.from('prompt_eval_runs').update({ completed_pairs: count || 0, cost_micro: costSum }).eq('id', runId)
+  await s.from('prompt_eval_runs').update({
+    completed_pairs: count || 0,
+    cost_micro: costSum,
+    // Heartbeat so the admin UI's "stalled" detector doesn't trip
+    // while the CLI is humming along. Without this the UI shows
+    // amber after 4min even though pairs are landing fine.
+    last_progress_at: new Date().toISOString(),
+  }).eq('id', runId)
 }
 
 async function finalizeRun(s: SupabaseClient | null, runId: string | null, summary: RunSummary): Promise<void> {

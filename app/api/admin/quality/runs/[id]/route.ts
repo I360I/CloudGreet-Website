@@ -25,7 +25,7 @@ export async function GET(
 
   const { data: run, error: runErr } = await supabaseAdmin
     .from('prompt_eval_runs')
-    .select('id, started_at, finished_at, status, generator_sha, total_pairs, completed_pairs, overall_score, expectation_pass_rate, category_averages, cost_micro, last_progress_at, meta, notes, prompts_cache')
+    .select('id, started_at, finished_at, status, generator_sha, total_pairs, completed_pairs, overall_score, expectation_pass_rate, category_averages, cost_micro, last_progress_at, meta, notes, prompts_cache, analysis, analyzed_at, analysis_cost_micro')
     .eq('id', params.id)
     .maybeSingle()
   if (runErr) {

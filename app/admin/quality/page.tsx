@@ -14,6 +14,32 @@ type Score = { category: string; score: number; justification: string }
 type ToolCall = { tool: string; args: Record<string, unknown>; response: unknown }
 type Turn = { role: 'agent' | 'caller'; text: string }
 
+type Analysis = {
+ generated_at: string
+ model: string
+ per_pair: Array<{
+  business_id: string
+  scenario_id: string
+  overall_score: number
+  why_it_failed: string
+  responsible_source: string
+  recommended_fix: string
+ }>
+ patterns: Array<{
+  pattern: string
+  affected_pairs: string[]
+  severity: 'critical' | 'high' | 'medium' | 'low'
+ }>
+ prioritized_fixes: Array<{
+  rank: number
+  title: string
+  file: string
+  rationale: string
+  estimated_score_delta: string
+  suggested_diff_hint: string
+ }>
+}
+
 type Run = {
  id: string
  started_at: string
@@ -29,6 +55,9 @@ type Run = {
  notes: string | null
  last_progress_at?: string | null
  meta?: Record<string, any> | null
+ analysis?: Analysis | null
+ analyzed_at?: string | null
+ analysis_cost_micro?: number | null
 }
 
 type ClientOption = {
@@ -519,6 +548,27 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
     </div>
    </Panel>
 
+   {run.analysis && (
+    <AnalysisPanel analysis={run.analysis} costMicro={run.analysis_cost_micro || 0} />
+   )}
+
+   {!run.analysis && run.status === 'completed' && (
+    <Panel>
+     <div className="px-5 py-4 flex items-center justify-between gap-3">
+      <div>
+       <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Brain · Failure-Reading Agent</div>
+       <div className="text-sm text-gray-300">No analysis yet. Run from the CLI to get fix recommendations:</div>
+      </div>
+     </div>
+     <div className="px-5 pb-5">
+      <pre className="bg-black/40 border border-white/[0.06] rounded-xl px-4 py-3 text-[11px] font-mono text-sky-200 overflow-x-auto">
+       npx tsx --env-file=.env.local scripts/prompt-research/analyze.ts {run.id}
+      </pre>
+      <div className="text-[10px] text-gray-500 mt-1 font-mono">~$0.30-0.60 · Opus 4.7</div>
+     </div>
+    </Panel>
+   )}
+
    {isClient && generatedPrompt && (
     <Panel>
      <PanelHeader eyebrow="The prompt these scenarios ran against" title="Generated agent prompt" />
@@ -545,6 +595,105 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
      ))}
     </div>
    </Panel>
+  </div>
+ )
+}
+
+function AnalysisPanel({ analysis, costMicro }: { analysis: Analysis; costMicro: number }) {
+ const sevColor = (s: string) =>
+  s === 'critical' ? 'border-rose-400/40 bg-rose-500/[0.06] text-rose-200'
+  : s === 'high' ? 'border-amber-400/40 bg-amber-500/[0.06] text-amber-200'
+  : s === 'medium' ? 'border-sky-400/30 bg-sky-500/[0.04] text-sky-200'
+  : 'border-white/[0.08] bg-white/[0.02] text-gray-300'
+
+ return (
+  <div className="rounded-2xl border border-purple-400/20 bg-gradient-to-br from-purple-500/[0.06] to-transparent">
+   <div className="px-5 pt-4 pb-3 border-b border-white/[0.04] flex items-center justify-between gap-3 flex-wrap">
+    <div>
+     <div className="text-[10px] font-mono uppercase tracking-wider text-purple-300/80 mb-1">Brain · Failure-Reading Agent</div>
+     <h2 className="text-base font-medium text-white">What to fix</h2>
+    </div>
+    <div className="text-[10px] font-mono text-gray-500">
+     {analysis.model} · ${(costMicro / 1_000_000).toFixed(3)}
+    </div>
+   </div>
+
+   {/* Prioritized fixes - the headline takeaway */}
+   <div className="px-5 py-4 space-y-3">
+    <div className="text-[10px] font-mono uppercase tracking-wider text-purple-300/80">Prioritized fixes</div>
+    {analysis.prioritized_fixes.map((f) => (
+     <div key={f.rank} className="rounded-xl border border-purple-400/15 bg-purple-500/[0.03] p-4">
+      <div className="flex items-start gap-3">
+       <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 text-purple-200 text-sm font-medium flex items-center justify-center">
+        {f.rank}
+       </div>
+       <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1.5">
+         <div className="text-sm font-medium text-white">{f.title}</div>
+         <div className="text-[10px] font-mono text-emerald-300 tabular-nums">{f.estimated_score_delta}</div>
+        </div>
+        <div className="text-[11px] font-mono text-sky-300 mb-2">{f.file}</div>
+        <div className="text-xs text-gray-300 leading-relaxed mb-2">{f.rationale}</div>
+        {f.suggested_diff_hint && (
+         <pre className="text-[11px] font-mono text-gray-300 bg-black/30 border border-white/[0.04] rounded-lg p-2.5 overflow-x-auto whitespace-pre-wrap">
+{f.suggested_diff_hint}
+         </pre>
+        )}
+       </div>
+      </div>
+     </div>
+    ))}
+   </div>
+
+   {/* Cross-cutting patterns */}
+   {analysis.patterns.length > 0 && (
+    <div className="px-5 pb-4 space-y-2">
+     <div className="text-[10px] font-mono uppercase tracking-wider text-purple-300/80 mt-3">Cross-cutting patterns</div>
+     {analysis.patterns.map((p, i) => (
+      <div key={i} className={`rounded-xl border p-3 ${sevColor(p.severity)}`}>
+       <div className="flex items-baseline justify-between gap-2 flex-wrap mb-1">
+        <div className="text-[10px] font-mono uppercase tracking-wider opacity-70">{p.severity}</div>
+        <div className="text-[10px] font-mono opacity-60">{p.affected_pairs.length} pair{p.affected_pairs.length === 1 ? '' : 's'}</div>
+       </div>
+       <div className="text-sm leading-relaxed">{p.pattern}</div>
+       {p.affected_pairs.length > 0 && (
+        <div className="text-[10px] font-mono mt-1.5 opacity-60 truncate">
+         {p.affected_pairs.join(' · ')}
+        </div>
+       )}
+      </div>
+     ))}
+    </div>
+   )}
+
+   {/* Per-pair diagnoses - expandable */}
+   <details className="px-5 pb-5 group">
+    <summary className="cursor-pointer text-xs font-mono text-purple-300 hover:text-purple-200 inline-flex items-center gap-2 py-2">
+     <ArrowRight className="w-3 h-3 transition-transform group-open:rotate-90" />
+     Per-pair diagnoses ({analysis.per_pair.length})
+    </summary>
+    <div className="mt-2 space-y-2">
+     {analysis.per_pair.map((p, i) => (
+      <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+       <div className="flex items-baseline justify-between gap-3 mb-1.5">
+        <div className="text-xs text-gray-300">
+         <span className="text-gray-500">{p.business_id}</span> <span className="text-gray-700">×</span> <span className="font-medium text-white">{p.scenario_id}</span>
+        </div>
+        <div className="text-[10px] font-mono text-rose-300 tabular-nums">{pct(p.overall_score)}</div>
+       </div>
+       <div className="text-xs text-gray-300 leading-relaxed mb-1.5">
+        <span className="text-gray-500 font-mono text-[10px] uppercase tracking-wider">Why: </span>
+        {p.why_it_failed}
+       </div>
+       <div className="text-[11px] text-sky-300 font-mono mb-1.5">{p.responsible_source}</div>
+       <div className="text-xs text-emerald-200/90 leading-relaxed">
+        <span className="text-emerald-300/70 font-mono text-[10px] uppercase tracking-wider">Fix: </span>
+        {p.recommended_fix}
+       </div>
+      </div>
+     ))}
+    </div>
+   </details>
   </div>
  )
 }
