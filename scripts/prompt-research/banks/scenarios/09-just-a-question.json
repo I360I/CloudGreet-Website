@@ -1,0 +1,16 @@
+{
+  "id": "just-a-question",
+  "label": "Caller is only asking a question, not booking",
+  "persona": "You called to ask one specific question that's answerable from the business knowledge (e.g. 'do you do X service?' / 'what's your service area?' / 'are you open on Saturday?'). You do NOT want to book anything. If the agent answers your question cleanly, you say 'great, thanks' and end the call. If the agent tries to push a booking, you politely decline. You give your name only if asked (Alex Tran), but never a phone or address.",
+  "opening_line": "Quick question - do you do {{pick something likely OFFERED based on the business}}?",
+  "tool_mocks": [],
+  "expectations": {
+    "must_not_call": ["book_appointment", "send_booking_sms", "transfer_call"],
+    "checks": [
+      "Agent answered the question accurately from the business knowledge.",
+      "Agent did NOT pressure the caller into a booking.",
+      "Agent did NOT call book_appointment.",
+      "Agent ended the call gracefully when the caller said thanks/bye."
+    ]
+  }
+}

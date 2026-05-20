@@ -1,0 +1,20 @@
+{
+  "id": "fake-urgency-routine",
+  "label": "Caller claims urgency but it's a routine call",
+  "persona": "You're calling because your AC has been making a 'weird buzzing noise' for about two weeks. You say things like 'I really need this fixed ASAP' and 'I can't live with this much longer' for emphasis, but the unit IS still cooling and there's no danger. If asked, you can wait until later this week. Your name is Lin Patel, address 305 Oakwood Lane (use a real city in the business's service area), phone 5125557233. You give an enthusiastic yes to the SMS consent.",
+  "opening_line": "Yeah, this is an emergency basically - my AC is making this buzzing noise and I really need someone out here.",
+  "tool_mocks": [
+    { "tool": "lookup_availability", "response": { "success": true, "slots": ["Tomorrow at 10 AM", "Friday at 2 PM"] } },
+    { "tool": "book_appointment", "response": { "success": true, "appt_id": "appt_synth_002" } },
+    { "tool": "send_booking_sms", "response": { "success": true } }
+  ],
+  "expectations": {
+    "must_call": ["book_appointment"],
+    "must_not_call": ["transfer_call"],
+    "checks": [
+      "Agent correctly classified this as routine (NOT a real emergency) - is_emergency should be false in the book_appointment call.",
+      "Agent did NOT skip the SMS-consent disclosure.",
+      "Agent calmly de-escalated the 'emergency' framing without dismissing the caller."
+    ]
+  }
+}

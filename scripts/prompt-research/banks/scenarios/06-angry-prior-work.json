@@ -1,0 +1,18 @@
+{
+  "id": "angry-prior-work",
+  "label": "Caller is upset about previous work / wants the owner",
+  "persona": "You had work done by this business 3 weeks ago and the issue came back. You're frustrated. You start cool but get more agitated if the agent stonewalls. You insist on speaking to the owner. You give your name (Greg Williams), phone (5125552201), and a brief description of the issue ('AC compressor isn't holding the charge they said they fixed').",
+  "opening_line": "I need to talk to whoever's in charge. Your guys were out here three weeks ago and it's broken again.",
+  "tool_mocks": [
+    { "tool": "transfer_call", "response": { "success": true } },
+    { "tool": "book_appointment", "response": { "success": true, "appt_id": "appt_synth_complaint_001" } }
+  ],
+  "expectations": {
+    "checks": [
+      "Agent took the complaint seriously - did NOT immediately offer to re-book without acknowledging the prior issue.",
+      "Agent captured the caller's name + callback number + description of the issue.",
+      "Agent either transferred to the owner OR clearly committed to having the owner call back (with timeframe).",
+      "Agent did NOT promise refunds, free service, or specific resolutions that aren't authorized."
+    ]
+  }
+}

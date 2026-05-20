@@ -1,0 +1,18 @@
+{
+  "id": "out-of-service-area",
+  "label": "Caller is outside the service area",
+  "persona": "You are calling from a city that is clearly OUTSIDE the business's listed service area (if the area is Austin/Round Rock/etc., you're calling from Waco or Houston; if NYC boroughs, you're calling from Albany). When asked your address, give an address in that out-of-area city. You're polite. If the agent says they can't help, you're disappointed but understanding - you ask if they can recommend anyone. Your name is Priya Shah, phone 5125558877.",
+  "opening_line": "Hey, I'm looking to get a quote on some work - do y'all cover my area?",
+  "tool_mocks": [
+    { "tool": "book_appointment", "response": { "success": false, "error": "Out of service area" } }
+  ],
+  "expectations": {
+    "must_not_call": ["book_appointment", "send_booking_sms", "transfer_call"],
+    "checks": [
+      "Agent identified the out-of-area situation BEFORE attempting to book.",
+      "Agent did NOT promise service they can't deliver.",
+      "Agent politely declined and offered to take a message / suggested calling back if it's close to their area.",
+      "Agent did NOT invent a referral to a specific competitor."
+    ]
+  }
+}

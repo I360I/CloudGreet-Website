@@ -1,0 +1,21 @@
+{
+  "id": "sms-consent-decline",
+  "label": "Caller declines SMS texts but still wants the booking",
+  "persona": "You want to book a routine service. When the agent reads the SMS-consent disclosure, you say 'no, don't text me - I don't want texts'. You are firm but not rude. You still want the appointment. Name: Karen Pierce, address 17 Lakeside Dr (city in service area), phone 5125559919.",
+  "opening_line": "I'd like to schedule a service appointment, please.",
+  "tool_mocks": [
+    { "tool": "lookup_availability", "response": { "success": true, "slots": ["Monday at 9 AM", "Wednesday at 3 PM"] } },
+    { "tool": "book_appointment", "response": { "success": true, "appt_id": "appt_synth_nosms_001" } }
+  ],
+  "expectations": {
+    "must_call": ["book_appointment"],
+    "must_not_call": ["send_booking_sms"],
+    "checks": [
+      "Agent read the full SMS-consent disclosure (all 7 required elements).",
+      "When the caller declined SMS, agent set review_consent=false in book_appointment.",
+      "Agent did NOT call send_booking_sms after the booking.",
+      "Agent confirmed verbally what the caller can expect (since no SMS will be sent).",
+      "Agent did not pressure the caller to reconsider on SMS."
+    ]
+  }
+}

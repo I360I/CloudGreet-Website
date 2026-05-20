@@ -1,0 +1,53 @@
+{
+  "id": "electrical-ca-residential",
+  "label": "Electrical, San Diego CA, residential, professional",
+  "context": {
+    "business": {
+      "name": "Pacific Edge Electric",
+      "owner_name": "Maria Chen",
+      "phone": "+16195550144",
+      "address": "8210 Miramar Rd, San Diego, CA 92126",
+      "website": "https://pacificedge-electric.example",
+      "categories": ["Electrician", "Residential electrical contractor"],
+      "service_area": ["San Diego", "La Mesa", "El Cajon", "Chula Vista", "National City"],
+      "hours": {
+        "monday": "7:30 AM - 5:30 PM",
+        "tuesday": "7:30 AM - 5:30 PM",
+        "wednesday": "7:30 AM - 5:30 PM",
+        "thursday": "7:30 AM - 5:30 PM",
+        "friday": "7:30 AM - 5:30 PM",
+        "saturday": "Closed",
+        "sunday": "Closed"
+      }
+    },
+    "services": {
+      "offered": [
+        "panel upgrades", "EV charger install", "outlet + switch repair",
+        "lighting install", "ceiling fan install", "whole-home rewire",
+        "GFCI / AFCI replacement", "code-compliance inspections"
+      ],
+      "not_offered": ["commercial industrial", "solar inverter wiring", "low-voltage data/AV"],
+      "raw_hints": ["C-10 licensed", "permits handled in-house", "EV chargers are biggest growth area"]
+    },
+    "pricing": {
+      "displays_pricing": false,
+      "free_estimates_hint": false,
+      "notes": ["$125 trip + diagnostic for repairs.", "Written quote on-site for installs and panel work.", "Permit fees pass-through at cost."]
+    },
+    "tone": {
+      "formality": "friendly-professional",
+      "review_keywords": ["clean work", "on time", "knowledgeable", "fair quote"],
+      "style_notes": ["thorough, takes time to explain"]
+    },
+    "reviews": {
+      "rating": 4.9,
+      "count": 156,
+      "samples": [
+        { "author": "S.K.", "rating": 5, "text": "Maria personally walked us through every option for our panel upgrade. No upsell." },
+        { "author": "C.L.", "rating": 5, "text": "Installed our EV charger same week. Permit and inspection went smooth." }
+      ]
+    },
+    "sources": {},
+    "errors": []
+  }
+}

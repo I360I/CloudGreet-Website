@@ -1,0 +1,52 @@
+{
+  "id": "roofing-tx-storm",
+  "label": "Roofing, San Antonio TX, residential + insurance, professional-warm",
+  "context": {
+    "business": {
+      "name": "Lone Star Roofing",
+      "owner_name": "Dave Martinez",
+      "phone": "+12105550199",
+      "address": "5025 NW Loop 410, San Antonio, TX 78229",
+      "website": "https://lonestar-roofing.example",
+      "categories": ["Roofing contractor", "Storm damage repair"],
+      "service_area": ["San Antonio", "New Braunfels", "Boerne", "Selma", "Schertz"],
+      "hours": {
+        "monday": "7:00 AM - 5:00 PM",
+        "tuesday": "7:00 AM - 5:00 PM",
+        "wednesday": "7:00 AM - 5:00 PM",
+        "thursday": "7:00 AM - 5:00 PM",
+        "friday": "7:00 AM - 5:00 PM",
+        "saturday": "By appointment",
+        "sunday": "Closed"
+      }
+    },
+    "services": {
+      "offered": [
+        "roof repair", "full replacement", "free inspections",
+        "gutter work", "storm damage assessment", "insurance claim assistance"
+      ],
+      "not_offered": ["solar install", "skylights", "tile roofs"],
+      "raw_hints": ["residential + light commercial", "works with most insurance carriers", "field manager Carlos handles complex bids"]
+    },
+    "pricing": {
+      "displays_pricing": false,
+      "free_estimates_hint": true,
+      "notes": ["All inspections and estimates are free.", "On-site written quote for repair/replacement.", "Will meet adjuster on-site for insurance claims."]
+    },
+    "tone": {
+      "formality": "friendly-professional",
+      "review_keywords": ["honest", "no pressure", "responsive", "insurance"],
+      "style_notes": ["calm, direct - customers are often stressed (storm damage)"]
+    },
+    "reviews": {
+      "rating": 4.9,
+      "count": 213,
+      "samples": [
+        { "author": "B.W.", "rating": 5, "text": "Dave's team was out within hours after the hailstorm. Tarped the roof, handled the insurance paperwork, replaced everything." },
+        { "author": "J.M.", "rating": 5, "text": "Honest assessment - told us we just needed a repair, not a full replacement. Saved us thousands." }
+      ]
+    },
+    "sources": {},
+    "errors": []
+  }
+}

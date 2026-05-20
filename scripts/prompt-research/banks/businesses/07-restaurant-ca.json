@@ -1,0 +1,53 @@
+{
+  "id": "restaurant-ca",
+  "label": "Restaurant (reservations + private events), San Francisco CA, refined-casual",
+  "context": {
+    "business": {
+      "name": "Marina Table",
+      "owner_name": "Elena Rossi",
+      "phone": "+14155550188",
+      "address": "2424 Chestnut St, San Francisco, CA 94123",
+      "website": "https://marinatable.example",
+      "categories": ["Italian restaurant", "Private events"],
+      "service_area": ["San Francisco"],
+      "hours": {
+        "monday": "Closed",
+        "tuesday": "5:30 PM - 10:00 PM",
+        "wednesday": "5:30 PM - 10:00 PM",
+        "thursday": "5:30 PM - 10:00 PM",
+        "friday": "5:30 PM - 11:00 PM",
+        "saturday": "5:00 PM - 11:00 PM",
+        "sunday": "5:00 PM - 9:30 PM"
+      }
+    },
+    "services": {
+      "offered": [
+        "dinner reservations", "private dining room bookings",
+        "buyouts (whole restaurant)", "tasting menu reservations",
+        "wine pairings", "off-site catering inquiries"
+      ],
+      "not_offered": ["lunch service", "delivery", "to-go orders"],
+      "raw_hints": ["coastal Italian / seafood-leaning", "private room seats 18", "buyouts considered for 40+ guests"]
+    },
+    "pricing": {
+      "displays_pricing": true,
+      "free_estimates_hint": false,
+      "notes": ["Per-person ranges $65-110 for dinner.", "Tasting menu $145 per guest.", "Private room minimums vary by night; chef sends a quote."]
+    },
+    "tone": {
+      "formality": "friendly-professional",
+      "review_keywords": ["beautiful", "thoughtful service", "incredible food", "intimate"],
+      "style_notes": ["refined but warm", "never stiff"]
+    },
+    "reviews": {
+      "rating": 4.8,
+      "count": 624,
+      "samples": [
+        { "author": "A.D.", "rating": 5, "text": "Hosted our anniversary dinner here. The team made it feel like home." },
+        { "author": "M.F.", "rating": 5, "text": "Best burrata in the city. Elena stopped by our table." }
+      ]
+    },
+    "sources": {},
+    "errors": []
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "id": "plumbing-ny-commercial",
+  "label": "Plumbing, Brooklyn NY, commercial + residential, professional",
+  "context": {
+    "business": {
+      "name": "Borough Plumbing & Drain",
+      "owner_name": "David Levin",
+      "phone": "+17185550133",
+      "address": "1140 Atlantic Ave, Brooklyn, NY 11216",
+      "website": "https://boroughplumbing.example",
+      "categories": ["Plumber", "Drain cleaning service"],
+      "service_area": ["Brooklyn", "Queens", "Manhattan"],
+      "hours": {
+        "monday": "7:00 AM - 7:00 PM",
+        "tuesday": "7:00 AM - 7:00 PM",
+        "wednesday": "7:00 AM - 7:00 PM",
+        "thursday": "7:00 AM - 7:00 PM",
+        "friday": "7:00 AM - 7:00 PM",
+        "saturday": "8:00 AM - 4:00 PM",
+        "sunday": "Emergency only"
+      }
+    },
+    "services": {
+      "offered": [
+        "leak repair", "drain cleaning", "water-heater install + repair",
+        "boiler service", "sewer line", "fixture install",
+        "commercial backflow testing", "trenchless replacement"
+      ],
+      "not_offered": ["septic", "well pumps", "HVAC"],
+      "raw_hints": ["licensed master plumber", "commercial accounts welcome", "24/7 emergency for active leaks"]
+    },
+    "pricing": {
+      "displays_pricing": false,
+      "free_estimates_hint": false,
+      "notes": ["$150 service-call fee (covers diagnosis).", "Written estimate before any repair work begins.", "Emergency after-hours: $250 service-call."]
+    },
+    "tone": {
+      "formality": "friendly-professional",
+      "review_keywords": ["professional", "responsive", "clean", "fair pricing", "licensed"],
+      "style_notes": ["direct, no fluff", "respects the caller's time"]
+    },
+    "reviews": {
+      "rating": 4.7,
+      "count": 489,
+      "samples": [
+        { "author": "K.S.", "rating": 5, "text": "Showed up on time, gave a written estimate, fixed our shop's backflow issue same day." },
+        { "author": "R.P.", "rating": 4, "text": "Pricey but professional. Worth it for the peace of mind." }
+      ]
+    },
+    "sources": {},
+    "errors": []
+  }
+}

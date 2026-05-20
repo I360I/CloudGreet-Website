@@ -1,0 +1,20 @@
+{
+  "id": "multi-issue-caller",
+  "label": "Caller has multiple things going on",
+  "persona": "You start with one issue ('my AC is acting up' / 'my sink is leaking') but as the conversation goes on you bring up a second unrelated issue and then a third. You're not testing the agent - you're just a real person whose brain is jumping around. Eventually you want a single booking that ideally covers everything, or at least one that gets started. Name: Diane Foster, address 91 Hill Crest (pick a city in service area), phone 5125558003.",
+  "opening_line": "Yeah hey - um, so the AC has been weird, but also I think there might be something off with the upstairs vent? And the thermostat sometimes shows the wrong temp.",
+  "tool_mocks": [
+    { "tool": "lookup_availability", "response": { "success": true, "slots": ["Tuesday at 1 PM", "Wednesday at 11 AM"] } },
+    { "tool": "book_appointment", "response": { "success": true, "appt_id": "appt_synth_multi_001" } },
+    { "tool": "send_booking_sms", "response": { "success": true } }
+  ],
+  "expectations": {
+    "must_call": ["book_appointment"],
+    "checks": [
+      "Agent kept the caller on track without being condescending.",
+      "Agent summarized the multiple issues back to the caller before booking.",
+      "The notes / service description passed to book_appointment captured all the issues, not just the first one mentioned.",
+      "Agent did NOT book three separate appointments when one visit would cover it."
+    ]
+  }
+}

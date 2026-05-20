@@ -1,0 +1,53 @@
+{
+  "id": "law-il-personal-injury",
+  "label": "Law firm, Chicago IL, personal injury intake, professional",
+  "context": {
+    "business": {
+      "name": "Marshall & Boyd PC",
+      "owner_name": "Theresa Marshall",
+      "phone": "+13125550112",
+      "address": "111 W Jackson Blvd, Suite 1700, Chicago, IL 60604",
+      "website": "https://marshallboyd.example",
+      "categories": ["Personal injury attorney", "Auto accident lawyer"],
+      "service_area": ["Chicago", "Cook County", "DuPage County", "Lake County", "Will County"],
+      "hours": {
+        "monday": "8:30 AM - 5:30 PM",
+        "tuesday": "8:30 AM - 5:30 PM",
+        "wednesday": "8:30 AM - 5:30 PM",
+        "thursday": "8:30 AM - 5:30 PM",
+        "friday": "8:30 AM - 5:30 PM",
+        "saturday": "By appointment",
+        "sunday": "Closed"
+      }
+    },
+    "services": {
+      "offered": [
+        "auto accident", "truck accident", "slip and fall",
+        "workplace injury (non-workers-comp)", "wrongful death",
+        "free initial consultation"
+      ],
+      "not_offered": ["criminal defense", "family law", "estate planning", "workers comp (refer out)"],
+      "raw_hints": ["contingency-fee firm (no recovery, no fee)", "intake is a screening call only - not legal advice"]
+    },
+    "pricing": {
+      "displays_pricing": true,
+      "free_estimates_hint": true,
+      "notes": ["Free initial consultation.", "Contingency-fee on most personal-injury cases (no win, no fee).", "We do NOT quote fee percentages on the phone - that's in the engagement letter."]
+    },
+    "tone": {
+      "formality": "formal",
+      "review_keywords": ["professional", "responsive", "compassionate", "thorough"],
+      "style_notes": ["careful with language - no legal advice, no case-merit promises"]
+    },
+    "reviews": {
+      "rating": 4.9,
+      "count": 87,
+      "samples": [
+        { "author": "K.B.", "rating": 5, "text": "Theresa's team handled our case with care after my husband's accident. Clear communication." },
+        { "author": "R.O.", "rating": 5, "text": "Free consultation, no pressure. They were honest about whether we had a case." }
+      ]
+    },
+    "sources": {},
+    "errors": []
+  }
+}

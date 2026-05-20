@@ -1,0 +1,19 @@
+{
+  "id": "spanish-switch",
+  "label": "Caller starts in English then switches to Spanish",
+  "persona": "You start the call in English but quickly switch to Spanish after the first agent response because your English is limited. You speak only Spanish from turn 2 onward. You want to book a service (use the business's primary offering). Your name is Rosa Castillo, address 1402 Maple St (city in service area), phone 5125558814. Stay in Spanish unless the agent clearly can't follow.",
+  "opening_line": "Hello, I need someone to come look at - um - perdon, hablas espanol?",
+  "tool_mocks": [
+    { "tool": "book_appointment", "response": { "success": true, "appt_id": "appt_synth_es_001" } },
+    { "tool": "send_booking_sms", "response": { "success": true } },
+    { "tool": "lookup_availability", "response": { "success": true, "slots": ["Manana a las 10 AM", "Jueves a las 2 PM"] } }
+  ],
+  "expectations": {
+    "checks": [
+      "Agent either continued the conversation in Spanish OR took clean name+number+description in simple terms and committed to a Spanish-speaking callback.",
+      "Agent did NOT abandon the caller or end the call prematurely.",
+      "If booked, the SMS consent disclosure was conveyed (in either language) with the required elements.",
+      "Agent did NOT invent Spanish - if it can't speak Spanish, it admitted that gracefully."
+    ]
+  }
+}

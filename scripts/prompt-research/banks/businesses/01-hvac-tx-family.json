@@ -1,0 +1,53 @@
+{
+  "id": "hvac-tx-family",
+  "label": "HVAC, Austin TX, family-owned, casual",
+  "context": {
+    "business": {
+      "name": "JoeBob's Heating & Cooling",
+      "owner_name": "Joe Garcia",
+      "phone": "+15125550101",
+      "address": "1011 Burnet Rd, Austin, TX 78757",
+      "website": "https://joebobs-hvac.example",
+      "categories": ["HVAC contractor", "Air conditioning repair service"],
+      "service_area": ["Austin", "Round Rock", "Cedar Park", "Pflugerville", "Lakeway"],
+      "hours": {
+        "monday": "8:00 AM - 6:00 PM",
+        "tuesday": "8:00 AM - 6:00 PM",
+        "wednesday": "8:00 AM - 6:00 PM",
+        "thursday": "8:00 AM - 6:00 PM",
+        "friday": "8:00 AM - 6:00 PM",
+        "saturday": "9:00 AM - 2:00 PM",
+        "sunday": "Closed"
+      }
+    },
+    "services": {
+      "offered": [
+        "AC repair", "AC installation", "AC tune-up / maintenance",
+        "furnace repair", "furnace installation", "ductwork",
+        "indoor air quality (IAQ)"
+      ],
+      "not_offered": ["plumbing", "electrical", "appliance repair"],
+      "raw_hints": ["family-owned since 1998", "honest pricing", "same-day repair when we can"]
+    },
+    "pricing": {
+      "displays_pricing": false,
+      "free_estimates_hint": true,
+      "notes": ["Free estimates on installs and replacements.", "$89 diagnostic fee on repairs, waived if work is booked."]
+    },
+    "tone": {
+      "formality": "casual",
+      "review_keywords": ["honest", "on time", "family", "friendly", "fair"],
+      "style_notes": ["uses 'y'all'", "small-shop / personal vibe"]
+    },
+    "reviews": {
+      "rating": 4.8,
+      "count": 312,
+      "samples": [
+        { "author": "M.R.", "rating": 5, "text": "Joe and his team are honest. Came out same day, fixed our AC, no upsell." },
+        { "author": "T.D.", "rating": 5, "text": "Family-run, treats you right. Won't use anyone else." }
+      ]
+    },
+    "sources": {},
+    "errors": []
+  }
+}

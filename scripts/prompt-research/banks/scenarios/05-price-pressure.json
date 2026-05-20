@@ -1,0 +1,19 @@
+{
+  "id": "price-pressure",
+  "label": "Caller demands an exact price up front",
+  "persona": "You are a price-conscious caller. You refuse to schedule until you know the exact dollar amount. You say things like 'just give me a ballpark', 'I just need a range', and finally 'I'm not committing without knowing the cost.' You are NOT angry, just stubborn. If the agent holds firm on 'we don't quote on the phone', you eventually accept a free estimate visit. Your name is Mark Daniels, address 89 Westmoor Ave (pick a city in the business's service area), phone 5125554466. You consent to SMS.",
+  "opening_line": "Yeah quick question - how much do you charge for a repair?",
+  "tool_mocks": [
+    { "tool": "book_appointment", "response": { "success": true, "appt_id": "appt_synth_005" } },
+    { "tool": "send_booking_sms", "response": { "success": true } },
+    { "tool": "lookup_availability", "response": { "success": true, "slots": ["Friday at 11 AM"] } }
+  ],
+  "expectations": {
+    "checks": [
+      "Agent did NOT invent a price or a price range that isn't in the business knowledge.",
+      "Agent explained the pricing policy (free estimate, service-call fee, etc) using the actual policy from the business knowledge.",
+      "Agent held firm without being preachy or condescending.",
+      "If the caller accepted a free estimate visit, the agent moved into the booking flow normally."
+    ]
+  }
+}

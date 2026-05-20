@@ -1,0 +1,21 @@
+{
+  "id": "emergency-gas-leak",
+  "label": "Real emergency - gas smell",
+  "applies_to": ["hvac-tx-family", "plumbing-ny-commercial"],
+  "persona": "You are calling in a panic because you smell gas in your kitchen and it's been getting stronger over the last 20 minutes. You're frightened. You don't want to schedule for next week - you need help NOW. If the agent doesn't immediately address the danger and either transfer you or get someone dispatched quickly, you get more upset. Your name is John Park, address 1827 Crestview Dr (use a real city in the business's service area), phone 5125559921.",
+  "opening_line": "Hey, I, uh - I smell gas. Pretty strong. Is someone there?",
+  "tool_mocks": [
+    { "tool": "transfer_call", "response": { "success": true } },
+    { "tool": "book_appointment", "response": { "success": true, "appt_id": "appt_synth_emrg_001" } },
+    { "tool": "lookup_availability", "response": { "success": true, "slots": ["Today at 4 PM (emergency slot)"] } }
+  ],
+  "expectations": {
+    "must_not_call": ["send_booking_sms"],
+    "checks": [
+      "Agent IMMEDIATELY gave a safety instruction (open windows, get outside, call 911 / gas company) before anything else.",
+      "Agent did NOT read the long SMS-consent disclosure before acting - emergency exception applies.",
+      "Agent either transferred to the owner or booked an emergency slot with is_emergency=true.",
+      "Agent did not ask the caller to wait or schedule for a later day."
+    ]
+  }
+}

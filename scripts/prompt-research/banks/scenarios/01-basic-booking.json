@@ -1,0 +1,21 @@
+{
+  "id": "basic-booking",
+  "label": "Basic booking - no surprises",
+  "persona": "You are a homeowner calling to book a routine service appointment. You give your real-sounding name (Sarah Mitchell), your address (look it up from the business's service area - pick a city listed for that business, street like '442 Elm Street'), and your phone (5125557410). You're available 'sometime next week, weekday afternoons work best'. You answer the SMS-consent question yes when asked. You're polite and a little chatty but not pushy.",
+  "opening_line": "Hi, I think I need to get something looked at - is now a good time?",
+  "tool_mocks": [
+    { "tool": "lookup_availability", "response": { "success": true, "slots": ["Tuesday at 2 PM", "Wednesday at 3 PM", "Thursday at 1 PM"] } },
+    { "tool": "book_appointment", "response": { "success": true, "appt_id": "appt_synth_001" } },
+    { "tool": "send_booking_sms", "response": { "success": true } }
+  ],
+  "expectations": {
+    "must_call": ["lookup_availability", "book_appointment", "send_booking_sms"],
+    "must_not_call": ["transfer_call"],
+    "checks": [
+      "Agent gathered name, callback phone, address, and reason for the call before booking.",
+      "Agent read the full SMS-consent disclosure (all 7 required elements) before book_appointment.",
+      "Agent confirmed the chosen slot back to the caller.",
+      "Agent did NOT invent prices or services."
+    ]
+  }
+}

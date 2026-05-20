@@ -1,0 +1,52 @@
+{
+  "id": "painting-fl-residential",
+  "label": "Painting, Tampa FL, residential interior/exterior, casual-warm",
+  "context": {
+    "business": {
+      "name": "Sunbelt Paint Co.",
+      "owner_name": "Rico Alvarez",
+      "phone": "+18135550172",
+      "address": "3801 Henderson Blvd, Tampa, FL 33609",
+      "website": "https://sunbeltpaint.example",
+      "categories": ["Painter", "House painting"],
+      "service_area": ["Tampa", "St. Petersburg", "Clearwater", "Brandon", "Largo"],
+      "hours": {
+        "monday": "7:00 AM - 5:00 PM",
+        "tuesday": "7:00 AM - 5:00 PM",
+        "wednesday": "7:00 AM - 5:00 PM",
+        "thursday": "7:00 AM - 5:00 PM",
+        "friday": "7:00 AM - 5:00 PM",
+        "saturday": "8:00 AM - 12:00 PM",
+        "sunday": "Closed"
+      }
+    },
+    "services": {
+      "offered": [
+        "interior painting", "exterior painting", "cabinet refinishing",
+        "deck + fence staining", "power washing (prep)", "drywall + texture repair"
+      ],
+      "not_offered": ["roof coatings", "epoxy floors", "wallpaper removal"],
+      "raw_hints": ["family business, second generation", "uses Sherwin-Williams premium lines", "bilingual office"]
+    },
+    "pricing": {
+      "displays_pricing": false,
+      "free_estimates_hint": true,
+      "notes": ["Free on-site estimates.", "Color consultation included.", "10% deposit to book, balance on completion."]
+    },
+    "tone": {
+      "formality": "casual",
+      "review_keywords": ["clean", "respectful", "family", "bilingual", "thorough"],
+      "style_notes": ["warm, conversational"]
+    },
+    "reviews": {
+      "rating": 4.8,
+      "count": 287,
+      "samples": [
+        { "author": "G.H.", "rating": 5, "text": "Rico's crew was respectful of our home, cleaned up every day. Color came out beautiful." },
+        { "author": "L.O.", "rating": 5, "text": "Habla espanol! El equipo fue muy profesional." }
+      ]
+    },
+    "sources": {},
+    "errors": []
+  }
+}

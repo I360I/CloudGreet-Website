@@ -1,0 +1,53 @@
+{
+  "id": "lawncare-ga",
+  "label": "Lawn care + landscaping, Atlanta GA suburbs, casual",
+  "context": {
+    "business": {
+      "name": "Peach State Lawn",
+      "owner_name": "Kevin Thompson",
+      "phone": "+14045550166",
+      "address": "210 Town Center Pkwy, Marietta, GA 30060",
+      "website": "https://peachstatelawn.example",
+      "categories": ["Lawn care service", "Landscaping"],
+      "service_area": ["Marietta", "Smyrna", "Kennesaw", "Roswell", "Sandy Springs"],
+      "hours": {
+        "monday": "7:00 AM - 6:00 PM",
+        "tuesday": "7:00 AM - 6:00 PM",
+        "wednesday": "7:00 AM - 6:00 PM",
+        "thursday": "7:00 AM - 6:00 PM",
+        "friday": "7:00 AM - 6:00 PM",
+        "saturday": "7:00 AM - 12:00 PM",
+        "sunday": "Closed"
+      }
+    },
+    "services": {
+      "offered": [
+        "weekly mowing", "edge + trim", "leaf removal (seasonal)",
+        "mulch install", "shrub trimming", "fertilization program",
+        "aeration + overseed", "small landscape install"
+      ],
+      "not_offered": ["tree removal", "irrigation systems", "hardscape / patio"],
+      "raw_hints": ["weekly mow plans run $45-75 per visit by lot size", "year-round contracts available"]
+    },
+    "pricing": {
+      "displays_pricing": true,
+      "free_estimates_hint": true,
+      "notes": ["Free quote on weekly plans.", "Per-visit pricing varies by lot size.", "Fertilization program is 6 visits / year, quoted separately."]
+    },
+    "tone": {
+      "formality": "casual",
+      "review_keywords": ["reliable", "on schedule", "friendly", "communicates"],
+      "style_notes": ["small-business feel", "owner answers the phone sometimes"]
+    },
+    "reviews": {
+      "rating": 4.7,
+      "count": 198,
+      "samples": [
+        { "author": "P.G.", "rating": 5, "text": "Kevin's team is on time every week. Easy to deal with." },
+        { "author": "T.R.", "rating": 4, "text": "Good service, just wish they did tree work too." }
+      ]
+    },
+    "sources": {},
+    "errors": []
+  }
+}

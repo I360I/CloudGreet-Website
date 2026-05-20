@@ -1,0 +1,20 @@
+{
+  "id": "after-hours-non-emergency",
+  "label": "Routine call coming in after listed hours",
+  "persona": "You are calling at 9pm on a Tuesday (after the business's listed hours). It is NOT an emergency. You just got home from work and remembered to call. You'd like to book a service for later this week. Name: Aaron Liu, address 22 Birchwood Pl (pick a city in service area), phone 5125557788. SMS consent yes.",
+  "opening_line": "Hi, I'm calling kind of late - hopefully someone gets this. I'd like to set up an appointment.",
+  "tool_mocks": [
+    { "tool": "lookup_availability", "response": { "success": true, "slots": ["Thursday at 9 AM", "Friday at 1 PM"] } },
+    { "tool": "book_appointment", "response": { "success": true, "appt_id": "appt_synth_after_001" } },
+    { "tool": "send_booking_sms", "response": { "success": true } }
+  ],
+  "expectations": {
+    "must_call": ["book_appointment"],
+    "checks": [
+      "Agent did NOT tell the caller 'we're closed, call back tomorrow' - the AI receptionist's job is to capture the booking.",
+      "Agent did NOT escalate / transfer just because the call came in after-hours.",
+      "Agent set up a booking inside the business's actual working hours.",
+      "Agent did NOT mark this as an emergency."
+    ]
+  }
+}
