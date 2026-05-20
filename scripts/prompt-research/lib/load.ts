@@ -11,28 +11,32 @@ import { join } from 'node:path'
 import type { BusinessFixture, ScenarioFixture } from './types'
 
 /**
- * Resolve the banks/ directory across both CLI and serverless contexts.
+ * Resolve the banks/ directory.
  *
- * - Locally (tsx CLI), `import.meta.url` points at the source file and
- *   `../banks/` lands correctly.
- * - On Vercel, `outputFileTracingIncludes` in next.config.js drops the
- *   banks/ directory under the function root at the same relative path
- *   from the project root. `process.cwd()` is the project root in
- *   serverless functions, so `<cwd>/scripts/prompt-research/banks` is
- *   the right place to look.
+ * We anchor everything on `process.cwd()` because that's the project
+ * root in both contexts:
+ *   - tsx CLI: started from cloudgreet/ where the user ran the command
+ *   - Vercel serverless: the function bundle's working dir is the
+ *     project root, and `outputFileTracingIncludes` in next.config.js
+ *     drops the banks/ tree at the same relative path.
  *
- * Try the relative-to-source location first; fall back to cwd.
+ * We deliberately avoid `new URL('../banks/', import.meta.url)` because
+ * webpack tries to statically resolve that as a module import at build
+ * time and chokes ("Module not found: Can't resolve '../banks/'").
  */
+const REL_BANKS = 'scripts/prompt-research/banks'
+
 function resolveBanksRoot(): string {
   const candidates = [
-    new URL('../banks/', import.meta.url).pathname,
-    join(process.cwd(), 'scripts/prompt-research/banks/'),
+    join(process.cwd(), REL_BANKS),
+    // Fallback if cwd is somewhere unexpected: walk up from this file's
+    // expected location. We can't trust import.meta.url under webpack so
+    // we just try a couple of common ancestor layouts.
+    join(process.cwd(), '..', REL_BANKS),
   ]
   for (const c of candidates) {
     if (existsSync(join(c, 'rubric.md'))) return c
   }
-  // Last resort - return the first so the caller gets a recognisable
-  // ENOENT pointing at the expected path.
   return candidates[0]
 }
 
