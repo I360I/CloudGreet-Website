@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { execSync } from 'node:child_process'
 import { loadBusinesses, loadScenarios, buildMatrix } from '@/scripts/prompt-research/lib/load'
+import { loadClientFixture } from '@/scripts/prompt-research/lib/client-fixture'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -13,18 +14,21 @@ export const maxDuration = 30
  * POST /api/admin/quality/start
  *
  * Body:
- *   - mode: 'smoke' | 'full' | 'custom'  (smoke=10, full=all, custom needs limit/only)
+ *   - mode: 'smoke' | 'full' | 'custom' | 'client'
+ *       smoke  = 10 synthetic pairs (cheap, fast)
+ *       full   = every synthetic (business, scenario) pair
+ *       client = all 12 scenarios run against ONE real client's
+ *                generated prompt (set business_id)
+ *   - business_id?: string  (required for mode='client')
  *   - limit?: number
  *   - only?: string (scenario id)
- *   - business?: string (business id)
+ *   - business?: string (synthetic business id, for filtering)
  *
- * Creates the prompt_eval_runs row in 'running' state with the full
- * pending matrix serialized, then kicks off /api/admin/quality/process
- * (fire-and-forget) to start chewing through pairs. Returns immediately
- * with the runId so the UI can switch to the live-progress view.
+ * Creates a prompt_eval_runs row in 'running' state and kicks off the
+ * /process chain. Returns immediately with the runId so the UI can
+ * switch to the live-progress view.
  *
- * One run at a time. If another run is already 'running', refuse so we
- * don't double-charge Anthropic.
+ * One run at a time - if another run is already 'running', refuse.
  */
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request)
@@ -33,10 +37,11 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => ({})) as {
-    mode?: 'smoke' | 'full' | 'custom'
+    mode?: 'smoke' | 'full' | 'custom' | 'client'
     limit?: number
     only?: string
     business?: string
+    business_id?: string
   }
   const mode = body.mode || 'smoke'
 
@@ -55,14 +60,45 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Build the matrix from the on-disk banks.
-  const businesses = loadBusinesses()
+  // Build the matrix. mode='client' takes a single business and runs
+  // every applicable scenario against it; everything else uses the
+  // synthetic on-disk banks.
   const scenarios = loadScenarios()
-  let matrix = buildMatrix(businesses, scenarios)
-  if (body.only) matrix = matrix.filter((p) => p.scenario.id === body.only)
-  if (body.business) matrix = matrix.filter((p) => p.business.id === body.business)
-  if (mode === 'smoke') matrix = matrix.slice(0, 10)
-  if (mode === 'custom' && body.limit) matrix = matrix.slice(0, body.limit)
+  let matrix: Array<{ business: { id: string }; scenario: { id: string } }> = []
+  let meta: Record<string, any> = {}
+
+  if (mode === 'client') {
+    if (!body.business_id) {
+      return NextResponse.json({ error: 'business_id required for mode=client' }, { status: 400 })
+    }
+    let clientFixture
+    try {
+      clientFixture = await loadClientFixture(body.business_id)
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to load client' }, { status: 400 })
+    }
+    // Run every scenario against this one client. Scenarios with an
+    // applies_to filter that doesn't include 'client-*' still run -
+    // applies_to was authored against synthetic business ids.
+    for (const s of scenarios) {
+      matrix.push({ business: { id: clientFixture.id }, scenario: { id: s.id } })
+    }
+    meta = {
+      source: 'client',
+      business_id: body.business_id,
+      business_name: clientFixture.context.business.name,
+      client_fixture: clientFixture,
+    }
+  } else {
+    const businesses = loadBusinesses()
+    let mx = buildMatrix(businesses, scenarios)
+    if (body.only) mx = mx.filter((p) => p.scenario.id === body.only)
+    if (body.business) mx = mx.filter((p) => p.business.id === body.business)
+    if (mode === 'smoke') mx = mx.slice(0, 10)
+    if (mode === 'custom' && body.limit) mx = mx.slice(0, body.limit)
+    matrix = mx
+    meta = { source: 'synthetic', mode }
+  }
 
   if (matrix.length === 0) {
     return NextResponse.json({ error: 'Matrix is empty for the given filters.' }, { status: 400 })
@@ -70,6 +106,10 @@ export async function POST(request: NextRequest) {
 
   const sha = gitSha()
   const pending = matrix.map((p) => ({ business_id: p.business.id, scenario_id: p.scenario.id }))
+
+  const noteSuffix = mode === 'client'
+    ? ` business_id=${body.business_id}`
+    : `${body.only ? ' only=' + body.only : ''}${body.business ? ' business=' + body.business : ''}`
 
   const { data: run, error } = await supabaseAdmin
     .from('prompt_eval_runs')
@@ -79,7 +119,8 @@ export async function POST(request: NextRequest) {
       generator_sha: sha,
       pending_matrix: pending,
       prompts_cache: {},
-      notes: `mode=${mode}${body.only ? ' only=' + body.only : ''}${body.business ? ' business=' + body.business : ''}`,
+      meta,
+      notes: `mode=${mode}${noteSuffix}`,
     })
     .select('id')
     .single()

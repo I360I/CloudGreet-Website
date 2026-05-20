@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   }
   const { data, error } = await supabaseAdmin
     .from('prompt_eval_runs')
-    .select('id, started_at, finished_at, status, generator_sha, total_pairs, completed_pairs, overall_score, expectation_pass_rate, category_averages, cost_micro, last_progress_at, notes')
+    .select('id, started_at, finished_at, status, generator_sha, total_pairs, completed_pairs, overall_score, expectation_pass_rate, category_averages, cost_micro, last_progress_at, meta, notes')
     .order('started_at', { ascending: false })
     .limit(20)
   if (error) {

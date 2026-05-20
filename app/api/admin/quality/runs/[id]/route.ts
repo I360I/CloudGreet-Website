@@ -25,7 +25,7 @@ export async function GET(
 
   const { data: run, error: runErr } = await supabaseAdmin
     .from('prompt_eval_runs')
-    .select('id, started_at, finished_at, status, generator_sha, total_pairs, completed_pairs, overall_score, expectation_pass_rate, category_averages, cost_micro, last_progress_at, notes')
+    .select('id, started_at, finished_at, status, generator_sha, total_pairs, completed_pairs, overall_score, expectation_pass_rate, category_averages, cost_micro, last_progress_at, meta, notes, prompts_cache')
     .eq('id', params.id)
     .maybeSingle()
   if (runErr) {
@@ -55,9 +55,23 @@ export async function GET(
     .limit(1)
     .maybeSingle()
 
+  // For client-mode runs there's exactly one business prompt - surface
+  // it at the top of the payload so the UI doesn't have to dig into
+  // prompts_cache JSON.
+  const meta = ((run as any)?.meta || {}) as Record<string, any>
+  let clientPrompt: string | null = null
+  if (meta?.source === 'client' && meta?.client_fixture?.id) {
+    const cache = ((run as any)?.prompts_cache || {}) as Record<string, string>
+    clientPrompt = cache[meta.client_fixture.id] || null
+  }
+  // Don't ship the full prompts_cache - synthetic runs have 8 prompts
+  // at ~10KB each, that's wasted bytes.
+  const { prompts_cache, ...runWithoutCache } = run as any
+
   return NextResponse.json({
-    run,
+    run: runWithoutCache,
     previous: prev || null,
     results: results || [],
+    client_prompt: clientPrompt,
   })
 }

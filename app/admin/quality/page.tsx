@@ -28,6 +28,15 @@ type Run = {
  cost_micro: number | null
  notes: string | null
  last_progress_at?: string | null
+ meta?: Record<string, any> | null
+}
+
+type ClientOption = {
+ id: string
+ business_name: string
+ business_type: string | null
+ retell_agent_id: string | null
+ subscription_status: string | null
 }
 
 type PairResult = {
@@ -49,6 +58,7 @@ type RunDetail = {
  run: Run
  previous: { id: string; overall_score: number | null; expectation_pass_rate: number | null; category_averages: Record<string, number> | null; generator_sha: string | null; cost_micro: number | null } | null
  results: PairResult[]
+ client_prompt?: string | null
 }
 
 const CATEGORIES: { id: string; label: string; short: string }[] = [
@@ -130,13 +140,15 @@ export default function QualityPage() {
  const latest = runs[0] || null
  const activeRun = runs.find((r) => r.status === 'running') || null
 
- const handleStart = async (mode: 'smoke' | 'full') => {
+ const handleStart = async (mode: 'smoke' | 'full' | 'client', businessId?: string) => {
   try {
    setErr('')
+   const body: Record<string, unknown> = { mode }
+   if (mode === 'client' && businessId) body.business_id = businessId
    const r = await fetchWithAuth('/api/admin/quality/start', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mode }),
+    body: JSON.stringify(body),
    })
    const j = await r.json().catch(() => ({}))
    if (!r.ok || !j.success) {
@@ -144,7 +156,6 @@ export default function QualityPage() {
    }
    setRunModalOpen(false)
    setSelectedRunId(j.run_id)
-   // Force a refresh of the list.
    const lr = await fetchWithAuth('/api/admin/quality/runs')
    const lj = await lr.json().catch(() => ({}))
    if (lr.ok) setRuns(lj.runs || [])
@@ -396,7 +407,14 @@ function RunList({
         <div className="text-[11px] font-mono uppercase tracking-wider text-gray-500">
          {timeAgo(r.started_at)}
         </div>
-        <StatusBadge status={r.status} />
+        <div className="flex items-center gap-1.5">
+         {r.meta?.source === 'client' && (
+          <div className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-400/20 truncate max-w-[110px]" title={r.meta?.business_name as string | undefined}>
+           {r.meta?.business_name || 'client'}
+          </div>
+         )}
+         <StatusBadge status={r.status} />
+        </div>
        </div>
        <div className="flex items-center justify-between gap-3">
         <div className="text-base font-medium text-white tabular-nums">
@@ -423,8 +441,26 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
  const completedResults = useMemo(() => results.filter((r) => r.overall_score !== null), [results])
  const passCount = completedResults.filter((r) => r.expectation_pass).length
 
+ const isClient = run.meta?.source === 'client'
+ const clientName = run.meta?.business_name as string | undefined
+ const generatedPrompt = isClient ? detail.client_prompt || undefined : undefined
+
  return (
   <div className="space-y-5">
+   {isClient && clientName && (
+    <div className="rounded-2xl border border-sky-400/20 bg-sky-500/[0.04] p-4">
+     <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div>
+       <div className="text-[10px] font-mono uppercase tracking-wider text-sky-300/80 mb-1">Testing client</div>
+       <div className="text-base font-medium text-white">{clientName}</div>
+       <div className="text-[11px] font-mono text-gray-500 mt-0.5">business_id {run.meta?.business_id?.slice?.(0, 8)}</div>
+      </div>
+      <div className="text-[11px] text-gray-400 max-w-md leading-relaxed">
+       Every scenario runs against the agent prompt that would be generated for this client right now, using the same <span className="font-mono text-sky-300">lib/agent-builder</span> code that ships production agents.
+      </div>
+     </div>
+    </div>
+   )}
    {/* Big number row */}
    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
     <BigStat
@@ -482,6 +518,21 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
      })}
     </div>
    </Panel>
+
+   {isClient && generatedPrompt && (
+    <Panel>
+     <PanelHeader eyebrow="The prompt these scenarios ran against" title="Generated agent prompt" />
+     <details className="px-5 pb-5 group">
+      <summary className="cursor-pointer text-xs font-mono text-sky-300 hover:text-sky-200 inline-flex items-center gap-2 py-2">
+       <ArrowRight className="w-3 h-3 transition-transform group-open:rotate-90" />
+       {generatedPrompt.length} characters · click to view
+      </summary>
+      <pre className="mt-2 rounded-xl border border-white/[0.04] bg-black/30 p-4 text-[11px] font-mono text-gray-300 leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
+       {generatedPrompt}
+      </pre>
+     </details>
+    </Panel>
+   )}
 
    <Panel>
     <PanelHeader eyebrow="Each (business x scenario) pair, worst-first" title="Pairs" />
@@ -737,21 +788,55 @@ function EmptyState({ onRun }: { onRun: () => void }) {
 
 function RunModal({
  onClose, onStart, activeRun,
-}: { onClose: () => void; onStart: (mode: 'smoke' | 'full') => Promise<void>; activeRun: Run | null }) {
- const [busy, setBusy] = useState<'smoke' | 'full' | null>(null)
+}: {
+ onClose: () => void
+ onStart: (mode: 'smoke' | 'full' | 'client', businessId?: string) => Promise<void>
+ activeRun: Run | null
+}) {
+ const [busy, setBusy] = useState<'smoke' | 'full' | 'client' | null>(null)
  const [error, setError] = useState('')
+ const [tab, setTab] = useState<'synthetic' | 'client'>('synthetic')
+ const [clients, setClients] = useState<ClientOption[]>([])
+ const [clientQuery, setClientQuery] = useState('')
+ const [pickedClientId, setPickedClientId] = useState<string | null>(null)
 
- const start = async (mode: 'smoke' | 'full') => {
+ useEffect(() => {
+  if (tab !== 'client' || activeRun) return
+  let cancelled = false
+  ;(async () => {
+   try {
+    const r = await fetchWithAuth('/api/admin/quality/clients')
+    const j = await r.json().catch(() => ({}))
+    if (!cancelled && r.ok) setClients(j.clients || [])
+   } catch { /* ignore */ }
+  })()
+  return () => { cancelled = true }
+ }, [tab, activeRun])
+
+ const start = async (mode: 'smoke' | 'full' | 'client') => {
   if (busy) return
+  if (mode === 'client' && !pickedClientId) {
+   setError('Pick a client first')
+   return
+  }
   setBusy(mode)
   setError('')
   try {
-   await onStart(mode)
+   await onStart(mode, pickedClientId || undefined)
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to start')
    setBusy(null)
   }
  }
+
+ const filteredClients = useMemo(() => {
+  const q = clientQuery.trim().toLowerCase()
+  if (!q) return clients
+  return clients.filter((c) =>
+   (c.business_name || '').toLowerCase().includes(q) ||
+   (c.business_type || '').toLowerCase().includes(q),
+  )
+ }, [clients, clientQuery])
 
  return (
   <motion.div
@@ -762,7 +847,7 @@ function RunModal({
    <motion.div
     initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }}
     transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-    className="relative bg-[#0c0c10] border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg"
+    className="relative bg-[#0c0c10] border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
    >
     <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
      <div className="text-sm font-semibold text-white inline-flex items-center gap-2">
@@ -780,35 +865,118 @@ function RunModal({
       Wait for it to finish or cancel it first.
      </div>
     ) : (
-     <div className="px-6 py-5 space-y-3">
-      <p className="text-sm text-gray-400">
-       Pick a size. Pairs are processed in the background — you can close this tab and come back; progress is saved live.
-      </p>
+     <>
+      <div className="px-6 pt-4">
+       <div className="inline-flex rounded-lg border border-white/[0.08] bg-white/[0.02] p-0.5">
+        <TabButton active={tab === 'synthetic'} onClick={() => setTab('synthetic')}>
+         Test the generator
+        </TabButton>
+        <TabButton active={tab === 'client'} onClick={() => setTab('client')}>
+         Test a specific client
+        </TabButton>
+       </div>
+      </div>
 
-      <RunChoice
-       title="Smoke test"
-       sub="10 pairs · ~3 min · ~$1"
-       icon={<Lightning className="w-5 h-5 text-amber-300" weight="bold" />}
-       onClick={() => start('smoke')}
-       busy={busy === 'smoke'}
-       disabled={busy !== null}
-       recommendedFor="Use after every prompt-generator tweak. Same scenarios each time so scores are comparable."
-      />
+      {tab === 'synthetic' && (
+       <div className="px-6 py-5 space-y-3">
+        <p className="text-sm text-gray-400">
+         Run the prompt generator against synthetic businesses + scenarios. This is what to run after editing <span className="font-mono text-sky-300">lib/agent-builder/*</span>.
+        </p>
 
-      <RunChoice
-       title="Full sweep"
-       sub="~90 pairs · ~25-40 min · ~$10-15"
-       icon={<TestTube className="w-5 h-5 text-sky-400" weight="bold" />}
-       onClick={() => start('full')}
-       busy={busy === 'full'}
-       disabled={busy !== null}
-       recommendedFor="Run before merging a meaningful change. Every business x every applicable scenario."
-      />
+        <RunChoice
+         title="Smoke test"
+         sub="10 pairs · ~3 min · ~$1"
+         icon={<Lightning className="w-5 h-5 text-amber-300" weight="bold" />}
+         onClick={() => start('smoke')}
+         busy={busy === 'smoke'}
+         disabled={busy !== null}
+         recommendedFor="Same 10 scenarios every time so scores are directly comparable across runs."
+        />
+
+        <RunChoice
+         title="Full sweep"
+         sub="~90 pairs · ~25-40 min · ~$10-15"
+         icon={<TestTube className="w-5 h-5 text-sky-400" weight="bold" />}
+         onClick={() => start('full')}
+         busy={busy === 'full'}
+         disabled={busy !== null}
+         recommendedFor="Run before merging a meaningful change. Every synthetic business × every applicable scenario."
+        />
+       </div>
+      )}
+
+      {tab === 'client' && (
+       <div className="px-6 py-5 space-y-3">
+        <p className="text-sm text-gray-400">
+         Run every scenario against a real client's generated prompt. Use this before submitting an agent so you can see how it handles emergencies, prompt injection, SMS consent, etc.
+        </p>
+
+        <input
+         placeholder="Search clients..."
+         value={clientQuery}
+         onChange={(e) => setClientQuery(e.target.value)}
+         className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-sky-400/40"
+        />
+
+        <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 -mr-1">
+         {filteredClients.length === 0 && (
+          <div className="text-xs text-gray-500 text-center py-6">No clients match.</div>
+         )}
+         {filteredClients.map((c) => (
+          <button
+           key={c.id}
+           onClick={() => setPickedClientId(c.id)}
+           className={`w-full text-left p-3 rounded-xl border transition-all ${
+            pickedClientId === c.id
+             ? 'border-sky-400/40 bg-sky-400/5'
+             : 'border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12]'
+           }`}
+          >
+           <div className="flex items-center justify-between gap-2">
+            <div className="text-sm font-medium text-white truncate">{c.business_name || 'Unnamed business'}</div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+             {c.retell_agent_id && (
+              <div className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-400/20">
+               live agent
+              </div>
+             )}
+             {c.subscription_status === 'active' && (
+              <div className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-400/20">
+               paying
+              </div>
+             )}
+            </div>
+           </div>
+           <div className="text-[11px] font-mono text-gray-500 mt-0.5">
+            {c.business_type || '—'} · {c.id.slice(0, 8)}
+           </div>
+          </button>
+         ))}
+        </div>
+
+        <div className="text-[11px] text-gray-500 font-mono">
+         {pickedClientId
+          ? `12 scenarios · ~3 min · ~$1`
+          : 'Pick a client above'}
+        </div>
+
+        <PrimaryButton
+         onClick={() => start('client')}
+         disabled={!pickedClientId || busy !== null}
+        >
+         {busy === 'client' ? (
+          <><CircleNotch className="w-4 h-4 animate-spin" weight="bold" /> Starting...</>
+         ) : (
+          <><Sparkle className="w-4 h-4" weight="bold" /> Test this client</>
+         )}
+        </PrimaryButton>
+       </div>
+      )}
 
       {error && (
-       <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{error}</div>
+       <div className="mx-6 mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{error}</div>
       )}
-     </div>
+     </>
     )}
 
     <div className="px-6 py-3 border-t border-white/[0.06] flex justify-end gap-2">
@@ -816,6 +984,21 @@ function RunModal({
     </div>
    </motion.div>
   </motion.div>
+ )
+}
+
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+ return (
+  <button
+   onClick={onClick}
+   className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+    active
+     ? 'bg-white/[0.08] text-white'
+     : 'text-gray-400 hover:text-gray-200'
+   }`}
+  >
+   {children}
+  </button>
  )
 }
 

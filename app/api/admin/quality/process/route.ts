@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
   const { data: run, error: runErr } = await supabaseAdmin
     .from('prompt_eval_runs')
-    .select('id, status, pending_matrix, prompts_cache, total_pairs, completed_pairs')
+    .select('id, status, pending_matrix, prompts_cache, total_pairs, completed_pairs, meta')
     .eq('id', runId)
     .maybeSingle()
   if (runErr) return NextResponse.json({ error: runErr.message }, { status: 500 })
@@ -78,8 +78,16 @@ export async function POST(request: NextRequest) {
   const businesses = loadBusinesses()
   const scenarios = loadScenarios()
   const rubric = loadRubric()
-  const bizMap = new Map(businesses.map((b) => [b.id, b]))
+  const bizMap = new Map<string, BusinessFixture>(businesses.map((b) => [b.id, b]))
   const scnMap = new Map(scenarios.map((s) => [s.id, s]))
+
+  // mode=client runs stash a synthetic-shaped BusinessFixture for the
+  // real client on the run's meta. Inject it into bizMap so the pair
+  // pipeline treats it like any other fixture.
+  const meta = ((run as any).meta || {}) as Record<string, any>
+  if (meta?.source === 'client' && meta?.client_fixture?.id) {
+    bizMap.set(meta.client_fixture.id, meta.client_fixture as BusinessFixture)
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
