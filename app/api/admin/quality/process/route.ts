@@ -33,13 +33,14 @@ export const maxDuration = 60
  *     stub so the chain doesn't die on one bad pair
  */
 
-// Conservative: 1 pair per invocation. With Anthropic Tier 1's 30K
-// input-tokens-per-minute cap, even WITH prompt caching, running 3
-// pairs in parallel can crest the limit because they share the
-// org-wide bucket. One pair at a time spaces requests out enough
-// that retries (with backoff) keep us inside the budget.
-// Bump back up once on a higher tier.
-const PAIRS_PER_INVOCATION = 1
+// 3 pairs in parallel per invocation. Anthropic Tier 2 has 450K
+// input tokens per minute on Sonnet - plenty of headroom for 3
+// concurrent pairs even without prompt caching. Each pair averages
+// ~25-40s wall time when not rate-limited; 3 in parallel fit
+// comfortably inside the 60s Vercel function cap.
+// Retry-with-backoff stays in place as a safety net in case
+// Anthropic returns a transient 429.
+const PAIRS_PER_INVOCATION = 3
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request)

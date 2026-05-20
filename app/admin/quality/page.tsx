@@ -295,9 +295,11 @@ function RunningBanner({
   onResume()
  }
  const ageSec = run.last_progress_at ? Math.floor((Date.now() - new Date(run.last_progress_at).getTime()) / 1000) : 0
- // The chain pings last_progress_at every batch (~30-45s) so >90s without
- // an update means a function probably timed out and never fired the next.
- const stalled = ageSec > 90
+ // The chain pings last_progress_at every batch. A healthy batch is
+ // ~30-60s, but worst-case (rate-limit retries, slow Anthropic) can
+ // push to 3+ minutes. Wait until 4 minutes before crying stalled so
+ // we don't lie about progress on slow networks.
+ const stalled = ageSec > 240
 
  const accent = stalled
   ? { border: 'border-amber-400/40', bg: 'from-amber-500/10', text: 'text-amber-200', icon: 'text-amber-300' }
