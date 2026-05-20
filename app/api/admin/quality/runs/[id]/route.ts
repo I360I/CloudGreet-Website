@@ -25,7 +25,7 @@ export async function GET(
 
   const { data: run, error: runErr } = await supabaseAdmin
     .from('prompt_eval_runs')
-    .select('id, started_at, finished_at, status, generator_sha, total_pairs, completed_pairs, overall_score, expectation_pass_rate, category_averages, notes')
+    .select('id, started_at, finished_at, status, generator_sha, total_pairs, completed_pairs, overall_score, expectation_pass_rate, category_averages, cost_micro, notes')
     .eq('id', params.id)
     .maybeSingle()
   if (runErr) {
@@ -37,7 +37,7 @@ export async function GET(
 
   const { data: results, error: resErr } = await supabaseAdmin
     .from('prompt_eval_results')
-    .select('id, business_id, scenario_id, overall_score, expectation_pass, expectation_notes, scores, transcript, tool_calls, stop_reason, created_at')
+    .select('id, business_id, scenario_id, overall_score, expectation_pass, expectation_notes, scores, transcript, tool_calls, stop_reason, cost_micro, created_at')
     .eq('run_id', params.id)
     .order('created_at', { ascending: true })
   if (resErr) {
@@ -48,7 +48,7 @@ export async function GET(
   // in flight - their numbers aren't stable.
   const { data: prev } = await supabaseAdmin
     .from('prompt_eval_runs')
-    .select('id, started_at, overall_score, expectation_pass_rate, category_averages, generator_sha')
+    .select('id, started_at, overall_score, expectation_pass_rate, category_averages, generator_sha, cost_micro')
     .eq('status', 'completed')
     .lt('started_at', (run as any).started_at)
     .order('started_at', { ascending: false })

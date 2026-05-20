@@ -90,10 +90,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate the agent prompt once per business and cache on the run row.
+    // Track the generation cost separately so we can attribute it to the
+    // FIRST pair for this business (we only generate once, but the cost is
+    // real and should land somewhere).
     let agentPrompt = promptsCache[business.id]
+    let generationCostMicro = 0
     if (!agentPrompt) {
       try {
-        agentPrompt = await generateFullPromptForBusiness(business)
+        const gen = await generateFullPromptForBusiness(business)
+        agentPrompt = gen.prompt
+        generationCostMicro = gen.cost_micro
         promptsCache[business.id] = agentPrompt
         await supabaseAdmin
           .from('prompt_eval_runs')
@@ -102,13 +108,15 @@ export async function POST(request: NextRequest) {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         logger.warn('quality: generate failed', { runId, businessId: business.id, error: msg })
-        await insertErrorResult(runId, business.id, scenario.id, `generate failed: ${msg}`)
+        await insertErrorResult(runId, business.id, scenario.id, `generate failed: ${msg}`, 0)
         continue
       }
     }
 
     try {
-      const scored = await processPair(client, agentPrompt, rubric, business, scenario)
+      const scored = await processPair(client, agentPrompt, rubric, business, scenario, {
+        extraCostMicro: generationCostMicro,
+      })
       await supabaseAdmin.from('prompt_eval_results').insert({
         run_id: runId,
         business_id: scored.business_id,
@@ -120,11 +128,13 @@ export async function POST(request: NextRequest) {
         transcript: scored.transcript,
         tool_calls: scored.tool_calls,
         stop_reason: scored.stop_reason,
+        cost_micro: scored.cost_micro,
       })
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       logger.warn('quality: pair failed', { runId, businessId: business.id, scenarioId: scenario.id, error: msg })
-      await insertErrorResult(runId, business.id, scenario.id, `run errored: ${msg}`)
+      // Even if the pair errored, the generation cost was already spent.
+      await insertErrorResult(runId, business.id, scenario.id, `run errored: ${msg}`, generationCostMicro)
     }
 
     // Update progress counters + heartbeat after each pair so the UI ticks.
@@ -162,22 +172,29 @@ export async function POST(request: NextRequest) {
 }
 
 async function advanceProgress(runId: string): Promise<void> {
-  // Recompute completed_pairs from a fresh COUNT instead of trusting
-  // an increment - avoids races if a second invocation overlaps.
+  // Recompute completed_pairs + cost from fresh aggregates instead of
+  // trusting per-call increments - avoids races if a second invocation
+  // overlaps.
   const { count } = await supabaseAdmin
     .from('prompt_eval_results')
     .select('id', { count: 'exact', head: true })
     .eq('run_id', runId)
+  const { data: rows } = await supabaseAdmin
+    .from('prompt_eval_results')
+    .select('cost_micro')
+    .eq('run_id', runId)
+  const costSum = (rows || []).reduce((a, r: any) => a + (Number(r.cost_micro) || 0), 0)
   await supabaseAdmin
     .from('prompt_eval_runs')
     .update({
       completed_pairs: count || 0,
+      cost_micro: costSum,
       last_progress_at: new Date().toISOString(),
     })
     .eq('id', runId)
 }
 
-async function insertErrorResult(runId: string, businessId: string, scenarioId: string, msg: string): Promise<void> {
+async function insertErrorResult(runId: string, businessId: string, scenarioId: string, msg: string, costMicro = 0): Promise<void> {
   const CATEGORIES = [
     'booking_correctness', 'information_completeness', 'sms_consent_disclosure',
     'emergency_handling', 'tone_naturalness', 'hallucination_safety', 'edge_case_handling',
@@ -193,6 +210,7 @@ async function insertErrorResult(runId: string, businessId: string, scenarioId: 
     transcript: [{ role: 'agent', text: `RUN ERROR: ${msg}` }],
     tool_calls: [],
     stop_reason: 'error',
+    cost_micro: costMicro,
   })
 }
 

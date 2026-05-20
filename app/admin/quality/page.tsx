@@ -25,6 +25,7 @@ type Run = {
  overall_score: number | null
  expectation_pass_rate: number | null
  category_averages: Record<string, number> | null
+ cost_micro: number | null
  notes: string | null
 }
 
@@ -39,12 +40,13 @@ type PairResult = {
  transcript: Turn[]
  tool_calls: ToolCall[]
  stop_reason: string
+ cost_micro: number | null
  created_at: string
 }
 
 type RunDetail = {
  run: Run
- previous: { id: string; overall_score: number | null; expectation_pass_rate: number | null; category_averages: Record<string, number> | null; generator_sha: string | null } | null
+ previous: { id: string; overall_score: number | null; expectation_pass_rate: number | null; category_averages: Record<string, number> | null; generator_sha: string | null; cost_micro: number | null } | null
  results: PairResult[]
 }
 
@@ -287,6 +289,9 @@ function RunningBanner({
      <div className="text-xs font-mono text-sky-300">
       {run.completed_pairs} / {run.total_pairs} pairs
      </div>
+     <div className="text-xs font-mono text-amber-300 tabular-nums">
+      {formatCost(run.cost_micro)} spent
+     </div>
      <button
       onClick={handleCancelClick}
       disabled={cancelling}
@@ -374,7 +379,7 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
  return (
   <div className="space-y-5">
    {/* Big number row */}
-   <div className="grid sm:grid-cols-3 gap-3">
+   <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
     <BigStat
      label="Overall score"
      value={run.overall_score !== null ? pct(run.overall_score) : '—'}
@@ -403,6 +408,13 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
         ? `Finished ${timeAgo(run.finished_at)}`
         : run.status
      }
+    />
+    <CostStat
+     micro={run.cost_micro}
+     prevMicro={previous?.cost_micro ?? null}
+     completed={run.completed_pairs}
+     total={run.total_pairs}
+     status={run.status}
     />
    </div>
 
@@ -454,6 +466,45 @@ function BigStat({
  )
 }
 
+function CostStat({
+ micro, prevMicro, completed, total, status,
+}: {
+ micro: number | null
+ prevMicro: number | null
+ completed: number
+ total: number
+ status: string
+}) {
+ const dollars = (micro ?? 0) / 1_000_000
+ const perPair = completed > 0 ? dollars / completed : 0
+ const projected = total > 0 ? perPair * total : 0
+ // Raw cost delta in dollars vs previous run. We show absolute $ here
+ // rather than percent because runs with different pair counts skew %.
+ const prevDollars = prevMicro != null ? prevMicro / 1_000_000 : null
+ const deltaUSD = prevDollars != null ? dollars - prevDollars : null
+ return (
+  <div className="rounded-2xl border border-amber-400/15 bg-amber-500/[0.04] p-5">
+   <div className="text-[10px] font-mono uppercase tracking-wider text-amber-300/80 mb-2">Anthropic cost</div>
+   <div className="flex items-baseline gap-2 mb-1">
+    <div className="text-3xl font-medium text-white tabular-nums">${dollars.toFixed(2)}</div>
+    {deltaUSD != null && Math.abs(deltaUSD) >= 0.005 && (
+     <div className={`text-[10px] font-mono inline-flex items-center gap-0.5 ${deltaUSD > 0 ? 'text-rose-300' : 'text-emerald-300'}`}>
+      {deltaUSD > 0 ? <ArrowUp className="w-2.5 h-2.5" weight="bold" /> : <ArrowDown className="w-2.5 h-2.5" weight="bold" />}
+      {deltaUSD > 0 ? '+' : ''}${Math.abs(deltaUSD).toFixed(2)}
+     </div>
+    )}
+   </div>
+   <div className="text-xs text-gray-500 tabular-nums">
+    {status === 'running' && completed > 0
+     ? `~$${projected.toFixed(2)} projected at this pace`
+     : completed > 0
+      ? `$${perPair.toFixed(3)} avg / pair`
+      : 'No pairs scored yet'}
+   </div>
+  </div>
+ )
+}
+
 function CategoryBar({
  label, current, previous,
 }: { label: string; current: number; previous: number | null }) {
@@ -497,6 +548,9 @@ function PairRow({ pair }: { pair: PairResult }) {
     <div className="text-sm text-gray-200 truncate flex-1">
      <span className="text-gray-500">{pair.business_id}</span> <span className="text-gray-700">×</span> <span className="font-medium">{pair.scenario_id}</span>
     </div>
+    {pair.cost_micro != null && pair.cost_micro > 0 && (
+     <div className="text-[10px] font-mono text-amber-300/70 tabular-nums">{formatCost(pair.cost_micro)}</div>
+    )}
     <div className="flex items-center gap-1.5">
      {pair.expectation_pass
       ? <CheckCircle className="w-4 h-4 text-emerald-400" weight="fill" />
@@ -754,6 +808,15 @@ function RunChoice({
 
 function pct(x: number): string {
  return (x * 100).toFixed(1) + '%'
+}
+
+function formatCost(micro: number | null | undefined): string {
+ const m = micro || 0
+ const d = m / 1_000_000
+ if (d < 0.01) return '< $0.01'
+ if (d < 1) return `$${d.toFixed(3)}`
+ if (d < 10) return `$${d.toFixed(2)}`
+ return `$${d.toFixed(2)}`
 }
 
 function timeAgo(iso: string): string {

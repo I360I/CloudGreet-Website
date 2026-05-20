@@ -84,6 +84,9 @@ export async function scoreSimulation(
     overall,
     expectation_pass: expectationPass.pass,
     expectation_notes: expectationPass.notes,
+    // Cost is attached by processPair() once the meter has finished
+    // accumulating across simulate + score; placeholder for now.
+    cost_micro: 0,
   }
 }
 

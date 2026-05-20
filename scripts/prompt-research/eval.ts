@@ -21,8 +21,7 @@ import { execSync } from 'node:child_process'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { loadBusinesses, loadScenarios, loadRubric, buildMatrix } from './lib/load'
 import { generateFullPromptForBusiness } from './lib/generate'
-import { runSimulation } from './lib/simulate'
-import { scoreSimulation } from './lib/score'
+import { processPair } from './lib/run-pair'
 import { renderReport } from './lib/report'
 import type { ScoredResult, RunSummary, RubricCategory } from './lib/types'
 
@@ -114,20 +113,24 @@ async function main() {
   const uniqueBizIds = Array.from(new Set(matrix.map((p) => p.business.id)))
   const promptByBiz = new Map<string, string>()
   console.log(`generating prompts for ${uniqueBizIds.length} business fixtures...`)
+  const genCostByBiz = new Map<string, number>()
   const promptResults = await pool(uniqueBizIds, Math.min(flags.concurrency, 3), async (bid) => {
     const b = businesses.find((x) => x.id === bid)!
     try {
-      const p = await generateFullPromptForBusiness(b)
-      console.log(`  ✓ generated: ${bid} (${p.length} chars)`)
-      return { bid, prompt: p, ok: true as const }
+      const gen = await generateFullPromptForBusiness(b)
+      console.log(`  ✓ generated: ${bid} (${gen.prompt.length} chars, $${(gen.cost_micro / 1_000_000).toFixed(3)})`)
+      return { bid, prompt: gen.prompt, cost: gen.cost_micro, ok: true as const }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       console.log(`  ✗ generate failed: ${bid} - ${msg}`)
-      return { bid, prompt: '', ok: false as const, error: msg }
+      return { bid, prompt: '', cost: 0, ok: false as const, error: msg }
     }
   })
   for (const r of promptResults) {
-    if (r.ok) promptByBiz.set(r.bid, r.prompt)
+    if (r.ok) {
+      promptByBiz.set(r.bid, r.prompt)
+      genCostByBiz.set(r.bid, r.cost)
+    }
   }
   if (promptByBiz.size === 0) {
     console.error('All generations failed. Aborting.')
@@ -137,13 +140,17 @@ async function main() {
   // 2) Run + score each pair (skip pairs whose business prompt failed).
   const runnable = matrix.filter((p) => promptByBiz.has(p.business.id))
   console.log(`running ${runnable.length} simulations...`)
+  // Track which businesses we've already attributed generation cost to.
+  // First pair for each business folds gen cost in; subsequent pairs don't.
+  const genCostUsed = new Set<string>()
   const results: ScoredResult[] = await pool(runnable, flags.concurrency, async (pair, idx) => {
     const tag = `[${idx + 1}/${runnable.length}] ${pair.business.id} × ${pair.scenario.id}`
     try {
       const prompt = promptByBiz.get(pair.business.id)!
-      const sim = await runSimulation(client, prompt, pair.business, pair.scenario)
-      const scored = await scoreSimulation(client, rubric, pair.business, pair.scenario, sim)
-      console.log(`  ✓ ${tag} overall=${scored.overall.toFixed(2)} expect=${scored.expectation_pass ? 'pass' : 'FAIL'}`)
+      const extra = genCostUsed.has(pair.business.id) ? 0 : (genCostByBiz.get(pair.business.id) || 0)
+      genCostUsed.add(pair.business.id)
+      const scored = await processPair(client, prompt, rubric, pair.business, pair.scenario, { extraCostMicro: extra })
+      console.log(`  ✓ ${tag} overall=${scored.overall.toFixed(2)} cost=$${(scored.cost_micro / 1_000_000).toFixed(3)} expect=${scored.expectation_pass ? 'pass' : 'FAIL'}`)
       await persistResult(supabase, runId, scored)
       return scored
     } catch (e) {
@@ -165,6 +172,7 @@ async function main() {
         overall: 0,
         expectation_pass: false,
         expectation_notes: [`run errored: ${msg}`],
+        cost_micro: 0,
       } satisfies ScoredResult
     }
   })
@@ -239,12 +247,15 @@ async function persistResult(s: SupabaseClient | null, runId: string | null, sco
     transcript: scored.transcript,
     tool_calls: scored.tool_calls,
     stop_reason: scored.stop_reason,
+    cost_micro: scored.cost_micro,
   })
   if (error) console.log(`(Supabase: insert result failed: ${error.message})`)
-  // Update completed_pairs counter using an RPC-like increment.
-  const { data: row } = await s.from('prompt_eval_runs').select('completed_pairs').eq('id', runId).maybeSingle()
-  const next = ((row as any)?.completed_pairs || 0) + 1
-  await s.from('prompt_eval_runs').update({ completed_pairs: next }).eq('id', runId)
+  // Recompute completed_pairs + cost_micro from aggregates - avoids
+  // races when --concurrency > 1.
+  const { count } = await s.from('prompt_eval_results').select('id', { count: 'exact', head: true }).eq('run_id', runId)
+  const { data: rows } = await s.from('prompt_eval_results').select('cost_micro').eq('run_id', runId)
+  const costSum = (rows || []).reduce((a, r: any) => a + (Number(r.cost_micro) || 0), 0)
+  await s.from('prompt_eval_runs').update({ completed_pairs: count || 0, cost_micro: costSum }).eq('id', runId)
 }
 
 async function finalizeRun(s: SupabaseClient | null, runId: string | null, summary: RunSummary): Promise<void> {
@@ -260,12 +271,14 @@ async function finalizeRun(s: SupabaseClient | null, runId: string | null, summa
     const scores = summary.results.flatMap((r) => r.scores.filter((s) => s.category === c)).map((s) => s.score)
     catAvgs[c] = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0
   }
+  const totalCost = summary.results.reduce((a, r) => a + (r.cost_micro || 0), 0)
   const { error } = await s.from('prompt_eval_runs').update({
     status: 'completed',
     finished_at: summary.finished_at,
     overall_score: overall,
     expectation_pass_rate: expectPass,
     category_averages: catAvgs,
+    cost_micro: totalCost,
   }).eq('id', runId)
   if (error) console.log(`(Supabase: finalize failed: ${error.message})`)
 }

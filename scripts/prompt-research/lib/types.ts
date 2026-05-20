@@ -99,6 +99,8 @@ export type ScoredResult = SimulationResult & {
   /** True if every must_call fired and no must_not_call fired. */
   expectation_pass: boolean
   expectation_notes: string[]
+  /** Anthropic API cost for this pair, in micro-dollars (1e6 = $1). */
+  cost_micro: number
 }
 
 export type RunSummary = {
