@@ -128,7 +128,7 @@ jobs:
           TELNYX_WEBHOOK_SECRET: ${{ secrets.TELNYX_WEBHOOK_SECRET }}
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-files
           path: .next/
@@ -162,7 +162,7 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
       - name: Upload E2E test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report

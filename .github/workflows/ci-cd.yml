@@ -161,7 +161,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
 
       - name: Upload integration test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: integration-test-results
@@ -219,7 +219,7 @@ jobs:
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
 
       - name: Upload E2E test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-test-results
@@ -227,7 +227,7 @@ jobs:
           retention-days: 7
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
@@ -266,7 +266,7 @@ jobs:
           LOAD_TEST_API_KEY: ${{ secrets.LOAD_TEST_API_KEY }}
 
       - name: Upload load test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: load-test-results
@@ -299,7 +299,7 @@ jobs:
           args: --severity-threshold=high
 
       - name: Upload security scan results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-scan-results
@@ -406,6 +406,8 @@ jobs:
 
       - name: Notify deployment success
         uses: 8398a7/action-slack@v3
+        if: env.SLACK_WEBHOOK_URL != ''
+        continue-on-error: true
         with:
           status: success
           channel: '#deployments'
@@ -436,6 +438,8 @@ jobs:
 
       - name: Notify rollback
         uses: 8398a7/action-slack@v3
+        if: env.SLACK_WEBHOOK_URL != ''
+        continue-on-error: true
         with:
           status: failure
           channel: '#deployments'
