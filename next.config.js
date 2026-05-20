@@ -21,7 +21,16 @@ if (process.env.NODE_ENV === 'production' &&
 
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['bcryptjs']
+    serverComponentsExternalPackages: ['bcryptjs'],
+    // The /admin/quality eval reads its scenario + business fixtures
+    // and the rubric.md off disk at runtime in the API route. Tell
+    // Vercel's file tracer to bundle them with the serverless function
+    // or it'll 500 with ENOENT in prod.
+    outputFileTracingIncludes: {
+      '/api/admin/quality/**': [
+        './scripts/prompt-research/banks/**/*',
+      ],
+    },
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if

@@ -6,11 +6,37 @@
  * Cartesian product after that filter.
  */
 
-import { readdirSync, readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { BusinessFixture, ScenarioFixture } from './types'
 
-const ROOT = new URL('../banks/', import.meta.url).pathname
+/**
+ * Resolve the banks/ directory across both CLI and serverless contexts.
+ *
+ * - Locally (tsx CLI), `import.meta.url` points at the source file and
+ *   `../banks/` lands correctly.
+ * - On Vercel, `outputFileTracingIncludes` in next.config.js drops the
+ *   banks/ directory under the function root at the same relative path
+ *   from the project root. `process.cwd()` is the project root in
+ *   serverless functions, so `<cwd>/scripts/prompt-research/banks` is
+ *   the right place to look.
+ *
+ * Try the relative-to-source location first; fall back to cwd.
+ */
+function resolveBanksRoot(): string {
+  const candidates = [
+    new URL('../banks/', import.meta.url).pathname,
+    join(process.cwd(), 'scripts/prompt-research/banks/'),
+  ]
+  for (const c of candidates) {
+    if (existsSync(join(c, 'rubric.md'))) return c
+  }
+  // Last resort - return the first so the caller gets a recognisable
+  // ENOENT pointing at the expected path.
+  return candidates[0]
+}
+
+const ROOT = resolveBanksRoot()
 
 export function loadBusinesses(): BusinessFixture[] {
   const dir = join(ROOT, 'businesses')

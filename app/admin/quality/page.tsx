@@ -3,12 +3,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
- TestTube, CheckCircle, XCircle, ArrowRight, CircleNotch, Copy, X, Clock, Sparkle,
- ArrowUp, ArrowDown, Minus, ChatCircle, Wrench,
+ TestTube, CheckCircle, XCircle, ArrowRight, CircleNotch, X, Sparkle,
+ ArrowUp, ArrowDown, Minus, ChatCircle, Wrench, Lightning, Stop, WarningCircle,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
-import { Panel, PanelHeader, GhostButton, PrimaryButton } from '../_components/ui'
+import { Panel, PanelHeader, GhostButton, PrimaryButton, DangerButton } from '../_components/ui'
 
 type Score = { category: string; score: number; justification: string }
 type ToolCall = { tool: string; args: Record<string, unknown>; response: unknown }
@@ -65,7 +65,8 @@ export default function QualityPage() {
  const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
  const [detail, setDetail] = useState<RunDetail | null>(null)
  const [detailLoading, setDetailLoading] = useState(false)
- const [howToOpen, setHowToOpen] = useState(false)
+ const [runModalOpen, setRunModalOpen] = useState(false)
+ const [cancelling, setCancelling] = useState(false)
 
  // Initial + polling: list refreshes every 5s if there's a running run.
  useEffect(() => {
@@ -126,13 +127,61 @@ export default function QualityPage() {
  const latest = runs[0] || null
  const activeRun = runs.find((r) => r.status === 'running') || null
 
+ const handleStart = async (mode: 'smoke' | 'full') => {
+  try {
+   setErr('')
+   const r = await fetchWithAuth('/api/admin/quality/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j.success) {
+    throw new Error(j?.error || 'Failed to start')
+   }
+   setRunModalOpen(false)
+   setSelectedRunId(j.run_id)
+   // Force a refresh of the list.
+   const lr = await fetchWithAuth('/api/admin/quality/runs')
+   const lj = await lr.json().catch(() => ({}))
+   if (lr.ok) setRuns(lj.runs || [])
+  } catch (e) {
+   setErr(e instanceof Error ? e.message : 'Failed to start')
+  }
+ }
+
+ const handleCancel = async () => {
+  if (!activeRun) return
+  setCancelling(true)
+  try {
+   await fetchWithAuth('/api/admin/quality/cancel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ run_id: activeRun.id }),
+   })
+  } catch (e) {
+   setErr(e instanceof Error ? e.message : 'Cancel failed')
+  } finally {
+   setCancelling(false)
+  }
+ }
+
  return (
   <AdminShell activeLabel="Quality">
    <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl mx-auto space-y-6">
-    <Header onHowTo={() => setHowToOpen(true)} latest={latest} />
+    <Header
+     onRun={() => setRunModalOpen(true)}
+     latest={latest}
+     activeRun={activeRun}
+    />
 
     {activeRun && (
-     <RunningBanner run={activeRun} onSelect={() => setSelectedRunId(activeRun.id)} />
+     <RunningBanner
+      run={activeRun}
+      onSelect={() => setSelectedRunId(activeRun.id)}
+      onCancel={handleCancel}
+      cancelling={cancelling}
+     />
     )}
 
     {err && !loading && (
@@ -162,7 +211,7 @@ export default function QualityPage() {
         </motion.div>
        )}
        {!detail && !detailLoading && runs.length === 0 && !loading && (
-        <EmptyState onHowTo={() => setHowToOpen(true)} />
+        <EmptyState onRun={() => setRunModalOpen(true)} />
        )}
        {detailLoading && !detail && (
         <Panel><div className="p-10 text-center text-gray-500 text-sm flex items-center justify-center gap-2"><CircleNotch className="w-4 h-4 animate-spin" /> Loading run...</div></Panel>
@@ -173,13 +222,21 @@ export default function QualityPage() {
    </div>
 
    <AnimatePresence>
-    {howToOpen && <HowToRunModal onClose={() => setHowToOpen(false)} />}
+    {runModalOpen && (
+     <RunModal
+      onClose={() => setRunModalOpen(false)}
+      onStart={handleStart}
+      activeRun={activeRun}
+     />
+    )}
    </AnimatePresence>
   </AdminShell>
  )
 }
 
-function Header({ onHowTo, latest }: { onHowTo: () => void; latest: Run | null }) {
+function Header({
+ onRun, latest, activeRun,
+}: { onRun: () => void; latest: Run | null; activeRun: Run | null }) {
  return (
   <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
    <div>
@@ -197,28 +254,46 @@ function Header({ onHowTo, latest }: { onHowTo: () => void; latest: Run | null }
       Last run: {timeAgo(latest.started_at)}
      </div>
     )}
-    <PrimaryButton onClick={onHowTo}>
-     <Sparkle className="w-4 h-4" weight="bold" /> Run new eval
+    <PrimaryButton onClick={onRun} disabled={!!activeRun}>
+     <Sparkle className="w-4 h-4" weight="bold" /> {activeRun ? 'Eval running...' : 'Run new eval'}
     </PrimaryButton>
    </div>
   </div>
  )
 }
 
-function RunningBanner({ run, onSelect }: { run: Run; onSelect: () => void }) {
+function RunningBanner({
+ run, onSelect, onCancel, cancelling,
+}: { run: Run; onSelect: () => void; onCancel: () => void; cancelling: boolean }) {
  const pct = run.total_pairs > 0 ? (run.completed_pairs / run.total_pairs) * 100 : 0
+ const handleCancelClick = (e: React.MouseEvent) => {
+  e.stopPropagation()
+  if (cancelling) return
+  if (confirm('Cancel the running eval? Pairs already processed will stay, but no further pairs will run.')) {
+   onCancel()
+  }
+ }
  return (
-  <button
+  <div
    onClick={onSelect}
-   className="w-full text-left rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-500/10 to-transparent p-4 hover:bg-sky-500/15 transition-colors"
+   className="w-full cursor-pointer rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-500/10 to-transparent p-4 hover:bg-sky-500/15 transition-colors"
   >
    <div className="flex items-center justify-between gap-3 mb-2">
     <div className="flex items-center gap-2 text-sm font-medium text-sky-200">
      <CircleNotch className="w-4 h-4 animate-spin" weight="bold" />
      Eval in progress
     </div>
-    <div className="text-xs font-mono text-sky-300">
-     {run.completed_pairs} / {run.total_pairs} pairs
+    <div className="flex items-center gap-3">
+     <div className="text-xs font-mono text-sky-300">
+      {run.completed_pairs} / {run.total_pairs} pairs
+     </div>
+     <button
+      onClick={handleCancelClick}
+      disabled={cancelling}
+      className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-400/20 inline-flex items-center gap-1 disabled:opacity-50"
+     >
+      {cancelling ? <CircleNotch className="w-3 h-3 animate-spin" /> : <Stop className="w-3 h-3" weight="fill" />} cancel
+     </button>
     </div>
    </div>
    <div className="relative h-2 rounded-full bg-white/[0.06] overflow-hidden">
@@ -229,7 +304,7 @@ function RunningBanner({ run, onSelect }: { run: Run; onSelect: () => void }) {
      transition={{ duration: 0.5 }}
     />
    </div>
-  </button>
+  </div>
  )
 }
 
@@ -542,31 +617,41 @@ function DeltaPill({ delta, suffix = '' }: { delta: number; suffix?: string }) {
  )
 }
 
-function EmptyState({ onHowTo }: { onHowTo: () => void }) {
+function EmptyState({ onRun }: { onRun: () => void }) {
  return (
   <Panel>
    <div className="p-10 text-center">
     <TestTube className="w-10 h-10 text-sky-400 mx-auto mb-3" weight="bold" />
     <div className="text-base font-medium text-white mb-1">No evals yet</div>
     <p className="text-sm text-gray-400 max-w-md mx-auto mb-5">
-     Run the offline eval harness to test the agent-prompt pipeline against synthetic businesses + caller scenarios. Results show up here as the run progresses.
+     Run the offline eval to test the agent-prompt pipeline against synthetic businesses + caller scenarios. Results show up here as the run progresses.
     </p>
-    <PrimaryButton onClick={onHowTo}>How to run</PrimaryButton>
+    <PrimaryButton onClick={onRun}>
+     <Sparkle className="w-4 h-4" weight="bold" /> Run new eval
+    </PrimaryButton>
    </div>
   </Panel>
  )
 }
 
-function HowToRunModal({ onClose }: { onClose: () => void }) {
- const [copied, setCopied] = useState(false)
- const cmd = `vercel env pull .env.local && npx tsx --env-file=.env.local scripts/prompt-research/eval.ts --limit=10`
- const copy = async () => {
+function RunModal({
+ onClose, onStart, activeRun,
+}: { onClose: () => void; onStart: (mode: 'smoke' | 'full') => Promise<void>; activeRun: Run | null }) {
+ const [busy, setBusy] = useState<'smoke' | 'full' | null>(null)
+ const [error, setError] = useState('')
+
+ const start = async (mode: 'smoke' | 'full') => {
+  if (busy) return
+  setBusy(mode)
+  setError('')
   try {
-   await navigator.clipboard?.writeText(cmd)
-   setCopied(true)
-   setTimeout(() => setCopied(false), 1500)
-  } catch {}
+   await onStart(mode)
+  } catch (e) {
+   setError(e instanceof Error ? e.message : 'Failed to start')
+   setBusy(null)
+  }
  }
+
  return (
   <motion.div
    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -575,43 +660,93 @@ function HowToRunModal({ onClose }: { onClose: () => void }) {
    <button onClick={onClose} aria-label="Close" className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
    <motion.div
     initial={{ opacity: 0, y: 12, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }}
-    className="relative bg-[#0c0c10] border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-xl"
+    transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+    className="relative bg-[#0c0c10] border border-white/[0.08] rounded-2xl shadow-2xl w-full max-w-lg"
    >
     <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
      <div className="text-sm font-semibold text-white inline-flex items-center gap-2">
-      <Sparkle className="w-4 h-4 text-sky-400" /> Run a new eval
+      <Sparkle className="w-4 h-4 text-sky-400" weight="bold" /> Run a new eval
      </div>
      <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-white/[0.06]">
       <X className="w-4 h-4 text-gray-400" />
      </button>
     </div>
-    <div className="px-6 py-5 space-y-4 text-sm text-gray-300">
-     <p>
-      Right now the eval runs locally (it takes a few minutes and burns Anthropic tokens, so it's not exposed as a one-click admin action yet). Run this from your <span className="font-mono text-sky-300">cloudgreet/</span> directory:
-     </p>
-     <div className="relative">
-      <pre className="bg-black/40 border border-white/[0.06] rounded-xl px-4 py-3 text-xs font-mono text-sky-200 overflow-x-auto whitespace-pre-wrap">
-       {cmd}
-      </pre>
-      <button
-       onClick={copy}
-       className="absolute top-2 right-2 px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider bg-white/[0.06] hover:bg-white/[0.1] text-gray-300 inline-flex items-center gap-1"
-      >
-       <Copy className="w-3 h-3" /> {copied ? 'copied' : 'copy'}
-      </button>
+
+    {activeRun ? (
+     <div className="px-6 py-6 text-center text-sm text-gray-400">
+      <WarningCircle className="w-7 h-7 text-amber-400 mx-auto mb-2" weight="bold" />
+      An eval is already in progress.<br />
+      Wait for it to finish or cancel it first.
      </div>
-     <div className="text-xs text-gray-500 space-y-1">
-      <div>• <span className="font-mono text-gray-400">--limit=10</span> runs ~10 pairs as a smoke test (~$1).</div>
-      <div>• Omit <span className="font-mono text-gray-400">--limit</span> for the full ~90-pair sweep (~$10-15).</div>
-      <div>• Progress shows up here in real time as pairs complete.</div>
-      <div>• When done: <span className="font-mono text-gray-400">rm .env.local</span> so secrets don't sit on disk.</div>
+    ) : (
+     <div className="px-6 py-5 space-y-3">
+      <p className="text-sm text-gray-400">
+       Pick a size. Pairs are processed in the background — you can close this tab and come back; progress is saved live.
+      </p>
+
+      <RunChoice
+       title="Smoke test"
+       sub="10 pairs · ~3 min · ~$1"
+       icon={<Lightning className="w-5 h-5 text-amber-300" weight="bold" />}
+       onClick={() => start('smoke')}
+       busy={busy === 'smoke'}
+       disabled={busy !== null}
+       recommendedFor="Use after every prompt-generator tweak. Same scenarios each time so scores are comparable."
+      />
+
+      <RunChoice
+       title="Full sweep"
+       sub="~90 pairs · ~25-40 min · ~$10-15"
+       icon={<TestTube className="w-5 h-5 text-sky-400" weight="bold" />}
+       onClick={() => start('full')}
+       busy={busy === 'full'}
+       disabled={busy !== null}
+       recommendedFor="Run before merging a meaningful change. Every business x every applicable scenario."
+      />
+
+      {error && (
+       <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{error}</div>
+      )}
      </div>
-    </div>
+    )}
+
     <div className="px-6 py-3 border-t border-white/[0.06] flex justify-end gap-2">
-     <GhostButton onClick={onClose}>Close</GhostButton>
+     <GhostButton onClick={onClose}>{activeRun ? 'Close' : 'Cancel'}</GhostButton>
     </div>
    </motion.div>
   </motion.div>
+ )
+}
+
+function RunChoice({
+ title, sub, icon, onClick, busy, disabled, recommendedFor,
+}: {
+ title: string; sub: string; icon: React.ReactNode
+ onClick: () => void; busy: boolean; disabled: boolean
+ recommendedFor: string
+}) {
+ return (
+  <button
+   onClick={onClick}
+   disabled={disabled}
+   className={`w-full text-left rounded-xl border p-4 transition-all ${
+    disabled
+     ? 'border-white/[0.04] bg-white/[0.02] opacity-50 cursor-not-allowed'
+     : 'border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.16]'
+   }`}
+  >
+   <div className="flex items-center gap-3 mb-1.5">
+    <div className="w-9 h-9 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
+     {busy ? <CircleNotch className="w-4 h-4 text-sky-300 animate-spin" weight="bold" /> : icon}
+    </div>
+    <div className="flex-1 min-w-0">
+     <div className="text-sm font-medium text-white">{title}</div>
+     <div className="text-[11px] font-mono text-gray-500">{sub}</div>
+    </div>
+    <ArrowRight className="w-4 h-4 text-gray-500" />
+   </div>
+   <p className="text-[11px] text-gray-500 leading-relaxed pl-12">{recommendedFor}</p>
+  </button>
  )
 }
 
