@@ -15,6 +15,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { withRateLimitRetry } from './retry'
 import type {
   BusinessFixture, ScenarioFixture, SimulationResult,
   ScoredResult, RubricScore, RubricCategory,
@@ -91,14 +92,14 @@ export async function scoreSimulation(
 }
 
 async function runJudge(client: Anthropic, prompt: string, attempt = 1): Promise<RubricScore[]> {
-  const resp = await client.messages.create({
+  const resp = await withRateLimitRetry(() => client.messages.create({
     model: JUDGE_MODEL,
     max_tokens: JUDGE_MAX_TOKENS,
     system: attempt === 1
       ? 'You are a strict but fair evaluator. Output ONLY the JSON block as instructed. No prose before or after.'
       : 'CRITICAL: previous response could not be parsed. Output ONLY the JSON object, starting with { and ending with }. No code fences, no explanation, no markdown.',
     messages: [{ role: 'user', content: prompt }],
-  })
+  }))
   const text = (resp.content.find((b: any) => b.type === 'text') as any)?.text || ''
   const parsed = tryParse(text)
   if (!parsed && attempt < 2) {

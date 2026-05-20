@@ -33,7 +33,13 @@ export const maxDuration = 60
  *     stub so the chain doesn't die on one bad pair
  */
 
-const PAIRS_PER_INVOCATION = 3
+// Conservative: 1 pair per invocation. With Anthropic Tier 1's 30K
+// input-tokens-per-minute cap, even WITH prompt caching, running 3
+// pairs in parallel can crest the limit because they share the
+// org-wide bucket. One pair at a time spaces requests out enough
+// that retries (with backoff) keep us inside the budget.
+// Bump back up once on a higher tier.
+const PAIRS_PER_INVOCATION = 1
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request)

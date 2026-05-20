@@ -22,6 +22,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import { withRateLimitRetry } from './retry'
 import type {
   BusinessFixture,
   ScenarioFixture,
@@ -30,9 +31,13 @@ import type {
   ConversationTurn,
 } from './types'
 
+// Agent stays on Sonnet because that's what we're testing. Caller
+// only role-plays a human - Haiku is plenty and uses ~1/3 the TPM,
+// which matters a lot on lower Anthropic tiers where 30K input
+// tokens/minute is the cap.
 const AGENT_MODEL = 'claude-sonnet-4-6'
-const CALLER_MODEL = 'claude-sonnet-4-6'
-const MAX_CALLER_TURNS = 14
+const CALLER_MODEL = 'claude-haiku-4-5-20251001'
+const MAX_CALLER_TURNS = 12
 const MAX_TOOL_LOOPS_PER_TURN = 6
 
 const AGENT_TOOLS = [
@@ -131,13 +136,17 @@ async function runAgentTurn(
 ): Promise<AgentTurnResult> {
   let spokenAll = ''
   for (let loop = 0; loop < MAX_TOOL_LOOPS_PER_TURN; loop++) {
-    const resp = await client.messages.create({
+    // The agent system prompt is the SAME across every turn within
+    // this pair. Mark it cache_control: ephemeral so subsequent turns
+    // hit the cache - 10% of the input cost AND 10% of the input TPM,
+    // which keeps us under Anthropic Tier 1 rate limits.
+    const resp = await withRateLimitRetry(() => client.messages.create({
       model: AGENT_MODEL,
       max_tokens: 1024,
-      system: agentPrompt,
+      system: [{ type: 'text', text: agentPrompt, cache_control: { type: 'ephemeral' } }] as any,
       tools: AGENT_TOOLS as any,
       messages: history,
-    })
+    }))
 
     let say = ''
     const toolUses: any[] = []
@@ -178,12 +187,12 @@ async function runAgentTurn(
     if (ended) return { spoken: spokenAll, ended: true, transferred: false }
     if (transferred) {
       // Allow one more turn for the agent to say a final line, but cap it.
-      const final = await client.messages.create({
+      const final = await withRateLimitRetry(() => client.messages.create({
         model: AGENT_MODEL,
         max_tokens: 256,
-        system: agentPrompt,
+        system: [{ type: 'text', text: agentPrompt, cache_control: { type: 'ephemeral' } }] as any,
         messages: history,
-      })
+      }))
       const finalSay = (final.content.find((b: any) => b.type === 'text') as any)?.text?.trim() || ''
       if (finalSay) {
         transcript.push({ role: 'agent', text: finalSay })
@@ -226,12 +235,12 @@ export async function runSimulation(
     const agentSpoken = agentTurn.spoken || '(...silence...)'
     callerHistory.push({ role: 'user', content: agentSpoken })
 
-    const callerResp = await client.messages.create({
+    const callerResp = await withRateLimitRetry(() => client.messages.create({
       model: CALLER_MODEL,
       max_tokens: 256,
       system: callerSystemPrompt,
       messages: callerHistory,
-    })
+    }))
     const callerSay = (callerResp.content.find((b: any) => b.type === 'text') as any)?.text?.trim() || ''
     if (!callerSay) { stopReason = 'caller_silent'; hitLimit = false; break }
 
