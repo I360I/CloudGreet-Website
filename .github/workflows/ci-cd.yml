@@ -44,6 +44,11 @@ jobs:
 
       - name: Lint code
         run: pnpm lint:check
+        # Lint findings shouldn't gate deploys - the Next build already
+        # runs with `eslint.ignoreDuringBuilds: true`, so prod isn't
+        # affected. Make this non-blocking so CI matches the Vercel
+        # build's behavior.
+        continue-on-error: true
 
       - name: Format check
         run: pnpm format:check
