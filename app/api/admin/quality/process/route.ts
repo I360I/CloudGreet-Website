@@ -84,10 +84,13 @@ export async function POST(request: NextRequest) {
   const toProcess = pending.slice(0, PAIRS_PER_INVOCATION)
   const remaining = pending.slice(PAIRS_PER_INVOCATION)
 
-  // ---- Step 1: ensure prompts for every business in this batch ----
-  // Generation calls hit Anthropic too, so do them in parallel to keep
-  // the function under its time budget. Cost from each generation gets
-  // attributed to the FIRST pair of that business we see in this batch.
+  // ---- Step 1: warm the prompts cache (defer pairs if anything was generated) ----
+  // Generation + simulation in the same invocation can exceed Vercel's
+  // 60s function cap (~28s for 3 generations + 30-60s for 3 parallel
+  // simulations). Split them: if this invocation generated ANY prompts,
+  // persist the cache + heartbeat + chain to a fresh invocation that
+  // starts with a warm cache and only has to run pairs. Costs us a few
+  // extra invocations early on, but the chain stays alive.
   const generationCostByBiz: Record<string, number> = {}
   const uniqueBizInBatch = Array.from(new Set(toProcess.map((p) => p.business_id)))
   const toGenerate = uniqueBizInBatch.filter((bid) => !promptsCache[bid])
@@ -109,23 +112,40 @@ export async function POST(request: NextRequest) {
         generationCostByBiz[g.bid] = g.cost
       }
     }
-    // Persist the cache once we have all of them, and heartbeat.
     await supabaseAdmin
       .from('prompt_eval_runs')
       .update({ prompts_cache: promptsCache, last_progress_at: new Date().toISOString() })
       .eq('id', runId)
-    // For any business whose generation failed, insert error stubs for
-    // every pair in this batch from that business and drop them from toProcess.
     for (const g of genResults) {
       if (!g.ok) {
+        // Pre-fail every pair in this batch from this business and drop them
+        // from pending so we don't keep tripping over them.
+        const droppedScenarios: string[] = []
         for (const p of toProcess) {
           if (p.business_id === g.bid) {
             await insertErrorResult(runId, p.business_id, p.scenario_id, `generate failed: ${g.error}`, 0)
+            droppedScenarios.push(p.scenario_id)
           }
         }
-        logger.warn('quality: generate failed', { runId, businessId: g.bid, error: g.error })
+        // Strip ALL remaining pairs for this failed business from the
+        // pending matrix - no point retrying generation 12 more times.
+        const stillPending = remaining.filter((p) => p.business_id !== g.bid)
+        remaining.length = 0
+        remaining.push(...stillPending)
+        logger.warn('quality: generate failed', { runId, businessId: g.bid, error: g.error, dropped: droppedScenarios.length })
       }
     }
+
+    // CHAIN TO NEXT INVOCATION instead of running pairs in this one.
+    // Persist the matrix (with any failed-business pairs dropped) and
+    // hand off. The next /process call has a fully warm cache for these
+    // businesses and goes straight to pair processing.
+    await supabaseAdmin
+      .from('prompt_eval_runs')
+      .update({ pending_matrix: [...toProcess.filter((p) => promptsCache[p.business_id]), ...remaining], last_progress_at: new Date().toISOString() })
+      .eq('id', runId)
+    void kickNext(request, runId)
+    return NextResponse.json({ ok: true, generated: toGenerate.length, deferredPairs: toProcess.length })
   }
 
   // ---- Step 2: process all pairs in PARALLEL ----
