@@ -15,13 +15,16 @@ export const maxDuration = 60
 /**
  * POST /api/admin/quality/process { run_id }
  *
- * Pulls the next pending pair off the run's `pending_matrix`, processes
- * it (generate prompt if not cached, simulate, score), inserts the
- * result, decrements the pending matrix, and fires off the NEXT
- * /process call to keep the chain going.
+ * Pulls the next batch of pending pairs off the run's `pending_matrix`,
+ * processes them IN PARALLEL within this invocation, inserts results,
+ * decrements the pending matrix, and fires off the NEXT /process call
+ * to keep the chain going.
  *
- * Two-pair batch per invocation to stay comfortably under Vercel's
- * 60s function cap. Each pair ~20-35s typical.
+ * Parallel batch (not sequential) because each pair is ~30s of mostly-
+ * idle network time waiting on Anthropic - parallelising lets us hit
+ * 3 pairs in roughly the same wall-clock budget that one sequential
+ * pair would take. With maxDuration=60s and ~35s typical per pair, 3
+ * concurrent pairs is the sweet spot.
  *
  * Safety:
  *   - if run.status != 'running' we no-op (handles cancellation)
@@ -30,7 +33,7 @@ export const maxDuration = 60
  *     stub so the chain doesn't die on one bad pair
  */
 
-const PAIRS_PER_INVOCATION = 2
+const PAIRS_PER_INVOCATION = 3
 
 export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request)
@@ -81,41 +84,73 @@ export async function POST(request: NextRequest) {
   const toProcess = pending.slice(0, PAIRS_PER_INVOCATION)
   const remaining = pending.slice(PAIRS_PER_INVOCATION)
 
-  for (const p of toProcess) {
-    const business = bizMap.get(p.business_id)
-    const scenario = scnMap.get(p.scenario_id)
-    if (!business || !scenario) {
-      await insertErrorResult(runId, p.business_id, p.scenario_id, 'fixture missing on disk')
-      continue
-    }
+  // ---- Step 1: ensure prompts for every business in this batch ----
+  // Generation calls hit Anthropic too, so do them in parallel to keep
+  // the function under its time budget. Cost from each generation gets
+  // attributed to the FIRST pair of that business we see in this batch.
+  const generationCostByBiz: Record<string, number> = {}
+  const uniqueBizInBatch = Array.from(new Set(toProcess.map((p) => p.business_id)))
+  const toGenerate = uniqueBizInBatch.filter((bid) => !promptsCache[bid])
 
-    // Generate the agent prompt once per business and cache on the run row.
-    // Track the generation cost separately so we can attribute it to the
-    // FIRST pair for this business (we only generate once, but the cost is
-    // real and should land somewhere).
-    let agentPrompt = promptsCache[business.id]
-    let generationCostMicro = 0
-    if (!agentPrompt) {
+  if (toGenerate.length > 0) {
+    const genResults = await Promise.all(toGenerate.map(async (bid) => {
+      const biz = bizMap.get(bid)
+      if (!biz) return { bid, ok: false as const, error: 'fixture missing' }
       try {
-        const gen = await generateFullPromptForBusiness(business)
-        agentPrompt = gen.prompt
-        generationCostMicro = gen.cost_micro
-        promptsCache[business.id] = agentPrompt
-        await supabaseAdmin
-          .from('prompt_eval_runs')
-          .update({ prompts_cache: promptsCache, last_progress_at: new Date().toISOString() })
-          .eq('id', runId)
+        const gen = await generateFullPromptForBusiness(biz)
+        return { bid, ok: true as const, prompt: gen.prompt, cost: gen.cost_micro }
       } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e)
-        logger.warn('quality: generate failed', { runId, businessId: business.id, error: msg })
-        await insertErrorResult(runId, business.id, scenario.id, `generate failed: ${msg}`, 0)
-        continue
+        return { bid, ok: false as const, error: e instanceof Error ? e.message : String(e) }
+      }
+    }))
+    for (const g of genResults) {
+      if (g.ok) {
+        promptsCache[g.bid] = g.prompt
+        generationCostByBiz[g.bid] = g.cost
       }
     }
+    // Persist the cache once we have all of them, and heartbeat.
+    await supabaseAdmin
+      .from('prompt_eval_runs')
+      .update({ prompts_cache: promptsCache, last_progress_at: new Date().toISOString() })
+      .eq('id', runId)
+    // For any business whose generation failed, insert error stubs for
+    // every pair in this batch from that business and drop them from toProcess.
+    for (const g of genResults) {
+      if (!g.ok) {
+        for (const p of toProcess) {
+          if (p.business_id === g.bid) {
+            await insertErrorResult(runId, p.business_id, p.scenario_id, `generate failed: ${g.error}`, 0)
+          }
+        }
+        logger.warn('quality: generate failed', { runId, businessId: g.bid, error: g.error })
+      }
+    }
+  }
 
+  // ---- Step 2: process all pairs in PARALLEL ----
+  // First pair for each business in this batch absorbs the generation
+  // cost; subsequent pairs from the same business get 0 extra.
+  const genCostUsed = new Set<string>()
+  const tasks = toProcess
+    .filter((p) => promptsCache[p.business_id]) // skip pairs whose gen failed
+    .map((p) => {
+      const extra = genCostUsed.has(p.business_id) ? 0 : (generationCostByBiz[p.business_id] || 0)
+      genCostUsed.add(p.business_id)
+      return { pair: p, extraCost: extra }
+    })
+
+  await Promise.all(tasks.map(async ({ pair, extraCost }) => {
+    const business = bizMap.get(pair.business_id)
+    const scenario = scnMap.get(pair.scenario_id)
+    if (!business || !scenario) {
+      await insertErrorResult(runId, pair.business_id, pair.scenario_id, 'fixture missing on disk')
+      return
+    }
+    const agentPrompt = promptsCache[business.id]
     try {
       const scored = await processPair(client, agentPrompt, rubric, business, scenario, {
-        extraCostMicro: generationCostMicro,
+        extraCostMicro: extraCost,
       })
       await supabaseAdmin.from('prompt_eval_results').insert({
         run_id: runId,
@@ -133,13 +168,12 @@ export async function POST(request: NextRequest) {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       logger.warn('quality: pair failed', { runId, businessId: business.id, scenarioId: scenario.id, error: msg })
-      // Even if the pair errored, the generation cost was already spent.
-      await insertErrorResult(runId, business.id, scenario.id, `run errored: ${msg}`, generationCostMicro)
+      await insertErrorResult(runId, business.id, scenario.id, `run errored: ${msg}`, extraCost)
     }
+  }))
 
-    // Update progress counters + heartbeat after each pair so the UI ticks.
-    await advanceProgress(runId)
-  }
+  // Single progress update after the parallel batch lands.
+  await advanceProgress(runId)
 
   // Persist the updated pending matrix (whether anything remains or not).
   await supabaseAdmin

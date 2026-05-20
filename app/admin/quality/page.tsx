@@ -27,6 +27,7 @@ type Run = {
  category_averages: Record<string, number> | null
  cost_micro: number | null
  notes: string | null
+ last_progress_at?: string | null
 }
 
 type PairResult = {
@@ -168,6 +169,19 @@ export default function QualityPage() {
   }
  }
 
+ const handleResume = async () => {
+  if (!activeRun) return
+  try {
+   await fetchWithAuth('/api/admin/quality/resume', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ run_id: activeRun.id }),
+   })
+  } catch (e) {
+   setErr(e instanceof Error ? e.message : 'Resume failed')
+  }
+ }
+
  return (
   <AdminShell activeLabel="Quality">
    <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-7xl mx-auto space-y-6">
@@ -182,6 +196,7 @@ export default function QualityPage() {
       run={activeRun}
       onSelect={() => setSelectedRunId(activeRun.id)}
       onCancel={handleCancel}
+      onResume={handleResume}
       cancelling={cancelling}
      />
     )}
@@ -265,8 +280,8 @@ function Header({
 }
 
 function RunningBanner({
- run, onSelect, onCancel, cancelling,
-}: { run: Run; onSelect: () => void; onCancel: () => void; cancelling: boolean }) {
+ run, onSelect, onCancel, onResume, cancelling,
+}: { run: Run; onSelect: () => void; onCancel: () => void; onResume: () => void; cancelling: boolean }) {
  const pct = run.total_pairs > 0 ? (run.completed_pairs / run.total_pairs) * 100 : 0
  const handleCancelClick = (e: React.MouseEvent) => {
   e.stopPropagation()
@@ -275,23 +290,53 @@ function RunningBanner({
    onCancel()
   }
  }
+ const handleResumeClick = (e: React.MouseEvent) => {
+  e.stopPropagation()
+  onResume()
+ }
+ const ageSec = run.last_progress_at ? Math.floor((Date.now() - new Date(run.last_progress_at).getTime()) / 1000) : 0
+ // The chain pings last_progress_at every batch (~30-45s) so >90s without
+ // an update means a function probably timed out and never fired the next.
+ const stalled = ageSec > 90
+
+ const accent = stalled
+  ? { border: 'border-amber-400/40', bg: 'from-amber-500/10', text: 'text-amber-200', icon: 'text-amber-300' }
+  : { border: 'border-sky-400/30', bg: 'from-sky-500/10', text: 'text-sky-200', icon: 'text-sky-300' }
+
  return (
   <div
    onClick={onSelect}
-   className="w-full cursor-pointer rounded-2xl border border-sky-400/30 bg-gradient-to-br from-sky-500/10 to-transparent p-4 hover:bg-sky-500/15 transition-colors"
+   className={`w-full cursor-pointer rounded-2xl border ${accent.border} bg-gradient-to-br ${accent.bg} to-transparent p-4 hover:bg-white/[0.04] transition-colors`}
   >
    <div className="flex items-center justify-between gap-3 mb-2">
-    <div className="flex items-center gap-2 text-sm font-medium text-sky-200">
-     <CircleNotch className="w-4 h-4 animate-spin" weight="bold" />
-     Eval in progress
+    <div className={`flex items-center gap-2 text-sm font-medium ${accent.text}`}>
+     {stalled ? (
+      <>
+       <WarningCircle className={`w-4 h-4 ${accent.icon}`} weight="bold" />
+       Eval stalled - last update {ageSec}s ago
+      </>
+     ) : (
+      <>
+       <CircleNotch className="w-4 h-4 animate-spin" weight="bold" />
+       Eval in progress
+      </>
+     )}
     </div>
     <div className="flex items-center gap-3">
-     <div className="text-xs font-mono text-sky-300">
+     <div className={`text-xs font-mono ${accent.icon}`}>
       {run.completed_pairs} / {run.total_pairs} pairs
      </div>
      <div className="text-xs font-mono text-amber-300 tabular-nums">
       {formatCost(run.cost_micro)} spent
      </div>
+     {stalled && (
+      <button
+       onClick={handleResumeClick}
+       className="text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-400/30 inline-flex items-center gap-1"
+      >
+       <Sparkle className="w-3 h-3" weight="bold" /> resume
+      </button>
+     )}
      <button
       onClick={handleCancelClick}
       disabled={cancelling}
@@ -303,7 +348,7 @@ function RunningBanner({
    </div>
    <div className="relative h-2 rounded-full bg-white/[0.06] overflow-hidden">
     <motion.div
-     className="absolute inset-y-0 left-0 bg-sky-400 rounded-full"
+     className={`absolute inset-y-0 left-0 rounded-full ${stalled ? 'bg-amber-400' : 'bg-sky-400'}`}
      initial={{ width: 0 }}
      animate={{ width: `${pct}%` }}
      transition={{ duration: 0.5 }}
