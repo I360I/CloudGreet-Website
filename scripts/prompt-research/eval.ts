@@ -18,12 +18,18 @@ import Anthropic from '@anthropic-ai/sdk'
 import { mkdirSync, writeFileSync, existsSync, symlinkSync, unlinkSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { execSync } from 'node:child_process'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { loadBusinesses, loadScenarios, loadRubric, buildMatrix } from './lib/load'
 import { generateFullPromptForBusiness } from './lib/generate'
 import { runSimulation } from './lib/simulate'
 import { scoreSimulation } from './lib/score'
 import { renderReport } from './lib/report'
-import type { ScoredResult, RunSummary } from './lib/types'
+import type { ScoredResult, RunSummary, RubricCategory } from './lib/types'
+
+const CATEGORIES: RubricCategory[] = [
+  'booking_correctness', 'information_completeness', 'sms_consent_disclosure',
+  'emergency_handling', 'tone_naturalness', 'hallucination_safety', 'edge_case_handling',
+]
 
 type Flags = {
   only?: string
@@ -94,6 +100,13 @@ async function main() {
   const runDir = join(new URL('.', import.meta.url).pathname, 'runs', timestamp)
   mkdirSync(runDir, { recursive: true })
 
+  // Supabase progress reporting. Optional - if either env var is missing
+  // we just skip and write to disk only. Admin UI reads from these tables.
+  const supabase = buildSupabaseClient()
+  const sha = gitSha()
+  const runId = await createRunRow(supabase, matrix.length, sha)
+  if (runId) console.log(`run row created in Supabase: ${runId}`)
+
   console.log(`prompt-research starting: ${matrix.length} pairs at concurrency ${flags.concurrency}`)
   console.log(`output dir: ${runDir}`)
 
@@ -131,6 +144,7 @@ async function main() {
       const sim = await runSimulation(client, prompt, pair.business, pair.scenario)
       const scored = await scoreSimulation(client, rubric, pair.business, pair.scenario, sim)
       console.log(`  ✓ ${tag} overall=${scored.overall.toFixed(2)} expect=${scored.expectation_pass ? 'pass' : 'FAIL'}`)
+      await persistResult(supabase, runId, scored)
       return scored
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -167,6 +181,8 @@ async function main() {
   const report = renderReport(summary)
   writeFileSync(join(runDir, 'report.md'), report)
 
+  await finalizeRun(supabase, runId, summary)
+
   // Update `latest` symlink for convenience.
   const latest = join(new URL('.', import.meta.url).pathname, 'runs', 'latest')
   try {
@@ -182,6 +198,76 @@ async function main() {
   console.log('Run complete.')
   console.log(`  Report:  ${join(runDir, 'report.md')}`)
   console.log(`  Results: ${join(runDir, 'results.json')}`)
+}
+
+// ---- Supabase progress reporting --------------------------------------
+
+function buildSupabaseClient(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    console.log('(Supabase env not set - skipping admin-UI reporting; results still saved to disk)')
+    return null
+  }
+  return createClient(url, key, { auth: { persistSession: false } })
+}
+
+async function createRunRow(s: SupabaseClient | null, totalPairs: number, sha: string): Promise<string | null> {
+  if (!s) return null
+  const { data, error } = await s
+    .from('prompt_eval_runs')
+    .insert({ status: 'running', total_pairs: totalPairs, generator_sha: sha })
+    .select('id')
+    .single()
+  if (error) {
+    console.log(`(Supabase: failed to create run row: ${error.message})`)
+    return null
+  }
+  return (data as any).id as string
+}
+
+async function persistResult(s: SupabaseClient | null, runId: string | null, scored: ScoredResult): Promise<void> {
+  if (!s || !runId) return
+  const { error } = await s.from('prompt_eval_results').insert({
+    run_id: runId,
+    business_id: scored.business_id,
+    scenario_id: scored.scenario_id,
+    overall_score: scored.overall,
+    expectation_pass: scored.expectation_pass,
+    expectation_notes: scored.expectation_notes,
+    scores: scored.scores,
+    transcript: scored.transcript,
+    tool_calls: scored.tool_calls,
+    stop_reason: scored.stop_reason,
+  })
+  if (error) console.log(`(Supabase: insert result failed: ${error.message})`)
+  // Update completed_pairs counter using an RPC-like increment.
+  const { data: row } = await s.from('prompt_eval_runs').select('completed_pairs').eq('id', runId).maybeSingle()
+  const next = ((row as any)?.completed_pairs || 0) + 1
+  await s.from('prompt_eval_runs').update({ completed_pairs: next }).eq('id', runId)
+}
+
+async function finalizeRun(s: SupabaseClient | null, runId: string | null, summary: RunSummary): Promise<void> {
+  if (!s || !runId) return
+  const overall = summary.results.length
+    ? summary.results.reduce((a, b) => a + b.overall, 0) / summary.results.length
+    : 0
+  const expectPass = summary.results.length
+    ? summary.results.filter((r) => r.expectation_pass).length / summary.results.length
+    : 0
+  const catAvgs: Record<string, number> = {}
+  for (const c of CATEGORIES) {
+    const scores = summary.results.flatMap((r) => r.scores.filter((s) => s.category === c)).map((s) => s.score)
+    catAvgs[c] = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0
+  }
+  const { error } = await s.from('prompt_eval_runs').update({
+    status: 'completed',
+    finished_at: summary.finished_at,
+    overall_score: overall,
+    expectation_pass_rate: expectPass,
+    category_averages: catAvgs,
+  }).eq('id', runId)
+  if (error) console.log(`(Supabase: finalize failed: ${error.message})`)
 }
 
 main().catch((e) => {

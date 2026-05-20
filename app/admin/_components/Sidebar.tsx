@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { SquaresFour, Phone, CurrencyDollar, ListChecks, MagicWand, SignOut, Users, FileText, Robot, PhoneOutgoing } from '@phosphor-icons/react'
+import { SquaresFour, Phone, CurrencyDollar, ListChecks, MagicWand, SignOut, Users, FileText, Robot, PhoneOutgoing, TestTube } from '@phosphor-icons/react'
 
 type Item = {
  icon: React.ElementType
@@ -21,11 +21,12 @@ const items: Item[] = [
  { icon: Robot, label: 'Agents Due', href: '/admin/agents-due', match: (p) => p.startsWith('/admin/agents-due') },
  { icon: FileText, label: 'Applications', href: '/admin/applications', match: (p) => p.startsWith('/admin/applications') },
  { icon: ListChecks, label: 'Leads', href: '/admin/leads', match: (p) => p.startsWith('/admin/leads') },
+ { icon: TestTube, label: 'Quality', href: '/admin/quality', match: (p) => p.startsWith('/admin/quality') },
  { icon: MagicWand, label: 'Tools', href: '/admin/tools', match: (p) => p.startsWith('/admin/tools') },
 ]
 
 export type AdminActiveLabel =
- | 'Overview' | 'Calls' | 'Billing' | 'Sales' | 'Dialer' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due'
+ | 'Overview' | 'Calls' | 'Billing' | 'Sales' | 'Dialer' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due' | 'Quality'
 
 export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
  adminEmail: string
