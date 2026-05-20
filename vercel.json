@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/calcom-sync",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/quality-resume",
+      "schedule": "*/1 * * * *"
     }
   ]
 }

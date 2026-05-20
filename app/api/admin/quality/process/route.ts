@@ -43,9 +43,18 @@ export const maxDuration = 60
 const PAIRS_PER_INVOCATION = 3
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAdmin(request)
-  if (!auth.success) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Two acceptable auth paths:
+  //   1. Admin user (manual kick from the dashboard)
+  //   2. Vercel Cron heartbeat (Bearer CRON_SECRET + x-quality-cron header)
+  // Cron is what self-heals stalled chains without requiring a logged-in admin.
+  const isCron = request.headers.get('x-quality-cron') === '1'
+    && request.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET || ''}`
+    && !!process.env.CRON_SECRET
+  if (!isCron) {
+    const auth = await requireAdmin(request)
+    if (!auth.success) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
   }
 
   const body = await request.json().catch(() => ({})) as { run_id?: string }
