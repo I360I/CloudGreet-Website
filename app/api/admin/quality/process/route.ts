@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       .from('prompt_eval_runs')
       .update({ pending_matrix: [...toProcess.filter((p) => promptsCache[p.business_id]), ...remaining], last_progress_at: new Date().toISOString() })
       .eq('id', runId)
-    void kickNext(request, runId)
+    kickNext(request, runId)
     return NextResponse.json({ ok: true, generated: toGenerate.length, deferredPairs: toProcess.length })
   }
 
@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Chain the next invocation.
-  void kickNext(request, runId)
+  kickNext(request, runId)
   return NextResponse.json({ ok: true, processed: toProcess.length, remaining: remaining.length })
 }
 
@@ -319,22 +319,22 @@ async function markRunFailed(runId: string, notes: string): Promise<void> {
     .eq('id', runId)
 }
 
-async function kickNext(request: NextRequest, runId: string): Promise<void> {
+function kickNext(request: NextRequest, runId: string): void {
   const url = new URL('/api/admin/quality/process', request.nextUrl.origin)
   const cookie = request.headers.get('cookie') || ''
   const authz = request.headers.get('authorization') || ''
-  try {
-    await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(cookie ? { cookie } : {}),
-        ...(authz ? { authorization: authz } : {}),
-        'x-internal-eval': '1',
-      },
-      body: JSON.stringify({ run_id: runId }),
-    })
-  } catch (e) {
+  // Fire-and-forget. Awaiting this would hold the current invocation
+  // open until the next one finishes, breaking the chain.
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(cookie ? { cookie } : {}),
+      ...(authz ? { authorization: authz } : {}),
+      'x-internal-eval': '1',
+    },
+    body: JSON.stringify({ run_id: runId }),
+  }).catch((e) => {
     logger.warn('quality: failed to chain /process', { runId, error: e instanceof Error ? e.message : String(e) })
-  }
+  })
 }

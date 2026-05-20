@@ -88,9 +88,9 @@ export async function POST(request: NextRequest) {
   }
   const runId = (run as any).id as string
 
-  // Fire-and-forget the first /process invocation. We don't await it -
-  // the work happens in the background while the client polls.
-  void kickProcess(request, runId)
+  // Fire-and-forget the first /process invocation. Synchronous kick so
+  // /start can respond before the chain's first hop.
+  kickProcess(request, runId)
 
   logger.info('quality eval started', { runId, totalPairs: matrix.length, mode })
   return NextResponse.json({ success: true, run_id: runId, total_pairs: matrix.length })
@@ -107,24 +107,25 @@ function gitSha(): string {
   }
 }
 
-async function kickProcess(request: NextRequest, runId: string): Promise<void> {
+function kickProcess(request: NextRequest, runId: string): void {
+  // Fire-and-forget. We must NOT await fetch here - if we do, the
+  // Vercel function holds the response to the caller open until the
+  // continuation request completes, which can take 30s+. Returning
+  // synchronously lets /start respond in ~1s and the chain runs in
+  // the background.
   const url = new URL('/api/admin/quality/process', request.nextUrl.origin)
-  try {
-    // Pass through the admin auth cookie + Authorization header so the
-    // continuation call passes requireAdmin. We're calling our own API.
-    const cookie = request.headers.get('cookie') || ''
-    const authz = request.headers.get('authorization') || ''
-    await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(cookie ? { cookie } : {}),
-        ...(authz ? { authorization: authz } : {}),
-        'x-internal-eval': '1',
-      },
-      body: JSON.stringify({ run_id: runId }),
-    })
-  } catch (e) {
+  const cookie = request.headers.get('cookie') || ''
+  const authz = request.headers.get('authorization') || ''
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(cookie ? { cookie } : {}),
+      ...(authz ? { authorization: authz } : {}),
+      'x-internal-eval': '1',
+    },
+    body: JSON.stringify({ run_id: runId }),
+  }).catch((e) => {
     logger.warn('failed to kick first /process call', { runId, error: e instanceof Error ? e.message : String(e) })
-  }
+  })
 }
