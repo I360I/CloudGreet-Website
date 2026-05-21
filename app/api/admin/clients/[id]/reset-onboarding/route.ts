@@ -119,7 +119,9 @@ export async function POST(
       onboarding_completed: false,
       onboarding_step: null,
       onboarding_data: null,
-      onboarding_video_progress: null,
+      // jsonb NOT NULL with default '{}' - reset to empty object,
+      // never to null or Postgres rejects with a not-null violation.
+      onboarding_video_progress: {},
       // Forwarding + numbers entered by the client
       forwarding_verified_at: null,
       forwarding_carrier: null,
