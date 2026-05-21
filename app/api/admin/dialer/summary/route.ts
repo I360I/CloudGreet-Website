@@ -121,6 +121,23 @@ export async function GET(request: NextRequest) {
   if (repFilter) recentQuery = recentQuery.eq('rep_id', repFilter)
   const { data: recentCalls } = await recentQuery
 
+  // Telnyx number inventory. We count out of sales_rep_phone_numbers
+  // (the canonical multi-number table). active_numbers are the ones
+  // a rep can currently dial out from; total_numbers includes the
+  // saved-but-not-active spares we keep on each rep.
+  let numbersQuery = supabaseAdmin
+   .from('sales_rep_phone_numbers')
+   .select('id, rep_id, is_active', { count: 'exact', head: true })
+  if (repFilter) numbersQuery = numbersQuery.eq('rep_id', repFilter)
+  const { count: totalNumbers } = await numbersQuery
+
+  let activeNumbersQuery = supabaseAdmin
+   .from('sales_rep_phone_numbers')
+   .select('id, rep_id, is_active', { count: 'exact', head: true })
+   .eq('is_active', true)
+  if (repFilter) activeNumbersQuery = activeNumbersQuery.eq('rep_id', repFilter)
+  const { count: activeNumbers } = await activeNumbersQuery
+
   // Hydrate lead/business names for live + recent calls.
   const leadIds = new Set<string>()
   for (const c of (liveCalls || []) as any[]) if (c.lead_id) leadIds.add(c.lead_id)
@@ -164,6 +181,11 @@ export async function GET(request: NextRequest) {
    today,
    recent,
    reps: (reps || []).map((r: any) => ({ id: r.id, name: repName(r) })),
+   numbers: {
+    active: activeNumbers || 0,
+    total: totalNumbers || 0,
+    scope: repFilter ? 'rep' : 'all',
+   },
    generated_at: new Date().toISOString(),
   })
  } catch (e) {

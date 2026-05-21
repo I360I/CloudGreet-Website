@@ -48,6 +48,11 @@ type Summary = {
  today: TodayRow[]
  recent: RecentCall[]
  reps: { id: string; name: string }[]
+ numbers?: {
+  active: number
+  total: number
+  scope: 'all' | 'rep'
+ }
  generated_at: string
 }
 
@@ -171,11 +176,21 @@ export default function AdminDialerPage() {
 
     {summary && (
      <>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
        <Stat label="LIVE NOW" value={String(totals.live)} accent />
        <Stat label="ATTEMPTS TODAY" value={String(totals.attempts)} />
        <Stat label="CONNECTS TODAY" value={String(totals.connects)} sub={totals.attempts ? `${Math.round((totals.connects / totals.attempts) * 100)}% connect rate` : undefined} />
        <Stat label="TOTAL TALK" value={fmtDuration(totals.talk_seconds)} />
+       <Stat
+        label="ACTIVE NUMBERS"
+        value={summary.numbers ? String(summary.numbers.active) : '—'}
+        sub={summary.numbers ? (summary.numbers.scope === 'rep' ? 'for selected rep' : 'across all reps') : undefined}
+       />
+       <Stat
+        label="TOTAL NUMBERS"
+        value={summary.numbers ? String(summary.numbers.total) : '—'}
+        sub={summary.numbers ? `${summary.numbers.total - summary.numbers.active} spare` : undefined}
+       />
       </div>
 
       <Panel padding="none">
