@@ -715,8 +715,9 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
          </div>
          <button
           type="button"
-          role="switch"
+          role="checkbox"
           aria-checked={emergencyEnabled}
+          aria-label={emergencyEnabled ? 'Disable emergency dispatch event type' : 'Enable emergency dispatch event type'}
           onClick={async () => {
            const next = !emergencyEnabled
            setEmergencyEnabled(next)
@@ -737,15 +738,15 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
             }
            }
           }}
-          className={`relative inline-block h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
-           emergencyEnabled ? 'bg-rose-500' : 'bg-gray-300'
+          className={`flex-shrink-0 h-6 w-6 rounded-full border-2 transition-all flex items-center justify-center ${
+           emergencyEnabled
+            ? 'bg-rose-500 border-rose-500'
+            : 'bg-transparent border-gray-300 hover:border-gray-400'
           }`}
          >
-          <span
-           className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-            emergencyEnabled ? 'translate-x-5' : 'translate-x-0'
-           }`}
-          />
+          {emergencyEnabled && (
+           <span className="block h-2 w-2 rounded-full bg-white" />
+          )}
          </button>
         </div>
 
