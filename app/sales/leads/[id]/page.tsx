@@ -329,6 +329,13 @@ export default function LeadDetailPage() {
               </button>
               <CopyAccountLinkPrimary leadId={lead.id} leadEmail={lead.email || ''} />
               <MarkDemoButton leadId={lead.id} onSet={() => { void load() }} />
+              <Link
+                href={`/sales/closes/demo?lead_id=${lead.id}`}
+                className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] transition-all"
+                title="Submit as a demo client - skips pricing, just gets Anthony the basics to start the agent build"
+              >
+                <Trophy weight="fill" className="w-4 h-4 text-emerald-500" /> Submit as demo client
+              </Link>
               <LoginAsClientButton business={linkedBusiness} />
               <SendCustomizationButton leadId={lead.id} />
               <CreateAccountButton leadId={lead.id} leadEmail={lead.email || ''} onCreated={() => { void load() }} />

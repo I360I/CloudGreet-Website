@@ -45,7 +45,12 @@ export async function POST(request: NextRequest) {
   const email = body?.prospect_email ? String(body.prospect_email).trim() : null
   const phone = body?.prospect_phone ? String(body.prospect_phone).trim() : null
   const website = body?.website ? String(body.website).trim() : null
+  const address = body?.address ? String(body.address).trim() : null
+  const city = body?.city ? String(body.city).trim() : null
+  const state = body?.state ? String(body.state).trim() : null
+  const businessType = body?.business_type ? String(body.business_type).trim() : null
   const notes = body?.notes ? String(body.notes).trim().slice(0, 4000) : null
+  const leadId = body?.lead_id ? String(body.lead_id) : null
 
   // demo_scheduled_at is optional. Accept ISO strings; ignore garbage
   // so a typo in the rep's input doesn't kill the submission.
@@ -64,6 +69,17 @@ export async function POST(request: NextRequest) {
   // Build the insert payload. website + demo_scheduled_at are columns
   // already on `closes` (see sql/closes-prebuild-agent.sql +
   // sql/closes-demo-result.sql / customization-and-demo-agents.sql).
+  // Address / city / state / business_type aren't currently on
+  // closes - they live on `leads` and `businesses`. Fold them into
+  // notes so admin still sees them at review time (no migration
+  // needed); when the close is converted to a business those fields
+  // get populated on `businesses` from rep input then.
+  const addrParts = [address, city, state].filter(Boolean).join(', ')
+  const extraNotes: string[] = []
+  if (businessType) extraNotes.push(`Industry: ${businessType}`)
+  if (addrParts) extraNotes.push(`Address: ${addrParts}`)
+  const mergedNotes = [extraNotes.join(' · '), notes].filter(Boolean).join('\n\n')
+
   const insertRow: Record<string, unknown> = {
     rep_id: auth.userId,
     prospect_business_name: name,
@@ -72,7 +88,7 @@ export async function POST(request: NextRequest) {
     prospect_phone: phone,
     agreed_monthly_cents: 0,
     agreed_setup_fee_cents: 0,
-    notes,
+    notes: mergedNotes || null,
     status: 'pending',
   }
   if (website) insertRow.website = website
@@ -87,6 +103,18 @@ export async function POST(request: NextRequest) {
   if (insertErr || !created) {
     logger.error('Demo-client insert failed', { userId: auth.userId, error: insertErr?.message })
     return NextResponse.json({ error: insertErr?.message || 'Failed to submit' }, { status: 500 })
+  }
+
+  // If this came from a claimed lead, mark it 'won' so it drops out
+  // of the rep's pool view. Same pattern as the priced-close path
+  // does on /api/sales/closes.
+  if (leadId) {
+    try {
+      await supabaseAdmin
+        .from('leads')
+        .update({ status: 'won', updated_at: new Date().toISOString() })
+        .eq('id', leadId)
+    } catch { /* non-fatal */ }
   }
 
   // Founder email - distinct subject so it's clearly a demo-only

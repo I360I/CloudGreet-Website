@@ -9,12 +9,35 @@ export const runtime = 'nodejs'
 /**
  * POST /api/sales/leads/import
  *
- * Body: { csv: string } - comma-separated, header row required.
- * Recognized columns (case-insensitive): business_name, contact_name,
- * phone, email, notes. business_name is required per row.
+ * Body: { csv: string, source?: string }
+ *   - csv: comma-separated, header row required
+ *   - source: optional tag to label where the leads came from
+ *             (e.g. "Houston HVAC scrape May 21"). Stored on every
+ *             imported row; falls back to "import".
+ *
+ * Column matching is FUZZY (case-insensitive, spaces / dashes /
+ * underscores treated the same). Anything that looks like the
+ * canonical field name maps. A business name is required per row
+ * - either business_name, name, company, company_name, "business",
+ * or "biz" all work.
+ *
+ * Recognized fields (and common variants):
+ *   - business_name | name | company | company_name | business | biz
+ *   - contact_name  | contact | owner | owner_name | first_name | full_name
+ *   - phone         | phone_number | tel | telephone | mobile | cell | phone1
+ *   - email         | email_address | e-mail | mail
+ *   - website       | url | site | web | domain
+ *   - address       | street | street_address | addr | address1
+ *   - city          | town | locality
+ *   - state         | st | region | province
+ *   - zip           | zip_code | postal | postal_code
+ *   - business_type | type | industry | category | biz_type
+ *   - notes         | comment | comments | remarks | description
  *
  * Inserts rows into `leads` (deduped by phone within leads), then
  * auto-claims them for the calling rep so they appear in "Yours".
+ * Returns { mapped_columns } so the UI can show the rep exactly
+ * which CSV columns got picked up.
  */
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request)
@@ -26,6 +49,7 @@ export async function POST(request: NextRequest) {
   try { body = await request.json() } catch { body = {} }
 
   const csv = typeof body?.csv === 'string' ? body.csv : ''
+  const sourceTag = (typeof body?.source === 'string' && body.source.trim()) ? body.source.trim().slice(0, 80) : 'import'
   if (!csv.trim()) return NextResponse.json({ error: 'csv body required' }, { status: 400 })
   if (csv.length > 2_000_000) {
     return NextResponse.json({ error: 'CSV too large (max 2MB)' }, { status: 413 })
@@ -36,16 +60,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'CSV must include a header row plus at least one data row' }, { status: 400 })
   }
 
-  const header = rows[0].map((h) => h.trim().toLowerCase())
-  const idxOf = (name: string) => header.indexOf(name)
-  const iBiz = idxOf('business_name')
-  const iContact = idxOf('contact_name')
-  const iPhone = idxOf('phone')
-  const iEmail = idxOf('email')
-  const iNotes = idxOf('notes')
+  // Fuzzy column matching - normalise both the header cells and the
+  // synonyms so "Business Name", "business-name", "BusinessName",
+  // "business_name" all hit the same target.
+  const normaliseHeader = (s: string) => s.trim().toLowerCase().replace(/[\s_\-.]+/g, '')
+  const headerNorm = rows[0].map(normaliseHeader)
+  const findCol = (...candidates: string[]): number => {
+    for (const c of candidates) {
+      const idx = headerNorm.indexOf(normaliseHeader(c))
+      if (idx >= 0) return idx
+    }
+    return -1
+  }
+  const iBiz = findCol('business_name', 'businessname', 'name', 'company', 'company_name', 'business', 'biz')
+  const iContact = findCol('contact_name', 'contactname', 'contact', 'owner', 'owner_name', 'ownername', 'first_name', 'firstname', 'full_name', 'fullname')
+  const iPhone = findCol('phone', 'phone_number', 'phonenumber', 'tel', 'telephone', 'mobile', 'cell', 'phone1')
+  const iEmail = findCol('email', 'email_address', 'emailaddress', 'e-mail', 'mail')
+  const iWebsite = findCol('website', 'url', 'site', 'web', 'domain', 'homepage')
+  const iAddress = findCol('address', 'street', 'street_address', 'streetaddress', 'addr', 'address1', 'address_line_1')
+  const iCity = findCol('city', 'town', 'locality')
+  const iState = findCol('state', 'st', 'region', 'province')
+  const iZip = findCol('zip', 'zip_code', 'zipcode', 'postal', 'postal_code', 'postalcode')
+  const iBizType = findCol('business_type', 'businesstype', 'type', 'industry', 'category', 'biz_type', 'biztype')
+  const iNotes = findCol('notes', 'note', 'comment', 'comments', 'remarks', 'description', 'desc')
 
   if (iBiz === -1) {
-    return NextResponse.json({ error: 'Missing required column: business_name' }, { status: 400 })
+    return NextResponse.json({
+      error: 'Could not find a business-name column. Header should include one of: business_name, name, company.',
+      detected_headers: rows[0],
+    }, { status: 400 })
   }
 
   const dataRows = rows.slice(1).filter((r) => r.length > 0 && r.some((c) => c.trim()))
@@ -54,6 +97,23 @@ export async function POST(request: NextRequest) {
   }
   if (dataRows.length > 2000) {
     return NextResponse.json({ error: 'Max 2000 rows per import' }, { status: 400 })
+  }
+
+  // Build a record of which CSV column got mapped to which canonical
+  // field so the UI can show the rep what we picked up (and what we
+  // ignored).
+  const mappedColumns: Record<string, string | null> = {
+    business_name: iBiz >= 0 ? rows[0][iBiz] : null,
+    contact_name: iContact >= 0 ? rows[0][iContact] : null,
+    phone: iPhone >= 0 ? rows[0][iPhone] : null,
+    email: iEmail >= 0 ? rows[0][iEmail] : null,
+    website: iWebsite >= 0 ? rows[0][iWebsite] : null,
+    address: iAddress >= 0 ? rows[0][iAddress] : null,
+    city: iCity >= 0 ? rows[0][iCity] : null,
+    state: iState >= 0 ? rows[0][iState] : null,
+    zip: iZip >= 0 ? rows[0][iZip] : null,
+    business_type: iBizType >= 0 ? rows[0][iBizType] : null,
+    notes: iNotes >= 0 ? rows[0][iNotes] : null,
   }
 
   // Phone dedupe against existing leads.
@@ -92,16 +152,27 @@ export async function POST(request: NextRequest) {
       continue
     }
 
+    const cell = (idx: number): string | null => {
+      if (idx < 0) return null
+      const v = (row[idx] || '').trim()
+      return v.length ? v : null
+    }
     const { data: lead, error: insertErr } = await supabaseAdmin
       .from('leads')
       .insert({
         name: businessName,
         business_name: businessName,
-        contact_name: iContact >= 0 ? (row[iContact] || null) : null,
-        phone: iPhone >= 0 ? (row[iPhone] || null) : null,
-        email: iEmail >= 0 ? (row[iEmail] || null) : null,
-        notes: iNotes >= 0 ? (row[iNotes] || null) : null,
-        source: 'import',
+        contact_name: cell(iContact),
+        phone: cell(iPhone),
+        email: cell(iEmail),
+        website: cell(iWebsite),
+        address: cell(iAddress),
+        city: cell(iCity),
+        state: cell(iState),
+        zip: cell(iZip),
+        business_type: cell(iBizType),
+        notes: cell(iNotes),
+        source: sourceTag,
         status: 'cold',
       })
       .select('id')
@@ -133,6 +204,9 @@ export async function POST(request: NextRequest) {
     skipped_duplicate_phone: skipped,
     invalid,
     claimed,
+    source: sourceTag,
+    mapped_columns: mappedColumns,
+    total_data_rows: dataRows.length,
   })
 }
 
