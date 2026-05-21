@@ -49,6 +49,18 @@ export async function GET(request: NextRequest) {
  const auth = await requireAdmin(request)
  if (!auth.success) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+ // Auto-wire the Telnyx Call Control webhook on the SIP Connection
+ // every rep dials through. Idempotent + fire-and-forget so we don't
+ // slow this endpoint - if the webhook is already pointed at us, the
+ // helper short-circuits in ~100ms. Catches the case where reps dial
+ // via softphone / Telnyx mobile / API and aren't picked up by the
+ // browser-driven /api/sales/dialer/log path.
+ ensureRepVoiceWebhookWired(request).catch((e) => {
+  logger.warn('ensureRepVoiceWebhookWired failed', {
+   error: e instanceof Error ? e.message : String(e),
+  })
+ })
+
  try {
   const sp = request.nextUrl.searchParams
   const repFilter = (sp.get('rep_id') || '').trim()
@@ -157,5 +169,64 @@ export async function GET(request: NextRequest) {
  } catch (e) {
   logger.error('admin dialer summary failed', { error: e instanceof Error ? e.message : 'Unknown' })
   return NextResponse.json({ error: 'Failed' }, { status: 500 })
+ }
+}
+
+// ---- Auto-wire helper ----
+
+/**
+ * One-shot ensure: the rep SIP Connection's webhook_event_url points
+ * at our /api/telnyx/rep-voice-webhook so every rep outbound call
+ * lands in rep_calls regardless of how the rep dialed. We memoize
+ * the success in module-level state so we only hit Telnyx the first
+ * time per cold-start (Vercel functions cycle, but within one warm
+ * instance we won't spam Telnyx).
+ */
+const TELNYX_API_BASE = 'https://api.telnyx.com/v2'
+let webhookWiredCheckedAt = 0
+const WEBHOOK_CHECK_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+async function ensureRepVoiceWebhookWired(request: NextRequest): Promise<void> {
+ if (Date.now() - webhookWiredCheckedAt < WEBHOOK_CHECK_TTL_MS) return
+ const apiKey = process.env.TELNYX_API_KEY
+ const connId = process.env.TELNYX_SIP_CONNECTION_ID
+ if (!apiKey || !connId) return // nothing to do without credentials
+
+ const desired = `${process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin}/api/telnyx/rep-voice-webhook`
+
+ // GET current state.
+ const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+ const cur = await fetch(`${TELNYX_API_BASE}/connections/${connId}`, { headers })
+ if (!cur.ok) return
+ const j = await cur.json().catch(() => null) as any
+ const data = j?.data
+ if (!data) return
+
+ if (data.webhook_event_url === desired) {
+  webhookWiredCheckedAt = Date.now()
+  return
+ }
+
+ // PATCH the right connection type.
+ const recordType = data.record_type || 'credential_connection'
+ const path = recordType === 'fqdn_connection' ? 'fqdn_connections'
+  : recordType === 'ip_connection' ? 'ip_connections'
+  : 'credential_connections'
+
+ const patchRes = await fetch(`${TELNYX_API_BASE}/${path}/${connId}`, {
+  method: 'PATCH',
+  headers,
+  body: JSON.stringify({ webhook_event_url: desired }),
+ })
+ if (patchRes.ok) {
+  webhookWiredCheckedAt = Date.now()
+  logger.info('rep-voice webhook auto-wired', {
+   connection_id: connId,
+   previous: data.webhook_event_url || null,
+   new: desired,
+  })
+ } else {
+  const txt = await patchRes.text().catch(() => '')
+  logger.warn('rep-voice webhook auto-wire failed', { status: patchRes.status, body: txt.slice(0, 200) })
  }
 }
