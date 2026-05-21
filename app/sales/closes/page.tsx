@@ -204,12 +204,20 @@ export default function SalesClosesPage() {
           eyebrow="closes"
           title="Your deals"
           action={
-            <Link
-              href="/sales/closes/new"
-              className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-800"
-            >
-              <Plus weight="bold" className="w-4 h-4" /> Submit close
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/sales/closes/demo"
+                className="inline-flex items-center gap-2 bg-white border border-gray-300 text-gray-900 text-sm rounded-lg px-4 py-2 hover:bg-gray-50"
+              >
+                <Plus weight="bold" className="w-4 h-4" /> Submit demo client
+              </Link>
+              <Link
+                href="/sales/closes/new"
+                className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-800"
+              >
+                <Plus weight="bold" className="w-4 h-4" /> Submit close
+              </Link>
+            </div>
           }
         />
 
