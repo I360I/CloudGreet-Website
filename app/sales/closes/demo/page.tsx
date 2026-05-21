@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { CircleNotch, WarningCircle, ArrowLeft, CheckCircle, Calendar } from '@phosphor-icons/react'
+import { CircleNotch, WarningCircle, ArrowLeft, CheckCircle } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -155,15 +155,12 @@ function NewDemoClientForm() {
             label="Demo scheduled at (optional)"
             hint="Local time. Leave blank if no demo is booked yet."
           >
-            <div className="relative">
-              <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="datetime-local"
-                value={demoScheduledAt}
-                onChange={(e) => setDemoScheduledAt(e.target.value)}
-                className={`${inputCls} pl-9`}
-              />
-            </div>
+            <input
+              type="datetime-local"
+              value={demoScheduledAt}
+              onChange={(e) => setDemoScheduledAt(e.target.value)}
+              className={inputCls}
+            />
           </Field>
 
           <Field
