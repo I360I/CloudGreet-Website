@@ -87,6 +87,16 @@ export default function AgentsDuePage() {
 
   const bulk = async (action: 'archive' | 'unarchive' | 'delete') => {
     if (selected.size === 0) return
+    if (action === 'archive') {
+      // Show the prospect names in the confirm so the admin can sanity-
+      // check what's being swept off the queue. Sweeping demo-scheduled
+      // rows off by accident has bitten this workspace before.
+      const labels = sorted
+        .filter((row) => selected.has(row.close_id))
+        .map((row) => row.business?.business_name || row.prospect.business_name || '(unnamed)')
+      const preview = labels.slice(0, 5).join(', ') + (labels.length > 5 ? `, +${labels.length - 5} more` : '')
+      if (!confirm(`Archive ${selected.size} workshop${selected.size === 1 ? '' : 's'}? They'll disappear from the active queue.\n\n${preview}`)) return
+    }
     if (action === 'delete') {
       if (!confirm(`Delete ${selected.size} archived workshop${selected.size === 1 ? '' : 's'}? Only the close row is removed - the client account, calls, and agent stay intact.`)) return
     }

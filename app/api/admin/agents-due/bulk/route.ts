@@ -42,6 +42,36 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Too many ids in one request (max 200)' }, { status: 400 })
   }
 
+  // Snapshot the rows BEFORE mutating so the audit row captures what
+  // was touched even on partial failures.
+  const { data: snapshot } = await supabaseAdmin
+    .from('closes')
+    .select('id, prospect_business_name, demo_scheduled_at, workshop_archived_at, status')
+    .in('id', ids)
+  const snapshotById = new Map<string, any>((snapshot || []).map((r: any) => [r.id, r]))
+
+  const writeAudit = async (auditAction: string, extra?: Record<string, unknown>) => {
+    try {
+      await supabaseAdmin.from('admin_audit_events').insert({
+        actor_user_id: auth.userId || null,
+        action: auditAction,
+        target_type: 'closes_bulk',
+        target_id: null,
+        reason: null,
+        metadata: {
+          close_ids: ids,
+          rows: ids.map((id) => snapshotById.get(id) || { id, not_found: true }),
+          ...(extra || {}),
+        },
+      })
+    } catch (e) {
+      logger.warn('agents-due bulk: audit insert failed (non-fatal)', {
+        action: auditAction,
+        error: e instanceof Error ? e.message : 'Unknown',
+      })
+    }
+  }
+
   try {
     if (action === 'archive') {
       const { error } = await supabaseAdmin
@@ -49,6 +79,7 @@ export async function POST(request: NextRequest) {
         .update({ workshop_archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .in('id', ids)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      void writeAudit('closes_bulk_archive')
       return NextResponse.json({ success: true, archived: ids.length })
     }
 
@@ -58,6 +89,7 @@ export async function POST(request: NextRequest) {
         .update({ workshop_archived_at: null, updated_at: new Date().toISOString() })
         .in('id', ids)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      void writeAudit('closes_bulk_unarchive')
       return NextResponse.json({ success: true, unarchived: ids.length })
     }
 
@@ -88,6 +120,7 @@ export async function POST(request: NextRequest) {
       .in('id', deletable)
     if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
 
+    void writeAudit('closes_bulk_delete', { deletable, skipped })
     return NextResponse.json({ success: true, deleted: deletable.length, skipped })
   } catch (e) {
     logger.error('admin agents-due bulk failed', {
