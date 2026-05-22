@@ -189,7 +189,7 @@ function NewDemoClientForm() {
           </Field>
 
           <Field
-            label="Website"
+            label="Website (optional)"
             hint="Helps us auto-fill services, hours, and tone for the agent."
           >
             <input
