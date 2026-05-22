@@ -87,7 +87,7 @@ function NewCloseForm() {
           <CheckCircle weight="fill" className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
           <h1 className="text-xl font-medium text-gray-900 mb-1">Close submitted</h1>
           <p className="text-sm text-gray-500">
-            Anthony will review and send the payment link. You&apos;ll see it move to &quot;Invoice sent&quot;.
+            The team will review and send the payment link. You&apos;ll see it move to &quot;Invoice sent&quot;.
           </p>
         </section>
       </SalesShell>
@@ -181,7 +181,7 @@ function NewCloseForm() {
             </Field>
           </div>
 
-          <Field label="Notes (optional)" hint="Anything Anthony should know before sending the payment link">
+          <Field label="Notes (optional)" hint="Anything the team should know before sending the payment link">
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}

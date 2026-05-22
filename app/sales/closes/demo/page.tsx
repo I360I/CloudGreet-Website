@@ -106,7 +106,7 @@ function NewDemoClientForm() {
           <CheckCircle weight="fill" className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
           <h1 className="text-xl font-medium text-gray-900 mb-1">Demo client submitted</h1>
           <p className="text-sm text-gray-500">
-            Anthony will start building the agent. Come back later to add pricing once you close.
+            The team will start building the agent. Come back later to add pricing once you close.
           </p>
         </section>
       </SalesShell>
@@ -128,7 +128,7 @@ function NewDemoClientForm() {
         />
         <p className="text-sm text-gray-500 mb-4 -mt-4">
           For external leads with a demo booked but no pricing agreed yet.
-          Anthony gets the basics he needs to start building the agent.
+          The team gets the basics needed to start building the agent.
         </p>
 
         {autoFilled && (
@@ -255,7 +255,7 @@ function NewDemoClientForm() {
 
           <Field
             label="Notes (optional)"
-            hint="Anything Anthony should know before building - business size, special services, tone."
+            hint="Anything the team should know before building - business size, special services, tone."
           >
             <textarea
               value={notes}

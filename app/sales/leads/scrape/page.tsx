@@ -132,7 +132,7 @@ export default function SalesScrapePage() {
             <div>
               <p className="text-sm font-medium text-amber-900">Scraper not set up</p>
               <p className="text-xs text-amber-800 mt-1">
-                Ask Anthony to run sql/scraper.sql in Supabase, then reload.
+                Ask admin to run sql/scraper.sql in Supabase, then reload.
               </p>
             </div>
           </div>
@@ -189,7 +189,7 @@ export default function SalesScrapePage() {
               <span className="text-amber-800">
                 Google Places enrichment is off - TDLR doesn&apos;t expose phones,
                 so you&apos;ll get business names + license info but you&apos;ll
-                need to look up phones yourself. Tell Anthony to set
+                need to look up phones yourself. Tell admin to set
                 <code className="font-mono text-xs bg-amber-100 px-1 rounded mx-1">GOOGLE_PLACES_API_KEY</code>
                 in Vercel.
               </span>

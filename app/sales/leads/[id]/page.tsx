@@ -332,7 +332,7 @@ export default function LeadDetailPage() {
               <Link
                 href={`/sales/closes/demo?lead_id=${lead.id}`}
                 className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 hover:border-gray-300 active:scale-[0.98] transition-all"
-                title="Submit as a demo client - skips pricing, just gets Anthony the basics to start the agent build"
+                title="Submit as a demo client - skips pricing, just gets the team the basics to start the agent build"
               >
                 <Trophy weight="fill" className="w-4 h-4 text-emerald-500" /> Submit as demo client
               </Link>
@@ -1295,7 +1295,7 @@ function MarkDemoButton({ leadId, onSet }: { leadId: string; onSet: () => void }
       <button
         onClick={() => setOpen(true)}
         className="inline-flex items-center justify-center gap-2 h-10 px-4 bg-amber-500 text-white text-sm font-medium rounded-xl hover:bg-amber-600 active:scale-[0.98] shadow-sm shadow-amber-500/10 transition-all"
-        title="Mark a demo as scheduled - pings Anthony + Slack"
+        title="Mark a demo as scheduled - pings the team + Slack"
       >
         <CalendarBlank weight="fill" className="w-4 h-4" /> Demo set
       </button>
@@ -1367,7 +1367,7 @@ function DemoSetModal({ leadId, onClose, onSaved }: {
           <h3 className="text-base font-medium text-gray-900">Mark demo set</h3>
         </div>
         <p className="text-xs text-gray-500 mb-4">
-          Sends a heads-up to Anthony + Slack so the demo agent gets built before the call.
+          Sends a heads-up to the team + Slack so the demo agent gets built before the call.
         </p>
         <label className="block text-xs font-medium text-gray-700 mb-1.5">When?</label>
         <input

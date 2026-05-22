@@ -373,7 +373,7 @@ export default function SalesLeadsPage() {
             >
               <WarningCircle weight="fill" className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" />
               <span>
-                Workflow features are off. Tell Anthony to run{' '}
+                Workflow features are off. Ask admin to run{' '}
                 <code className="font-mono text-xs bg-amber-100 px-1 rounded">sql/{migrationNeeded}.sql</code>{' '}
                 in Supabase so status pills, follow-ups and notes show up.
               </span>
@@ -645,7 +645,7 @@ export default function SalesLeadsPage() {
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDemoModalLeadId(l.id) }}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
                             aria-label="Mark demo set"
-                            title="Mark demo set - pings Anthony + Slack"
+                            title="Mark demo set - pings the team + Slack"
                           >
                             <CheckCircle weight="fill" className="w-4 h-4" />
                           </button>
@@ -706,7 +706,7 @@ export default function SalesLeadsPage() {
             // Bump the row's status in-place so the user sees the change
             // immediately. Background refetch keeps the rest in sync.
             setLeads((prev) => prev.map((l) => l.id === lid ? { ...l, status: 'demo_scheduled' } : l))
-            setFlash('Demo set - Anthony pinged.')
+            setFlash('Demo set - the team has been pinged.')
             setTimeout(() => setFlash(''), 3500)
           }}
         />
@@ -769,7 +769,7 @@ function LeadsDemoSetModal({ leadId, onClose, onSaved }: {
           <h3 className="text-base font-medium text-gray-900">Mark demo set</h3>
         </div>
         <p className="text-xs text-gray-500 mb-4">
-          Status flips to demo_scheduled. Anthony + Slack get pinged so the agent gets built in time.
+          Status flips to demo_scheduled. The team + Slack get pinged so the agent gets built in time.
         </p>
         <label className="block text-xs font-medium text-gray-700 mb-1.5">When?</label>
         <input

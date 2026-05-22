@@ -78,7 +78,7 @@ export default function SalesClientsPage() {
           <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-900 flex items-start gap-2">
             <WarningCircle weight="fill" className="w-4 h-4 mt-0.5 text-amber-600" />
             <span>
-              Agent editing isn&apos;t fully on yet. Tell Anthony to run{' '}
+              Agent editing isn&apos;t fully on yet. Ask admin to run{' '}
               <code className="font-mono text-xs bg-amber-100 px-1 rounded">sql/{migration}.sql</code>{' '}
               in Supabase.
             </span>

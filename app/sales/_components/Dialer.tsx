@@ -794,7 +794,7 @@ export function Dialer() {
               {status === 'unconfigured' ? (
                 <div className="text-xs text-gray-600">
                   <div className="font-medium text-gray-900 mb-1">Not set up yet</div>
-                  Browser dialing needs Telnyx credentials. Anthony has to flip a couple of env vars before this works (TELNYX_TELEPHONY_CREDENTIAL_ID and TELNYX_OUTBOUND_FROM_NUMBER).
+                  Browser dialing needs Telnyx credentials. Admin has to flip a couple of env vars before this works (TELNYX_TELEPHONY_CREDENTIAL_ID and TELNYX_OUTBOUND_FROM_NUMBER).
                 </div>
               ) : status === 'mic_required' ? (
                 <div className="text-xs text-gray-700 space-y-3">

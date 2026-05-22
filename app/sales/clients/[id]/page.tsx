@@ -256,7 +256,7 @@ export default function SalesClientDetailPage() {
             <div className="flex-1 text-sm">
               <div className="font-medium text-amber-900">No AI agent linked yet</div>
               <p className="text-xs text-amber-800 mt-1">
-                Anthony needs to wire a Retell agent to this client before edits go live.
+                The team needs to wire a Retell agent to this client before edits go live.
                 Edge cases below still save - they apply once the agent is linked.
               </p>
             </div>
