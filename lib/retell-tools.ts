@@ -74,6 +74,11 @@ export type RetellGeneralTool = RetellCustomTool | RetellEndCallTool | RetellTra
 export type GetToolsOptions = {
   /** E.164 phone for transfer_call destination - omit to skip the tool. */
   escalationPhone?: string | null
+  /** When true, attach `send_dispatch_request` for businesses that
+   *  accept jobs ad-hoc (rideshare, mobile services) instead of
+   *  scheduling via Cal.com. The agent uses it for "right now"
+   *  requests; the owner texts/calls back to accept. */
+  dispatchMode?: boolean
 }
 
 export function getRetellGeneralTools(
@@ -234,13 +239,70 @@ export function getRetellGeneralTools(
         },
       },
     },
-    {
-      type: 'end_call',
-      name: 'end_call',
-      description:
-        "Ends the call cleanly. Use only when the caller has clearly wrapped up (\"thanks, bye\", \"I gotta go\") or you've already attempted handoff and given a clear next step. Never end while a question is unanswered or the caller is mid-thought.",
-    },
   ]
+
+  // Dispatch flow: for businesses that take "right now" jobs and have the
+  // owner accept/reject before any calendar event exists (rideshare, mobile
+  // services). The agent gathers trip details and fires this; we text the
+  // owner a summary and tell the caller they'll get a callback. No Cal.com
+  // event is created here - the owner books it manually after accepting.
+  if (opts.dispatchMode) {
+    tools.push({
+      type: 'custom',
+      name: 'send_dispatch_request',
+      description:
+        "Texts the owner a summary of an immediate-pickup / right-now request so they can accept and call the caller back. Use this INSTEAD OF book_appointment when the caller wants service now or in the next couple hours and is not scheduling for a future day. Do not call book_appointment after this - the owner books it themselves once they accept. Tell the caller the owner will text or call them back shortly to confirm.",
+      url: webhookUrl,
+      speak_during_execution: true,
+      speak_after_execution: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_name: {
+            type: 'string',
+            description: "Caller's name as they gave it.",
+          },
+          customer_phone: {
+            type: 'string',
+            description:
+              "Caller's phone in E.164 if available, otherwise as spoken. Default to inbound caller_id when not provided.",
+          },
+          pickup: {
+            type: 'string',
+            description:
+              "Pickup address or location as the caller gave it. For rideshare this is where to pick them up; for mobile services this is the service address.",
+          },
+          dropoff: {
+            type: 'string',
+            description:
+              "Optional. Dropoff or destination address (rideshare). Leave blank when not applicable.",
+          },
+          party_size: {
+            type: 'number',
+            description: 'Optional. Number of passengers / people.',
+          },
+          requested_time: {
+            type: 'string',
+            description:
+              "When the caller wants service. Use 'now' or 'ASAP' for immediate, or a short phrase like 'in 30 minutes', '7pm tonight'. Plain text - no ISO required.",
+          },
+          notes: {
+            type: 'string',
+            description:
+              'Optional. Anything else the owner should know (luggage, kids, accessibility, job description, etc.).',
+          },
+        },
+        required: ['customer_name', 'customer_phone', 'pickup', 'requested_time'],
+      },
+    })
+  }
+
+  tools.push({
+    type: 'end_call',
+    name: 'end_call',
+    description:
+      "Ends the call cleanly. Use only when the caller has clearly wrapped up (\"thanks, bye\", \"I gotta go\") or you've already attempted handoff and given a clear next step. Never end while a question is unanswered or the caller is mid-thought.",
+  })
 
   // transfer_call needs BOTH transfer_destination AND transfer_option
   // in Retell's current schema. Earlier attempts shipped only

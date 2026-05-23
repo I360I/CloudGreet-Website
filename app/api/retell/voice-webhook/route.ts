@@ -745,6 +745,85 @@ export async function POST(request: NextRequest) {
  }, { status: 500 })
  }
  }
+ case 'send_dispatch_request': {
+ // Dispatch flow: the agent gathers trip details and we text the
+ // owner instead of creating a Cal.com event. The owner accepts
+ // and calls/texts the caller back. No appointment row is created
+ // here - if the owner books it themselves we'll capture it via
+ // their normal booking flow.
+ const args = tool.arguments || {}
+ const customerName = String(args.customer_name || '').trim()
+ const customerPhone = String(args.customer_phone || '').trim()
+ const pickup = String(args.pickup || '').trim()
+ const dropoff = String(args.dropoff || '').trim()
+ const partySize = args.party_size
+ const requestedTime = String(args.requested_time || '').trim()
+ const notes = String(args.notes || '').trim()
+
+ if (!customerName || !customerPhone || !pickup || !requestedTime) {
+ return NextResponse.json({
+ success: false,
+ error: 'missing_parameters',
+ detail: 'send_dispatch_request needs customer_name, customer_phone, pickup, and requested_time.',
+ }, { status: 400 })
+ }
+
+ const fromNum = process.env.CLOUDGREET_NOTIFICATIONS_FROM
+ if (!fromNum) {
+ logger.error('send_dispatch_request skipped - CLOUDGREET_NOTIFICATIONS_FROM unset')
+ return NextResponse.json({
+ success: false,
+ error: 'no_sender_configured',
+ detail: 'Set CLOUDGREET_NOTIFICATIONS_FROM in Vercel env.',
+ }, { status: 500 })
+ }
+
+ const { data: bizRow } = await supabaseAdmin
+ .from('businesses')
+ .select('business_name, notifications_phone, notification_phone, escalation_phone, dispatch_sms_template')
+ .eq('id', resolvedBusinessId)
+ .maybeSingle()
+
+ const ownerPhone = (bizRow as any)?.notifications_phone
+ || (bizRow as any)?.notification_phone
+ || (bizRow as any)?.escalation_phone
+ if (!ownerPhone) {
+ return NextResponse.json({
+ success: false,
+ error: 'no_owner_phone',
+ detail: 'No notifications_phone on file for this business - cannot text the owner.',
+ }, { status: 422 })
+ }
+
+ const businessName = (bizRow as any)?.business_name || 'CloudGreet'
+ const lines = [
+ `${businessName} dispatch request:`,
+ `${customerName} (${customerPhone})`,
+ `Pickup: ${pickup}`,
+ ]
+ if (dropoff) lines.push(`Dropoff: ${dropoff}`)
+ if (typeof partySize === 'number' && partySize > 0) lines.push(`Party: ${partySize}`)
+ lines.push(`When: ${requestedTime}`)
+ if (notes) lines.push(`Notes: ${notes}`)
+ lines.push('Call or text them back to accept.')
+ const body = lines.join('\n')
+
+ try {
+ await telnyxClient.sendSMS(ownerPhone, body, fromNum)
+ return NextResponse.json({
+ success: true,
+ message: 'Owner texted. Tell the caller the owner will call or text them back shortly to confirm.',
+ })
+ } catch (smsError) {
+ const msg = smsError instanceof Error ? smsError.message : 'Unknown error'
+ logger.error('send_dispatch_request failed', { error: msg, ownerPhone, customerPhone })
+ return NextResponse.json({
+ success: false,
+ error: 'sms_send_failed',
+ detail: msg.slice(0, 300),
+ }, { status: 500 })
+ }
+ }
  case 'cancel_appointment': {
  const { phone: rawPhone, reason } = tool.arguments || {}
  if (!resolvedBusinessId) {

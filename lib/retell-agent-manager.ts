@@ -81,16 +81,18 @@ class RetellAgentManager {
       // We only attach transfer_call when one of these exists; otherwise
       // the agent would offer to transfer to a number that isn't there.
       let escalationPhone: string | null = null
+      let dispatchMode = false
       try {
         const { data: biz } = await supabaseAdmin
           .from('businesses')
-          .select('escalation_phone, notifications_phone, owner_id')
+          .select('escalation_phone, notifications_phone, owner_id, dispatch_mode')
           .eq('id', mergedConfig.businessId)
           .maybeSingle()
         escalationPhone =
           (biz as any)?.escalation_phone ||
           (biz as any)?.notifications_phone ||
           null
+        dispatchMode = Boolean((biz as any)?.dispatch_mode)
         if (!escalationPhone && (biz as any)?.owner_id) {
           const { data: owner } = await supabaseAdmin
             .from('custom_users')
@@ -123,7 +125,7 @@ class RetellAgentManager {
           // resolves the calling business from the signed agent_id, so
           // the same URL works for every client; the transfer
           // destination is pulled from the business's escalation_phone.
-          general_tools: getRetellGeneralTools(webhookUrl, { escalationPhone }),
+          general_tools: getRetellGeneralTools(webhookUrl, { escalationPhone, dispatchMode }),
         }),
       })
       if (!createLlmRes.ok) {
@@ -1128,16 +1130,18 @@ class RetellAgentManager {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com'
     const webhookUrl = `${appUrl}/api/retell/voice-webhook`
     let escalationPhone: string | null = null
+    let dispatchMode = false
     try {
       const { data: biz } = await supabaseAdmin
         .from('businesses')
-        .select('escalation_phone, notifications_phone, owner_id')
+        .select('escalation_phone, notifications_phone, owner_id, dispatch_mode')
         .eq('id', businessId)
         .maybeSingle()
       escalationPhone =
         (biz as any)?.escalation_phone ||
         (biz as any)?.notifications_phone ||
         null
+      dispatchMode = Boolean((biz as any)?.dispatch_mode)
       if (!escalationPhone && (biz as any)?.owner_id) {
         const { data: owner } = await supabaseAdmin
           .from('custom_users')
@@ -1147,8 +1151,9 @@ class RetellAgentManager {
         escalationPhone = (owner as any)?.phone || null
       }
     } catch { /* optional column, ignore */ }
-    const tools = getRetellGeneralTools(webhookUrl, { escalationPhone })
+    const tools = getRetellGeneralTools(webhookUrl, { escalationPhone, dispatchMode })
     t(`transfer destination: ${escalationPhone || '∅ (skipping transfer_call)'}`)
+    t(`dispatch mode: ${dispatchMode ? 'on (send_dispatch_request attached)' : 'off'}`)
 
     const patchRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
       method: 'PATCH',
