@@ -522,8 +522,19 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
          max={480}
          value={newLengthInMinutes}
          onChange={(e) => {
+          // Don't clamp inside onChange or "15" becomes "55" - the 1
+          // hits the min and snaps up to 5 before the 5 ever arrives.
+          // Allow any number through; enforce bounds on blur instead.
           const v = e.target.value
-          setNewLengthInMinutes(v === '' ? '' : Math.max(5, Math.min(480, Number(v) || 0)))
+          if (v === '') return setNewLengthInMinutes('')
+          const n = Number(v)
+          if (!Number.isFinite(n)) return
+          setNewLengthInMinutes(Math.min(480, n))
+         }}
+         onBlur={() => {
+          if (typeof newLengthInMinutes === 'number' && newLengthInMinutes > 0 && newLengthInMinutes < 5) {
+           setNewLengthInMinutes(5)
+          }
          }}
          placeholder={eventTypeOptions?.find((et) => et.id === eventTypeId)?.lengthInMinutes?.toString() || '60'}
          className="form-input"
@@ -537,8 +548,19 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
          max={168}
          value={newMinNoticeHours}
          onChange={(e) => {
+          // Same pattern: don't clamp mid-typing. Min is 0 here so the
+          // original code didn't bite, but kept consistent for the
+          // upper bound.
           const v = e.target.value
-          setNewMinNoticeHours(v === '' ? '' : Math.max(0, Math.min(168, Number(v) || 0)))
+          if (v === '') return setNewMinNoticeHours('')
+          const n = Number(v)
+          if (!Number.isFinite(n)) return
+          setNewMinNoticeHours(Math.min(168, n))
+         }}
+         onBlur={() => {
+          if (typeof newMinNoticeHours === 'number' && newMinNoticeHours < 0) {
+           setNewMinNoticeHours(0)
+          }
          }}
          placeholder="2"
          className="form-input"
