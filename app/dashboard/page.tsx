@@ -351,10 +351,13 @@ export default function DashboardPage() {
               <div className="flex-1 min-w-0">
                <div className="flex items-baseline justify-between gap-2">
                 <span className="text-sm font-medium text-gray-900 truncate">
-                 {c.caller_name || c.from_number || 'Unknown'}
+                 {c.caller_name || fmtPhone(c.from_number) || '(no caller info)'}
                 </span>
                 <span className="text-xs text-gray-400 flex-shrink-0">{relTime(c.created_at)}</span>
                </div>
+               {c.caller_name && c.from_number && (
+                <div className="text-xs text-gray-500 font-mono truncate mt-0.5">{fmtPhone(c.from_number)}</div>
+               )}
                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <BookingTypeTag call={c} />
                 <OutcomeBadge outcome={tagOutcome(c)} />
@@ -670,6 +673,20 @@ function SkeletonGrid() {
 }
 
 /* ====================== HELPERS ====================== */
+
+/**
+ * Format a phone string for display. Empty string for missing /
+ * sentinel 'unknown' values; passthrough for non-US-shaped numbers.
+ */
+function fmtPhone(raw?: string | null): string {
+ if (!raw) return ''
+ const v = String(raw).trim()
+ if (!v || v.toLowerCase() === 'unknown') return ''
+ const digits = v.replace(/\D/g, '')
+ if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+ if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+ return v
+}
 
 function pctDelta(current: number, prior: number): number {
  if (prior === 0) return current === 0 ? 0 : 100

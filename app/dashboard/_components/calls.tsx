@@ -110,6 +110,20 @@ export function relTime(iso: string): string {
  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+/**
+ * Format a phone string for display. Empty for missing or sentinel
+ * 'unknown' values; passthrough for non-US-shaped numbers.
+ */
+export function fmtPhone(raw?: string | null): string {
+ if (!raw) return ''
+ const v = String(raw).trim()
+ if (!v || v.toLowerCase() === 'unknown') return ''
+ const digits = v.replace(/\D/g, '')
+ if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+ if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+ return v
+}
+
 export function fmtDateTime(iso: string): string {
  const d = new Date(iso)
  const sameYear = d.getFullYear() === new Date().getFullYear()
@@ -140,7 +154,10 @@ export function CallDrawer({ call, onClose }: { call: Call; onClose: () => void 
    >
     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
      <div>
-      <div className="text-sm font-semibold text-gray-900">{call.caller_name || call.from_number || 'Unknown caller'}</div>
+      <div className="text-sm font-semibold text-gray-900">{call.caller_name || fmtPhone(call.from_number) || '(no caller info)'}</div>
+      {call.caller_name && call.from_number && (
+       <div className="text-xs text-gray-500 font-mono">{fmtPhone(call.from_number)}</div>
+      )}
       <div className="text-xs text-gray-500">{fmtDateTime(call.created_at)} · {fmtDur(call.duration || 0)}</div>
      </div>
      <button onClick={onClose} className="p-2 -mr-2 rounded-full hover:bg-gray-100">

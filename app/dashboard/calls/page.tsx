@@ -177,11 +177,15 @@ export default function CallsPage() {
             {/* Mobile: stacked compact layout; Desktop: 12-col table */}
             <div className="lg:col-span-4 min-w-0">
              <div className="text-sm font-medium text-gray-900 truncate">
-              {c.caller_name || c.from_number || 'Unknown'}
+              {c.caller_name || fmtPhone(c.from_number) || '(no caller info)'}
              </div>
              <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-gray-500 font-mono truncate">{c.from_number}</span>
-              <span className="lg:hidden text-xs text-gray-400">·</span>
+              {/* Only show the number under the name if there IS a name -
+                  otherwise the number is already on the top line. */}
+              {c.caller_name && c.from_number && (
+               <span className="text-xs text-gray-500 font-mono truncate">{fmtPhone(c.from_number)}</span>
+              )}
+              {c.caller_name && c.from_number && <span className="lg:hidden text-xs text-gray-400">·</span>}
               <span className="lg:hidden text-xs text-gray-400">{relTime(c.created_at)}</span>
              </div>
             </div>
@@ -234,6 +238,21 @@ export default function CallsPage() {
    </AnimatePresence>
   </DashShell>
  )
+}
+
+/**
+ * Format a raw phone string for display. Falls back to the original
+ * input if it doesn't look like a US-shaped number so we don't
+ * accidentally swallow international or test numbers.
+ */
+function fmtPhone(raw?: string | null): string {
+ if (!raw) return ''
+ const v = String(raw).trim()
+ if (!v || v.toLowerCase() === 'unknown') return ''
+ const digits = v.replace(/\D/g, '')
+ if (digits.length === 10) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+ if (digits.length === 11 && digits.startsWith('1')) return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+ return v
 }
 
 function Pill({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
