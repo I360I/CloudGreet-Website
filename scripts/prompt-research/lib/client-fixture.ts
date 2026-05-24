@@ -24,7 +24,7 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
       'id, business_name, business_type, phone_number, owner_id, retell_agent_id, ' +
       'agent_edge_cases, customization, business_hours, ' +
       'cal_com_event_type_slug, extraction_fields, service_areas, ' +
-      'address, city, state, zip',
+      'address, city, state, zip_code',
     )
     .eq('id', businessId)
     .maybeSingle()
@@ -92,7 +92,7 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
 
   const b = biz as any
   const cityState = [b.city, b.state].filter(Boolean).join(', ')
-  const fullAddress = [b.address, cityState, b.zip].filter(Boolean).join(', ')
+  const fullAddress = [b.address, cityState, b.zip_code].filter(Boolean).join(', ')
 
   // Pull whatever services hints exist on the row. The agent-builder
   // accepts both an explicit array and free-form notes - we use both.
