@@ -485,7 +485,7 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
        <div className="text-[11px] font-mono text-gray-500 mt-0.5">business_id {run.meta?.business_id?.slice?.(0, 8)}</div>
       </div>
       <div className="text-[11px] text-gray-400 max-w-md leading-relaxed">
-       Every scenario runs against the agent prompt that would be generated for this client right now, using the same <span className="font-mono text-sky-300">lib/agent-builder</span> code that ships production agents.
+       Every scenario runs against the <span className="text-sky-300">live Retell system prompt + greeting</span> pulled directly from this client&apos;s deployed agent. No regeneration - this is exactly what real callers hear today.
       </div>
      </div>
     </div>
@@ -1057,7 +1057,7 @@ function RunModal({
       {tab === 'client' && (
        <div className="px-6 py-5 space-y-3">
         <p className="text-sm text-gray-400">
-         Run every scenario against a real client's generated prompt. Use this before submitting an agent so you can see how it handles emergencies, prompt injection, SMS consent, etc.
+         Run every scenario against the client&apos;s live Retell prompt and greeting (pulled directly from the deployed agent, no regeneration). Use this to audit what real callers actually hit.
         </p>
 
         <input
