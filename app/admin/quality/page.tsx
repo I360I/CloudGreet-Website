@@ -170,27 +170,27 @@ export default function QualityPage() {
  const activeRun = runs.find((r) => r.status === 'running') || null
 
  const handleStart = async (mode: 'smoke' | 'full' | 'client', businessId?: string) => {
-  try {
-   setErr('')
-   const body: Record<string, unknown> = { mode }
-   if (mode === 'client' && businessId) body.business_id = businessId
-   const r = await fetchWithAuth('/api/admin/quality/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-   })
-   const j = await r.json().catch(() => ({}))
-   if (!r.ok || !j.success) {
-    throw new Error(j?.error || 'Failed to start')
-   }
-   setRunModalOpen(false)
-   setSelectedRunId(j.run_id)
-   const lr = await fetchWithAuth('/api/admin/quality/runs')
-   const lj = await lr.json().catch(() => ({}))
-   if (lr.ok) setRuns(lj.runs || [])
-  } catch (e) {
-   setErr(e instanceof Error ? e.message : 'Failed to start')
+  // Don't catch here - the modal awaits this and uses the thrown
+  // error to reset its busy state and display the message inline.
+  // Swallowing it locks the button on "Starting..." forever (the
+  // outer setErr is hidden behind the modal anyway).
+  setErr('')
+  const body: Record<string, unknown> = { mode }
+  if (mode === 'client' && businessId) body.business_id = businessId
+  const r = await fetchWithAuth('/api/admin/quality/start', {
+   method: 'POST',
+   headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify(body),
+  })
+  const j = await r.json().catch(() => ({}))
+  if (!r.ok || !j.success) {
+   throw new Error(j?.error || `Start failed (${r.status})`)
   }
+  setRunModalOpen(false)
+  setSelectedRunId(j.run_id)
+  const lr = await fetchWithAuth('/api/admin/quality/runs')
+  const lj = await lr.json().catch(() => ({}))
+  if (lr.ok) setRuns(lj.runs || [])
  }
 
  const handleCancel = async () => {

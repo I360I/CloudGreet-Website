@@ -41,24 +41,33 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
   const retellAgentId = (biz as any).retell_agent_id as string | null
   const retellKey = process.env.RETELL_API_KEY
   if (retellAgentId && retellKey) {
+    // 5s budget per Retell call - we'd rather fall back to local generation
+    // than hang /start until Vercel's 30s function timeout kills it.
+    const fetchWithTimeout = async (url: string) => {
+      const ctrl = new AbortController()
+      const t = setTimeout(() => ctrl.abort(), 5000)
+      try {
+        return await fetch(url, {
+          headers: { Authorization: `Bearer ${retellKey}` },
+          signal: ctrl.signal,
+        })
+      } finally {
+        clearTimeout(t)
+      }
+    }
     try {
-      const aRes = await fetch(`https://api.retellai.com/get-agent/${retellAgentId}`, {
-        headers: { Authorization: `Bearer ${retellKey}` },
-      })
+      const aRes = await fetchWithTimeout(`https://api.retellai.com/get-agent/${retellAgentId}`)
       if (aRes.ok) {
         const agent = await aRes.json() as any
         const begin = agent?.begin_message
         if (typeof begin === 'string' && begin.trim()) liveBeginMessage = begin
         const llmId = agent?.response_engine?.llm_id
         if (agent?.response_engine?.type === 'retell-llm' && llmId) {
-          const lRes = await fetch(`https://api.retellai.com/get-retell-llm/${llmId}`, {
-            headers: { Authorization: `Bearer ${retellKey}` },
-          })
+          const lRes = await fetchWithTimeout(`https://api.retellai.com/get-retell-llm/${llmId}`)
           if (lRes.ok) {
             const llm = await lRes.json() as any
             const gp = llm?.general_prompt
             if (typeof gp === 'string' && gp.trim()) livePrompt = gp
-            // Begin message can also live on the LLM (newer Retell layouts).
             if (!liveBeginMessage) {
               const bm = llm?.begin_message
               if (typeof bm === 'string' && bm.trim()) liveBeginMessage = bm
@@ -67,7 +76,7 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
         }
       }
     } catch {
-      // Network/parsing error - silently fall back to local generation.
+      // Timeout / network / parsing error - silently fall back.
     }
   }
 
