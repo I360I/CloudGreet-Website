@@ -21,7 +21,7 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
   const { data: biz, error } = await supabaseAdmin
     .from('businesses')
     .select(
-      'id, business_name, business_type, phone_number, owner_id, ' +
+      'id, business_name, business_type, phone_number, owner_id, retell_agent_id, ' +
       'agent_edge_cases, customization, business_hours, ' +
       'cal_com_event_type_slug, extraction_fields, service_area, ' +
       'address, city, state, zip',
@@ -31,6 +31,45 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
 
   if (error) throw new Error(`Failed to load business: ${error.message}`)
   if (!biz) throw new Error(`Business ${businessId} not found`)
+
+  // Pull the live Retell agent's system prompt + begin_message so the
+  // eval tests what callers actually hit today. If anything fails (no
+  // RETELL_API_KEY, agent doesn't exist, engine isn't retell-llm), we
+  // fall back to generating fresh in generateFullPromptForBusiness.
+  let livePrompt: string | undefined
+  let liveBeginMessage: string | undefined
+  const retellAgentId = (biz as any).retell_agent_id as string | null
+  const retellKey = process.env.RETELL_API_KEY
+  if (retellAgentId && retellKey) {
+    try {
+      const aRes = await fetch(`https://api.retellai.com/get-agent/${retellAgentId}`, {
+        headers: { Authorization: `Bearer ${retellKey}` },
+      })
+      if (aRes.ok) {
+        const agent = await aRes.json() as any
+        const begin = agent?.begin_message
+        if (typeof begin === 'string' && begin.trim()) liveBeginMessage = begin
+        const llmId = agent?.response_engine?.llm_id
+        if (agent?.response_engine?.type === 'retell-llm' && llmId) {
+          const lRes = await fetch(`https://api.retellai.com/get-retell-llm/${llmId}`, {
+            headers: { Authorization: `Bearer ${retellKey}` },
+          })
+          if (lRes.ok) {
+            const llm = await lRes.json() as any
+            const gp = llm?.general_prompt
+            if (typeof gp === 'string' && gp.trim()) livePrompt = gp
+            // Begin message can also live on the LLM (newer Retell layouts).
+            if (!liveBeginMessage) {
+              const bm = llm?.begin_message
+              if (typeof bm === 'string' && bm.trim()) liveBeginMessage = bm
+            }
+          }
+        }
+      }
+    } catch {
+      // Network/parsing error - silently fall back to local generation.
+    }
+  }
 
   let ownerName: string | undefined
   if ((biz as any).owner_id) {
@@ -68,6 +107,8 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
   return {
     id: `client-${b.id}`,
     label: `${b.business_name || 'Unnamed business'} (real client)`,
+    live_prompt: livePrompt,
+    live_begin_message: liveBeginMessage,
     context: {
       business: {
         name: b.business_name || 'Unnamed business',

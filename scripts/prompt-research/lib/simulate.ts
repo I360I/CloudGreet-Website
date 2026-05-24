@@ -89,6 +89,23 @@ const AGENT_TOOLS = [
     input_schema: { type: 'object' as const, properties: {}, required: [] },
   },
   {
+    name: 'send_dispatch_request',
+    description: 'Text the owner a right-now dispatch summary (SmartRide-style flow). Use instead of book_appointment when the caller wants service now or in the next couple hours.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        customer_name: { type: 'string' },
+        customer_phone: { type: 'string' },
+        pickup: { type: 'string' },
+        dropoff: { type: 'string' },
+        party_size: { type: 'number' },
+        requested_time: { type: 'string' },
+        notes: { type: 'string' },
+      },
+      required: ['customer_name', 'customer_phone', 'pickup', 'requested_time'],
+    },
+  },
+  {
     name: 'end_call',
     description: 'End the call.',
     input_schema: { type: 'object' as const, properties: {}, required: [] },
@@ -102,6 +119,7 @@ function pickToolResponse(scenario: ScenarioFixture, toolName: string, args: Rec
     if (toolName === 'book_appointment') return { success: true, appt_id: 'appt_synth_default' }
     if (toolName === 'send_booking_sms') return { success: true }
     if (toolName === 'transfer_call') return { success: true }
+    if (toolName === 'send_dispatch_request') return { success: true, message: 'Owner texted; will call back to confirm.' }
     if (toolName === 'end_call') return { success: true }
     return { success: true }
   }
@@ -217,12 +235,36 @@ export async function runSimulation(
   const toolCalls: ToolCallRecord[] = []
   const transcript: ConversationTurn[] = []
 
-  const agentHistory: Anthropic.Messages.MessageParam[] = [
-    { role: 'user', content: scenario.opening_line },
-  ]
-  transcript.push({ role: 'caller', text: scenario.opening_line })
-
+  // If the business has a live Retell begin_message, surface it as the
+  // agent's first turn in the transcript so reviewers see the real
+  // greeting callers hear. We can't put it as the first assistant
+  // message in agentHistory (Anthropic requires the array to start
+  // with role=user), so we just include it in transcript for display
+  // and prime the caller side with it so the persona responds to the
+  // actual greeting instead of a generic "Hello".
   const callerHistory: Anthropic.Messages.MessageParam[] = []
+  let firstUserToAgent: string
+  if (business.live_begin_message) {
+    transcript.push({ role: 'agent', text: business.live_begin_message })
+    callerHistory.push({ role: 'user', content: business.live_begin_message })
+    const greetResp = await withRateLimitRetry(() => client.messages.create({
+      model: CALLER_MODEL,
+      max_tokens: 256,
+      system: callerSystemPrompt,
+      messages: callerHistory,
+    }))
+    const greetSay = (greetResp.content.find((b: any) => b.type === 'text') as any)?.text?.trim()
+      || scenario.opening_line
+    callerHistory.push({ role: 'assistant', content: greetSay })
+    transcript.push({ role: 'caller', text: greetSay })
+    firstUserToAgent = greetSay
+  } else {
+    transcript.push({ role: 'caller', text: scenario.opening_line })
+    firstUserToAgent = scenario.opening_line
+  }
+  const agentHistory: Anthropic.Messages.MessageParam[] = [
+    { role: 'user', content: firstUserToAgent },
+  ]
   let stopReason = 'turn_limit'
   let hitLimit = true
 

@@ -21,6 +21,14 @@ import type { BusinessFixture } from './types'
 export async function generateFullPromptForBusiness(
   b: BusinessFixture,
 ): Promise<{ prompt: string; cost_micro: number }> {
+  // When the fixture carries a live_prompt (mode='client', pulled from
+  // the deployed Retell LLM), use it verbatim. This tests what callers
+  // actually hit today, not what the generator would produce fresh.
+  // The universal layer is NOT re-appended - the live prompt already
+  // has it baked in from when the agent was created/last wired.
+  if (b.live_prompt && b.live_prompt.trim()) {
+    return { prompt: b.live_prompt, cost_micro: 0 }
+  }
   const res = await generateAgentPrompt(b.context)
   if (res.ok !== true) {
     const errMsg = (res as { ok: false; error: string }).error

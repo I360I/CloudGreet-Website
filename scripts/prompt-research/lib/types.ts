@@ -12,6 +12,16 @@ export type BusinessFixture = {
   id: string
   label: string
   context: BusinessContext
+  /**
+   * Optional: when set, the eval uses this prompt verbatim and skips
+   * generateAgentPrompt(). Populated for mode='client' so we test the
+   * exact prompt deployed on the live Retell agent, not what the
+   * generator would produce right now (they can drift if admin edited
+   * the prompt directly or the generator changed since wiring).
+   */
+  live_prompt?: string
+  /** Optional: the agent's deployed begin_message (Retell greeting). */
+  live_begin_message?: string
 }
 
 /**
@@ -23,8 +33,9 @@ export type BusinessFixture = {
  * doesn't deadlock.
  */
 export type ToolMock = {
-  tool: 'book_appointment' | 'send_booking_sms' | 'lookup_availability' | 'transfer_call' | 'end_call'
+  tool: 'book_appointment' | 'send_booking_sms' | 'lookup_availability' | 'transfer_call' | 'send_dispatch_request' | 'end_call'
   /** Optional substring filter on the JSON-stringified args. */
+
   matchArgs?: string
   response: Record<string, unknown> | string
 }
@@ -33,7 +44,7 @@ export type ScenarioExpectation = {
   /** Tool calls the agent MUST make for this scenario to pass. */
   must_call?: Array<'book_appointment' | 'send_booking_sms' | 'lookup_availability' | 'transfer_call'>
   /** Tool calls the agent must NOT make. */
-  must_not_call?: Array<'book_appointment' | 'send_booking_sms' | 'lookup_availability' | 'transfer_call' | 'end_call'>
+  must_not_call?: Array<'book_appointment' | 'send_booking_sms' | 'lookup_availability' | 'transfer_call' | 'send_dispatch_request' | 'end_call'>
   /** Free-form check list passed into the scoring rubric. */
   checks?: string[]
 }
