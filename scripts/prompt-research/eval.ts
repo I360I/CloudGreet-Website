@@ -1,7 +1,12 @@
 /**
  * Main eval entrypoint. Usage:
  *   npx tsx --env-file=.env.local scripts/prompt-research/eval.ts \
- *     [--only=<scenario-id>] [--business=<id>] [--limit=N] [--concurrency=N]
+ *     [--only=<scenario-id>] [--business=<id>] [--client=<business_uuid>] \
+ *     [--limit=N] [--concurrency=N]
+ *
+ *   --client=<uuid> mode runs every scenario against ONE real client's
+ *   live Retell prompt + greeting (same code path as /admin/quality
+ *   client mode, just without Vercel's function timeout in the way).
  *
  * Outputs:
  *   scripts/prompt-research/runs/<timestamp>/report.md
@@ -33,6 +38,7 @@ const CATEGORIES: RubricCategory[] = [
 type Flags = {
   only?: string
   business?: string
+  client?: string
   limit?: number
   concurrency: number
 }
@@ -42,6 +48,7 @@ function parseFlags(argv: string[]): Flags {
   for (const a of argv) {
     if (a.startsWith('--only=')) f.only = a.slice('--only='.length)
     else if (a.startsWith('--business=')) f.business = a.slice('--business='.length)
+    else if (a.startsWith('--client=')) f.client = a.slice('--client='.length)
     else if (a.startsWith('--limit=')) f.limit = Number(a.slice('--limit='.length))
     else if (a.startsWith('--concurrency=')) f.concurrency = Math.max(1, Number(a.slice('--concurrency='.length)))
   }
@@ -80,11 +87,30 @@ async function main() {
   const flags = parseFlags(process.argv.slice(2))
   const client = new Anthropic({ apiKey })
 
-  const businesses = loadBusinesses()
   const scenarios = loadScenarios()
   const rubric = loadRubric()
 
-  let matrix = buildMatrix(businesses, scenarios)
+  // --client=<uuid> overrides the synthetic banks: we pull one real
+  // business from Supabase (with its live Retell prompt + greeting)
+  // and run every scenario against it. This is the terminal-equivalent
+  // of /admin/quality "Test a specific client" mode.
+  let businesses: ReturnType<typeof loadBusinesses>
+  if (flags.client) {
+    const { loadClientFixture } = await import('./lib/client-fixture')
+    const fixture = await loadClientFixture(flags.client)
+    console.log(`loaded client fixture: ${fixture.label}`)
+    console.log(`  live_prompt: ${fixture.live_prompt ? `${fixture.live_prompt.length} chars (from Retell)` : 'none - will fall back to generateAgentPrompt()'}`)
+    console.log(`  live_begin_message: ${fixture.live_begin_message ? `"${fixture.live_begin_message.slice(0, 80)}${fixture.live_begin_message.length > 80 ? '...' : ''}"` : 'none'}`)
+    businesses = [fixture]
+  } else {
+    businesses = loadBusinesses()
+  }
+
+  // In --client mode bypass applies_to (those filters reference
+  // synthetic business ids; a real client never matches).
+  let matrix = flags.client
+    ? scenarios.map((s) => ({ business: businesses[0], scenario: s }))
+    : buildMatrix(businesses, scenarios)
   if (flags.only) matrix = matrix.filter((p) => p.scenario.id === flags.only)
   if (flags.business) matrix = matrix.filter((p) => p.business.id === flags.business)
   if (flags.limit) matrix = matrix.slice(0, flags.limit)
