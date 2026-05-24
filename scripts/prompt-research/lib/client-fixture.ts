@@ -23,7 +23,7 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
     .select(
       'id, business_name, business_type, phone_number, owner_id, retell_agent_id, ' +
       'agent_edge_cases, customization, business_hours, ' +
-      'cal_com_event_type_slug, extraction_fields, service_area, ' +
+      'cal_com_event_type_slug, extraction_fields, service_areas, ' +
       'address, city, state, zip',
     )
     .eq('id', businessId)
@@ -108,8 +108,8 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
   if (b.business_type && offered.length === 0) offered.push(b.business_type)
 
   const serviceArea: string[] =
-    Array.isArray(b.service_area) ? b.service_area as string[]
-    : typeof b.service_area === 'string' ? [b.service_area]
+    Array.isArray(b.service_areas) ? b.service_areas as string[]
+    : typeof b.service_areas === 'string' ? [b.service_areas]
     : cityState ? [cityState]
     : []
 
@@ -126,7 +126,7 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
         address: fullAddress || undefined,
         website: undefined,
         categories: b.business_type ? [b.business_type] : [],
-        service_area: serviceArea.length ? serviceArea : undefined,
+        service_areas: serviceArea.length ? serviceArea : undefined,
         hours: parseHours(b.business_hours),
       },
       services: {
