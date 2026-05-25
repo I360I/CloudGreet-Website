@@ -490,6 +490,18 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
      </div>
     </div>
    )}
+   {/* Download full report */}
+   <div className="flex justify-end">
+    <a
+     href={`/api/admin/quality/runs/${run.id}/export`}
+     download
+     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] text-xs text-gray-300 hover:text-white transition-colors"
+    >
+     <ArrowRight className="w-3 h-3 -rotate-90" weight="bold" />
+     Download full report (.md)
+    </a>
+   </div>
+
    {/* Big number row */}
    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
     <BigStat
@@ -553,20 +565,7 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
    )}
 
    {!run.analysis && run.status === 'completed' && (
-    <Panel>
-     <div className="px-5 py-4 flex items-center justify-between gap-3">
-      <div>
-       <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Brain · Failure-Reading Agent</div>
-       <div className="text-sm text-gray-300">No analysis yet. Run from the CLI to get fix recommendations:</div>
-      </div>
-     </div>
-     <div className="px-5 pb-5">
-      <pre className="bg-black/40 border border-white/[0.06] rounded-xl px-4 py-3 text-[11px] font-mono text-sky-200 overflow-x-auto">
-       npx tsx --env-file=.env.local scripts/prompt-research/analyze.ts {run.id}
-      </pre>
-      <div className="text-[10px] text-gray-500 mt-1 font-mono">~$0.30-0.60 · Opus 4.7</div>
-     </div>
-    </Panel>
+    <RunAnalysisPanel runId={run.id} />
    )}
 
    {isClient && generatedPrompt && (
@@ -595,6 +594,54 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
      ))}
     </div>
    </Panel>
+  </div>
+ )
+}
+
+function RunAnalysisPanel({ runId }: { runId: string }) {
+ const [busy, setBusy] = useState(false)
+ const [err, setErr] = useState('')
+ const [done, setDone] = useState(false)
+
+ const run = async () => {
+  setBusy(true)
+  setErr('')
+  try {
+   const r = await fetchWithAuth(`/api/admin/quality/runs/${runId}/analyze`, { method: 'POST' })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j.success) throw new Error(j?.error || `Analyze failed (${r.status})`)
+   setDone(true)
+   // Trigger a refetch on the parent by reloading - simplest is a soft refresh.
+   if (typeof window !== 'undefined') setTimeout(() => window.location.reload(), 500)
+  } catch (e) {
+   setErr(e instanceof Error ? e.message : 'Analyze failed')
+   setBusy(false)
+  }
+ }
+
+ return (
+  <div className="rounded-2xl border border-purple-400/20 bg-gradient-to-br from-purple-500/[0.06] to-transparent">
+   <div className="px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
+    <div>
+     <div className="text-[10px] font-mono uppercase tracking-wider text-purple-300/80 mb-1">Brain · Failure-Reading Agent</div>
+     <div className="text-sm text-gray-300">Diagnose the bottom-5 worst pairs and get prioritized fixes.</div>
+     <div className="text-[10px] text-gray-500 mt-1 font-mono">~$0.30-0.60 · Opus 4.7 · 30-60s</div>
+    </div>
+    <button
+     onClick={run}
+     disabled={busy}
+     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-purple-400/30 bg-purple-500/[0.08] hover:bg-purple-500/[0.14] disabled:opacity-50 disabled:cursor-not-allowed text-sm text-purple-100 transition-colors"
+    >
+     {busy ? (
+      <><CircleNotch className="w-4 h-4 animate-spin" weight="bold" /> {done ? 'Saving...' : 'Analyzing...'}</>
+     ) : (
+      <><Sparkle className="w-4 h-4" weight="bold" /> Run analysis</>
+     )}
+    </button>
+   </div>
+   {err && (
+    <div className="mx-5 mb-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">{err}</div>
+   )}
   </div>
  )
 }
