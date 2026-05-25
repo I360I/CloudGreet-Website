@@ -1552,6 +1552,33 @@ function ReviewRequestsSection() {
   }
  }
 
+ // Persist the on/off toggle the moment it's clicked. The Save button
+ // is for the URL / template / timing fields where the user wants a
+ // chance to undo a typo - but toggling the feature on/off shouldn't
+ // require a second action. Previously it only updated local state,
+ // so a refresh threw the change away (the bug screenshot).
+ const toggleEnabled = async (next: boolean) => {
+  setEnabled(next)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/review-requests', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: next }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    // Revert the visual state if the server rejected us.
+    setEnabled(!next)
+    setFlash({ tone: 'err', text: j?.error || 'Could not save toggle' })
+    setTimeout(() => setFlash(null), 4000)
+   }
+  } catch {
+   setEnabled(!next)
+   setFlash({ tone: 'err', text: 'Network error - toggle not saved' })
+   setTimeout(() => setFlash(null), 4000)
+  }
+ }
+
  const renderPreview = (tpl: string) => {
   return (tpl || defaultTemplate)
    .replace(/\{first_name\}/g, 'John')
@@ -1572,7 +1599,7 @@ function ReviewRequestsSection() {
       After every booking your AI completes, automatically text the customer asking for a Google review. The AI asks for consent on the call first - only customers who say yes get the text. 90-day cap per customer, sends only between 9am-7pm local, STOP-to-opt-out is automatic.
      </p>
     </div>
-    <Toggle checked={enabled} onChange={setEnabled} />
+    <Toggle checked={enabled} onChange={toggleEnabled} />
    </div>
 
    <div className={`space-y-5 mt-5 ${dim ? 'opacity-50 pointer-events-none' : ''}`}>
