@@ -1307,6 +1307,25 @@ function VerifyStep({ onVerified, onBack }: { onVerified: () => void; onBack: ()
 /* --------------------------------- Done --------------------------------- */
 
 function DoneStep({ onGo }: { onGo: () => void }) {
+ const [restarting, setRestarting] = useState(false)
+ const [err, setErr] = useState('')
+
+ const restart = async () => {
+  if (restarting) return
+  if (!window.confirm('Restart setup? This clears your calendar connection, forwarding number, and SMS templates so you can redo the steps. Your call history and bookings are kept.')) return
+  setRestarting(true)
+  setErr('')
+  try {
+   const r = await fetchWithAuth('/api/me/onboarding/restart', { method: 'POST' })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j.success) throw new Error(j?.error || 'Restart failed')
+   if (typeof window !== 'undefined') window.location.reload()
+  } catch (e) {
+   setErr(e instanceof Error ? e.message : 'Restart failed')
+   setRestarting(false)
+  }
+ }
+
  return (
   <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center">
    <div className="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mx-auto mb-4">
@@ -1322,6 +1341,18 @@ function DoneStep({ onGo }: { onGo: () => void }) {
    >
     Go to dashboard
    </button>
+   <div className="mt-3">
+    <button
+     onClick={restart}
+     disabled={restarting}
+     className="inline-flex items-center gap-2 bg-rose-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 ease-out"
+    >
+     {restarting ? 'Restarting…' : 'Restart setup'}
+    </button>
+   </div>
+   {err && (
+    <p className="mt-3 text-xs text-rose-600">{err}</p>
+   )}
   </div>
  )
 }
