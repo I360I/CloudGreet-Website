@@ -159,7 +159,7 @@ function getTzOffsetMinutes(d: Date, timezone: string): number {
 /* ---------- main API ---------- */
 
 export type ScheduleResult =
-  | { ok: true; review_request_id: string; scheduled_for: string }
+  | { ok: true; review_request_id: string; scheduled_for: string; provider_scheduled?: boolean }
   | { ok: false; reason: 'disabled' | 'no_review_url' | 'no_consent' | 'opt_out' | 'frequency_cap' | 'no_phone' | 'db_error' | 'business_not_found'; detail?: string }
 
 /**
@@ -250,7 +250,92 @@ export async function scheduleReviewRequest(args: {
     return { ok: false, reason: 'db_error', detail: insertErr?.message }
   }
 
-  return { ok: true, review_request_id: (inserted as any).id, scheduled_for: (inserted as any).scheduled_for }
+  // Hand the message off to Telnyx with server-side send_at scheduling.
+  // Vercel Hobby caps cron cadence at once-daily, which would make
+  // "1 hour after" fire many hours late. Telnyx holds the message and
+  // dispatches at exactly scheduled_for, so the timing is independent
+  // of our cron. The cron remains as a fallback for any rows where
+  // Telnyx scheduling failed (network/API error at booking time).
+  //
+  // Skip provider-scheduling if the send time is already <2 minutes
+  // away - Telnyx rejects send_at that close to "now", and the cron
+  // would pick it up immediately anyway.
+  const provider = await tryScheduleWithTelnyx({
+    reviewRequestId: (inserted as any).id,
+    businessId,
+    customerPhone,
+    customerName,
+    businessName: (biz as any).business_name || 'us',
+    template: (biz as any).review_sms_template || DEFAULT_REVIEW_SMS_TEMPLATE,
+    reviewUrl,
+    scheduledFor,
+  })
+
+  return {
+    ok: true,
+    review_request_id: (inserted as any).id,
+    scheduled_for: (inserted as any).scheduled_for,
+    provider_scheduled: provider.scheduled,
+  }
+}
+
+async function tryScheduleWithTelnyx(args: {
+  reviewRequestId: string
+  businessId: string
+  customerPhone: string
+  customerName: string | null | undefined
+  businessName: string
+  template: string
+  reviewUrl: string
+  scheduledFor: Date
+}): Promise<{ scheduled: boolean; reason?: string }> {
+  const fromNumber = process.env.CLOUDGREET_NOTIFICATIONS_FROM
+  if (!fromNumber) return { scheduled: false, reason: 'no_sender' }
+
+  const msUntilSend = args.scheduledFor.getTime() - Date.now()
+  if (msUntilSend < 2 * 60_000) {
+    // Too close - let the cron pick it up. Avoids Telnyx 400s.
+    return { scheduled: false, reason: 'too_soon' }
+  }
+
+  const message = renderReviewTemplate(args.template, {
+    first_name: firstName(args.customerName),
+    business_name: args.businessName,
+    review_link: args.reviewUrl,
+  })
+
+  try {
+    const resp = await telnyxClient.sendSMS(args.customerPhone, message, fromNumber, {
+      sendAt: args.scheduledFor,
+    })
+    const messageId = resp?.data?.id || null
+    // Mark the row as 'scheduled_remote' so the cron skips it. When
+    // Telnyx actually dispatches, the message-status webhook will
+    // flip it to 'sent' (or 'failed').
+    await supabaseAdmin
+      .from('review_requests')
+      .update({
+        status: 'scheduled_remote',
+        telnyx_message_id: messageId,
+        rendered_message: message,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', args.reviewRequestId)
+    logger.info('review request scheduled with Telnyx', {
+      reviewRequestId: args.reviewRequestId,
+      telnyxMessageId: messageId,
+      sendAt: args.scheduledFor.toISOString(),
+    })
+    return { scheduled: true }
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : 'unknown'
+    logger.warn('Telnyx scheduling failed; falling back to cron', {
+      reviewRequestId: args.reviewRequestId,
+      error: detail,
+    })
+    // Leave the row status='queued' so the daily cron picks it up.
+    return { scheduled: false, reason: detail }
+  }
 }
 
 /* ---------- cron worker ---------- */
@@ -388,12 +473,36 @@ export async function markPhoneOptedOut(
     .upsert({ phone: phoneDigits, source, opted_out_at: new Date().toISOString() }, {
       onConflict: 'phone',
     })
-  // Also cancel any queued requests for this phone
+
+  // Also cancel anything pending for this phone. Two flavors:
+  //  - 'queued' rows: just flip the row; the cron will skip them.
+  //  - 'scheduled_remote' rows: Telnyx is HOLDING these for send_at.
+  //    We must call Telnyx's cancel-message API or they'll dispatch
+  //    after the opt-out (real compliance bug). Look up the message
+  //    IDs first, mark the rows canceled, then fire the cancel calls.
+  const { data: remoteRows } = await supabaseAdmin
+    .from('review_requests')
+    .select('id, telnyx_message_id')
+    .eq('customer_phone', phoneDigits)
+    .in('status', ['queued', 'scheduled_remote'])
   await supabaseAdmin
     .from('review_requests')
     .update({ status: 'canceled', skip_reason: 'opt_out', updated_at: new Date().toISOString() })
     .eq('customer_phone', phoneDigits)
-    .eq('status', 'queued')
+    .in('status', ['queued', 'scheduled_remote'])
+
+  for (const r of (remoteRows || []) as any[]) {
+    if (r.telnyx_message_id) {
+      try { await telnyxClient.cancelScheduledMessage(r.telnyx_message_id) }
+      catch (e) {
+        logger.warn('opt-out: telnyx cancel failed', {
+          reviewRequestId: r.id,
+          telnyxMessageId: r.telnyx_message_id,
+          error: e instanceof Error ? e.message : 'unknown',
+        })
+      }
+    }
+  }
 }
 
 /* ---------- bulk cancel ---------- */
@@ -407,6 +516,15 @@ export async function markPhoneOptedOut(
 export async function cancelQueuedForBusiness(businessId: string): Promise<{
   canceled: number
 }> {
+  // Capture telnyx_message_ids before flipping status so we can cancel
+  // the Telnyx-held scheduled sends too. Without this, contractor
+  // toggles reviews OFF -> their previously-queued messages still ship.
+  const { data: pending } = await supabaseAdmin
+    .from('review_requests')
+    .select('id, telnyx_message_id')
+    .eq('business_id', businessId)
+    .in('status', ['queued', 'scheduled_remote'])
+
   const { data, error } = await supabaseAdmin
     .from('review_requests')
     .update({
@@ -415,13 +533,27 @@ export async function cancelQueuedForBusiness(businessId: string): Promise<{
       updated_at: new Date().toISOString(),
     })
     .eq('business_id', businessId)
-    .eq('status', 'queued')
+    .in('status', ['queued', 'scheduled_remote'])
     .select('id')
 
   if (error) {
     logger.warn('cancelQueuedForBusiness failed', { businessId, error: error.message })
     return { canceled: 0 }
   }
+
+  for (const r of (pending || []) as any[]) {
+    if (r.telnyx_message_id) {
+      try { await telnyxClient.cancelScheduledMessage(r.telnyx_message_id) }
+      catch (e) {
+        logger.warn('disable: telnyx cancel failed', {
+          reviewRequestId: r.id,
+          telnyxMessageId: r.telnyx_message_id,
+          error: e instanceof Error ? e.message : 'unknown',
+        })
+      }
+    }
+  }
+
   return { canceled: data?.length || 0 }
 }
 
@@ -489,11 +621,14 @@ export async function getReviewStats(businessId: string): Promise<{
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
   const [{ count: queued }, { count: sent }, { count: failed }, { data: lastSent }, { count: optedOut }] = await Promise.all([
+    // Count both flavors of pending: 'queued' (will be picked up by cron)
+    // and 'scheduled_remote' (Telnyx is holding for server-side send).
+    // From the contractor's point of view, both are "waiting to send".
     supabaseAdmin
       .from('review_requests')
       .select('id', { count: 'exact', head: true })
       .eq('business_id', businessId)
-      .eq('status', 'queued'),
+      .in('status', ['queued', 'scheduled_remote']),
     supabaseAdmin
       .from('review_requests')
       .select('id', { count: 'exact', head: true })

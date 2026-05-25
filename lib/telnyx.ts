@@ -58,6 +58,7 @@ export class TelnyxClient {
     to: string,
     message: string,
     from: string,
+    opts?: { sendAt?: Date | string },
   ): Promise<{ data: { id: string; to: any; from: any; text: string } }> {
     if (!this.apiKey) throw new Error('TELNYX_API_KEY missing')
     if (!from) throw new Error('sendSMS: `from` (E.164 phone number) is required')
@@ -67,6 +68,16 @@ export class TelnyxClient {
       to,
       from,
       text: message,
+    }
+    // Telnyx server-side scheduled send. Pass send_at as ISO-8601
+    // (Telnyx accepts up to 35 days in the future). Telnyx holds the
+    // message and dispatches at that exact time - eliminates our
+    // cron-cadence dependency for review-request timing. Note: if
+    // send_at is in the past or under ~1 min from now, Telnyx may
+    // either reject (400) or send immediately, depending on jitter.
+    if (opts?.sendAt) {
+      const iso = opts.sendAt instanceof Date ? opts.sendAt.toISOString() : opts.sendAt
+      body.send_at = iso
     }
     // messaging_profile_id is recommended but not strictly required
     // when `from` is on a single profile. Send it when we have one.
@@ -95,6 +106,28 @@ export class TelnyxClient {
       throw new Error(`Telnyx SMS failed (${res.status}): ${txt.slice(0, 200)}`)
     }
     return await res.json()
+  }
+
+  /**
+   * Cancel a scheduled SMS (send_at hasn't fired yet). Used when a
+   * customer hits STOP between schedule and dispatch so a queued
+   * review request doesn't go out after they've opted out. Telnyx
+   * returns 404 if the message has already been sent - we treat
+   * that as a no-op so the caller doesn't need a special case.
+   */
+  async cancelScheduledMessage(messageId: string): Promise<{ ok: boolean; status?: number }> {
+    if (!this.apiKey) throw new Error('TELNYX_API_KEY missing')
+    if (!messageId) return { ok: false }
+    const res = await fetch(`${TELNYX_BASE}/messages/${encodeURIComponent(messageId)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${this.apiKey}` },
+    })
+    if (res.ok || res.status === 404) return { ok: true, status: res.status }
+    logger.warn('Telnyx cancel scheduled message failed', {
+      status: res.status,
+      messageId,
+    })
+    return { ok: false, status: res.status }
   }
 
   /** Search for an available US local DID and order it. */
