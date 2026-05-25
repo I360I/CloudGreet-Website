@@ -1163,9 +1163,17 @@ function RunModal({
          {busy === 'client' ? (
           <><CircleNotch className="w-4 h-4 animate-spin" weight="bold" /> Starting...</>
          ) : (
-          <><Sparkle className="w-4 h-4" weight="bold" /> Test this client</>
+          <><Sparkle className="w-4 h-4" weight="bold" /> Test this client (web)</>
          )}
         </PrimaryButton>
+
+        <LocalCliCommand pickedClientId={pickedClientId} />
+       </div>
+      )}
+
+      {tab === 'synthetic' && (
+       <div className="px-6 pb-5">
+        <LocalCliCommand mode="synthetic" />
        </div>
       )}
 
@@ -1180,6 +1188,57 @@ function RunModal({
     </div>
    </motion.div>
   </motion.div>
+ )
+}
+
+/**
+ * Renders the exact one-line CLI command for this run config so the user
+ * can paste into their terminal. Bypasses Vercel function timeouts +
+ * runs against their own Anthropic rate-limit window. Results stream
+ * into the same Supabase tables, so the dashboard shows it live.
+ */
+function LocalCliCommand({
+ pickedClientId,
+ mode,
+}: { pickedClientId?: string | null; mode?: 'synthetic' }) {
+ const [copied, setCopied] = useState(false)
+ const baseCmd = 'npx tsx --env-file=.env.local scripts/prompt-research/eval.ts'
+ const cmd = mode === 'synthetic'
+  ? baseCmd
+  : pickedClientId
+   ? `${baseCmd} --client=${pickedClientId} --generate-scenarios`
+   : null
+
+ if (!cmd) return null
+
+ const copy = () => {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return
+  navigator.clipboard.writeText(cmd).then(() => {
+   setCopied(true)
+   setTimeout(() => setCopied(false), 1500)
+  }).catch(() => {})
+ }
+
+ return (
+  <div className="mt-3 rounded-xl border border-emerald-400/15 bg-emerald-500/[0.03] p-3">
+   <div className="flex items-center justify-between gap-3 mb-2">
+    <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-300/80">
+     Or run locally (no Vercel timeout · uses your laptop&apos;s rate-limit window)
+    </div>
+    <button
+     onClick={copy}
+     className="text-[10px] font-mono px-2 py-1 rounded border border-emerald-400/30 bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] text-emerald-200 transition-colors"
+    >
+     {copied ? 'Copied!' : 'Copy'}
+    </button>
+   </div>
+   <pre className="text-[11px] font-mono text-emerald-100/90 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+    {cmd}
+   </pre>
+   <div className="text-[10px] text-gray-500 mt-2 font-mono">
+    Results stream to Supabase, so this dashboard updates live while it runs.
+   </div>
+  </div>
  )
 }
 
