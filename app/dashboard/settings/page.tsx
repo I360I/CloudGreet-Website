@@ -1470,7 +1470,32 @@ function ReviewRequestsSection() {
    }
   } finally {
    setTesting(false)
-   setTimeout(() => setTestResult(null), 8000)
+   setTimeout(() => setTestResult(null), 12000)
+  }
+ }
+
+ const dryRun = async () => {
+  setTesting(true); setTestResult(null)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/review-requests/dry-run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: testPhone }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setTestResult({ tone: 'err', text: j?.error || 'Dry-run failed' })
+   } else {
+    setTestResult({
+     tone: 'ok',
+     text: `Full pipeline OK: row queued, cron logic ran, SMS sent to ${j.sent_to}. Check Activity below - the count just went up.`,
+    })
+    // Refresh stats so the user sees the queued/sent counts move.
+    load()
+   }
+  } finally {
+   setTesting(false)
+   setTimeout(() => setTestResult(null), 15000)
   }
  }
 
@@ -1604,12 +1629,15 @@ function ReviewRequestsSection() {
      )}
     </div>
 
-    {/* Send a test SMS to a number you own. Bypasses the queue/cap so you
-        can verify the wiring works without booking a real appointment. */}
+    {/* Two test flavors:
+         - Send test: one-shot Telnyx send. Proves the template + URL + sender are correct.
+         - Dry-run pipeline: inserts a real review_requests row, runs the same cron-send
+           logic against it, and lands the SMS. Proves the FULL pipeline (schedule →
+           cron → Telnyx) works end-to-end. Activity counts move so you see it. */}
     <div className="pt-5 mt-5 border-t border-gray-100">
-     <div className="text-xs font-medium text-gray-700 mb-1">Send test SMS</div>
+     <div className="text-xs font-medium text-gray-700 mb-1">Test the flow</div>
      <p className="text-[11px] text-gray-500 mb-2">
-      Type your phone number and we&apos;ll send the actual review SMS using your settings above. Use this to verify your link, your template, and that messages reach the customer.
+      Type your phone number. <b>Send test</b> is a one-shot SMS to check the template. <b>Run full pipeline</b> creates a real queued review-request and fires the same code the cron runs, so you can verify the whole path works (and the count under Activity moves).
      </p>
      <div className="flex flex-col sm:flex-row gap-2">
       <input
@@ -1622,14 +1650,22 @@ function ReviewRequestsSection() {
       <button
        onClick={sendTest}
        disabled={testing || !testPhone.trim() || !reviewUrl.trim()}
-       className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+       className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
        title={!reviewUrl.trim() ? 'Add a Google review link above first' : ''}
       >
-       {testing ? 'Sending…' : 'Send test'}
+       {testing ? 'Working…' : 'Send test'}
+      </button>
+      <button
+       onClick={dryRun}
+       disabled={testing || !testPhone.trim() || !reviewUrl.trim() || !enabled}
+       className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+       title={!enabled ? 'Turn the toggle on first' : !reviewUrl.trim() ? 'Add a Google review link above first' : 'Inserts a real queued row + runs the cron-send logic on it'}
+      >
+       {testing ? 'Working…' : 'Run full pipeline'}
       </button>
      </div>
      {testResult && (
-      <p className={`text-xs mt-2 ${testResult.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>
+      <p className={`text-xs mt-2 leading-relaxed ${testResult.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>
        {testResult.text}
       </p>
      )}
