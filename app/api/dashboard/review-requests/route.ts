@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('businesses')
-    .select('review_requests_enabled, google_review_url, review_sms_template, review_send_timing')
+    .select('business_name, review_requests_enabled, google_review_url, review_sms_template, review_send_timing')
     .eq('id', auth.businessId)
     .maybeSingle()
 
@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: true,
     enabled: !!(data as any)?.review_requests_enabled,
+    business_name: (data as any)?.business_name || '',
     google_review_url: (data as any)?.google_review_url || '',
     review_sms_template: (data as any)?.review_sms_template || '',
     review_send_timing: (data as any)?.review_send_timing || '1h_after',

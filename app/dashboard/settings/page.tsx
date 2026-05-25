@@ -1426,6 +1426,7 @@ function ReviewRequestsSection() {
  // but the value of the feature only happens when it's enabled, so
  // making them opt-in is friction for no upside.
  const [enabled, setEnabled] = useState(true)
+ const [businessName, setBusinessName] = useState('')
  const [reviewUrl, setReviewUrl] = useState('')
  const [template, setTemplate] = useState('')
  const [defaultTemplate, setDefaultTemplate] = useState('')
@@ -1443,6 +1444,7 @@ function ReviewRequestsSection() {
    const j = await r.json().catch(() => ({}))
    if (r.ok && j?.success) {
     setEnabled(!!j.enabled)
+    setBusinessName(j.business_name || '')
     setReviewUrl(j.google_review_url || '')
     setTemplate(j.review_sms_template || j.default_template || '')
     setDefaultTemplate(j.default_template || '')
@@ -1580,10 +1582,13 @@ function ReviewRequestsSection() {
  }
 
  const renderPreview = (tpl: string) => {
+  // Use the actual business name + review URL so the preview matches
+  // what real customers will receive. first_name stays 'John' because
+  // there's no real customer to draw from at preview time.
   return (tpl || defaultTemplate)
    .replace(/\{first_name\}/g, 'John')
-   .replace(/\{business_name\}/g, "Mike's HVAC")
-   .replace(/\{review_link\}/g, reviewUrl || 'https://g.page/r/...')
+   .replace(/\{business_name\}/g, businessName || 'your business')
+   .replace(/\{review_link\}/g, reviewUrl || 'https://your-review-link')
  }
 
  if (loading) return null
