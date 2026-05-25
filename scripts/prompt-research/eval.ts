@@ -39,6 +39,7 @@ type Flags = {
   only?: string
   business?: string
   client?: string
+  generateScenarios?: number
   limit?: number
   concurrency: number
 }
@@ -51,6 +52,11 @@ function parseFlags(argv: string[]): Flags {
     else if (a.startsWith('--client=')) f.client = a.slice('--client='.length)
     else if (a.startsWith('--limit=')) f.limit = Number(a.slice('--limit='.length))
     else if (a.startsWith('--concurrency=')) f.concurrency = Math.max(1, Number(a.slice('--concurrency='.length)))
+    else if (a === '--generate-scenarios') f.generateScenarios = 10
+    else if (a.startsWith('--generate-scenarios=')) {
+      const n = Number(a.slice('--generate-scenarios='.length))
+      f.generateScenarios = Number.isFinite(n) && n > 0 ? Math.min(20, n) : 10
+    }
   }
   return f
 }
@@ -87,7 +93,7 @@ async function main() {
   const flags = parseFlags(process.argv.slice(2))
   const client = new Anthropic({ apiKey })
 
-  const scenarios = loadScenarios()
+  let scenarios = loadScenarios()
   const rubric = loadRubric()
 
   // --client=<uuid> overrides the synthetic banks: we pull one real
@@ -95,6 +101,7 @@ async function main() {
   // and run every scenario against it. This is the terminal-equivalent
   // of /admin/quality "Test a specific client" mode.
   let businesses: ReturnType<typeof loadBusinesses>
+  let generatedScenarioCostMicro = 0
   if (flags.client) {
     const { loadClientFixture } = await import('./lib/client-fixture')
     const fixture = await loadClientFixture(flags.client)
@@ -102,6 +109,22 @@ async function main() {
     console.log(`  live_prompt: ${fixture.live_prompt ? `${fixture.live_prompt.length} chars (from Retell)` : 'none - will fall back to generateAgentPrompt()'}`)
     console.log(`  live_begin_message: ${fixture.live_begin_message ? `"${fixture.live_begin_message.slice(0, 80)}${fixture.live_begin_message.length > 80 ? '...' : ''}"` : 'none'}`)
     businesses = [fixture]
+
+    // Per-client scenario generation: ask Claude to fabricate N callers
+    // tailored to THIS business (using the live prompt as context),
+    // replacing the generic service-contractor bank. ~$0.02 one-shot.
+    if (flags.generateScenarios && flags.generateScenarios > 0) {
+      const { generateScenariosForClient } = await import('./lib/generate-scenarios')
+      console.log(`generating ${flags.generateScenarios} client-tailored scenarios via Claude...`)
+      const gen = await generateScenariosForClient(client, fixture, flags.generateScenarios)
+      generatedScenarioCostMicro = gen.cost_micro
+      console.log(`  ✓ generated ${gen.scenarios.length} scenarios ($${(gen.cost_micro / 1_000_000).toFixed(3)})`)
+      for (const s of gen.scenarios) console.log(`    - ${s.id}: ${s.label}`)
+      scenarios = gen.scenarios
+      // Stash the generated scenarios into a side-file for later review.
+      // Done after runDir is created (see below), via a closure.
+      ;(globalThis as any).__generatedScenarios = gen.scenarios
+    }
   } else {
     businesses = loadBusinesses()
   }
@@ -124,6 +147,10 @@ async function main() {
   const timestamp = startedAt.replace(/[:.]/g, '-')
   const runDir = join(new URL('.', import.meta.url).pathname, 'runs', timestamp)
   mkdirSync(runDir, { recursive: true })
+  const stashedScenarios = (globalThis as any).__generatedScenarios
+  if (Array.isArray(stashedScenarios) && stashedScenarios.length > 0) {
+    writeFileSync(join(runDir, 'generated-scenarios.json'), JSON.stringify(stashedScenarios, null, 2))
+  }
 
   // Supabase progress reporting. Optional - if either env var is missing
   // we just skip and write to disk only. Admin UI reads from these tables.

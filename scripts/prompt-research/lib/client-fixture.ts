@@ -126,7 +126,7 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
         address: fullAddress || undefined,
         website: undefined,
         categories: b.business_type ? [b.business_type] : [],
-        service_areas: serviceArea.length ? serviceArea : undefined,
+        service_area: serviceArea.length ? serviceArea : undefined,
         hours: parseHours(b.business_hours),
       },
       services: {
