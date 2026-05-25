@@ -169,13 +169,13 @@ export default function QualityPage() {
  const latest = runs[0] || null
  const activeRun = runs.find((r) => r.status === 'running') || null
 
- const handleStart = async (mode: 'smoke' | 'full' | 'client', businessId?: string) => {
+ const handleStart = async (mode: 'smoke' | 'full' | 'client', businessId?: string, runner: 'web' | 'local' = 'web') => {
   // Don't catch here - the modal awaits this and uses the thrown
   // error to reset its busy state and display the message inline.
   // Swallowing it locks the button on "Starting..." forever (the
   // outer setErr is hidden behind the modal anyway).
   setErr('')
-  const body: Record<string, unknown> = { mode }
+  const body: Record<string, unknown> = { mode, runner }
   if (mode === 'client' && businessId) body.business_id = businessId
   const r = await fetchWithAuth('/api/admin/quality/start', {
    method: 'POST',
@@ -986,7 +986,7 @@ function RunModal({
  onClose, onStart, activeRun,
 }: {
  onClose: () => void
- onStart: (mode: 'smoke' | 'full' | 'client', businessId?: string) => Promise<void>
+ onStart: (mode: 'smoke' | 'full' | 'client', businessId?: string, runner?: 'web' | 'local') => Promise<void>
  activeRun: Run | null
 }) {
  const [busy, setBusy] = useState<'smoke' | 'full' | 'client' | null>(null)
@@ -995,6 +995,17 @@ function RunModal({
  const [clients, setClients] = useState<ClientOption[]>([])
  const [clientQuery, setClientQuery] = useState('')
  const [pickedClientId, setPickedClientId] = useState<string | null>(null)
+ // Persist runner preference across modal opens. Default to local once
+ // they've used it - they almost certainly want it again.
+ const [useLocalRunner, setUseLocalRunner] = useState<boolean>(() => {
+  if (typeof window === 'undefined') return false
+  return window.localStorage.getItem('cg.quality.runner') === 'local'
+ })
+ useEffect(() => {
+  if (typeof window !== 'undefined') {
+   window.localStorage.setItem('cg.quality.runner', useLocalRunner ? 'local' : 'web')
+  }
+ }, [useLocalRunner])
 
  useEffect(() => {
   if (tab !== 'client' || activeRun) return
@@ -1018,7 +1029,7 @@ function RunModal({
   setBusy(mode)
   setError('')
   try {
-   await onStart(mode, pickedClientId || undefined)
+   await onStart(mode, pickedClientId || undefined, useLocalRunner ? 'local' : 'web')
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to start')
    setBusy(null)
@@ -1062,7 +1073,7 @@ function RunModal({
      </div>
     ) : (
      <>
-      <div className="px-6 pt-4">
+      <div className="px-6 pt-4 space-y-3">
        <div className="inline-flex rounded-lg border border-white/[0.08] bg-white/[0.02] p-0.5">
         <TabButton active={tab === 'synthetic'} onClick={() => setTab('synthetic')}>
          Test the generator
@@ -1071,6 +1082,34 @@ function RunModal({
          Test a specific client
         </TabButton>
        </div>
+
+       <button
+        type="button"
+        onClick={() => setUseLocalRunner((v) => !v)}
+        className={`w-full text-left rounded-xl border px-3 py-2.5 flex items-start gap-3 transition-colors ${
+         useLocalRunner
+          ? 'border-emerald-400/30 bg-emerald-500/[0.05]'
+          : 'border-white/[0.08] bg-white/[0.02] hover:border-white/[0.14]'
+        }`}
+       >
+        <div
+         className={`mt-0.5 w-4 h-4 rounded-md border flex items-center justify-center flex-shrink-0 transition-colors ${
+          useLocalRunner ? 'border-emerald-400 bg-emerald-400' : 'border-white/30'
+         }`}
+        >
+         {useLocalRunner && <span className="block w-2 h-2 bg-[#0c0c10] rounded-sm" />}
+        </div>
+        <div className="min-w-0">
+         <div className="text-xs font-medium text-white">
+          {useLocalRunner ? 'Run on my laptop (local runner)' : 'Run on the website (Vercel)'}
+         </div>
+         <div className="text-[11px] text-gray-500 leading-relaxed mt-0.5">
+          {useLocalRunner
+           ? 'Make sure `npm run quality:runner` is running in a terminal. Your laptop will pick this up within ~5s. No Vercel timeouts, no chain hops.'
+           : 'Uses Vercel functions. Can stall on long runs because each pair is rate-limited and chains hop through 30s function calls.'}
+         </div>
+        </div>
+       </button>
       </div>
 
       {tab === 'synthetic' && (

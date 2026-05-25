@@ -19,6 +19,7 @@
     "test:e2e": "playwright test",
     "test:integration": "jest --testPathPattern=integration",
     "synthetic:registration": "node scripts/monitor-registration.js",
+    "quality:runner": "npx tsx --env-file=.env.local scripts/prompt-research/runner.ts",
     "seed:tollfree": "node scripts/seed-toll-free-numbers.js",
     "seed:demo": "node scripts/seed-demo-data.js",
     "test:ui": "vitest --ui",

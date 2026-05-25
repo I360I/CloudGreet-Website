@@ -42,8 +42,10 @@ export async function POST(request: NextRequest) {
     only?: string
     business?: string
     business_id?: string
+    runner?: 'web' | 'local'
   }
   const mode = body.mode || 'smoke'
+  const runner = body.runner === 'local' ? 'local' : 'web'
 
   // Refuse if another run is in flight - keeps cost predictable and
   // avoids overlapping inserts into prompt_eval_results.
@@ -88,6 +90,7 @@ export async function POST(request: NextRequest) {
       business_id: body.business_id,
       business_name: clientFixture.context.business.name,
       client_fixture: clientFixture,
+      runner,
     }
   } else {
     const businesses = loadBusinesses()
@@ -97,7 +100,7 @@ export async function POST(request: NextRequest) {
     if (mode === 'smoke') mx = mx.slice(0, 10)
     if (mode === 'custom' && body.limit) mx = mx.slice(0, body.limit)
     matrix = mx
-    meta = { source: 'synthetic', mode }
+    meta = { source: 'synthetic', mode, runner }
   }
 
   if (matrix.length === 0) {
@@ -129,11 +132,13 @@ export async function POST(request: NextRequest) {
   }
   const runId = (run as any).id as string
 
-  // Fire-and-forget the first /process invocation. Synchronous kick so
-  // /start can respond before the chain's first hop.
-  kickProcess(request, runId)
+  // Local runs are picked up by the local runner daemon polling
+  // Supabase - we do NOT kick the Vercel chain in that case.
+  if (runner === 'web') {
+    kickProcess(request, runId)
+  }
 
-  logger.info('quality eval started', { runId, totalPairs: matrix.length, mode })
+  logger.info('quality eval started', { runId, totalPairs: matrix.length, mode, runner })
   return NextResponse.json({ success: true, run_id: runId, total_pairs: matrix.length })
 }
 
