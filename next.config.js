@@ -29,6 +29,12 @@ const nextConfig = {
     outputFileTracingIncludes: {
       '/api/admin/quality/**': [
         './scripts/prompt-research/banks/**/*',
+        // The Failure-Reading Agent reads these three files off disk
+        // to feed the analyst as context. Without explicit tracing
+        // Vercel doesn't bundle them and analyze 500s with ENOENT.
+        './lib/agent-builder/v21-system-prompt.ts',
+        './lib/agent-builder/universal-layer.ts',
+        './lib/agent-builder/generate.ts',
       ],
     },
   },
