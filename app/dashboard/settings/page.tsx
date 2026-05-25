@@ -1490,12 +1490,38 @@ function ReviewRequestsSection() {
      tone: 'ok',
      text: `Full pipeline OK: row queued, cron logic ran, SMS sent to ${j.sent_to}. Check Activity below - the count just went up.`,
     })
-    // Refresh stats so the user sees the queued/sent counts move.
     load()
    }
   } finally {
    setTesting(false)
    setTimeout(() => setTestResult(null), 15000)
+  }
+ }
+
+ const testOptOut = async (clear = false) => {
+  setTesting(true); setTestResult(null)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/review-requests/test-opt-out', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: testPhone, clear }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.success) {
+    setTestResult({ tone: 'err', text: j?.error || 'Opt-out test failed' })
+   } else if (clear) {
+    setTestResult({ tone: 'ok', text: `Cleared opt-out for ${j.cleared}. The phone can receive review SMS again.` })
+   } else {
+    const tCancel = (j.telnyx_messages_canceled || []).length
+    setTestResult({
+     tone: 'ok',
+     text: `Opt-out registered for ${j.phone_normalised}. ${j.canceled_count} pending review(s) canceled${tCancel > 0 ? `, ${tCancel} Telnyx scheduled message(s) recalled` : ''}. Future review SMS to this number will be blocked. Tap "Clear opt-out" to undo.`,
+    })
+    load()
+   }
+  } finally {
+   setTesting(false)
+   setTimeout(() => setTestResult(null), 20000)
   }
  }
 
@@ -1662,6 +1688,24 @@ function ReviewRequestsSection() {
        title={!enabled ? 'Turn the toggle on first' : !reviewUrl.trim() ? 'Add a Google review link above first' : 'Inserts a real queued row + runs the cron-send logic on it'}
       >
        {testing ? 'Working…' : 'Run full pipeline'}
+      </button>
+     </div>
+     <div className="flex flex-col sm:flex-row gap-2 mt-2">
+      <button
+       onClick={() => testOptOut(false)}
+       disabled={testing || !testPhone.trim()}
+       className="flex-1 inline-flex items-center justify-center gap-2 bg-white hover:bg-rose-50 border border-rose-200 text-rose-700 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+       title="Simulates the customer texting STOP. Adds the phone to your opt-out list and cancels any pending sends."
+      >
+       Simulate STOP
+      </button>
+      <button
+       onClick={() => testOptOut(true)}
+       disabled={testing || !testPhone.trim()}
+       className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-600 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+       title="Removes this phone from the opt-out list so it can receive review SMS again."
+      >
+       Clear opt-out
       </button>
      </div>
      {testResult && (

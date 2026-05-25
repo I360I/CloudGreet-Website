@@ -83,6 +83,40 @@ export async function GET(request: NextRequest) {
     recentSends = (data || []) as any
   } catch { /* ok */ }
 
+  // Pull the messaging profile from Telnyx and surface its currently-
+  // configured inbound webhook URL. If this doesn't match
+  // expected_webhooks.inbound_sms, STOP keywords will never reach us
+  // and opt-outs silently break. Cheap one-shot API call.
+  let messaging_profile_state: {
+    configured_inbound_url: string | null
+    matches_expected: boolean | null
+    error: string | null
+  } = { configured_inbound_url: null, matches_expected: null, error: null }
+  if (process.env.TELNYX_API_KEY && process.env.TELNYX_MESSAGING_PROFILE_ID) {
+    try {
+      const res = await fetch(
+        `https://api.telnyx.com/v2/messaging_profiles/${process.env.TELNYX_MESSAGING_PROFILE_ID}`,
+        { headers: { Authorization: `Bearer ${process.env.TELNYX_API_KEY}` } },
+      )
+      if (res.ok) {
+        const j = await res.json() as any
+        const url = j?.data?.webhook_url || null
+        messaging_profile_state = {
+          configured_inbound_url: url,
+          matches_expected: typeof url === 'string'
+            && url.replace(/\/$/, '') === `${baseUrl}/api/telnyx/sms-webhook`.replace(/\/$/, ''),
+          error: null,
+        }
+      } else {
+        messaging_profile_state.error = `Telnyx returned ${res.status}`
+      }
+    } catch (e) {
+      messaging_profile_state.error = e instanceof Error ? e.message : 'unknown'
+    }
+  } else {
+    messaging_profile_state.error = 'TELNYX_API_KEY or TELNYX_MESSAGING_PROFILE_ID not set'
+  }
+
   return NextResponse.json({
     success: true,
     env,
@@ -90,6 +124,7 @@ export async function GET(request: NextRequest) {
       inbound_sms: `${baseUrl}/api/telnyx/sms-webhook`,
       voice: `${baseUrl}/api/telnyx/voice-webhook`,
     },
+    messaging_profile_state,
     activity: {
       recent_opt_outs: recentOptOuts,
       recent_send_failures: recentFailures,
