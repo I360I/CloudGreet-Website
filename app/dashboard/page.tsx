@@ -313,7 +313,7 @@ export default function DashboardPage() {
        initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
        className="grid md:grid-cols-2 gap-3 scroll-mt-20"
       >
-       <div id="calls" className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px] scroll-mt-20">
+       <div id="calls" className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px] max-h-[640px] scroll-mt-20">
         <div className="px-6 pt-5 pb-4 border-b border-gray-100">
          <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -375,7 +375,7 @@ export default function DashboardPage() {
         </div>
        </div>
 
-       <div id="appointments" className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px] scroll-mt-20">
+       <div id="appointments" className="bg-white border border-gray-200 rounded-2xl overflow-hidden flex flex-col min-h-[440px] max-h-[640px] scroll-mt-20">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
          <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
           <Calendar className="w-4 h-4 text-sky-500" /> Today&apos;s bookings
