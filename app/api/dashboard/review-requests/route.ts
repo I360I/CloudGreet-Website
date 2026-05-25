@@ -16,12 +16,13 @@ const VALID_TIMINGS = new Set(['1h_after', 'evening_same_day', 'next_morning'])
 const TEMPLATE_MAX = 320
 
 /**
- * Loose Google review URL check. We accept anything that points at one
- * of Google's review surfaces. Doesn't guarantee the URL works - just
- * stops obvious mistakes (random https URLs, missing protocol, etc).
+ * Loose review URL check. Originally locked to Google review surfaces
+ * but contractors legitimately use Yelp, Facebook, BBB, NextDoor,
+ * Trustpilot, Angi, etc. - and rideshare/restaurant clients may not
+ * have a Google profile at all. We now accept any https URL; the
+ * downstream SMS template just inlines whatever they paste. Server
+ * still enforces https so we don't ship http: links in marketing SMS.
  */
-const GOOGLE_REVIEW_HOSTS_RE =
-  /^https:\/\/(g\.page|search\.google\.com|maps\.google\.com|maps\.app\.goo\.gl|www\.google\.com\/maps|goo\.gl)/i
 
 /**
  * GET  → returns the contractor's current review-request settings
@@ -90,15 +91,8 @@ export async function PATCH(request: NextRequest) {
 
   if (typeof body.google_review_url === 'string') {
     const trimmed = body.google_review_url.trim()
-    if (trimmed) {
-      if (!/^https:\/\//i.test(trimmed)) {
-        return NextResponse.json({ error: 'review URL must start with https://' }, { status: 400 })
-      }
-      if (!GOOGLE_REVIEW_HOSTS_RE.test(trimmed)) {
-        return NextResponse.json({
-          error: "That doesn't look like a Google review link. Use the URL from Google Business Profile → Customers → Reviews → Get more reviews (it usually starts with https://g.page/r/ or https://search.google.com/local/writereview).",
-        }, { status: 400 })
-      }
+    if (trimmed && !/^https:\/\//i.test(trimmed)) {
+      return NextResponse.json({ error: 'review URL must start with https://' }, { status: 400 })
     }
     update.google_review_url = trimmed || null
   }

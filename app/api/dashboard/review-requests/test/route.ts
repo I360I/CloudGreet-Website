@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const message = ({
       notifications_from_unset: 'SMS sender not configured. Contact support.',
       business_not_found: 'Could not find your business record.',
-      no_review_url: 'Add your Google review link in the form above before testing.',
+      no_review_url: 'Add a review link in the form above before testing (Google, Yelp, Facebook - any review page).',
       send_failed: `Telnyx rejected the send: ${result.detail || 'unknown error'}`,
     } as Record<string, string>)[result.reason] || `Send failed: ${result.reason}`
     return NextResponse.json({ success: false, error: message }, { status: 400 })

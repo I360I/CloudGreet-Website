@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
   if (!reviewUrl) {
     return NextResponse.json({
       success: false,
-      error: 'Add your Google review link above before running the dry-run.',
+      error: 'Add a review link above before running the dry-run (Google, Yelp, Facebook - any review page).',
     }, { status: 400 })
   }
   if (!(biz as any).review_requests_enabled) {

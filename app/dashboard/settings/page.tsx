@@ -1604,7 +1604,7 @@ function ReviewRequestsSection() {
 
    <div className={`space-y-5 mt-5 ${dim ? 'opacity-50 pointer-events-none' : ''}`}>
     <div>
-     <label className="block text-xs font-medium text-gray-700 mb-1.5">Your Google review link</label>
+     <label className="block text-xs font-medium text-gray-700 mb-1.5">Your review link</label>
      <input
       type="url"
       value={reviewUrl}
@@ -1613,7 +1613,7 @@ function ReviewRequestsSection() {
       className="w-full bg-white border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors font-mono"
      />
      <p className="text-[11px] text-gray-500 mt-1">
-      Get this from <a href="https://www.google.com/business/" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline">Google Business Profile</a> → Customers → Reviews → &quot;Get more reviews&quot;.
+      Any review page works - <a href="https://www.google.com/business/" target="_blank" rel="noopener noreferrer" className="text-sky-600 hover:underline">Google</a>, Yelp, Facebook, BBB, your own site. Most contractors use the Google one (Google Business Profile → Customers → Reviews → &quot;Get more reviews&quot;).
      </p>
     </div>
 
@@ -1704,7 +1704,7 @@ function ReviewRequestsSection() {
        onClick={sendTest}
        disabled={testing || !testPhone.trim() || !reviewUrl.trim()}
        className="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
-       title={!reviewUrl.trim() ? 'Add a Google review link above first' : ''}
+       title={!reviewUrl.trim() ? 'Add a review link above first' : ''}
       >
        {testing ? 'Working…' : 'Send test'}
       </button>
@@ -1712,7 +1712,7 @@ function ReviewRequestsSection() {
        onClick={dryRun}
        disabled={testing || !testPhone.trim() || !reviewUrl.trim() || !enabled}
        className="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
-       title={!enabled ? 'Turn the toggle on first' : !reviewUrl.trim() ? 'Add a Google review link above first' : 'Inserts a real queued row + runs the cron-send logic on it'}
+       title={!enabled ? 'Turn the toggle on first' : !reviewUrl.trim() ? 'Add a review link above first' : 'Inserts a real queued row + runs the cron-send logic on it'}
       >
        {testing ? 'Working…' : 'Run full pipeline'}
       </button>
