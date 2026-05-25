@@ -108,17 +108,47 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, ignored: 'event not tracked', eventType })
   }
 
-  // Upsert keyed by telnyx_call_id. The frontend dialer also writes
-  // with the same id, so duplicate inserts are silently merged.
-  const { data: existing } = await supabaseAdmin
+  // Try multiple lookup paths because the browser SDK and the Call
+  // Control webhook produce DIFFERENT id formats for the same call:
+  //   - Browser SDK exposes `call.id` (v3:... or sdk-internal)
+  //   - Webhook payload has call_control_id (UUID) + call_session_id
+  // Without dedup we'd double-count every dial (one row per source).
+  //
+  // 1) Direct hit on telnyx_call_id (subsequent webhook events).
+  // 2) Otherwise: find the orphan ringing row the browser inserted
+  //    matching from + to + last 60s, then adopt it (overwrite its
+  //    telnyx_call_id with the canonical webhook id).
+  let existing: { id: string; status: string | null } | null = null
+  const direct = await supabaseAdmin
     .from('rep_calls')
     .select('id, status')
     .eq('telnyx_call_id', callId)
     .maybeSingle()
+  if ((direct.data as any)?.id) {
+    existing = direct.data as any
+  } else {
+    const sinceIso = new Date(Date.now() - 60_000).toISOString()
+    const { data: orphans } = await supabaseAdmin
+      .from('rep_calls')
+      .select('id, status, telnyx_call_id, started_at')
+      .eq('from_number', fromNumber)
+      .eq('to_number', payload?.to || '')
+      .gte('started_at', sinceIso)
+      .order('started_at', { ascending: false })
+      .limit(1)
+    const orphan = (orphans || [])[0] as any
+    if (orphan?.id) {
+      // Adopt the browser-inserted placeholder. Overwrite its
+      // telnyx_call_id so future events for this call match directly.
+      await supabaseAdmin
+        .from('rep_calls')
+        .update({ telnyx_call_id: callId })
+        .eq('id', orphan.id)
+      existing = { id: orphan.id, status: orphan.status }
+    }
+  }
 
   if (existing?.id) {
-    // Only forward-progress updates. Don't downgrade in_progress back
-    // to ringing if events arrive out of order.
     if (shouldApplyTransition(existing.status, update.status)) {
       await supabaseAdmin
         .from('rep_calls')
