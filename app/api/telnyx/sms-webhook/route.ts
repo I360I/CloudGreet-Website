@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/monitoring'
 import { markPhoneOptedOut } from '@/lib/review-requests'
+import { supabaseAdmin } from '@/lib/supabase'
+import { handleInboundSms } from '@/lib/sms-agent'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -42,6 +44,13 @@ export async function POST(request: NextRequest) {
     const payload = body?.data?.payload || body?.payload || body
     const fromNumber: string | undefined =
       payload?.from?.phone_number || payload?.from || undefined
+    // Telnyx wraps `to` as an array of {phone_number, status}. The first
+    // entry is the recipient that fired this webhook event.
+    const toRaw = payload?.to
+    const toNumber: string | undefined =
+      typeof toRaw === 'string' ? toRaw
+      : Array.isArray(toRaw) ? (toRaw[0]?.phone_number || toRaw[0])
+      : (toRaw?.phone_number)
     const text: string =
       typeof payload?.text === 'string' ? payload.text :
       typeof payload?.body === 'string' ? payload.body : ''
@@ -50,19 +59,59 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true })
     }
 
-    // Normalize: trim, uppercase, strip punctuation, take first word.
+    // STOP / opt-out keyword - always processed first, regardless of
+    // which business number received it. Keeps compliance reliable
+    // even if the business-routing lookup misses.
     const firstWord = text.trim().toUpperCase().replace(/[^A-Z0-9]+/g, ' ').split(/\s+/)[0]
-    if (!firstWord) return NextResponse.json({ received: true })
-
-    if (OPT_OUT_KEYWORDS.has(firstWord)) {
+    if (firstWord && OPT_OUT_KEYWORDS.has(firstWord)) {
       try {
         await markPhoneOptedOut(fromNumber, 'stop_keyword')
         logger.info('opt-out registered', { phone: fromNumber, keyword: firstWord })
       } catch (e) {
         logger.warn('opt-out mark failed', {
-          phone: fromNumber,
-          error: e instanceof Error ? e.message : 'Unknown',
+          phone: fromNumber, error: e instanceof Error ? e.message : 'Unknown',
         })
+      }
+      // Telnyx auto-replies with the compliance confirmation. Don't
+      // also fire the business agent for a STOP message.
+      return NextResponse.json({ received: true })
+    }
+
+    // If the message hit a business's CloudGreet SMS number (sms_phone_number
+    // when set, otherwise the same number their voice agent listens on),
+    // route to the SMS agent so customers can text to get a quote / dispatch.
+    if (toNumber) {
+      // .or() with two equality predicates - Telnyx-owned SMS DIDs
+      // typically differ from the Retell-managed voice DID, so we
+      // check both columns.
+      const { data: biz } = await supabaseAdmin
+        .from('businesses')
+        .select('id, sms_agent_enabled')
+        .or(`sms_phone_number.eq.${toNumber},phone_number.eq.${toNumber}`)
+        .limit(1)
+        .maybeSingle()
+      if ((biz as any)?.id) {
+        // Default: SMS agent ON for any business with dispatch_mode
+        // already enabled, OR explicitly enabled via the column.
+        // The column is checked below for non-dispatch businesses.
+        const enabled = (biz as any).sms_agent_enabled !== false
+        if (enabled) {
+          // Fire and forget - return 200 to Telnyx immediately to stay
+          // well under their ~10s timeout while the agent runs. Errors
+          // from the agent are logged but don't 5xx upstream.
+          handleInboundSms({
+            businessId: (biz as any).id,
+            fromPhone: fromNumber,
+            toPhone: toNumber,
+            body: text,
+          }).catch((e) => {
+            logger.error('sms-agent: handleInboundSms threw', {
+              businessId: (biz as any).id,
+              error: e instanceof Error ? e.message : 'unknown',
+            })
+          })
+          return NextResponse.json({ received: true, routed: 'sms_agent' })
+        }
       }
     }
 
