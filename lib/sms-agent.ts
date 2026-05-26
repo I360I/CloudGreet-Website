@@ -58,9 +58,65 @@ const TOOLS: Anthropic.Messages.Tool[] = [
     },
   },
   {
+    name: 'lookup_availability',
+    description:
+      "Look up open appointment slots on the business's Cal.com calendar. Use to confirm a requested pickup time is actually available before booking. No args = next 7 days; pass `date` (YYYY-MM-DD) to scope to one day.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: "Optional ISO date (YYYY-MM-DD) to scope to one day." },
+        duration: { type: 'number', description: 'Optional appointment length in minutes. Default 60.' },
+      },
+    },
+  },
+  {
+    name: 'book_appointment',
+    description:
+      "Books an appointment on the business's calendar (Cal.com event + DB row, owner notification SMS). Use for customers scheduling FAR ahead (next day or later) when send_dispatch_request isn't appropriate. Pull name + phone + service + datetime (ISO-8601 with timezone offset) from the conversation. For SmartRide, prefer send_dispatch_request unless the customer specifically wants a calendar booking.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: "Customer's name." },
+        phone: { type: 'string', description: 'Customer phone in E.164. Defaults to the SMS sender if omitted.' },
+        service: { type: 'string', description: 'Short trip description, e.g., "Airport pickup CMH to OhioHealth".' },
+        datetime: { type: 'string', description: 'ISO-8601 start time WITH timezone offset, e.g., "2026-05-27T16:00:00-04:00".' },
+        review_consent: { type: 'boolean', description: 'true if the customer agreed to a post-trip review request text.' },
+        is_emergency: { type: 'boolean', description: 'true for emergencies. Default false.' },
+      },
+      required: ['name', 'phone', 'service', 'datetime'],
+    },
+  },
+  {
+    name: 'cancel_appointment',
+    description:
+      "Cancels the customer's existing appointment. Looks up their most recent upcoming booking by phone. Confirm the appointment details with the customer in text BEFORE calling this.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        phone: { type: 'string', description: 'Customer phone in E.164. Defaults to the SMS sender if omitted.' },
+        reason: { type: 'string', description: 'Optional cancellation reason.' },
+      },
+      required: ['phone'],
+    },
+  },
+  {
+    name: 'reschedule_appointment',
+    description:
+      "Moves the customer's existing appointment to a new time. Call lookup_availability FIRST. Confirm the new time with the customer in text before firing this.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        phone: { type: 'string', description: 'Customer phone in E.164. Defaults to the SMS sender if omitted.' },
+        new_datetime: { type: 'string', description: 'New ISO-8601 start time with timezone offset.' },
+        reason: { type: 'string' },
+      },
+      required: ['phone', 'new_datetime'],
+    },
+  },
+  {
     name: 'send_dispatch_request',
     description:
-      "Text the owner a summary of an immediate-pickup request so they can call/text back to confirm. Use this for 'right now' or 'in the next couple hours' requests. Don't book a ride yourself - the owner does that after accepting.",
+      "Text the owner a summary of an immediate-pickup or near-term request so they can call/text the customer back to confirm. Use this for SmartRide's typical flow - the owner doesn't use a calendar. Don't book a ride yourself.",
     input_schema: {
       type: 'object',
       properties: {
@@ -188,6 +244,7 @@ export async function handleInboundSms(args: {
         name: tu.name,
         args: tu.input || {},
         businessId: args.businessId,
+        retellAgentId: (biz as any).retell_agent_id || null,
         customerPhone: fromPhone,
       })
       collectedToolCalls.push({ name: tu.name, args: tu.input, result })
@@ -298,24 +355,31 @@ QUOTING RULES:
 - For distance rides: call lookup_drive_time FIRST to get miles + origin county.
 - For hourly: ask how many hours, then call compute_quote.
 
-DISPATCH FLOW (when caller wants a ride NOW or in the next couple hours):
-- Don't try to "book" anything. Gather: name, pickup, dropoff, when, party size.
+DISPATCH FLOW (DEFAULT for SmartRide - any ride happening today or in the next few hours):
+- Don't try to "book" anything in a calendar. Gather: name, pickup, dropoff, when, party size.
 - Call send_dispatch_request with the trip details.
 - Tell the customer Steve will text/call them shortly to confirm + give the exact ETA.
 
-SCHEDULING AHEAD (more than ~2 hours out):
-- Get the same details + the pickup time.
-- Use send_dispatch_request - SmartRide doesn't book through a calendar; Steve confirms personally.
+CALENDAR BOOKING FLOW (only when the customer explicitly wants a scheduled booking ahead of time):
+- Call lookup_availability to confirm the requested time is open.
+- Confirm name + phone + service + datetime with the customer in text.
+- Call book_appointment with ISO-8601 datetime + offset (e.g., "2026-05-28T15:00:00-04:00").
+- For SmartRide specifically: this is rare - most rides go through send_dispatch_request.
+
+CHANGES TO EXISTING BOOKINGS:
+- Cancel: confirm details with the customer, then call cancel_appointment (it looks up by phone).
+- Reschedule: call lookup_availability for the new time first, confirm both old and new with the customer, then reschedule_appointment.
 
 WHAT YOU CAN DO:
 - Quote a price (lookup_drive_time + compute_quote)
 - Send Steve a dispatch request (send_dispatch_request)
+- Check calendar availability (lookup_availability)
+- Book / cancel / reschedule calendar appointments
 - Answer simple service questions (what kind of rides, service area, etc.)
 
 WHAT YOU CAN'T DO:
-- You can't actually book or guarantee a ride - only Steve confirms.
 - You can't process payments.
-- You can't accept changes to existing bookings - tell them to text/call Steve directly.
+- You can't override or change Steve's pricing.
 
 EXAMPLE FLOWS:
 
@@ -337,37 +401,88 @@ async function runTool(args: {
   name: string
   args: Record<string, any>
   businessId: string
+  retellAgentId: string | null
   customerPhone: string
 }): Promise<any> {
-  switch (args.name) {
-    case 'lookup_drive_time': {
-      const r = await lookupDriveTime({
-        origin: args.args.origin,
-        destination: args.args.destination,
-        departure_time: args.args.departure_time,
-      })
-      return r
+  // Pure-function tools handled inline - no need for an HTTP round-trip.
+  if (args.name === 'lookup_drive_time') {
+    return await lookupDriveTime({
+      origin: args.args.origin,
+      destination: args.args.destination,
+      departure_time: args.args.departure_time,
+    })
+  }
+  if (args.name === 'compute_quote') {
+    return computeQuote(args.args as any)
+  }
+  if (args.name === 'send_dispatch_request') {
+    return await sendDispatchRequest({
+      businessId: args.businessId,
+      customerName: String(args.args.customer_name || 'Customer'),
+      customerPhone: String(args.args.customer_phone || args.customerPhone),
+      pickup: String(args.args.pickup || ''),
+      dropoff: args.args.dropoff ? String(args.args.dropoff) : undefined,
+      partySize: typeof args.args.party_size === 'number' ? args.args.party_size : undefined,
+      requestedTime: String(args.args.requested_time || ''),
+      notes: args.args.notes ? String(args.args.notes) : undefined,
+    })
+  }
+
+  // Everything else (book_appointment, cancel, reschedule, lookup_
+  // availability) routes through the existing voice-webhook tool
+  // handlers via internal HTTP. The voice-webhook resolves the
+  // business by metadata.agent_id and runs the full Cal.com +
+  // notification side-effect chain - same code that runs for voice
+  // calls, so SMS gets exact parity for free.
+  const allowedViaWebhook = new Set([
+    'book_appointment', 'cancel_appointment', 'reschedule_appointment',
+    'lookup_availability',
+  ])
+  if (!allowedViaWebhook.has(args.name)) {
+    return { ok: false, error: 'unknown_tool', detail: args.name }
+  }
+
+  // Inject the SMS sender as the default phone so cancel/reschedule
+  // can resolve the customer's existing booking without the agent
+  // having to extract a phone from the chat.
+  const argsWithDefaults: Record<string, any> = { ...args.args }
+  if (!argsWithDefaults.phone) argsWithDefaults.phone = args.customerPhone
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    || process.env.NEXT_PUBLIC_BASE_URL
+    || 'https://cloudgreet.com'
+
+  try {
+    const res = await fetch(`${appUrl}/api/retell/voice-webhook`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-cg-internal-channel': 'sms',
+      },
+      body: JSON.stringify({
+        tool_call: { name: args.name, arguments: argsWithDefaults },
+        call: {
+          agent_id: args.retellAgentId || '',
+          from_number: args.customerPhone,
+        },
+        metadata: {
+          agent_id: args.retellAgentId || '',
+          business_id: args.businessId,
+          channel: 'sms',
+        },
+      }),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      return { ok: false, error: 'tool_http_error', detail: `${res.status}: ${JSON.stringify(j).slice(0, 200)}` }
     }
-    case 'compute_quote': {
-      return computeQuote(args.args as any)
-    }
-    case 'send_dispatch_request': {
-      // Default customer_phone to the inbound sender if the agent
-      // omits it. Default customer_name to "Customer" when unknown.
-      const r = await sendDispatchRequest({
-        businessId: args.businessId,
-        customerName: String(args.args.customer_name || 'Customer'),
-        customerPhone: String(args.args.customer_phone || args.customerPhone),
-        pickup: String(args.args.pickup || ''),
-        dropoff: args.args.dropoff ? String(args.args.dropoff) : undefined,
-        partySize: typeof args.args.party_size === 'number' ? args.args.party_size : undefined,
-        requestedTime: String(args.args.requested_time || ''),
-        notes: args.args.notes ? String(args.args.notes) : undefined,
-      })
-      return r
-    }
-    default:
-      return { ok: false, error: 'unknown_tool', detail: args.name }
+    return j
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : 'unknown'
+    logger.warn('sms-agent: voice-webhook tool call failed', {
+      tool: args.name, error: detail,
+    })
+    return { ok: false, error: 'network_error', detail }
   }
 }
 
