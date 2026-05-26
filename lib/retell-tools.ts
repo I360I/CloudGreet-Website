@@ -296,16 +296,67 @@ export function getRetellGeneralTools(
       },
     })
 
+    // SmartRide pricing engine. Deterministic quote calculation so the
+    // agent doesn't try to do tax + per-mile + surcharge math in its
+    // head (and get it wrong on a recorded sales call). Returns final
+    // dollar amount the agent can read back exactly. SmartRide-specific
+    // for now - the price sheet, county tax table, and time surcharges
+    // are hardcoded in the webhook handler. When a second rideshare
+    // client onboards we'll lift this into a per-business config.
+    tools.push({
+      type: 'custom',
+      name: 'compute_quote',
+      description:
+        "Calculates the EXACT dollar amount to quote the caller, including county sales tax and any late-night/early-morning surcharge. ALWAYS call this before quoting a price - don't do the math yourself. Inputs depend on service_type: distance-priced services (airport / point-to-point) need miles (call lookup_drive_time first); hourly services need hours. Returns total_dollars + a spoken_summary you can read back.",
+      url: webhookUrl,
+      speak_during_execution: true,
+      speak_after_execution: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          service_type: {
+            type: 'string',
+            description: "One of: airport_dropoff, airport_pickup, point_to_point, hourly_event, independent_living. Use point_to_point for any non-airport transfer (the system auto-applies the over-50-mile discount).",
+          },
+          miles: {
+            type: 'number',
+            description: 'Distance in miles. REQUIRED for distance-priced services. Pull this from a prior lookup_drive_time call - do not estimate.',
+          },
+          hours: {
+            type: 'number',
+            description: 'Hours of service. REQUIRED for hourly_event (2 hr minimum) and independent_living. Whole or half hours.',
+          },
+          pickup_hour_24: {
+            type: 'number',
+            description: 'Pickup time hour in 24-hour format (0-23). Used to apply the late-night/early-morning surcharge. e.g., 2 for 2 AM, 14 for 2 PM, 23 for 11 PM.',
+          },
+          pickup_minute: {
+            type: 'number',
+            description: 'Optional. Pickup time minute (0-59). Defaults to 0. Important for the 5:30 AM and 6:45 AM surcharge boundaries.',
+          },
+          origin_county: {
+            type: 'string',
+            description: "Origin county name WITHOUT the word 'County' - one of: Franklin, Delaware, Licking, Fairfield, Madison, Pickaway, Union, Morrow. Pull from lookup_drive_time's origin_county field. If unknown, omit and the quote skips tax (tell the caller tax will be added at booking).",
+          },
+          cmh_airport: {
+            type: 'boolean',
+            description: "true if the pickup OR dropoff is CMH (John Glenn Columbus Airport) - adds the $4.50 airport fee. False for LCK (no fee). Pull from lookup_drive_time's is_airport_origin or your knowledge of the address.",
+          },
+        },
+        required: ['service_type'],
+      },
+    })
+
     // Rideshare-specific: agent needs real drive-time estimates to give
     // callers a realistic pickup ETA + total trip duration. Hits Google
-    // Maps Distance Matrix with departure_time=now and traffic_model=
-    // best_guess so the number reflects ACTUAL conditions, not a static
-    // map distance.
+    // Routes API with TRAFFIC_AWARE so the number reflects ACTUAL
+    // conditions, not a static map distance. Also returns origin
+    // county for the quote tool's tax calculation.
     tools.push({
       type: 'custom',
       name: 'lookup_drive_time',
       description:
-        "Looks up real drive time between two addresses INCLUDING current traffic. Use this during the booking flow when the caller asks how long the trip will take, or when you need to estimate a pickup ETA. Returns minutes of driving + distance in miles. Don't guess - always call this when a duration question comes up.",
+        "Looks up real drive time + distance between two addresses INCLUDING current traffic. ALSO returns origin_county and is_airport_origin which feed directly into compute_quote. Use this BEFORE compute_quote on any distance-priced ride. Don't guess miles or duration - always call this.",
       url: webhookUrl,
       speak_during_execution: true,
       speak_after_execution: true,

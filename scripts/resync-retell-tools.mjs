@@ -144,9 +144,30 @@ function buildTools({ escalationPhone, dispatchMode }) {
     })
 
     tools.push({
+      type: 'custom', name: 'compute_quote',
+      description:
+        "Calculates the EXACT dollar amount to quote the caller, including county sales tax and any late-night/early-morning surcharge. ALWAYS call this before quoting a price - don't do the math yourself. Returns total_dollars + a spoken_summary.",
+      url: webhookUrl,
+      speak_during_execution: true, speak_after_execution: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          service_type: { type: 'string', description: 'One of: airport_dropoff, airport_pickup, point_to_point, hourly_event, independent_living.' },
+          miles: { type: 'number', description: 'Distance in miles for distance-priced services. Pull from lookup_drive_time.' },
+          hours: { type: 'number', description: 'Hours of service for hourly services.' },
+          pickup_hour_24: { type: 'number', description: 'Pickup hour in 24-hour format (0-23) for the time-of-day surcharge.' },
+          pickup_minute: { type: 'number', description: 'Optional pickup minute (0-59). Defaults to 0.' },
+          origin_county: { type: 'string', description: "Origin county name without 'County'. e.g., Franklin, Delaware, Licking. Pull from lookup_drive_time.origin_county." },
+          cmh_airport: { type: 'boolean', description: 'true if pickup or dropoff is CMH (adds $4.50 fee). False for LCK.' },
+        },
+        required: ['service_type'],
+      },
+    })
+
+    tools.push({
       type: 'custom', name: 'lookup_drive_time',
       description:
-        "Looks up real drive time between two addresses INCLUDING current traffic. Use this during the booking flow when the caller asks how long the trip will take, or when you need to estimate a pickup ETA. Returns minutes of driving + distance in miles. Don't guess - always call this when a duration question comes up.",
+        "Looks up real drive time + distance between two addresses INCLUDING current traffic. ALSO returns origin_county and is_airport_origin which feed compute_quote. Call this BEFORE compute_quote on any distance-priced ride.",
       url: webhookUrl,
       speak_during_execution: true, speak_after_execution: true,
       parameters: {

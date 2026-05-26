@@ -839,11 +839,44 @@ export async function POST(request: NextRequest) {
  const miles = Math.round((distanceMeters / 1609.34) * 10) / 10
  const usedTraffic = trafficSec != null && trafficSec !== staticSec
 
+ // Geocode origin in parallel so the agent can pull the county for
+ // tax-rate calculations on the quote. Best-effort: if Geocoding
+ // API isn't enabled or the lookup fails, county comes back null
+ // and the agent falls back to asking the caller.
+ let originCounty: string | null = null
+ let originState: string | null = null
+ let isAirportOrigin = /airport|CMH|LCK|john glenn|rickenbacker/i.test(origin)
+ try {
+ const gRes = await fetch(
+ `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(origin)}&key=${apiKey}`,
+ )
+ if (gRes.ok) {
+ const gj = await gRes.json() as any
+ const comps = gj?.results?.[0]?.address_components || []
+ for (const c of comps) {
+ const types = c.types || []
+ if (types.includes('administrative_area_level_2')) {
+ originCounty = String(c.long_name || '').replace(/\s*County$/i, '').trim() || null
+ }
+ if (types.includes('administrative_area_level_1')) {
+ originState = c.short_name || null
+ }
+ }
+ const resolved = (gj?.results?.[0]?.formatted_address || '').toLowerCase()
+ if (resolved.includes('airport') || resolved.includes('cmh') || resolved.includes('lck')) {
+ isAirportOrigin = true
+ }
+ }
+ } catch { /* non-fatal */ }
+
  return NextResponse.json({
  success: true,
  minutes,
  distance_miles: miles,
  used_traffic: usedTraffic,
+ origin_county: originCounty,
+ origin_state: originState,
+ is_airport_origin: isAirportOrigin,
  spoken_summary: `${minutes} minutes${miles ? `, about ${miles} miles` : ''}${usedTraffic ? ' with current traffic' : ''}`,
  })
  } catch (e) {
@@ -855,6 +888,134 @@ export async function POST(request: NextRequest) {
  detail: detail.slice(0, 200),
  }, { status: 502 })
  }
+ }
+ case 'compute_quote': {
+ // SmartRide-specific pricing engine. Hardcoded to Steve's rate
+ // sheet (sent 2026-05-26). When a second client needs custom
+ // pricing, we'll move this into a per-business config table -
+ // for now one client, hardcoded for speed + accuracy.
+ //
+ // Returns dollar amounts as numbers so the agent can read them
+ // back exactly. LLMs are bad at multi-step math with tax +
+ // surcharges; this guarantees the quote the caller hears is
+ // the quote that lands.
+ const args = tool.arguments || {}
+ const serviceType = String(args.service_type || '').toLowerCase().replace(/[^a-z_]/g, '')
+ const miles = Number(args.miles)
+ const hours = Number(args.hours)
+ const pickupHour = Number(args.pickup_hour_24)
+ const pickupMinute = Number(args.pickup_minute || 0)
+ const originCounty = String(args.origin_county || '').trim()
+ const airportFee = !!args.cmh_airport
+ // Two flag names supported for clarity in the prompt.
+ const isCmh = !!args.cmh_airport || /cmh|john glenn/i.test(String(args.airport_code || ''))
+
+ const COUNTY_TAX: Record<string, number> = {
+ franklin: 0.0800,
+ delaware: 0.0700,
+ licking: 0.0725,
+ fairfield: 0.0675,
+ madison: 0.0700,
+ pickaway: 0.0725,
+ union: 0.0700,
+ morrow: 0.0725,
+ }
+ const taxRate = COUNTY_TAX[originCounty.toLowerCase()] ?? null
+
+ // Time-of-day surcharge based on pickup hour (24h).
+ // Each window is [start_min_of_day, end_min_of_day] in minutes.
+ const minOfDay = (h: number, m: number) => (h % 24) * 60 + (m % 60)
+ const surchargeFor = (h: number, m: number): number => {
+ if (!Number.isFinite(h)) return 0
+ const t = minOfDay(h, m)
+ // 23:00–24:00 +10%
+ if (t >= 23 * 60 && t < 24 * 60) return 0.10
+ // 00:00–02:00 +15%
+ if (t >= 0 && t < 2 * 60) return 0.15
+ // 02:00–04:00 +20%
+ if (t >= 2 * 60 && t < 4 * 60) return 0.20
+ // 04:00–05:30 +15%
+ if (t >= 4 * 60 && t < 5 * 60 + 30) return 0.15
+ // 05:30–06:45 +10%
+ if (t >= 5 * 60 + 30 && t < 6 * 60 + 45) return 0.10
+ return 0
+ }
+ const surchargeRate = surchargeFor(pickupHour, pickupMinute)
+
+ // Base price by service type.
+ let baseCents = 0
+ const lines: Array<{ label: string; cents: number }> = []
+ const note = (label: string, cents: number) => {
+ baseCents += cents
+ lines.push({ label, cents })
+ }
+
+ const svc = serviceType.replace(/[_-]/g, '')
+ if (svc === 'airportdropoff' || svc === 'airportpickup' || svc === 'pointtopoint' || svc === 'p2p' || svc === 'transfer') {
+ if (!Number.isFinite(miles) || miles <= 0) {
+ return NextResponse.json({
+ success: false, error: 'missing_miles',
+ detail: 'compute_quote needs miles for distance-priced service. Call lookup_drive_time first to get miles.',
+ }, { status: 400 })
+ }
+ // Over-50-mi transfers drop to $1.75/mi (per Steve's sheet).
+ const isOver50 = (svc === 'pointtopoint' || svc === 'p2p' || svc === 'transfer') && miles > 50
+ const ratePerMile = isOver50 ? 1.75 : 2.75
+ const distanceCents = Math.round(miles * ratePerMile * 100)
+ note(`${miles} mi @ $${ratePerMile.toFixed(2)}/mi`, distanceCents)
+ if (svc === 'airportdropoff' || svc === 'airportpickup') {
+ if (isCmh || airportFee) {
+ note('CMH airport fee', 450)
+ }
+ // LCK = no additional fee, so no line if not CMH.
+ }
+ } else if (svc === 'hourlyevent' || svc === 'event' || svc === 'hourlyservice') {
+ if (!Number.isFinite(hours) || hours < 2) {
+ return NextResponse.json({
+ success: false, error: 'minimum_hours',
+ detail: 'Hourly/Event service is 2-hour minimum at $50/hr.',
+ }, { status: 400 })
+ }
+ const hoursCents = Math.round(hours * 50 * 100)
+ note(`${hours} hr @ $50/hr (2hr min)`, hoursCents)
+ } else if (svc === 'independentliving' || svc === 'independent') {
+ // Custom step pricing: $35 hr 1, $15 hr 2, $50 each additional.
+ const h = Math.max(1, Math.floor(hours || 1))
+ if (h >= 1) note('Hour 1', 3500)
+ if (h >= 2) note('Hour 2', 1500)
+ if (h > 2) note(`Hours 3-${h} @ $50/hr`, (h - 2) * 5000)
+ } else {
+ return NextResponse.json({
+ success: false, error: 'unknown_service',
+ detail: `service_type "${args.service_type}" not recognized. Use one of: airport_dropoff, airport_pickup, point_to_point, hourly_event, independent_living.`,
+ }, { status: 400 })
+ }
+
+ const surchargeCents = Math.round(baseCents * surchargeRate)
+ if (surchargeCents > 0) {
+ const pct = Math.round(surchargeRate * 100)
+ note(`Late-night/early-morning surcharge (+${pct}%)`, surchargeCents)
+ }
+ const subtotalCents = baseCents
+ const taxCents = taxRate != null ? Math.round(subtotalCents * taxRate) : 0
+ if (taxRate != null) {
+ const pct = (taxRate * 100).toFixed(2)
+ note(`${originCounty} County sales tax (${pct}%)`, taxCents)
+ }
+ const totalCents = subtotalCents + taxCents
+ const fmt = (c: number) => `$${(c / 100).toFixed(2)}`
+
+ return NextResponse.json({
+ success: true,
+ total_dollars: Math.round(totalCents) / 100,
+ subtotal_dollars: Math.round(subtotalCents) / 100,
+ tax_dollars: Math.round(taxCents) / 100,
+ county_tax_rate: taxRate,
+ surcharge_rate: surchargeRate,
+ used_county: originCounty || null,
+ lines: lines.map((l) => ({ label: l.label, amount: fmt(l.cents) })),
+ spoken_summary: `${fmt(totalCents)} total${surchargeRate > 0 ? ` including the +${Math.round(surchargeRate * 100)}% time surcharge` : ''}${taxRate != null ? ` and ${originCounty} County tax` : ''}.`,
+ })
  }
  case 'send_dispatch_request': {
  // Dispatch flow: the agent gathers trip details and we text the
