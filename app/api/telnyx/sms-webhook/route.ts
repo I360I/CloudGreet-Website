@@ -6,6 +6,11 @@ import { handleInboundSms } from '@/lib/sms-agent'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// The SMS agent loop (Anthropic + Cal.com + Telnyx send) can take
+// 15-20s on a complex turn. Bump from default 10s. Telnyx waits for
+// up to ~30s for the webhook response before considering it failed,
+// so this still fits inside their tolerance.
+export const maxDuration = 30
 
 /**
  * Telnyx inbound SMS webhook.
@@ -91,26 +96,32 @@ export async function POST(request: NextRequest) {
         .limit(1)
         .maybeSingle()
       if ((biz as any)?.id) {
-        // Default: SMS agent ON for any business with dispatch_mode
-        // already enabled, OR explicitly enabled via the column.
-        // The column is checked below for non-dispatch businesses.
         const enabled = (biz as any).sms_agent_enabled !== false
         if (enabled) {
-          // Fire and forget - return 200 to Telnyx immediately to stay
-          // well under their ~10s timeout while the agent runs. Errors
-          // from the agent are logged but don't 5xx upstream.
-          handleInboundSms({
-            businessId: (biz as any).id,
-            fromPhone: fromNumber,
-            toPhone: toNumber,
-            body: text,
-          }).catch((e) => {
+          // Await inline. Vercel serverless terminates pending work
+          // the moment the response is sent, so fire-and-forget would
+          // silently die on every call. Telnyx's webhook timeout is
+          // ~30s, plenty of room for our ~15s tool-use loop.
+          try {
+            const result = await handleInboundSms({
+              businessId: (biz as any).id,
+              fromPhone: fromNumber,
+              toPhone: toNumber,
+              body: text,
+            })
+            return NextResponse.json({
+              received: true,
+              routed: 'sms_agent',
+              result_ok: result.ok,
+            })
+          } catch (e) {
             logger.error('sms-agent: handleInboundSms threw', {
               businessId: (biz as any).id,
               error: e instanceof Error ? e.message : 'unknown',
             })
-          })
-          return NextResponse.json({ received: true, routed: 'sms_agent' })
+            // Still 200 so Telnyx doesn't retry-storm us.
+            return NextResponse.json({ received: true, routed: 'sms_agent', error: true })
+          }
         }
       }
     }
