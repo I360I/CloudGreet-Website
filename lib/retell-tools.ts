@@ -295,6 +295,39 @@ export function getRetellGeneralTools(
         required: ['customer_name', 'customer_phone', 'pickup', 'requested_time'],
       },
     })
+
+    // Rideshare-specific: agent needs real drive-time estimates to give
+    // callers a realistic pickup ETA + total trip duration. Hits Google
+    // Maps Distance Matrix with departure_time=now and traffic_model=
+    // best_guess so the number reflects ACTUAL conditions, not a static
+    // map distance.
+    tools.push({
+      type: 'custom',
+      name: 'lookup_drive_time',
+      description:
+        "Looks up real drive time between two addresses INCLUDING current traffic. Use this during the booking flow when the caller asks how long the trip will take, or when you need to estimate a pickup ETA. Returns minutes of driving + distance in miles. Don't guess - always call this when a duration question comes up.",
+      url: webhookUrl,
+      speak_during_execution: true,
+      speak_after_execution: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          origin: {
+            type: 'string',
+            description: "Starting address as the caller gave it, or a landmark name (e.g., 'John Glenn Columbus airport', '3310 Morse Road Columbus OH', 'OhioHealth McMillen'). Plain text - Google geocodes it.",
+          },
+          destination: {
+            type: 'string',
+            description: 'Destination address or landmark name in the same plain-text format as origin.',
+          },
+          departure_time: {
+            type: 'string',
+            description: "Optional. ISO-8601 timestamp WITH offset for when the trip starts, e.g., '2026-05-26T21:00:00-04:00' for 9 PM ET. If omitted, uses 'now' (current traffic). Use a future timestamp when the caller is scheduling ahead and you want traffic for THAT time, not now.",
+          },
+        },
+        required: ['origin', 'destination'],
+      },
+    })
   }
 
   tools.push({

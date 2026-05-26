@@ -142,6 +142,23 @@ function buildTools({ escalationPhone, dispatchMode }) {
         required: ['customer_name', 'customer_phone', 'pickup', 'requested_time'],
       },
     })
+
+    tools.push({
+      type: 'custom', name: 'lookup_drive_time',
+      description:
+        "Looks up real drive time between two addresses INCLUDING current traffic. Use this during the booking flow when the caller asks how long the trip will take, or when you need to estimate a pickup ETA. Returns minutes of driving + distance in miles. Don't guess - always call this when a duration question comes up.",
+      url: webhookUrl,
+      speak_during_execution: true, speak_after_execution: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          origin: { type: 'string', description: "Starting address as the caller gave it, or a landmark name. Plain text - Google geocodes it." },
+          destination: { type: 'string', description: 'Destination address or landmark name.' },
+          departure_time: { type: 'string', description: "Optional. ISO-8601 timestamp WITH offset for when the trip starts. If omitted, uses 'now'." },
+        },
+        required: ['origin', 'destination'],
+      },
+    })
   }
 
   tools.push({

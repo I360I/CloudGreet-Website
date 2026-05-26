@@ -745,6 +745,117 @@ export async function POST(request: NextRequest) {
  }, { status: 500 })
  }
  }
+ case 'lookup_drive_time': {
+ // Rideshare-specific. Uses Google's Routes API (Distance Matrix's
+ // successor - the legacy endpoint returns REQUEST_DENIED on new
+ // GCP projects). Auth via X-Goog-Api-Key + field mask to keep
+ // response cost minimal.
+ //
+ // The GCP project must have "Routes API" enabled in the console.
+ // Same key as GOOGLE_PLACES_API_KEY since we're on one project.
+ const args = tool.arguments || {}
+ const origin = String(args.origin || '').trim()
+ const destination = String(args.destination || '').trim()
+ const departureTime = String(args.departure_time || '').trim()
+
+ if (!origin || !destination) {
+ return NextResponse.json({
+ success: false,
+ error: 'missing_parameters',
+ detail: 'lookup_drive_time needs origin and destination.',
+ }, { status: 400 })
+ }
+
+ const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_PLACES_API_KEY
+ if (!apiKey) {
+ return NextResponse.json({
+ success: false,
+ error: 'no_api_key',
+ detail: 'GOOGLE_PLACES_API_KEY not configured.',
+ }, { status: 500 })
+ }
+
+ const body: Record<string, unknown> = {
+ origin: { address: origin },
+ destination: { address: destination },
+ travelMode: 'DRIVE',
+ routingPreference: 'TRAFFIC_AWARE',
+ units: 'IMPERIAL',
+ }
+ // Future-dated trips: pass departureTime so traffic estimate
+ // reflects THAT moment. Routes API expects RFC3339. If omitted,
+ // it uses "now" with current traffic, which is the default we want.
+ if (departureTime) {
+ const d = new Date(departureTime)
+ if (Number.isFinite(d.getTime()) && d.getTime() > Date.now() - 60_000) {
+ body.departureTime = d.toISOString()
+ }
+ }
+
+ try {
+ const ctrl = new AbortController()
+ const t = setTimeout(() => ctrl.abort(), 6000)
+ const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json',
+ 'X-Goog-Api-Key': apiKey,
+ 'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters,routes.legs.startLocation,routes.legs.endLocation',
+ },
+ body: JSON.stringify(body),
+ signal: ctrl.signal,
+ })
+ clearTimeout(t)
+ if (!res.ok) {
+ const txt = await res.text().catch(() => res.statusText)
+ logger.warn('lookup_drive_time: Routes API non-2xx', { status: res.status, body: txt.slice(0, 200) })
+ return NextResponse.json({
+ success: false,
+ error: 'google_api_error',
+ detail: `${res.status}: ${txt.slice(0, 200)}`,
+ }, { status: 502 })
+ }
+ const j = await res.json().catch(() => ({}))
+ const route = j?.routes?.[0]
+ if (!route) {
+ return NextResponse.json({
+ success: false,
+ error: 'no_route',
+ detail: `Could not route ${origin} -> ${destination}`,
+ }, { status: 404 })
+ }
+
+ // Routes API returns "Xs" string ("450s"). Parse to int seconds.
+ const parseDur = (s: any): number | null => {
+ if (typeof s !== 'string') return null
+ const m = s.match(/^(\d+(?:\.\d+)?)s$/)
+ return m ? Math.round(Number(m[1])) : null
+ }
+ const trafficSec = parseDur(route.duration)
+ const staticSec = parseDur(route.staticDuration)
+ const seconds = trafficSec ?? staticSec ?? 0
+ const minutes = Math.round(seconds / 60)
+ const distanceMeters = route.distanceMeters || 0
+ const miles = Math.round((distanceMeters / 1609.34) * 10) / 10
+ const usedTraffic = trafficSec != null && trafficSec !== staticSec
+
+ return NextResponse.json({
+ success: true,
+ minutes,
+ distance_miles: miles,
+ used_traffic: usedTraffic,
+ spoken_summary: `${minutes} minutes${miles ? `, about ${miles} miles` : ''}${usedTraffic ? ' with current traffic' : ''}`,
+ })
+ } catch (e) {
+ const detail = e instanceof Error ? e.message : 'unknown'
+ logger.warn('lookup_drive_time fetch failed', { error: detail })
+ return NextResponse.json({
+ success: false,
+ error: 'network_error',
+ detail: detail.slice(0, 200),
+ }, { status: 502 })
+ }
+ }
  case 'send_dispatch_request': {
  // Dispatch flow: the agent gathers trip details and we text the
  // owner instead of creating a Cal.com event. The owner accepts
