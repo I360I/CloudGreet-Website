@@ -33,7 +33,12 @@ export async function POST(
   const body = await request.json().catch(() => ({})) as {
    monthly_cents?: number
    setup_fee_cents?: number
+   platform_only?: boolean
   }
+  // Default to platform-only when admin generates the link: revenue
+  // goes 100% to the platform regardless of business.rep_id. Pass
+  // platform_only:false explicitly to keep the rep commission split.
+  const platformOnly = body.platform_only !== false
 
   const monthlyCents = Math.round(Number(body.monthly_cents))
   if (!Number.isFinite(monthlyCents) || monthlyCents < 5000) {
@@ -127,6 +132,26 @@ export async function POST(
    })
   }
 
+  const subscriptionMeta: Record<string, string> = {
+   cloudgreet_business_id: business.id,
+   plan: 'custom',
+   monthly_cents: String(monthlyCents),
+   setup_fee_cents: String(setupFeeCents),
+   // When platform_only is set, blank out rep_id on the metadata AND
+   // stamp cg_no_commission so the Stripe webhook short-circuits the
+   // 50/50 split (defense in depth against the business row having
+   // a rep_id we forgot to clear).
+   rep_id: platformOnly ? '' : (business.rep_id || ''),
+  }
+  if (platformOnly) subscriptionMeta.cg_no_commission = 'true'
+
+  const sessionMeta: Record<string, string> = {
+   cloudgreet_business_id: business.id,
+   plan: 'custom',
+   rep_id: platformOnly ? '' : (business.rep_id || ''),
+  }
+  if (platformOnly) sessionMeta.cg_no_commission = 'true'
+
   const session = await stripe.checkout.sessions.create({
    mode: 'subscription',
    customer: stripeCustomerId,
@@ -134,20 +159,8 @@ export async function POST(
    success_url: successUrl,
    cancel_url: cancelUrl,
    allow_promotion_codes: true,
-   subscription_data: {
-    metadata: {
-     cloudgreet_business_id: business.id,
-     plan: 'custom',
-     monthly_cents: String(monthlyCents),
-     setup_fee_cents: String(setupFeeCents),
-     rep_id: business.rep_id || '',
-    },
-   },
-   metadata: {
-    cloudgreet_business_id: business.id,
-    plan: 'custom',
-    rep_id: business.rep_id || '',
-   },
+   subscription_data: { metadata: subscriptionMeta },
+   metadata: sessionMeta,
   })
 
   await supabaseAdmin
@@ -164,7 +177,7 @@ export async function POST(
   }
 
   logger.info('Admin generated Stripe checkout link', {
-   businessId: business.id, monthlyCents, setupFeeCents, sessionId: session.id,
+   businessId: business.id, monthlyCents, setupFeeCents, sessionId: session.id, platformOnly,
   })
 
   return NextResponse.json({
@@ -175,6 +188,7 @@ export async function POST(
    amount: amountStr,
    setup_fee_cents: setupFeeCents,
    business_name: business.business_name,
+   platform_only: platformOnly,
   })
  } catch (e) {
   const msg = e instanceof Error ? e.message : 'Unknown'

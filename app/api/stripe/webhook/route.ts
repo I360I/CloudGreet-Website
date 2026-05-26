@@ -591,6 +591,25 @@ async function creditRepCommission(
  if (!business.rep_id) return // not a rep-sourced client
  if (!invoice.id) return
 
+ // Per-checkout override: admin can generate a checkout link with
+ // platform_only=true (e.g. comping a rep-sourced client, billing a
+ // referral that didn't go through a rep, etc.). The override is
+ // stamped on the subscription metadata at session creation and we
+ // honor it here. Belt-and-suspenders: also check the invoice's
+ // own metadata in case the subscription metadata is missing on
+ // proration invoices.
+ const subMeta = ((invoice as any)?.subscription_details?.metadata
+   || (invoice as any)?.lines?.data?.find((l: any) => l.subscription)?.metadata
+   || {}) as Record<string, string>
+ const invMeta = (invoice.metadata || {}) as Record<string, string>
+ if (subMeta.cg_no_commission === 'true' || invMeta.cg_no_commission === 'true') {
+  logger.info('commission skipped via cg_no_commission flag', {
+   businessId: business.id,
+   invoiceId: invoice.id,
+  })
+  return
+ }
+
  // Mark the close as paid the first time we see its invoice. Match
  // the close by business_id (set during convert-to-client). Doing
  // this here keeps the rep's "In flight" → "Paid" transition tied

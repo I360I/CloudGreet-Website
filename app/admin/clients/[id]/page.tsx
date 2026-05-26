@@ -1851,12 +1851,16 @@ function CheckoutLinkModal({
 }) {
  const [customMonthly, setCustomMonthly] = useState<string>('')
  const [setupFee, setSetupFee] = useState<string>('')
+ const [platformOnly, setPlatformOnly] = useState<boolean>(true)
  const [busy, setBusy] = useState(false)
  const [error, setError] = useState('')
  const [result, setResult] = useState<{
-  url: string; plan_label: string; amount: string
+  url: string; plan_label: string; amount: string; platform_only: boolean
  } | null>(null)
  const [copied, setCopied] = useState<'url' | 'sms' | null>(null)
+ const [smsPhone, setSmsPhone] = useState<string>('')
+ const [sendingSms, setSendingSms] = useState(false)
+ const [smsStatus, setSmsStatus] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null)
 
  useEffect(() => {
   const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -1874,6 +1878,7 @@ function CheckoutLinkModal({
    const body: Record<string, any> = {
     plan: 'custom',
     monthly_cents: Math.round(dollars * 100),
+    platform_only: platformOnly,
    }
    const fee = parseFloat(setupFee || '0')
    if (Number.isFinite(fee) && fee > 0) {
@@ -1887,7 +1892,7 @@ function CheckoutLinkModal({
    })
    const j = await res.json().catch(() => ({}))
    if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
-   setResult({ url: j.url, plan_label: j.plan_label, amount: j.amount })
+   setResult({ url: j.url, plan_label: j.plan_label, amount: j.amount, platform_only: !!j.platform_only })
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed')
   } finally {
@@ -1906,6 +1911,30 @@ function CheckoutLinkModal({
  const sampleSms = result
   ? `Hey, this is the CloudGreet checkout link for ${businessName} - ${result.plan_label}, ${result.amount}. ${result.url}`
   : ''
+
+ const sendSms = async () => {
+  if (!result) return
+  setSendingSms(true); setSmsStatus(null)
+  try {
+   const payload: Record<string, string> = { url: result.url, message: sampleSms }
+   const trimmed = smsPhone.trim()
+   if (trimmed) payload.phone = trimmed
+   const res = await fetchWithAuth(`/api/admin/clients/${clientId}/send-checkout-sms`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) {
+    setSmsStatus({ tone: 'err', text: j?.error || `Send failed (${res.status})` })
+   } else {
+    setSmsStatus({ tone: 'ok', text: `Sent to ${j.sent_to}.` })
+   }
+  } catch (e) {
+   setSmsStatus({ tone: 'err', text: e instanceof Error ? e.message : 'Send failed' })
+  } finally {
+   setSendingSms(false)
+  }
+ }
 
  return (
   <motion.div
@@ -1966,6 +1995,34 @@ function CheckoutLinkModal({
         </p>
        </div>
 
+       <button
+        type="button"
+        onClick={() => setPlatformOnly((v) => !v)}
+        className={`w-full text-left rounded-xl border px-3 py-2.5 flex items-start gap-3 transition-colors ${
+         platformOnly
+          ? 'border-emerald-400/30 bg-emerald-500/[0.06]'
+          : 'border-amber-400/30 bg-amber-500/[0.06]'
+        }`}
+       >
+        <div
+         className={`mt-0.5 w-4 h-4 rounded-md border flex items-center justify-center flex-shrink-0 transition-colors ${
+          platformOnly ? 'border-emerald-400 bg-emerald-400' : 'border-amber-400'
+         }`}
+        >
+         {platformOnly && <span className="block w-2 h-2 bg-[#0c0c10] rounded-sm" />}
+        </div>
+        <div className="min-w-0">
+         <div className="text-xs font-medium text-white">
+          {platformOnly ? 'Platform only — 100% revenue to platform' : 'Standard split — 50% to assigned rep'}
+         </div>
+         <div className="text-[11px] text-gray-500 leading-relaxed mt-0.5">
+          {platformOnly
+           ? 'No rep commission for this checkout, even if a rep_id is assigned to this client. Stamps cg_no_commission on the subscription metadata.'
+           : 'Webhook will credit 50% of every payment to the rep assigned to this client.'}
+         </div>
+        </div>
+       </button>
+
        {error && (
         <div className="bg-rose-500/10 border border-rose-500/20 text-rose-200 rounded-xl px-3 py-2 text-sm flex items-start gap-2">
          <WarningCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
@@ -2002,15 +2059,36 @@ function CheckoutLinkModal({
        </div>
 
        <div>
-        <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">Sample SMS</div>
-        <div className="bg-[#0a0a0c] border border-white/[0.08] rounded-xl px-3 py-2.5 text-xs text-gray-300 leading-relaxed">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">Send to client</div>
+        <div className="bg-[#0a0a0c] border border-white/[0.08] rounded-xl px-3 py-2.5 text-xs text-gray-300 leading-relaxed mb-2">
          {sampleSms}
         </div>
-        <div className="flex justify-end mt-2">
+        <div className="flex flex-col sm:flex-row gap-2">
+         <input
+          type="tel"
+          value={smsPhone}
+          onChange={(e) => setSmsPhone(e.target.value)}
+          placeholder="Phone (leave blank = owner's saved phone)"
+          className="flex-1 bg-[#0a0a0c] border border-white/[0.08] rounded-xl px-3 py-2 text-xs font-mono text-gray-200 placeholder-gray-500 focus:outline-none focus:border-sky-400/40"
+         />
+         <PrimaryButton onClick={sendSms} loading={sendingSms}>
+          Send SMS
+         </PrimaryButton>
          <GhostButton onClick={() => copy('sms', sampleSms)}>
-          <Copy className="w-4 h-4" /> {copied === 'sms' ? 'Copied' : 'Copy SMS'}
+          <Copy className="w-4 h-4" /> {copied === 'sms' ? 'Copied' : 'Copy'}
          </GhostButton>
         </div>
+        {smsStatus && (
+         <p className={`text-[11px] mt-2 ${smsStatus.tone === 'ok' ? 'text-emerald-300' : 'text-rose-300'}`}>
+          {smsStatus.text}
+         </p>
+        )}
+       </div>
+
+       <div className={`text-[11px] px-3 py-2 rounded-xl border ${result.platform_only ? 'border-emerald-400/30 bg-emerald-500/[0.05] text-emerald-200' : 'border-amber-400/30 bg-amber-500/[0.05] text-amber-200'}`}>
+        {result.platform_only
+         ? '100% of revenue from this link goes to the platform. No rep commission.'
+         : 'Standard 50/50 rep split applies if this client has a rep_id.'}
        </div>
 
        <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.06]">
