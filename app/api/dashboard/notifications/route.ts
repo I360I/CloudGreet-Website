@@ -155,7 +155,30 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true, toolsError, toolsTrace })
+  // When service_hours changes, surgically replace the dedicated block
+  // inside the LIVE agent's prompt - we don't regenerate the whole
+  // prompt (would touch other sections + cost an LLM call). The patch
+  // is delimited by HTML comment markers so repeat saves are idempotent.
+  let promptPatchError: string | null = null
+  let promptPatched = false
+  if (body.service_hours !== undefined) {
+    try {
+      const { syncServiceHoursToPrompt } = await import('@/lib/agent-prompt-patches')
+      const res = await syncServiceHoursToPrompt({
+        businessId: auth.businessId!,
+        serviceHours: (body.service_hours || '').toString().trim() || null,
+      })
+      if (!res.ok) promptPatchError = res.reason || 'patch_failed'
+      promptPatched = !!res.updated
+    } catch (e) {
+      promptPatchError = e instanceof Error ? e.message : 'Unknown'
+      logger.warn('service_hours prompt patch failed', {
+        businessId: auth.businessId, error: promptPatchError,
+      })
+    }
+  }
+
+  return NextResponse.json({ success: true, toolsError, toolsTrace, promptPatchError, promptPatched })
 }
 
 /**
