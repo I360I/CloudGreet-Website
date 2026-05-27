@@ -598,17 +598,19 @@ function OwnerCard({
  const [first, setFirst] = useState('')
  const [last, setLast] = useState('')
  const [phone, setPhone] = useState('')
+ const [email, setEmail] = useState('')
+ const [originalEmail, setOriginalEmail] = useState('')
  const [saving, setSaving] = useState(false)
  const [err, setErr] = useState('')
 
  useEffect(() => {
-  // Try to split o.name back into first/last when first_name fields
-  // aren't returned (older API shapes). Best-effort.
   const name = (o as any)?.name || ''
   const parts = name ? name.split(/\s+/) : []
   setFirst((o as any)?.first_name ?? parts[0] ?? '')
   setLast((o as any)?.last_name ?? parts.slice(1).join(' ') ?? '')
   setPhone(o?.phone ?? '')
+  setEmail(o?.email ?? '')
+  setOriginalEmail(o?.email ?? '')
  }, [o])
 
  const save = async () => {
@@ -624,6 +626,24 @@ function OwnerCard({
    })
    const j = await res.json().catch(() => ({}))
    if (!res.ok || !j.success) throw new Error(j?.error || 'Save failed')
+
+   // Email is a login identifier, persisted via a separate endpoint
+   // so the regular owner-edit flow can keep its tighter validation
+   // semantics. Only fire if it actually changed.
+   const nextEmail = email.trim().toLowerCase()
+   if (nextEmail && nextEmail !== (originalEmail || '').toLowerCase()) {
+    if (!window.confirm(`Change owner's login email to ${nextEmail}? They'll use this to log in going forward.`)) {
+     setSaving(false)
+     return
+    }
+    const er = await fetchWithAuth(`/api/admin/clients/${clientId}/owner-email`, {
+     method: 'PATCH',
+     body: JSON.stringify({ email: nextEmail }),
+    })
+    const ej = await er.json().catch(() => ({}))
+    if (!er.ok || !ej.success) throw new Error(ej?.error || 'Email update failed')
+   }
+
    setEditing(false)
    onSaved()
   } catch (e) {
@@ -656,6 +676,12 @@ function OwnerCard({
       <Input value={last} onChange={(e) => setLast(e.target.value)} placeholder="Last name" />
      </div>
      <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" />
+     <Input
+      type="email"
+      value={email}
+      onChange={(e) => setEmail(e.target.value)}
+      placeholder="Login email"
+     />
      <div className="flex items-center gap-2">
       <PrimaryButton onClick={save} disabled={saving}>
        {saving ? <CircleNotch className="w-4 h-4 animate-spin" /> : <FloppyDisk className="w-4 h-4" />}
@@ -665,7 +691,7 @@ function OwnerCard({
       {err && <span className="text-xs text-rose-300">{err}</span>}
      </div>
      <p className="text-[10px] text-gray-500">
-      Email is read-only. Updates also refresh the agent&apos;s knowledge base so the AI knows the owner.
+      Email is the owner&apos;s login. Changing it asks for confirmation and updates how they sign in. Name/phone updates also refresh the agent&apos;s knowledge base.
      </p>
     </div>
    ) : (
