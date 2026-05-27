@@ -61,13 +61,18 @@ export async function GET(request: NextRequest) {
 
  const businessServices = business?.services || []
 
- // Local appointments first.
+ // Local appointments first. Cancelled bookings stay in the table
+ // for audit + cancel-readback, but they should NOT appear on the
+ // calendar - they're already off the contractor's Cal.com event
+ // list, so leaving them on the dashboard creates a confusing
+ // mismatch.
  const { data: localRows, error: appointmentsError } = await supabaseAdmin
  .from('appointments')
  .select('*')
  .eq('business_id', businessId)
  .gte('scheduled_date', startDate.toISOString().split('T')[0])
  .lte('scheduled_date', endDate.toISOString().split('T')[0])
+ .not('status', 'in', '(cancelled,no_show)')
  .order('start_time', { ascending: true })
 
  if (appointmentsError) {

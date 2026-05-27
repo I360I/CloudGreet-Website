@@ -20,7 +20,7 @@ export type Call = {
  call_extractions?: Record<string, any> | null
 }
 
-export type Outcome = 'booked' | 'message' | 'dropped'
+export type Outcome = 'booked' | 'cancelled' | 'message' | 'dropped'
 
 function formatExtraction(v: any): string {
  if (v === null || v === undefined || v === '') return '-'
@@ -30,8 +30,14 @@ function formatExtraction(v: any): string {
  try { return JSON.stringify(v) } catch { return String(v) }
 }
 
-export function tagOutcome(c: Pick<Call, 'outcome' | 'status' | 'duration'>): Outcome {
+export function tagOutcome(c: Pick<Call, 'outcome' | 'status' | 'duration' | 'call_extractions'>): Outcome {
  const o = (c.outcome || '').toLowerCase()
+ // Cancellations come in two flavors: from Retell's post-call extraction
+ // (booking_type='cancelled') OR the legacy outcome field containing
+ // 'cancel'. Check booking_type first so it wins over generic strings.
+ const bt = String((c.call_extractions as any)?.booking_type || '').toLowerCase()
+ if (bt === 'cancelled' || bt === 'canceled' || bt === 'cancellation') return 'cancelled'
+ if (o.includes('cancel')) return 'cancelled'
  if (o.includes('book') || o.includes('appoint') || o === 'emergency') return 'booked'
  if (o.includes('message') || o.includes('voicemail')) return 'message'
  if (c.status === 'failed' || (c.duration ?? 0) < 5) return 'dropped'
@@ -39,13 +45,18 @@ export function tagOutcome(c: Pick<Call, 'outcome' | 'status' | 'duration'>): Ou
 }
 
 export function OutcomeDot({ outcome }: { outcome: Outcome }) {
- const cls = outcome === 'booked' ? 'bg-sky-500' : outcome === 'dropped' ? 'bg-rose-300' : 'bg-gray-300'
+ const cls =
+  outcome === 'booked' ? 'bg-sky-500'
+  : outcome === 'cancelled' ? 'bg-rose-500'
+  : outcome === 'dropped' ? 'bg-rose-300'
+  : 'bg-gray-300'
  return <div className={`w-2 h-2 rounded-full flex-shrink-0 ${cls}`} />
 }
 
 export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
  const map = {
   booked: 'bg-sky-50 text-sky-700',
+  cancelled: 'bg-rose-50 text-rose-700',
   message: 'bg-gray-100 text-gray-600',
   dropped: 'bg-rose-50 text-rose-700',
  } as const
@@ -58,6 +69,7 @@ export function OutcomeBadge({ outcome }: { outcome: Outcome }) {
 
 const BOOKING_TYPE_TONE: Record<string, string> = {
  booked: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+ cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
  quote: 'bg-sky-50 text-sky-700 border-sky-200',
  emergency: 'bg-rose-50 text-rose-700 border-rose-200',
  callback: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -66,6 +78,7 @@ const BOOKING_TYPE_TONE: Record<string, string> = {
 }
 const BOOKING_TYPE_LABEL: Record<string, string> = {
  booked: 'Booked',
+ cancelled: 'Cancelled',
  quote: 'Quote',
  emergency: 'Emergency',
  callback: 'Callback',

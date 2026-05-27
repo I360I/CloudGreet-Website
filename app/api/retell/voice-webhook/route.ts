@@ -1172,6 +1172,37 @@ export async function POST(request: NextRequest) {
   })
   .eq('id', match.id)
 
+ // Tag the active call as a cancellation so the dashboard shows the
+ // right outcome chip (red "cancelled") instead of inheriting "booked"
+ // from Retell's post-call categorizer, which counts any
+ // appointment-related call as a booking. Best-effort - the call row
+ // may not exist yet if call_started hasn't been webhook'd.
+ const cancelCallId: string | undefined = (body as any)?.call?.call_id || (body as any)?.call_id
+ if (cancelCallId) {
+  try {
+   const { data: callRow } = await supabaseAdmin
+    .from('calls')
+    .select('id, call_extractions')
+    .eq('retell_call_id', cancelCallId)
+    .maybeSingle()
+   if (callRow) {
+    const prev = ((callRow as any).call_extractions || {}) as Record<string, any>
+    await supabaseAdmin
+     .from('calls')
+     .update({
+      outcome: 'cancelled',
+      call_extractions: { ...prev, booking_type: 'cancelled', cancelled_appointment_id: match.id },
+      updated_at: new Date().toISOString(),
+     })
+     .eq('id', (callRow as any).id)
+   }
+  } catch (e) {
+   logger.warn('cancel_appointment: failed to mark call outcome', {
+    callId: cancelCallId, error: e instanceof Error ? e.message : 'Unknown',
+   })
+  }
+ }
+
  return NextResponse.json({
   success: true,
   appt_id: match.id,
@@ -1856,6 +1887,30 @@ async function handleCallEvent(
    .maybeSingle()
 
   if (existing?.id) {
+   // If cancel_appointment ran during the call it already wrote
+   // outcome='cancelled' + booking_type='cancelled' to this row.
+   // Retell's post-call categorizer doesn't know about cancellations
+   // and will overwrite to 'booked' or 'message'. Preserve our
+   // explicit value by re-reading and skipping outcome promotion
+   // when we've already marked it.
+   const { data: prev } = await supabaseAdmin
+    .from('calls')
+    .select('outcome, call_extractions')
+    .eq('id', existing.id)
+    .maybeSingle()
+   const prevOutcome = (prev as any)?.outcome as string | undefined
+   const prevBookingType = ((prev as any)?.call_extractions || {})?.booking_type as string | undefined
+   if (prevOutcome === 'cancelled' || prevBookingType === 'cancelled') {
+    if ('outcome' in patch) delete (patch as any).outcome
+    if (patch.call_extractions && typeof patch.call_extractions === 'object') {
+     // Merge instead of replace so we don't lose cancelled_appointment_id.
+     patch.call_extractions = {
+      ...(prev as any).call_extractions,
+      ...(patch.call_extractions as any),
+      booking_type: 'cancelled',
+     }
+    }
+   }
    const upd = await supabaseAdmin
     .from('calls')
     .update({ ...patch, updated_at: new Date().toISOString() })

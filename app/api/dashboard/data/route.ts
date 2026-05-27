@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
  .from('appointments')
  .select('id', { count: 'exact', head: true })
  .eq('business_id', businessId)
+ .not('status', 'in', '(cancelled,no_show)')
 
  // Calculate revenue using CONFIG
  const avgTicket = CONFIG.BUSINESS.AVERAGE_TICKET
@@ -84,6 +85,7 @@ export async function GET(request: NextRequest) {
  .select('id, customer_name, service_type, scheduled_date, start_time')
  .eq('business_id', businessId)
  .gte('scheduled_date', new Date().toISOString())
+ .not('status', 'in', '(cancelled,no_show)')
  .order('scheduled_date', { ascending: true })
  .limit(10)
 

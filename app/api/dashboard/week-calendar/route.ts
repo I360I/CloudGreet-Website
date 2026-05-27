@@ -68,13 +68,18 @@ export async function GET(request: NextRequest) {
 
  const businessServices = business?.services || []
 
- // Fetch local appointments for the week.
+ // Fetch local appointments for the week. Cancelled bookings stay
+ // in the table (we need them for audit + cancel readback flows) but
+ // they should not show up on the calendar - they're already off the
+ // contractor's Cal.com event list, so leaving them on the dashboard
+ // creates a confusing mismatch.
  const { data: localRows, error: appointmentsError } = await supabaseAdmin
  .from('appointments')
  .select('id, scheduled_date, start_time, end_time, customer_name, service_type, status, cal_com_booking_uid, is_emergency')
  .eq('business_id', businessId)
  .gte('scheduled_date', startDate.toISOString().split('T')[0])
  .lte('scheduled_date', endDate.toISOString().split('T')[0])
+ .not('status', 'in', '(cancelled,no_show)')
  .order('start_time', { ascending: true })
 
  if (appointmentsError) {
