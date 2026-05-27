@@ -707,31 +707,6 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
       </div>
 
       <div className="border-t border-emerald-200 pt-3">
-       <div className="text-sm font-medium text-gray-900 mb-1">Your business hours</div>
-       <div className="text-xs text-gray-600 mb-3">
-        Type your hours in plain English so the AI can answer &quot;when are you open?&quot; and avoid quoting times you don&apos;t work. Cal.com still controls actual booking slots - this is what the AI says in conversation.
-       </div>
-       <div className="flex flex-wrap items-start gap-2">
-        <textarea
-         value={serviceHours}
-         onChange={(e) => { setServiceHours(e.target.value); setServiceHoursSaved(false); setServiceHoursErr('') }}
-         placeholder="Mon-Fri 4am-11pm, Sat-Sun 6am-12am"
-         rows={2}
-         className="flex-1 min-w-[260px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-900 resize-y"
-        />
-        <button
-         type="button"
-         onClick={saveServiceHours}
-         disabled={serviceHoursSaving}
-         className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
-        >
-         {serviceHoursSaving ? 'Saving…' : serviceHoursSaved ? 'Saved ✓' : 'Save'}
-        </button>
-       </div>
-       {serviceHoursErr && <div className="mt-2 text-xs text-rose-700">{serviceHoursErr}</div>}
-      </div>
-
-      <div className="border-t border-emerald-200 pt-3">
        <div className="text-sm font-medium text-gray-900 mb-1">Transfer calls to</div>
        <div className="text-xs text-gray-600 mb-3">
         When a caller asks for the owner, the AI warm-transfers the live call to this number. Use the cell or office line you actually want ringing.
