@@ -211,7 +211,13 @@ export async function POST(request: NextRequest) {
  // cleanly. Idempotent: leaves already-numeric values alone.
  const { compressDigitWords } = await import('@/lib/digit-words')
  const name = compressDigitWords(rawName)
- const service = compressDigitWords(rawService)
+ // Belt-and-suspenders: cap service text at 1000 chars. The column
+ // is `text` (unlimited) as of 2026-05-27, but every once in a
+ // while a future schema migration could re-introduce a length cap
+ // and we don't want a booking to fail because an extra-verbose
+ // ride description tipped over. 1000 chars is well above any
+ // realistic message Steve scans on his phone.
+ const service = compressDigitWords(rawService)?.slice?.(0, 1000) ?? rawService
  // Coerce review_consent to a strict boolean - the agent may pass true/false,
  // "true"/"false", "yes"/"no", or omit entirely. Anything ambiguous = false
  // so we never text without an explicit yes.
