@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
   const { data, error } = await supabaseAdmin
     .from('businesses')
-    .select('notifications_phone, escalation_phone, booking_sms_template, booking_sms_template_emergency, business_name')
+    .select('notifications_phone, escalation_phone, booking_sms_template, booking_sms_template_emergency, business_name, service_hours')
     .eq('id', auth.businessId)
     .maybeSingle()
   if (error || !data) {
@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     success: true,
     notifications_phone: (data as any).notifications_phone || '',
     transfer_phone: (data as any).escalation_phone || '',
+    service_hours: (data as any).service_hours || '',
     booking_sms_template: (data as any).booking_sms_template || DEFAULT_BOOKING_SMS_TEMPLATE,
     booking_sms_template_emergency:
       (data as any).booking_sms_template_emergency || DEFAULT_EMERGENCY_SMS_TEMPLATE,
@@ -51,6 +52,7 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json().catch(() => ({})) as {
     notifications_phone?: string | null
     transfer_phone?: string | null
+    service_hours?: string | null
     booking_sms_template?: string | null
     booking_sms_template_emergency?: string | null
   }
@@ -80,6 +82,20 @@ export async function PATCH(request: NextRequest) {
       }
       update.escalation_phone = norm
     }
+  }
+
+  // service_hours: freeform text the contractor types in their own
+  // words, e.g. "Mon-Fri 4am-11pm, Sat-Sun 6am-12am". Gets read into
+  // the agent's system prompt so it knows when the business actually
+  // operates - separate from Cal.com availability (which controls
+  // bookable slots) because callers ask about hours in conversation
+  // outside of just booking.
+  if (body.service_hours !== undefined) {
+    const raw = (body.service_hours || '').toString().trim()
+    if (raw.length > 500) {
+      return NextResponse.json({ error: 'Hours text is too long (max 500 chars).' }, { status: 400 })
+    }
+    update.service_hours = raw || null
   }
 
   if (body.booking_sms_template !== undefined) {
