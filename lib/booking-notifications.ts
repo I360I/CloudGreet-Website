@@ -169,6 +169,17 @@ export async function sendBookingNotification(
 
   try {
     await telnyxClient.sendSMS(to, message, fromNumber)
+    // Mirror to the platform admin so we see every booking land across
+    // all clients without logging into each dashboard. Fire-and-forget;
+    // a failure here NEVER blocks the primary owner notification.
+    void import('./admin-notify').then(({ sendAdminCopyIfDistinct }) =>
+      sendAdminCopyIfDistinct({
+        clientName: (biz as any).business_name || 'client',
+        ownerPhone: to,
+        kind: ctx.is_emergency ? 'dispatch' : 'booking',
+        body: message,
+      }),
+    ).catch(() => { /* admin-copy is best-effort */ })
   } catch (sendErr) {
     // Don't swallow - the caller (Retell webhook) catches and logs warn,
     // but a persistent failure means contractors miss bookings. Loud

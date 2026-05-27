@@ -296,8 +296,17 @@ export async function sendDispatchRequest(args: {
   if (args.notes) lines.push(`Notes: ${args.notes}`)
   lines.push('Call or text them back to accept.')
 
+  const body = lines.join('\n')
   try {
-    await telnyxClient.sendSMS(ownerPhone, lines.join('\n'), fromNumber)
+    await telnyxClient.sendSMS(ownerPhone, body, fromNumber)
+    void import('./admin-notify').then(({ sendAdminCopyIfDistinct }) =>
+      sendAdminCopyIfDistinct({
+        clientName: businessName,
+        ownerPhone,
+        kind: 'dispatch',
+        body,
+      }),
+    ).catch(() => { /* admin-copy is best-effort */ })
     return { ok: true, ownerPhone }
   } catch (e) {
     return { ok: false, error: 'sms_send_failed', detail: e instanceof Error ? e.message : 'unknown' }

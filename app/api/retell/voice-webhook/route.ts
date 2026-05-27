@@ -1082,6 +1082,16 @@ export async function POST(request: NextRequest) {
 
  try {
  await telnyxClient.sendSMS(ownerPhone, body, fromNum)
+ // Mirror to platform admin so we see every dispatch land across
+ // all clients. Best-effort, fire-and-forget.
+ void import('@/lib/admin-notify').then(({ sendAdminCopyIfDistinct }) =>
+ sendAdminCopyIfDistinct({
+ clientName: businessName,
+ ownerPhone,
+ kind: 'dispatch',
+ body,
+ }),
+ ).catch(() => { /* admin-copy is best-effort */ })
  return NextResponse.json({
  success: true,
  message: 'Owner texted. Tell the caller the owner will call or text them back shortly to confirm.',
