@@ -154,6 +154,7 @@ function SettingsGroups({
    rows: [
     { key: 'notifications', label: 'Booking notifications', subtitle: 'Where booking summary texts get sent.', icon: CheckCircle, render: () => <BookingNotificationsSection /> },
     { key: 'reviews', label: 'Review requests', subtitle: 'Auto-text customers a review link after the job.', icon: CheckCircle, render: () => <ReviewRequestsSection /> },
+    { key: 'sms_booking', label: 'Text-to-book', subtitle: 'A dedicated number customers can text to get quotes and request bookings.', icon: Phone, render: () => <SmsBookingSection /> },
    ],
   },
   {
@@ -2725,4 +2726,111 @@ function ForwardingSection({ profile, onSaved }: { profile: Profile; onSaved: ()
    )}
   </div>
  )
+}
+
+/* ------------------------- SMS booking section ------------------------- */
+
+type SmsBookingState = {
+ sms_phone_number: string | null
+ sms_agent_enabled: boolean
+ status: 'live' | 'pending' | 'action_required' | 'not_provisioned'
+ status_message: string
+ last_updated_at: string | null
+}
+
+function SmsBookingSection() {
+ const [state, setState] = useState<SmsBookingState | null>(null)
+ const [loading, setLoading] = useState(true)
+ const [toggling, setToggling] = useState(false)
+
+ const load = async () => {
+  setLoading(true)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/sms-booking')
+   const j = await r.json().catch(() => ({}))
+   if (r.ok && j?.success) setState(j as any)
+  } finally {
+   setLoading(false)
+  }
+ }
+
+ useEffect(() => { load() }, [])
+
+ const toggleEnabled = async (next: boolean) => {
+  if (!state) return
+  setToggling(true)
+  const prev = state.sms_agent_enabled
+  setState({ ...state, sms_agent_enabled: next })
+  try {
+   const r = await fetchWithAuth('/api/dashboard/sms-booking', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sms_agent_enabled: next }),
+   })
+   if (!r.ok) setState({ ...state, sms_agent_enabled: prev })
+  } catch { setState({ ...state, sms_agent_enabled: prev }) }
+  finally { setToggling(false) }
+ }
+
+ if (loading || !state) return null
+
+ const tone =
+  state.status === 'live' ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+  : state.status === 'pending' ? 'border-amber-200 bg-amber-50 text-amber-800'
+  : state.status === 'action_required' ? 'border-rose-200 bg-rose-50 text-rose-800'
+  : 'border-gray-200 bg-gray-50 text-gray-700'
+
+ const badge =
+  state.status === 'live' ? 'Live'
+  : state.status === 'pending' ? 'Pending review'
+  : state.status === 'action_required' ? 'Action required'
+  : 'Not provisioned'
+
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl p-6">
+   <div className="flex items-start justify-between gap-4 mb-3 flex-wrap">
+    <div>
+     <h2 className="text-sm font-medium text-gray-700">Text-to-book number</h2>
+     <p className="text-xs text-gray-500 mt-1 max-w-prose leading-relaxed">
+      Customers text this number to get a quote and request a ride or booking. The AI uses your Cal.com calendar and your pricing rules to answer instantly.
+     </p>
+    </div>
+    {state.sms_phone_number && (
+     <Toggle checked={state.sms_agent_enabled} onChange={(v) => { if (!toggling) toggleEnabled(v) }} />
+    )}
+   </div>
+
+   {!state.sms_phone_number ? (
+    <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+     <div className="font-medium text-gray-800 mb-1">No text number assigned yet</div>
+     <p>Ask CloudGreet to provision a dedicated text-to-book number for your business. Setup includes carrier compliance review (1-3 business days) and is a one-time process.</p>
+    </div>
+   ) : (
+    <>
+     <div className="flex items-center gap-3 mb-3">
+      <div className="font-mono text-base text-gray-900">{formatPhone(state.sms_phone_number)}</div>
+      <span className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border ${tone}`}>
+       {badge}
+      </span>
+     </div>
+     <div className={`rounded-xl border ${tone.replace('text-', 'text-')} p-3 text-sm leading-relaxed`}>
+      {state.status_message}
+     </div>
+     {!state.sms_agent_enabled && (
+      <div className="mt-3 text-xs text-gray-500">
+       Toggle is off - the AI won&apos;t respond to texts on this number until you turn it back on.
+      </div>
+     )}
+    </>
+   )}
+  </div>
+ )
+}
+
+function formatPhone(p: string): string {
+ const digits = (p || '').replace(/\D/g, '')
+ if (digits.length === 11 && digits.startsWith('1')) {
+  return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+ }
+ return p
 }
