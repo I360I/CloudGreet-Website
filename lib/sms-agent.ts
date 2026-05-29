@@ -19,6 +19,7 @@ import { supabaseAdmin } from './supabase'
 import { telnyxClient } from './telnyx'
 import { logger } from './monitoring'
 import { lookupDriveTime, computeQuote, sendDispatchRequest } from './quote-engine'
+import { saveCustomerEmail } from './customers'
 
 const MODEL = 'claude-sonnet-4-6'
 const CONTEXT_WINDOW_HOURS = 24
@@ -117,6 +118,19 @@ const TOOLS: Anthropic.Messages.Tool[] = [
         reason: { type: 'string' },
       },
       required: ['phone', 'new_datetime'],
+    },
+  },
+  {
+    name: 'save_customer_email',
+    description:
+      "Save the customer's email to the business's contact memory. Call this AFTER the customer gives you their email so future calls/texts can read it instead of asking again. The customer phone is auto-filled from the SMS sender.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', description: 'Customer email address.' },
+        name: { type: 'string', description: "Customer's name, if known. Optional." },
+      },
+      required: ['email'],
     },
   },
   {
@@ -238,12 +252,20 @@ export async function handleInboundSms(args: {
     messages.push({ role: 'user', content: args.body })
   }
 
+  // Pull what we know about this customer so the prompt can decide
+  // whether to ask for an email or skip it.
+  const { lookupCallerHistory } = await import('./caller-history')
+  const callerHistory = await lookupCallerHistory(args.businessId, fromPhone)
+
   const systemPrompt = await buildSystemPrompt({
     businessId: args.businessId,
     businessName: (biz as any).business_name || 'us',
     customerPhone: fromPhone,
     timezone: (biz as any).timezone || 'America/New_York',
     dispatchMode: !!(biz as any).dispatch_mode,
+    customerName: callerHistory.caller_name,
+    customerEmail: callerHistory.customer_email,
+    hasEmailOnFile: callerHistory.has_email_on_file === 'true',
   })
 
   // Tool-use loop.
@@ -357,6 +379,9 @@ async function buildSystemPrompt(args: {
   customerPhone: string
   timezone: string
   dispatchMode: boolean
+  customerName?: string
+  customerEmail?: string
+  hasEmailOnFile?: boolean
 }): Promise<string> {
   // SmartRide-specific full prompt (matches the live voice prompt's
   // pricing rules) until we wire per-business prompt overrides. The
@@ -364,11 +389,15 @@ async function buildSystemPrompt(args: {
   // just optimized for text length.
   const now = new Date()
   const nowLocal = now.toLocaleString('en-US', { timeZone: args.timezone, hour12: false })
+  const knownName = (args.customerName || '').trim()
+  const knownEmail = (args.customerEmail || '').trim()
+  const hasEmail = !!args.hasEmailOnFile
 
   return `You are the AI receptionist for ${args.businessName}, working over SMS.
 
 Current time (local): ${nowLocal}
 Customer phone: ${args.customerPhone}
+Customer on file: ${knownName ? `name="${knownName}"` : 'no name yet'}, ${hasEmail ? `email="${knownEmail}"` : 'no email yet'}.
 
 CHANNEL RULES (CRITICAL):
 - This is plain SMS. NO markdown - no **bold**, no *italics*, no bullet markers (- * 1.), no code fences. SMS displays markdown as literal characters and looks broken.
@@ -377,6 +406,13 @@ CHANNEL RULES (CRITICAL):
 - Don't say "let me put you on hold" or "let me check" - just call the tool and respond with the answer.
 - Be warm but brief. The customer wants a quick answer, not a paragraph.
 - Numbered/list style is fine but use plain text only: "Name, pickup, dropoff, time, how many passengers?" - all on one or two lines.
+
+EMAIL COLLECTION:
+- ${hasEmail
+    ? `We already have an email on file for this customer ("${knownEmail}"). Do NOT ask for it again. Use it silently when needed; only re-ask if the customer mentions a new email.`
+    : 'No email on file yet. After a booking or dispatch goes through successfully, ask ONCE in your closing turn: "last thing - what\'s a good email to keep on file for Steve? (skip if you\'d rather not)". If they give one, call save_customer_email. If they decline or skip, do NOT ask again - just close out.'}
+- NEVER ask for the email before the trip details and confirmation are handled. The email ask is a "last thing", not a gating question.
+- If save_customer_email returns invalid_email, ask them to repeat it ONCE; if it fails again, move on.
 
 NAME COLLECTION (CRITICAL):
 - You ALWAYS need the customer's name before calling send_dispatch_request or book_appointment - Steve uses it when he texts back to confirm.
@@ -513,6 +549,14 @@ async function runTool(args: {
   }
   if (args.name === 'compute_quote') {
     return computeQuote(args.args as any)
+  }
+  if (args.name === 'save_customer_email') {
+    return await saveCustomerEmail({
+      businessId: args.businessId,
+      phone: args.customerPhone,
+      email: String(args.args.email || ''),
+      name: args.args.name ? String(args.args.name) : null,
+    })
   }
   if (args.name === 'send_dispatch_request') {
     // Per-sender dispatch cap. Caps Steve's exposure to a single

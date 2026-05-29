@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
 
    const history = inboundBusinessId
     ? await lookupCallerHistory(inboundBusinessId, fromNumber)
-    : { returning_caller: 'false', caller_name: '', last_service: '' }
+    : { returning_caller: 'false', caller_name: '', last_service: '', customer_email: '', has_email_on_file: 'false' }
 
    // Slot cache prewarm. Kicked off as a fetch to a separate internal
    // endpoint so it gets its own serverless invocation lifetime -
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
    })
    return NextResponse.json({
     call_inbound: {
-     dynamic_variables: { returning_caller: 'false', caller_name: '', last_service: '' },
+     dynamic_variables: { returning_caller: 'false', caller_name: '', last_service: '', customer_email: '', has_email_on_file: 'false' },
     },
    })
   }
@@ -405,6 +405,18 @@ export async function POST(request: NextRequest) {
 
  const apptId = appointmentId
  sideEffects.push('db_inserted')
+
+ // Mirror to customers table so future calls/texts from this number
+ // can read name/email straight from there. Best-effort; failure
+ // here must never block the booking response.
+ try {
+   const { touchCustomerFromBooking } = await import('@/lib/customers')
+   await touchCustomerFromBooking({
+     businessId: business_id,
+     phone: String(phone || ''),
+     name: name ? String(name) : null,
+   })
+ } catch { /* best-effort */ }
 
  // Stamp the Cal.com booking ids onto the row now that we have apptId.
  // Cal.com was already created successfully in the pre-flight above.
@@ -679,6 +691,48 @@ export async function POST(request: NextRequest) {
   appointment_id: apptId,
   is_emergency: isEmergency,
   did: sideEffects,
+ })
+ }
+ case 'save_customer_email': {
+ if (!resolvedBusinessId) {
+   return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
+ }
+ const { email, phone: phoneArg, name } = tool.arguments || {}
+ // Default phone to the caller's number - voice agents always have it
+ // on the call payload, no need to ask the customer.
+ const phone: string | undefined =
+   phoneArg
+   || body?.call?.from_number
+   || body?.from_number
+   || body?.call?.from
+ if (!phone) {
+   return NextResponse.json({ success: false, error: 'missing_phone', detail: 'No caller phone to anchor the email to.' }, { status: 400 })
+ }
+ const { saveCustomerEmail } = await import('@/lib/customers')
+ const result = await saveCustomerEmail({
+   businessId: resolvedBusinessId,
+   phone: String(phone),
+   email: String(email || ''),
+   name: name ? String(name) : null,
+ })
+ if (!result.ok) {
+   const r = result as { ok: false; error: string; detail?: string }
+   return NextResponse.json({
+     success: false,
+     error: r.error,
+     detail: r.detail || null,
+     guidance: r.error === 'invalid_email'
+       ? "That doesn't look like a valid email. Ask the customer to repeat it slowly (or spell it out) and try again."
+       : "Email didn't save. Don't keep retrying - just move on.",
+   }, { status: 400 })
+ }
+ const ok = result as { ok: true; created: boolean; id: string }
+ return NextResponse.json({
+   success: true,
+   created: ok.created,
+   guidance: ok.created
+     ? 'Email saved. Confirm it back briefly ("got it, saved as <email>") and continue.'
+     : 'Email updated on the existing customer record.',
  })
  }
  case 'send_booking_sms': {

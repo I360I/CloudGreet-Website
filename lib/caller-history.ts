@@ -19,12 +19,18 @@ export type CallerHistory = {
   returning_caller: string
   caller_name: string
   last_service: string
+  /** Email we have on file from a prior call/text. Empty string if none. */
+  customer_email: string
+  /** "true" / "false" so the prompt can branch without parsing the email itself. */
+  has_email_on_file: string
 }
 
 const EMPTY: CallerHistory = {
   returning_caller: 'false',
   caller_name: '',
   last_service: '',
+  customer_email: '',
+  has_email_on_file: 'false',
 }
 
 /**
@@ -44,27 +50,46 @@ export async function lookupCallerHistory(
   const fromDigits = digits(fromNumber)
   if (fromDigits.length < 7) return EMPTY
 
-  // Pull recent calls for this business; we filter by digits-only match
-  // in JS rather than SQL because storage format isn't guaranteed.
-  // 50-row cap is plenty: a business with >50 calls from the same
-  // number is almost certainly a known recurring customer anyway, and
-  // the most recent one we see wins.
+  // 1. Customers table is the authoritative source for email + stable
+  //    name. Cheap O(1) lookup via the (business_id, phone_digits)
+  //    unique index. Calls/extractions are the fallback.
+  const { data: cust } = await supabaseAdmin
+    .from('customers')
+    .select('name, email')
+    .eq('business_id', businessId)
+    .eq('phone_digits', fromDigits)
+    .maybeSingle()
+  const custName = (cust as any)?.name ? String((cust as any).name).trim() : ''
+  const custEmail = (cust as any)?.email ? String((cust as any).email).trim() : ''
+
+  // 2. Pull recent calls for "last service" + a name fallback. 50-row
+  //    cap is plenty: a business with >50 calls from the same number
+  //    is almost certainly a known recurring customer anyway, and the
+  //    most recent one we see wins.
   const { data, error } = await supabaseAdmin
     .from('calls')
     .select('from_number, caller_name, call_extractions, created_at')
     .eq('business_id', businessId)
     .order('created_at', { ascending: false })
     .limit(50)
-  if (error || !data) return EMPTY
+  if (error || !data) {
+    // Even if calls lookup fails, surface the customer row if we have one.
+    if (custName || custEmail) {
+      return {
+        returning_caller: 'true',
+        caller_name: custName,
+        last_service: '',
+        customer_email: custEmail,
+        has_email_on_file: custEmail ? 'true' : 'false',
+      }
+    }
+    return EMPTY
+  }
 
   const match = data.find((row) => digits((row as any).from_number) === fromDigits)
-  if (!match) return EMPTY
-
-  // Prefer the dedicated caller_name column (set when book_appointment
-  // fires), fall back to whatever the post-call extraction captured.
-  const extractions = (match as any).call_extractions || {}
-  const name =
-    (match as any).caller_name ||
+  const extractions = (match as any)?.call_extractions || {}
+  const callName =
+    (match as any)?.caller_name ||
     extractions.customer_name ||
     extractions.name ||
     extractions.caller_name ||
@@ -75,11 +100,16 @@ export async function lookupCallerHistory(
     extractions.service_type ||
     ''
 
-  if (!name && !service) return EMPTY
+  const name = custName || (callName ? String(callName).trim() : '')
+  const isReturning = !!(custName || custEmail || match)
+
+  if (!isReturning) return EMPTY
 
   return {
     returning_caller: 'true',
-    caller_name: String(name).trim(),
+    caller_name: name,
     last_service: String(service).trim(),
+    customer_email: custEmail,
+    has_email_on_file: custEmail ? 'true' : 'false',
   }
 }
