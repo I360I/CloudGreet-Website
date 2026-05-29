@@ -664,6 +664,7 @@ async function creditRepCommission(
  // overpayment is better than zeroing out the rep.
  let netCents = actualPaid
  try {
+  const stripe = getStripeClient()
   const chargeRef = (invoice as any).charge as string | Stripe.Charge | null | undefined
   const chargeId = typeof chargeRef === 'string' ? chargeRef : chargeRef?.id || null
   if (chargeId) {
