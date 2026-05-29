@@ -132,11 +132,13 @@ export async function POST(request: NextRequest) {
  }
 
  // Stripe fires both `invoice.payment_succeeded` (legacy) and
- // `invoice.paid` (newer) for the same event. Endpoints subscribed
- // to either get the notification; we handle both so commission
- // credit isn't dependent on which the dashboard happens to send.
- // The webhook_events idempotency table de-dupes so we don't double
- // credit when both fire.
+ // `invoice.paid` (newer) for the same invoice. We handle both so
+ // commission credit isn't dependent on which the dashboard sends.
+ // These are DISTINCT events (different event ids), so the
+ // webhook_events table does NOT de-dupe them - double-fire is
+ // prevented downstream instead: billing_history upserts on the
+ // invoice id, and the commission ledger has UNIQUE(invoice_id,
+ // source_type).
  case 'invoice.payment_succeeded':
  case 'invoice.paid': {
  const invoice = event.data.object as Stripe.Invoice
@@ -294,6 +296,35 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
  customerId,
  sessionId: session.id
  })
+
+ // One-time payments (mode='payment', e.g. a standalone setup fee) never
+ // generate an invoice, so `invoice.payment_succeeded` never fires and the
+ // charge never lands in billing_history - it was invisible to revenue
+ // reporting. Subscription checkouts are skipped here: their first invoice
+ // (which already bundles any setup-fee line) is recorded by
+ // handleInvoicePaymentSucceeded, so writing here too would double-count.
+ // Stripe's webhook_events idempotency above prevents retry duplicates.
+ if (session.mode === 'payment' && (session.amount_total || 0) > 0) {
+  const { error: billingErr } = await supabaseAdmin
+   .from('billing_history')
+   .insert({
+    business_id: businessId,
+    amount: (session.amount_total || 0) / 100,
+    currency: (session.currency || 'usd').toUpperCase(),
+    description: 'One-time payment (setup fee)',
+    billing_type: 'setup_fee',
+    stripe_payment_intent_id: (session.payment_intent as string) || null,
+    status: 'paid',
+    created_at: new Date().toISOString(),
+   })
+  if (billingErr) {
+   logger.error('Failed to record one-time payment in billing_history', {
+    error: billingErr.message,
+    businessId,
+    sessionId: session.id,
+   })
+  }
+ }
 
  } catch (error) {
  logger.error('Error handling checkout completed', {
@@ -538,19 +569,24 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  return
  }
 
- // Log payment in billing history
+ // Log payment in billing history. Stripe fires BOTH `invoice.paid` and
+ // `invoice.payment_succeeded` for the same invoice (different event ids,
+ // so the webhook_events idempotency table does NOT collapse them - it
+ // only de-dupes retries of one event). Upserting on the invoice id makes
+ // the second event a no-op so we don't double-count revenue.
  await supabaseAdmin
  .from('billing_history')
- .insert({
+ .upsert({
  business_id: business.id,
  amount,
  currency: invoice.currency.toUpperCase(),
  description: `Payment for ${invoice.description || 'subscription'}`,
  billing_type: 'subscription',
  stripe_payment_intent_id: invoice.payment_intent as string,
+ stripe_invoice_id: invoice.id,
  status: 'paid',
  created_at: new Date().toISOString()
- })
+ }, { onConflict: 'stripe_invoice_id', ignoreDuplicates: true })
 
  // Commission ledger - the source of truth for what we owe each rep.
  // We split each invoice into MRR (recurring subscription line items)
