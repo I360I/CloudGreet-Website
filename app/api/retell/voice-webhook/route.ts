@@ -1483,13 +1483,22 @@ export async function POST(request: NextRequest) {
  })
  }
 
+ // Explicit availability flag - the agent has read `success:true` as
+ // "the day is available" and confirmed a time even when slots was [].
+ // Surface a separate available + guidance so there's no room to
+ // misinterpret an empty list as "go ahead and book."
+ const available = slots.length > 0
  return NextResponse.json({
  success: true,
+ available,
  slots,
  slots_display,
  timezone: tz,
  source: 'calcom',
  cache: 'miss',
+ guidance: available
+   ? `${slots.length} open slot${slots.length === 1 ? '' : 's'} on ${date || 'the requested window'}. Confirm with the customer and book.`
+   : `NO open slots on ${date || 'the requested window'} - the calendar is fully blocked. Do NOT tell the customer the time is open. Offer to send the request to Steve directly via send_dispatch_request (route through the same-day / dispatch flow even if the date is in the future) or suggest a different day.`,
  })
  }
  } catch (calErr) {
@@ -1509,7 +1518,13 @@ export async function POST(request: NextRequest) {
  if (date) {
  const slots = await getAvailableSlots(business_id, date, duration)
  const fullSlots = slots.map(slot => `${date}T${slot}:00`)
- return NextResponse.json({ success: true, slots: fullSlots, source: 'local' })
+ const available = fullSlots.length > 0
+ return NextResponse.json({
+   success: true, available, slots: fullSlots, source: 'local',
+   guidance: available
+     ? `${fullSlots.length} open slot${fullSlots.length === 1 ? '' : 's'} on ${date}.`
+     : `NO open slots on ${date}. Do NOT tell the customer the time is open. Offer dispatch or a different day.`,
+ })
  } else {
  const allSlots: string[] = []
  const now = new Date()
@@ -1524,7 +1539,13 @@ export async function POST(request: NextRequest) {
  allSlots.push(...fullSlots)
  }
 
- return NextResponse.json({ success: true, slots: allSlots, source: 'local' })
+ const available = allSlots.length > 0
+ return NextResponse.json({
+   success: true, available, slots: allSlots, source: 'local',
+   guidance: available
+     ? `${allSlots.length} open slot${allSlots.length === 1 ? '' : 's'} in the next 7 days.`
+     : `NO open slots in the next 7 days. Offer dispatch or a different window.`,
+ })
  }
  } catch (error) {
  logger.error('lookup_availability failed', {
