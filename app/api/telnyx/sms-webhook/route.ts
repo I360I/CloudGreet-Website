@@ -47,6 +47,29 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = body?.data?.payload || body?.payload || body
+
+    // Dedup: Telnyx retries the same webhook if our response is slow,
+    // and our agent loop (Anthropic + Cal.com + send_sms) can take 15s+.
+    // Race-safe via a PK insert - the SECOND identical webhook gets a
+    // 23505 unique violation and bounces here, before either run can
+    // start replying. Without this we ended up texting the customer
+    // back twice per inbound message.
+    const telnyxMessageId: string | undefined =
+      payload?.id || payload?.message_id || body?.data?.id
+    if (telnyxMessageId) {
+      const { error: dedupErr } = await supabaseAdmin
+        .from('processed_webhook_ids')
+        .insert({ id: `telnyx_sms:${telnyxMessageId}`, source: 'telnyx_sms' })
+      if (dedupErr) {
+        if (dedupErr.code === '23505') {
+          logger.info('sms webhook duplicate suppressed', { telnyxMessageId })
+          return NextResponse.json({ received: true, dedup: true })
+        }
+        logger.warn('sms webhook dedup insert failed (continuing)', {
+          telnyxMessageId, code: dedupErr.code, msg: dedupErr.message,
+        })
+      }
+    }
     const fromNumber: string | undefined =
       payload?.from?.phone_number || payload?.from || undefined
     // Telnyx wraps `to` as an array of {phone_number, status}. The first

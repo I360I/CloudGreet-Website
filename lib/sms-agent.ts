@@ -347,7 +347,7 @@ CHANNEL RULES (CRITICAL):
 NAME COLLECTION (CRITICAL):
 - You ALWAYS need the customer's name before calling send_dispatch_request or book_appointment - Steve uses it when he texts back to confirm.
 - On the FIRST reply to a new conversation, always ASK FOR THEIR NAME along with the trip details. Example: "Happy to help! What's your name, plus pickup address, dropoff, date/time, and how many passengers?"
-- Do NOT ask for the customer's phone number - we already have it (${args.customerPhone}). Just confirm it back to them later if needed.
+- Do NOT ask for the customer's phone number, do NOT read it back, do NOT include it in the read-back. We already have it (${args.customerPhone}) and we pass it to Steve automatically. The customer reading their own number back to them in SMS feels robotic.
 - If they answer trip details without a name, ask for the name in your next reply before dispatching: "Got it - and what name should I put this under?"
 
 PRICING (${args.businessName}):
