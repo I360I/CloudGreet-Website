@@ -273,9 +273,87 @@ export async function POST(request: NextRequest) {
  const startTime = parseAgentDatetime(datetime, businessTz)
  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000) // Add 1 hour
 
- // Create appointment in database using transaction function for atomicity
- // Both scheduled_date and start_time stamped from the normalized
- // startTime so the local DB stays consistent with Cal.com.
+ // Cal.com pre-flight: book on Cal.com BEFORE inserting into our DB.
+ // Cal.com is the source of truth for slot availability. If the slot
+ // is taken or otherwise rejected we must not leave an orphan
+ // "scheduled" row claiming the booking succeeded - the agent then
+ // tells the caller "you're booked" while the calendar disagrees.
+ const sideEffects: string[] = []
+ const calApiKey = (business as any)?.cal_com_api_key as string | null
+ const calEventTypeIdRaw = (business as any)?.cal_com_event_type_id
+ let calBooking: { uid: string; id: number } | null = null
+ if (calApiKey && calEventTypeIdRaw) {
+  try {
+   const { createBooking } = await import('@/lib/calcom')
+   // Route emergencies through the dedicated emergency Cal.com event
+   // type when the contractor configured one. That event type can have
+   // its own availability rules / colour / reminder cadence in Cal so
+   // emergencies show up visually distinct on the contractor's
+   // calendar. Falls through to the normal event type otherwise.
+   const emergencyEventTypeId = (business as any)?.cal_com_event_type_id_emergency
+   const effectiveEventTypeId = isEmergency && emergencyEventTypeId
+    ? Number(emergencyEventTypeId)
+    : Number(calEventTypeIdRaw)
+   const created = await createBooking(calApiKey, {
+    startIso: startTime.toISOString(),
+    eventTypeId: effectiveEventTypeId,
+    attendee: {
+     name: name || 'Caller',
+     // Disambiguated synthetic email - the apptId-suffixed form we
+     // used to use isn't available yet (we book Cal first now). Use
+     // business_id + epoch so Cal still sees a unique attendee.
+     email: `noemail+${business_id}+${Date.now()}@cloudgreet.com`,
+     timeZone: businessTz,
+     phoneNumber: phone || undefined,
+    },
+    metadata: {
+     cloudgreet_business_id: String(business_id),
+     customer_phone: phone || '',
+     is_emergency: isEmergency ? 'true' : 'false',
+    },
+    notes: `${isEmergency ? '🚨 EMERGENCY · ' : ''}Booked by CloudGreet AI receptionist. Service requested: ${service || 'unspecified'}. Caller phone: ${phone || 'unknown'}.`,
+   })
+   calBooking = { uid: created.uid, id: created.id }
+   sideEffects.push('calcom_synced')
+   logger.info('Cal.com booking created (pre-DB)', {
+    business_id, calBookingUid: created.uid,
+   })
+  } catch (calErr) {
+   const msg = calErr instanceof Error ? calErr.message : 'Unknown'
+   const status = (calErr as any)?.status as number | undefined
+   // Cal.com signals slot conflicts via 400/409/422 with messages like
+   // "no available users", "slot not available", "already booked".
+   // Distinguish those from generic API failures so the agent gets a
+   // clear "offer alternatives" signal rather than a vague error.
+   const unavailable =
+    (status === 400 || status === 409 || status === 422) &&
+    /no.available|unavailable|already.+book|slot|conflict|busy|not.available|taken/i.test(msg)
+   logger.warn('Cal.com pre-flight failed - no DB row written', {
+    business_id, status, error: msg, unavailable,
+   })
+   if (unavailable) {
+    return NextResponse.json({
+     success: false,
+     error: 'slot_unavailable',
+     detail: msg,
+     guidance: "That exact time is already booked. Don't tell the caller they're booked. Use lookup_availability to find 2-3 nearby openings, offer them, and call book_appointment again with the time they pick.",
+    }, { status: 409 })
+   }
+   return NextResponse.json({
+    success: false,
+    error: 'calcom_sync_failed',
+    detail: msg,
+    guidance: "Tell the caller the booking system is having trouble and offer to take their info for a callback. Do not claim the appointment is on the calendar.",
+   }, { status: 502 })
+  }
+ } else {
+  logger.warn('Skipping Cal.com booking - no cal.com config on business', { business_id })
+  sideEffects.push('calcom_skipped_not_configured')
+ }
+
+ // Create appointment in database using transaction function for atomicity.
+ // Only reached if Cal.com confirmed (or no Cal.com is configured), so
+ // a row here always corresponds to a real calendar booking.
  const { data: appointmentId, error: appointmentError } = await supabaseAdmin.rpc('create_appointment_safe', {
  p_business_id: business_id,
  p_customer_name: name,
@@ -302,12 +380,20 @@ export async function POST(request: NextRequest) {
  datetime,
  service,
  })
- // Surface enough detail in the response that Retell's logs (and our
- // own debugging) show *what* the DB rejected, not just "db_error".
- // The agent reads this and may verbalise it - which is fine for a
- // launch-grade error: better to say "looks like that didn't go
- // through, what time were you thinking?" than to claim a booking
- // that never happened.
+ // Roll back the Cal.com side so we don't leave a phantom booking in
+ // the OTHER direction (calendar shows it, our DB does not).
+ if (calBooking && calApiKey) {
+   try {
+     const { cancelBooking } = await import('@/lib/calcom')
+     await cancelBooking(calApiKey, calBooking.uid, 'CloudGreet DB insert failed; rolling back Cal.com side.')
+     logger.info('Cal.com booking rolled back after DB failure', { calBookingUid: calBooking.uid })
+   } catch (rbErr) {
+     logger.warn('Cal.com rollback failed - may leave orphan calendar event', {
+       calBookingUid: calBooking.uid,
+       error: rbErr instanceof Error ? rbErr.message : 'unknown',
+     })
+   }
+ }
  return NextResponse.json({
  success: false,
  error: 'db_error',
@@ -318,6 +404,20 @@ export async function POST(request: NextRequest) {
  }
 
  const apptId = appointmentId
+ sideEffects.push('db_inserted')
+
+ // Stamp the Cal.com booking ids onto the row now that we have apptId.
+ // Cal.com was already created successfully in the pre-flight above.
+ if (calBooking) {
+   await supabaseAdmin
+     .from('appointments')
+     .update({
+       cal_com_booking_uid: calBooking.uid,
+       cal_com_booking_id: calBooking.id,
+       updated_at: new Date().toISOString(),
+     })
+     .eq('id', apptId)
+ }
 
  // Link the appointment row to the Retell call that booked it so the
  // dashboard's appointment drawer can render the call transcript +
@@ -387,89 +487,6 @@ export async function POST(request: NextRequest) {
      apptId,
      error: e instanceof Error ? e.message : 'Unknown',
    })
- }
-
- // Cal.com booking - this is the path that lands on the contractor's
- // calendar (Google/Apple/Outlook via Cal.com). Without this, the
- // appointment exists in our DB but never appears on their actual
- // calendar feed. We HARD FAIL when Cal.com is connected but the
- // sync fails - silently swallowing the error has been the source
- // of "agent says booked, calendar is empty" false positives. The
- // agent gets the error and tells the caller honestly that the
- // booking didn't go through.
- const sideEffects: string[] = ['db_inserted']
- if ((business as any)?.cal_com_api_key && (business as any)?.cal_com_event_type_id) {
- try {
-  const { createBooking } = await import('@/lib/calcom')
-  // Route emergencies through the dedicated emergency Cal.com event
-  // type when the contractor configured one. That event type can have
-  // its own availability rules / colour / reminder cadence in Cal so
-  // emergencies show up visually distinct on the contractor's
-  // calendar. Falls through to the normal event type otherwise.
-  const emergencyEventTypeId = (business as any)?.cal_com_event_type_id_emergency
-  const effectiveEventTypeId = isEmergency && emergencyEventTypeId
-   ? Number(emergencyEventTypeId)
-   : Number((business as any).cal_com_event_type_id)
-  const booking = await createBooking((business as any).cal_com_api_key, {
-   startIso: startTime.toISOString(),
-   eventTypeId: effectiveEventTypeId,
-   attendee: {
-    name: name || 'Caller',
-    email: `noemail+${apptId}@cloudgreet.com`,
-    timeZone: resolveBusinessTimezone({
-      explicit: (business as any).timezone,
-      state: (business as any).state,
-    }),
-    phoneNumber: phone || undefined,
-   },
-   metadata: {
-    cloudgreet_business_id: String(business_id),
-    cloudgreet_appointment_id: String(apptId),
-    customer_phone: phone || '',
-    is_emergency: isEmergency ? 'true' : 'false',
-   },
-   notes: `${isEmergency ? '🚨 EMERGENCY · ' : ''}Booked by CloudGreet AI receptionist. Service requested: ${service || 'unspecified'}. Caller phone: ${phone || 'unknown'}.`,
-  })
-  await supabaseAdmin
-   .from('appointments')
-   .update({
-    cal_com_booking_uid: booking.uid,
-    cal_com_booking_id: booking.id,
-    updated_at: new Date().toISOString(),
-   })
-   .eq('id', apptId)
-  sideEffects.push('calcom_synced')
-  logger.info('Cal.com booking created', {
-   business_id, apptId, calBookingUid: booking.uid,
-  })
- } catch (calErr) {
-  const msg = calErr instanceof Error ? calErr.message : 'Unknown'
-  logger.error('Cal.com booking failed', {
-   business_id, apptId, error: msg,
-  })
-  // Mark the DB row as a failed sync so the contractor's dashboard
-  // can flag it (instead of showing a confirmed booking that doesn't
-  // exist on their actual calendar).
-  await supabaseAdmin
-   .from('appointments')
-   .update({
-    status: 'sync_failed',
-    notes: `Cal.com sync failed: ${msg.slice(0, 300)}`,
-    updated_at: new Date().toISOString(),
-   })
-   .eq('id', apptId)
-  return NextResponse.json({
-   success: false,
-   error: 'calcom_sync_failed',
-   detail: msg,
-   appointment_id: apptId,
-   did: sideEffects,
-   guidance: "Tell the caller the booking didn't go through and offer to take their info for a callback.",
-  }, { status: 502 })
- }
- } else {
- logger.warn('Skipping Cal.com booking - no cal.com config on business', { business_id })
- sideEffects.push('calcom_skipped_not_configured')
  }
 
  // Legacy Google Calendar sync - kept for backward compatibility but

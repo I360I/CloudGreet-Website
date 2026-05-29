@@ -199,6 +199,7 @@ export function computeQuote(args: QuoteArgs): QuoteResult {
   }
 
   const svc = serviceType.replace(/[_-]/g, '')
+  const MIN_FARE_CENTS = 5000
   if (svc === 'airportdropoff' || svc === 'airportpickup' || svc === 'pointtopoint' || svc === 'p2p' || svc === 'transfer') {
     if (!Number.isFinite(miles) || miles <= 0) {
       return { ok: false, error: 'missing_miles', detail: 'compute_quote needs miles for distance-priced service.' }
@@ -209,6 +210,10 @@ export function computeQuote(args: QuoteArgs): QuoteResult {
     note(`${miles} mi @ $${ratePerMile.toFixed(2)}/mi`, distanceCents)
     if (svc === 'airportdropoff' || svc === 'airportpickup') {
       if (isCmh) note('CMH airport fee', 450)
+    }
+    if (baseCents < MIN_FARE_CENTS) {
+      const adj = MIN_FARE_CENTS - baseCents
+      note('Minimum fare adjustment ($50 floor)', adj)
     }
   } else if (svc === 'hourlyevent' || svc === 'event' || svc === 'hourlyservice') {
     if (!Number.isFinite(hours) || hours < 2) {
