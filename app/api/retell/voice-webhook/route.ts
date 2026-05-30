@@ -9,6 +9,7 @@ import { createCalendarEvent } from '@/lib/calendar'
 import { verifyRetellSignature } from '@/lib/webhook-verification'
 import { notifyAdmin } from '@/lib/notifications/notify'
 import { resolveCallBusinessId } from '@/lib/calls/resolve-business'
+import { recordUsageCost } from '@/lib/billing/usage-costs'
 import { readSlotCache, writeSlotCache, invalidateSlotCache } from '@/lib/slot-cache'
 import { resolveBusinessTimezone } from '@/lib/timezones'
 import { CONFIG } from '@/lib/config'
@@ -1990,9 +1991,30 @@ async function handleCallEvent(
   // we never saw call_started (Retell can fire analyzed without it).
   const { data: existing } = await supabaseAdmin
    .from('calls')
-   .select('id')
+   .select('id, business_id')
    .eq('retell_call_id', retellCallId)
    .maybeSingle()
+
+  // Retell reports the actual blended cost of the call (voice + its LLM)
+  // in cents on call_ended/call_analyzed. Record it to the cost ledger so
+  // the admin client view can show real cost-to-serve. Idempotent on
+  // retell_call_id, so the two near-simultaneous events don't double-count.
+  const retellCostCents =
+   typeof call?.call_cost?.combined_cost === 'number' ? Math.round(call.call_cost.combined_cost) : 0
+  const recordRetellCost = (businessId: string | null) => {
+   if (!businessId || retellCostCents <= 0) return
+   void recordUsageCost({
+    businessId,
+    provider: 'retell',
+    kind: 'voice',
+    amountCents: retellCostCents,
+    quantity: typeof patch.duration === 'number' ? patch.duration / 60 : undefined,
+    unit: 'minute',
+    refType: 'call',
+    refId: retellCallId,
+    metadata: { retell_call_id: retellCallId },
+   })
+  }
 
   if (existing?.id) {
    // If cancel_appointment ran during the call it already wrote
@@ -2031,6 +2053,8 @@ async function handleCallEvent(
      body: `${upd.error.message}. row id ${existing.id}, retell_call_id ${retellCallId}. patch keys: [${Object.keys(patch).join(',')}].`,
      metadata: { error: upd.error.message, patch_keys: Object.keys(patch), retell_call_id: retellCallId },
     }).catch(() => {})
+   } else {
+    recordRetellCost((existing as any).business_id ?? null)
    }
    return
   }
@@ -2074,6 +2098,8 @@ async function handleCallEvent(
      body: `${ins.error.message}. business_id ${finalBusinessId}, retell_call_id ${retellCallId}. patch keys: [${Object.keys(patch).join(',')}].`,
      metadata: { error: ins.error.message, patch_keys: Object.keys(patch), retell_call_id: retellCallId, business_id: finalBusinessId },
     }).catch(() => {})
+   } else {
+    recordRetellCost(finalBusinessId)
    }
    return
   }

@@ -4,6 +4,7 @@ import { logger } from '@/lib/monitoring'
 import Stripe from 'stripe'
 import { Resend } from 'resend'
 import { getStripeClient } from '@/lib/billing/stripe-client'
+import { recordUsageCost } from '@/lib/billing/usage-costs'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -587,6 +588,39 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  status: 'paid',
  created_at: new Date().toISOString()
  }, { onConflict: 'stripe_invoice_id', ignoreDuplicates: true })
+
+ // Cost-to-serve: the Stripe processing fee on this charge. Pull it from
+ // the charge's balance_transaction (the only place Stripe exposes the
+ // fee at webhook time). Recorded to usage_costs so the admin client view
+ // can net it out. Idempotent on the invoice id.
+ try {
+  const stripe = getStripeClient()
+  const chargeRef = (invoice as any).charge as string | Stripe.Charge | null | undefined
+  const chargeId = typeof chargeRef === 'string' ? chargeRef : chargeRef?.id || null
+  if (chargeId) {
+   const charge = await stripe.charges.retrieve(chargeId, { expand: ['balance_transaction'] })
+   const bt = charge.balance_transaction as Stripe.BalanceTransaction | null
+   if (bt && typeof bt.fee === 'number' && bt.fee > 0) {
+    await recordUsageCost({
+     businessId: business.id,
+     provider: 'stripe',
+     kind: 'fee',
+     amountCents: bt.fee,
+     refType: 'invoice',
+     refId: invoice.id,
+     occurredAt: invoice.status_transitions?.paid_at
+      ? new Date(invoice.status_transitions.paid_at * 1000).toISOString()
+      : new Date().toISOString(),
+     metadata: { invoice_id: invoice.id, charge_id: chargeId },
+    })
+   }
+  }
+ } catch (e) {
+  logger.warn('stripe fee cost capture failed', {
+   invoiceId: invoice.id,
+   error: e instanceof Error ? e.message : 'Unknown',
+  })
+ }
 
  // Commission ledger - the source of truth for what we owe each rep.
  // We split each invoice into MRR (recurring subscription line items)

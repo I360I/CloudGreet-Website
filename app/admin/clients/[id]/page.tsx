@@ -354,6 +354,11 @@ export default function ClientDetailPage() {
       <KnowledgeBaseCard clientId={id} hasAgent={!!aiAgent?.retell_agent_id} />
      </RisingFade>
 
+     {/* Cost to serve vs revenue (margin) */}
+     <RisingFade delay={0.195}>
+      <CostMarginCard clientId={id} />
+     </RisingFade>
+
 
      {/* Address row */}
      <RisingFade delay={0.2}>
@@ -1067,6 +1072,97 @@ const PRESET_FIELDS: { label: string; field: ExtractionField }[] = [
  { label: 'Preferred callback time', field: { name: 'preferred_callback', type: 'string', description: 'When the caller asked to be reached back, free-text (e.g. "Tuesday morning").' } },
  { label: 'Booked appointment?', field: { name: 'booked_appointment', type: 'boolean', description: 'True if the AI confirmed an appointment on this call.' } },
 ]
+
+/**
+ * Cost-to-serve panel: measured provider cost (Retell voice, Anthropic LLM,
+ * Telnyx SMS, Stripe fees, Google routes) plus allocated infra, shown
+ * against the client's monthly price as a margin. Fetches its own data.
+ */
+function CostMarginCard({ clientId }: { clientId: string }) {
+ const [data, setData] = useState<any>(null)
+ const [loading, setLoading] = useState(true)
+ const [error, setError] = useState('')
+
+ useEffect(() => {
+  let alive = true
+  ;(async () => {
+   try {
+    const res = await fetchWithAuth(`/api/admin/clients/${clientId}/cost-margin`)
+    const j = await res.json()
+    if (!alive) return
+    if (!res.ok) { setError(j.error || 'Failed to load costs'); return }
+    setData(j)
+   } catch { if (alive) setError('Failed to load costs') }
+   finally { if (alive) setLoading(false) }
+  })()
+  return () => { alive = false }
+ }, [clientId])
+
+ const usd = (c: number) =>
+  `$${((c || 0) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+ const mtd = data?.monthToDate
+ const positive = (mtd?.marginCents ?? 0) >= 0
+ const providerRows: Array<[string, number]> = mtd
+  ? [
+     ['Voice · Retell', mtd.byProvider.retell],
+     ['AI · Anthropic', mtd.byProvider.anthropic],
+     ['SMS · Telnyx', mtd.byProvider.telnyx],
+     ['Stripe fees', mtd.byProvider.stripe],
+     ['Maps · Google', mtd.byProvider.google],
+     ...(mtd.allocatedInfraCents > 0 ? [['Allocated infra', mtd.allocatedInfraCents] as [string, number]] : []),
+    ]
+  : []
+
+ return (
+  <Panel>
+   <PanelHeader eyebrow="Cost to serve" title="Cost & margin · this month" />
+   {loading ? (
+    <div className="text-sm text-gray-500">Loading…</div>
+   ) : error ? (
+    <div className="text-sm text-rose-300">{error}</div>
+   ) : mtd ? (
+    <div className="space-y-5">
+     <div className="grid grid-cols-3 gap-3">
+      <div>
+       <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1.5">Revenue</div>
+       <div className="font-mono font-medium tabular-nums text-xl md:text-2xl text-white">{usd(mtd.revenueCents)}</div>
+      </div>
+      <div>
+       <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1.5">Cost</div>
+       <div className="font-mono font-medium tabular-nums text-xl md:text-2xl text-white">{usd(mtd.totalCostCents)}</div>
+      </div>
+      <div>
+       <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1.5">Margin</div>
+       <div className={`font-mono font-medium tabular-nums text-xl md:text-2xl ${positive ? 'text-emerald-300' : 'text-rose-300'}`}>
+        {usd(mtd.marginCents)}
+        {mtd.marginPct != null && (
+         <span className="text-xs text-gray-500 ml-1.5">{mtd.marginPct}%</span>
+        )}
+       </div>
+      </div>
+     </div>
+
+     <div className="divide-y divide-white/[0.04] border-t border-white/[0.04]">
+      {providerRows.map(([label, cents]) => (
+       <div key={label} className="flex items-center justify-between py-2">
+        <span className="text-sm text-gray-400">{label}</span>
+        <span className="font-mono tabular-nums text-sm text-gray-200">{usd(cents)}</span>
+       </div>
+      ))}
+     </div>
+
+     <div className="text-[11px] text-gray-600">
+      Measured providers are exact (Retell, Stripe) or rate-based (Anthropic tokens, Telnyx
+      segments). Infra is allocated evenly across active clients
+      {mtd.allocatedInfraCents > 0 ? '.' : ' (off until COST_INFRA_MONTHLY_CENTS is set).'}{' '}
+      Lifetime cost: {usd(data.lifetime.measuredCostCents)}.
+     </div>
+    </div>
+   ) : null}
+  </Panel>
+ )
+}
 
 function ExtractionFieldsSection({ clientId, hasAgent }: { clientId: string; hasAgent: boolean }) {
  const [fields, setFields] = useState<ExtractionField[]>([])

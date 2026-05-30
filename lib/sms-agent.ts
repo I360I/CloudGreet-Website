@@ -20,6 +20,8 @@ import { telnyxClient } from './telnyx'
 import { logger } from './monitoring'
 import { lookupDriveTime, computeQuote, sendDispatchRequest } from './quote-engine'
 import { saveCustomerEmail } from './customers'
+import { recordUsageCost } from './billing/usage-costs'
+import { anthropicCostCents, smsSegments, COST_RATES } from './billing/cost-rates'
 
 const MODEL = 'claude-sonnet-4-6'
 const CONTEXT_WINDOW_HOURS = 24
@@ -271,6 +273,10 @@ export async function handleInboundSms(args: {
   // Tool-use loop.
   let reply: string | null = null
   const collectedToolCalls: any[] = []
+  // Accumulate token usage across every model call in this turn so we can
+  // record one LLM cost row for the whole inbound message.
+  let usageInTokens = 0
+  let usageOutTokens = 0
   for (let loop = 0; loop < MAX_TOOL_LOOPS; loop++) {
     const resp = await anthropic.messages.create({
       model: MODEL,
@@ -279,6 +285,8 @@ export async function handleInboundSms(args: {
       tools: TOOLS,
       messages,
     })
+    usageInTokens += resp.usage?.input_tokens || 0
+    usageOutTokens += resp.usage?.output_tokens || 0
 
     let say = ''
     const toolUses: any[] = []
@@ -352,6 +360,37 @@ export async function handleInboundSms(args: {
     .from('sms_conversations')
     .update({ last_outbound_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', conversationId)
+
+  // Cost-to-serve: the Anthropic tokens for this whole turn, plus the
+  // outbound SMS segments. Keyed on the outbound message id so a retry of
+  // the same reply can't double-count.
+  if (usageInTokens > 0 || usageOutTokens > 0) {
+    void recordUsageCost({
+      businessId: args.businessId,
+      provider: 'anthropic',
+      kind: 'llm',
+      amountCents: anthropicCostCents(usageInTokens, usageOutTokens),
+      quantity: usageInTokens + usageOutTokens,
+      unit: 'token',
+      refType: 'message',
+      refId: telnyxMessageId ? `llm:${telnyxMessageId}` : null,
+      metadata: { input_tokens: usageInTokens, output_tokens: usageOutTokens, model: MODEL },
+    })
+  }
+  const outSegments = smsSegments(reply)
+  if (outSegments > 0) {
+    void recordUsageCost({
+      businessId: args.businessId,
+      provider: 'telnyx',
+      kind: 'sms',
+      amountCents: Math.round(outSegments * COST_RATES.telnyx.centsPerSmsSegment),
+      quantity: outSegments,
+      unit: 'segment',
+      refType: 'sms',
+      refId: telnyxMessageId ? `sms:${telnyxMessageId}` : null,
+      metadata: { direction: 'outbound' },
+    })
+  }
 
   return { ok: true, reply_sent: true, reply }
 }
