@@ -1110,7 +1110,6 @@ function CostMarginCard({ clientId }: { clientId: string }) {
      ['SMS · Telnyx', mtd.byProvider.telnyx],
      ['Stripe fees', mtd.byProvider.stripe],
      ['Maps · Google', mtd.byProvider.google],
-     ...(mtd.allocatedInfraCents > 0 ? [['Allocated infra', mtd.allocatedInfraCents] as [string, number]] : []),
     ]
   : []
 
@@ -1153,9 +1152,8 @@ function CostMarginCard({ clientId }: { clientId: string }) {
      </div>
 
      <div className="text-[11px] text-gray-600">
-      Measured providers are exact (Retell, Stripe) or rate-based (Anthropic tokens, Telnyx
-      segments). Infra is allocated evenly across active clients
-      {mtd.allocatedInfraCents > 0 ? '.' : ' (off until COST_INFRA_MONTHLY_CENTS is set).'}{' '}
+      Per-customer cost only. Exact where the provider reports it (Retell, Stripe),
+      rate-based otherwise (Anthropic tokens, Telnyx segments).{' '}
       Lifetime cost: {usd(data.lifetime.measuredCostCents)}.
      </div>
     </div>

@@ -34,11 +34,6 @@ export const COST_RATES = {
   google: {
     centsPerRoutesCall: envCents('COST_GOOGLE_CENTS_PER_ROUTES_CALL', 0.5),
   },
-  // Flat infra (Vercel + Supabase + Cal.com + Resend) that can't be
-  // measured per client. Total monthly bill in cents, allocated evenly
-  // across active clients at read time. Default 0 so we never fabricate a
-  // number - set COST_INFRA_MONTHLY_CENTS to turn allocation on.
-  infraMonthlyCents: envCents('COST_INFRA_MONTHLY_CENTS', 0),
 } as const
 
 /**

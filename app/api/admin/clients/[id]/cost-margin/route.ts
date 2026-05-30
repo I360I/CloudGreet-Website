@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { COST_RATES } from '@/lib/billing/cost-rates'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -68,22 +67,11 @@ export async function GET(
       }
     }
 
-    // Allocated flat infra: total monthly infra bill / active clients. Off
-    // by default (rate is 0 unless COST_INFRA_MONTHLY_CENTS is set) so we
-    // never invent a number.
-    let allocatedInfraCents = 0
-    if (COST_RATES.infraMonthlyCents > 0) {
-      const { count: activeClients } = await supabaseAdmin
-        .from('businesses')
-        .select('id', { count: 'exact', head: true })
-        .in('subscription_status', ['active', 'trialing', 'past_due'])
-      const denom = Math.max(activeClients || 1, 1)
-      allocatedInfraCents = Math.round(COST_RATES.infraMonthlyCents / denom)
-    }
-
+    // Per-customer measured cost only - no flat-infra allocation. Infra
+    // (Vercel/Supabase/Cal.com/Resend) is all on free tiers, and the policy
+    // is to track only what each individual customer costs.
     const monthlyRevenueCents = (biz.monthly_price_cents as number) || 0
-    const monthCostWithInfra = month.total + allocatedInfraCents
-    const marginCents = monthlyRevenueCents - monthCostWithInfra
+    const marginCents = monthlyRevenueCents - month.total
     const marginPct = monthlyRevenueCents > 0 ? Math.round((marginCents / monthlyRevenueCents) * 1000) / 10 : null
 
     return NextResponse.json({
@@ -92,8 +80,7 @@ export async function GET(
       monthToDate: {
         measuredCostCents: month.total,
         byProvider: month.byProvider,
-        allocatedInfraCents,
-        totalCostCents: monthCostWithInfra,
+        totalCostCents: month.total,
         revenueCents: monthlyRevenueCents,
         marginCents,
         marginPct,
