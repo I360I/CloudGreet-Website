@@ -251,13 +251,62 @@ export async function POST(request: NextRequest) {
  // Get business info - need cal.com config for the booking too.
  const { data: business, error: businessError } = await supabaseAdmin
  .from('businesses')
- .select('id, stripe_customer_id, subscription_status, timezone, cal_com_api_key, cal_com_event_type_id, cal_com_event_type_id_emergency, business_name, email, phone_number')
+ .select('id, stripe_customer_id, subscription_status, timezone, cal_com_api_key, cal_com_event_type_id, cal_com_event_type_id_emergency, business_name, email, phone_number, dispatch_mode')
  .eq('id', business_id)
  .single()
 
  if (businessError || !business) {
  logger.error('Business not found', { business_id, error: businessError?.message || JSON.stringify(businessError) })
  return NextResponse.json({ success: false, error: 'business_not_found' }, { status: 404 })
+ }
+
+ // Ride businesses (dispatch_mode): never finalize a booking without a real
+ // street-level pickup. A bare city like "Powell" geocodes to a meaningless
+ // centroid, so the quote gate in lookup_drive_time isn't enough - a caller
+ // who never asks for a quote could otherwise book with no real address.
+ // Airports / named places are exempt. Enforced only on a definitive
+ // geocode, so a Geocoding outage degrades to not blocking.
+ if ((business as any).dispatch_mode) {
+ const pickup = String((tool.arguments as any)?.pickup || '').trim()
+ if (!pickup) {
+ return NextResponse.json({
+ success: false,
+ error: 'pickup_required',
+ guidance: 'Before booking, ask the caller for the full pickup street address (house or building number + street) and pass it as the pickup argument. Do not book from a city name alone. Airports and named places are fine.',
+ }, { status: 422 })
+ }
+ const geoKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_PLACES_API_KEY
+ const airportHint =
+ /airport|CMH|LCK|john glenn|rickenbacker|baggage claim|curbside/i.test(pickup) ||
+ /airport[ _]?pickup/i.test(String(rawService || ''))
+ if (geoKey && !airportHint) {
+ let blocked = false
+ try {
+ const gRes = await fetch(
+ `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(pickup)}&key=${geoKey}`,
+ )
+ if (gRes.ok) {
+ const gj = await gRes.json() as any
+ const top = gj?.results?.[0]
+ if (top) {
+ const gtypes: string[] = top.types || []
+ const locType: string = top?.geometry?.location_type || ''
+ const preciseType = gtypes.some((t) =>
+ ['street_address', 'premise', 'subpremise', 'establishment', 'point_of_interest'].includes(t),
+ )
+ const preciseLoc = locType === 'ROOFTOP' || locType === 'RANGE_INTERPOLATED'
+ blocked = !(preciseType || preciseLoc)
+ }
+ }
+ } catch { /* non-fatal - leaves blocked false */ }
+ if (blocked) {
+ return NextResponse.json({
+ success: false,
+ error: 'pickup_not_specific',
+ guidance: `"${pickup}" is only a city or area, not an exact pickup point. Ask the caller for the full pickup street address (house or building number + street) before booking.`,
+ }, { status: 422 })
+ }
+ }
  }
 
  // Parse datetime and calculate end time (default 1 hour duration).
