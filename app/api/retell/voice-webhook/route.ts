@@ -924,13 +924,21 @@ export async function POST(request: NextRequest) {
  let originCounty: string | null = null
  let originState: string | null = null
  let isAirportOrigin = /airport|CMH|LCK|john glenn|rickenbacker/i.test(origin)
+ // Pickup-precision gate. A bare city/town ("Powell") geocodes fine and
+ // yields a plausible-but-meaningless distance, letting the agent quote +
+ // book without a real pickup point. We use Google's own precision signal
+ // to require a street-level address. Only enforced when we get a
+ // definitive geocode - if Geocoding is down we degrade to not blocking.
+ let originGeocoded = false
+ let originPrecise = false
  try {
  const gRes = await fetch(
  `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(origin)}&key=${apiKey}`,
  )
  if (gRes.ok) {
  const gj = await gRes.json() as any
- const comps = gj?.results?.[0]?.address_components || []
+ const top = gj?.results?.[0]
+ const comps = top?.address_components || []
  for (const c of comps) {
  const types = c.types || []
  if (types.includes('administrative_area_level_2')) {
@@ -940,12 +948,35 @@ export async function POST(request: NextRequest) {
  originState = c.short_name || null
  }
  }
- const resolved = (gj?.results?.[0]?.formatted_address || '').toLowerCase()
+ const resolved = (top?.formatted_address || '').toLowerCase()
  if (resolved.includes('airport') || resolved.includes('cmh') || resolved.includes('lck')) {
  isAirportOrigin = true
  }
+ if (top) {
+ originGeocoded = true
+ const gtypes: string[] = top.types || []
+ const locType: string = top?.geometry?.location_type || ''
+ // Street-level only: a specific address, a building/POI, or a
+ // rooftop/interpolated hit. A city/route/zip resolves to APPROXIMATE
+ // with locality/route types and is rejected.
+ const preciseType = gtypes.some((t) =>
+ ['street_address', 'premise', 'subpremise', 'establishment', 'point_of_interest'].includes(t),
+ )
+ const preciseLoc = locType === 'ROOFTOP' || locType === 'RANGE_INTERPOLATED'
+ originPrecise = preciseType || preciseLoc
  }
- } catch { /* non-fatal */ }
+ }
+ } catch { /* non-fatal - leaves originGeocoded false, so no block */ }
+
+ // Block vague pickups (airports exempt - they're a valid named origin).
+ if (originGeocoded && !originPrecise && !isAirportOrigin) {
+ return NextResponse.json({
+ success: false,
+ error: 'pickup_not_specific',
+ guidance:
+ `"${origin}" is only a city/area, not an exact pickup point. Ask the caller for the full pickup street address (house or building number + street) before quoting or booking. Do not quote from a city name alone. Named places like airports or hotels are fine.`,
+ }, { status: 422 })
+ }
 
  return NextResponse.json({
  success: true,
