@@ -368,60 +368,33 @@ export async function DELETE(
    await deleteWebhook(business.cal_com_api_key, business.cal_com_webhook_id)
   }
 
-  const childTables = [
-   "calls", "appointments", "phone_numbers", "sms_messages",
-   "messages", "notes", "tags", "notifications",
-   "ai_agents", "knowledge_base", "knowledge_articles",
-   "billing_records", "subscription_events", "audit_logs",
-  ]
-  const stepErrors: string[] = []
-  const isMissingTable = (err: any) =>
-   err?.code === "42P01" ||
-   err?.code === "PGRST205" ||
-   /Could not find the table|does not exist|schema cache/i.test(err?.message || "")
-  for (const table of childTables) {
-   const { error } = await supabaseAdmin.from(table).delete().eq("business_id", clientId)
-   if (error && !isMissingTable(error)) {
-    stepErrors.push(`${table}: ${error.message}`)
-   }
-  }
-
-  const { error: uByBizErr } = await supabaseAdmin
-   .from("custom_users").delete().eq("business_id", clientId)
-  if (uByBizErr && !isMissingTable(uByBizErr)) {
-   stepErrors.push(`custom_users (by business_id): ${uByBizErr.message}`)
-  }
-  if (business.owner_id) {
-   const { error: uByOwnerErr } = await supabaseAdmin
-    .from("custom_users").delete().eq("id", business.owner_id)
-   if (uByOwnerErr && uByOwnerErr.code !== "PGRST116" && !isMissingTable(uByOwnerErr)) {
-    stepErrors.push(`custom_users (by owner_id): ${uByOwnerErr.message}`)
-   }
-  }
-
-  const { error: bDelErr } = await supabaseAdmin
-   .from("businesses").delete().eq("id", clientId)
-  if (bDelErr) {
-   logger.error("Admin delete client: business row failed", {
-    clientId, error: bDelErr.message,
+  // Cascade-delete via a DB function that dynamically clears every table
+  // with a blocking (NO ACTION / RESTRICT) FK to businesses, then the
+  // business row - all in one transaction. This replaced a hardcoded list
+  // of child tables that silently drifted out of date every time a new
+  // table was added, leaving the final business delete to fail on a FK
+  // violation (the "delete button does nothing" bug).
+  const { error: rpcErr } = await supabaseAdmin.rpc("admin_delete_business", {
+   p_business_id: clientId,
+  })
+  if (rpcErr) {
+   logger.error("Admin delete client: cascade failed", {
+    clientId, error: rpcErr.message,
    })
    return NextResponse.json({
-    error: "Could not delete business row",
-    detail: bDelErr.message,
-    stepErrors,
+    error: "Could not delete business",
+    detail: rpcErr.message,
    }, { status: 409 })
   }
 
   logger.info("Admin deleted client", {
    clientId,
    businessName: business.business_name,
-   stepErrorCount: stepErrors.length,
   })
 
   return NextResponse.json({
    success: true,
    deletedId: clientId,
-   stepErrors: stepErrors.length ? stepErrors : undefined,
   })
  } catch (error) {
   logger.error("Failed to delete client", {
