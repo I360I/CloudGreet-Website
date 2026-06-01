@@ -187,7 +187,8 @@ export async function handleInboundSms(args: {
 
   // Find or create conversation. Older inactive convos start fresh
   // so we don't pile months of unrelated context into the prompt.
-  const conversationId = await getOrCreateConversation(args.businessId, fromPhone)
+  const { id: conversationId, reportToken, isNew: isNewConversation } =
+    await getOrCreateConversation(args.businessId, fromPhone)
 
   // Per-sender rate limit. Count inbound rows from this conversation
   // in the last 5 minutes. Past INBOUND_RATE_LIMIT_5MIN we silently
@@ -273,6 +274,9 @@ export async function handleInboundSms(args: {
   // Tool-use loop.
   let reply: string | null = null
   const collectedToolCalls: any[] = []
+  // Track whether this turn completed a booking or dispatch, for the
+  // admin alert below.
+  let outcomeKind: 'booked' | 'dispatch' | null = null
   // Accumulate token usage across every model call in this turn so we can
   // record one LLM cost row for the whole inbound message.
   let usageInTokens = 0
@@ -312,6 +316,10 @@ export async function handleInboundSms(args: {
         customerPhone: fromPhone,
       })
       collectedToolCalls.push({ name: tu.name, args: tu.input, result })
+      if (tu.name === 'book_appointment' && (result as any)?.success === true) outcomeKind = 'booked'
+      if (tu.name === 'send_dispatch_request' && ((result as any)?.ok === true || (result as any)?.success === true)) {
+        outcomeKind = 'dispatch'
+      }
       toolResults.push({
         type: 'tool_result',
         tool_use_id: tu.id,
@@ -392,24 +400,73 @@ export async function handleInboundSms(args: {
     })
   }
 
+  // Admin alerts (fire-and-forget). A "NEW" alert on the first message of a
+  // fresh conversation, and a "BOOKED"/"DISPATCH" alert when this turn
+  // produced an outcome - both carry the login-free report link.
+  const businessName = (biz as any).business_name || 'Client'
+  if (isNewConversation) {
+    void alertAdminTextToBook({
+      kind: 'new', businessName, customerPhone: fromPhone, reportToken, fromNumber, preview: args.body,
+    })
+  }
+  if (outcomeKind) {
+    void alertAdminTextToBook({
+      kind: outcomeKind, businessName, customerPhone: fromPhone, reportToken, fromNumber,
+    })
+  }
+
   return { ok: true, reply_sent: true, reply }
 }
 
-async function getOrCreateConversation(businessId: string, customerPhone: string): Promise<string> {
+async function getOrCreateConversation(
+  businessId: string,
+  customerPhone: string,
+): Promise<{ id: string; reportToken: string | null; isNew: boolean }> {
   const { data: existing } = await supabaseAdmin
     .from('sms_conversations')
-    .select('id')
+    .select('id, report_token')
     .eq('business_id', businessId)
     .eq('customer_phone', customerPhone)
     .maybeSingle()
-  if ((existing as any)?.id) return (existing as any).id
+  if ((existing as any)?.id) {
+    return { id: (existing as any).id, reportToken: (existing as any).report_token ?? null, isNew: false }
+  }
   const { data: created, error } = await supabaseAdmin
     .from('sms_conversations')
     .insert({ business_id: businessId, customer_phone: customerPhone })
-    .select('id')
+    .select('id, report_token')
     .single()
   if (error || !created) throw new Error(`Failed to create conversation: ${error?.message || 'no row'}`)
-  return (created as any).id
+  return { id: (created as any).id, reportToken: (created as any).report_token ?? null, isNew: true }
+}
+
+/**
+ * Texts the admin (CLOUDGREET_ADMIN_NOTIFY_PHONE) a labeled text-to-book
+ * alert with a login-free "view full report" link to the conversation.
+ * Fire-and-forget: never throws into the agent's hot path.
+ */
+async function alertAdminTextToBook(opts: {
+  kind: 'new' | 'booked' | 'dispatch'
+  businessName: string
+  customerPhone: string
+  reportToken: string | null
+  fromNumber: string
+  preview?: string
+}): Promise<void> {
+  try {
+    const adminPhone = (process.env.CLOUDGREET_ADMIN_NOTIFY_PHONE || '+17372960092').trim()
+    const base = process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'
+    const link = opts.reportToken ? `${base}/r/${opts.reportToken}` : base
+    const label =
+      opts.kind === 'new' ? 'NEW text-to-book' :
+      opts.kind === 'booked' ? 'text-to-book BOOKED' :
+      'text-to-book DISPATCH'
+    const preview = opts.preview ? `\n"${opts.preview.replace(/\s+/g, ' ').trim().slice(0, 120)}"` : ''
+    const body = `[${opts.businessName}] ${label}\nFrom ${opts.customerPhone}${preview}\nView full report: ${link}`
+    await telnyxClient.sendSMS(adminPhone, body, opts.fromNumber)
+  } catch (e) {
+    logger.warn('alertAdminTextToBook failed', { error: e instanceof Error ? e.message : 'unknown' })
+  }
 }
 
 async function buildSystemPrompt(args: {
