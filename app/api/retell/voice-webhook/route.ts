@@ -2051,10 +2051,20 @@ async function handleCallEvent(
        && /callback|dispatch|same.?day|under.?24/.test(bookingType.toLowerCase())) {
     const callerPhone = (typeof call?.from_number === 'string' && call.from_number) || patch.from_number || null
     if (callerPhone && callerPhone !== 'unknown') {
+     // Ground truth: did the agent already fire send_dispatch_request during
+     // the call? Retell's call object carries the tool-call log, which is
+     // authoritative - far more reliable than our mid-call dispatch_sent_at
+     // stamp, which no-ops when the calls row doesn't exist yet at tool time
+     // (that gap is what double-texted Barbara Martin).
+     const agentAlreadyDispatched = JSON.stringify(call || {}).includes('"send_dispatch_request"')
      const { data: prev } = await supabaseAdmin
       .from('calls').select('dispatch_sent_at, caller_name')
       .eq('retell_call_id', retellCallId).maybeSingle()
-     if (!(prev as any)?.dispatch_sent_at) {
+     const alreadyHandled = agentAlreadyDispatched || !!(prev as any)?.dispatch_sent_at
+     if (alreadyHandled) {
+      // Record it so any re-fire of call_analyzed also stays quiet.
+      if (!(prev as any)?.dispatch_sent_at) patch.dispatch_sent_at = new Date().toISOString()
+     } else {
       try {
        const { sendDispatchRequest } = await import('@/lib/quote-engine')
        const r = await sendDispatchRequest({
