@@ -1250,6 +1250,16 @@ export async function POST(request: NextRequest) {
  body,
  }),
  ).catch(() => { /* admin-copy is best-effort */ })
+ // Stamp the call so the call_analyzed safety net (which re-sends dropped
+ // dispatches) knows this one already went out. Best-effort - the row may
+ // not exist yet mid-call, in which case the safety net's own idempotency
+ // check still applies.
+ const dispatchedCallId = (body as any)?.call?.call_id || (body as any)?.call?.id
+ if (dispatchedCallId) {
+ void supabaseAdmin.from('calls')
+ .update({ dispatch_sent_at: new Date().toISOString() })
+ .eq('retell_call_id', dispatchedCallId)
+ }
  return NextResponse.json({
  success: true,
  message: 'Owner texted. Tell the caller the owner will call or text them back shortly to confirm.',
@@ -2028,6 +2038,43 @@ async function handleCallEvent(
    const bookingType = flat.booking_type
    if (typeof bookingType === 'string' && bookingType.trim()) {
     patch.outcome = bookingType.trim().toLowerCase()
+   }
+
+   // SAFETY NET for dropped dispatches. The agent sometimes promises a
+   // callback ("Steve will call you back") but never fires
+   // send_dispatch_request, silently dropping it (confirmed on a real
+   // call). If the post-call analysis says this was a callback / dispatch /
+   // same-day request and no dispatch went out during the call, send it
+   // now so the owner still gets it. Idempotent via dispatch_sent_at:
+   // the agent's own dispatch stamps it, and we stamp it here on fire.
+   if (eventType === 'call_analyzed' && resolvedBusinessId && typeof bookingType === 'string'
+       && /callback|dispatch|same.?day|under.?24/.test(bookingType.toLowerCase())) {
+    const callerPhone = (typeof call?.from_number === 'string' && call.from_number) || patch.from_number || null
+    if (callerPhone && callerPhone !== 'unknown') {
+     const { data: prev } = await supabaseAdmin
+      .from('calls').select('dispatch_sent_at, caller_name')
+      .eq('retell_call_id', retellCallId).maybeSingle()
+     if (!(prev as any)?.dispatch_sent_at) {
+      try {
+       const { sendDispatchRequest } = await import('@/lib/quote-engine')
+       const r = await sendDispatchRequest({
+        businessId: resolvedBusinessId,
+        customerName: (prev as any)?.caller_name || patch.caller_name || (flat.customer_name as string) || 'Caller',
+        customerPhone: String(callerPhone),
+        pickup: (flat.service_address as string) || 'CALLBACK REQUEST',
+        requestedTime: (flat.preferred_callback as string) || 'Callback ASAP',
+        notes: 'Auto-recovered: the agent did not send a dispatch during the call.',
+       })
+       if (r.ok) {
+        patch.dispatch_sent_at = new Date().toISOString()
+       } else {
+        logger.warn('dispatch safety net send failed', { retellCallId, error: (r as any).error })
+       }
+      } catch (e) {
+       logger.warn('dispatch safety net threw', { retellCallId, error: e instanceof Error ? e.message : 'unknown' })
+      }
+     }
+    }
    }
   }
 
