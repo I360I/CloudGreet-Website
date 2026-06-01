@@ -89,13 +89,20 @@ export async function lookupDriveTime(args: {
     let originCounty: string | null = null
     let originState: string | null = null
     let isAirportOrigin = /airport|CMH|LCK|john glenn|rickenbacker/i.test(origin)
+    // Pickup-precision gate (same as the voice path): a bare city like
+    // "Powell" geocodes to a meaningless centroid, so never quote from it.
+    // Require a street-level address; airports/named places exempt. Only
+    // enforced on a definitive geocode, so a Geocoding outage doesn't block.
+    let originGeocoded = false
+    let originPrecise = false
     try {
       const gRes = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(origin)}&key=${apiKey}`,
       )
       if (gRes.ok) {
         const gj = await gRes.json() as any
-        const comps = gj?.results?.[0]?.address_components || []
+        const top = gj?.results?.[0]
+        const comps = top?.address_components || []
         for (const c of comps) {
           const types = c.types || []
           if (types.includes('administrative_area_level_2')) {
@@ -105,12 +112,30 @@ export async function lookupDriveTime(args: {
             originState = c.short_name || null
           }
         }
-        const resolved = (gj?.results?.[0]?.formatted_address || '').toLowerCase()
+        const resolved = (top?.formatted_address || '').toLowerCase()
         if (resolved.includes('airport') || resolved.includes('cmh') || resolved.includes('lck')) {
           isAirportOrigin = true
         }
+        if (top) {
+          originGeocoded = true
+          const gtypes: string[] = top.types || []
+          const locType: string = top?.geometry?.location_type || ''
+          const preciseType = gtypes.some((t) =>
+            ['street_address', 'premise', 'subpremise', 'establishment', 'point_of_interest'].includes(t),
+          )
+          const preciseLoc = locType === 'ROOFTOP' || locType === 'RANGE_INTERPOLATED'
+          originPrecise = preciseType || preciseLoc
+        }
       }
-    } catch { /* best-effort */ }
+    } catch { /* best-effort - leaves originGeocoded false, so no block */ }
+
+    if (originGeocoded && !originPrecise && !isAirportOrigin) {
+      return {
+        ok: false,
+        error: 'pickup_not_specific',
+        detail: `"${origin}" is only a city or area, not an exact pickup point. Ask the customer for the full pickup street address (house or building number + street) before quoting or booking. Do not quote from a city name alone. Airports and named places are fine.`,
+      }
+    }
 
     return {
       ok: true,

@@ -17,10 +17,10 @@ function fmtPhone(p: string): string {
   return p
 }
 
-function fmtTime(iso: string): string {
+function fmtTime(iso: string, timeZone: string): string {
   try {
     return new Date(iso).toLocaleString('en-US', {
-      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone,
     })
   } catch { return '' }
 }
@@ -46,7 +46,7 @@ export default async function ReportPage({ params }: { params: { token: string }
   }
 
   const [{ data: biz }, { data: msgs }] = await Promise.all([
-    supabaseAdmin.from('businesses').select('business_name').eq('id', (convo as any).business_id).maybeSingle(),
+    supabaseAdmin.from('businesses').select('business_name, timezone').eq('id', (convo as any).business_id).maybeSingle(),
     supabaseAdmin
       .from('sms_agent_messages')
       .select('direction, body, created_at, tool_calls')
@@ -55,6 +55,9 @@ export default async function ReportPage({ params }: { params: { token: string }
   ])
 
   const businessName = (biz as any)?.business_name || 'Client'
+  // Render times in the business's local zone so they match what the agent
+  // told the customer (stored timestamps are UTC). Fall back to Eastern.
+  const tz = (biz as any)?.timezone || 'America/New_York'
   const messages = (msgs || []) as Array<{ direction: string; body: string; created_at: string; tool_calls: any }>
 
   return (
@@ -66,7 +69,7 @@ export default async function ReportPage({ params }: { params: { token: string }
           </div>
           <h1 className="text-xl font-semibold">{businessName}</h1>
           <div className="text-sm text-gray-500 mt-0.5">
-            Conversation with {fmtPhone((convo as any).customer_phone)} · started {fmtTime((convo as any).created_at)}
+            Conversation with {fmtPhone((convo as any).customer_phone)} · started {fmtTime((convo as any).created_at, tz)}
           </div>
         </div>
 
@@ -92,7 +95,7 @@ export default async function ReportPage({ params }: { params: { token: string }
                     {m.body}
                   </div>
                   <div className="text-[11px] text-gray-400 mt-1 px-1">
-                    {inbound ? fmtPhone((convo as any).customer_phone) : 'Agent'} · {fmtTime(m.created_at)}
+                    {inbound ? fmtPhone((convo as any).customer_phone) : 'Agent'} · {fmtTime(m.created_at, tz)}
                     {toolNames.length > 0 && (
                       <span className="ml-1 text-gray-400">· ran {toolNames.join(', ')}</span>
                     )}
