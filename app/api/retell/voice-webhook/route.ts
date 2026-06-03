@@ -2040,15 +2040,31 @@ async function handleCallEvent(
     patch.outcome = bookingType.trim().toLowerCase()
    }
 
-   // SAFETY NET for dropped dispatches. The agent sometimes promises a
-   // callback ("Steve will call you back") but never fires
-   // send_dispatch_request, silently dropping it (confirmed on a real
-   // call). If the post-call analysis says this was a callback / dispatch /
-   // same-day request and no dispatch went out during the call, send it
-   // now so the owner still gets it. Idempotent via dispatch_sent_at:
-   // the agent's own dispatch stamps it, and we stamp it here on fire.
-   if (eventType === 'call_analyzed' && resolvedBusinessId && typeof bookingType === 'string'
-       && /callback|dispatch|same.?day|under.?24/.test(bookingType.toLowerCase())) {
+   // SAFETY NET for dropped dispatches. Two ways a callback gets dropped:
+   // (1) the agent promises "Steve will call you back" but never fires
+   // send_dispatch_request, and (2) the caller says "callback" then hangs
+   // up before giving a name, so the tool (which needs a name) can't fire.
+   // Either way, if there's callback/dispatch intent and nothing went out,
+   // send it now off the caller ID so the owner still gets it. We trigger
+   // on the post-call booking_type OR an explicit "callback" from the
+   // CALLER in the transcript - the analyzer sometimes tags an early
+   // hang-up info_only/not_a_fit even though the caller clearly asked for a
+   // callback. Idempotent via dispatch_sent_at + the agent's tool log.
+   const btLower = typeof bookingType === 'string' ? bookingType.toLowerCase() : ''
+   const userAskedCallback = (() => {
+    const turns = (call?.transcript_object || call?.transcript_with_tool_calls || []) as any[]
+    if (!Array.isArray(turns)) return false
+    // Only the CALLER's turns - the agent greeting always says "say callback".
+    return turns.some((t) =>
+     t?.role === 'user' &&
+     /\bcall ?back\b|call me back|have steve call|speak (to|with) steve|talk to steve/i.test(
+      String(t?.content ?? t?.transcript ?? ''),
+     ))
+   })()
+   const dispatchIntent =
+    btLower !== 'booked' &&
+    (/callback|dispatch|same.?day|under.?24/.test(btLower) || userAskedCallback)
+   if (eventType === 'call_analyzed' && resolvedBusinessId && dispatchIntent) {
     const callerPhone = (typeof call?.from_number === 'string' && call.from_number) || patch.from_number || null
     if (callerPhone && callerPhone !== 'unknown') {
      // Ground truth: did the agent already fire send_dispatch_request during
@@ -2066,14 +2082,19 @@ async function handleCallEvent(
       if (!(prev as any)?.dispatch_sent_at) patch.dispatch_sent_at = new Date().toISOString()
      } else {
       try {
+       const knownName = (prev as any)?.caller_name || patch.caller_name || (flat.customer_name as string) || null
+       const hungUp = call?.disconnection_reason === 'user_hangup'
+       const note = (!knownName && (userAskedCallback || hungUp))
+        ? `Caller asked for a callback${hungUp ? ' then hung up' : ''} before giving their name. Call them back at this number.`
+        : 'Auto-recovered: the agent did not send a dispatch during the call.'
        const { sendDispatchRequest } = await import('@/lib/quote-engine')
        const r = await sendDispatchRequest({
         businessId: resolvedBusinessId,
-        customerName: (prev as any)?.caller_name || patch.caller_name || (flat.customer_name as string) || 'Caller',
+        customerName: knownName || 'Caller',
         customerPhone: String(callerPhone),
         pickup: (flat.service_address as string) || 'CALLBACK REQUEST',
         requestedTime: (flat.preferred_callback as string) || 'Callback ASAP',
-        notes: 'Auto-recovered: the agent did not send a dispatch during the call.',
+        notes: note,
        })
        if (r.ok) {
         patch.dispatch_sent_at = new Date().toISOString()
