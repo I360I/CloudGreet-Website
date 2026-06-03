@@ -16,6 +16,7 @@ import { SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch, 
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { NotificationsBell } from '@/components/NotificationsBell'
+import { ImpersonationBanner } from '@/app/dashboard/_components/ImpersonationBanner'
 
 type ActiveLabel = 'Overview' | 'Leads' | 'Closes' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook'
 
@@ -82,6 +83,8 @@ export function SalesShell({
   }
 
   return (
+    <>
+    <ImpersonationBanner />
     <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
       <aside className="hidden lg:flex w-60 border-r border-black/5 flex-col py-6 px-4 sticky top-0 h-screen bg-white/40 backdrop-blur-sm">
         <div className="px-2 mb-8 flex items-start justify-between gap-2">
@@ -178,6 +181,7 @@ export function SalesShell({
 
       {pathname.startsWith('/sales/leads') && <Dialer />}
     </main>
+    </>
   )
 }
 

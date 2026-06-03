@@ -212,6 +212,28 @@ export default function RepDetailPage() {
        </div>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
+       <GhostButton
+        onClick={async () => {
+         try {
+          const r = await fetch(`/api/admin/sales/reps/${id}/impersonate`, {
+           method: 'POST', credentials: 'include',
+          })
+          const j = await r.json().catch(() => ({}))
+          if (r.ok && j?.success) {
+           // Scrub the admin's own localStorage so the rep portal doesn't
+           // read stale session blobs and trip the session-guard reload.
+           const { clearClientAuthState } = await import('@/lib/auth/session-guard')
+           clearClientAuthState()
+           window.location.href = j.redirect_url || '/sales'
+          } else {
+           alert(j?.error || 'Could not log in as this rep')
+          }
+         } catch { alert('Could not log in as this rep') }
+        }}
+        disabled={rep.status !== 'active'}
+       >
+        <Key className="w-4 h-4" /> Login as rep
+       </GhostButton>
        {rep.status === 'active' && (
         <GhostButton
          onClick={() => setStatus('paused', 'Pause this rep? They can\'t sign in but commissions still accrue.')}
