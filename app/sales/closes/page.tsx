@@ -116,6 +116,7 @@ function subscriptionPill(status: string | null): { label: string; cls: string }
 
 export default function SalesClosesPage() {
   const [closes, setCloses] = useState<Close[]>([])
+  const [linkedProspects, setLinkedProspects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [linkBusy, setLinkBusy] = useState<string | null>(null)
@@ -125,10 +126,24 @@ export default function SalesClosesPage() {
 
   const load = async () => {
     try {
-      const res = await fetchWithAuth('/api/sales/closes')
-      const j = await res.json().catch(() => ({}))
-      if (!res.ok) setError(j?.error || 'Failed to load closes')
-      else setCloses(j.closes || [])
+      const [cr, br] = await Promise.all([
+        fetchWithAuth('/api/sales/closes'),
+        fetchWithAuth('/api/sales/clients'),
+      ])
+      const j = await cr.json().catch(() => ({}))
+      if (!cr.ok) setError(j?.error || 'Failed to load prospects')
+      const closesList = (j.closes || []) as Close[]
+      setCloses(closesList)
+      // Externally-linked businesses that never went through a close and
+      // aren't paying yet are prospects too - surface them here so they
+      // don't vanish (they're filtered out of the Clients tab now).
+      const bj = await br.json().catch(() => ({}))
+      const PAYING = new Set(['active', 'past_due'])
+      const closeBizIds = new Set(closesList.map((c) => c.business_id).filter(Boolean))
+      const linked = ((bj.clients || []) as any[]).filter(
+        (b) => !PAYING.has((b.subscription_status || '').toLowerCase()) && !closeBizIds.has(b.id),
+      )
+      setLinkedProspects(linked)
     } finally {
       setLoading(false)
     }
@@ -198,11 +213,11 @@ export default function SalesClosesPage() {
   }
 
   return (
-    <SalesShell activeLabel="Closes">
+    <SalesShell activeLabel="Prospects">
       <section className="max-w-5xl mx-auto px-6 py-10">
         <SalesPageHeader
-          eyebrow="closes"
-          title="Your deals"
+          eyebrow="prospects"
+          title="Your pipeline"
           action={
             <div className="flex items-center gap-2">
               <Link
@@ -228,9 +243,33 @@ export default function SalesClosesPage() {
           </div>
         )}
 
+        {!loading && linkedProspects.length > 0 && (
+          <div className="mb-6 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100 text-[10px] font-mono uppercase tracking-wider text-gray-500">
+              Linked accounts · not paying yet
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {linkedProspects.map((b) => (
+                <li key={b.id}>
+                  <Link
+                    href={`/sales/clients/${b.id}`}
+                    className="px-5 py-4 flex items-center justify-between gap-3 hover:bg-gray-50/60 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">{b.business_name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5 capitalize">{b.subscription_status || 'pending'}</div>
+                    </div>
+                    <span className="text-gray-400 text-xs shrink-0">View →</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {loading ? (
           <SalesLoadingState />
-        ) : closes.length === 0 ? (
+        ) : closes.length === 0 && linkedProspects.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
@@ -240,7 +279,7 @@ export default function SalesClosesPage() {
               <Trophy weight="duotone" className="w-6 h-6" />
             </div>
             <p className="text-sm text-gray-500 mb-4">
-              No closes yet. Submit one when you sign someone.
+              No prospects yet. Submit a close when you sign someone, or link an account.
             </p>
             <Link
               href="/sales/closes/new"
@@ -249,7 +288,7 @@ export default function SalesClosesPage() {
               <Plus weight="bold" className="w-4 h-4" /> Submit close
             </Link>
           </motion.div>
-        ) : (
+        ) : closes.length === 0 ? null : (
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}

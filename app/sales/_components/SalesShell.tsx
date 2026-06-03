@@ -12,13 +12,13 @@ const Dialer = dynamicImport(
   () => import('./Dialer').then((m) => ({ default: m.Dialer })),
   { ssr: false },
 )
-import { SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch, Gear, Users, GraduationCap, BookOpen, Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch, Gear, Users, GraduationCap, BookOpen, UserPlus, Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { NotificationsBell } from '@/components/NotificationsBell'
 import { ImpersonationBanner } from '@/app/dashboard/_components/ImpersonationBanner'
 
-type ActiveLabel = 'Overview' | 'Leads' | 'Closes' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook'
+type ActiveLabel = 'Overview' | 'Leads' | 'Prospects' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook'
 
 type NavItem = {
   label: ActiveLabel
@@ -30,7 +30,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { label: 'Overview', href: '/sales',          icon: SquaresFour,   match: (p) => p === '/sales' },
   { label: 'Leads',    href: '/sales/leads',    icon: ListChecks,    match: (p) => p.startsWith('/sales/leads') },
-  { label: 'Closes',   href: '/sales/closes',   icon: Trophy,        match: (p) => p.startsWith('/sales/closes') },
+  { label: 'Prospects', href: '/sales/closes',   icon: UserPlus,      match: (p) => p.startsWith('/sales/closes') },
   { label: 'Clients',  href: '/sales/clients',  icon: Users,         match: (p) => p.startsWith('/sales/clients') },
   { label: 'Earnings', href: '/sales/earnings', icon: CurrencyDollar, match: (p) => p.startsWith('/sales/earnings') },
   { label: 'Playbook',  href: '/sales/playbook',  icon: BookOpen,       match: (p) => p.startsWith('/sales/playbook') },

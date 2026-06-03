@@ -82,7 +82,7 @@ function NewCloseForm() {
 
   if (done) {
     return (
-      <SalesShell activeLabel="Closes">
+      <SalesShell activeLabel="Prospects">
         <section className="max-w-xl mx-auto px-6 py-16 text-center">
           <CheckCircle weight="fill" className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
           <h1 className="text-xl font-medium text-gray-900 mb-1">Close submitted</h1>
@@ -95,7 +95,7 @@ function NewCloseForm() {
   }
 
   return (
-    <SalesShell activeLabel="Closes">
+    <SalesShell activeLabel="Prospects">
       <section className="max-w-xl mx-auto px-6 py-10">
         <Link
           href="/sales/closes"

@@ -66,6 +66,14 @@ export default function SalesClientsPage() {
     return () => { cancelled = true }
   }, [])
 
+  // Only actually-paying accounts are "clients". Everyone else (pending,
+  // trialing, inactive, unsigned externally-linked businesses) is a prospect
+  // and lives on the Prospects tab - not here.
+  const PAYING = new Set(['active', 'past_due'])
+  const payingClients = clients.filter(
+    (c) => PAYING.has((c.subscription_status || '').toLowerCase()),
+  )
+
   return (
     <SalesShell activeLabel="Clients">
       <section className="max-w-3xl mx-auto px-6 py-10">
@@ -94,7 +102,7 @@ export default function SalesClientsPage() {
 
         {loading ? (
           <SalesLoadingState />
-        ) : clients.length === 0 ? (
+        ) : payingClients.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: EASE }}
@@ -115,7 +123,7 @@ export default function SalesClientsPage() {
             className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
           >
             <ul className="divide-y divide-gray-100">
-              {clients.map((c) => (
+              {payingClients.map((c) => (
                 <li key={c.id}>
                   <Link
                     href={`/sales/clients/${c.id}`}
