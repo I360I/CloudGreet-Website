@@ -295,6 +295,7 @@ export async function sendDispatchRequest(args: {
   partySize?: number
   requestedTime: string
   notes?: string
+  retellCallId?: string | null
 }): Promise<{ ok: true; ownerPhone: string } | { ok: false; error: string; detail?: string }> {
   const { supabaseAdmin } = await import('./supabase')
   const { telnyxClient } = await import('./telnyx')
@@ -328,7 +329,17 @@ export async function sendDispatchRequest(args: {
 
   const body = lines.join('\n')
   try {
-    await telnyxClient.sendSMS(ownerPhone, body, fromNumber)
+    const sent = await telnyxClient.sendSMS(ownerPhone, body, fromNumber)
+    void import('./dispatch-tracking').then(({ recordDispatchSend }) =>
+      recordDispatchSend({
+        businessId: args.businessId,
+        retellCallId: args.retellCallId ?? null,
+        recipientPhone: ownerPhone,
+        fromNumber,
+        body,
+        telnyxMessageId: (sent as any)?.data?.id || null,
+      }),
+    ).catch(() => { /* tracking is best-effort */ })
     void import('./admin-notify').then(({ sendAdminCopyIfDistinct }) =>
       sendAdminCopyIfDistinct({
         clientName: businessName,

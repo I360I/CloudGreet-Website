@@ -42,6 +42,29 @@ export async function POST(request: NextRequest) {
     if (!body) return NextResponse.json({ received: true })
 
     const event = body?.data?.event_type || body?.event_type || ''
+
+    // Outbound delivery receipts for owner dispatch texts. message.finalized
+    // carries the final per-recipient status; we retry/alert on failure so a
+    // "Steve, call this customer back" text that doesn't land gets resent.
+    if (event === 'message.finalized' || event === 'message.sent') {
+      const dlr = body?.data?.payload || body?.payload || body
+      const msgId: string | undefined = dlr?.id || body?.data?.id
+      const toArr = dlr?.to
+      const toStatus: string =
+        Array.isArray(toArr) ? (toArr[0]?.status || '') : (toArr?.status || '')
+      const errDetail =
+        dlr?.errors?.[0]?.detail || dlr?.errors?.[0]?.title || dlr?.errors?.[0]?.code
+      if (msgId && toStatus) {
+        try {
+          const { handleDispatchDlr } = await import('@/lib/dispatch-tracking')
+          await handleDispatchDlr(String(msgId), String(toStatus), errDetail ? String(errDetail) : undefined)
+        } catch (e) {
+          logger.warn('dispatch DLR handling failed', { error: e instanceof Error ? e.message : 'unknown' })
+        }
+      }
+      return NextResponse.json({ received: true })
+    }
+
     if (event !== 'message.received') {
       return NextResponse.json({ received: true })
     }

@@ -1239,7 +1239,19 @@ export async function POST(request: NextRequest) {
  const body = lines.join('\n')
 
  try {
- await telnyxClient.sendSMS(ownerPhone, body, fromNum)
+ const sent = await telnyxClient.sendSMS(ownerPhone, body, fromNum)
+ // Track delivery so a failed send gets retried (a Telnyx 200 = accepted,
+ // not delivered). The SMS webhook watches the delivery receipt by message
+ // id and resends on failure.
+ void import('@/lib/dispatch-tracking').then(({ recordDispatchSend }) =>
+ recordDispatchSend({
+ businessId: resolvedBusinessId,
+ recipientPhone: ownerPhone,
+ fromNumber: fromNum,
+ body,
+ telnyxMessageId: (sent as any)?.data?.id || null,
+ }),
+ ).catch(() => {})
  // Mirror to platform admin so we see every dispatch land across
  // all clients. Best-effort, fire-and-forget.
  void import('@/lib/admin-notify').then(({ sendAdminCopyIfDistinct }) =>
@@ -1250,16 +1262,6 @@ export async function POST(request: NextRequest) {
  body,
  }),
  ).catch(() => { /* admin-copy is best-effort */ })
- // Stamp the call so the call_analyzed safety net (which re-sends dropped
- // dispatches) knows this one already went out. Best-effort - the row may
- // not exist yet mid-call, in which case the safety net's own idempotency
- // check still applies.
- const dispatchedCallId = (body as any)?.call?.call_id || (body as any)?.call?.id
- if (dispatchedCallId) {
- void supabaseAdmin.from('calls')
- .update({ dispatch_sent_at: new Date().toISOString() })
- .eq('retell_call_id', dispatchedCallId)
- }
  return NextResponse.json({
  success: true,
  message: 'Owner texted. Tell the caller the owner will call or text them back shortly to confirm.',
@@ -2095,6 +2097,7 @@ async function handleCallEvent(
         pickup: (flat.service_address as string) || 'CALLBACK REQUEST',
         requestedTime: (flat.preferred_callback as string) || 'Callback ASAP',
         notes: note,
+        retellCallId,
        })
        if (r.ok) {
         patch.dispatch_sent_at = new Date().toISOString()
