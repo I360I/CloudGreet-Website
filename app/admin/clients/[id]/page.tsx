@@ -1115,7 +1115,15 @@ function CostMarginCard({ clientId }: { clientId: string }) {
 
  return (
   <Panel>
-   <PanelHeader eyebrow="Cost to serve" title="Cost & margin · this month" />
+   <PanelHeader
+    eyebrow="Cost to serve"
+    title="Cost & margin · this billing cycle"
+    trailing={mtd?.periodStart ? (
+     <span className="text-[11px] text-gray-500">
+      since {new Date(mtd.periodStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+     </span>
+    ) : undefined}
+   />
    {loading ? (
     <div className="text-sm text-gray-500">Loading…</div>
    ) : error ? (
