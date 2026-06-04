@@ -90,10 +90,21 @@ export async function GET(request: NextRequest) {
     // 'invoice_sent' (link sent, prospect hasn't paid yet) show up in
     // the customer list flagged "awaiting first payment" - they don't
     // count toward MRR until money lands.
+    // Only count closes whose linked business is STILL a live, paying
+    // subscription. Two ways one drops out of MRR:
+    //   · deleted business -> close.business_id is SET NULL on delete, so
+    //     the join returns null (c.businesses is null).
+    //   · cancelled/inactive subscription -> subscription_status isn't live.
+    // The old check only looked at account_status and treated a null
+    // (deleted) business as "fine", so deleted + cancelled clients kept
+    // inflating MRR.
+    const LIVE_SUB = new Set(['active', 'past_due', 'trialing', 'trial'])
     const mrr = (closeRows ?? []).reduce((sum: number, c: any) => {
       if (c.status !== 'paid') return sum
-      const acctStatus = c.businesses?.account_status
-      if (acctStatus && acctStatus !== 'active' && acctStatus !== 'trial' && acctStatus !== null) return sum
+      const biz = c.businesses
+      if (!biz) return sum // business deleted -> no longer recurring
+      const sub = String(biz.subscription_status || '').toLowerCase()
+      if (!LIVE_SUB.has(sub)) return sum // cancelled / inactive / pending -> not recurring
       return sum + (c.agreed_monthly_cents || 0)
     }, 0)
 
