@@ -84,7 +84,7 @@ const STARTER_TEMPLATES: Array<{ label: string; instruction: string; tag: string
   {
     tag: 'Emergency',
     label: 'After-hours emergency',
-    instruction: 'If the caller mentions an emergency or no heat / no water / leak, transfer immediately to [forwarding number] and don\'t collect more info.',
+    instruction: 'If the caller has an emergency (no heat / no water / leak / gas / sparks), reassure them, give a quick safety note if it\'s dangerous, get the address and ask for the best callback number, then book the soonest emergency slot so the team is alerted right away.',
   },
   {
     tag: 'Service area',
