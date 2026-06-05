@@ -257,7 +257,17 @@ export default function SalesClosesPage() {
                   >
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-gray-900 truncate">{b.business_name}</div>
-                      <div className="text-xs text-gray-500 mt-0.5 capitalize">{b.subscription_status || 'pending'}</div>
+                      <div className="text-xs mt-1 flex items-center gap-2 flex-wrap">
+                        {b.retell_agent_id ? (
+                          <span className="font-mono uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">agent connected</span>
+                        ) : (
+                          <span className="font-mono uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">not connected</span>
+                        )}
+                        {b.phone_number && (
+                          <span className="font-mono text-gray-600">{b.phone_number}</span>
+                        )}
+                        <span className="text-gray-400 capitalize">· {b.subscription_status || 'pending'}</span>
+                      </div>
                     </div>
                     <span className="text-gray-400 text-xs shrink-0">View →</span>
                   </Link>
