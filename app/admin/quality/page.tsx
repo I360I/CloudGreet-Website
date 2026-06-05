@@ -169,7 +169,7 @@ export default function QualityPage() {
  const latest = runs[0] || null
  const activeRun = runs.find((r) => r.status === 'running') || null
 
- const handleStart = async (mode: 'smoke' | 'full' | 'client', businessId?: string, runner: 'web' | 'local' = 'web') => {
+ const handleStart = async (mode: 'smoke' | 'full' | 'client', businessId?: string, runner: 'web' | 'local' = 'web', knowledge?: string) => {
   // Don't catch here - the modal awaits this and uses the thrown
   // error to reset its busy state and display the message inline.
   // Swallowing it locks the button on "Starting..." forever (the
@@ -177,6 +177,7 @@ export default function QualityPage() {
   setErr('')
   const body: Record<string, unknown> = { mode, runner }
   if (mode === 'client' && businessId) body.business_id = businessId
+  if (mode === 'client' && knowledge) body.knowledge = knowledge
   const r = await fetchWithAuth('/api/admin/quality/start', {
    method: 'POST',
    headers: { 'Content-Type': 'application/json' },
@@ -986,7 +987,7 @@ function RunModal({
  onClose, onStart, activeRun,
 }: {
  onClose: () => void
- onStart: (mode: 'smoke' | 'full' | 'client', businessId?: string, runner?: 'web' | 'local') => Promise<void>
+ onStart: (mode: 'smoke' | 'full' | 'client', businessId?: string, runner?: 'web' | 'local', knowledge?: string) => Promise<void>
  activeRun: Run | null
 }) {
  const [busy, setBusy] = useState<'smoke' | 'full' | 'client' | null>(null)
@@ -995,6 +996,7 @@ function RunModal({
  const [clients, setClients] = useState<ClientOption[]>([])
  const [clientQuery, setClientQuery] = useState('')
  const [pickedClientId, setPickedClientId] = useState<string | null>(null)
+ const [kbText, setKbText] = useState('')
  // Persist runner preference across modal opens. Default to local once
  // they've used it - they almost certainly want it again.
  const [useLocalRunner, setUseLocalRunner] = useState<boolean>(() => {
@@ -1029,7 +1031,7 @@ function RunModal({
   setBusy(mode)
   setError('')
   try {
-   await onStart(mode, pickedClientId || undefined, useLocalRunner ? 'local' : 'web')
+   await onStart(mode, pickedClientId || undefined, useLocalRunner ? 'local' : 'web', kbText.trim() || undefined)
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to start')
    setBusy(null)
@@ -1187,6 +1189,22 @@ function RunModal({
            </div>
           </button>
          ))}
+        </div>
+
+        <div className="space-y-1.5">
+         <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
+          Knowledge base (optional)
+         </div>
+         <textarea
+          placeholder="Paste the agent's knowledge base text here. Retell doesn't expose KB content via API, so paste it to make the eval as faithful as the real agent. Leave blank to skip."
+          value={kbText}
+          onChange={(e) => setKbText(e.target.value)}
+          rows={5}
+          className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-sky-400/40 resize-y font-mono leading-relaxed"
+         />
+         {kbText.trim() && (
+          <div className="text-[10px] text-emerald-300/80 font-mono">{kbText.trim().length} chars will be injected as the KB</div>
+         )}
         </div>
 
         <div className="text-[11px] text-gray-500 font-mono">

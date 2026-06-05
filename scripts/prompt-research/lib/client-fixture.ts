@@ -17,7 +17,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import type { BusinessFixture } from './types'
 
-export async function loadClientFixture(businessId: string): Promise<BusinessFixture> {
+export async function loadClientFixture(businessId: string, kbOverride?: string): Promise<BusinessFixture> {
   const { data: biz, error } = await supabaseAdmin
     .from('businesses')
     .select(
@@ -123,6 +123,12 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
       liveKnowledge = [liveKnowledge, ...dbChunks].filter(Boolean).join('\n\n---\n\n').slice(0, 20000)
     }
   } catch { /* non-fatal */ }
+
+  // Pasted KB from the admin "Paste KB" box wins - it's how a client whose
+  // KB lives only in Retell (unretrievable via API) gets faithful coverage.
+  if (kbOverride && kbOverride.trim()) {
+    liveKnowledge = [liveKnowledge, kbOverride.trim()].filter(Boolean).join('\n\n---\n\n').slice(0, 20000)
+  }
 
   let ownerName: string | undefined
   if ((biz as any).owner_id) {

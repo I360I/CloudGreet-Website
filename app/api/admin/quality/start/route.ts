@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
     business?: string
     business_id?: string
     runner?: 'web' | 'local'
+    knowledge?: string
   }
   const mode = body.mode || 'smoke'
   const runner = body.runner === 'local' ? 'local' : 'web'
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
     let clientFixture
     try {
-      clientFixture = await loadClientFixture(body.business_id)
+      clientFixture = await loadClientFixture(body.business_id, body.knowledge)
     } catch (e) {
       return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to load client' }, { status: 400 })
     }
