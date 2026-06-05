@@ -244,6 +244,12 @@ export default function SalesClientDetailPage() {
           title={business.business_name}
         />
 
+        {/* Actions - top of the page, like the lead view */}
+        <div className="grid sm:grid-cols-2 gap-3 mb-5">
+          <LoginAsClientSection businessId={id} businessName={business.business_name} />
+          <PaymentLinkSection businessId={id} />
+        </div>
+
         {err && (
           <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-start gap-2">
             <WarningCircle weight="fill" className="w-4 h-4 mt-0.5" /> {err}
@@ -494,8 +500,6 @@ export default function SalesClientDetailPage() {
           stay locked - these rules layer on top under a SPECIAL HANDLING section.
         </p>
 
-        <LoginAsClientSection businessId={id} businessName={business.business_name} />
-        <PaymentLinkSection businessId={id} />
         <DeleteClientSection businessId={id} businessName={business.business_name} />
       </section>
     </SalesShell>
@@ -542,10 +546,10 @@ function PaymentLinkSection({ businessId }: { businessId: string }) {
   }
 
   return (
-    <div className="mt-4 border border-emerald-200 bg-emerald-50/50 rounded-2xl p-4">
+    <div className="border border-emerald-200 bg-emerald-50/50 rounded-2xl p-4">
       <div className="text-sm font-medium text-emerald-900">Generate payment link</div>
       <div className="text-xs text-emerald-800/80 mt-0.5 mb-3">
-        Stripe checkout for this prospect. When they pay, the account goes live and the commission is credited to you automatically.
+        Stripe checkout. When they pay, the account goes live and your commission is credited automatically.
       </div>
       <div className="flex items-end gap-2 flex-wrap">
         <label className="text-xs text-emerald-900">
@@ -602,12 +606,12 @@ function LoginAsClientSection({ businessId, businessName }: {
   }
 
   return (
-    <div className="mt-6 border border-sky-200 bg-sky-50/50 rounded-2xl p-4">
+    <div className="border border-sky-200 bg-sky-50/50 rounded-2xl p-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <div className="text-sm font-medium text-sky-900">Login as {businessName}</div>
           <div className="text-xs text-sky-800/80 mt-0.5">
-            Opens this client&apos;s dashboard in your browser. Useful for live demos. You can exit back to your sales console anytime.
+            Opens their dashboard in your browser for the demo. Exit back anytime.
           </div>
         </div>
         <button
