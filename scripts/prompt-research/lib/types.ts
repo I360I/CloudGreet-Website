@@ -22,6 +22,8 @@ export type BusinessFixture = {
   live_prompt?: string
   /** Optional: the agent's deployed begin_message (Retell greeting). */
   live_begin_message?: string
+  /** Optional: full text of the agent's live Retell knowledge base(s). */
+  live_knowledge?: string
 }
 
 /**

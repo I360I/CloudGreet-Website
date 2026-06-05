@@ -27,7 +27,14 @@ export async function generateFullPromptForBusiness(
   // The universal layer is NOT re-appended - the live prompt already
   // has it baked in from when the agent was created/last wired.
   if (b.live_prompt && b.live_prompt.trim()) {
-    return { prompt: b.live_prompt, cost_micro: 0 }
+    // Append the live Retell knowledge base so the eval agent can draw on
+    // the same facts a real caller's agent retrieves (Retell does RAG; we
+    // inline the full text - the closest a prompt-only sim can get).
+    let prompt = b.live_prompt
+    if (b.live_knowledge && b.live_knowledge.trim()) {
+      prompt += `\n\n# KNOWLEDGE BASE\n\nThe following is the business's knowledge base. Use it for facts (services, pricing, hours, policies, service area). Do not state anything beyond the prompt and this knowledge.\n\n${b.live_knowledge}`
+    }
+    return { prompt, cost_micro: 0 }
   }
   const res = await generateAgentPrompt(b.context)
   if (res.ok !== true) {

@@ -38,6 +38,7 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
   // fall back to generating fresh in generateFullPromptForBusiness.
   let livePrompt: string | undefined
   let liveBeginMessage: string | undefined
+  let liveKnowledge: string | undefined
   const retellAgentId = (biz as any).retell_agent_id as string | null
   const retellKey = process.env.RETELL_API_KEY
   if (retellAgentId && retellKey) {
@@ -72,6 +73,31 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
               const bm = llm?.begin_message
               if (typeof bm === 'string' && bm.trim()) liveBeginMessage = bm
             }
+            // Pull the agent's knowledge base(s) so the eval has the same
+            // facts the real agent retrieves from at call time. Retell does
+            // RAG; inlining the full source text is the closest a prompt-only
+            // simulation can get. Capped so a huge KB can't blow the context.
+            const kbIds: string[] = Array.isArray(llm?.knowledge_base_ids) ? llm.knowledge_base_ids : []
+            if (kbIds.length) {
+              const chunks: string[] = []
+              for (const kbId of kbIds) {
+                try {
+                  const kbRes = await fetchWithTimeout(
+                    `https://api.retellai.com/get-knowledge-base/${encodeURIComponent(kbId)}`,
+                  )
+                  if (!kbRes.ok) continue
+                  const kb = await kbRes.json() as any
+                  const srcs: any[] = Array.isArray(kb?.knowledge_base_sources)
+                    ? kb.knowledge_base_sources
+                    : Array.isArray(kb?.sources) ? kb.sources : []
+                  for (const s of srcs) {
+                    const text = (s?.text || s?.content || '').toString().trim()
+                    if (text) chunks.push(text)
+                  }
+                } catch { /* skip this KB */ }
+              }
+              if (chunks.length) liveKnowledge = chunks.join('\n\n---\n\n').slice(0, 20000)
+            }
           }
         }
       }
@@ -79,6 +105,24 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
       // Timeout / network / parsing error - silently fall back.
     }
   }
+
+  // Also pull any KB content curated in our own DB. Retell's API does NOT
+  // return the raw text of text-type KB sources (they're indexed internally
+  // for RAG), so business_knowledge_entries is the reliable source whenever
+  // the KB is managed in-app. If a client's KB was authored directly in
+  // Retell (not via the app), it won't be here - and isn't retrievable.
+  try {
+    const { data: kbRows } = await supabaseAdmin
+      .from('business_knowledge_entries')
+      .select('title, content')
+      .eq('business_id', businessId)
+    const dbChunks = (kbRows || [])
+      .map((r: any) => [r.title, r.content].filter(Boolean).join('\n'))
+      .filter((s: string) => s.trim())
+    if (dbChunks.length) {
+      liveKnowledge = [liveKnowledge, ...dbChunks].filter(Boolean).join('\n\n---\n\n').slice(0, 20000)
+    }
+  } catch { /* non-fatal */ }
 
   let ownerName: string | undefined
   if ((biz as any).owner_id) {
@@ -118,6 +162,7 @@ export async function loadClientFixture(businessId: string): Promise<BusinessFix
     label: `${b.business_name || 'Unnamed business'} (real client)`,
     live_prompt: livePrompt,
     live_begin_message: liveBeginMessage,
+    live_knowledge: liveKnowledge,
     context: {
       business: {
         name: b.business_name || 'Unnamed business',

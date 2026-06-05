@@ -108,6 +108,7 @@ async function main() {
     console.log(`loaded client fixture: ${fixture.label}`)
     console.log(`  live_prompt: ${fixture.live_prompt ? `${fixture.live_prompt.length} chars (from Retell)` : 'none - will fall back to generateAgentPrompt()'}`)
     console.log(`  live_begin_message: ${fixture.live_begin_message ? `"${fixture.live_begin_message.slice(0, 80)}${fixture.live_begin_message.length > 80 ? '...' : ''}"` : 'none'}`)
+    console.log(`  live_knowledge: ${fixture.live_knowledge ? `${fixture.live_knowledge.length} chars (Retell KB)` : 'none - no KB on this agent'}`)
     businesses = [fixture]
 
     // Per-client scenario generation: ask Claude to fabricate N callers
