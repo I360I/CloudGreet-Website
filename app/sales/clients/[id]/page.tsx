@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X, Robot, Lightning, ChatCircle, Phone, CalendarBlank, Trash, Play, SpeakerHigh, SignIn } from '@phosphor-icons/react'
+import { ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X, Robot, Lightning, ChatCircle, Phone, CalendarBlank, Trash, Play, SpeakerHigh, SignIn, CurrencyDollar } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { clearClientAuthState } from '@/lib/auth/session-guard'
@@ -545,39 +545,58 @@ function PaymentLinkSection({ businessId }: { businessId: string }) {
     }
   }
 
+  const [open, setOpen] = useState(false)
+
   return (
-    <div className="border border-emerald-200 bg-emerald-50/50 rounded-2xl p-4">
-      <div className="text-sm font-medium text-emerald-900">Generate payment link</div>
-      <div className="text-xs text-emerald-800/80 mt-0.5 mb-3">
-        Stripe checkout. When they pay, the account goes live and your commission is credited automatically.
-      </div>
-      <div className="flex items-end gap-2 flex-wrap">
-        <label className="text-xs text-emerald-900">
-          Monthly $
-          <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="499"
-            className="block mt-1 w-28 bg-white border border-emerald-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-900" />
-        </label>
-        <label className="text-xs text-emerald-900">
-          Setup $ (optional)
-          <input value={setup} onChange={(e) => setSetup(e.target.value)} inputMode="decimal" placeholder="0"
-            className="block mt-1 w-28 bg-white border border-emerald-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-900" />
-        </label>
-        <button onClick={generate} disabled={busy}
-          className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors">
-          {busy ? 'Generating…' : 'Generate link'}
-        </button>
-      </div>
-      {err && <div className="text-xs text-rose-700 mt-2">{err}</div>}
-      {url && (
-        <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <a href={url} target="_blank" rel="noreferrer" className="text-xs text-emerald-800 underline break-all max-w-full">{url}</a>
-          <button onClick={() => { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2500) }}
-            className="text-[11px] px-2 py-1 rounded-lg border border-emerald-300 text-emerald-800 hover:bg-emerald-100">
-            {copied ? 'Copied' : 'Copy'}
-          </button>
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full h-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-4 rounded-2xl text-sm font-semibold transition-colors"
+      >
+        <CurrencyDollar className="w-4 h-4" weight="fill" /> Generate payment link
+      </button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <button onClick={() => setOpen(false)} aria-label="Close" className="absolute inset-0 bg-black/40" />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-5">
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-sm font-semibold text-gray-900">Generate payment link</div>
+              <button onClick={() => setOpen(false)} className="p-1.5 -mr-1.5 rounded-full hover:bg-gray-100"><X className="w-4 h-4 text-gray-400" /></button>
+            </div>
+            <div className="text-xs text-gray-500 mb-4">
+              Stripe checkout. When they pay, the account goes live and your commission is credited automatically.
+            </div>
+            <div className="flex items-end gap-2">
+              <label className="text-xs text-gray-600 flex-1">
+                Monthly $
+                <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="499" autoFocus
+                  className="block mt-1 w-full bg-white border border-gray-300 rounded-lg px-2.5 py-2 text-sm text-gray-900" />
+              </label>
+              <label className="text-xs text-gray-600 flex-1">
+                Setup $ (optional)
+                <input value={setup} onChange={(e) => setSetup(e.target.value)} inputMode="decimal" placeholder="0"
+                  className="block mt-1 w-full bg-white border border-gray-300 rounded-lg px-2.5 py-2 text-sm text-gray-900" />
+              </label>
+            </div>
+            <button onClick={generate} disabled={busy}
+              className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors">
+              {busy ? 'Generating…' : 'Generate link'}
+            </button>
+            {err && <div className="text-xs text-rose-700 mt-2">{err}</div>}
+            {url && (
+              <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex items-center gap-2">
+                <a href={url} target="_blank" rel="noreferrer" className="text-xs text-emerald-800 underline break-all flex-1">{url}</a>
+                <button onClick={() => { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2500) }}
+                  className="text-[11px] px-2 py-1 rounded-lg border border-emerald-300 text-emerald-800 hover:bg-emerald-100 shrink-0">
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -606,24 +625,17 @@ function LoginAsClientSection({ businessId, businessName }: {
   }
 
   return (
-    <div className="border border-sky-200 bg-sky-50/50 rounded-2xl p-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <div className="text-sm font-medium text-sky-900">Login as {businessName}</div>
-          <div className="text-xs text-sky-800/80 mt-0.5">
-            Opens their dashboard in your browser for the demo. Exit back anytime.
-          </div>
-        </div>
-        <button
-          onClick={go}
-          disabled={busy}
-          className="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors"
-        >
-          <SignIn className="w-4 h-4" weight="fill" />
-          {busy ? 'Starting...' : 'Login as client'}
-        </button>
-      </div>
-      {err && <div className="text-xs text-rose-700 mt-2">{err}</div>}
+    <div className="w-full">
+      <button
+        onClick={go}
+        disabled={busy}
+        title={`Login as ${businessName}`}
+        className="w-full inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-4 rounded-2xl text-sm font-semibold disabled:opacity-50 transition-colors"
+      >
+        <SignIn className="w-4 h-4" weight="fill" />
+        {busy ? 'Starting…' : 'Login as client'}
+      </button>
+      {err && <div className="text-xs text-rose-700 mt-1.5">{err}</div>}
     </div>
   )
 }
