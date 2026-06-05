@@ -997,6 +997,25 @@ function RunModal({
  const [clientQuery, setClientQuery] = useState('')
  const [pickedClientId, setPickedClientId] = useState<string | null>(null)
  const [kbText, setKbText] = useState('')
+ const [kbSaveMsg, setKbSaveMsg] = useState('')
+
+ const saveKb = async () => {
+  if (!pickedClientId) { setError('Pick a client first'); return }
+  setKbSaveMsg('saving…')
+  try {
+   const r = await fetchWithAuth('/api/admin/quality/save-kb', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ business_id: pickedClientId, content: kbText.trim() }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (r.ok && j.success) {
+    setKbSaveMsg(j.cleared ? 'cleared' : `saved ${j.saved_chars} chars — the terminal eval will use it`)
+   } else {
+    setKbSaveMsg(j?.error || 'save failed')
+   }
+  } catch { setKbSaveMsg('save failed') }
+ }
  // Persist runner preference across modal opens. Default to local once
  // they've used it - they almost certainly want it again.
  const [useLocalRunner, setUseLocalRunner] = useState<boolean>(() => {
@@ -1202,9 +1221,23 @@ function RunModal({
           rows={5}
           className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-sky-400/40 resize-y font-mono leading-relaxed"
          />
-         {kbText.trim() && (
-          <div className="text-[10px] text-emerald-300/80 font-mono">{kbText.trim().length} chars will be injected as the KB</div>
-         )}
+         <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] font-mono text-gray-500">
+           {kbSaveMsg
+            ? <span className="text-emerald-300/80">{kbSaveMsg}</span>
+            : kbText.trim()
+             ? `${kbText.trim().length} chars`
+             : ''}
+          </span>
+          <button
+           type="button"
+           onClick={saveKb}
+           disabled={!pickedClientId}
+           className="text-[11px] font-mono px-2.5 py-1 rounded-lg border border-white/[0.1] text-gray-200 hover:bg-white/[0.06] disabled:opacity-40 transition-colors"
+          >
+           Save KB (for terminal eval)
+          </button>
+         </div>
         </div>
 
         <div className="text-[11px] text-gray-500 font-mono">
