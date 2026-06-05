@@ -85,12 +85,29 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // The Retell agent number a rep can CALL to test the AI - distinct from
+  // businesses.phone_number, which is the contractor's own published line.
+  const retellPhone = new Map<string, string>()
+  if (businessIds.length > 0) {
+    const { data: nums } = await supabaseAdmin
+      .from('phone_numbers')
+      .select('business_id, phone_number')
+      .eq('provider', 'retell')
+      .in('business_id', businessIds)
+    for (const n of nums || []) {
+      if (n.business_id && n.phone_number && !retellPhone.has(n.business_id)) {
+        retellPhone.set(n.business_id, n.phone_number)
+      }
+    }
+  }
+
   return NextResponse.json({
     success: true,
     clients: (data || []).map((b: any) => {
       const fallback = priceFromClose.get(b.id)
       return {
         ...b,
+        retell_phone_number: retellPhone.get(b.id) || null,
         // Use the business's stored price if set; otherwise pick up the
         // negotiated price from the most recent close so reps see the
         // actual quoted amount instead of '-'.

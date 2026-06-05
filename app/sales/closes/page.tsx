@@ -263,8 +263,10 @@ export default function SalesClosesPage() {
                         ) : (
                           <span className="font-mono uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">not connected</span>
                         )}
-                        {b.phone_number && (
-                          <span className="font-mono text-gray-600">{b.phone_number}</span>
+                        {b.retell_phone_number ? (
+                          <span className="font-mono text-gray-700">{b.retell_phone_number} <span className="text-gray-400 not-italic">(call to test)</span></span>
+                        ) : (
+                          <span className="text-gray-400">no test number yet</span>
                         )}
                         <span className="text-gray-400 capitalize">· {b.subscription_status || 'pending'}</span>
                       </div>
