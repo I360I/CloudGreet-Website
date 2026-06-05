@@ -495,6 +495,7 @@ export default function SalesClientDetailPage() {
         </p>
 
         <LoginAsClientSection businessId={id} businessName={business.business_name} />
+        <PaymentLinkSection businessId={id} />
         <DeleteClientSection businessId={id} businessName={business.business_name} />
       </section>
     </SalesShell>
@@ -507,6 +508,75 @@ export default function SalesClientDetailPage() {
  * rep's own token in `impersonator_token` so they can exit back to
  * their sales console without re-logging in.
  */
+function PaymentLinkSection({ businessId }: { businessId: string }) {
+  const [monthly, setMonthly] = useState('')
+  const [setup, setSetup] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [url, setUrl] = useState('')
+  const [err, setErr] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const generate = async () => {
+    const monthlyCents = Math.round(parseFloat(monthly) * 100)
+    if (!Number.isFinite(monthlyCents) || monthlyCents < 5000) {
+      setErr('Enter a monthly price of at least $50')
+      return
+    }
+    const setupCents = setup.trim() ? Math.round(parseFloat(setup) * 100) : 0
+    setBusy(true); setErr(''); setUrl('')
+    try {
+      const r = await fetchWithAuth(`/api/sales/clients/${businessId}/payment-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ monthly_cents: monthlyCents, setup_fee_cents: setupCents }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) throw new Error(j?.error || `Failed (${r.status})`)
+      setUrl(j.url)
+      try { await navigator.clipboard.writeText(j.url); setCopied(true); setTimeout(() => setCopied(false), 2500) } catch { /* clipboard denied */ }
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to generate link')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-4 border border-emerald-200 bg-emerald-50/50 rounded-2xl p-4">
+      <div className="text-sm font-medium text-emerald-900">Generate payment link</div>
+      <div className="text-xs text-emerald-800/80 mt-0.5 mb-3">
+        Stripe checkout for this prospect. When they pay, the account goes live and the commission is credited to you automatically.
+      </div>
+      <div className="flex items-end gap-2 flex-wrap">
+        <label className="text-xs text-emerald-900">
+          Monthly $
+          <input value={monthly} onChange={(e) => setMonthly(e.target.value)} inputMode="decimal" placeholder="499"
+            className="block mt-1 w-28 bg-white border border-emerald-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-900" />
+        </label>
+        <label className="text-xs text-emerald-900">
+          Setup $ (optional)
+          <input value={setup} onChange={(e) => setSetup(e.target.value)} inputMode="decimal" placeholder="0"
+            className="block mt-1 w-28 bg-white border border-emerald-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-900" />
+        </label>
+        <button onClick={generate} disabled={busy}
+          className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors">
+          {busy ? 'Generating…' : 'Generate link'}
+        </button>
+      </div>
+      {err && <div className="text-xs text-rose-700 mt-2">{err}</div>}
+      {url && (
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          <a href={url} target="_blank" rel="noreferrer" className="text-xs text-emerald-800 underline break-all max-w-full">{url}</a>
+          <button onClick={() => { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2500) }}
+            className="text-[11px] px-2 py-1 rounded-lg border border-emerald-300 text-emerald-800 hover:bg-emerald-100">
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function LoginAsClientSection({ businessId, businessName }: {
   businessId: string
   businessName: string
