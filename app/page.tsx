@@ -68,10 +68,10 @@ function Marquee() {
 function Reveal({ children }: { children: React.ReactNode }) {
  return (
   <motion.div
-   initial={{ opacity: 0, y: 44 }}
+   initial={{ opacity: 0, y: 70 }}
    whileInView={{ opacity: 1, y: 0 }}
-   viewport={{ once: true, margin: '0px 0px -140px 0px' }}
-   transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+   viewport={{ once: true, margin: '0px 0px -120px 0px' }}
+   transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
   >
    {children}
   </motion.div>
@@ -115,7 +115,7 @@ function Nav() {
 
 function Hero() {
  return (
-  <section className="px-5 sm:px-6 pt-6 sm:pt-10 md:pt-12 pb-10 sm:pb-14 relative overflow-hidden">
+  <section className="px-5 sm:px-6 pt-3 sm:pt-6 md:pt-8 pb-10 sm:pb-14 relative overflow-hidden">
    <div
     className="absolute inset-0 -z-10 pointer-events-none opacity-40"
     style={{
@@ -124,7 +124,7 @@ function Hero() {
     }}
    />
    <div className="max-w-6xl mx-auto text-center">
-    <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-gray-600 mb-7">
+    <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-gray-600 mb-5">
      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
      Live AI receptionist - call it now
     </div>
