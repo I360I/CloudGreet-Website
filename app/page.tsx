@@ -115,7 +115,7 @@ function Nav() {
 
 function Hero() {
  return (
-  <section className="px-5 sm:px-6 pt-12 sm:pt-20 md:pt-24 pb-10 sm:pb-14 relative overflow-hidden">
+  <section className="px-5 sm:px-6 pt-6 sm:pt-10 md:pt-12 pb-10 sm:pb-14 relative overflow-hidden">
    <div
     className="absolute inset-0 -z-10 pointer-events-none opacity-40"
     style={{
@@ -128,12 +128,12 @@ function Hero() {
      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
      Live AI receptionist - call it now
     </div>
-    <h1 className="font-display font-medium tracking-tight leading-[1.05] text-[34px] xs:text-[40px] sm:text-[56px] md:text-[72px] lg:text-[80px] mb-6 sm:mb-8 text-gray-900">
+    <h1 className="font-display font-medium tracking-tight leading-[1.05] text-[34px] xs:text-[40px] sm:text-[56px] md:text-[72px] lg:text-[80px] mb-5 sm:mb-7 text-gray-900">
      Stop losing <span className="text-gray-400">profit</span>
      <br />
      to voicemail.
     </h1>
-    <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto mb-8 sm:mb-12 leading-relaxed px-2">
+    <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto mb-7 sm:mb-9 leading-relaxed px-2">
      A 24/7 AI receptionist for service businesses. Answers every call, books jobs straight into your calendar, and logs the full transcript and recording in your dashboard the second the call ends.
     </p>
     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center">
