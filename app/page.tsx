@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow } from '@phosphor-icons/react'
@@ -62,19 +62,46 @@ function Marquee() {
 
 /* --------------------------- Scroll reveal --------------------- */
 /**
- * Subtle fade-up as each section scrolls into view, once. Kept gentle
- * per LANDING-DESIGN.md: no bounce, no stagger, no gimmicks.
+ * Fade-and-rise as each section scrolls into view, once. Plain
+ * IntersectionObserver + CSS transition so it fires reliably (no
+ * framer-motion whileInView quirks). Triggers when ~18% of the section
+ * is on screen, so the movement is clearly visible.
  */
 function Reveal({ children }: { children: React.ReactNode }) {
+ const ref = useRef<HTMLDivElement>(null)
+ const [shown, setShown] = useState(false)
+
+ useEffect(() => {
+  const el = ref.current
+  if (!el) return
+  const io = new IntersectionObserver(
+   (entries) => {
+    for (const e of entries) {
+     if (e.isIntersecting) {
+      setShown(true)
+      io.disconnect()
+      break
+     }
+    }
+   },
+   { threshold: 0.18 },
+  )
+  io.observe(el)
+  return () => io.disconnect()
+ }, [])
+
  return (
-  <motion.div
-   initial={{ opacity: 0, y: 70 }}
-   whileInView={{ opacity: 1, y: 0 }}
-   viewport={{ once: true, margin: '0px 0px -120px 0px' }}
-   transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+  <div
+   ref={ref}
+   style={{
+    opacity: shown ? 1 : 0,
+    transform: shown ? 'none' : 'translateY(64px)',
+    transition: 'opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1)',
+    willChange: 'opacity, transform',
+   }}
   >
    {children}
-  </motion.div>
+  </div>
  )
 }
 
