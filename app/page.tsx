@@ -15,6 +15,7 @@ export default function LandingPage() {
  return (
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
    <Nav />
+   <Marquee />
    <Reveal><Hero /></Reveal>
    <Reveal><RoiCalculator /></Reveal>
    <Reveal><WhoItsFor /></Reveal>
@@ -22,6 +23,40 @@ export default function LandingPage() {
    <Reveal><FinalCTA /></Reveal>
    <Reveal><FooterCard /></Reveal>
   </main>
+ )
+}
+
+/* ----------------------------- Marquee ------------------------- */
+/**
+ * Thin scrolling value-prop banner directly under the header. Seamless
+ * infinite loop: the row is duplicated and translated by exactly -50% of
+ * its own width, so the second copy lands where the first started.
+ */
+function Marquee() {
+ const items = [
+  'Never miss a call',
+  'Books jobs 24/7',
+  'Answers in English and Spanish',
+  'Keep your existing number',
+  'Flat monthly, no per-call fees',
+  'Live in your dashboard in 30 seconds',
+ ]
+ const row = [...items, ...items]
+ return (
+  <div className="bg-gray-900 text-white overflow-hidden">
+   <motion.div
+    className="flex whitespace-nowrap py-2.5"
+    animate={{ x: ['0%', '-50%'] }}
+    transition={{ duration: 28, ease: 'linear', repeat: Infinity }}
+   >
+    {row.map((t, i) => (
+     <span key={i} className="flex items-center text-[11px] font-mono uppercase tracking-[0.2em] text-gray-200">
+      <span className="mx-5">{t}</span>
+      <span className="text-sky-400" aria-hidden>&bull;</span>
+     </span>
+    ))}
+   </motion.div>
+  </div>
  )
 }
 
@@ -33,10 +68,10 @@ export default function LandingPage() {
 function Reveal({ children }: { children: React.ReactNode }) {
  return (
   <motion.div
-   initial={{ opacity: 0, y: 20 }}
+   initial={{ opacity: 0, y: 44 }}
    whileInView={{ opacity: 1, y: 0 }}
-   viewport={{ once: true, margin: '0px 0px -80px 0px' }}
-   transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+   viewport={{ once: true, margin: '0px 0px -140px 0px' }}
+   transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
   >
    {children}
   </motion.div>
@@ -62,13 +97,13 @@ function Nav() {
     <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
      <a href="#customers" className="hover:text-gray-900 transition-colors">Who it&apos;s for</a>
      <a href="#roi" className="hover:text-gray-900 transition-colors">ROI</a>
-     <Link href="/login" className="hover:text-gray-900 transition-colors">Sign in</Link>
+     <Link href="/contact" className="hover:text-gray-900 transition-colors">Book Demo</Link>
     </div>
     <Link
-     href="/contact"
+     href="/login"
      className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
     >
-     Book Demo
+     Sign in
      <ArrowUpRight className="w-4 h-4" />
     </Link>
    </div>
