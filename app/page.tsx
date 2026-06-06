@@ -16,6 +16,7 @@ export default function LandingPage() {
    <Nav />
    <Hero />
    <RoiCalculator />
+   <Testimonial />
    <FinalCTA />
    <FooterCard />
   </main>
@@ -740,6 +741,32 @@ function FounderNote() {
        </a>
       </div>
      </div>
+    </div>
+   </div>
+  </section>
+ )
+}
+
+/* -------------------------- Testimonial ------------------------ */
+/**
+ * Real customer quote (Steve French, Smart Ride Central Ohio), trimmed
+ * from his LinkedIn post. Editorial treatment per LANDING-DESIGN.md: large
+ * left-aligned quote, no cards, no icon-squares, no glow, type carries it.
+ */
+function Testimonial() {
+ return (
+  <section className="px-5 sm:px-6 py-16 sm:py-24 md:py-28">
+   <div className="max-w-4xl mx-auto">
+    <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-7 sm:mb-9">
+     From a customer
+    </p>
+    <blockquote className="font-display text-2xl sm:text-3xl md:text-[40px] font-medium tracking-tight leading-[1.3] text-gray-900">
+     I&apos;m often behind the wheel serving customers, so I can&apos;t always answer the phone. Adding CloudGreet as my booking assistant has been a game changer. In just a short time I&apos;ve already gotten multiple bookings and callbacks from people who talked straight to my AI.
+    </blockquote>
+    <div className="mt-8 sm:mt-10 flex items-center gap-3 text-sm">
+     <span className="font-medium text-gray-900">Steve French</span>
+     <span className="w-1 h-1 rounded-full bg-gray-300" />
+     <span className="text-gray-500">Owner, Smart Ride Central Ohio</span>
     </div>
    </div>
   </section>
