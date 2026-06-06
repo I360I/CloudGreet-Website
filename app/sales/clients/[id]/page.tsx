@@ -742,16 +742,16 @@ function VoicePanel({
       </label>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <div>
+        <div className="min-w-0">
           <label className="block">
             <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
               Voice
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <select
                 value={voiceId}
                 onChange={(e) => setVoiceId(e.target.value)}
-                className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
+                className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-400"
               >
                 <option value="">- Default -</option>
                 {voices.map((v) => (
@@ -768,7 +768,7 @@ function VoicePanel({
             </div>
           </label>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="block">
             <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5 flex items-center justify-between">
               <span>Voice speed</span>
