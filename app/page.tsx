@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow } from '@phosphor-icons/react'
+import { motion } from 'framer-motion'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -14,13 +15,31 @@ export default function LandingPage() {
  return (
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
    <Nav />
-   <Hero />
-   <RoiCalculator />
-   <WhoItsFor />
-   <Testimonial />
-   <FinalCTA />
-   <FooterCard />
+   <Reveal><Hero /></Reveal>
+   <Reveal><RoiCalculator /></Reveal>
+   <Reveal><WhoItsFor /></Reveal>
+   <Reveal><Testimonial /></Reveal>
+   <Reveal><FinalCTA /></Reveal>
+   <Reveal><FooterCard /></Reveal>
   </main>
+ )
+}
+
+/* --------------------------- Scroll reveal --------------------- */
+/**
+ * Subtle fade-up as each section scrolls into view, once. Kept gentle
+ * per LANDING-DESIGN.md: no bounce, no stagger, no gimmicks.
+ */
+function Reveal({ children }: { children: React.ReactNode }) {
+ return (
+  <motion.div
+   initial={{ opacity: 0, y: 20 }}
+   whileInView={{ opacity: 1, y: 0 }}
+   viewport={{ once: true, margin: '0px 0px -80px 0px' }}
+   transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+  >
+   {children}
+  </motion.div>
  )
 }
 
@@ -41,6 +60,7 @@ function Nav() {
      />
     </Link>
     <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
+     <a href="#customers" className="hover:text-gray-900 transition-colors">Who it&apos;s for</a>
      <a href="#roi" className="hover:text-gray-900 transition-colors">ROI</a>
      <Link href="/login" className="hover:text-gray-900 transition-colors">Sign in</Link>
     </div>
