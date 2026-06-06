@@ -3,10 +3,24 @@
 import React, { useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow } from '@phosphor-icons/react'
+import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, Wrench, Drop, House, PaintBrush, Hammer, Truck, Quotes, Sparkle, Star } from '@phosphor-icons/react'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
+
+// Landing-page photography (free Unsplash commercial license). Curated here
+// so the whole site's imagery is swappable from one place - drop in /public
+// files or different Unsplash IDs without touching the components.
+const PHOTOS = {
+ about: {
+  src: 'https://images.unsplash.com/photo-1621905253185-95614217f357?auto=format&fit=crop&w=1100&q=80',
+  alt: 'Service contractor in a hard hat checking his phone to confirm an appointment on the job site',
+ },
+ customers: {
+  src: 'https://images.unsplash.com/photo-1620083203716-95587a218643?auto=format&fit=crop&w=1100&q=80',
+  alt: 'Tradesperson taking a customer call next to his work van between jobs',
+ },
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +29,16 @@ export default function LandingPage() {
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
    <Nav />
    <Hero />
+   <AboutStory />
+   <Platforms />
+   <Capabilities />
+   <CallFlow />
+   <TypesOfCustomers />
    <RoiCalculator />
+   <DashboardPreview />
+   <Testimonial />
+   <FounderNote />
+   <Faq />
    <FinalCTA />
    <FooterCard />
   </main>
@@ -38,8 +61,11 @@ function Nav() {
       className="h-9 w-auto"
      />
     </Link>
-    <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
+    <div className="hidden md:flex items-center gap-7 text-sm text-gray-600">
+     <a href="#about" className="hover:text-gray-900 transition-colors">About</a>
+     <a href="#customers" className="hover:text-gray-900 transition-colors">Customers</a>
      <a href="#roi" className="hover:text-gray-900 transition-colors">ROI</a>
+     <Link href="/contact" className="hover:text-gray-900 transition-colors">Demo</Link>
      <Link href="/login" className="hover:text-gray-900 transition-colors">Sign in</Link>
     </div>
     <Link
@@ -100,6 +126,66 @@ function Hero() {
     <p className="text-sm text-gray-400 mt-8">
      Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a> and ask it anything.
     </p>
+   </div>
+  </section>
+ )
+}
+
+/* --------------------------- About / story --------------------- */
+/**
+ * The narrative beat Uncle Jim asked for: build interest, raise the
+ * question ("what is this costing me?"), then point the reader straight
+ * down into the ROI calculator. Pairs a real contractor photo with the
+ * AI call transcript so the story lands visually.
+ */
+function AboutStory() {
+ return (
+  <section id="about" className="px-5 sm:px-6 pt-4 pb-16 sm:pb-24 md:pb-32 scroll-mt-24">
+   <div className="max-w-6xl mx-auto">
+    <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+     <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-3">
+      About CloudGreet
+     </p>
+     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-5">
+      The call you miss is the job you <span className="text-gray-400">don&apos;t book.</span>
+     </h2>
+     <div className="text-base md:text-lg text-gray-600 leading-relaxed space-y-4">
+      <p>
+       You&apos;re on a roof, under a sink, behind the wheel, or finally sitting down to dinner. The phone rings. By the time you see it, the customer already called the next name on their list.
+      </p>
+      <p>
+       CloudGreet is a 24/7 AI receptionist that answers in your business&apos;s voice, the instant a call comes in. It talks naturally, answers the questions your customers actually ask, books the job straight into your calendar, and texts a confirmation before they&apos;ve hung up. Every call shows up in your dashboard with the full transcript and recording.
+      </p>
+     </div>
+    </div>
+
+    <div className="grid md:grid-cols-2 gap-5 sm:gap-6 items-stretch">
+     <div className="relative rounded-3xl overflow-hidden border border-gray-200 min-h-[320px] md:min-h-[420px]">
+      <Image
+       src={PHOTOS.about.src}
+       alt={PHOTOS.about.alt}
+       fill
+       sizes="(max-width: 768px) 100vw, 50vw"
+       className="object-cover"
+      />
+     </div>
+     <div className="flex items-center">
+      <PhoneTranscript />
+     </div>
+    </div>
+
+    <div className="text-center mt-10 sm:mt-14">
+     <p className="text-base md:text-lg text-gray-600 mb-4">
+      Curious what those missed calls add up to?
+     </p>
+     <a
+      href="#roi"
+      className="inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors"
+     >
+      See your numbers
+      <ArrowRight className="w-4 h-4" />
+     </a>
+    </div>
    </div>
   </section>
  )
@@ -347,7 +433,7 @@ function CallFlow() {
   { icon: PhoneOutgoing, title: 'Ends or transfers.', body: 'Resolved calls end. Others are passed to your team.' },
  ]
  return (
-  <section id="how-it-works" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
+  <section id="how-it-works" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40 scroll-mt-24">
    <div className="max-w-6xl mx-auto">
     <div className="text-center mb-10">
      <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
@@ -452,6 +538,67 @@ function DashboardPreview() {
  )
 }
 
+/* ------------------------ Types of customers ------------------- */
+/**
+ * Positions CloudGreet broad ("almost any business") while grounding it
+ * in the real service verticals we serve, so prospects self-identify.
+ */
+function TypesOfCustomers() {
+ const verticals = [
+  { icon: Wrench, label: 'HVAC' },
+  { icon: Drop, label: 'Plumbing' },
+  { icon: Lightning, label: 'Electrical' },
+  { icon: House, label: 'Roofing' },
+  { icon: PaintBrush, label: 'Painting' },
+  { icon: Hammer, label: 'Remodeling' },
+  { icon: Truck, label: 'Transportation' },
+  { icon: Sparkle, label: 'And more' },
+ ]
+ return (
+  <section id="customers" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40 scroll-mt-24">
+   <div className="max-w-6xl mx-auto">
+    <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
+     <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-3">
+      Types of customers
+     </p>
+     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
+      Built for almost <span className="text-gray-400">any business.</span>
+     </h2>
+     <p className="text-base md:text-lg text-gray-500">
+      We primarily help service businesses, the kind that live and die by the phone. If your customers call to book, CloudGreet fits.
+     </p>
+    </div>
+
+    <div className="grid md:grid-cols-2 gap-5 sm:gap-6 items-stretch">
+     <div className="relative rounded-3xl overflow-hidden border border-gray-200 min-h-[300px] md:min-h-[380px] order-last md:order-first">
+      <Image
+       src={PHOTOS.customers.src}
+       alt={PHOTOS.customers.alt}
+       fill
+       sizes="(max-width: 768px) 100vw, 50vw"
+       className="object-cover"
+      />
+     </div>
+
+     <div className="grid grid-cols-2 gap-3">
+      {verticals.map(({ icon: Icon, label }) => (
+       <div
+        key={label}
+        className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-4 sm:px-5 sm:py-5"
+       >
+        <span className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center flex-shrink-0">
+         <Icon className="w-5 h-5 text-sky-600" />
+        </span>
+        <span className="font-display text-base sm:text-lg font-medium text-gray-900">{label}</span>
+       </div>
+      ))}
+     </div>
+    </div>
+   </div>
+  </section>
+ )
+}
+
 /* ---------------------- ROI Calculator ------------------------- */
 
 function RoiCalculator() {
@@ -471,7 +618,7 @@ function RoiCalculator() {
  const fmt = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
 
  return (
-  <section id="roi" className="px-5 sm:px-6 pt-6 pb-12 sm:pb-16">
+  <section id="roi" className="px-5 sm:px-6 pt-6 pb-12 sm:pb-16 scroll-mt-24">
    <div className="max-w-6xl mx-auto text-center mb-10">
     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
      See <span className="text-gray-400">your numbers.</span>
@@ -602,8 +749,7 @@ function Slider({
  * the native <details> element handles the open/close, which keeps
  * the page lean and works without hydration.
  */
-function Faq() {
- const items = [
+const FAQ_ITEMS = [
   {
    q: 'Does it actually sound human?',
    a: "Yes. It's a natural conversational AI, not a phone tree. You pick the voice and tone (warm, direct, formal, etc.) and we tune the greeting to your brand. Most callers don't realize they're not talking to a person - and the ones who do still get the help they called for.",
@@ -637,8 +783,24 @@ function Faq() {
    a: "We work with you. If you're not seeing bookings come through in the first couple of weeks we'll dig into the call transcripts together, tune the script, and get it right. The product is the result for you - if it isn't producing, we're going to fix it.",
   },
  ]
+
+function Faq() {
+ const items = FAQ_ITEMS
+ const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: items.map((it) => ({
+   '@type': 'Question',
+   name: it.q,
+   acceptedAnswer: { '@type': 'Answer', text: it.a },
+  })),
+ }
  return (
-  <section id="faq" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
+  <section id="faq" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40 scroll-mt-24">
+   <script
+    type="application/ld+json"
+    dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+   />
    <div className="max-w-3xl mx-auto">
     <div className="text-center mb-10">
      <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-3">
@@ -679,6 +841,52 @@ function Faq() {
       Book a demo
      </Link>{' '}
      or call <a href={DEMO_TEL} className="text-gray-900 underline underline-offset-4 hover:text-sky-600">{DEMO_NUMBER}</a>.
+    </div>
+   </div>
+  </section>
+ )
+}
+
+/* -------------------------- Testimonial ------------------------ */
+/**
+ * Real customer testimonial (Steve French, Smart Ride Central Ohio),
+ * lightly trimmed from his LinkedIn post. Quote + attribution only, by
+ * the owner's call - we don't publish his live demo line here.
+ */
+function Testimonial() {
+ return (
+  <section className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
+   <div className="max-w-3xl mx-auto">
+    <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 md:p-12 relative overflow-hidden">
+     <div className="absolute -top-20 -left-20 w-72 h-72 bg-sky-100/50 blur-3xl rounded-full pointer-events-none" />
+     <div className="relative">
+      <div className="flex items-center justify-between mb-5">
+       <Quotes weight="fill" className="w-9 h-9 text-sky-500" />
+       <div className="flex items-center gap-0.5">
+        {[0, 1, 2, 3, 4].map((i) => (
+         <Star key={i} weight="fill" className="w-4 h-4 text-amber-400" />
+        ))}
+       </div>
+      </div>
+
+      <blockquote className="text-lg sm:text-xl md:text-2xl text-gray-800 leading-[1.5] font-normal mb-6">
+       As a small business owner, I&apos;m often behind the wheel serving customers, which means I can&apos;t always answer the phone. Adding CloudGreet as my phone and text booking assistant has been a game changer. In just a short time I&apos;ve already received multiple bookings and callback requests from customers who talked directly to my AI assistant. It answers professionally, communicates naturally, and can answer virtually any question about my business.
+      </blockquote>
+      <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-7">
+       Sometimes the best technology isn&apos;t the technology that replaces people. It&apos;s the technology that makes it easier to serve them. Highly recommended.
+      </p>
+
+      <div className="flex items-center gap-3 pt-6 border-t border-gray-100">
+       <div className="w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center text-base font-medium flex-shrink-0">
+        SF
+       </div>
+       <div>
+        <div className="text-sm font-semibold text-gray-900">Steve French</div>
+        <div className="text-xs text-gray-500">Owner, Smart Ride Central Ohio</div>
+        <div className="text-xs text-gray-400 italic mt-0.5">Every ride personally driven by owner Steve French</div>
+       </div>
+      </div>
+     </div>
     </div>
    </div>
   </section>
@@ -823,6 +1031,8 @@ function FooterCard() {
      <div className="md:col-span-2">
       <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Product</h4>
       <ul className="space-y-2 text-sm text-gray-700">
+       <li><a href="#about" className="hover:text-sky-600 transition-colors">About</a></li>
+       <li><a href="#customers" className="hover:text-sky-600 transition-colors">Customers</a></li>
        <li><a href="#roi" className="hover:text-sky-600 transition-colors">ROI calculator</a></li>
        <li><a href="#faq" className="hover:text-sky-600 transition-colors">FAQ</a></li>
        <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Book a demo</Link></li>
