@@ -762,10 +762,10 @@ function Testimonial() {
      alt="Smart Ride Central Ohio"
      width={507}
      height={417}
-     className="h-14 w-auto mb-7 sm:mb-9"
+     className="h-16 sm:h-20 w-auto mb-7 sm:mb-9"
     />
     <blockquote className="font-display text-2xl sm:text-3xl md:text-[40px] font-medium tracking-tight leading-[1.3] text-gray-900">
-     I&apos;m often behind the wheel serving customers, so I can&apos;t always answer the phone. Adding CloudGreet as my booking assistant has been a game changer. In just a short time I&apos;ve already gotten multiple bookings and callbacks from people who talked straight to my AI.
+     &ldquo;I&apos;m often behind the wheel serving customers, so I can&apos;t always answer the phone. Adding CloudGreet as my booking assistant has been a game changer. In just a short time I&apos;ve already gotten multiple bookings and callbacks from people who talked straight to my AI.&rdquo;
     </blockquote>
     <div className="mt-8 sm:mt-10 flex items-center gap-3 text-sm">
      <span className="font-medium text-gray-900">Steve French</span>
