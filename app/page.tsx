@@ -16,6 +16,7 @@ export default function LandingPage() {
    <Nav />
    <Hero />
    <RoiCalculator />
+   <WhoItsFor />
    <Testimonial />
    <FinalCTA />
    <FooterCard />
@@ -742,6 +743,31 @@ function FounderNote() {
       </div>
      </div>
     </div>
+   </div>
+  </section>
+ )
+}
+
+/* -------------------------- Who it's for ----------------------- */
+/**
+ * Positioning section per LANDING-DESIGN.md: one typographic statement, no
+ * icon-card grid. Broad ("almost any business") but grounded in the real
+ * service verticals. Type and rhythm do the work.
+ */
+function WhoItsFor() {
+ return (
+  <section id="customers" className="px-5 sm:px-6 py-16 sm:py-24 md:py-28 scroll-mt-24">
+   <div className="max-w-4xl mx-auto">
+    <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-7 sm:mb-9">
+     Who it&apos;s for
+    </p>
+    <p className="font-display text-2xl sm:text-3xl md:text-[40px] font-medium tracking-tight leading-[1.3]">
+     <span className="text-gray-900">HVAC. Plumbing. Electrical. Roofing. Painting. Remodels. Car services.</span>{' '}
+     <span className="text-gray-400">And just about anyone whose next job comes in over the phone.</span>
+    </p>
+    <p className="mt-6 text-base md:text-lg text-gray-500 max-w-xl">
+     CloudGreet fits almost any business. We mostly help service businesses, the kind that can&apos;t stop working to answer every call.
+    </p>
    </div>
   </section>
  )
