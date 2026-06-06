@@ -757,9 +757,13 @@ function Testimonial() {
  return (
   <section className="px-5 sm:px-6 py-16 sm:py-24 md:py-28">
    <div className="max-w-4xl mx-auto">
-    <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-7 sm:mb-9">
-     From a customer
-    </p>
+    <Image
+     src="/smartride-logo.png"
+     alt="Smart Ride Central Ohio"
+     width={507}
+     height={417}
+     className="h-14 w-auto mb-7 sm:mb-9"
+    />
     <blockquote className="font-display text-2xl sm:text-3xl md:text-[40px] font-medium tracking-tight leading-[1.3] text-gray-900">
      I&apos;m often behind the wheel serving customers, so I can&apos;t always answer the phone. Adding CloudGreet as my booking assistant has been a game changer. In just a short time I&apos;ve already gotten multiple bookings and callbacks from people who talked straight to my AI.
     </blockquote>
