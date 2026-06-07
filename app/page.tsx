@@ -1008,7 +1008,7 @@ function FooterCard() {
        <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Product</h4>
        <ul className="space-y-2 text-sm text-gray-700">
         <li><a href="#roi" className="hover:text-sky-600 transition-colors">ROI calculator</a></li>
-        <li><a href="#faq" className="hover:text-sky-600 transition-colors">FAQ</a></li>
+        <li><a href="#customers" className="hover:text-sky-600 transition-colors">Who it&apos;s for</a></li>
         <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Book a demo</Link></li>
        </ul>
       </div>
