@@ -50,6 +50,12 @@ const nextConfig = {
   },
   images: {
     domains: ['localhost'],
+    // Landing-page photography is served from Unsplash (free, commercial
+    // license). Curated in the PHOTOS array in app/page.tsx - swap to /public
+    // files later without touching this config.
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+    ],
   },
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY,

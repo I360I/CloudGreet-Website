@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow } from '@phosphor-icons/react'
+import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, List, X } from '@phosphor-icons/react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -14,21 +15,104 @@ export default function LandingPage() {
  return (
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
    <Nav />
-   <Hero />
-   <RoiCalculator />
-   <FinalCTA />
-   <FooterCard />
+   <Marquee />
+   <Reveal><Hero /></Reveal>
+   <Reveal><RoiCalculator /></Reveal>
+   <Reveal><Testimonial /></Reveal>
+   <Reveal><WhoItsFor /></Reveal>
+   <Reveal><FinalCTA /></Reveal>
+   <Reveal><FooterCard /></Reveal>
   </main>
+ )
+}
+
+/* ----------------------------- Marquee ------------------------- */
+/**
+ * Thin scrolling value-prop banner directly under the header. Seamless
+ * infinite loop: the row is duplicated and translated by exactly -50% of
+ * its own width, so the second copy lands where the first started.
+ */
+function Marquee() {
+ const items = [
+  'Never miss a call',
+  'Books jobs 24/7',
+  'Answers in English and Spanish',
+  'Keep your existing number',
+  'Flat monthly, no per-call fees',
+  'Live in your dashboard in 30 seconds',
+ ]
+ const row = [...items, ...items]
+ return (
+  <div className="bg-gray-900 text-white overflow-hidden">
+   <motion.div
+    className="flex whitespace-nowrap py-2.5"
+    animate={{ x: ['0%', '-50%'] }}
+    transition={{ duration: 28, ease: 'linear', repeat: Infinity }}
+   >
+    {row.map((t, i) => (
+     <span key={i} className="flex items-center text-[11px] font-mono uppercase tracking-[0.2em] text-gray-200">
+      <span className="mx-5">{t}</span>
+      <span className="text-sky-400" aria-hidden>&bull;</span>
+     </span>
+    ))}
+   </motion.div>
+  </div>
+ )
+}
+
+/* --------------------------- Scroll reveal --------------------- */
+/**
+ * Fade-and-rise as each section scrolls into view, once. Plain
+ * IntersectionObserver + CSS transition so it fires reliably (no
+ * framer-motion whileInView quirks). Triggers when ~18% of the section
+ * is on screen, so the movement is clearly visible.
+ */
+function Reveal({ children }: { children: React.ReactNode }) {
+ const ref = useRef<HTMLDivElement>(null)
+ const [shown, setShown] = useState(false)
+
+ useEffect(() => {
+  const el = ref.current
+  if (!el) return
+  const io = new IntersectionObserver(
+   (entries) => {
+    for (const e of entries) {
+     if (e.isIntersecting) {
+      setShown(true)
+      io.disconnect()
+      break
+     }
+    }
+   },
+   { threshold: 0.18 },
+  )
+  io.observe(el)
+  return () => io.disconnect()
+ }, [])
+
+ return (
+  <div
+   ref={ref}
+   style={{
+    opacity: shown ? 1 : 0,
+    transform: shown ? 'none' : 'translateY(64px)',
+    transition: 'opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1)',
+    willChange: 'opacity, transform',
+   }}
+  >
+   {children}
+  </div>
  )
 }
 
 /* ----------------------------- Nav ----------------------------- */
 
 function Nav() {
+ const [open, setOpen] = useState(false)
  return (
   <nav className="sticky top-0 z-50 bg-[#f6f5f1]/80 backdrop-blur-md border-b border-black/5">
    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
-    <Link href="/" className="flex items-center" aria-label="CloudGreet">
+    <Link href="/" className="flex items-center" aria-label="CloudGreet" onClick={() => setOpen(false)}>
      <Image
       src="/cloudgreet-logo.png"
       alt="CloudGreet"
@@ -38,18 +122,62 @@ function Nav() {
       className="h-9 w-auto"
      />
     </Link>
+
+    {/* Desktop links */}
     <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
+     <a href="#customers" className="hover:text-gray-900 transition-colors">Who it&apos;s for</a>
      <a href="#roi" className="hover:text-gray-900 transition-colors">ROI</a>
-     <Link href="/login" className="hover:text-gray-900 transition-colors">Sign in</Link>
+     <Link href="/contact" className="hover:text-gray-900 transition-colors">Book Demo</Link>
     </div>
+
+    {/* Desktop CTA */}
     <Link
-     href="/contact"
-     className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+     href="/login"
+     className="hidden md:inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
     >
-     Book Demo
+     Sign in
      <ArrowUpRight className="w-4 h-4" />
     </Link>
+
+    {/* Mobile hamburger */}
+    <button
+     type="button"
+     onClick={() => setOpen((v) => !v)}
+     className="md:hidden inline-flex items-center justify-center w-10 h-10 -mr-2 text-gray-900"
+     aria-label={open ? 'Close menu' : 'Open menu'}
+     aria-expanded={open}
+    >
+     {open ? <X className="w-6 h-6" /> : <List className="w-6 h-6" />}
+    </button>
    </div>
+
+   {/* Mobile dropdown */}
+   <AnimatePresence initial={false}>
+    {open && (
+     <motion.div
+      key="mobile-menu"
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 'auto', opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      className="md:hidden overflow-hidden border-t border-black/5 bg-[#f6f5f1]/95 backdrop-blur-md"
+     >
+      <div className="px-5 py-3 flex flex-col">
+       <a href="#customers" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700 border-b border-black/5">Who it&apos;s for</a>
+       <a href="#roi" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700 border-b border-black/5">ROI</a>
+       <Link href="/contact" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700">Book a demo</Link>
+       <Link
+        href="/login"
+        onClick={() => setOpen(false)}
+        className="mt-3 mb-1 inline-flex items-center justify-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-full text-sm font-medium"
+       >
+        Sign in
+        <ArrowUpRight className="w-4 h-4" />
+       </Link>
+      </div>
+     </motion.div>
+    )}
+   </AnimatePresence>
   </nav>
  )
 }
@@ -58,7 +186,7 @@ function Nav() {
 
 function Hero() {
  return (
-  <section className="px-5 sm:px-6 pt-12 sm:pt-20 md:pt-24 pb-10 sm:pb-14 relative overflow-hidden">
+  <section className="px-5 sm:px-6 pt-3 sm:pt-6 md:pt-8 pb-10 sm:pb-14 relative overflow-hidden">
    <div
     className="absolute inset-0 -z-10 pointer-events-none opacity-40"
     style={{
@@ -67,16 +195,16 @@ function Hero() {
     }}
    />
    <div className="max-w-6xl mx-auto text-center">
-    <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-gray-600 mb-7">
+    <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-gray-600 mb-5">
      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
      Live AI receptionist - call it now
     </div>
-    <h1 className="font-display font-medium tracking-tight leading-[1.05] text-[34px] xs:text-[40px] sm:text-[56px] md:text-[72px] lg:text-[80px] mb-6 sm:mb-8 text-gray-900">
+    <h1 className="font-display font-medium tracking-tight leading-[1.05] text-[34px] xs:text-[40px] sm:text-[56px] md:text-[72px] lg:text-[80px] mb-5 sm:mb-7 text-gray-900">
      Stop losing <span className="text-gray-400">profit</span>
      <br />
      to voicemail.
     </h1>
-    <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto mb-8 sm:mb-12 leading-relaxed px-2">
+    <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto mb-7 sm:mb-9 leading-relaxed px-2">
      A 24/7 AI receptionist for service businesses. Answers every call, books jobs straight into your calendar, and logs the full transcript and recording in your dashboard the second the call ends.
     </p>
     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center">
@@ -84,7 +212,7 @@ function Hero() {
       href={DEMO_TEL}
       className="group inline-flex items-center justify-center gap-3 bg-white text-gray-900 px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium border border-gray-200 hover:border-gray-300 transition-all shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)] hover:shadow-[0_0_80px_-10px_rgba(56,189,248,0.55)]"
      >
-      Try a live demo call
+      Call to test our AI
       <span className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center group-hover:border-gray-900 transition-colors">
        <ArrowRight className="w-3.5 h-3.5" />
       </span>
@@ -746,6 +874,61 @@ function FounderNote() {
  )
 }
 
+/* -------------------------- Who it's for ----------------------- */
+/**
+ * Positioning section per LANDING-DESIGN.md: one typographic statement, no
+ * icon-card grid. Broad ("almost any business") but grounded in the real
+ * service verticals. Type and rhythm do the work.
+ */
+function WhoItsFor() {
+ return (
+  <section id="customers" className="px-5 sm:px-6 py-16 sm:py-24 md:py-28 scroll-mt-24">
+   <div className="max-w-4xl mx-auto">
+    <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-7 sm:mb-9">
+     Who it&apos;s for
+    </p>
+    <p className="font-display text-2xl sm:text-3xl md:text-[40px] font-medium tracking-tight leading-[1.3]">
+     <span className="text-gray-900">HVAC. Plumbing. Electrical. Roofing. Painting. Remodels. Car services.</span>{' '}
+     <span className="text-gray-400">And just about anyone whose next job comes in over the phone.</span>
+    </p>
+    <p className="mt-6 text-base md:text-lg text-gray-500 max-w-xl">
+     CloudGreet fits almost any business. We mostly help service businesses, the kind that can&apos;t stop working to answer every call.
+    </p>
+   </div>
+  </section>
+ )
+}
+
+/* -------------------------- Testimonial ------------------------ */
+/**
+ * Real customer quote (Steve French, Smart Ride Central Ohio), trimmed
+ * from his LinkedIn post. Editorial treatment per LANDING-DESIGN.md: large
+ * left-aligned quote, no cards, no icon-squares, no glow, type carries it.
+ */
+function Testimonial() {
+ return (
+  <section className="px-5 sm:px-6 py-16 sm:py-24 md:py-28">
+   <div className="max-w-4xl mx-auto">
+    <Image
+     src="/smartride-logo.png"
+     alt="Smart Ride Central Ohio"
+     width={507}
+     height={417}
+     className="h-16 sm:h-20 w-auto mb-7 sm:mb-9"
+    />
+    <blockquote className="font-display text-2xl sm:text-3xl md:text-[40px] font-medium tracking-tight leading-[1.3] text-gray-900">
+     &ldquo;I&apos;m often behind the wheel serving customers, so I can&apos;t always answer the phone. Adding CloudGreet as my booking assistant has been a game changer. In just a short time I&apos;ve already gotten multiple bookings and callbacks from people who talked straight to my AI.&rdquo;
+    </blockquote>
+    <div className="mt-8 sm:mt-10 flex items-center gap-3 text-sm">
+     <span className="font-medium text-gray-900">Steve French</span>
+     <span className="w-1 h-1 rounded-full bg-gray-300" />
+     <span className="text-gray-500">Owner, Smart Ride Central Ohio</span>
+    </div>
+   </div>
+  </section>
+ )
+}
+
 /* --------------------------- Final CTA ------------------------- */
 
 function FinalCTA() {
@@ -798,8 +981,8 @@ function FooterCard() {
  return (
   <section className="px-5 sm:px-6 pb-10">
    <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-7 sm:p-9 md:p-12">
-    <div className="grid md:grid-cols-12 gap-8 md:gap-12">
-     <div className="md:col-span-5">
+    <div className="grid md:grid-cols-2 gap-10 md:gap-12">
+     <div>
       <Link href="/" className="inline-flex items-center mb-4" aria-label="CloudGreet">
        <Image
         src="/cloudgreet-logo.png"
@@ -820,31 +1003,33 @@ function FooterCard() {
       </div>
      </div>
 
-     <div className="md:col-span-2">
-      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Product</h4>
-      <ul className="space-y-2 text-sm text-gray-700">
-       <li><a href="#roi" className="hover:text-sky-600 transition-colors">ROI calculator</a></li>
-       <li><a href="#faq" className="hover:text-sky-600 transition-colors">FAQ</a></li>
-       <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Book a demo</Link></li>
-      </ul>
-     </div>
+     <div className="grid grid-cols-3 gap-6 sm:gap-8">
+      <div>
+       <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Product</h4>
+       <ul className="space-y-2 text-sm text-gray-700">
+        <li><a href="#roi" className="hover:text-sky-600 transition-colors">ROI calculator</a></li>
+        <li><a href="#customers" className="hover:text-sky-600 transition-colors">Who it&apos;s for</a></li>
+        <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Book a demo</Link></li>
+       </ul>
+      </div>
 
-     <div className="md:col-span-2">
-      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Company</h4>
-      <ul className="space-y-2 text-sm text-gray-700">
-       <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Contact</Link></li>
-       <li><Link href="/login" className="hover:text-sky-600 transition-colors">Sign in</Link></li>
-       <li><Link href="/apply" className="hover:text-sky-600 transition-colors">Sales careers</Link></li>
-      </ul>
-     </div>
+      <div>
+       <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Company</h4>
+       <ul className="space-y-2 text-sm text-gray-700">
+        <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Contact</Link></li>
+        <li><Link href="/login" className="hover:text-sky-600 transition-colors">Sign in</Link></li>
+        <li><Link href="/apply" className="hover:text-sky-600 transition-colors">Sales careers</Link></li>
+       </ul>
+      </div>
 
-     <div className="md:col-span-3">
-      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Legal</h4>
-      <ul className="space-y-2 text-sm text-gray-700">
-       <li><Link href="/privacy" className="hover:text-sky-600 transition-colors">Privacy policy</Link></li>
-       <li><Link href="/terms" className="hover:text-sky-600 transition-colors">Terms of service</Link></li>
-       <li><Link href="/tcpa-a2p" className="hover:text-sky-600 transition-colors">TCPA / A2P compliance</Link></li>
-      </ul>
+      <div>
+       <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Legal</h4>
+       <ul className="space-y-2 text-sm text-gray-700">
+        <li><Link href="/privacy" className="hover:text-sky-600 transition-colors">Privacy policy</Link></li>
+        <li><Link href="/terms" className="hover:text-sky-600 transition-colors">Terms of service</Link></li>
+        <li><Link href="/tcpa-a2p" className="hover:text-sky-600 transition-colors">TCPA / A2P compliance</Link></li>
+       </ul>
+      </div>
      </div>
     </div>
     <div className="mt-10 pt-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-400">
