@@ -202,13 +202,8 @@ function Hero() {
    />
 
    {/* Centered text over the scrim; full-width agents show below */}
-   <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center pt-12 text-center sm:pt-16 md:pt-20">
-    <div className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white/70 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-gray-600 backdrop-blur">
-     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-     Live AI receptionist - call it now
-    </div>
-
-    <h1 className="mt-7 font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,7vw,6rem)]">
+   <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center pt-4 text-center sm:pt-8 md:pt-10">
+    <h1 className="font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,7vw,6rem)]">
      Stop losing <span className="text-blue-600">profit</span>
      <br />
      to voicemail.
@@ -242,17 +237,19 @@ function DemoCallButtons() {
  return (
   <>
    <div className="flex flex-col sm:flex-row gap-3">
+    {/* Apple "Liquid Glass" approximation: translucent + backdrop-blur +
+        white rim border + inset top sheen + soft float shadow. */}
     <button
      type="button"
      onClick={() => setOpen(true)}
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl bg-blue-600 px-7 py-4 text-base font-medium text-white shadow-[0_16px_36px_-12px_rgba(37,99,235,0.7)] transition-all hover:-translate-y-0.5 hover:bg-blue-700"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/30 bg-blue-600/80 px-7 py-4 text-base font-medium text-white backdrop-blur-xl shadow-[0_16px_38px_-12px_rgba(37,99,235,0.6),inset_0_1px_0_0_rgba(255,255,255,0.45)] transition-all hover:-translate-y-0.5 hover:bg-blue-600/90"
     >
      Test our AI
      <ArrowRight weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
     </button>
     <Link
      href="/contact"
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-7 py-4 text-base font-medium text-gray-900 shadow-[0_16px_36px_-16px_rgba(15,23,42,0.45)] transition-all hover:-translate-y-0.5 hover:border-gray-300"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/60 bg-white/40 px-7 py-4 text-base font-medium text-gray-900 backdrop-blur-xl shadow-[0_16px_38px_-16px_rgba(15,23,42,0.35),inset_0_1px_0_0_rgba(255,255,255,0.7)] transition-all hover:-translate-y-0.5 hover:bg-white/55"
     >
      Book a 15-min demo
      <ArrowUpRight weight="bold" className="h-4 w-4" />
