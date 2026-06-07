@@ -18,8 +18,8 @@ export default function LandingPage() {
    <Marquee />
    <Reveal><Hero /></Reveal>
    <Reveal><RoiCalculator /></Reveal>
-   <Reveal><WhoItsFor /></Reveal>
    <Reveal><Testimonial /></Reveal>
+   <Reveal><WhoItsFor /></Reveal>
    <Reveal><FinalCTA /></Reveal>
    <Reveal><FooterCard /></Reveal>
   </main>
