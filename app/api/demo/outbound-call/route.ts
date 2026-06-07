@@ -20,7 +20,11 @@ export const runtime = 'nodejs'
  * The visitor entering their own number + tapping "Call me" is the TCPA
  * consent for this single call.
  */
-const DEMO_FROM = '+17379370084'
+// The 737 demo line is a retell-telnyx number whose OUTBOUND leg errors at the
+// Telnyx trunk. Place the call from a retell-twilio number (reliable outbound)
+// but override to the demo agent so the caller still gets the demo experience.
+const DEMO_FROM = '+18146486307'
+const DEMO_AGENT = 'agent_56d7fa8635fdd5313c99729233'
 
 function normalizeUsPhone(raw: string): string | null {
  const digits = String(raw || '').replace(/\D/g, '')
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
   const r = await fetch('https://api.retellai.com/v2/create-phone-call', {
    method: 'POST',
    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-   body: JSON.stringify({ from_number: DEMO_FROM, to_number: to }),
+   body: JSON.stringify({ from_number: DEMO_FROM, to_number: to, override_agent_id: DEMO_AGENT }),
   })
   const j = await r.json().catch(() => ({} as any))
   if (!r.ok) {

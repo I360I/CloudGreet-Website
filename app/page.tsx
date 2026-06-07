@@ -307,41 +307,44 @@ function DemoCallModal({ onClose }: { onClose: () => void }) {
     >
      <X className="h-5 w-5" />
     </button>
-    <div className="text-base font-semibold text-gray-900">Hear it for yourself</div>
-    <p className="mt-1 text-sm text-gray-500">
-     Enter your number and our AI receptionist calls you in seconds.
-    </p>
-
     {state === 'done' ? (
-     <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-      {msg}
+     <div className="py-2">
+      <div className="text-lg font-semibold text-gray-900">Your phone is about to ring</div>
+      <p className="mt-2 text-sm text-gray-600">
+       Pick up and treat it like a real call. Ask about pricing, hours, or booking a job, and the AI will handle it just like it would for your customers.
+      </p>
      </div>
     ) : (
-     <form onSubmit={submit} className="mt-4 flex flex-col gap-2">
-      <input
-       type="tel"
-       inputMode="tel"
-       required
-       autoFocus
-       value={phone}
-       onChange={(e) => setPhone(e.target.value)}
-       placeholder="(555) 123-4567"
-       className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-900 outline-none focus:border-gray-400"
-      />
-      <button
-       type="submit"
-       disabled={state === 'loading'}
-       className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-60"
-      >
-       {state === 'loading' ? 'Calling...' : 'Call me'}
-      </button>
-     </form>
+     <>
+      <div className="text-base font-semibold text-gray-900">Hear it for yourself</div>
+      <p className="mt-1 text-sm text-gray-500">
+       Enter your number and our AI receptionist calls you in seconds.
+      </p>
+      <form onSubmit={submit} className="mt-4 flex flex-col gap-2">
+       <input
+        type="tel"
+        inputMode="tel"
+        required
+        autoFocus
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        placeholder="(555) 123-4567"
+        className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-900 outline-none focus:border-gray-400"
+       />
+       <button
+        type="submit"
+        disabled={state === 'loading'}
+        className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+       >
+        {state === 'loading' ? 'Calling...' : 'Call me'}
+       </button>
+      </form>
+      {state === 'error' && <p className="mt-2 text-xs text-amber-700">{msg}</p>}
+      <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
+       By tapping Call me you agree to receive a one-time call from our AI at the number provided.
+      </p>
+     </>
     )}
-    {state === 'error' && <p className="mt-2 text-xs text-amber-700">{msg}</p>}
-
-    <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
-     By tapping Call me you agree to receive a one-time call from our AI at the number provided.
-    </p>
    </div>
   </div>
  )
