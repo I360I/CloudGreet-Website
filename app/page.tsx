@@ -205,7 +205,7 @@ function Hero() {
    <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center pt-4 text-center sm:pt-8 md:pt-10">
     <h1 className="font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,7vw,6rem)]">
      Stop losing{' '}
-     <span className="bg-gradient-to-b from-sky-400 via-blue-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_3px_14px_rgba(56,189,248,0.4)]">
+     <span className="bg-gradient-to-b from-sky-300/75 via-blue-400/65 to-blue-600/70 bg-clip-text text-transparent drop-shadow-[0_3px_18px_rgba(56,189,248,0.55)]">
       profit
      </span>
      <br />
@@ -245,7 +245,7 @@ function DemoCallButtons() {
     <button
      type="button"
      onClick={() => setOpen(true)}
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/30 bg-blue-600/85 px-7 py-4 text-base font-medium text-white backdrop-blur-xl shadow-[0_16px_40px_-12px_rgba(37,99,235,0.6),inset_0_1px_0_0_rgba(255,255,255,0.5)] transition-all hover:-translate-y-0.5 hover:bg-blue-600/95"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/40 bg-blue-500/55 px-7 py-4 text-base font-medium text-white backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-12px_rgba(37,99,235,0.45),inset_0_1px_0_0_rgba(255,255,255,0.7),inset_0_-10px_24px_-14px_rgba(255,255,255,0.4)] transition-all hover:-translate-y-0.5 hover:bg-blue-500/65"
     >
      Test our AI
      <ArrowRight weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
