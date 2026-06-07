@@ -200,19 +200,19 @@ function Hero() {
        Live AI receptionist - call it now
       </div>
 
-      <h1 className="mt-7 font-display font-medium tracking-tighter leading-[0.9] text-gray-900 text-[clamp(2.5rem,8vw,7rem)]">
+      <h1 className="mt-6 font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,6.2vw,5.25rem)]">
        Stop losing <span className="text-blue-600">profit</span>
        <br />
        to voicemail.
       </h1>
 
-      <p className="mt-6 max-w-md text-base sm:text-lg text-gray-600 leading-relaxed">
-       A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
+      <p className="mt-5 max-w-sm text-base text-gray-600 leading-relaxed">
+       A 24/7 AI receptionist that answers every call, books the job, and texts customers back.
       </p>
      </div>
 
-     {/* CTA panel - drops into the upper-right blank space on desktop, stacks on mobile */}
-     <div className="mt-9 w-full sm:max-w-[400px] lg:absolute lg:right-0 lg:top-0 lg:mt-0">
+     {/* CTA panel - compact, frosted, tucked into the upper-right clear space */}
+     <div className="mt-8 w-full sm:max-w-[340px] lg:absolute lg:right-0 lg:top-1 lg:mt-0">
       <DemoCallPanel />
      </div>
     </div>
@@ -259,18 +259,18 @@ function DemoCallPanel() {
  }
 
  return (
-  <div className="rounded-3xl border border-gray-200 bg-white/80 p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.3)] backdrop-blur-md">
+  <div className="rounded-2xl border border-white/70 bg-white/70 p-5 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.45)] backdrop-blur-xl">
    <div className="text-sm font-semibold text-gray-900">Hear it for yourself</div>
-   <p className="mt-1 text-sm text-gray-500">
-    Enter your number and our AI receptionist calls you in seconds.
+   <p className="mt-1 text-xs text-gray-500">
+    Enter your number, our AI receptionist calls you in seconds.
    </p>
 
    {state === 'done' ? (
-    <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+    <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800">
      {msg}
     </div>
    ) : (
-    <form onSubmit={submit} className="mt-4 flex flex-col gap-2 sm:flex-row">
+    <form onSubmit={submit} className="mt-3 flex gap-2">
      <input
       type="tel"
       inputMode="tel"
@@ -278,33 +278,29 @@ function DemoCallPanel() {
       value={phone}
       onChange={(e) => setPhone(e.target.value)}
       placeholder="(555) 123-4567"
-      className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-900 outline-none focus:border-gray-400"
+      className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-400"
      />
      <button
       type="submit"
       disabled={state === 'loading'}
-      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gray-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-60"
+      className="shrink-0 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-60"
      >
-      {state === 'loading' ? 'Calling...' : 'Call me'}
+      {state === 'loading' ? '...' : 'Call me'}
      </button>
     </form>
    )}
    {state === 'error' && <p className="mt-2 text-xs text-amber-700">{msg}</p>}
 
-   <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-widest text-gray-400">
-    <span className="h-px flex-1 bg-gray-200" /> or <span className="h-px flex-1 bg-gray-200" />
-   </div>
-
    <Link
     href="/contact"
-    className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-medium text-gray-900 transition-colors hover:border-gray-300"
+    className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-gray-600 transition-colors hover:text-gray-900"
    >
-    Book a 15-min demo
-    <ArrowUpRight className="h-4 w-4" />
+    or book a 15-min demo
+    <ArrowUpRight className="h-3 w-3" />
    </Link>
 
-   <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
-    By tapping Call me you agree to receive a one-time call from our AI at the number provided.
+   <p className="mt-3 text-[10px] leading-relaxed text-gray-400">
+    One-time call from our AI to the number you enter.
    </p>
   </div>
  )
