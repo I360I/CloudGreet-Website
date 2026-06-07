@@ -44,16 +44,16 @@ function Marquee() {
  ]
  const row = [...items, ...items]
  return (
-  <div className="overflow-hidden border-y border-white/70 bg-white/50 backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.95),0_10px_30px_-20px_rgba(15,23,42,0.25)]">
+  <div className="overflow-hidden border-y border-white/10 bg-gray-950/70 backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_12px_30px_-20px_rgba(15,23,42,0.5)]">
    <motion.div
     className="flex whitespace-nowrap py-2.5"
     animate={{ x: ['0%', '-50%'] }}
     transition={{ duration: 28, ease: 'linear', repeat: Infinity }}
    >
     {row.map((t, i) => (
-     <span key={i} className="flex items-center text-[11px] font-mono uppercase tracking-[0.2em] text-gray-700">
+     <span key={i} className="flex items-center text-[11px] font-mono uppercase tracking-[0.2em] text-gray-100">
       <span className="mx-5">{t}</span>
-      <span className="text-blue-500/70" aria-hidden>&bull;</span>
+      <span className="text-sky-300/80" aria-hidden>&bull;</span>
      </span>
     ))}
    </motion.div>
@@ -245,14 +245,14 @@ function DemoCallButtons() {
     <button
      type="button"
      onClick={() => setOpen(true)}
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/60 bg-blue-500/20 px-7 py-4 text-base font-medium text-gray-900 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(37,99,235,0.4),inset_0_1px_0_0_rgba(255,255,255,0.9),inset_0_-10px_24px_-14px_rgba(255,255,255,0.55)] transition-all hover:-translate-y-0.5 hover:bg-blue-500/30"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/50 bg-blue-500/35 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(37,99,235,0.45),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-10px_24px_-14px_rgba(255,255,255,0.5)] transition-all hover:-translate-y-0.5 hover:bg-blue-500/45"
     >
      Test our AI
      <ArrowRight weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
     </button>
     <Link
      href="/contact"
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/70 bg-white/10 px-7 py-4 text-base font-medium text-gray-900 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.3),inset_0_1px_0_0_rgba(255,255,255,0.95),inset_0_-10px_24px_-14px_rgba(255,255,255,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/25"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/70 bg-white/10 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.3),inset_0_1px_0_0_rgba(255,255,255,0.95),inset_0_-10px_24px_-14px_rgba(255,255,255,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/20"
     >
      Book a 15-min demo
      <ArrowUpRight weight="bold" className="h-4 w-4" />
