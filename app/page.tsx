@@ -200,20 +200,20 @@ function Hero() {
        Live AI receptionist - call it now
       </div>
 
-      <h1 className="mt-6 font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,6.2vw,5.25rem)]">
+      <h1 className="mt-7 font-display font-medium tracking-tighter leading-[0.9] text-gray-900 text-[clamp(2.5rem,8vw,7rem)]">
        Stop losing <span className="text-blue-600">profit</span>
        <br />
        to voicemail.
       </h1>
 
-      <p className="mt-5 max-w-sm text-base text-gray-600 leading-relaxed">
-       A 24/7 AI receptionist that answers every call, books the job, and texts customers back.
+      <p className="mt-6 max-w-md text-base sm:text-lg text-gray-600 leading-relaxed">
+       A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
       </p>
      </div>
 
-     {/* CTA panel - compact, frosted, tucked into the upper-right clear space */}
-     <div className="mt-8 w-full sm:max-w-[340px] lg:absolute lg:right-0 lg:top-1 lg:mt-0">
-      <DemoCallPanel />
+     {/* CTAs: two buttons side by side in the upper-right white space */}
+     <div className="mt-8 lg:absolute lg:right-0 lg:top-2 lg:mt-0">
+      <DemoCallButtons />
      </div>
     </div>
    </div>
@@ -221,14 +221,42 @@ function Hero() {
  )
 }
 
-/* -------------------------- Demo call panel -------------------- */
+/* -------------------------- Demo call CTAs -------------------- */
 /**
- * "Hear it for yourself" - the visitor enters their own number and our AI
- * receptionist calls them (POST /api/demo/outbound-call triggers a Retell
- * outbound call). Replaces the old tel: link, which only works on devices
- * with a dialer.
+ * Two hero CTAs side by side. "Test our AI" opens a popup where the visitor
+ * enters their number and our demo agent calls them (POST
+ * /api/demo/outbound-call -> Retell outbound). Replaces the old tel: link,
+ * which only works on devices with a dialer.
  */
-function DemoCallPanel() {
+function DemoCallButtons() {
+ const [open, setOpen] = useState(false)
+ return (
+  <>
+   <div className="flex flex-col sm:flex-row gap-3">
+    <button
+     type="button"
+     onClick={() => setOpen(true)}
+     className="group inline-flex items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white px-6 py-3.5 text-sm sm:text-base font-medium text-gray-900 shadow-[0_0_60px_-10px_rgba(37,99,235,0.4)] transition-all hover:border-gray-300"
+    >
+     Test our AI
+     <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 transition-colors group-hover:border-gray-900">
+      <ArrowRight className="h-3.5 w-3.5" />
+     </span>
+    </button>
+    <Link
+     href="/contact"
+     className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gray-900 px-6 py-3.5 text-sm sm:text-base font-medium text-white transition-colors hover:bg-gray-800"
+    >
+     Book a 15-min demo
+     <ArrowUpRight className="h-5 w-5" />
+    </Link>
+   </div>
+   {open && <DemoCallModal onClose={() => setOpen(false)} />}
+  </>
+ )
+}
+
+function DemoCallModal({ onClose }: { onClose: () => void }) {
  const [phone, setPhone] = useState('')
  const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
  const [msg, setMsg] = useState('')
@@ -259,49 +287,58 @@ function DemoCallPanel() {
  }
 
  return (
-  <div className="rounded-2xl border border-white/70 bg-white/70 p-5 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.45)] backdrop-blur-xl">
-   <div className="text-sm font-semibold text-gray-900">Hear it for yourself</div>
-   <p className="mt-1 text-xs text-gray-500">
-    Enter your number, our AI receptionist calls you in seconds.
-   </p>
-
-   {state === 'done' ? (
-    <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800">
-     {msg}
-    </div>
-   ) : (
-    <form onSubmit={submit} className="mt-3 flex gap-2">
-     <input
-      type="tel"
-      inputMode="tel"
-      required
-      value={phone}
-      onChange={(e) => setPhone(e.target.value)}
-      placeholder="(555) 123-4567"
-      className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-400"
-     />
-     <button
-      type="submit"
-      disabled={state === 'loading'}
-      className="shrink-0 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-60"
-     >
-      {state === 'loading' ? '...' : 'Call me'}
-     </button>
-    </form>
-   )}
-   {state === 'error' && <p className="mt-2 text-xs text-amber-700">{msg}</p>}
-
-   <Link
-    href="/contact"
-    className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-gray-600 transition-colors hover:text-gray-900"
+  <div
+   className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+   onClick={onClose}
+  >
+   <div
+    className="relative w-full max-w-sm rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl"
+    onClick={(e) => e.stopPropagation()}
    >
-    or book a 15-min demo
-    <ArrowUpRight className="h-3 w-3" />
-   </Link>
+    <button
+     type="button"
+     onClick={onClose}
+     aria-label="Close"
+     className="absolute right-4 top-4 text-gray-400 transition-colors hover:text-gray-900"
+    >
+     <X className="h-5 w-5" />
+    </button>
+    <div className="text-base font-semibold text-gray-900">Hear it for yourself</div>
+    <p className="mt-1 text-sm text-gray-500">
+     Enter your number and our AI receptionist calls you in seconds.
+    </p>
 
-   <p className="mt-3 text-[10px] leading-relaxed text-gray-400">
-    One-time call from our AI to the number you enter.
-   </p>
+    {state === 'done' ? (
+     <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+      {msg}
+     </div>
+    ) : (
+     <form onSubmit={submit} className="mt-4 flex flex-col gap-2">
+      <input
+       type="tel"
+       inputMode="tel"
+       required
+       autoFocus
+       value={phone}
+       onChange={(e) => setPhone(e.target.value)}
+       placeholder="(555) 123-4567"
+       className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-900 outline-none focus:border-gray-400"
+      />
+      <button
+       type="submit"
+       disabled={state === 'loading'}
+       className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-60"
+      >
+       {state === 'loading' ? 'Calling...' : 'Call me'}
+      </button>
+     </form>
+    )}
+    {state === 'error' && <p className="mt-2 text-xs text-amber-700">{msg}</p>}
+
+    <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
+     By tapping Call me you agree to receive a one-time call from our AI at the number provided.
+    </p>
+   </div>
   </div>
  )
 }
