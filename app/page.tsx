@@ -191,45 +191,40 @@ function Hero() {
    {/* Ambient call-center scene - atmosphere on the right */}
    <CallCenterScene />
 
-   {/* Scrim: separation layer between the video and the text. Solid on the
-       left where the copy lives, fading to transparent over the characters so
-       text always wins contrast and the animation still shows through. */}
+   {/* Scrim: vertical fade - solid up top where the copy lives, clearing to
+       fully transparent at the bottom so ALL the agents show through. */}
    <div
     className="pointer-events-none absolute inset-0 z-[1]"
     style={{
      background:
-      'linear-gradient(to right, #f6f5f1 0%, #f6f5f1 30%, rgba(246,245,241,0.45) 44%, rgba(246,245,241,0) 56%)',
+      'linear-gradient(to bottom, #f6f5f1 0%, #f6f5f1 30%, rgba(246,245,241,0.4) 48%, rgba(246,245,241,0) 66%)',
     }}
    />
 
-   {/* Left text column over the scrim: badge -> headline -> subhead -> CTAs -> phone */}
-   <div className="relative z-10 mx-auto w-full max-w-7xl pt-12 sm:pt-16 md:pt-24">
-    <div className="max-w-4xl">
-     <div className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white/70 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-gray-600 backdrop-blur">
-      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-      Live AI receptionist - call it now
-     </div>
-
-     <h1 className="mt-7 font-display font-medium tracking-tighter leading-[0.9] text-gray-900 text-[clamp(2.5rem,8vw,7rem)]">
-      Stop losing <span className="text-blue-600">profit</span>
-      <br />
-      to voicemail.
-     </h1>
-
-     <div className="max-w-lg">
-      <p className="mt-6 text-base sm:text-lg text-gray-600 leading-relaxed">
-       A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
-      </p>
-
-      <div className="mt-8">
-       <DemoCallButtons />
-      </div>
-
-      <p className="mt-6 text-sm text-gray-500">
-       Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a> and ask it anything.
-      </p>
-     </div>
+   {/* Centered text over the scrim; full-width agents show below */}
+   <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center pt-12 text-center sm:pt-16 md:pt-20">
+    <div className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white/70 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-gray-600 backdrop-blur">
+     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+     Live AI receptionist - call it now
     </div>
+
+    <h1 className="mt-7 font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,7vw,6rem)]">
+     Stop losing <span className="text-blue-600">profit</span>
+     <br />
+     to voicemail.
+    </h1>
+
+    <p className="mt-6 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed">
+     A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
+    </p>
+
+    <div className="mt-8">
+     <DemoCallButtons />
+    </div>
+
+    <p className="mt-6 text-sm text-gray-500">
+     Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a> and ask it anything.
+    </p>
    </div>
   </section>
  )
