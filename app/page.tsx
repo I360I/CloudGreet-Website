@@ -242,14 +242,14 @@ function DemoCallButtons() {
     <button
      type="button"
      onClick={() => setOpen(true)}
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/40 bg-blue-500/55 px-7 py-4 text-base font-medium text-white backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-12px_rgba(37,99,235,0.5),inset_0_1px_0_0_rgba(255,255,255,0.7),inset_0_-10px_24px_-14px_rgba(255,255,255,0.35)] transition-all hover:-translate-y-0.5 hover:bg-blue-500/65"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/30 bg-blue-600/85 px-7 py-4 text-base font-medium text-white backdrop-blur-xl shadow-[0_16px_40px_-12px_rgba(37,99,235,0.6),inset_0_1px_0_0_rgba(255,255,255,0.5)] transition-all hover:-translate-y-0.5 hover:bg-blue-600/95"
     >
      Test our AI
      <ArrowRight weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
     </button>
     <Link
      href="/contact"
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/70 bg-white/25 px-7 py-4 text-base font-medium text-gray-900 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.3),inset_0_1px_0_0_rgba(255,255,255,0.9),inset_0_-10px_24px_-14px_rgba(255,255,255,0.5)] transition-all hover:-translate-y-0.5 hover:bg-white/40"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/70 bg-white/10 px-7 py-4 text-base font-medium text-gray-900 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.3),inset_0_1px_0_0_rgba(255,255,255,0.95),inset_0_-10px_24px_-14px_rgba(255,255,255,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/25"
     >
      Book a 15-min demo
      <ArrowUpRight weight="bold" className="h-4 w-4" />
