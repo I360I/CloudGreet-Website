@@ -44,16 +44,16 @@ function Marquee() {
  ]
  const row = [...items, ...items]
  return (
-  <div className="bg-blue-600 text-white overflow-hidden">
+  <div className="overflow-hidden border-y border-white/60 bg-white/10 backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85)]">
    <motion.div
     className="flex whitespace-nowrap py-2.5"
     animate={{ x: ['0%', '-50%'] }}
     transition={{ duration: 28, ease: 'linear', repeat: Infinity }}
    >
     {row.map((t, i) => (
-     <span key={i} className="flex items-center text-[11px] font-mono uppercase tracking-[0.2em] text-blue-50">
+     <span key={i} className="flex items-center text-[11px] font-mono uppercase tracking-[0.2em] text-gray-700">
       <span className="mx-5">{t}</span>
-      <span className="text-sky-200/80" aria-hidden>&bull;</span>
+      <span className="text-blue-500/70" aria-hidden>&bull;</span>
      </span>
     ))}
    </motion.div>
