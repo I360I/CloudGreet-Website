@@ -205,7 +205,7 @@ function Hero() {
    <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center pt-4 text-center sm:pt-8 md:pt-10">
     <h1 className="font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,7vw,6rem)]">
      Stop losing{' '}
-     <span className="inline-block rounded-2xl border border-white/30 bg-blue-600/85 px-3 text-white shadow-[0_14px_36px_-12px_rgba(37,99,235,0.55),inset_0_1px_0_0_rgba(255,255,255,0.5)] backdrop-blur-xl">
+     <span className="bg-gradient-to-b from-sky-400 via-blue-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_3px_14px_rgba(56,189,248,0.4)]">
       profit
      </span>
      <br />
