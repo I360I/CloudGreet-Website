@@ -1,16 +1,18 @@
 /**
  * Ambient call-center scene behind the hero: a looping clip of the blue
- * agent characters at their desks (generated, optimized to /cganimation.mp4).
+ * agent characters at their desks (CapCut export, cropped + transcoded to
+ * the browser-safe /cganimation.mp4).
  *
  * The clip has a white background, so `mix-blend-multiply` drops the white
- * and lets the characters sit directly on the off-white page. The top is
- * masked to a fade so the scene dissolves up behind the headline.
+ * and lets the characters sit directly on the off-white page. It runs as a
+ * full-width band along the bottom, with the top masked to a soft fade so
+ * it dissolves up behind the headline.
  */
 export function CallCenterScene() {
  return (
   <div
    aria-hidden
-   className="pointer-events-none absolute inset-x-0 bottom-0 h-[82%] [mask-image:linear-gradient(to_top,black_62%,transparent)]"
+   className="pointer-events-none absolute inset-x-0 bottom-0 [mask-image:linear-gradient(to_top,black_78%,transparent)]"
   >
    <video
     autoPlay
@@ -18,7 +20,7 @@ export function CallCenterScene() {
     muted
     playsInline
     preload="auto"
-    className="h-full w-full object-cover object-bottom mix-blend-multiply"
+    className="h-auto w-full mix-blend-multiply"
    >
     <source src="/cganimation.mp4" type="video/mp4" />
    </video>
