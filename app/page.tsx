@@ -204,7 +204,10 @@ function Hero() {
    {/* Centered text over the scrim; full-width agents show below */}
    <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center pt-4 text-center sm:pt-8 md:pt-10">
     <h1 className="font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,7vw,6rem)]">
-     Stop losing <span className="text-blue-600">profit</span>
+     Stop losing{' '}
+     <span className="inline-block rounded-2xl border border-white/30 bg-blue-600/85 px-3 text-white shadow-[0_14px_36px_-12px_rgba(37,99,235,0.55),inset_0_1px_0_0_rgba(255,255,255,0.5)] backdrop-blur-xl">
+      profit
+     </span>
      <br />
      to voicemail.
     </h1>
