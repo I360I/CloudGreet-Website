@@ -198,7 +198,7 @@ function Hero() {
     className="pointer-events-none absolute inset-0 z-[1]"
     style={{
      background:
-      'linear-gradient(to right, #f6f5f1 0%, #f6f5f1 40%, rgba(246,245,241,0.7) 56%, rgba(246,245,241,0) 76%)',
+      'linear-gradient(to right, #f6f5f1 0%, #f6f5f1 30%, rgba(246,245,241,0.45) 44%, rgba(246,245,241,0) 56%)',
     }}
    />
 
@@ -250,19 +250,17 @@ function DemoCallButtons() {
     <button
      type="button"
      onClick={() => setOpen(true)}
-     className="group inline-flex items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white px-6 py-3.5 text-sm sm:text-base font-medium text-gray-900 shadow-[0_0_60px_-10px_rgba(37,99,235,0.4)] transition-all hover:border-gray-300"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl bg-blue-600 px-7 py-4 text-base font-medium text-white shadow-[0_16px_36px_-12px_rgba(37,99,235,0.7)] transition-all hover:-translate-y-0.5 hover:bg-blue-700"
     >
      Test our AI
-     <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 transition-colors group-hover:border-gray-900">
-      <ArrowRight className="h-3.5 w-3.5" />
-     </span>
+     <ArrowRight weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
     </button>
     <Link
      href="/contact"
-     className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gray-900 px-6 py-3.5 text-sm sm:text-base font-medium text-white transition-colors hover:bg-gray-800"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-gray-200 bg-white px-7 py-4 text-base font-medium text-gray-900 shadow-[0_16px_36px_-16px_rgba(15,23,42,0.45)] transition-all hover:-translate-y-0.5 hover:border-gray-300"
     >
      Book a 15-min demo
-     <ArrowUpRight className="h-5 w-5" />
+     <ArrowUpRight weight="bold" className="h-4 w-4" />
     </Link>
    </div>
    {open && <DemoCallModal onClose={() => setOpen(false)} />}
