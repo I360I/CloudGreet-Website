@@ -18,6 +18,7 @@ export default function LandingPage() {
    <Nav />
    <Marquee />
    <Hero />
+   <LogoMarquee />
    <Reveal><RoiCalculator /></Reveal>
    <Reveal><Testimonial /></Reveal>
    <Reveal><WhoItsFor /></Reveal>
@@ -695,6 +696,57 @@ function DashboardPreview() {
       ))}
      </div>
     </div>
+   </div>
+  </section>
+ )
+}
+
+/* ---------------------- Integration logos ---------------------- */
+/**
+ * Trust strip above the ROI calculator: the real stack we use, scrolling
+ * in a seamless loop. Every logo is rendered through a CSS mask so they all
+ * share one slate color regardless of the source SVG's own colors.
+ */
+function LogoMarquee() {
+ const logos = [
+  { src: '/logos/stripe.svg', alt: 'Stripe' },
+  { src: '/logos/googlecalendar.svg', alt: 'Google Calendar' },
+  { src: '/logos/calcom.svg', alt: 'Cal.com' },
+  { src: '/logos/twilio.svg', alt: 'Twilio' },
+  { src: '/logos/anthropic.svg', alt: 'Anthropic' },
+  { src: '/logos/google.svg', alt: 'Google' },
+ ]
+ const row = [...logos, ...logos]
+ return (
+  <section className="px-5 sm:px-6 pt-16 sm:pt-24">
+   <p className="mb-8 text-center text-[10px] font-mono uppercase tracking-[0.25em] text-gray-400">
+    Plugs into the tools you already use
+   </p>
+   <div className="relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+    <motion.div
+     className="flex w-max items-center gap-14 sm:gap-16"
+     animate={{ x: ['0%', '-50%'] }}
+     transition={{ duration: 26, ease: 'linear', repeat: Infinity }}
+    >
+     {row.map((l, i) => (
+      <span
+       key={i}
+       role="img"
+       aria-label={l.alt}
+       className="block h-7 w-[110px] shrink-0 bg-slate-400 transition-colors duration-300 hover:bg-slate-600"
+       style={{
+        WebkitMaskImage: `url(${l.src})`,
+        maskImage: `url(${l.src})`,
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+        WebkitMaskPosition: 'center',
+        maskPosition: 'center',
+        WebkitMaskSize: 'contain',
+        maskSize: 'contain',
+       }}
+      />
+     ))}
+    </motion.div>
    </div>
   </section>
  )
