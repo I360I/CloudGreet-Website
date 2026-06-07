@@ -937,8 +937,8 @@ function FooterCard() {
  return (
   <section className="px-5 sm:px-6 pb-10">
    <div className="max-w-6xl mx-auto bg-white rounded-3xl border border-gray-200 p-7 sm:p-9 md:p-12">
-    <div className="grid md:grid-cols-12 gap-8 md:gap-12">
-     <div className="md:col-span-5">
+    <div className="grid md:grid-cols-2 gap-10 md:gap-12">
+     <div>
       <Link href="/" className="inline-flex items-center mb-4" aria-label="CloudGreet">
        <Image
         src="/cloudgreet-logo.png"
@@ -959,31 +959,33 @@ function FooterCard() {
       </div>
      </div>
 
-     <div className="md:col-span-2">
-      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Product</h4>
-      <ul className="space-y-2 text-sm text-gray-700">
-       <li><a href="#roi" className="hover:text-sky-600 transition-colors">ROI calculator</a></li>
-       <li><a href="#faq" className="hover:text-sky-600 transition-colors">FAQ</a></li>
-       <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Book a demo</Link></li>
-      </ul>
-     </div>
+     <div className="grid grid-cols-3 gap-6 sm:gap-8">
+      <div>
+       <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Product</h4>
+       <ul className="space-y-2 text-sm text-gray-700">
+        <li><a href="#roi" className="hover:text-sky-600 transition-colors">ROI calculator</a></li>
+        <li><a href="#faq" className="hover:text-sky-600 transition-colors">FAQ</a></li>
+        <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Book a demo</Link></li>
+       </ul>
+      </div>
 
-     <div className="md:col-span-2">
-      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Company</h4>
-      <ul className="space-y-2 text-sm text-gray-700">
-       <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Contact</Link></li>
-       <li><Link href="/login" className="hover:text-sky-600 transition-colors">Sign in</Link></li>
-       <li><Link href="/apply" className="hover:text-sky-600 transition-colors">Sales careers</Link></li>
-      </ul>
-     </div>
+      <div>
+       <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Company</h4>
+       <ul className="space-y-2 text-sm text-gray-700">
+        <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Contact</Link></li>
+        <li><Link href="/login" className="hover:text-sky-600 transition-colors">Sign in</Link></li>
+        <li><Link href="/apply" className="hover:text-sky-600 transition-colors">Sales careers</Link></li>
+       </ul>
+      </div>
 
-     <div className="md:col-span-3">
-      <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Legal</h4>
-      <ul className="space-y-2 text-sm text-gray-700">
-       <li><Link href="/privacy" className="hover:text-sky-600 transition-colors">Privacy policy</Link></li>
-       <li><Link href="/terms" className="hover:text-sky-600 transition-colors">Terms of service</Link></li>
-       <li><Link href="/tcpa-a2p" className="hover:text-sky-600 transition-colors">TCPA / A2P compliance</Link></li>
-      </ul>
+      <div>
+       <h4 className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-3">Legal</h4>
+       <ul className="space-y-2 text-sm text-gray-700">
+        <li><Link href="/privacy" className="hover:text-sky-600 transition-colors">Privacy policy</Link></li>
+        <li><Link href="/terms" className="hover:text-sky-600 transition-colors">Terms of service</Link></li>
+        <li><Link href="/tcpa-a2p" className="hover:text-sky-600 transition-colors">TCPA / A2P compliance</Link></li>
+       </ul>
+      </div>
      </div>
     </div>
     <div className="mt-10 pt-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-400">
