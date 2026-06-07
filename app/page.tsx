@@ -44,7 +44,7 @@ function Marquee() {
  ]
  const row = [...items, ...items]
  return (
-  <div className="overflow-hidden border-y border-white/60 bg-white/10 backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.85)]">
+  <div className="overflow-hidden border-y border-white/70 bg-white/50 backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.95),0_10px_30px_-20px_rgba(15,23,42,0.25)]">
    <motion.div
     className="flex whitespace-nowrap py-2.5"
     animate={{ x: ['0%', '-50%'] }}
@@ -245,7 +245,7 @@ function DemoCallButtons() {
     <button
      type="button"
      onClick={() => setOpen(true)}
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/60 bg-blue-500/20 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_3px_rgba(15,23,42,0.45)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(37,99,235,0.4),inset_0_1px_0_0_rgba(255,255,255,0.9),inset_0_-10px_24px_-14px_rgba(255,255,255,0.55)] transition-all hover:-translate-y-0.5 hover:bg-blue-500/30"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/60 bg-blue-500/20 px-7 py-4 text-base font-medium text-gray-900 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(37,99,235,0.4),inset_0_1px_0_0_rgba(255,255,255,0.9),inset_0_-10px_24px_-14px_rgba(255,255,255,0.55)] transition-all hover:-translate-y-0.5 hover:bg-blue-500/30"
     >
      Test our AI
      <ArrowRight weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
