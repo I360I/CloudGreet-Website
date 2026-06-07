@@ -191,49 +191,122 @@ function Hero() {
    {/* Ambient call-center scene behind everything */}
    <CallCenterScene />
 
-   {/* Content - asymmetric, left-aligned, oversized (taste-skill: no centered hero) */}
+   {/* Content - asymmetric: headline left, CTA panel upper-right (taste-skill: no centered hero) */}
    <div className="relative z-10 mx-auto w-full max-w-7xl pt-12 sm:pt-16 md:pt-20">
-    <div className="max-w-4xl">
-     <div className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white/70 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-gray-600 backdrop-blur">
-      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-      Live AI receptionist - call it now
+    <div className="relative">
+     <div className="max-w-3xl">
+      <div className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white/70 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-gray-600 backdrop-blur">
+       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+       Live AI receptionist - call it now
+      </div>
+
+      <h1 className="mt-7 font-display font-medium tracking-tighter leading-[0.9] text-gray-900 text-[clamp(2.5rem,8vw,7rem)]">
+       Stop losing <span className="text-blue-600">profit</span>
+       <br />
+       to voicemail.
+      </h1>
+
+      <p className="mt-6 max-w-md text-base sm:text-lg text-gray-600 leading-relaxed">
+       A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
+      </p>
      </div>
 
-     <h1 className="mt-7 font-display font-medium tracking-tighter leading-[0.9] text-gray-900 text-[clamp(2.75rem,9vw,7.5rem)]">
-      Stop losing <span className="text-blue-600">profit</span>
-      <br />
-      to voicemail.
-     </h1>
-
-     <p className="mt-7 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed">
-      A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and logs the full transcript and recording the second the call ends.
-     </p>
-
-     <div className="mt-9 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
-      <a
-       href={DEMO_TEL}
-       className="group inline-flex items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white px-6 sm:px-7 py-3.5 sm:py-4 text-sm sm:text-base font-medium text-gray-900 shadow-[0_0_60px_-10px_rgba(37,99,235,0.4)] transition-all hover:border-gray-300"
-      >
-       Call to test our AI
-       <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 transition-colors group-hover:border-gray-900">
-        <ArrowRight className="h-3.5 w-3.5" />
-       </span>
-      </a>
-      <Link
-       href="/contact"
-       className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gray-900 px-6 sm:px-7 py-3.5 sm:py-4 text-sm sm:text-base font-medium text-white transition-colors hover:bg-gray-800"
-      >
-       Book a 15-min demo
-       <ArrowUpRight className="h-5 w-5" />
-      </Link>
+     {/* CTA panel - drops into the upper-right blank space on desktop, stacks on mobile */}
+     <div className="mt-9 w-full sm:max-w-[400px] lg:absolute lg:right-0 lg:top-0 lg:mt-0">
+      <DemoCallPanel />
      </div>
-
-     <p className="mt-7 text-sm text-gray-500">
-      Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a> and ask it anything.
-     </p>
     </div>
    </div>
   </section>
+ )
+}
+
+/* -------------------------- Demo call panel -------------------- */
+/**
+ * "Hear it for yourself" - the visitor enters their own number and our AI
+ * receptionist calls them (POST /api/demo/outbound-call triggers a Retell
+ * outbound call). Replaces the old tel: link, which only works on devices
+ * with a dialer.
+ */
+function DemoCallPanel() {
+ const [phone, setPhone] = useState('')
+ const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+ const [msg, setMsg] = useState('')
+
+ const submit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  if (state === 'loading') return
+  setState('loading')
+  setMsg('')
+  try {
+   const r = await fetch('/api/demo/outbound-call', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok) {
+    setState('error')
+    setMsg(j?.error || 'Something went wrong. Try again.')
+    return
+   }
+   setState('done')
+   setMsg('Calling you now. Pick up and talk to it like a real receptionist.')
+  } catch {
+   setState('error')
+   setMsg('Could not reach the server. Try again.')
+  }
+ }
+
+ return (
+  <div className="rounded-3xl border border-gray-200 bg-white/80 p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.3)] backdrop-blur-md">
+   <div className="text-sm font-semibold text-gray-900">Hear it for yourself</div>
+   <p className="mt-1 text-sm text-gray-500">
+    Enter your number and our AI receptionist calls you in seconds.
+   </p>
+
+   {state === 'done' ? (
+    <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+     {msg}
+    </div>
+   ) : (
+    <form onSubmit={submit} className="mt-4 flex flex-col gap-2 sm:flex-row">
+     <input
+      type="tel"
+      inputMode="tel"
+      required
+      value={phone}
+      onChange={(e) => setPhone(e.target.value)}
+      placeholder="(555) 123-4567"
+      className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-900 outline-none focus:border-gray-400"
+     />
+     <button
+      type="submit"
+      disabled={state === 'loading'}
+      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gray-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-60"
+     >
+      {state === 'loading' ? 'Calling...' : 'Call me'}
+     </button>
+    </form>
+   )}
+   {state === 'error' && <p className="mt-2 text-xs text-amber-700">{msg}</p>}
+
+   <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-widest text-gray-400">
+    <span className="h-px flex-1 bg-gray-200" /> or <span className="h-px flex-1 bg-gray-200" />
+   </div>
+
+   <Link
+    href="/contact"
+    className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-medium text-gray-900 transition-colors hover:border-gray-300"
+   >
+    Book a 15-min demo
+    <ArrowUpRight className="h-4 w-4" />
+   </Link>
+
+   <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
+    By tapping Call me you agree to receive a one-time call from our AI at the number provided.
+   </p>
+  </div>
  )
 }
 
