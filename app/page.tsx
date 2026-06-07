@@ -4,7 +4,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, List, X } from '@phosphor-icons/react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -152,23 +152,32 @@ function Nav() {
    </div>
 
    {/* Mobile dropdown */}
-   {open && (
-    <div className="md:hidden border-t border-black/5 bg-[#f6f5f1]/95 backdrop-blur-md">
-     <div className="px-5 py-3 flex flex-col">
-      <a href="#customers" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700 border-b border-black/5">Who it&apos;s for</a>
-      <a href="#roi" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700 border-b border-black/5">ROI</a>
-      <Link href="/contact" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700">Book a demo</Link>
-      <Link
-       href="/login"
-       onClick={() => setOpen(false)}
-       className="mt-3 mb-1 inline-flex items-center justify-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-full text-sm font-medium"
-      >
-       Sign in
-       <ArrowUpRight className="w-4 h-4" />
-      </Link>
-     </div>
-    </div>
-   )}
+   <AnimatePresence initial={false}>
+    {open && (
+     <motion.div
+      key="mobile-menu"
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: 'auto', opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      className="md:hidden overflow-hidden border-t border-black/5 bg-[#f6f5f1]/95 backdrop-blur-md"
+     >
+      <div className="px-5 py-3 flex flex-col">
+       <a href="#customers" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700 border-b border-black/5">Who it&apos;s for</a>
+       <a href="#roi" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700 border-b border-black/5">ROI</a>
+       <Link href="/contact" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700">Book a demo</Link>
+       <Link
+        href="/login"
+        onClick={() => setOpen(false)}
+        className="mt-3 mb-1 inline-flex items-center justify-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-full text-sm font-medium"
+       >
+        Sign in
+        <ArrowUpRight className="w-4 h-4" />
+       </Link>
+      </div>
+     </motion.div>
+    )}
+   </AnimatePresence>
   </nav>
  )
 }
