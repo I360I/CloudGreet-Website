@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, List, X } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { CallCenterScene } from './components/landing/CallCenterScene'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -16,7 +17,7 @@ export default function LandingPage() {
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
    <Nav />
    <Marquee />
-   <Reveal><Hero /></Reveal>
+   <Hero />
    <Reveal><RoiCalculator /></Reveal>
    <Reveal><Testimonial /></Reveal>
    <Reveal><WhoItsFor /></Reveal>
@@ -186,48 +187,51 @@ function Nav() {
 
 function Hero() {
  return (
-  <section className="px-5 sm:px-6 pt-3 sm:pt-6 md:pt-8 pb-10 sm:pb-14 relative overflow-hidden">
-   <div
-    className="absolute inset-0 -z-10 pointer-events-none opacity-40"
-    style={{
-     backgroundImage:
-      'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(56,189,248,0.18), transparent 70%)',
-    }}
-   />
-   <div className="max-w-6xl mx-auto text-center">
-    <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-gray-600 mb-5">
-     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-     Live AI receptionist - call it now
+  <section className="relative min-h-[100dvh] overflow-hidden bg-[#f6f5f1] px-5 sm:px-8">
+   {/* Ambient call-center scene behind everything */}
+   <CallCenterScene />
+
+   {/* Content - asymmetric, left-aligned, oversized (taste-skill: no centered hero) */}
+   <div className="relative z-10 mx-auto w-full max-w-7xl pt-12 sm:pt-16 md:pt-20">
+    <div className="max-w-4xl">
+     <div className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white/70 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.2em] text-gray-600 backdrop-blur">
+      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+      Live AI receptionist - call it now
+     </div>
+
+     <h1 className="mt-7 font-display font-medium tracking-tighter leading-[0.9] text-gray-900 text-[clamp(2.75rem,9vw,7.5rem)]">
+      Stop losing <span className="text-blue-600">profit</span>
+      <br />
+      to voicemail.
+     </h1>
+
+     <p className="mt-7 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed">
+      A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and logs the full transcript and recording the second the call ends.
+     </p>
+
+     <div className="mt-9 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
+      <a
+       href={DEMO_TEL}
+       className="group inline-flex items-center justify-center gap-3 rounded-2xl border border-gray-200 bg-white px-6 sm:px-7 py-3.5 sm:py-4 text-sm sm:text-base font-medium text-gray-900 shadow-[0_0_60px_-10px_rgba(37,99,235,0.4)] transition-all hover:border-gray-300"
+      >
+       Call to test our AI
+       <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-300 transition-colors group-hover:border-gray-900">
+        <ArrowRight className="h-3.5 w-3.5" />
+       </span>
+      </a>
+      <Link
+       href="/contact"
+       className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gray-900 px-6 sm:px-7 py-3.5 sm:py-4 text-sm sm:text-base font-medium text-white transition-colors hover:bg-gray-800"
+      >
+       Book a 15-min demo
+       <ArrowUpRight className="h-5 w-5" />
+      </Link>
+     </div>
+
+     <p className="mt-7 text-sm text-gray-500">
+      Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a> and ask it anything.
+     </p>
     </div>
-    <h1 className="font-display font-medium tracking-tight leading-[1.05] text-[34px] xs:text-[40px] sm:text-[56px] md:text-[72px] lg:text-[80px] mb-5 sm:mb-7 text-gray-900">
-     Stop losing <span className="text-gray-400">profit</span>
-     <br />
-     to voicemail.
-    </h1>
-    <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto mb-7 sm:mb-9 leading-relaxed px-2">
-     A 24/7 AI receptionist for service businesses. Answers every call, books jobs straight into your calendar, and logs the full transcript and recording in your dashboard the second the call ends.
-    </p>
-    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center">
-     <a
-      href={DEMO_TEL}
-      className="group inline-flex items-center justify-center gap-3 bg-white text-gray-900 px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium border border-gray-200 hover:border-gray-300 transition-all shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)] hover:shadow-[0_0_80px_-10px_rgba(56,189,248,0.55)]"
-     >
-      Call to test our AI
-      <span className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center group-hover:border-gray-900 transition-colors">
-       <ArrowRight className="w-3.5 h-3.5" />
-      </span>
-     </a>
-     <Link
-      href="/contact"
-      className="inline-flex items-center justify-center gap-3 bg-gray-900 text-white px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors"
-     >
-      Book a 15-min demo
-      <ArrowUpRight className="w-5 h-5" />
-     </Link>
-    </div>
-    <p className="text-sm text-gray-400 mt-8">
-     Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a> and ask it anything.
-    </p>
    </div>
   </section>
  )
