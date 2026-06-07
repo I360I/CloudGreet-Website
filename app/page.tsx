@@ -217,8 +217,8 @@ function Hero() {
      <DemoCallButtons />
     </div>
 
-    <p className="mt-6 text-sm text-gray-500">
-     Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a> and ask it anything.
+    <p className="mt-6 text-sm font-medium text-gray-700">
+     Or call <a href={DEMO_TEL} className="font-semibold text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-900">{DEMO_NUMBER}</a> and ask it anything.
     </p>
    </div>
   </section>
