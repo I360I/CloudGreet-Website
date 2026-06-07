@@ -212,7 +212,7 @@ function Hero() {
      to voicemail.
     </h1>
 
-    <p className="mt-6 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed">
+    <p className="mt-3 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed">
      A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
     </p>
 
