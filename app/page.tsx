@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, List, X } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { CallCenterScene } from './components/landing/CallCenterScene'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -16,7 +17,7 @@ export default function LandingPage() {
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
    <Nav />
    <Marquee />
-   <Reveal><Hero /></Reveal>
+   <Hero />
    <Reveal><RoiCalculator /></Reveal>
    <Reveal><Testimonial /></Reveal>
    <Reveal><WhoItsFor /></Reveal>
@@ -43,16 +44,16 @@ function Marquee() {
  ]
  const row = [...items, ...items]
  return (
-  <div className="bg-gray-900 text-white overflow-hidden">
+  <div className="overflow-hidden border-y border-white/10 bg-gray-950/70 backdrop-blur-2xl backdrop-saturate-150 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.12),0_12px_30px_-20px_rgba(15,23,42,0.5)]">
    <motion.div
     className="flex whitespace-nowrap py-2.5"
     animate={{ x: ['0%', '-50%'] }}
     transition={{ duration: 28, ease: 'linear', repeat: Infinity }}
    >
     {row.map((t, i) => (
-     <span key={i} className="flex items-center text-[11px] font-mono uppercase tracking-[0.2em] text-gray-200">
+     <span key={i} className="flex items-center text-[11px] font-mono uppercase tracking-[0.2em] text-gray-100">
       <span className="mx-5">{t}</span>
-      <span className="text-sky-400" aria-hidden>&bull;</span>
+      <span className="text-sky-300/80" aria-hidden>&bull;</span>
      </span>
     ))}
    </motion.div>
@@ -186,50 +187,169 @@ function Nav() {
 
 function Hero() {
  return (
-  <section className="px-5 sm:px-6 pt-3 sm:pt-6 md:pt-8 pb-10 sm:pb-14 relative overflow-hidden">
+  <section className="relative min-h-[100dvh] overflow-hidden bg-[#f6f5f1] px-5 sm:px-8">
+   {/* Ambient call-center scene - atmosphere on the right */}
+   <CallCenterScene />
+
+   {/* Scrim: vertical fade - solid up top where the copy lives, clearing to
+       fully transparent at the bottom so ALL the agents show through. */}
    <div
-    className="absolute inset-0 -z-10 pointer-events-none opacity-40"
+    className="pointer-events-none absolute inset-0 z-[1]"
     style={{
-     backgroundImage:
-      'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(56,189,248,0.18), transparent 70%)',
+     background:
+      'linear-gradient(to bottom, #f6f5f1 0%, #f6f5f1 30%, rgba(246,245,241,0.4) 48%, rgba(246,245,241,0) 66%)',
     }}
    />
-   <div className="max-w-6xl mx-auto text-center">
-    <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-gray-600 mb-5">
-     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-     Live AI receptionist - call it now
-    </div>
-    <h1 className="font-display font-medium tracking-tight leading-[1.05] text-[34px] xs:text-[40px] sm:text-[56px] md:text-[72px] lg:text-[80px] mb-5 sm:mb-7 text-gray-900">
-     Stop losing <span className="text-gray-400">profit</span>
+
+   {/* Centered text over the scrim; full-width agents show below */}
+   <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center pt-4 text-center sm:pt-8 md:pt-10">
+    <h1 className="font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,7vw,6rem)]">
+     Stop losing{' '}
+     <span className="bg-gradient-to-b from-sky-400 via-blue-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_3px_16px_rgba(56,189,248,0.45)]">
+      profit
+     </span>
      <br />
      to voicemail.
     </h1>
-    <p className="text-base md:text-lg text-gray-500 max-w-xl mx-auto mb-7 sm:mb-9 leading-relaxed px-2">
-     A 24/7 AI receptionist for service businesses. Answers every call, books jobs straight into your calendar, and logs the full transcript and recording in your dashboard the second the call ends.
+
+    <p className="mt-6 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed">
+     A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
     </p>
-    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center">
-     <a
-      href={DEMO_TEL}
-      className="group inline-flex items-center justify-center gap-3 bg-white text-gray-900 px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium border border-gray-200 hover:border-gray-300 transition-all shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)] hover:shadow-[0_0_80px_-10px_rgba(56,189,248,0.55)]"
-     >
-      Call to test our AI
-      <span className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center group-hover:border-gray-900 transition-colors">
-       <ArrowRight className="w-3.5 h-3.5" />
-      </span>
-     </a>
-     <Link
-      href="/contact"
-      className="inline-flex items-center justify-center gap-3 bg-gray-900 text-white px-6 sm:px-7 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-medium hover:bg-gray-800 transition-colors"
-     >
-      Book a 15-min demo
-      <ArrowUpRight className="w-5 h-5" />
-     </Link>
+
+    <div className="mt-8">
+     <DemoCallButtons />
     </div>
-    <p className="text-sm text-gray-400 mt-8">
-     Or call <a href={DEMO_TEL} className="font-medium text-gray-700 hover:text-gray-900">{DEMO_NUMBER}</a> and ask it anything.
+
+    <p className="mt-6 text-sm font-medium text-gray-700">
+     Or call <a href={DEMO_TEL} className="font-semibold text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-900">{DEMO_NUMBER}</a> and ask it anything.
     </p>
    </div>
   </section>
+ )
+}
+
+/* -------------------------- Demo call CTAs -------------------- */
+/**
+ * Two hero CTAs side by side. "Test our AI" opens a popup where the visitor
+ * enters their number and our demo agent calls them (POST
+ * /api/demo/outbound-call -> Retell outbound). Replaces the old tel: link,
+ * which only works on devices with a dialer.
+ */
+function DemoCallButtons() {
+ const [open, setOpen] = useState(false)
+ return (
+  <>
+   <div className="flex flex-col sm:flex-row gap-3">
+    {/* Apple "Liquid Glass" approximation: translucent + backdrop-blur +
+        white rim border + inset top sheen + soft float shadow. */}
+    <button
+     type="button"
+     onClick={() => setOpen(true)}
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/50 bg-blue-500/35 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(37,99,235,0.45),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-10px_24px_-14px_rgba(255,255,255,0.5)] transition-all hover:-translate-y-0.5 hover:bg-blue-500/45"
+    >
+     Test our AI
+     <ArrowRight weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+    </button>
+    <Link
+     href="/contact"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/70 bg-white/10 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.3),inset_0_1px_0_0_rgba(255,255,255,0.95),inset_0_-10px_24px_-14px_rgba(255,255,255,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/20"
+    >
+     Book a 15-min demo
+     <ArrowUpRight weight="bold" className="h-4 w-4" />
+    </Link>
+   </div>
+   {open && <DemoCallModal onClose={() => setOpen(false)} />}
+  </>
+ )
+}
+
+function DemoCallModal({ onClose }: { onClose: () => void }) {
+ const [phone, setPhone] = useState('')
+ const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+ const [msg, setMsg] = useState('')
+
+ const submit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  if (state === 'loading') return
+  setState('loading')
+  setMsg('')
+  try {
+   const r = await fetch('/api/demo/outbound-call', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok) {
+    setState('error')
+    setMsg(j?.error || 'Something went wrong. Try again.')
+    return
+   }
+   setState('done')
+   setMsg('Calling you now. Pick up and talk to it like a real receptionist.')
+  } catch {
+   setState('error')
+   setMsg('Could not reach the server. Try again.')
+  }
+ }
+
+ return (
+  <div
+   className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+   onClick={onClose}
+  >
+   <div
+    className="relative w-full max-w-sm rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl"
+    onClick={(e) => e.stopPropagation()}
+   >
+    <button
+     type="button"
+     onClick={onClose}
+     aria-label="Close"
+     className="absolute right-4 top-4 text-gray-400 transition-colors hover:text-gray-900"
+    >
+     <X className="h-5 w-5" />
+    </button>
+    {state === 'done' ? (
+     <div className="py-2">
+      <div className="text-lg font-semibold text-gray-900">Your phone is about to ring</div>
+      <p className="mt-2 text-sm text-gray-600">
+       Pick up and treat it like a real call. Ask about pricing, hours, or booking a job, and the AI will handle it just like it would for your customers.
+      </p>
+     </div>
+    ) : (
+     <>
+      <div className="text-base font-semibold text-gray-900">Hear it for yourself</div>
+      <p className="mt-1 text-sm text-gray-500">
+       Enter your number and our AI receptionist calls you in seconds.
+      </p>
+      <form onSubmit={submit} className="mt-4 flex flex-col gap-2">
+       <input
+        type="tel"
+        inputMode="tel"
+        required
+        autoFocus
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        placeholder="(555) 123-4567"
+        className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-900 outline-none focus:border-gray-400"
+       />
+       <button
+        type="submit"
+        disabled={state === 'loading'}
+        className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+       >
+        {state === 'loading' ? 'Calling...' : 'Call me'}
+       </button>
+      </form>
+      {state === 'error' && <p className="mt-2 text-xs text-amber-700">{msg}</p>}
+      <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
+       By tapping Call me you agree to receive a one-time call from our AI at the number provided.
+      </p>
+     </>
+    )}
+   </div>
+  </div>
  )
 }
 
