@@ -47,14 +47,14 @@ export async function POST(request: NextRequest) {
  // Rate limits (cheap head-count queries against the indexed log).
  const perPhone = await supabaseAdmin
   .from('demo_calls').select('id', { count: 'exact', head: true })
-  .eq('phone', to).gte('created_at', since(10))
+  .eq('phone', to).gte('created_at', since(1))
  if ((perPhone.count || 0) >= 1) {
-  return NextResponse.json({ error: 'We just called that number. Give it a couple minutes and try again.' }, { status: 429 })
+  return NextResponse.json({ error: 'We just called that number. Give it a minute and try again.' }, { status: 429 })
  }
  const perIp = await supabaseAdmin
   .from('demo_calls').select('id', { count: 'exact', head: true })
   .eq('ip', ip).gte('created_at', since(60))
- if ((perIp.count || 0) >= 3) {
+ if ((perIp.count || 0) >= 10) {
   return NextResponse.json({ error: 'That is a few demo calls from your network already. Try again later or book a demo.' }, { status: 429 })
  }
  const global = await supabaseAdmin
