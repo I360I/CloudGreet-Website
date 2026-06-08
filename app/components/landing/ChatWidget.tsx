@@ -71,7 +71,7 @@ export function ChatWidget() {
     transition={{ delay: 0.6, type: 'spring', stiffness: 320, damping: 22 }}
     whileHover={{ scale: 1.06 }}
     whileTap={{ scale: 0.94 }}
-    className="fixed bottom-5 right-5 z-[70] relative flex h-14 w-14 items-center justify-center rounded-full border border-black/5 bg-white shadow-[0_18px_44px_-10px_rgba(37,99,235,0.55)]"
+    className="fixed bottom-5 right-5 z-[70] flex h-14 w-14 items-center justify-center rounded-full border border-black/5 bg-white shadow-[0_18px_44px_-10px_rgba(37,99,235,0.55)]"
    >
     {!open && (
      <span className="absolute inset-0 animate-ping rounded-full bg-blue-500/30 [animation-duration:2.5s]" />
