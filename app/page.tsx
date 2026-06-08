@@ -729,21 +729,13 @@ function LogoMarquee() {
      transition={{ duration: 26, ease: 'linear', repeat: Infinity }}
     >
      {row.map((l, i) => (
-      <span
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
        key={i}
-       role="img"
-       aria-label={l.alt}
-       className="block h-7 w-[110px] shrink-0 bg-slate-400 transition-colors duration-300 hover:bg-slate-600"
-       style={{
-        WebkitMaskImage: `url(${l.src})`,
-        maskImage: `url(${l.src})`,
-        WebkitMaskRepeat: 'no-repeat',
-        maskRepeat: 'no-repeat',
-        WebkitMaskPosition: 'center',
-        maskPosition: 'center',
-        WebkitMaskSize: 'contain',
-        maskSize: 'contain',
-       }}
+       src={l.src}
+       alt={l.alt}
+       draggable={false}
+       className="h-8 w-auto shrink-0 opacity-90 transition-opacity duration-300 hover:opacity-100"
       />
      ))}
     </motion.div>
