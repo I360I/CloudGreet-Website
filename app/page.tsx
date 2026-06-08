@@ -713,6 +713,8 @@ function LogoMarquee() {
   { src: '/logos/googlecalendar.svg', alt: 'Google Calendar' },
   { src: '/logos/calcom.svg', alt: 'Cal.com' },
   { src: '/logos/twilio.svg', alt: 'Twilio' },
+  { src: '/logos/telnyx.png', alt: 'Telnyx' },
+  { src: '/logos/retell.svg', alt: 'Retell AI' },
   { src: '/logos/anthropic.svg', alt: 'Anthropic' },
   { src: '/logos/google.svg', alt: 'Google' },
  ]
@@ -729,14 +731,15 @@ function LogoMarquee() {
      transition={{ duration: 26, ease: 'linear', repeat: Infinity }}
     >
      {row.map((l, i) => (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-       key={i}
-       src={l.src}
-       alt={l.alt}
-       draggable={false}
-       className="h-8 w-auto shrink-0 opacity-90 transition-opacity duration-300 hover:opacity-100"
-      />
+      <span key={i} className="flex h-10 w-[128px] shrink-0 items-center justify-center">
+       {/* eslint-disable-next-line @next/next/no-img-element */}
+       <img
+        src={l.src}
+        alt={l.alt}
+        draggable={false}
+        className="max-h-7 max-w-[120px] object-contain opacity-90 transition-opacity duration-300 hover:opacity-100"
+       />
+      </span>
      ))}
     </motion.div>
    </div>
