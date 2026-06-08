@@ -711,7 +711,7 @@ function LogoMarquee() {
  const logos = [
   { src: '/logos/stripe.svg', alt: 'Stripe' },
   { src: '/logos/googlecalendar.svg', alt: 'Google Calendar' },
-  { src: '/logos/calcom.svg', alt: 'Cal.com', cls: 'scale-[1.45]' },
+  { src: '/logos/calcom.svg', alt: 'Cal.com', cls: 'scale-[2.6]' },
   { src: '/logos/twilio.svg', alt: 'Twilio' },
   { src: '/logos/telnyx.png', alt: 'Telnyx' },
   { src: '/logos/retell.svg', alt: 'Retell AI' },
