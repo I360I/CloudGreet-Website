@@ -124,7 +124,10 @@ export async function PUT(
        await fetch(`https://api.retellai.com/update-phone-number/${encodeURIComponent(num)}`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inbound_agent_id: agentId, inbound_agent_version: null }),
+        // inbound_webhook_url is what makes call_inbound fire (returning-caller
+       // recognition). It lives on the phone number, not the agent - keep it
+       // pinned whenever we rebind so legacy numbers self-heal.
+       body: JSON.stringify({ inbound_agent_id: agentId, inbound_agent_version: null, inbound_webhook_url: `${(process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com').replace(/\/$/, '')}/api/retell/voice-webhook` }),
        })
       }
      }

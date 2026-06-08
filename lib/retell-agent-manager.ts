@@ -311,6 +311,12 @@ class RetellAgentManager {
         if (p.inbound_agent_id === retellAgentId) {
           patch.inbound_agent_id = retellAgentId
           patch.inbound_agent_version = null
+          // call_inbound fires from the PHONE NUMBER's inbound_webhook_url,
+          // NOT the agent's webhook_url. Without it Retell never asks us for
+          // dynamic_variables, so returning_caller/caller_name are never
+          // injected and every caller is treated as brand new. Pin it here
+          // so every (re)bind self-heals legacy numbers that lack it.
+          patch.inbound_webhook_url = `${(process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'https://cloudgreet.com').replace(/\/$/, '')}/api/retell/voice-webhook`
         }
         if (p.outbound_agent_id === retellAgentId) {
           patch.outbound_agent_id = retellAgentId
