@@ -114,7 +114,7 @@ export function ChatWidget() {
        <img
         src="/chat-agent-pose.png"
         alt=""
-        className="pointer-events-none absolute -bottom-1 right-2 h-[88px] w-auto drop-shadow-[0_10px_18px_rgba(15,23,42,0.32)]"
+        className="pointer-events-none absolute bottom-0 right-4 h-[80px] w-auto drop-shadow-[0_10px_18px_rgba(15,23,42,0.32)]"
        />
        <div className="relative z-10 max-w-[58%]">
         <div className="text-[15px] font-semibold">CloudGreet AI</div>
