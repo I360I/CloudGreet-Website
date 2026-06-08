@@ -708,11 +708,12 @@ export async function POST(request: NextRequest) {
  // surface to the caller.
  void (async () => {
  try {
- const apptDate = new Date(datetime)
- const formattedTime = apptDate.toLocaleString('en-US', {
- weekday: 'short', month: 'short', day: 'numeric',
- hour: 'numeric', minute: '2-digit', hour12: true,
- })
+ // Format in the BUSINESS's timezone, not the server's. Vercel runs in
+ // UTC, so a bare toLocaleString() printed e.g. a 5 AM Eastern pickup as
+ // "9 AM" (its UTC wall-clock) in the owner SMS while Cal.com booked the
+ // correct local time. Reuse startTime (already offset-normalized by
+ // parseAgentDatetime) + formatHuman, same as the customer confirmation.
+ const formattedTime = formatHuman(startTime.toISOString(), businessTz)
  await sendBookingNotification(business_id, {
  name,
  phone,
@@ -840,7 +841,10 @@ export async function POST(request: NextRequest) {
  detail: `No appointment row exists for id ${appt_id}. The book_appointment call before this may have failed.`,
  }, { status: 404 })
  }
- const isoTime = (apptRow as any)?.scheduled_date || (apptRow as any)?.start_time
+ // Prefer start_time: it carries the precise booked instant. scheduled_date
+ // is stored date-level (midnight UTC) in practice, so reading it first made
+ // the confirmation render the wrong time (e.g. midnight UTC -> 8 PM local).
+ const isoTime = (apptRow as any)?.start_time || (apptRow as any)?.scheduled_date
  if (!isoTime) {
  return NextResponse.json({
  success: false,
