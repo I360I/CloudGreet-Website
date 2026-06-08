@@ -246,7 +246,7 @@ function DemoCallButtons() {
     <button
      type="button"
      onClick={() => setOpen(true)}
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/50 bg-blue-500/35 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(37,99,235,0.45),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-10px_24px_-14px_rgba(255,255,255,0.5)] transition-all hover:-translate-y-0.5 hover:bg-blue-500/45"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/50 bg-blue-500/50 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(37,99,235,0.45),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-10px_24px_-14px_rgba(255,255,255,0.5)] transition-all hover:-translate-y-0.5 hover:bg-blue-500/60"
     >
      Test our AI
      <ArrowRight weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -711,7 +711,7 @@ function LogoMarquee() {
  const logos = [
   { src: '/logos/stripe.svg', alt: 'Stripe' },
   { src: '/logos/googlecalendar.svg', alt: 'Google Calendar' },
-  { src: '/logos/calcom.svg', alt: 'Cal.com' },
+  { src: '/logos/calcom.svg', alt: 'Cal.com', cls: 'scale-[1.45]' },
   { src: '/logos/twilio.svg', alt: 'Twilio' },
   { src: '/logos/telnyx.png', alt: 'Telnyx' },
   { src: '/logos/retell.svg', alt: 'Retell AI' },
@@ -737,7 +737,7 @@ function LogoMarquee() {
         src={l.src}
         alt={l.alt}
         draggable={false}
-        className="max-h-7 max-w-[120px] object-contain opacity-90 transition-opacity duration-300 hover:opacity-100"
+        className={`max-h-7 max-w-[120px] object-contain opacity-90 transition-opacity duration-300 hover:opacity-100 ${l.cls ?? ''}`}
        />
       </span>
      ))}
