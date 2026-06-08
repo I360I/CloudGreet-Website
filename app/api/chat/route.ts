@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { supabaseAdmin } from '@/lib/supabase'
 import { notifyAdmin } from '@/lib/notifications/notify'
 import { logger } from '@/lib/monitoring'
+import { listAvailableSlots, createBooking, listEventTypes } from '@/lib/calcom'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -24,6 +25,33 @@ const MAX_TOOL_LOOPS = 4
 const DEMO_FROM = '+18146486307'
 const DEMO_AGENT = 'agent_56d7fa8635fdd5313c99729233'
 
+// Real Cal.com booking turns on when CALCOM_DEMO_API_KEY is set. Without it,
+// book_demo falls back to capturing a lead for the team to confirm.
+const CAL_KEY = process.env.CALCOM_DEMO_API_KEY || ''
+const DISPLAY_TZ = 'America/Chicago'
+let cachedEventTypeId: number | null = null
+
+async function getEventTypeId(): Promise<number | null> {
+ if (!CAL_KEY) return null
+ if (cachedEventTypeId) return cachedEventTypeId
+ const envId = Number(process.env.CALCOM_DEMO_EVENT_TYPE_ID)
+ if (Number.isFinite(envId) && envId > 0) { cachedEventTypeId = envId; return envId }
+ try {
+  const types: any[] = await listEventTypes(CAL_KEY)
+  const demo = types.find((t) => (t?.lengthInMinutes ?? t?.length) === 15) || types[0]
+  if (demo?.id) { cachedEventTypeId = demo.id; return demo.id }
+ } catch { /* fall through */ }
+ return null
+}
+
+function fmtSlot(iso: string): string {
+ try {
+  return new Intl.DateTimeFormat('en-US', {
+   weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: DISPLAY_TZ,
+  }).format(new Date(iso))
+ } catch { return iso }
+}
+
 const SYSTEM = `You are the CloudGreet assistant, a warm, concise concierge on the CloudGreet website.
 
 CloudGreet is a 24/7 AI receptionist for service businesses (HVAC, plumbing, electrical, roofing, painting, general contractors, transportation, and most businesses that book work over the phone). It:
@@ -41,7 +69,7 @@ Your goals: answer helpfully and honestly, then help the visitor either (a) book
 Rules:
 - Keep replies short: usually 1-3 sentences. Friendly, no fluff, no emoji.
 - Never invent specific pricing. If asked, say it's flat monthly and a quick demo gets exact pricing for their business, then offer to book.
-- To book a demo, use the book_demo tool once you have at least a name and email. Ask for a phone and a preferred time if it flows naturally. Confirm warmly after.
+- To book a demo: once they're interested, call check_availability and offer a couple of real open times in plain language. When they pick one, call book_demo with their name, email, and the exact slot. If they don't want a specific time, book_demo still captures the request. Confirm warmly after.
 - If they want to hear the AI live, use request_ai_call once you have a US phone number.
 - Don't over-promise outcomes. If unsure, say the team will follow up.
 - Don't discuss internal vendors or tech details. You are CloudGreet.
@@ -49,15 +77,24 @@ Rules:
 
 const TOOLS: Anthropic.Messages.Tool[] = [
  {
+  name: 'check_availability',
+  description: "Check open demo time slots on the CloudGreet calendar. Call this before offering specific times. Optionally scope to one day with `date` (YYYY-MM-DD); otherwise returns the next several days.",
+  input_schema: {
+   type: 'object',
+   properties: { date: { type: 'string', description: 'Optional day to check, YYYY-MM-DD.' } },
+  },
+ },
+ {
   name: 'book_demo',
-  description: "Capture a demo request and notify the CloudGreet team. Use once you have at least the visitor's name and email.",
+  description: "Book the demo. If you offered a specific time from check_availability, pass its exact bracketed ISO value as start_time to book it on the calendar. Otherwise it captures a request the team will confirm. Needs at least name and email.",
   input_schema: {
    type: 'object',
    properties: {
     name: { type: 'string', description: "Visitor's name." },
     email: { type: 'string', description: "Visitor's email." },
     phone: { type: 'string', description: 'Optional phone number.' },
-    preferred_time: { type: 'string', description: 'Optional preferred day/time for the demo, in their words.' },
+    start_time: { type: 'string', description: 'Exact ISO-8601 slot start from check_availability (the bracketed value). Omit if no specific slot was chosen.' },
+    preferred_time: { type: 'string', description: 'Optional preferred day/time in their words (when no exact slot was picked).' },
     notes: { type: 'string', description: 'Optional: their business type or what they want help with.' },
    },
    required: ['name', 'email'],
@@ -82,9 +119,32 @@ function normalizeUsPhone(raw: string): string | null {
 }
 
 async function runTool(name: string, input: any, ip: string): Promise<string> {
+ if (name === 'check_availability') {
+  const etid = await getEventTypeId()
+  if (!CAL_KEY || !etid) return "No live calendar is connected. Collect the visitor's name and email and use book_demo to request a time the team will confirm."
+  const now = Date.now()
+  const base = input?.date ? Date.parse(`${input.date}T00:00:00`) : now
+  const start = Number.isFinite(base) ? base : now
+  const span = input?.date ? 1 : 7
+  try {
+   const slots = await listAvailableSlots(CAL_KEY, {
+    eventTypeId: etid,
+    startIso: new Date(start).toISOString(),
+    endIso: new Date(start + span * 24 * 3600 * 1000).toISOString(),
+    timeZone: DISPLAY_TZ,
+   })
+   if (!slots.length) return 'No open slots in that window. Suggest another day, or use book_demo to have the team confirm a time.'
+   const top = slots.slice(0, 6).map((s) => `${fmtSlot(s)} [${s}]`).join(' | ')
+   return `Open demo slots (times in US Central). Offer the visitor a couple in plain language, then call book_demo with the exact bracketed ISO as start_time. Slots: ${top}`
+  } catch (e) {
+   logger.error('chat cal availability failed', { error: e instanceof Error ? e.message : 'unknown' })
+   return 'Could not load the calendar right now. Use book_demo to capture a request the team will confirm.'
+  }
+ }
+
  if (name === 'book_demo') {
   if (!input?.name || !input?.email) return 'Need a name and email first.'
-  await supabaseAdmin.from('demo_leads').insert({
+  const lead = {
    name: String(input.name).slice(0, 120),
    email: String(input.email).slice(0, 160),
    phone: input.phone ? String(input.phone).slice(0, 40) : null,
@@ -92,13 +152,35 @@ async function runTool(name: string, input: any, ip: string): Promise<string> {
    notes: input.notes ? String(input.notes).slice(0, 500) : null,
    source: 'web_chat',
    ip,
-  })
+  }
+
+  // Real Cal.com booking when a key is set and a concrete slot was chosen.
+  const etid = await getEventTypeId()
+  if (CAL_KEY && etid && input.start_time) {
+   try {
+    const startIso = new Date(input.start_time).toISOString()
+    await createBooking(CAL_KEY, {
+     startIso,
+     eventTypeId: etid,
+     attendee: { name: lead.name, email: lead.email, timeZone: DISPLAY_TZ },
+     notes: lead.notes || undefined,
+    } as any)
+    await supabaseAdmin.from('demo_leads').insert({ ...lead, notes: `${lead.notes || ''} | booked ${startIso}`.slice(0, 500) })
+    await notifyAdmin({ type: 'demo.booked', severity: 'info', title: 'Demo booked from website chat', body: `${lead.name} <${lead.email}> booked ${fmtSlot(startIso)} Central.`, metadata: lead }).catch(() => {})
+    return `Booked for ${fmtSlot(startIso)} Central. Confirm warmly and tell the visitor they'll get a calendar invite by email.`
+   } catch (e) {
+    logger.error('chat cal booking failed', { error: e instanceof Error ? e.message : 'unknown' })
+    // fall through to lead capture below
+   }
+  }
+
+  await supabaseAdmin.from('demo_leads').insert(lead)
   await notifyAdmin({
    type: 'demo.requested',
    severity: 'info',
    title: 'New demo request from the website chat',
-   body: `${input.name} <${input.email}>${input.phone ? ' / ' + input.phone : ''}. Preferred: ${input.preferred_time || 'not given'}. Notes: ${input.notes || 'none'}.`,
-   metadata: { name: input.name, email: input.email, phone: input.phone || null },
+   body: `${lead.name} <${lead.email}>${lead.phone ? ' / ' + lead.phone : ''}. Preferred: ${lead.preferred_time || 'not given'}. Notes: ${lead.notes || 'none'}.`,
+   metadata: lead,
   }).catch(() => {})
   return 'Saved. The team will reach out to confirm a time. Tell the visitor they are booked and someone will follow up shortly.'
  }
