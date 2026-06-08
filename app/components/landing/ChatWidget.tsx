@@ -109,12 +109,12 @@ export function ChatWidget() {
        >
         <X className="h-5 w-5" />
        </button>
-       {/* Floating agent (transparent, no circle) — bottom-right, head clears the close button */}
+       {/* Floating agent — centered in the open space right of the title, clear of the X */}
        {/* eslint-disable-next-line @next/next/no-img-element */}
        <img
         src="/chat-agent-pose.png"
         alt=""
-        className="pointer-events-none absolute bottom-0 right-3 h-[108px] w-auto drop-shadow-[0_12px_20px_rgba(15,23,42,0.32)]"
+        className="pointer-events-none absolute bottom-0 right-[68px] h-[116px] w-auto drop-shadow-[0_12px_20px_rgba(15,23,42,0.32)]"
        />
        <div className="relative z-10 max-w-[52%]">
         <div className="text-[15px] font-semibold">CloudGreet AI</div>
