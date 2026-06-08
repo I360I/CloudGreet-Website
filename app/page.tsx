@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, List, X } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CallCenterScene } from './components/landing/CallCenterScene'
+import { ChatWidget } from './components/landing/ChatWidget'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -24,6 +25,7 @@ export default function LandingPage() {
    <Reveal><WhoItsFor /></Reveal>
    <Reveal><FinalCTA /></Reveal>
    <Reveal><FooterCard /></Reveal>
+   <ChatWidget />
   </main>
  )
 }
