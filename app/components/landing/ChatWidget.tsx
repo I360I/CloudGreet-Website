@@ -99,20 +99,29 @@ export function ChatWidget() {
       className="fixed bottom-24 right-5 z-[70] flex h-[min(72vh,600px)] w-[min(93vw,392px)] flex-col overflow-hidden rounded-[26px] border border-black/5 bg-white shadow-[0_40px_90px_-25px_rgba(15,23,42,0.55)]"
      >
       {/* Header */}
-      <div className="relative flex items-center gap-3 bg-gradient-to-br from-blue-600 to-blue-700 px-5 py-4 text-white">
-       <span className="h-10 w-10 overflow-hidden rounded-full border border-white/40 bg-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/chat-agent.png" alt="" className="h-full w-full object-cover" />
-       </span>
-       <div className="leading-tight">
-        <div className="text-sm font-semibold">CloudGreet AI</div>
-        <div className="flex items-center gap-1.5 text-[11px] text-blue-100">
-         <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> Online · replies in seconds
-        </div>
-       </div>
-       <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="ml-auto rounded-full p-1 text-white/70 transition-colors hover:bg-white/10 hover:text-white">
+      <div className="relative min-h-[96px] overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 px-5 py-4 text-white">
+       <div className="pointer-events-none absolute -right-6 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
+       <button
+        type="button"
+        onClick={() => setOpen(false)}
+        aria-label="Close"
+        className="absolute right-3 top-3 z-20 rounded-full p-1 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+       >
         <X className="h-5 w-5" />
        </button>
+       {/* Floating agent (transparent, no circle) */}
+       {/* eslint-disable-next-line @next/next/no-img-element */}
+       <img
+        src="/chat-agent-pose.png"
+        alt=""
+        className="pointer-events-none absolute -bottom-1 right-2 h-[88px] w-auto drop-shadow-[0_10px_18px_rgba(15,23,42,0.32)]"
+       />
+       <div className="relative z-10 max-w-[58%]">
+        <div className="text-[15px] font-semibold">CloudGreet AI</div>
+        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-blue-100">
+         <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_2px_rgba(110,231,183,0.6)]" /> Online · replies in seconds
+        </div>
+       </div>
       </div>
 
       {/* Messages */}
