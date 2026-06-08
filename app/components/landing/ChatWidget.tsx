@@ -96,43 +96,35 @@ export function ChatWidget() {
       exit={{ opacity: 0, y: 24, scale: 0.96 }}
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       style={{ transformOrigin: 'bottom right' }}
-      className="fixed bottom-24 right-5 z-[70] flex h-[min(72vh,600px)] w-[min(93vw,392px)] flex-col overflow-hidden rounded-[26px] border border-black/5 bg-white shadow-[0_40px_90px_-25px_rgba(15,23,42,0.55)]"
+      className="fixed bottom-24 right-5 z-[70] flex h-[min(72vh,600px)] w-[min(93vw,392px)] flex-col overflow-hidden rounded-[20px] border border-black/10 bg-white shadow-[0_30px_70px_-22px_rgba(0,0,0,0.45)]"
      >
       {/* Header */}
-      <div className="relative flex min-h-[150px] flex-col justify-center overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 px-5 py-4 text-white">
-       <div className="pointer-events-none absolute -right-6 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
+      <div className="relative flex items-center justify-between border-b border-white/10 bg-[#0a0a0b] px-5 py-4 text-white">
+       <div>
+        <div className="text-[15px] font-semibold tracking-tight">CloudGreet AI</div>
+        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-white/55">
+         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_2px_rgba(52,211,153,0.5)]" /> Online · replies in seconds
+        </div>
+       </div>
        <button
         type="button"
         onClick={() => setOpen(false)}
         aria-label="Close"
-        className="absolute right-3 top-3 z-20 rounded-full p-1 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+        className="-mr-1.5 rounded-full p-1.5 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
        >
         <X className="h-5 w-5" />
        </button>
-       {/* Floating agent — centered in the open space right of the title, clear of the X */}
-       {/* eslint-disable-next-line @next/next/no-img-element */}
-       <img
-        src="/chat-agent-pose.png"
-        alt=""
-        className="pointer-events-none absolute bottom-0 right-[68px] h-[116px] w-auto drop-shadow-[0_12px_20px_rgba(15,23,42,0.32)]"
-       />
-       <div className="relative z-10 max-w-[52%]">
-        <div className="text-[15px] font-semibold">CloudGreet AI</div>
-        <div className="mt-1 flex items-center gap-1.5 text-[11px] text-blue-100">
-         <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_2px_rgba(110,231,183,0.6)]" /> Online · replies in seconds
-        </div>
-       </div>
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-[#f8fafc] px-4 py-4">
+      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-white px-4 py-4">
        {messages.map((m, i) => (
         <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
          <div
-          className={`max-w-[84%] whitespace-pre-wrap px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
+          className={`max-w-[84%] whitespace-pre-wrap px-3.5 py-2.5 text-sm leading-relaxed ${
            m.role === 'user'
-            ? 'rounded-2xl rounded-br-md bg-blue-600 text-white'
-            : 'rounded-2xl rounded-bl-md border border-gray-100 bg-white text-gray-800'
+            ? 'rounded-2xl rounded-br-md bg-[#0a0a0b] text-white'
+            : 'rounded-2xl rounded-bl-md border border-black/[0.08] bg-white text-[#101015] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
           }`}
          >
           {m.content}
@@ -142,10 +134,10 @@ export function ChatWidget() {
 
        {loading && (
         <div className="flex justify-start">
-         <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-gray-100 bg-white px-3.5 py-3 shadow-sm">
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-400 [animation-delay:-0.2s]" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-400 [animation-delay:-0.1s]" />
-          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-400" />
+         <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-black/[0.08] bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.2s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.1s]" />
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" />
          </div>
         </div>
        )}
@@ -157,7 +149,7 @@ export function ChatWidget() {
            key={q}
            type="button"
            onClick={() => send(q)}
-           className="rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50"
+           className="rounded-full border border-black/12 bg-white px-3 py-1.5 text-xs font-medium text-[#101015] transition-colors hover:border-black/25 hover:bg-black/[0.04]"
           >
            {q}
           </button>
@@ -167,19 +159,19 @@ export function ChatWidget() {
       </div>
 
       {/* Input */}
-      <form onSubmit={(e) => { e.preventDefault(); send() }} className="flex items-center gap-2 border-t border-gray-100 bg-white p-3">
+      <form onSubmit={(e) => { e.preventDefault(); send() }} className="flex items-center gap-2 border-t border-black/[0.08] bg-white p-3">
        <input
         ref={inputRef}
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder="Type a message..."
-        className="min-w-0 flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:border-blue-300 focus:bg-white"
+        className="min-w-0 flex-1 rounded-full border border-black/10 bg-[#fafafa] px-4 py-2.5 text-sm text-[#101015] outline-none transition-colors placeholder:text-gray-400 focus:border-black/30 focus:bg-white"
        />
        <button
         type="submit"
         disabled={loading || !input.trim()}
         aria-label="Send"
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white transition-all hover:bg-blue-700 disabled:opacity-40"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0a0a0b] text-white transition-all hover:bg-black disabled:opacity-30"
        >
         <PaperPlaneRight className="h-4 w-4" weight="fill" />
        </button>
