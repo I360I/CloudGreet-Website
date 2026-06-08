@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChatCircle, X, PaperPlaneRight, Sparkle } from '@phosphor-icons/react'
+import { X, PaperPlaneRight } from '@phosphor-icons/react'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
@@ -71,14 +71,19 @@ export function ChatWidget() {
     transition={{ delay: 0.6, type: 'spring', stiffness: 320, damping: 22 }}
     whileHover={{ scale: 1.06 }}
     whileTap={{ scale: 0.94 }}
-    className="fixed bottom-5 right-5 z-[70] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-[0_18px_44px_-10px_rgba(37,99,235,0.65)]"
+    className="fixed bottom-5 right-5 z-[70] relative flex h-14 w-14 items-center justify-center rounded-full border border-black/5 bg-white shadow-[0_18px_44px_-10px_rgba(37,99,235,0.55)]"
    >
     {!open && (
-     <span className="absolute inset-0 animate-ping rounded-full bg-blue-500/40 [animation-duration:2.5s]" />
+     <span className="absolute inset-0 animate-ping rounded-full bg-blue-500/30 [animation-duration:2.5s]" />
     )}
-    <span className="relative">
-     {open ? <X className="h-6 w-6" weight="bold" /> : <ChatCircle className="h-7 w-7" weight="fill" />}
-    </span>
+    {open ? (
+     <X className="relative h-6 w-6 text-gray-700" weight="bold" />
+    ) : (
+     <span className="relative h-full w-full overflow-hidden rounded-full">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/chat-agent.png" alt="Chat with CloudGreet AI" className="h-full w-full object-cover" />
+     </span>
+    )}
    </motion.button>
 
    {/* Panel */}
@@ -95,8 +100,9 @@ export function ChatWidget() {
      >
       {/* Header */}
       <div className="relative flex items-center gap-3 bg-gradient-to-br from-blue-600 to-blue-700 px-5 py-4 text-white">
-       <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-white/15 backdrop-blur">
-        <Sparkle className="h-5 w-5" weight="fill" />
+       <span className="h-10 w-10 overflow-hidden rounded-full border border-white/40 bg-white">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/chat-agent.png" alt="" className="h-full w-full object-cover" />
        </span>
        <div className="leading-tight">
         <div className="text-sm font-semibold">CloudGreet AI</div>
