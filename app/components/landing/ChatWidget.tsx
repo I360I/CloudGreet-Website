@@ -81,7 +81,7 @@ export function ChatWidget() {
     ) : (
      <span className="relative h-full w-full overflow-hidden rounded-full">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/chat-agent.png" alt="Chat with CloudGreet AI" className="h-full w-full object-cover" />
+      <img src="/chat-agent.png" alt="Chat with CloudGreet AI" className="h-full w-full object-cover object-top" />
      </span>
     )}
    </motion.button>
@@ -99,7 +99,7 @@ export function ChatWidget() {
       className="fixed bottom-24 right-5 z-[70] flex h-[min(72vh,600px)] w-[min(93vw,392px)] flex-col overflow-hidden rounded-[26px] border border-black/5 bg-white shadow-[0_40px_90px_-25px_rgba(15,23,42,0.55)]"
      >
       {/* Header */}
-      <div className="relative min-h-[120px] overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 px-5 py-4 text-white">
+      <div className="relative min-h-[124px] overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 px-5 py-4 text-white">
        <div className="pointer-events-none absolute -right-6 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
        <button
         type="button"
@@ -114,7 +114,7 @@ export function ChatWidget() {
        <img
         src="/chat-agent-pose.png"
         alt=""
-        className="pointer-events-none absolute bottom-0 right-5 h-[78px] w-auto drop-shadow-[0_10px_18px_rgba(15,23,42,0.32)]"
+        className="pointer-events-none absolute bottom-0 right-4 h-[80px] w-auto drop-shadow-[0_10px_18px_rgba(15,23,42,0.32)]"
        />
        <div className="relative z-10 max-w-[58%]">
         <div className="text-[15px] font-semibold">CloudGreet AI</div>
