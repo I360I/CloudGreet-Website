@@ -99,7 +99,7 @@ export function ChatWidget() {
       className="fixed bottom-24 right-5 z-[70] flex h-[min(72vh,600px)] w-[min(93vw,392px)] flex-col overflow-hidden rounded-[26px] border border-black/5 bg-white shadow-[0_40px_90px_-25px_rgba(15,23,42,0.55)]"
      >
       {/* Header */}
-      <div className="relative min-h-[124px] overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 px-5 py-4 text-white">
+      <div className="relative flex min-h-[150px] flex-col justify-center overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 px-5 py-4 text-white">
        <div className="pointer-events-none absolute -right-6 -top-10 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
        <button
         type="button"
@@ -109,14 +109,14 @@ export function ChatWidget() {
        >
         <X className="h-5 w-5" />
        </button>
-       {/* Floating agent (transparent, no circle) */}
+       {/* Floating agent (transparent, no circle) — bottom-right, head clears the close button */}
        {/* eslint-disable-next-line @next/next/no-img-element */}
        <img
         src="/chat-agent-pose.png"
         alt=""
-        className="pointer-events-none absolute bottom-0 right-4 h-[80px] w-auto drop-shadow-[0_10px_18px_rgba(15,23,42,0.32)]"
+        className="pointer-events-none absolute bottom-0 right-3 h-[108px] w-auto drop-shadow-[0_12px_20px_rgba(15,23,42,0.32)]"
        />
-       <div className="relative z-10 max-w-[58%]">
+       <div className="relative z-10 max-w-[52%]">
         <div className="text-[15px] font-semibold">CloudGreet AI</div>
         <div className="mt-1 flex items-center gap-1.5 text-[11px] text-blue-100">
          <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_2px_rgba(110,231,183,0.6)]" /> Online · replies in seconds
