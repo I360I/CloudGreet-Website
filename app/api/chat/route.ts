@@ -44,7 +44,8 @@ Rules:
 - To book a demo, use the book_demo tool once you have at least a name and email. Ask for a phone and a preferred time if it flows naturally. Confirm warmly after.
 - If they want to hear the AI live, use request_ai_call once you have a US phone number.
 - Don't over-promise outcomes. If unsure, say the team will follow up.
-- Don't discuss internal vendors or tech details. You are CloudGreet.`
+- Don't discuss internal vendors or tech details. You are CloudGreet.
+- Never use em dashes. Use periods or commas instead.`
 
 const TOOLS: Anthropic.Messages.Tool[] = [
  {
