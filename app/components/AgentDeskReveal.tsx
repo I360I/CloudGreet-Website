@@ -1,15 +1,16 @@
 "use client"
 
 /**
- * Hero -> desk -> talk. Scrolling out of the hero seamlessly continues into
- * a scrubbed zoom (the clip opens on the SAME 5-mascot frame as the hero and
- * gets the same mix-blend-multiply white-drop, so the handoff is invisible),
- * pushes into one mascot who waves, then reveals a LIVE voice demo - you talk
- * to the AI receptionist in-browser via /api/demo/web-call (demo agent only,
- * no real client calendars/SMS).
+ * THE HERO. One scene, no second mascot row. At rest it's the hero: the
+ * headline/CTAs over the same 5 mascots. As you scroll, the wording scrolls
+ * up and fades while those exact mascots zoom in (one continuous clip, white
+ * dropped via mix-blend-multiply on cream so it matches the brand), landing
+ * on one mascot who waves. Then the live voice dock appears - talk to the AI
+ * receptionist in-browser via /api/demo/web-call (demo agent only).
  *
- * Prototype: one desk (car service). The sideways row of 5 is the next step.
- * Mobile / reduced-motion: autoplay the clip once, then show the talk dock.
+ * Hero copy is passed as children so page.tsx keeps owning it (DemoCallButtons
+ * etc). Prototype: one desk; sideways row of 5 is next. Mobile/reduced-motion
+ * fall back to a static hero + autoplay clip + talk dock.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
@@ -24,18 +25,17 @@ const norm = (v: number, a: number, b: number) => clamp((v - a) / (b - a), 0, 1)
 const DESK = { vertical: 'carservice', name: "Steve's Car Service", tag: 'Airport rides · dispatch · booking' }
 const ROSTER = ['HVAC', 'Electrical', "Steve's Car Service", 'Dentist', 'Lawyer']
 const ACTIVE = 2
-const ZOOM_P = 0.82 // scrub completes here; remainder reveals the talk dock
+const ZOOM_P = 0.82
 
-export default function AgentDeskReveal() {
+export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const dockRef = useRef<HTMLDivElement>(null)
-  const titleRef = useRef<HTMLDivElement>(null)
+  const heroRef = useRef<HTMLDivElement>(null)
   const pRef = useRef(0)
   const [reduced, setReduced] = useState(false)
   const [ready, setReady] = useState(false)
 
-  // --- live voice ---
   const clientRef = useRef<RetellWebClient | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [agentTalking, setAgentTalking] = useState(false)
@@ -85,7 +85,6 @@ export default function AgentDeskReveal() {
 
   const toggleMute = useCallback(() => { const c = clientRef.current; if (!c) return; if (muted) { c.unmute(); setMuted(false) } else { c.mute(); setMuted(true) } }, [muted])
 
-  // --- scroll scrub ---
   useEffect(() => {
     if (reduced) return
     const onScroll = () => {
@@ -102,9 +101,16 @@ export default function AgentDeskReveal() {
         cur += (target - cur) * 0.2; if (Math.abs(target - cur) < 0.004) cur = target
         try { v.currentTime = cur } catch {}
       }
+      // hero copy scrolls up + fades as the zoom begins
+      if (heroRef.current) {
+        const up = norm(p, 0.02, 0.28)
+        heroRef.current.style.transform = `translateY(${-up * 22}vh)`
+        heroRef.current.style.opacity = String(1 - up)
+        heroRef.current.style.pointerEvents = up > 0.5 ? 'none' : 'auto'
+      }
+      // talk dock + desk label reveal once we've landed on the mascot
       const reveal = norm(p, ZOOM_P, 1)
       if (dockRef.current) { dockRef.current.style.opacity = String(reveal); dockRef.current.style.pointerEvents = reveal > 0.6 ? 'auto' : 'none' }
-      if (titleRef.current) titleRef.current.style.opacity = String(1 - norm(p, 0.04, 0.3))
       raf = requestAnimationFrame(render)
     }
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -150,13 +156,13 @@ export default function AgentDeskReveal() {
     </div>
   )
 
-  // Reduced-motion / mobile: no scrub - autoplay once, then the dock.
   if (ready && reduced) {
     return (
-      <section id="agent-desk" className="bg-[#f6f5f1] px-5 py-10">
+      <section id="hero" className="bg-[#f6f5f1] px-5">
+        <div className="mx-auto max-w-5xl pt-6 text-center">{children}</div>
         <video src="/desk-carservice.mp4" poster="/desk-carservice-poster.jpg" autoPlay muted playsInline
-          className="mx-auto w-full max-w-3xl mix-blend-multiply" onEnded={(e) => (e.currentTarget as HTMLVideoElement).pause()} />
-        <div className="mx-auto mt-6 flex max-w-xl flex-col items-center text-center">
+          className="mx-auto mt-6 w-full max-w-3xl mix-blend-multiply" onEnded={(e) => (e.currentTarget as HTMLVideoElement).pause()} />
+        <div className="mx-auto mt-4 flex max-w-xl flex-col items-center pb-10 text-center">
           <h2 className="font-display text-3xl font-medium tracking-tight">{DESK.name}</h2>
           <p className="mb-4 mt-1 text-gray-500">{DESK.tag}</p>
           {Dock}
@@ -166,31 +172,38 @@ export default function AgentDeskReveal() {
   }
 
   return (
-    <section id="agent-desk">
-      <div ref={trackRef} style={{ height: '260vh' }}>
-        <div className="sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden bg-[#f6f5f1]">
-          {/* same white-drop treatment as the hero so frame 0 matches it */}
+    <section id="hero">
+      <div ref={trackRef} style={{ height: '300vh' }}>
+        <div className="sticky top-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f6f5f1]">
+          {/* the ONE scene: same 5 mascots, zooms with scroll */}
           <video ref={videoRef} src="/desk-carservice.mp4" poster="/desk-carservice-poster.jpg" muted playsInline preload="auto"
             className="absolute inset-0 h-full w-full object-cover mix-blend-multiply" />
+          {/* soft top scrim so the headline reads over the mascots */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[55%]"
+            style={{ background: 'linear-gradient(to bottom,#f6f5f1 0%,#f6f5f1 26%,rgba(246,245,241,0.4) 60%,rgba(246,245,241,0) 100%)' }} />
 
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-6">
-            <div className="flex items-center gap-3 text-xs text-gray-400">
-              {ROSTER.map((r, i) => (
-                <span key={r} className={`flex items-center gap-1.5 ${i === ACTIVE ? 'text-gray-900' : ''}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${i === ACTIVE ? 'bg-sky-500' : 'bg-gray-300'}`} />{r}
-                </span>
-              ))}
+          {/* HERO COPY - scrolls up and fades */}
+          <div ref={heroRef} className="absolute inset-x-0 top-0 z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-5 pt-24 text-center sm:pt-28">
+            {children}
+          </div>
+
+          {/* desk label + talk dock - reveal after the zoom lands */}
+          <div ref={dockRef} className="absolute inset-0 z-20 flex flex-col px-6" style={{ opacity: 0 }}>
+            <div className="flex justify-center pt-6">
+              <div className="flex items-center gap-3 text-xs text-gray-400">
+                {ROSTER.map((r, i) => (
+                  <span key={r} className={`flex items-center gap-1.5 ${i === ACTIVE ? 'text-gray-900' : ''}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${i === ACTIVE ? 'bg-sky-500' : 'bg-gray-300'}`} />{r}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-
-          <div ref={titleRef} className="absolute left-8 top-24 z-10 sm:left-14">
-            <p className="mb-2 text-xs uppercase tracking-[0.2em] text-sky-600">Live demo</p>
-            <h2 className="font-display text-4xl font-medium tracking-tight sm:text-5xl">{DESK.name}</h2>
-            <p className="mt-2 text-gray-500">{DESK.tag}</p>
-          </div>
-
-          <div ref={dockRef} className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center px-6 pb-10" style={{ opacity: 0 }}>
-            {Dock}
+            <div className="absolute left-8 top-24 sm:left-14">
+              <p className="mb-2 text-xs uppercase tracking-[0.2em] text-sky-600">Live demo</p>
+              <h2 className="font-display text-4xl font-medium tracking-tight sm:text-5xl">{DESK.name}</h2>
+              <p className="mt-2 text-gray-500">{DESK.tag}</p>
+            </div>
+            <div className="mt-auto flex flex-col items-center pb-10">{Dock}</div>
           </div>
         </div>
       </div>

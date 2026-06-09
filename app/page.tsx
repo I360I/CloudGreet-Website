@@ -5,7 +5,6 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, List, X } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CallCenterScene } from './components/landing/CallCenterScene'
 import { ChatWidget } from './components/landing/ChatWidget'
 import AgentDeskReveal from './components/AgentDeskReveal'
 
@@ -19,8 +18,23 @@ export default function LandingPage() {
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
    <Nav />
    <Marquee />
-   <Hero />
-   <AgentDeskReveal />
+   <AgentDeskReveal>
+    <h1 className="font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,7vw,6rem)]">
+     Stop losing{' '}
+     <span className="bg-gradient-to-b from-sky-400 via-blue-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_3px_16px_rgba(56,189,248,0.45)]">
+      profit
+     </span>
+     <br />
+     to voicemail.
+    </h1>
+    <p className="mt-3 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed">
+     A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
+    </p>
+    <div className="mt-8"><DemoCallButtons /></div>
+    <p className="mt-6 text-sm font-medium text-gray-700">
+     Or scroll down to <span className="font-semibold text-gray-900">talk to one live</span> — or call <a href={DEMO_TEL} className="font-semibold text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-900">{DEMO_NUMBER}</a>.
+    </p>
+   </AgentDeskReveal>
    <LogoMarquee />
    <Reveal><RoiCalculator /></Reveal>
    <Reveal><Testimonial /></Reveal>
@@ -185,51 +199,6 @@ function Nav() {
     )}
    </AnimatePresence>
   </nav>
- )
-}
-
-/* ----------------------------- Hero ----------------------------- */
-
-function Hero() {
- return (
-  <section className="relative min-h-[100dvh] overflow-hidden bg-[#f6f5f1] px-5 sm:px-8">
-   {/* Ambient call-center scene - atmosphere on the right */}
-   <CallCenterScene />
-
-   {/* Scrim: vertical fade - solid up top where the copy lives, clearing to
-       fully transparent at the bottom so ALL the agents show through. */}
-   <div
-    className="pointer-events-none absolute inset-0 z-[1]"
-    style={{
-     background:
-      'linear-gradient(to bottom, #f6f5f1 0%, #f6f5f1 30%, rgba(246,245,241,0.4) 48%, rgba(246,245,241,0) 66%)',
-    }}
-   />
-
-   {/* Centered text over the scrim; full-width agents show below */}
-   <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center pt-4 text-center sm:pt-8 md:pt-10">
-    <h1 className="font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,7vw,6rem)]">
-     Stop losing{' '}
-     <span className="bg-gradient-to-b from-sky-400 via-blue-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_3px_16px_rgba(56,189,248,0.45)]">
-      profit
-     </span>
-     <br />
-     to voicemail.
-    </h1>
-
-    <p className="mt-3 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed">
-     A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
-    </p>
-
-    <div className="mt-8">
-     <DemoCallButtons />
-    </div>
-
-    <p className="mt-6 text-sm font-medium text-gray-700">
-     Or call <a href={DEMO_TEL} className="font-semibold text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-900">{DEMO_NUMBER}</a> and ask it anything.
-    </p>
-   </div>
-  </section>
  )
 }
 
