@@ -196,7 +196,17 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
         const idx = 1 + Math.round(norm(p, SCRUB_START, SCRUB_END) * (N - 1))
         if (idx !== lastDrawnRef.current || lastDrawnRef.current === -1) drawFrame(idx)
         const nowAtDesk = p > SCRUB_END - 0.02
-        if (nowAtDesk !== atDeskRef.current) { atDeskRef.current = nowAtDesk; setAtDesk(nowAtDesk) }
+        if (nowAtDesk !== atDeskRef.current) {
+          atDeskRef.current = nowAtDesk; setAtDesk(nowAtDesk)
+          // Scrolling back UP out of the desk view: snap back to the first
+          // (HVAC, waving) mascot the zoom lands on. Otherwise, if another desk
+          // (e.g. Law) was selected, scrolling down replays the HVAC zoom but
+          // cuts to the wrong mascot at the handoff. Also end any live call.
+          if (!nowAtDesk && activeRef.current !== START) {
+            activeRef.current = START; setActive(START); setDir(0)
+            end(); setPhase('idle'); setTranscript([]); setMuted(false)
+          }
+        }
         const cross = norm(p, HANDOFF, HANDOFF + 0.08)
         if (idleRef.current?.parentElement) (idleRef.current.parentElement as HTMLElement).style.opacity = String(1 - cross)
         if (canvas) canvas.style.opacity = nowAtDesk ? '0' : String(cross)
