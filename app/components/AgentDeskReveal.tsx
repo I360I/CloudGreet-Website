@@ -22,7 +22,8 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v))
 const norm = (v: number, a: number, b: number) => clamp((v - a) / (b - a), 0, 1)
 
 const N = 73                       // zoom frames f001..f073 (in /public/desk-frames)
-const SCRUB_START = 0.03
+const HANDOFF = 0.04               // idle holds until here, then the zoom takes over (slight delay = smoother)
+const SCRUB_START = 0.04           // frames advance from the handoff so motion is continuous (no static beat)
 const SCRUB_END = 0.8              // zoom maps over p; 0.8..1 holds on the desk
 const STICK = 0.86                 // slight bottom-magnet target
 const Y_NUDGE = -0.006             // shift frames up to line the mascots up with the idle loop (fraction of height)
@@ -131,8 +132,9 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
         const p = total > 0 ? clamp(-el.getBoundingClientRect().top / total, 0, 1) : 0
         const idx = 1 + Math.round(norm(p, SCRUB_START, SCRUB_END) * (N - 1))
         if (idx !== lastDrawnRef.current || lastDrawnRef.current === -1) drawFrame(idx)
-        // crossfade idle -> scrubbed canvas right as the scrub begins
-        const cross = norm(p, 0.01, 0.05)
+        // crossfade idle -> canvas a touch later, over a window where the canvas
+        // is already scrubbing (moving) so the handoff has no static beat
+        const cross = norm(p, HANDOFF, HANDOFF + 0.08)
         if (idleRef.current?.parentElement) (idleRef.current.parentElement as HTMLElement).style.opacity = String(1 - cross)
         if (canvas) canvas.style.opacity = String(cross)
         // headline scrolls up with the scrub
@@ -227,8 +229,10 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
             </video>
           </div>
 
-          {/* ZOOM - scrubbed by scroll on a canvas (not autoplayed) */}
-          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full mix-blend-multiply" style={{ width: '100%', height: '100%', opacity: 0 }} />
+          {/* ZOOM - scrubbed by scroll on a canvas (not autoplayed). Top-fade
+              mask so the mascots' heads dissolve to white like the idle loop. */}
+          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full mix-blend-multiply"
+            style={{ width: '100%', height: '100%', opacity: 0, WebkitMaskImage: 'linear-gradient(to top, black 64%, transparent 100%)', maskImage: 'linear-gradient(to top, black 64%, transparent 100%)' }} />
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[55%]"
             style={{ background: 'linear-gradient(to bottom,#f6f5f1 0%,#f6f5f1 26%,rgba(246,245,241,0.4) 60%,rgba(246,245,241,0) 100%)' }} />
