@@ -31,11 +31,7 @@ export default function LandingPage() {
     <p className="mt-3 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed">
      A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
     </p>
-    <div className="mt-8">
-     <Link href="/contact" className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-7 py-3.5 text-base font-medium text-white shadow-[0_14px_34px_-12px_rgba(2,32,71,0.5)] transition hover:bg-gray-800">
-      Book a 15-min demo <ArrowUpRight className="h-4 w-4" />
-     </Link>
-    </div>
+    <div className="mt-8"><DemoCallButtons /></div>
     <p className="mt-6 text-sm font-medium text-gray-700">
      Or scroll down to <span className="font-semibold text-gray-900">talk to one live</span> — or call <a href={DEMO_TEL} className="font-semibold text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-900">{DEMO_NUMBER}</a>.
     </p>
