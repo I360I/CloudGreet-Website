@@ -8,7 +8,7 @@
  * blurred CSS bloom sits behind it. Lazy-loaded (three.js) and client-only.
  */
 
-import React, { useMemo, useRef } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
@@ -65,7 +65,7 @@ void main(){
   gl_FragColor = vec4(col, 1.0);
 }`
 
-function OrbMesh({ levelRef }: { levelRef: React.MutableRefObject<number> }) {
+function OrbMesh({ levelRef, colorA, colorB }: { levelRef: React.MutableRefObject<number>; colorA: string; colorB: string }) {
   const grp = useRef<THREE.Group>(null)
   const material = useMemo(() => new THREE.ShaderMaterial({
     vertexShader: VERT,
@@ -74,10 +74,14 @@ function OrbMesh({ levelRef }: { levelRef: React.MutableRefObject<number> }) {
       uTime: { value: 0 },
       uAmp: { value: 0.12 },
       uSpeed: { value: 0.7 },
-      uA: { value: new THREE.Color('#7dd3fc') },
-      uB: { value: new THREE.Color('#2563eb') },
+      uA: { value: new THREE.Color(colorA) },
+      uB: { value: new THREE.Color(colorB) },
     },
-  }), [])
+  }), []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    material.uniforms.uA.value.set(colorA)
+    material.uniforms.uB.value.set(colorB)
+  }, [colorA, colorB, material])
   useFrame((_state, delta) => {
     const l = Math.min(levelRef.current || 0, 1)
     const u = material.uniforms
@@ -96,12 +100,12 @@ function OrbMesh({ levelRef }: { levelRef: React.MutableRefObject<number> }) {
   )
 }
 
-export default function VoiceOrb({ levelRef }: { levelRef: React.MutableRefObject<number> }) {
+export default function VoiceOrb({ levelRef, colorA = '#7dd3fc', colorB = '#2563eb' }: { levelRef: React.MutableRefObject<number>; colorA?: string; colorB?: string }) {
   return (
     <div className="relative h-full w-full">
-      <div className="pointer-events-none absolute inset-0 rounded-full bg-sky-400/40 blur-2xl" />
+      <div className="pointer-events-none absolute inset-0 rounded-full blur-2xl" style={{ backgroundColor: colorB, opacity: 0.35 }} />
       <Canvas camera={{ position: [0, 0, 2.6], fov: 50 }} gl={{ antialias: true, alpha: true }} dpr={[1, 2]}>
-        <OrbMesh levelRef={levelRef} />
+        <OrbMesh levelRef={levelRef} colorA={colorA} colorB={colorB} />
       </Canvas>
     </div>
   )

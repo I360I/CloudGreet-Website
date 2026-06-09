@@ -37,13 +37,13 @@ const Y_NUDGE = -0.006
 const framePath = (i: number) => `/desk-frames/f${String(i).padStart(3, '0')}.jpg`
 const MASK = 'linear-gradient(to top, black 64%, transparent 100%)'
 
-type Desk = { v: string; biz: string; cat: string; name: string; tags: string; clip: string; hint: string }
+type Desk = { v: string; biz: string; cat: string; name: string; tags: string; clip: string; hint: string; orbA: string; orbB: string }
 const DESKS: Desk[] = [
-  { v: 'hvac', biz: 'Apex Air & Heat', cat: 'HVAC', name: 'Mia', tags: 'AC repair · installs · emergencies', clip: '/talk-hvac.mp4', hint: '“My AC stopped working and it’s 95 out.”' },
-  { v: 'electrical', biz: 'Bright Spark Electric', cat: 'Electrical', name: 'Dave', tags: 'Panels · outlets · 24/7 calls', clip: '/talk-electrical.mp4', hint: '“Half my outlets just went dead.”' },
-  { v: 'transport', biz: 'Executive Transport', cat: 'Transport', name: 'Sam', tags: 'Airport rides · dispatch · booking', clip: '/talk-transport.mp4', hint: '“I need a ride to the airport at 6am.”' },
-  { v: 'dentist', biz: 'Bright Smile Dental', cat: 'Dental', name: 'Ava', tags: 'Cleanings · new patients · scheduling', clip: '/talk-dental.mp4', hint: '“Do you have anything open this week?”' },
-  { v: 'lawyer', biz: 'Hale & Co. Law', cat: 'Law', name: 'Paul', tags: 'Intakes · consults · scheduling', clip: '/talk-law.mp4', hint: '“I was in a car accident, can someone help?”' },
+  { v: 'hvac', biz: 'Apex Air & Heat', cat: 'HVAC', name: 'Mia', tags: 'AC repair · installs · emergencies', clip: '/talk-hvac.mp4', hint: '“My AC stopped working and it’s 95 out.”', orbA: '#c8e2f2', orbB: '#6fa3c4' },
+  { v: 'electrical', biz: 'Bright Spark Electric', cat: 'Electrical', name: 'Dave', tags: 'Panels · outlets · 24/7 calls', clip: '/talk-electrical.mp4', hint: '“Half my outlets just went dead.”', orbA: '#9cc0ea', orbB: '#2a62a8' },
+  { v: 'transport', biz: 'Executive Transport', cat: 'Transport', name: 'Sam', tags: 'Airport rides · dispatch · booking', clip: '/talk-transport.mp4', hint: '“I need a ride to the airport at 6am.”', orbA: '#a3c4ea', orbB: '#356dad' },
+  { v: 'dentist', biz: 'Bright Smile Dental', cat: 'Dental', name: 'Ava', tags: 'Cleanings · new patients · scheduling', clip: '/talk-dental.mp4', hint: '“Do you have anything open this week?”', orbA: '#cae2ef', orbB: '#7ba8c0' },
+  { v: 'lawyer', biz: 'Hale & Co. Law', cat: 'Law', name: 'Paul', tags: 'Intakes · consults · scheduling', clip: '/talk-law.mp4', hint: '“I was in a car accident, can someone help?”', orbA: '#aad6ea', orbB: '#3f93bb' },
 ]
 const START = 0 // HVAC first (the light-blue waving mascot the zoom lands on)
 
@@ -256,6 +256,12 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
               <p className="font-gsans mx-auto mt-1.5 max-w-xs text-sm leading-snug text-gray-400">Pick a business and talk to its AI receptionist, live.</p>
             </div>
 
+            {/* always-on voice orb - idle morphs, reacts during a call, color-matched to the agent */}
+            <div className="pointer-events-none absolute z-[6] -translate-x-1/2 -translate-y-1/2"
+              style={{ left: '50%', top: '58%', width: 'clamp(180px,21vw,300px)', height: 'clamp(180px,21vw,300px)' }}>
+              <VoiceOrb levelRef={levelRef} colorA={desk.orbA} colorB={desk.orbB} />
+            </div>
+
             {/* main content - left */}
             <div className="absolute left-8 top-1/2 w-[min(92vw,600px)] -translate-y-1/2 sm:left-14 md:left-24">
               <AnimatePresence mode="wait" custom={dir}>
@@ -274,10 +280,6 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
                   {phase === 'live' || phase === 'connecting' ? (
                     <div className="mt-8 max-w-md">
-                      {/* voice-reactive 3D orb - shader sphere driven by the live audio level */}
-                      <div className="mb-4 h-32 w-32">
-                        <VoiceOrb levelRef={levelRef} />
-                      </div>
                       <div className="mb-4 flex items-center gap-2">
                         <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" /></span>
                         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">{agentTalking ? `${desk.name} is speaking` : phase === 'connecting' ? 'Connecting' : 'Listening'}</span>
