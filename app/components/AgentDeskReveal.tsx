@@ -25,6 +25,7 @@ const N = 73                       // zoom frames f001..f073 (in /public/desk-fr
 const SCRUB_START = 0.03
 const SCRUB_END = 0.8              // zoom maps over p; 0.8..1 holds on the desk
 const STICK = 0.86                 // slight bottom-magnet target
+const Y_NUDGE = -0.006             // shift frames up to line the mascots up with the idle loop (fraction of height)
 const framePath = (i: number) => `/desk-frames/f${String(i).padStart(3, '0')}.jpg`
 
 const DESK = { vertical: 'carservice', name: "Steve's Car Service", tag: 'Airport rides · dispatch · booking' }
@@ -118,7 +119,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
       const scale = Math.max(cw / im.naturalWidth, ch / im.naturalHeight)
       const w = im.naturalWidth * scale, h = im.naturalHeight * scale
       ctx.clearRect(0, 0, cw, ch)
-      ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h)
+      ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2 + ch * Y_NUDGE, w, h)
       lastDrawnRef.current = idx
     }
 
