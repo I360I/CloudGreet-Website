@@ -73,7 +73,9 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
   // talking loop runs while the call is connecting/live, then stops
   const talkActive = phase === 'connecting' || phase === 'live'
+  const talkActiveRef = useRef(false)
   useEffect(() => {
+    talkActiveRef.current = talkActive
     const v = talkRef.current
     if (!v) return
     if (talkActive) { try { v.currentTime = 0 } catch {}; v.play().catch(() => {}) }
@@ -146,7 +148,8 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
         // is already scrubbing (moving) so the handoff has no static beat
         const cross = norm(p, HANDOFF, HANDOFF + 0.08)
         if (idleRef.current?.parentElement) (idleRef.current.parentElement as HTMLElement).style.opacity = String(1 - cross)
-        if (canvas) canvas.style.opacity = String(cross)
+        // hide the static zoom frame entirely while the talking loop is up
+        if (canvas) canvas.style.opacity = talkActiveRef.current ? '0' : String(cross)
         // headline scrolls up with the scrub
         const up = norm(p, 0.04, 0.32)
         if (heroRef.current) {
@@ -246,6 +249,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
           {/* TALKING loop - takes over the desk once the call starts, loops while live */}
           <video ref={talkRef} src="/desk-talking.mp4" muted loop playsInline preload="auto"
+            onEnded={(e) => { const v = e.currentTarget; try { v.currentTime = 0; v.play().catch(() => {}) } catch {} }}
             className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-500"
             style={{ opacity: talkActive ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: 'linear-gradient(to top, black 64%, transparent 100%)', maskImage: 'linear-gradient(to top, black 64%, transparent 100%)', pointerEvents: 'none' }} />
 
