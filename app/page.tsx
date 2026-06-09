@@ -220,14 +220,14 @@ function DemoCallButtons() {
     <button
      type="button"
      onClick={() => setOpen(true)}
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/50 bg-blue-700/55 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(29,78,216,0.5),inset_0_1px_0_0_rgba(255,255,255,0.8),inset_0_-10px_24px_-14px_rgba(255,255,255,0.45)] transition-all hover:-translate-y-0.5 hover:bg-blue-700/65"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/40 bg-blue-600/80 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(29,78,216,0.55),inset_0_1px_0_0_rgba(255,255,255,0.6)] transition-all hover:-translate-y-0.5 hover:bg-blue-600/90"
     >
      Test our AI
      <ArrowRight weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
     </button>
     <Link
      href="/contact"
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/70 bg-white/10 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.3),inset_0_1px_0_0_rgba(255,255,255,0.95),inset_0_-10px_24px_-14px_rgba(255,255,255,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/20"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/20 bg-gray-900/55 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.5),inset_0_1px_0_0_rgba(255,255,255,0.28)] transition-all hover:-translate-y-0.5 hover:bg-gray-900/70"
     >
      Book a 15-min demo
      <ArrowUpRight weight="bold" className="h-4 w-4" />
