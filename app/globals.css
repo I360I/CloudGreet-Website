@@ -2,9 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Premium type for the demo-agents carousel (Fontshare). */
-.font-clash { font-family: 'Clash Display', var(--font-display), 'Helvetica Neue', sans-serif; }
-.font-gsans { font-family: 'General Sans', var(--font-display), 'Helvetica Neue', sans-serif; }
+/* Reverted to the site display font. Swap these to a real licensed webfont
+   (self-hosted woff2) when one is chosen. */
+.font-clash { font-family: var(--font-display), 'Helvetica Neue', sans-serif; }
+.font-gsans { font-family: var(--font-display), 'Helvetica Neue', sans-serif; }
 
 @keyframes breathe {
   0%, 100% { opacity: 1; transform: scale(1); }

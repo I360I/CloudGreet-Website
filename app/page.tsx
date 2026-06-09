@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, List, X } from '@phosphor-icons/react'
@@ -271,7 +272,11 @@ function DemoCallModal({ onClose }: { onClose: () => void }) {
   }
  }
 
- return (
+ if (typeof document === 'undefined') return null
+ // Portal to <body> so the fixed backdrop covers the whole viewport - if it
+ // renders inside a transformed ancestor (the hero), `fixed` is relative to
+ // that box and the dim shows as a partial grey rectangle.
+ return createPortal((
   <div
    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
    onClick={onClose}
@@ -328,7 +333,7 @@ function DemoCallModal({ onClose }: { onClose: () => void }) {
     )}
    </div>
   </div>
- )
+ ), document.body)
 }
 
 /* ------------------------ Product card ------------------------- */

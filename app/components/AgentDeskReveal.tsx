@@ -43,28 +43,6 @@ const DESKS: Desk[] = [
 ]
 const START = 0 // HVAC first (the light-blue waving mascot the zoom lands on)
 
-/**
- * Voice-reactive orb. Scales/brightens with the agent's live volume (level
- * from the SDK) and pulses harder while the agent is talking. Glassy gradient
- * reads as a soft 3D sphere - swap for a real 3D/Lottie asset later.
- */
-function Orb({ level, talking }: { level: number; talking: boolean }) {
-  const v = Math.min(level * 2.4, 1)
-  return (
-    <div className="relative h-24 w-24 shrink-0">
-      <div className="absolute inset-0 rounded-full bg-sky-400/40 blur-2xl transition-transform duration-100" style={{ transform: `scale(${0.9 + v})`, opacity: 0.5 + v * 0.5 }} />
-      <div className="absolute inset-1 rounded-full border border-sky-300/50 transition-transform duration-100" style={{ transform: `scale(${1 + v * 0.45})`, opacity: talking ? 0.9 : 0.45 }} />
-      <div className="absolute inset-3 rounded-full transition-transform duration-75"
-        style={{
-          transform: `scale(${0.92 + v * 0.18})`,
-          background: 'radial-gradient(circle at 32% 26%, #e0f2fe, #38bdf8 46%, #2563eb 100%)',
-          boxShadow: 'inset 0 6px 14px rgba(255,255,255,0.65), inset 0 -12px 22px rgba(2,32,71,0.45), 0 18px 44px -12px rgba(37,99,235,0.6)',
-        }} />
-      <div className="pointer-events-none absolute left-[30%] top-[22%] h-4 w-6 rounded-full bg-white/70 blur-[3px]" />
-    </div>
-  )
-}
-
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const idleRef = useRef<HTMLVideoElement>(null)
@@ -291,26 +269,27 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                   <p className="font-gsans mt-5 text-lg leading-relaxed text-gray-500">{desk.tags}</p>
 
                   {phase === 'live' || phase === 'connecting' ? (
-                    <div className="mt-8 flex items-start gap-6">
-                      <Orb level={level} talking={agentTalking} />
-                      <div className="min-w-0 flex-1">
-                        <div ref={transcriptRef} className="mb-5 max-h-[30vh] max-w-md space-y-3 overflow-y-auto pr-2 [scrollbar-width:thin]">
-                          {transcript.length === 0 && phase === 'connecting' && <p className="font-gsans text-gray-400">Connecting…</p>}
-                          {transcript.map((l, i) => (
-                            <div key={i}>
-                              <p className="font-gsans mb-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">{l.role === 'agent' ? desk.name : 'You'}</p>
-                              <p className={`font-gsans text-[17px] leading-snug ${l.role === 'agent' ? 'text-gray-900' : 'text-gray-500'}`}>{l.content}</p>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-5">
-                          <button onClick={toggleMute} className="font-gsans inline-flex items-center gap-2 text-base font-medium text-gray-600 transition hover:text-gray-900">
-                            {muted ? <MicrophoneSlash className="h-4 w-4" /> : <Microphone className="h-4 w-4" />}{muted ? 'Unmute' : 'Mute'}
-                          </button>
-                          <button onClick={() => { end(); setPhase('ended') }} className="font-gsans inline-flex items-center gap-2 text-base font-medium text-red-500 transition hover:text-red-600">
-                            <PhoneDisconnect weight="fill" className="h-4 w-4" />End call
-                          </button>
-                        </div>
+                    <div className="mt-8 max-w-md">
+                      <div className="mb-4 flex items-center gap-2">
+                        <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" /></span>
+                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">{agentTalking ? `${desk.name} is speaking` : phase === 'connecting' ? 'Connecting' : 'Listening'}</span>
+                      </div>
+                      <div ref={transcriptRef} className="mb-5 max-h-[30vh] space-y-3 overflow-y-auto pr-2 [scrollbar-width:thin]">
+                        {transcript.length === 0 && phase === 'connecting' && <p className="text-gray-400">Connecting…</p>}
+                        {transcript.map((l, i) => (
+                          <div key={i}>
+                            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">{l.role === 'agent' ? desk.name : 'You'}</p>
+                            <p className={`text-[17px] leading-snug ${l.role === 'agent' ? 'text-gray-900' : 'text-gray-500'}`}>{l.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-5">
+                        <button onClick={toggleMute} className="inline-flex items-center gap-2 text-base font-medium text-gray-600 transition hover:text-gray-900">
+                          {muted ? <MicrophoneSlash className="h-4 w-4" /> : <Microphone className="h-4 w-4" />}{muted ? 'Unmute' : 'Mute'}
+                        </button>
+                        <button onClick={() => { end(); setPhase('ended') }} className="inline-flex items-center gap-2 text-base font-medium text-red-500 transition hover:text-red-600">
+                          <PhoneDisconnect weight="fill" className="h-4 w-4" />End call
+                        </button>
                       </div>
                     </div>
                   ) : (
