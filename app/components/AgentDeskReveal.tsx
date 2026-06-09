@@ -43,6 +43,61 @@ const DESKS: Desk[] = [
 ]
 const START = 0 // HVAC first (the light-blue waving mascot the zoom lands on)
 
+// Scroll-scrubbed "flip the computer -> zoom into the white screen" transition
+// OUT of the desk view into the next section. One frame-set per agent; only
+// agents that have a transition asset get one (others just scroll straight on).
+const TRANSITIONS: Record<string, { base: string; n: number }> = {
+  electrical: { base: '/trans-electrical', n: 73 },
+}
+
+function TransitionOut({ base, n }: { base: string; n: number }) {
+  const trackRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const lastRef = useRef(-1)
+  useEffect(() => {
+    const canvas = canvasRef.current; if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const imgs: HTMLImageElement[] = []
+    for (let i = 1; i <= n; i++) { const im = new Image(); im.src = `${base}/f${String(i).padStart(3, '0')}.jpg`; imgs.push(im) }
+    const size = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      canvas.width = Math.floor(window.innerWidth * dpr); canvas.height = Math.floor(window.innerHeight * dpr); lastRef.current = -1
+    }
+    size()
+    const draw = (idx: number) => {
+      const im = imgs[idx - 1]; if (!ctx || !im || !im.complete || im.naturalWidth === 0) return
+      const cw = canvas.width, ch = canvas.height
+      const s = Math.max(cw / im.naturalWidth, ch / im.naturalHeight)
+      const w = im.naturalWidth * s, h = im.naturalHeight * s
+      ctx.clearRect(0, 0, cw, ch); ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2 + ch * Y_NUDGE, w, h); lastRef.current = idx
+    }
+    let raf = 0
+    const render = () => {
+      const el = trackRef.current
+      if (el) {
+        const total = el.offsetHeight - window.innerHeight
+        const p = total > 0 ? clamp(-el.getBoundingClientRect().top / total, 0, 1) : 0
+        const idx = 1 + Math.round(p * (n - 1))
+        if (idx !== lastRef.current || lastRef.current === -1) draw(idx)
+      }
+      raf = requestAnimationFrame(render)
+    }
+    raf = requestAnimationFrame(render)
+    window.addEventListener('resize', size)
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', size) }
+  }, [base, n])
+  return (
+    <section ref={trackRef} className="relative" style={{ height: '220vh' }}>
+      <div className="sticky top-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f6f5f1]">
+        <div className="pointer-events-none absolute inset-0" style={{ isolation: 'isolate' }}>
+          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full mix-blend-multiply"
+            style={{ WebkitMaskImage: MASK, maskImage: MASK }} />
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const idleRef = useRef<HTMLVideoElement>(null)
@@ -68,6 +123,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   const levelRef = useRef(0)
   const [err, setErr] = useState('')
   const desk = DESKS[active]
+  const trans = TRANSITIONS[desk.v]
 
   // idle loop autoplay (kick on interaction in case it's blocked)
   useEffect(() => {
@@ -227,6 +283,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   }, [])
 
   return (
+    <>
     <section id="hero">
       <div ref={trackRef} className="relative" style={{ height: '240vh' }}>
         {/* nav "Demo Agents" target: jumps to the scroll point where the desks are active */}
@@ -340,5 +397,8 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
         </div>
       </div>
     </section>
+    {/* scroll-scrubbed flip-and-zoom transition out, for agents that have one */}
+    {trans && <TransitionOut key={desk.v} base={trans.base} n={trans.n} />}
+    </>
   )
 }
