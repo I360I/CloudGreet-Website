@@ -251,7 +251,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
           {/* CAROUSEL - type on the screen, Apple-glass selector at the bottom */}
           <div className="absolute inset-0 z-20 transition-opacity duration-500" style={{ opacity: atDesk ? 1 : 0, pointerEvents: atDesk ? 'auto' : 'none' }}>
             {/* header */}
-            <div className="absolute inset-x-0 top-[17vh] z-10 text-center">
+            <div className="pointer-events-none absolute inset-x-0 top-[17vh] z-10 text-center">
               <p className="font-clash text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">Demo Agents</p>
               <p className="font-gsans mx-auto mt-1.5 max-w-xs text-sm leading-snug text-gray-400">Pick a business and talk to its AI receptionist, live.</p>
             </div>
@@ -312,9 +312,11 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
               </AnimatePresence>
             </div>
 
-            {/* Apple liquid-glass selector */}
-            <div className="absolute inset-x-0 bottom-8 z-30 flex justify-center px-4">
-              <div className="flex items-center gap-1 rounded-full border border-white/60 bg-white/40 p-1.5 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.35),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-8px_20px_-12px_rgba(255,255,255,0.5)]">
+            {/* Apple liquid-glass selector - container is click-through so its
+                full-width dead-zones don't eat clicks on the call controls; only
+                the pill itself is interactive. */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-8 z-30 flex justify-center px-4">
+              <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/60 bg-white/40 p-1.5 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.35),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-8px_20px_-12px_rgba(255,255,255,0.5)]">
                 {DESKS.map((d, i) => (
                   <button key={d.v} onClick={() => go(i, i > active ? 1 : -1)}
                     className={`relative rounded-full px-5 py-2.5 text-sm font-medium transition ${i === active ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}>
