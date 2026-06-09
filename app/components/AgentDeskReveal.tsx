@@ -16,6 +16,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Microphone, MicrophoneSlash, PhoneDisconnect, Play } from '@phosphor-icons/react'
 import { RetellWebClient } from 'retell-client-js-sdk'
 
 type Phase = 'idle' | 'connecting' | 'live' | 'ended' | 'error'
@@ -34,13 +35,13 @@ const MASK = 'linear-gradient(to top, black 64%, transparent 100%)'
 
 type Desk = { v: string; biz: string; cat: string; name: string; tags: string; clip: string; hint: string }
 const DESKS: Desk[] = [
-  { v: 'hvac', biz: 'Apex Air & Heat', cat: 'HVAC', name: 'Marcus', tags: 'AC repair · installs · emergencies', clip: '/talk-hvac.mp4', hint: '“My AC stopped working and it’s 95 out.”' },
+  { v: 'hvac', biz: 'Apex Air & Heat', cat: 'HVAC', name: 'Mia', tags: 'AC repair · installs · emergencies', clip: '/talk-hvac.mp4', hint: '“My AC stopped working and it’s 95 out.”' },
   { v: 'electrical', biz: 'Bright Spark Electric', cat: 'Electrical', name: 'Dave', tags: 'Panels · outlets · 24/7 calls', clip: '/talk-electrical.mp4', hint: '“Half my outlets just went dead.”' },
-  { v: 'carservice', biz: 'Executive Transport', cat: 'Transport', name: 'Sam', tags: 'Airport rides · dispatch · booking', clip: '/talk-carservice.mp4', hint: '“I need a ride to the airport at 6am.”' },
-  { v: 'dentist', biz: 'Bright Smile Dental', cat: 'Dental', name: 'Ava', tags: 'Cleanings · new patients · scheduling', clip: '/talk-dentist.mp4', hint: '“Do you have anything open this week?”' },
-  { v: 'lawyer', biz: 'Hale & Co. Law', cat: 'Law', name: 'Paul', tags: 'Intakes · consults · scheduling', clip: '/talk-lawyer.mp4', hint: '“I was in a car accident, can someone help?”' },
+  { v: 'transport', biz: 'Executive Transport', cat: 'Transport', name: 'Sam', tags: 'Airport rides · dispatch · booking', clip: '/talk-transport.mp4', hint: '“I need a ride to the airport at 6am.”' },
+  { v: 'dentist', biz: 'Bright Smile Dental', cat: 'Dental', name: 'Ava', tags: 'Cleanings · new patients · scheduling', clip: '/talk-dental.mp4', hint: '“Do you have anything open this week?”' },
+  { v: 'lawyer', biz: 'Hale & Co. Law', cat: 'Law', name: 'Paul', tags: 'Intakes · consults · scheduling', clip: '/talk-law.mp4', hint: '“I was in a car accident, can someone help?”' },
 ]
-const START = 0 // HVAC first
+const START = 0 // HVAC first (the light-blue waving mascot the zoom lands on)
 
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
@@ -58,6 +59,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   const activeRef = useRef(START)
   const [dir, setDir] = useState(0)
 
+  const transcriptRef = useRef<HTMLDivElement>(null)
   const clientRef = useRef<RetellWebClient | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [agentTalking, setAgentTalking] = useState(false)
@@ -92,6 +94,9 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
     const loop = () => { setLevel(clientRef.current?.analyzerComponent?.calculateVolume?.() ?? 0); raf = requestAnimationFrame(loop) }
     raf = requestAnimationFrame(loop); return () => cancelAnimationFrame(raf)
   }, [phase])
+
+  // keep transcript scrolled to the latest line
+  useEffect(() => { const el = transcriptRef.current; if (el) el.scrollTop = el.scrollHeight }, [transcript])
 
   const end = useCallback(() => { try { clientRef.current?.stopCall() } catch {} clientRef.current = null }, [])
   useEffect(() => () => end(), [end])
@@ -237,65 +242,63 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
             {children}
           </div>
 
-          {/* CAROUSEL - game-menu style, text straight on the screen, no box */}
+          {/* CAROUSEL - type on the screen, Apple-glass selector at the bottom */}
           <div className="absolute inset-0 z-20 transition-opacity duration-500" style={{ opacity: atDesk ? 1 : 0, pointerEvents: atDesk ? 'auto' : 'none' }}>
-            <div className="absolute left-8 top-1/2 w-[min(92vw,640px)] -translate-y-1/2 sm:left-14 md:left-20">
-              {/* agent selector menu */}
-              <div className="mb-7 flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-[11px] uppercase tracking-[0.22em]">
-                {DESKS.map((d, i) => (
-                  <button key={d.v} onClick={() => go(i, i > active ? 1 : -1)}
-                    className={`transition-colors ${i === active ? 'text-gray-900' : 'text-gray-300 hover:text-gray-500'}`}>
-                    {String(i + 1).padStart(2, '0')} {d.cat}
-                  </button>
-                ))}
-              </div>
+            {/* header */}
+            <div className="absolute inset-x-0 top-[14vh] z-10 text-center">
+              <p className="font-mono text-[11px] font-medium uppercase tracking-[0.4em] text-gray-400">Demo Agents</p>
+              <p className="mx-auto mt-2 max-w-xs text-[13px] leading-snug text-gray-400">Pick a business and talk to its AI receptionist, live.</p>
+            </div>
 
+            {/* main content - left */}
+            <div className="absolute left-8 top-1/2 w-[min(92vw,600px)] -translate-y-1/2 sm:left-14 md:left-24">
               <AnimatePresence mode="wait" custom={dir}>
                 <motion.div key={active} custom={dir}
-                  initial={{ opacity: 0, x: dir >= 0 ? 50 : -50 }}
+                  initial={{ opacity: 0, x: dir >= 0 ? 44 : -44 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: dir >= 0 ? -50 : 50 }}
-                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  exit={{ opacity: 0, x: dir >= 0 ? -44 : 44 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <p className="mb-4 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.25em] text-sky-600">
-                    <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" /></span>
-                    Live demo
-                  </p>
-                  <h2 className="font-display text-5xl font-medium leading-[0.95] tracking-tighter text-gray-900 sm:text-6xl md:text-7xl">{desk.biz}</h2>
-                  <p className="mt-4 text-base text-gray-500 sm:text-lg">{desk.tags}</p>
+                  <div className="mb-5 flex items-center gap-2.5">
+                    <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sky-500" /></span>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-gray-400">{desk.cat}</span>
+                  </div>
+                  <h2 className="font-display text-[clamp(2.75rem,5.5vw,5rem)] font-semibold leading-[0.92] tracking-[-0.03em] text-gray-900">{desk.biz}</h2>
+                  <p className="mt-5 text-lg font-light leading-relaxed text-gray-500">{desk.tags}</p>
 
                   {phase === 'live' || phase === 'connecting' ? (
-                    <div className="mt-7">
-                      {transcript.slice(-3).length > 0 && (
-                        <div className="mb-5 max-w-md space-y-2">
-                          {transcript.slice(-3).map((l, i) => (
-                            <p key={i} className="text-base leading-snug">
-                              <span className="mr-2 font-mono text-[10px] uppercase tracking-wide text-gray-400">{l.role === 'agent' ? desk.name : 'You'}</span>
-                              <span className={l.role === 'agent' ? 'text-sky-700' : 'text-gray-800'}>{l.content}</span>
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                      {phase === 'connecting' ? (
-                        <p className="font-display text-2xl font-medium text-gray-400">Connecting…</p>
-                      ) : (
-                        <div className="flex items-center gap-6">
-                          <span className="relative flex h-12 w-12 items-center justify-center">
-                            <span className="absolute inset-0 rounded-full bg-sky-400/30 transition-transform duration-75" style={{ transform: `scale(${ring})` }} />
-                            <span className="relative text-xl">{agentTalking ? '🔊' : '🎙️'}</span>
-                          </span>
-                          <button onClick={toggleMute} className="font-display text-xl font-medium text-gray-700 underline-offset-4 transition hover:text-gray-900 hover:underline">{muted ? 'Unmute' : 'Mute'}</button>
-                          <button onClick={() => { end(); setPhase('ended') }} className="font-display text-xl font-medium text-red-500 underline-offset-4 transition hover:text-red-600 hover:underline">End call</button>
-                        </div>
-                      )}
+                    <div className="mt-8">
+                      <div ref={transcriptRef} className="mb-6 max-h-[34vh] max-w-lg space-y-3 overflow-y-auto pr-2 [scrollbar-width:thin]">
+                        {transcript.length === 0 && phase === 'connecting' && <p className="font-light text-gray-400">Connecting…</p>}
+                        {transcript.map((l, i) => (
+                          <div key={i}>
+                            <p className="mb-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-gray-400">{l.role === 'agent' ? desk.name : 'You'}</p>
+                            <p className={`text-[17px] font-light leading-snug ${l.role === 'agent' ? 'text-gray-900' : 'text-gray-500'}`}>{l.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-5">
+                        <span className="relative flex h-12 w-12 items-center justify-center">
+                          <span className="absolute inset-0 rounded-full bg-sky-400/25 transition-transform duration-75" style={{ transform: `scale(${ring})` }} />
+                          <Microphone weight="fill" className="relative h-5 w-5 text-sky-600" />
+                        </span>
+                        <button onClick={toggleMute} className="inline-flex items-center gap-2 text-base font-medium text-gray-600 transition hover:text-gray-900">
+                          {muted ? <MicrophoneSlash className="h-4 w-4" /> : <Microphone className="h-4 w-4" />}{muted ? 'Unmute' : 'Mute'}
+                        </button>
+                        <button onClick={() => { end(); setPhase('ended') }} className="inline-flex items-center gap-2 text-base font-medium text-red-500 transition hover:text-red-600">
+                          <PhoneDisconnect weight="fill" className="h-4 w-4" />End call
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div className="mt-8">
-                      <button onClick={start} className="group inline-flex items-center gap-3.5 font-display text-2xl font-medium text-gray-900 sm:text-3xl">
-                        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-900 text-sm text-white transition-transform group-hover:scale-110">▶</span>
-                        <span className="transition-colors group-hover:text-sky-700">Talk to {desk.name}</span>
+                    <div className="mt-9">
+                      <button onClick={start} className="group inline-flex items-center gap-4">
+                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-900 text-white shadow-[0_12px_30px_-8px_rgba(2,32,71,0.5)] transition-transform group-hover:scale-105">
+                          <Play weight="fill" className="ml-0.5 h-5 w-5" />
+                        </span>
+                        <span className="font-display text-3xl font-medium tracking-tight text-gray-900 transition-colors group-hover:text-sky-700">Talk to {desk.name}</span>
                       </button>
-                      <p className="mt-4 font-mono text-xs text-gray-400">{phase === 'ended' ? 'Call ended — talk again, or scroll to another agent.' : desk.hint}</p>
+                      <p className="mt-5 text-[15px] font-light italic text-gray-400">{phase === 'ended' ? 'Call ended — talk again, or pick another agent below.' : desk.hint}</p>
                       {err && <p className="mt-2 text-sm text-red-500">{err}</p>}
                     </div>
                   )}
@@ -303,9 +306,17 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
               </AnimatePresence>
             </div>
 
-            {/* scroll hint */}
-            <div className="absolute inset-x-0 bottom-7 z-30 text-center font-mono text-[11px] uppercase tracking-[0.25em] text-gray-400">
-              ‹ scroll sideways to change agent ›
+            {/* Apple liquid-glass selector */}
+            <div className="absolute inset-x-0 bottom-8 z-30 flex justify-center px-4">
+              <div className="flex items-center gap-1 rounded-full border border-white/60 bg-white/40 p-1.5 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.35),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-8px_20px_-12px_rgba(255,255,255,0.5)]">
+                {DESKS.map((d, i) => (
+                  <button key={d.v} onClick={() => go(i, i > active ? 1 : -1)}
+                    className={`relative rounded-full px-5 py-2.5 text-sm font-medium transition ${i === active ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                    {i === active && <motion.span layoutId="sel" className="absolute inset-0 -z-10 rounded-full bg-gray-900 shadow-[0_6px_16px_-6px_rgba(2,32,71,0.6)]" transition={{ type: 'spring', stiffness: 400, damping: 34 }} />}
+                    {d.cat}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
