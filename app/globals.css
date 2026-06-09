@@ -2,8 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Reverted to the site display font. Swap these to a real licensed webfont
-   (self-hosted woff2) when one is chosen. */
+/* Site display font is now Geist (Vercel, self-hosted via the geist pkg).
+   GeistSans.variable defines --font-geist-sans on <body>; map --font-display
+   to it so all the existing var(--font-display) usages pick up Geist. */
+body { --font-display: var(--font-geist-sans); }
 .font-clash { font-family: var(--font-display), 'Helvetica Neue', sans-serif; }
 .font-gsans { font-family: var(--font-display), 'Helvetica Neue', sans-serif; }
 

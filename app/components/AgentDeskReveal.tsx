@@ -67,6 +67,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   const [transcript, setTranscript] = useState<Line[]>([])
   const [level, setLevel] = useState(0)
   const [err, setErr] = useState('')
+  const [orbOk, setOrbOk] = useState(true)
   const desk = DESKS[active]
 
   // idle loop autoplay (kick on interaction in case it's blocked)
@@ -270,6 +271,16 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
                   {phase === 'live' || phase === 'connecting' ? (
                     <div className="mt-8 max-w-md">
+                      {/* voice-reactive orb (drop a looping clip at /public/orb.mp4;
+                          it scales with the agent's live volume). Hides until present. */}
+                      {orbOk && (
+                        <div className="mb-5 h-28 w-28">
+                          <video src="/orb.mp4" autoPlay loop muted playsInline
+                            onError={() => setOrbOk(false)}
+                            className="h-full w-full object-contain transition-transform duration-75"
+                            style={{ transform: `scale(${1 + Math.min(level * 1.6, 0.55) + (agentTalking ? 0.05 : 0)})` }} />
+                        </div>
+                      )}
                       <div className="mb-4 flex items-center gap-2">
                         <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" /></span>
                         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">{agentTalking ? `${desk.name} is speaking` : phase === 'connecting' ? 'Connecting' : 'Listening'}</span>

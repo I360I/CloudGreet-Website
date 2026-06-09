@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
-import { JetBrains_Mono, Space_Grotesk } from 'next/font/google'
+import { JetBrains_Mono } from 'next/font/google'
+import { GeistSans } from 'geist/font/sans'
 import './globals.css'
 import { ToastProvider } from './contexts/ToastContext'
 import { RealtimeProvider } from './contexts/RealtimeProvider'
@@ -21,11 +22,6 @@ const mono = JetBrains_Mono({
  variable: '--font-mono',
 })
 
-const display = Space_Grotesk({
- subsets: ['latin'],
- weight: ['400', '500', '600', '700'],
- variable: '--font-display',
-})
 
 export const metadata: Metadata = {
  metadataBase: new URL('https://cloudgreet.com'),
@@ -154,7 +150,7 @@ export default function RootLayout({
  }}
  />
  </head>
- <body className={`${mono.variable} ${display.variable} font-sans overscroll-none bg-[#f6f5f1] text-gray-900 antialiased`}>
+ <body className={`${mono.variable} ${GeistSans.variable} font-sans overscroll-none bg-[#f6f5f1] text-gray-900 antialiased`}>
  <ErrorBoundary>
  <ToastProvider>
  <RealtimeProvider>
