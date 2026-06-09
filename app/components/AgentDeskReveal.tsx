@@ -36,11 +36,11 @@ type Desk = { v: string; biz: string; cat: string; name: string; tags: string; c
 const DESKS: Desk[] = [
   { v: 'hvac', biz: 'Apex Air & Heat', cat: 'HVAC', name: 'Marcus', tags: 'AC repair · installs · emergencies', clip: '/talk-hvac.mp4', hint: '“My AC stopped working and it’s 95 out.”' },
   { v: 'electrical', biz: 'Bright Spark Electric', cat: 'Electrical', name: 'Dave', tags: 'Panels · outlets · 24/7 calls', clip: '/talk-electrical.mp4', hint: '“Half my outlets just went dead.”' },
-  { v: 'carservice', biz: "Steve's Car Service", cat: 'Car service', name: 'Sam', tags: 'Airport rides · dispatch · booking', clip: '/talk-carservice.mp4', hint: '“I need a ride to the airport at 6am.”' },
+  { v: 'carservice', biz: 'Executive Transport', cat: 'Transport', name: 'Sam', tags: 'Airport rides · dispatch · booking', clip: '/talk-carservice.mp4', hint: '“I need a ride to the airport at 6am.”' },
   { v: 'dentist', biz: 'Bright Smile Dental', cat: 'Dental', name: 'Ava', tags: 'Cleanings · new patients · scheduling', clip: '/talk-dentist.mp4', hint: '“Do you have anything open this week?”' },
   { v: 'lawyer', biz: 'Hale & Co. Law', cat: 'Law', name: 'Paul', tags: 'Intakes · consults · scheduling', clip: '/talk-lawyer.mp4', hint: '“I was in a car accident, can someone help?”' },
 ]
-const START = 2 // car service - matches the zoom
+const START = 0 // HVAC first
 
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
@@ -55,6 +55,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
   const [atDesk, setAtDesk] = useState(false)
   const [active, setActive] = useState(START)
+  const activeRef = useRef(START)
   const [dir, setDir] = useState(0)
 
   const clientRef = useRef<RetellWebClient | null>(null)
@@ -120,19 +121,42 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   // switching agents ends any active call
   const go = useCallback((next: number, d: number) => {
     const n = (next + DESKS.length) % DESKS.length
-    if (n === active) return
+    if (n === activeRef.current) return
+    activeRef.current = n
     end(); setPhase('idle'); setTranscript([]); setMuted(false)
     setDir(d); setActive(n)
-  }, [active, end])
+  }, [end])
 
+  // keyboard arrows + sideways scroll/swipe to change agents (at the desk)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!atDesk) return
-      if (e.key === 'ArrowRight') go(active + 1, 1)
-      if (e.key === 'ArrowLeft') go(active - 1, -1)
+      if (!atDeskRef.current) return
+      if (e.key === 'ArrowRight') go(activeRef.current + 1, 1)
+      if (e.key === 'ArrowLeft') go(activeRef.current - 1, -1)
     }
-    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey)
-  }, [atDesk, active, go])
+    let lastSwitch = 0
+    const onWheel = (e: WheelEvent) => {
+      if (!atDeskRef.current) return
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 8) {
+        e.preventDefault()
+        const now = Date.now(); if (now - lastSwitch < 420) return
+        lastSwitch = now
+        go(activeRef.current + (e.deltaX > 0 ? 1 : -1), e.deltaX > 0 ? 1 : -1)
+      }
+    }
+    let tx = 0, ty = 0
+    const onTS = (e: TouchEvent) => { tx = e.touches[0].clientX; ty = e.touches[0].clientY }
+    const onTE = (e: TouchEvent) => {
+      if (!atDeskRef.current) return
+      const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(activeRef.current + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1)
+    }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('wheel', onWheel, { passive: false })
+    window.addEventListener('touchstart', onTS, { passive: true })
+    window.addEventListener('touchend', onTE, { passive: true })
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('wheel', onWheel); window.removeEventListener('touchstart', onTS); window.removeEventListener('touchend', onTE) }
+  }, [go])
 
   // frames preload + scroll scrub
   useEffect(() => {
@@ -213,80 +237,75 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
             {children}
           </div>
 
-          {/* CAROUSEL UI */}
+          {/* CAROUSEL - game-menu style, text straight on the screen, no box */}
           <div className="absolute inset-0 z-20 transition-opacity duration-500" style={{ opacity: atDesk ? 1 : 0, pointerEvents: atDesk ? 'auto' : 'none' }}>
-            {/* glass call panel, left in the open space */}
-            <div className="absolute left-6 top-1/2 w-[min(90vw,420px)] -translate-y-1/2 sm:left-12 md:left-20">
+            <div className="absolute left-8 top-1/2 w-[min(92vw,640px)] -translate-y-1/2 sm:left-14 md:left-20">
+              {/* agent selector menu */}
+              <div className="mb-7 flex flex-wrap items-center gap-x-6 gap-y-1 font-mono text-[11px] uppercase tracking-[0.22em]">
+                {DESKS.map((d, i) => (
+                  <button key={d.v} onClick={() => go(i, i > active ? 1 : -1)}
+                    className={`transition-colors ${i === active ? 'text-gray-900' : 'text-gray-300 hover:text-gray-500'}`}>
+                    {String(i + 1).padStart(2, '0')} {d.cat}
+                  </button>
+                ))}
+              </div>
+
               <AnimatePresence mode="wait" custom={dir}>
                 <motion.div key={active} custom={dir}
-                  initial={{ opacity: 0, x: dir >= 0 ? 40 : -40 }}
+                  initial={{ opacity: 0, x: dir >= 0 ? 50 : -50 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: dir >= 0 ? -40 : 40 }}
+                  exit={{ opacity: 0, x: dir >= 0 ? -50 : 50 }}
                   transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                  className="rounded-[26px] border border-white/60 bg-white/55 p-6 shadow-[0_30px_80px_-24px_rgba(2,32,71,0.35)] backdrop-blur-2xl backdrop-saturate-150 sm:p-7"
                 >
-                  <div className="mb-3 flex items-center gap-2">
+                  <p className="mb-4 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.25em] text-sky-600">
                     <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" /></span>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-600">Live demo · {desk.cat}</span>
-                  </div>
-                  <h2 className="font-display text-3xl font-medium tracking-tight text-gray-900 sm:text-4xl">{desk.biz}</h2>
-                  <p className="mt-1.5 text-sm text-gray-500">{desk.tags}</p>
+                    Live demo
+                  </p>
+                  <h2 className="font-display text-5xl font-medium leading-[0.95] tracking-tighter text-gray-900 sm:text-6xl md:text-7xl">{desk.biz}</h2>
+                  <p className="mt-4 text-base text-gray-500 sm:text-lg">{desk.tags}</p>
 
                   {phase === 'live' || phase === 'connecting' ? (
-                    <div className="mt-5">
+                    <div className="mt-7">
                       {transcript.slice(-3).length > 0 && (
-                        <div className="mb-4 space-y-1.5">
+                        <div className="mb-5 max-w-md space-y-2">
                           {transcript.slice(-3).map((l, i) => (
-                            <p key={i} className="text-sm leading-snug">
-                              <span className="mr-1.5 text-[10px] uppercase tracking-wide text-gray-400">{l.role === 'agent' ? desk.name : 'You'}</span>
+                            <p key={i} className="text-base leading-snug">
+                              <span className="mr-2 font-mono text-[10px] uppercase tracking-wide text-gray-400">{l.role === 'agent' ? desk.name : 'You'}</span>
                               <span className={l.role === 'agent' ? 'text-sky-700' : 'text-gray-800'}>{l.content}</span>
                             </p>
                           ))}
                         </div>
                       )}
                       {phase === 'connecting' ? (
-                        <div className="rounded-full bg-gray-900 px-6 py-3.5 text-center text-sm font-medium text-white">Connecting…</div>
+                        <p className="font-display text-2xl font-medium text-gray-400">Connecting…</p>
                       ) : (
-                        <div className="flex items-center gap-2.5">
-                          <div className="relative flex h-11 w-11 shrink-0 items-center justify-center">
+                        <div className="flex items-center gap-6">
+                          <span className="relative flex h-12 w-12 items-center justify-center">
                             <span className="absolute inset-0 rounded-full bg-sky-400/30 transition-transform duration-75" style={{ transform: `scale(${ring})` }} />
-                            <span className="relative text-base">{agentTalking ? '🔊' : '🎙️'}</span>
-                          </div>
-                          <button onClick={toggleMute} className="flex-1 rounded-full border border-black/10 bg-white/80 px-4 py-3 text-sm font-medium hover:bg-white">{muted ? 'Unmute' : 'Mute'}</button>
-                          <button onClick={() => { end(); setPhase('ended') }} className="flex-1 rounded-full bg-red-500 px-4 py-3 text-sm font-medium text-white hover:bg-red-600">End</button>
+                            <span className="relative text-xl">{agentTalking ? '🔊' : '🎙️'}</span>
+                          </span>
+                          <button onClick={toggleMute} className="font-display text-xl font-medium text-gray-700 underline-offset-4 transition hover:text-gray-900 hover:underline">{muted ? 'Unmute' : 'Mute'}</button>
+                          <button onClick={() => { end(); setPhase('ended') }} className="font-display text-xl font-medium text-red-500 underline-offset-4 transition hover:text-red-600 hover:underline">End call</button>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <div className="mt-5">
-                      <button onClick={start} className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-4 text-base font-medium text-white shadow-lg transition hover:bg-gray-800">
-                        Talk to {desk.name}
-                        <span className="transition-transform group-hover:translate-x-0.5">→</span>
+                    <div className="mt-8">
+                      <button onClick={start} className="group inline-flex items-center gap-3.5 font-display text-2xl font-medium text-gray-900 sm:text-3xl">
+                        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-900 text-sm text-white transition-transform group-hover:scale-110">▶</span>
+                        <span className="transition-colors group-hover:text-sky-700">Talk to {desk.name}</span>
                       </button>
-                      <p className="mt-2.5 text-center text-xs text-gray-400">{phase === 'ended' ? 'Call ended — talk again, or try another desk.' : desk.hint}</p>
-                      {err && <p className="mt-2 text-center text-sm text-red-500">{err}</p>}
+                      <p className="mt-4 font-mono text-xs text-gray-400">{phase === 'ended' ? 'Call ended — talk again, or scroll to another agent.' : desk.hint}</p>
+                      {err && <p className="mt-2 text-sm text-red-500">{err}</p>}
                     </div>
                   )}
                 </motion.div>
               </AnimatePresence>
             </div>
 
-            {/* arrows */}
-            <button aria-label="Previous agent" onClick={() => go(active - 1, -1)}
-              className="absolute left-2 top-1/2 z-30 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white/70 text-gray-700 backdrop-blur transition hover:bg-white sm:left-4">‹</button>
-            <button aria-label="Next agent" onClick={() => go(active + 1, 1)}
-              className="absolute right-2 top-1/2 z-30 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white/70 text-gray-700 backdrop-blur transition hover:bg-white sm:right-4">›</button>
-
-            {/* pill switcher */}
-            <div className="absolute inset-x-0 bottom-7 z-30 flex justify-center px-4">
-              <div className="flex max-w-full items-center gap-1.5 overflow-x-auto rounded-full border border-white/60 bg-white/55 p-1.5 backdrop-blur-2xl backdrop-saturate-150">
-                {DESKS.map((d, i) => (
-                  <button key={d.v} onClick={() => go(i, i > active ? 1 : -1)}
-                    className={`whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-medium transition ${i === active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-black/5'}`}>
-                    {d.cat}
-                  </button>
-                ))}
-              </div>
+            {/* scroll hint */}
+            <div className="absolute inset-x-0 bottom-7 z-30 text-center font-mono text-[11px] uppercase tracking-[0.25em] text-gray-400">
+              ‹ scroll sideways to change agent ›
             </div>
           </div>
         </div>
