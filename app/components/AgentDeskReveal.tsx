@@ -50,54 +50,6 @@ const TRANSITIONS: Record<string, { base: string; n: number }> = {
   electrical: { base: '/trans-electrical', n: 73 },
 }
 
-function TransitionOut({ base, n }: { base: string; n: number }) {
-  const trackRef = useRef<HTMLDivElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const lastRef = useRef(-1)
-  useEffect(() => {
-    const canvas = canvasRef.current; if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    const imgs: HTMLImageElement[] = []
-    for (let i = 1; i <= n; i++) { const im = new Image(); im.src = `${base}/f${String(i).padStart(3, '0')}.jpg`; imgs.push(im) }
-    const size = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      canvas.width = Math.floor(window.innerWidth * dpr); canvas.height = Math.floor(window.innerHeight * dpr); lastRef.current = -1
-    }
-    size()
-    const draw = (idx: number) => {
-      const im = imgs[idx - 1]; if (!ctx || !im || !im.complete || im.naturalWidth === 0) return
-      const cw = canvas.width, ch = canvas.height
-      const s = Math.max(cw / im.naturalWidth, ch / im.naturalHeight)
-      const w = im.naturalWidth * s, h = im.naturalHeight * s
-      ctx.clearRect(0, 0, cw, ch); ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2 + ch * Y_NUDGE, w, h); lastRef.current = idx
-    }
-    let raf = 0
-    const render = () => {
-      const el = trackRef.current
-      if (el) {
-        const total = el.offsetHeight - window.innerHeight
-        const p = total > 0 ? clamp(-el.getBoundingClientRect().top / total, 0, 1) : 0
-        const idx = 1 + Math.round(p * (n - 1))
-        if (idx !== lastRef.current || lastRef.current === -1) draw(idx)
-      }
-      raf = requestAnimationFrame(render)
-    }
-    raf = requestAnimationFrame(render)
-    window.addEventListener('resize', size)
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', size) }
-  }, [base, n])
-  return (
-    <section ref={trackRef} className="relative" style={{ height: '220vh' }}>
-      <div className="sticky top-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f6f5f1]">
-        <div className="pointer-events-none absolute inset-0" style={{ isolation: 'isolate' }}>
-          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full mix-blend-multiply"
-            style={{ WebkitMaskImage: MASK, maskImage: MASK }} />
-        </div>
-      </div>
-    </section>
-  )
-}
-
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const idleRef = useRef<HTMLVideoElement>(null)
@@ -108,6 +60,13 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   const imgsRef = useRef<HTMLImageElement[]>([])
   const lastDrawnRef = useRef(-1)
   const atDeskRef = useRef(false)
+  // transition-out (flip computer -> zoom to white), scrubbed in the SAME stage
+  const mediaRef = useRef<HTMLDivElement>(null)
+  const carouselRef = useRef<HTMLDivElement>(null)
+  const transCanvasRef = useRef<HTMLCanvasElement>(null)
+  const transImgsRef = useRef<HTMLImageElement[]>([])
+  const transNRef = useRef(0)
+  const lastTransRef = useRef(-1)
 
   const [atDesk, setAtDesk] = useState(false)
   const [active, setActive] = useState(START)
@@ -224,6 +183,14 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
     return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('wheel', onWheel); window.removeEventListener('touchstart', onTS); window.removeEventListener('touchend', onTE) }
   }, [go])
 
+  // preload the active agent's transition frames (if it has a transition)
+  useEffect(() => {
+    if (!trans) { transImgsRef.current = []; transNRef.current = 0; lastTransRef.current = -1; return }
+    const imgs: HTMLImageElement[] = []
+    for (let i = 1; i <= trans.n; i++) { const im = new Image(); im.src = `${trans.base}/f${String(i).padStart(3, '0')}.jpg`; imgs.push(im) }
+    transImgsRef.current = imgs; transNRef.current = trans.n; lastTransRef.current = -1
+  }, [trans?.base, trans?.n]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // frames preload + scroll scrub
   useEffect(() => {
     const canvas = canvasRef.current; if (!canvas) return
@@ -243,12 +210,28 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
       const w = im.naturalWidth * scale, h = im.naturalHeight * scale
       ctx.clearRect(0, 0, cw, ch); ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2 + ch * Y_NUDGE, w, h); lastDrawnRef.current = idx
     }
+    // transition-out frames draw into their own canvas (self-sizing)
+    const drawTransFrame = (idx: number) => {
+      const tc = transCanvasRef.current; const im = transImgsRef.current[idx - 1]
+      if (!tc || !im || !im.complete || im.naturalWidth === 0) return
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const cw = Math.floor(window.innerWidth * dpr), ch = Math.floor(window.innerHeight * dpr)
+      if (tc.width !== cw || tc.height !== ch) { tc.width = cw; tc.height = ch }
+      const tctx = tc.getContext('2d'); if (!tctx) return
+      const scale = Math.max(cw / im.naturalWidth, ch / im.naturalHeight)
+      const w = im.naturalWidth * scale, h = im.naturalHeight * scale
+      tctx.clearRect(0, 0, cw, ch); tctx.drawImage(im, (cw - w) / 2, (ch - h) / 2 + ch * Y_NUDGE, w, h)
+    }
     let raf = 0
     const render = () => {
       const el = trackRef.current
       if (el) {
-        const total = el.offsetHeight - window.innerHeight
-        const p = total > 0 ? clamp(-el.getBoundingClientRect().top / total, 0, 1) : 0
+        // p drives the existing zoom-in + desk over the first 240vh of track
+        // (= 140vh of scroll), unchanged whether or not a transition follows.
+        const vh = window.innerHeight
+        const deskScroll = 1.4 * vh
+        const scrolled = -el.getBoundingClientRect().top
+        const p = clamp(scrolled / deskScroll, 0, 1)
         const idx = 1 + Math.round(norm(p, SCRUB_START, SCRUB_END) * (N - 1))
         if (idx !== lastDrawnRef.current || lastDrawnRef.current === -1) drawFrame(idx)
         const nowAtDesk = p > SCRUB_END - 0.02
@@ -274,6 +257,26 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
           heroRef.current.style.opacity = String(1 - up)
           heroRef.current.style.pointerEvents = up > 0.5 ? 'none' : 'auto'
         }
+        // transition-out: scrub the flip-to-white in THIS same pinned stage,
+        // after the desk. Fade the desk media + UI out as the flip takes over,
+        // so there's never two scenes stacked.
+        const totalScroll = el.offsetHeight - vh
+        const transScroll = Math.max(totalScroll - deskScroll, 1)
+        const pt = transNRef.current > 0 ? clamp((scrolled - deskScroll) / transScroll, 0, 1) : 0
+        const tc = transCanvasRef.current
+        if (tc) {
+          if (pt > 0 && transImgsRef.current.length) {
+            const tIdx = 1 + Math.round(pt * (transNRef.current - 1))
+            if (tIdx !== lastTransRef.current) { drawTransFrame(tIdx); lastTransRef.current = tIdx }
+            tc.style.opacity = String(clamp(pt / 0.03, 0, 1))
+          } else { tc.style.opacity = '0'; lastTransRef.current = -1 }
+        }
+        const deskFade = 1 - clamp(pt / 0.05, 0, 1)
+        if (mediaRef.current) mediaRef.current.style.opacity = String(deskFade)
+        if (carouselRef.current) {
+          carouselRef.current.style.opacity = String(deskFade)
+          carouselRef.current.style.pointerEvents = pt > 0.02 ? 'none' : 'auto'
+        }
       }
       raf = requestAnimationFrame(render)
     }
@@ -283,14 +286,13 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   }, [])
 
   return (
-    <>
     <section id="hero">
-      <div ref={trackRef} className="relative" style={{ height: '240vh' }}>
+      <div ref={trackRef} className="relative" style={{ height: trans ? '460vh' : '240vh' }}>
         {/* nav "Demo Agents" target: jumps to the scroll point where the desks are active */}
         <div id="demo" aria-hidden className="pointer-events-none absolute left-0" style={{ top: '126vh' }} />
         <div ref={stageRef} className="sticky top-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f6f5f1]">
           {/* isolated blend media (keeps the buttons' frosted glass stable) */}
-          <div className="absolute inset-0" style={{ isolation: 'isolate' }}>
+          <div ref={mediaRef} className="absolute inset-0" style={{ isolation: 'isolate' }}>
             <div className="pointer-events-none absolute inset-x-0 bottom-0 [mask-image:linear-gradient(to_top,black_78%,transparent)]">
               <video ref={idleRef} autoPlay loop muted playsInline preload="auto" className="h-auto w-full mix-blend-multiply">
                 <source src="/cganimation.mp4" type="video/mp4" />
@@ -315,8 +317,12 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
             {children}
           </div>
 
-          {/* CAROUSEL - type on the screen, Apple-glass selector at the bottom */}
-          <div className="absolute inset-0 z-20 transition-opacity duration-500" style={{ opacity: atDesk ? 1 : 0, pointerEvents: atDesk ? 'auto' : 'none' }}>
+          {/* CAROUSEL - type on the screen, Apple-glass selector at the bottom.
+              Outer wrapper opacity is rAF-driven for the transition-out fade;
+              inner keeps the React atDesk reveal. Separate elements so they don't
+              fight over the same style property. */}
+          <div ref={carouselRef} className="absolute inset-0 z-20">
+          <div className="absolute inset-0 transition-opacity duration-500" style={{ opacity: atDesk ? 1 : 0, pointerEvents: atDesk ? 'auto' : 'none' }}>
             {/* header */}
             <div className="pointer-events-none absolute inset-x-0 top-[17vh] z-10 text-center">
               <p className="font-clash text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">Demo Agents</p>
@@ -394,11 +400,16 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
               </div>
             </div>
           </div>
+          </div>
+          {/* transition-out canvas: same stage, on top, fades in over the desk */}
+          {trans && (
+            <div className="pointer-events-none absolute inset-0 z-[40]" style={{ isolation: 'isolate' }}>
+              <canvas ref={transCanvasRef} className="absolute inset-0 h-full w-full mix-blend-multiply"
+                style={{ opacity: 0, WebkitMaskImage: MASK, maskImage: MASK }} />
+            </div>
+          )}
         </div>
       </div>
     </section>
-    {/* scroll-scrubbed flip-and-zoom transition out, for agents that have one */}
-    {trans && <TransitionOut key={desk.v} base={trans.base} n={trans.n} />}
-    </>
   )
 }
