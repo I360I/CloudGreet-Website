@@ -1,16 +1,18 @@
 "use client"
 
 /**
- * THE HERO. One scene, no second mascot row. At rest it's the hero: the
- * headline/CTAs over the same 5 mascots. As you scroll, the wording scrolls
- * up and fades while those exact mascots zoom in (one continuous clip, white
- * dropped via mix-blend-multiply on cream so it matches the brand), landing
- * on one mascot who waves. Then the live voice dock appears - talk to the AI
- * receptionist in-browser via /api/demo/web-call (demo agent only).
+ * THE HERO. One scene. At rest it's the hero: headline/CTAs over the 5
+ * mascots (clip frame 0). As you scroll, the wording scrolls up and fades and
+ * the zoom clip PLAYS through (native playback = smooth; not scrubbed), those
+ * same mascots pushing in until one waves. Then the live voice dock appears -
+ * talk to the AI receptionist in-browser via /api/demo/web-call (demo agent).
  *
- * Hero copy is passed as children so page.tsx keeps owning it (DemoCallButtons
- * etc). Prototype: one desk; sideways row of 5 is next. Mobile/reduced-motion
- * fall back to a static hero + autoplay clip + talk dock.
+ * Playback, not scroll-scrubbing: scrubbing currentTime per scroll frame was
+ * choppy, and a cut on fast mid-zoom scroll is acceptable by design. Scroll
+ * only (a) scrolls the wording up and (b) triggers play once.
+ *
+ * Hero copy comes in as children (page.tsx keeps DemoCallButtons). Prototype:
+ * one desk. Mobile/reduced-motion: static hero + autoplay clip + dock.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
@@ -25,16 +27,15 @@ const norm = (v: number, a: number, b: number) => clamp((v - a) / (b - a), 0, 1)
 const DESK = { vertical: 'carservice', name: "Steve's Car Service", tag: 'Airport rides · dispatch · booking' }
 const ROSTER = ['HVAC', 'Electrical', "Steve's Car Service", 'Dentist', 'Lawyer']
 const ACTIVE = 2
-const ZOOM_P = 0.82
 
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const dockRef = useRef<HTMLDivElement>(null)
   const heroRef = useRef<HTMLDivElement>(null)
-  const pRef = useRef(0)
+  const playedRef = useRef(false)
   const [reduced, setReduced] = useState(false)
   const [ready, setReady] = useState(false)
+  const [zoomDone, setZoomDone] = useState(false)
 
   const clientRef = useRef<RetellWebClient | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
@@ -85,38 +86,65 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
   const toggleMute = useCallback(() => { const c = clientRef.current; if (!c) return; if (muted) { c.unmute(); setMuted(false) } else { c.mute(); setMuted(true) } }, [muted])
 
+  // Move the wording up by whichever is further: the user's scroll OR the
+  // clip's playback - so once it's zooming the copy always clears the dock,
+  // even if you stopped scrolling. Scroll only triggers play (no scrubbing).
   useEffect(() => {
     if (reduced) return
-    const onScroll = () => {
-      const el = trackRef.current; if (!el) return
-      const total = el.offsetHeight - window.innerHeight
-      pRef.current = total > 0 ? clamp(-el.getBoundingClientRect().top / total, 0, 1) : 0
-    }
-    let raf = 0, cur = 0
+    let raf = 0
     const render = () => {
-      const p = pRef.current
-      const v = videoRef.current
-      if (v && v.duration && !Number.isNaN(v.duration)) {
-        const target = norm(p, 0, ZOOM_P) * v.duration
-        cur += (target - cur) * 0.2; if (Math.abs(target - cur) < 0.004) cur = target
-        try { v.currentTime = cur } catch {}
+      const el = trackRef.current, v = videoRef.current
+      if (el) {
+        const total = el.offsetHeight - window.innerHeight
+        const p = total > 0 ? clamp(-el.getBoundingClientRect().top / total, 0, 1) : 0
+        const scrollUp = norm(p, 0.02, 0.3)
+        const vidUp = v && v.duration ? norm(v.currentTime, 0, v.duration * 0.55) : 0
+        const up = Math.max(scrollUp, vidUp)
+        if (heroRef.current) {
+          heroRef.current.style.transform = `translateY(${-up * 26}vh)`
+          heroRef.current.style.opacity = String(1 - up)
+          heroRef.current.style.pointerEvents = up > 0.5 ? 'none' : 'auto'
+        }
+        if (v) {
+          if (p > 0.06 && !playedRef.current) { playedRef.current = true; v.play().catch(() => {}) }
+          if (p < 0.02 && playedRef.current) { playedRef.current = false; setZoomDone(false); try { v.pause(); v.currentTime = 0 } catch {} }
+        }
       }
-      // hero copy scrolls up + fades as the zoom begins
-      if (heroRef.current) {
-        const up = norm(p, 0.02, 0.28)
-        heroRef.current.style.transform = `translateY(${-up * 22}vh)`
-        heroRef.current.style.opacity = String(1 - up)
-        heroRef.current.style.pointerEvents = up > 0.5 ? 'none' : 'auto'
-      }
-      // talk dock + desk label reveal once we've landed on the mascot
-      const reveal = norm(p, ZOOM_P, 1)
-      if (dockRef.current) { dockRef.current.style.opacity = String(reveal); dockRef.current.style.pointerEvents = reveal > 0.6 ? 'auto' : 'none' }
       raf = requestAnimationFrame(render)
     }
+    raf = requestAnimationFrame(render)
+    return () => cancelAnimationFrame(raf)
+  }, [reduced])
+
+  // Magnetic snap: when scrolling stops inside the entry band, pull to the
+  // nearest endpoint - back to the hero, or down into the desk (which plays
+  // the zoom). Past the end it's released so the desk "sticks" with the
+  // sideways selector. Skipped once you're committed near the end.
+  useEffect(() => {
+    if (reduced) return
+    const DECIDE = 0.26 // scroll past this into the band -> magnet pulls to the desk
+    let t: ReturnType<typeof setTimeout> | undefined
+    let snapping = false
+    const onScroll = () => {
+      if (snapping) return
+      if (t) clearTimeout(t)
+      t = setTimeout(() => {
+        const el = trackRef.current; if (!el) return
+        const rect = el.getBoundingClientRect()
+        const total = el.offsetHeight - window.innerHeight
+        if (total <= 0) return
+        const absTop = rect.top + window.scrollY
+        const p = clamp(-rect.top / total, 0, 1)
+        if (p > 0.02 && p < 0.9) {
+          const targetP = p < DECIDE ? 0 : 1
+          snapping = true
+          window.scrollTo({ top: absTop + targetP * total, behavior: 'smooth' })
+          window.setTimeout(() => { snapping = false }, 750)
+        }
+      }, 130)
+    }
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
-    onScroll(); raf = requestAnimationFrame(render)
-    return () => { window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', onScroll); cancelAnimationFrame(raf) }
+    return () => { window.removeEventListener('scroll', onScroll); if (t) clearTimeout(t) }
   }, [reduced])
 
   const ring = 1 + Math.min(level * 1.6, 0.5) + (agentTalking ? 0.06 : 0)
@@ -173,22 +201,23 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
   return (
     <section id="hero">
-      <div ref={trackRef} style={{ height: '300vh' }}>
+      <div ref={trackRef} style={{ height: '220vh' }}>
         <div className="sticky top-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f6f5f1]">
-          {/* the ONE scene: same 5 mascots, zooms with scroll */}
-          <video ref={videoRef} src="/desk-carservice.mp4" poster="/desk-carservice-poster.jpg" muted playsInline preload="auto"
+          {/* the ONE scene: same 5 mascots, plays the zoom on scroll */}
+          <video ref={videoRef} src="/desk-carservice.mp4" poster="/desk-carservice-poster.jpg"
+            muted playsInline preload="auto" onEnded={() => setZoomDone(true)}
             className="absolute inset-0 h-full w-full object-cover mix-blend-multiply" />
-          {/* soft top scrim so the headline reads over the mascots */}
           <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[55%]"
             style={{ background: 'linear-gradient(to bottom,#f6f5f1 0%,#f6f5f1 26%,rgba(246,245,241,0.4) 60%,rgba(246,245,241,0) 100%)' }} />
 
-          {/* HERO COPY - scrolls up and fades */}
+          {/* HERO COPY - scrolls up + fades */}
           <div ref={heroRef} className="absolute inset-x-0 top-0 z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-5 pt-24 text-center sm:pt-28">
             {children}
           </div>
 
-          {/* desk label + talk dock - reveal after the zoom lands */}
-          <div ref={dockRef} className="absolute inset-0 z-20 flex flex-col px-6" style={{ opacity: 0 }}>
+          {/* desk label + talk dock - appear once the zoom finishes */}
+          <div className="absolute inset-0 z-20 flex flex-col px-6 transition-opacity duration-500"
+            style={{ opacity: zoomDone ? 1 : 0, pointerEvents: zoomDone ? 'auto' : 'none' }}>
             <div className="flex justify-center pt-6">
               <div className="flex items-center gap-3 text-xs text-gray-400">
                 {ROSTER.map((r, i) => (
