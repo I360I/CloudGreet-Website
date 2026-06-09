@@ -39,36 +39,36 @@ float snoise(vec3 v){
 
 const VERT = `
 uniform float uTime; uniform float uAmp; uniform float uSpeed;
-varying vec3 vN; varying vec3 vView; varying vec3 vWN; varying float vD;
+varying vec3 vN; varying vec3 vView; varying vec3 vDir;
 ${SNOISE}
 void main(){
-  // gentle ripples - stays spherical so it reads as a polished glass orb
-  float n = snoise(normal * 2.2 + vec3(uTime * uSpeed));
-  float disp = n * uAmp;
-  vD = disp;
-  vWN = normalize(normal);
-  vec3 pos = position + normal * disp;
+  // barely any displacement - keep it a clean smooth sphere, motion is in light
+  float n = snoise(normal * 1.4 + vec3(uTime * uSpeed * 0.5));
+  vec3 pos = position + normal * n * uAmp;
+  vDir = normalize(normal);
   vN = normalize(normalMatrix * normal);
   vec4 mv = modelViewMatrix * vec4(pos, 1.0);
   vView = normalize(-mv.xyz);
   gl_Position = projectionMatrix * mv;
 }`
 
+// soft luminous orb: flowing internal light + soft edge glow, no hard specular
 const FRAG = `
 precision highp float;
-uniform vec3 uA; uniform vec3 uB;
-varying vec3 vN; varying vec3 vView; varying vec3 vWN; varying float vD;
+uniform vec3 uA; uniform vec3 uB; uniform float uTime; uniform float uLevel;
+varying vec3 vN; varying vec3 vView; varying vec3 vDir;
+${SNOISE}
+float fbm(vec3 p){ float v=0.0,a=0.55; for(int i=0;i<4;i++){ v+=a*snoise(p); p*=2.0; a*=0.5; } return v; }
 void main(){
-  // glossy glass sphere: vertical gradient + fresnel rim + bright specular
-  float g = smoothstep(-0.65, 0.75, vWN.y);
-  vec3 base = mix(uB, uA, g);
-  float fres = pow(1.0 - max(dot(vN, vView), 0.0), 3.0);
-  vec3 L = normalize(vec3(-0.45, 0.9, 0.55));
-  float spec = pow(max(dot(reflect(-L, vN), vView), 0.0), 30.0);
-  vec3 col = base;
-  col += fres * mix(uA, vec3(1.0), 0.5) * 0.7;   // rim glow
-  col += spec * vec3(1.0) * 0.95;                // glossy highlight
-  col += max(vD, 0.0) * 0.15;
+  // slow flowing field across the surface
+  float f = fbm(vDir * 1.7 + vec3(0.0, uTime * 0.12, uTime * 0.08));
+  float g = smoothstep(-0.9, 0.9, vDir.y * 0.55 + f * 0.55);
+  vec3 col = mix(uB, uA, g);
+  // soft inner luminance from the flow (no hard highlight)
+  col += smoothstep(0.25, 1.0, f) * (0.12 + uLevel * 0.35);
+  // soft fresnel edge glow
+  float fres = pow(1.0 - max(dot(vN, vView), 0.0), 2.6);
+  col += fres * mix(uA, vec3(1.0), 0.35) * 0.4;
   gl_FragColor = vec4(col, 1.0);
 }`
 
@@ -79,8 +79,9 @@ function OrbMesh({ levelRef, colorA, colorB }: { levelRef: React.MutableRefObjec
     fragmentShader: FRAG,
     uniforms: {
       uTime: { value: 0 },
-      uAmp: { value: 0.12 },
-      uSpeed: { value: 0.7 },
+      uAmp: { value: 0.03 },
+      uSpeed: { value: 0.5 },
+      uLevel: { value: 0 },
       uA: { value: new THREE.Color(colorA) },
       uB: { value: new THREE.Color(colorB) },
     },
@@ -93,10 +94,11 @@ function OrbMesh({ levelRef, colorA, colorB }: { levelRef: React.MutableRefObjec
     const l = Math.min(levelRef.current || 0, 1)
     const u = material.uniforms
     u.uTime.value += delta
-    // small base ripple (idle) -> bigger when the agent talks, but stays round
-    u.uAmp.value += ((0.05 + l * 0.6) - u.uAmp.value) * 0.12
-    u.uSpeed.value = 0.45 + l * 0.7
-    if (grp.current) { grp.current.rotation.y += delta * 0.12; grp.current.scale.setScalar(1 + l * 0.12) }
+    // smooth sphere: tiny breathing displacement, light does the moving
+    u.uAmp.value += ((0.025 + l * 0.12) - u.uAmp.value) * 0.1
+    u.uSpeed.value = 0.4 + l * 0.5
+    u.uLevel.value += (l - u.uLevel.value) * 0.15
+    if (grp.current) { grp.current.rotation.y += delta * 0.05; grp.current.scale.setScalar(1 + l * 0.08) }
   })
   return (
     <group ref={grp}>
