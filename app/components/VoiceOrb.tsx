@@ -39,13 +39,14 @@ float snoise(vec3 v){
 
 const VERT = `
 uniform float uTime; uniform float uAmp; uniform float uSpeed;
-varying float vDisp; varying vec3 vN; varying vec3 vView;
+varying vec3 vN; varying vec3 vView; varying vec3 vWN; varying float vD;
 ${SNOISE}
 void main(){
-  float n = snoise(normal * 1.5 + vec3(uTime * uSpeed));
-  float n2 = snoise(normal * 3.0 - vec3(uTime * uSpeed * 0.6)) * 0.4;
-  float disp = (n + n2) * uAmp;
-  vDisp = disp;
+  // gentle ripples - stays spherical so it reads as a polished glass orb
+  float n = snoise(normal * 2.2 + vec3(uTime * uSpeed));
+  float disp = n * uAmp;
+  vD = disp;
+  vWN = normalize(normal);
   vec3 pos = position + normal * disp;
   vN = normalize(normalMatrix * normal);
   vec4 mv = modelViewMatrix * vec4(pos, 1.0);
@@ -56,12 +57,18 @@ void main(){
 const FRAG = `
 precision highp float;
 uniform vec3 uA; uniform vec3 uB;
-varying float vDisp; varying vec3 vN; varying vec3 vView;
+varying vec3 vN; varying vec3 vView; varying vec3 vWN; varying float vD;
 void main(){
-  float fres = pow(1.0 - max(dot(vN, vView), 0.0), 2.2);
-  vec3 base = mix(uB, uA, smoothstep(-0.25, 0.35, vDisp));
-  vec3 col = base + fres * vec3(0.55, 0.74, 1.0);
-  col += max(vDisp, 0.0) * 0.7;
+  // glossy glass sphere: vertical gradient + fresnel rim + bright specular
+  float g = smoothstep(-0.65, 0.75, vWN.y);
+  vec3 base = mix(uB, uA, g);
+  float fres = pow(1.0 - max(dot(vN, vView), 0.0), 3.0);
+  vec3 L = normalize(vec3(-0.45, 0.9, 0.55));
+  float spec = pow(max(dot(reflect(-L, vN), vView), 0.0), 30.0);
+  vec3 col = base;
+  col += fres * mix(uA, vec3(1.0), 0.5) * 0.7;   // rim glow
+  col += spec * vec3(1.0) * 0.95;                // glossy highlight
+  col += max(vD, 0.0) * 0.15;
   gl_FragColor = vec4(col, 1.0);
 }`
 
@@ -86,9 +93,10 @@ function OrbMesh({ levelRef, colorA, colorB }: { levelRef: React.MutableRefObjec
     const l = Math.min(levelRef.current || 0, 1)
     const u = material.uniforms
     u.uTime.value += delta
-    u.uAmp.value += ((0.12 + l * 1.5) - u.uAmp.value) * 0.12
-    u.uSpeed.value = 0.6 + l * 0.9
-    if (grp.current) { grp.current.rotation.y += delta * 0.18; grp.current.scale.setScalar(1 + l * 0.18) }
+    // small base ripple (idle) -> bigger when the agent talks, but stays round
+    u.uAmp.value += ((0.05 + l * 0.6) - u.uAmp.value) * 0.12
+    u.uSpeed.value = 0.45 + l * 0.7
+    if (grp.current) { grp.current.rotation.y += delta * 0.12; grp.current.scale.setScalar(1 + l * 0.12) }
   })
   return (
     <group ref={grp}>
@@ -103,7 +111,7 @@ function OrbMesh({ levelRef, colorA, colorB }: { levelRef: React.MutableRefObjec
 export default function VoiceOrb({ levelRef, colorA = '#7dd3fc', colorB = '#2563eb' }: { levelRef: React.MutableRefObject<number>; colorA?: string; colorB?: string }) {
   return (
     <div className="relative h-full w-full">
-      <div className="pointer-events-none absolute inset-0 rounded-full blur-2xl" style={{ backgroundColor: colorB, opacity: 0.35 }} />
+      <div className="pointer-events-none absolute inset-[18%] rounded-full blur-xl" style={{ backgroundColor: colorB, opacity: 0.28 }} />
       <Canvas camera={{ position: [0, 0, 2.6], fov: 50 }} gl={{ antialias: true, alpha: true }} dpr={[1, 2]}>
         <OrbMesh levelRef={levelRef} colorA={colorA} colorB={colorB} />
       </Canvas>
