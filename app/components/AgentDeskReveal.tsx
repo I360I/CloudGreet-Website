@@ -1,14 +1,16 @@
 "use client"
 
 /**
- * THE HERO. Dead-simple and robust: the zoom is a plain <video> that autoplays
- * on load (muted -> always allowed) and plays through once - 5 mascots zooming
- * into one who waves. No scrub, no magnet, no blend mode (those were the things
- * that read as "not playing"). The headline fades as the zoom plays; at the end
- * the live voice dock appears - talk to the AI receptionist in-browser via
+ * THE HERO. At rest it's the live hero: the idle call-center loop
+ * (/cganimation.mp4) under the headline - same as production. As you scroll
+ * it crossfades to the zoom transition (/desk-carservice.mp4) which plays
+ * through once (5 mascots zooming into one who waves), the headline scrolls
+ * up, then the live voice dock appears - talk to the AI receptionist via
  * /api/demo/web-call (demo agent only).
  *
- * Hero copy passed as children. Mobile/reduced-motion: same, just smaller.
+ * Both clips keep mix-blend-multiply (drops the white onto the cream page -
+ * confirmed working on live). The zoom plays on a scroll trigger (a cut on
+ * fast scroll is fine); it isn't scrubbed. Hero copy comes in as children.
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
@@ -17,13 +19,20 @@ import { RetellWebClient } from 'retell-client-js-sdk'
 type Phase = 'idle' | 'connecting' | 'live' | 'ended' | 'error'
 type Line = { role: string; content: string }
 
+const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v))
+const norm = (v: number, a: number, b: number) => clamp((v - a) / (b - a), 0, 1)
+
 const DESK = { vertical: 'carservice', name: "Steve's Car Service", tag: 'Airport rides · dispatch · booking' }
 const ROSTER = ['HVAC', 'Electrical', "Steve's Car Service", 'Dentist', 'Lawyer']
 const ACTIVE = 2
 
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const [copyHidden, setCopyHidden] = useState(false)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const idleRef = useRef<HTMLVideoElement>(null)
+  const zoomRef = useRef<HTMLVideoElement>(null)
+  const heroRef = useRef<HTMLDivElement>(null)
+  const startedRef = useRef(false)
+  const [started, setStarted] = useState(false)
   const [zoomDone, setZoomDone] = useState(false)
 
   const clientRef = useRef<RetellWebClient | null>(null)
@@ -34,18 +43,17 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   const [level, setLevel] = useState(0)
   const [err, setErr] = useState('')
 
-  // Make sure it actually plays (some browsers ignore the autoPlay attr).
+  // keep the idle loop playing (autoplay can be blocked until interaction)
   useEffect(() => {
-    const v = videoRef.current
+    const v = idleRef.current
     if (!v) return
-    const tryPlay = () => v.play().catch(() => {})
-    if (v.readyState >= 2) tryPlay()
-    v.addEventListener('loadeddata', tryPlay)
-    // also kick it on first user interaction, just in case
-    const kick = () => tryPlay()
+    const play = () => v.play().catch(() => {})
+    play()
+    v.addEventListener('loadeddata', play)
+    const kick = () => play()
+    window.addEventListener('pointerdown', kick, { passive: true })
     window.addEventListener('scroll', kick, { passive: true, once: true })
-    window.addEventListener('pointerdown', kick, { once: true })
-    return () => { v.removeEventListener('loadeddata', tryPlay); window.removeEventListener('scroll', kick); window.removeEventListener('pointerdown', kick) }
+    return () => { v.removeEventListener('loadeddata', play); window.removeEventListener('pointerdown', kick); window.removeEventListener('scroll', kick) }
   }, [])
 
   useEffect(() => {
@@ -79,6 +87,38 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   }, [end])
 
   const toggleMute = useCallback(() => { const c = clientRef.current; if (!c) return; if (muted) { c.unmute(); setMuted(false) } else { c.mute(); setMuted(true) } }, [muted])
+
+  // scroll: move wording up + trigger the zoom once (idle -> zoom crossfade)
+  useEffect(() => {
+    let raf = 0
+    const render = () => {
+      const el = trackRef.current
+      if (el) {
+        const total = el.offsetHeight - window.innerHeight
+        const p = total > 0 ? clamp(-el.getBoundingClientRect().top / total, 0, 1) : 0
+        const z = zoomRef.current
+        const vidUp = z && z.duration && startedRef.current ? norm(z.currentTime, 0, z.duration * 0.5) : 0
+        const up = Math.max(norm(p, 0.02, 0.28), vidUp)
+        if (heroRef.current) {
+          heroRef.current.style.transform = `translateY(${-up * 26}vh)`
+          heroRef.current.style.opacity = String(1 - up)
+          heroRef.current.style.pointerEvents = up > 0.5 ? 'none' : 'auto'
+        }
+        if (p > 0.05 && !startedRef.current) {
+          startedRef.current = true; setStarted(true)
+          const z = zoomRef.current
+          if (z) { try { z.currentTime = 0 } catch {}; z.play().catch(() => {}) }
+        }
+        if (p <= 0.005 && startedRef.current) {
+          startedRef.current = false; setStarted(false); setZoomDone(false)
+          const z = zoomRef.current; if (z) { try { z.pause(); z.currentTime = 0 } catch {} }
+        }
+      }
+      raf = requestAnimationFrame(render)
+    }
+    raf = requestAnimationFrame(render)
+    return () => cancelAnimationFrame(raf)
+  }, [])
 
   const ring = 1 + Math.min(level * 1.6, 0.5) + (agentTalking ? 0.06 : 0)
   const live = phase === 'live'
@@ -118,48 +158,50 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   )
 
   return (
-    <section id="hero" className="relative bg-white">
-      <div className="relative h-[100dvh] w-full overflow-hidden">
-        {/* the zoom - plain autoplaying video, no blend/scrub/magnet */}
-        <video
-          ref={videoRef}
-          src="/desk-carservice.mp4"
-          poster="/desk-carservice-poster.jpg"
-          autoPlay muted playsInline preload="auto"
-          className="absolute inset-0 h-full w-full object-cover"
-          onTimeUpdate={(e) => {
-            const v = e.currentTarget
-            if (v.duration && v.currentTime / v.duration > 0.25) setCopyHidden(true)
-          }}
-          onEnded={() => setZoomDone(true)}
-        />
+    <section id="hero">
+      <div ref={trackRef} style={{ height: '220vh' }}>
+        <div className="sticky top-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f6f5f1]">
+          {/* IDLE loop - the live hero scene, visible at rest, fades as the zoom takes over */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 transition-opacity duration-500 [mask-image:linear-gradient(to_top,black_78%,transparent)]"
+            style={{ opacity: started ? 0 : 1 }}>
+            <video ref={idleRef} autoPlay loop muted playsInline preload="auto" className="h-auto w-full mix-blend-multiply">
+              <source src="/cganimation.mp4" type="video/mp4" />
+            </video>
+          </div>
 
-        {/* hero copy - fades out as the zoom plays */}
-        <div
-          className="absolute inset-x-0 top-0 z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-5 pt-24 text-center transition-all duration-700 sm:pt-28"
-          style={{ opacity: copyHidden ? 0 : 1, transform: copyHidden ? 'translateY(-8vh)' : 'none', pointerEvents: copyHidden ? 'none' : 'auto' }}
-        >
-          {children}
-        </div>
+          {/* ZOOM transition - plays once on scroll */}
+          <video ref={zoomRef} src="/desk-carservice.mp4" poster="/desk-carservice-poster.jpg" muted playsInline preload="auto"
+            onEnded={() => setZoomDone(true)}
+            className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-500"
+            style={{ opacity: started ? 1 : 0 }} />
 
-        {/* desk label + talk dock - fade in when the zoom finishes */}
-        <div className="absolute inset-0 z-20 flex flex-col px-6 transition-opacity duration-500"
-          style={{ opacity: zoomDone ? 1 : 0, pointerEvents: zoomDone ? 'auto' : 'none' }}>
-          <div className="flex justify-center pt-6">
-            <div className="flex items-center gap-3 text-xs text-gray-400">
-              {ROSTER.map((r, i) => (
-                <span key={r} className={`flex items-center gap-1.5 ${i === ACTIVE ? 'text-gray-900' : ''}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${i === ACTIVE ? 'bg-sky-500' : 'bg-gray-300'}`} />{r}
-                </span>
-              ))}
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[55%]"
+            style={{ background: 'linear-gradient(to bottom,#f6f5f1 0%,#f6f5f1 26%,rgba(246,245,241,0.4) 60%,rgba(246,245,241,0) 100%)' }} />
+
+          {/* HERO COPY - scrolls up + fades */}
+          <div ref={heroRef} className="absolute inset-x-0 top-0 z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-5 pt-24 text-center sm:pt-28">
+            {children}
+          </div>
+
+          {/* desk label + talk dock - reveal once the zoom finishes */}
+          <div className="absolute inset-0 z-20 flex flex-col px-6 transition-opacity duration-500"
+            style={{ opacity: zoomDone ? 1 : 0, pointerEvents: zoomDone ? 'auto' : 'none' }}>
+            <div className="flex justify-center pt-6">
+              <div className="flex items-center gap-3 text-xs text-gray-400">
+                {ROSTER.map((r, i) => (
+                  <span key={r} className={`flex items-center gap-1.5 ${i === ACTIVE ? 'text-gray-900' : ''}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${i === ACTIVE ? 'bg-sky-500' : 'bg-gray-300'}`} />{r}
+                  </span>
+                ))}
+              </div>
             </div>
+            <div className="absolute left-8 top-24 sm:left-14">
+              <p className="mb-2 text-xs uppercase tracking-[0.2em] text-sky-600">Live demo</p>
+              <h2 className="font-display text-4xl font-medium tracking-tight sm:text-5xl">{DESK.name}</h2>
+              <p className="mt-2 text-gray-500">{DESK.tag}</p>
+            </div>
+            <div className="mt-auto flex flex-col items-center pb-10">{Dock}</div>
           </div>
-          <div className="absolute left-8 top-24 sm:left-14">
-            <p className="mb-2 text-xs uppercase tracking-[0.2em] text-sky-600">Live demo</p>
-            <h2 className="font-display text-4xl font-medium tracking-tight sm:text-5xl">{DESK.name}</h2>
-            <p className="mt-2 text-gray-500">{DESK.tag}</p>
-          </div>
-          <div className="mt-auto flex flex-col items-center pb-10">{Dock}</div>
         </div>
       </div>
     </section>
