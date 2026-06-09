@@ -46,9 +46,10 @@ const START = 0 // HVAC first (the light-blue waving mascot the zoom lands on)
 // Scroll-scrubbed "flip the computer -> zoom into the white screen" transition
 // OUT of the desk view into the next section. One frame-set per agent; only
 // agents that have a transition asset get one (others just scroll straight on).
-const TRANSITIONS: Record<string, { base: string; n: number }> = {
-  electrical: { base: '/trans-electrical', n: 73 },
-}
+// Disabled on the live site for now: the flip-zoom transition is only half-built
+// (one mascot, can be triggered mid-scroll). Re-enable per agent here once all
+// the matching clips exist. Empty map = no transition renders or triggers.
+const TRANSITIONS: Record<string, { base: string; n: number }> = {}
 
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
