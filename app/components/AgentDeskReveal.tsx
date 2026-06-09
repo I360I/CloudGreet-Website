@@ -249,7 +249,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
           {/* CAROUSEL - type on the screen, Apple-glass selector at the bottom */}
           <div className="absolute inset-0 z-20 transition-opacity duration-500" style={{ opacity: atDesk ? 1 : 0, pointerEvents: atDesk ? 'auto' : 'none' }}>
             {/* header */}
-            <div className="absolute inset-x-0 top-[13vh] z-10 text-center">
+            <div className="absolute inset-x-0 top-[17vh] z-10 text-center">
               <p className="font-clash text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">Demo Agents</p>
               <p className="font-gsans mx-auto mt-1.5 max-w-xs text-sm leading-snug text-gray-400">Pick a business and talk to its AI receptionist, live.</p>
             </div>
