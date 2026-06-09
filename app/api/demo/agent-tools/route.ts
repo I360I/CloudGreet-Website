@@ -122,13 +122,13 @@ export async function POST(req: Request) {
       if (!r.ok) {
         return NextResponse.json({ ok: false, result: `Could not calculate that route right now. ${('detail' in r && r.detail) || ''}`.trim() })
       }
-      const miles = (r as any).miles
+      const miles = (r as any).distance_miles
       const minutes = (r as any).minutes
       return NextResponse.json({
         ok: true,
         miles,
         minutes,
-        result: `That's about ${miles} miles, roughly ${minutes} minutes of drive time${(r as any).usedTraffic ? ' with current traffic' : ''}.`,
+        result: `That's ${(r as any).spoken_summary || `about ${miles} miles, roughly ${minutes} minutes`} of drive time.`,
       })
     }
 
