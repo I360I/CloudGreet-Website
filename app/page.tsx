@@ -7,6 +7,7 @@ import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCi
 import { motion, AnimatePresence } from 'framer-motion'
 import { CallCenterScene } from './components/landing/CallCenterScene'
 import { ChatWidget } from './components/landing/ChatWidget'
+import AgentDeskReveal from './components/AgentDeskReveal'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -19,6 +20,7 @@ export default function LandingPage() {
    <Nav />
    <Marquee />
    <Hero />
+   <AgentDeskReveal />
    <LogoMarquee />
    <Reveal><RoiCalculator /></Reveal>
    <Reveal><Testimonial /></Reveal>
