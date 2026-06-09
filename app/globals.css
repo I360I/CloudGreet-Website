@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Premium type for the demo-agents carousel (Fontshare). */
+.font-clash { font-family: 'Clash Display', var(--font-display), 'Helvetica Neue', sans-serif; }
+.font-gsans { font-family: 'General Sans', var(--font-display), 'Helvetica Neue', sans-serif; }
+
 @keyframes breathe {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.55; transform: scale(0.85); }

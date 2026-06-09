@@ -122,6 +122,9 @@ export default function RootLayout({
  <html lang="en" className="overscroll-none">
  <head>
  <link rel="manifest" href="/manifest.json" />
+ {/* Premium type for the demo-agents carousel (Fontshare, free for commercial). */}
+ <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="" />
+ <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=general-sans@400,500,600&display=swap" />
  <script
  type="application/ld+json"
  dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}

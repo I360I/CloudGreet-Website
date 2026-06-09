@@ -43,6 +43,28 @@ const DESKS: Desk[] = [
 ]
 const START = 0 // HVAC first (the light-blue waving mascot the zoom lands on)
 
+/**
+ * Voice-reactive orb. Scales/brightens with the agent's live volume (level
+ * from the SDK) and pulses harder while the agent is talking. Glassy gradient
+ * reads as a soft 3D sphere - swap for a real 3D/Lottie asset later.
+ */
+function Orb({ level, talking }: { level: number; talking: boolean }) {
+  const v = Math.min(level * 2.4, 1)
+  return (
+    <div className="relative h-24 w-24 shrink-0">
+      <div className="absolute inset-0 rounded-full bg-sky-400/40 blur-2xl transition-transform duration-100" style={{ transform: `scale(${0.9 + v})`, opacity: 0.5 + v * 0.5 }} />
+      <div className="absolute inset-1 rounded-full border border-sky-300/50 transition-transform duration-100" style={{ transform: `scale(${1 + v * 0.45})`, opacity: talking ? 0.9 : 0.45 }} />
+      <div className="absolute inset-3 rounded-full transition-transform duration-75"
+        style={{
+          transform: `scale(${0.92 + v * 0.18})`,
+          background: 'radial-gradient(circle at 32% 26%, #e0f2fe, #38bdf8 46%, #2563eb 100%)',
+          boxShadow: 'inset 0 6px 14px rgba(255,255,255,0.65), inset 0 -12px 22px rgba(2,32,71,0.45), 0 18px 44px -12px rgba(37,99,235,0.6)',
+        }} />
+      <div className="pointer-events-none absolute left-[30%] top-[22%] h-4 w-6 rounded-full bg-white/70 blur-[3px]" />
+    </div>
+  )
+}
+
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const idleRef = useRef<HTMLVideoElement>(null)
@@ -214,9 +236,6 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
     return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', sizeCanvas) }
   }, [])
 
-  const ring = 1 + Math.min(level * 1.6, 0.5) + (agentTalking ? 0.06 : 0)
-  const live = phase === 'live'
-
   return (
     <section id="hero">
       <div ref={trackRef} style={{ height: '240vh' }}>
@@ -250,9 +269,9 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
           {/* CAROUSEL - type on the screen, Apple-glass selector at the bottom */}
           <div className="absolute inset-0 z-20 transition-opacity duration-500" style={{ opacity: atDesk ? 1 : 0, pointerEvents: atDesk ? 'auto' : 'none' }}>
             {/* header */}
-            <div className="absolute inset-x-0 top-[14vh] z-10 text-center">
-              <p className="font-mono text-[11px] font-medium uppercase tracking-[0.4em] text-gray-400">Demo Agents</p>
-              <p className="mx-auto mt-2 max-w-xs text-[13px] leading-snug text-gray-400">Pick a business and talk to its AI receptionist, live.</p>
+            <div className="absolute inset-x-0 top-[21vh] z-10 text-center">
+              <p className="font-clash text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">Demo Agents</p>
+              <p className="font-gsans mx-auto mt-1.5 max-w-xs text-sm leading-snug text-gray-400">Pick a business and talk to its AI receptionist, live.</p>
             </div>
 
             {/* main content - left */}
@@ -266,33 +285,32 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                 >
                   <div className="mb-5 flex items-center gap-2.5">
                     <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sky-500" /></span>
-                    <span className="font-mono text-[11px] uppercase tracking-[0.3em] text-gray-400">{desk.cat}</span>
+                    <span className="font-gsans text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">{desk.cat}</span>
                   </div>
-                  <h2 className="font-display text-[clamp(2.75rem,5.5vw,5rem)] font-semibold leading-[0.92] tracking-[-0.03em] text-gray-900">{desk.biz}</h2>
-                  <p className="mt-5 text-lg font-light leading-relaxed text-gray-500">{desk.tags}</p>
+                  <h2 className="font-clash text-[clamp(2.9rem,5.8vw,5.4rem)] font-semibold leading-[0.9] tracking-[-0.02em] text-gray-900">{desk.biz}</h2>
+                  <p className="font-gsans mt-5 text-lg leading-relaxed text-gray-500">{desk.tags}</p>
 
                   {phase === 'live' || phase === 'connecting' ? (
-                    <div className="mt-8">
-                      <div ref={transcriptRef} className="mb-6 max-h-[34vh] max-w-lg space-y-3 overflow-y-auto pr-2 [scrollbar-width:thin]">
-                        {transcript.length === 0 && phase === 'connecting' && <p className="font-light text-gray-400">Connecting…</p>}
-                        {transcript.map((l, i) => (
-                          <div key={i}>
-                            <p className="mb-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-gray-400">{l.role === 'agent' ? desk.name : 'You'}</p>
-                            <p className={`text-[17px] font-light leading-snug ${l.role === 'agent' ? 'text-gray-900' : 'text-gray-500'}`}>{l.content}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-5">
-                        <span className="relative flex h-12 w-12 items-center justify-center">
-                          <span className="absolute inset-0 rounded-full bg-sky-400/25 transition-transform duration-75" style={{ transform: `scale(${ring})` }} />
-                          <Microphone weight="fill" className="relative h-5 w-5 text-sky-600" />
-                        </span>
-                        <button onClick={toggleMute} className="inline-flex items-center gap-2 text-base font-medium text-gray-600 transition hover:text-gray-900">
-                          {muted ? <MicrophoneSlash className="h-4 w-4" /> : <Microphone className="h-4 w-4" />}{muted ? 'Unmute' : 'Mute'}
-                        </button>
-                        <button onClick={() => { end(); setPhase('ended') }} className="inline-flex items-center gap-2 text-base font-medium text-red-500 transition hover:text-red-600">
-                          <PhoneDisconnect weight="fill" className="h-4 w-4" />End call
-                        </button>
+                    <div className="mt-8 flex items-start gap-6">
+                      <Orb level={level} talking={agentTalking} />
+                      <div className="min-w-0 flex-1">
+                        <div ref={transcriptRef} className="mb-5 max-h-[30vh] max-w-md space-y-3 overflow-y-auto pr-2 [scrollbar-width:thin]">
+                          {transcript.length === 0 && phase === 'connecting' && <p className="font-gsans text-gray-400">Connecting…</p>}
+                          {transcript.map((l, i) => (
+                            <div key={i}>
+                              <p className="font-gsans mb-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">{l.role === 'agent' ? desk.name : 'You'}</p>
+                              <p className={`font-gsans text-[17px] leading-snug ${l.role === 'agent' ? 'text-gray-900' : 'text-gray-500'}`}>{l.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-5">
+                          <button onClick={toggleMute} className="font-gsans inline-flex items-center gap-2 text-base font-medium text-gray-600 transition hover:text-gray-900">
+                            {muted ? <MicrophoneSlash className="h-4 w-4" /> : <Microphone className="h-4 w-4" />}{muted ? 'Unmute' : 'Mute'}
+                          </button>
+                          <button onClick={() => { end(); setPhase('ended') }} className="font-gsans inline-flex items-center gap-2 text-base font-medium text-red-500 transition hover:text-red-600">
+                            <PhoneDisconnect weight="fill" className="h-4 w-4" />End call
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -301,9 +319,9 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-900 text-white shadow-[0_12px_30px_-8px_rgba(2,32,71,0.5)] transition-transform group-hover:scale-105">
                           <Play weight="fill" className="ml-0.5 h-5 w-5" />
                         </span>
-                        <span className="font-display text-3xl font-medium tracking-tight text-gray-900 transition-colors group-hover:text-sky-700">Talk to {desk.name}</span>
+                        <span className="font-clash text-3xl font-semibold tracking-tight text-gray-900 transition-colors group-hover:text-sky-700">Talk to {desk.name}</span>
                       </button>
-                      <p className="mt-5 text-[15px] font-light italic text-gray-400">{phase === 'ended' ? 'Call ended — talk again, or pick another agent below.' : desk.hint}</p>
+                      <p className="font-gsans mt-5 text-[15px] italic text-gray-400">{phase === 'ended' ? 'Call ended — talk again, or pick another agent below.' : desk.hint}</p>
                       {err && <p className="mt-2 text-sm text-red-500">{err}</p>}
                     </div>
                   )}
