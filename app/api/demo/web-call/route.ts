@@ -22,7 +22,7 @@ const DEMO_AGENTS: Record<string, string> = {
   carservice: 'agent_56d7fa8635fdd5313c99729233',
   hvac: 'agent_56d7fa8635fdd5313c99729233',
   electrical: 'agent_56d7fa8635fdd5313c99729233',
-  dentist: 'agent_56d7fa8635fdd5313c99729233',
+  roofing: 'agent_56d7fa8635fdd5313c99729233',
   lawyer: 'agent_56d7fa8635fdd5313c99729233',
 }
 

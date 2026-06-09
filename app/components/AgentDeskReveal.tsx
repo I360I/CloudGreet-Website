@@ -38,7 +38,7 @@ const DESKS: Desk[] = [
   { v: 'hvac', biz: 'Apex Air & Heat', cat: 'HVAC', name: 'Mia', tags: 'AC repair · installs · emergencies', clip: '/talk-hvac.mp4', hint: '“My AC stopped working and it’s 95 out.”', orbA: '#c8e2f2', orbB: '#6fa3c4' },
   { v: 'electrical', biz: 'Bright Spark Electric', cat: 'Electrical', name: 'Dave', tags: 'Panels · outlets · 24/7 calls', clip: '/talk-electrical.mp4', hint: '“Half my outlets just went dead.”', orbA: '#9cc0ea', orbB: '#2a62a8' },
   { v: 'transport', biz: 'Executive Transport', cat: 'Transport', name: 'Sam', tags: 'Airport rides · dispatch · booking', clip: '/talk-transport.mp4', hint: '“I need a ride to the airport at 6am.”', orbA: '#a3c4ea', orbB: '#356dad' },
-  { v: 'dentist', biz: 'Bright Smile Dental', cat: 'Dental', name: 'Ava', tags: 'Cleanings · new patients · scheduling', clip: '/talk-dental.mp4', hint: '“Do you have anything open this week?”', orbA: '#cae2ef', orbB: '#7ba8c0' },
+  { v: 'roofing', biz: 'Summit Roofing', cat: 'Roofing', name: 'Ava', tags: 'Repairs · replacements · free estimates', clip: '/talk-dental.mp4', hint: '“I’ve got a leak after that storm.”', orbA: '#cae2ef', orbB: '#7ba8c0' },
   { v: 'lawyer', biz: 'Hale & Co. Law', cat: 'Law', name: 'Paul', tags: 'Intakes · consults · scheduling', clip: '/talk-law.mp4', hint: '“I was in a car accident, can someone help?”', orbA: '#aad6ea', orbB: '#3f93bb' },
 ]
 const START = 0 // HVAC first (the light-blue waving mascot the zoom lands on)
