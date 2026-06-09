@@ -146,6 +146,7 @@ function Nav() {
 
     {/* Desktop links */}
     <div className="hidden md:flex items-center gap-8 text-sm text-gray-600">
+     <a href="#demo" className="hover:text-gray-900 transition-colors">Demo Agents</a>
      <a href="#customers" className="hover:text-gray-900 transition-colors">Who it&apos;s for</a>
      <a href="#roi" className="hover:text-gray-900 transition-colors">ROI</a>
      <Link href="/contact" className="hover:text-gray-900 transition-colors">Book Demo</Link>
@@ -184,6 +185,7 @@ function Nav() {
       className="md:hidden overflow-hidden border-t border-black/5 bg-[#f6f5f1]/95 backdrop-blur-md"
      >
       <div className="px-5 py-3 flex flex-col">
+       <a href="#demo" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700 border-b border-black/5">Demo Agents</a>
        <a href="#customers" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700 border-b border-black/5">Who it&apos;s for</a>
        <a href="#roi" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700 border-b border-black/5">ROI</a>
        <Link href="/contact" onClick={() => setOpen(false)} className="py-3 text-base text-gray-700">Book a demo</Link>

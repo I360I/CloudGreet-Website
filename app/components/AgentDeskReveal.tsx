@@ -218,7 +218,9 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
   return (
     <section id="hero">
-      <div ref={trackRef} style={{ height: '240vh' }}>
+      <div ref={trackRef} className="relative" style={{ height: '240vh' }}>
+        {/* nav "Demo Agents" target: jumps to the scroll point where the desks are active */}
+        <div id="demo" aria-hidden className="pointer-events-none absolute left-0" style={{ top: '126vh' }} />
         <div ref={stageRef} className="sticky top-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f6f5f1]">
           {/* isolated blend media (keeps the buttons' frosted glass stable) */}
           <div className="absolute inset-0" style={{ isolation: 'isolate' }}>
@@ -297,8 +299,8 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                   ) : (
                     <div className="mt-9">
                       <button onClick={start} className="group inline-flex items-center gap-4">
-                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-900 text-white shadow-[0_12px_30px_-8px_rgba(2,32,71,0.5)] transition-transform group-hover:scale-105">
-                          <Play weight="fill" className="ml-0.5 h-5 w-5" />
+                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-900 text-white ring-1 ring-gray-900/10 shadow-md transition-all duration-200 group-hover:bg-sky-600 group-hover:shadow-lg group-hover:scale-105">
+                          <Play weight="fill" className="ml-[3px] h-[22px] w-[22px]" />
                         </span>
                         <span className="font-clash text-3xl font-semibold tracking-tight text-gray-900 transition-colors group-hover:text-sky-700">Talk to {desk.name}</span>
                       </button>
