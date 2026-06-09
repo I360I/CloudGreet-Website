@@ -15,13 +15,9 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Microphone, MicrophoneSlash, PhoneDisconnect, Play } from '@phosphor-icons/react'
 import { RetellWebClient } from 'retell-client-js-sdk'
-
-// three.js is heavy + browser-only: load the orb on the client, on demand.
-const VoiceOrb = dynamic(() => import('./VoiceOrb'), { ssr: false })
 
 type Phase = 'idle' | 'connecting' | 'live' | 'ended' | 'error'
 type Line = { role: string; content: string }
@@ -253,15 +249,9 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
           {/* CAROUSEL - type on the screen, Apple-glass selector at the bottom */}
           <div className="absolute inset-0 z-20 transition-opacity duration-500" style={{ opacity: atDesk ? 1 : 0, pointerEvents: atDesk ? 'auto' : 'none' }}>
             {/* header */}
-            <div className="absolute inset-x-0 top-[21vh] z-10 text-center">
+            <div className="absolute inset-x-0 top-[13vh] z-10 text-center">
               <p className="font-clash text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">Demo Agents</p>
               <p className="font-gsans mx-auto mt-1.5 max-w-xs text-sm leading-snug text-gray-400">Pick a business and talk to its AI receptionist, live.</p>
-            </div>
-
-            {/* always-on voice orb - idle morphs, reacts during a call, color-matched to the agent */}
-            <div className="pointer-events-none absolute z-[6] -translate-x-1/2 -translate-y-1/2"
-              style={{ left: '44%', top: '58%', width: 'clamp(170px,20vw,290px)', height: 'clamp(170px,20vw,290px)' }}>
-              <VoiceOrb levelRef={levelRef} colorA={desk.orbA} colorB={desk.orbB} />
             </div>
 
             {/* main content - left */}
