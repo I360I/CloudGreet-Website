@@ -54,6 +54,7 @@
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-slot": "^1.2.3",
     "@react-email/render": "^1.4.0",
+    "@react-three/fiber": "^8.18.0",
     "@sentry/nextjs": "^10.22.0",
     "@supabase/supabase-js": "^2.57.4",
     "@telnyx/webrtc": "^2.26.4",
@@ -91,6 +92,7 @@
     "stripe": "^14.7.0",
     "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1",
+    "three": "^0.184.0",
     "ws": "^8.18.3",
     "zod": "^3.22.4"
   },
