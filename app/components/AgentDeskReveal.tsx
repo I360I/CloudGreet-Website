@@ -64,6 +64,8 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   const [dir, setDir] = useState(0)
 
   const transcriptRef = useRef<HTMLDivElement>(null)
+  const transRef = useRef<HTMLVideoElement>(null)
+  const [transitioning, setTransitioning] = useState(false)
   const clientRef = useRef<RetellWebClient | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [agentTalking, setAgentTalking] = useState(false)
@@ -132,13 +134,21 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
   const toggleMute = useCallback(() => { const c = clientRef.current; if (!c) return; if (muted) { c.unmute(); setMuted(false) } else { c.mute(); setMuted(true) } }, [muted])
 
-  // switching agents ends any active call
+  // switching agents: play the swivel transition over the swap, end any call
   const go = useCallback((next: number, d: number) => {
     const n = (next + DESKS.length) % DESKS.length
     if (n === activeRef.current) return
     activeRef.current = n
     end(); setPhase('idle'); setTranscript([]); setMuted(false)
-    setDir(d); setActive(n)
+    const tv = transRef.current
+    if (tv && atDeskRef.current) {
+      setTransitioning(true)
+      try { tv.currentTime = 0; tv.playbackRate = 1.5; tv.play().catch(() => {}) } catch {}
+      // swap the underlying agent mid-spin so the new one is ready behind the blur
+      window.setTimeout(() => { setDir(d); setActive(n) }, 380)
+    } else {
+      setDir(d); setActive(n)
+    }
   }, [end])
 
   // keyboard arrows + sideways scroll/swipe to change agents (at the desk)
@@ -238,6 +248,12 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                 className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-500"
                 style={{ opacity: atDesk && i === active ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: MASK, maskImage: MASK, pointerEvents: 'none' }} />
             ))}
+
+            {/* swivel transition - plays over the agent swap */}
+            <video ref={transRef} src="/agent-transition.mp4" muted playsInline preload="auto"
+              onEnded={() => setTransitioning(false)}
+              className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-200"
+              style={{ opacity: transitioning ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: MASK, maskImage: MASK, pointerEvents: 'none' }} />
           </div>
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[55%]"
