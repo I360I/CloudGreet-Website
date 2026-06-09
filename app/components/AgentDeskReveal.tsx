@@ -310,7 +310,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                     <div className="mt-9">
                       <button onClick={start} className="group inline-flex items-center gap-4">
                         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-900 text-white ring-1 ring-gray-900/10 shadow-md transition-all duration-200 group-hover:bg-sky-600 group-hover:shadow-lg group-hover:scale-105">
-                          <Play weight="fill" className="ml-[3px] h-[22px] w-[22px]" />
+                          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-[22px] w-[22px] translate-x-[1px]"><path d="M8 5v14l11-7z" /></svg>
                         </span>
                         <span className="font-clash text-3xl font-semibold tracking-tight text-gray-900 transition-colors group-hover:text-sky-700">Talk to {desk.name}</span>
                       </button>
