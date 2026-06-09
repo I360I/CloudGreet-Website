@@ -13,17 +13,18 @@ export const runtime = 'nodejs'
  * real calendars get written and no owner SMS fire. Rate-limited per IP
  * because each web call is real, billable Retell time.
  *
- * One demo agent per business vertical. For the prototype every vertical
- * points at the existing "CloudGreet Receptionist" demo agent; per-vertical
- * personas get their own agent ids here as we build them out.
+ * One demo agent per business vertical. Each is its own purpose-built Retell
+ * agent (fictional company, persona, voice, and a full industry-tuned prompt)
+ * so the landing demo shows real per-vertical quality, not one shared bot.
  */
 const DEMO_AGENTS: Record<string, string> = {
-  default: 'agent_56d7fa8635fdd5313c99729233',
-  carservice: 'agent_56d7fa8635fdd5313c99729233',
-  hvac: 'agent_56d7fa8635fdd5313c99729233',
-  electrical: 'agent_56d7fa8635fdd5313c99729233',
-  roofing: 'agent_56d7fa8635fdd5313c99729233',
-  lawyer: 'agent_56d7fa8635fdd5313c99729233',
+  default: 'agent_1a0104f504c5b963146a6d98f3',          // Apex Air & Heat (Mia)
+  hvac: 'agent_1a0104f504c5b963146a6d98f3',             // Apex Air & Heat (Mia)
+  electrical: 'agent_2800f2b423ddb542ef96a6db76',       // Bright Spark Electric (Dave)
+  transport: 'agent_070b63dd536ee3d27d16c05a45',        // Executive Transport (Sam)
+  carservice: 'agent_070b63dd536ee3d27d16c05a45',       // alias for transport
+  roofing: 'agent_c6d94b0755392d61c9c2c21e45',          // Summit Roofing (Ava)
+  lawyer: 'agent_a5136ab4471231cd16e79c29ec',           // Hale & Co. Law (Paul)
 }
 
 export async function POST(req: NextRequest) {
