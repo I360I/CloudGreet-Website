@@ -1,10 +1,11 @@
 "use client"
 
 /**
- * PROTOTYPE - one desk, live voice. Validates the core of the landing
- * concept: zoom to a desk and actually talk to the AI receptionist in the
- * browser. Uses a dedicated DEMO agent via /api/demo/web-call (no real
- * client calendars/SMS). Next step is the sideways row of 5 verticals.
+ * PROTOTYPE - one desk, live voice. Validates the core landing concept:
+ * arrive at a mascot's desk (he waves hello) and actually talk to the AI
+ * receptionist in-browser. Dedicated DEMO agent via /api/demo/web-call
+ * (no real client calendars/SMS). Next: the sideways row of 5 verticals
+ * (solo shots already staged in /public as desk-*.jpg).
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
@@ -13,28 +14,30 @@ import { RetellWebClient } from 'retell-client-js-sdk'
 type Phase = 'idle' | 'connecting' | 'live' | 'ended' | 'error'
 type Line = { role: string; content: string }
 
-// Prototype desk. The other four are the rest of the carousel.
-const DESK = { vertical: 'carservice', name: "Steve's Car Service", tag: 'Airport rides · dispatch · booking' }
+const DESK = {
+  vertical: 'carservice',
+  name: "Steve's Car Service",
+  tag: 'Airport rides · dispatch · booking',
+  video: '/desk-carservice.mp4',
+  poster: '/desk-carservice-poster.jpg',
+}
 const ROSTER = ['HVAC', 'Electrical', "Steve's Car Service", 'Dentist', 'Lawyer']
 const ACTIVE = 2
 
 export default function AgentDemoPage() {
   const clientRef = useRef<RetellWebClient | null>(null)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [agentTalking, setAgentTalking] = useState(false)
   const [muted, setMuted] = useState(false)
   const [transcript, setTranscript] = useState<Line[]>([])
   const [level, setLevel] = useState(0)
-  const [err, setErr] = useState<string>('')
+  const [err, setErr] = useState('')
 
-  // pulse orb with live mic/agent volume
   useEffect(() => {
     if (phase !== 'live') return
     let raf = 0
     const loop = () => {
-      const v = clientRef.current?.analyzerComponent?.calculateVolume?.() ?? 0
-      setLevel(v)
+      setLevel(clientRef.current?.analyzerComponent?.calculateVolume?.() ?? 0)
       raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)
@@ -45,7 +48,6 @@ export default function AgentDemoPage() {
     try { clientRef.current?.stopCall() } catch {}
     clientRef.current = null
   }, [])
-
   useEffect(() => () => end(), [end])
 
   const start = useCallback(async () => {
@@ -61,7 +63,6 @@ export default function AgentDemoPage() {
       }
       const { access_token } = await res.json()
       if (!access_token) { setErr('No call token returned.'); setPhase('error'); return }
-
       const client = new RetellWebClient()
       clientRef.current = client
       client.on('call_started', () => setPhase('live'))
@@ -82,85 +83,78 @@ export default function AgentDemoPage() {
     if (muted) { c.unmute(); setMuted(false) } else { c.mute(); setMuted(true) }
   }, [muted])
 
-  const orbScale = 1 + Math.min(level * 1.8, 0.6) + (agentTalking ? 0.08 : 0)
-  const lastLines = transcript.slice(-6)
+  const ring = 1 + Math.min(level * 1.6, 0.5) + (agentTalking ? 0.06 : 0)
+  const lastLines = transcript.slice(-4)
+  const live = phase === 'live'
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden bg-[#0b1220] text-white">
-      {/* arrival video -> desk backdrop */}
-      <video
-        ref={videoRef} src="/roi-zoom.mp4" poster="/roi-zoom-poster.jpg"
-        autoPlay muted playsInline
-        className="absolute inset-0 h-full w-full object-cover opacity-60"
-        onEnded={(e) => { (e.currentTarget as HTMLVideoElement).pause() }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#0b1220]/40 via-[#0b1220]/30 to-[#0b1220]/85" />
+    <main className="relative min-h-screen w-full overflow-hidden bg-[#f6f5f1] text-gray-900">
+      {/* arrival: mascot zooms in and waves, then holds on last frame */}
+      <video src={DESK.video} poster={DESK.poster} autoPlay muted playsInline
+        className="absolute inset-0 h-full w-full object-cover"
+        onEnded={(e) => (e.currentTarget as HTMLVideoElement).pause()} />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f6f5f1] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-[#f6f5f1] via-[#f6f5f1]/80 to-transparent" />
 
-      {/* roster dots - hint at the sideways carousel */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 text-xs text-white/60">
+      {/* roster - the sideways carousel to come */}
+      <div className="absolute top-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 text-xs text-gray-400">
         {ROSTER.map((r, i) => (
-          <span key={r} className={`flex items-center gap-1.5 ${i === ACTIVE ? 'text-white' : ''}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${i === ACTIVE ? 'bg-sky-400' : 'bg-white/30'}`} />
+          <span key={r} className={`flex items-center gap-1.5 ${i === ACTIVE ? 'text-gray-900' : ''}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${i === ACTIVE ? 'bg-sky-500' : 'bg-gray-300'}`} />
             {r}
           </span>
         ))}
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-6 text-center">
-        <p className="mb-2 text-sm uppercase tracking-[0.2em] text-sky-300/80">Live demo</p>
-        <h1 className="font-display text-4xl sm:text-5xl font-medium tracking-tight">{DESK.name}</h1>
-        <p className="mt-2 text-white/60">{DESK.tag}</p>
+      {/* title, top-left in the open space */}
+      <div className="absolute left-8 top-20 z-10 sm:left-14 sm:top-28">
+        <p className="mb-2 text-xs uppercase tracking-[0.2em] text-sky-600">Live demo</p>
+        <h1 className="font-display text-4xl font-medium tracking-tight sm:text-5xl">{DESK.name}</h1>
+        <p className="mt-2 text-gray-500">{DESK.tag}</p>
+      </div>
 
-        {/* the orb */}
-        <div className="relative my-10 flex h-44 w-44 items-center justify-center">
-          <div
-            className="absolute h-32 w-32 rounded-full bg-sky-500/30 blur-xl transition-transform duration-75"
-            style={{ transform: `scale(${phase === 'live' ? orbScale : 1})` }}
-          />
-          <div
-            className={`relative flex h-28 w-28 items-center justify-center rounded-full border transition-all
-              ${phase === 'live' ? 'border-sky-400/60 bg-sky-500/20' : 'border-white/20 bg-white/5'}`}
-            style={{ transform: `scale(${phase === 'live' ? orbScale : 1})` }}
-          >
-            <span className="text-3xl">{agentTalking ? '🔊' : phase === 'live' ? '🎙️' : '☁️'}</span>
+      {/* call dock, bottom-center */}
+      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-4 px-6 pb-10">
+        {lastLines.length > 0 && (
+          <div className="w-full max-w-xl space-y-1.5 rounded-2xl border border-black/5 bg-white/80 p-4 backdrop-blur">
+            {lastLines.map((l, i) => (
+              <div key={i} className="text-sm">
+                <span className="mr-2 text-xs uppercase tracking-wide text-gray-400">{l.role === 'agent' ? 'Agent' : 'You'}</span>
+                <span className={l.role === 'agent' ? 'text-sky-700' : 'text-gray-800'}>{l.content}</span>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
 
-        {/* controls */}
-        {phase === 'idle' || phase === 'ended' || phase === 'error' ? (
+        {!live && phase !== 'connecting' ? (
           <button onClick={start}
-            className="rounded-full bg-white px-8 py-4 text-base font-medium text-gray-900 shadow-lg transition hover:bg-gray-100">
+            className="group relative inline-flex items-center gap-2 rounded-full bg-gray-900 px-8 py-4 text-base font-medium text-white shadow-xl transition hover:bg-gray-800">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-500" />
+            </span>
             {phase === 'ended' ? 'Talk again' : 'Talk to the receptionist'}
           </button>
         ) : phase === 'connecting' ? (
-          <div className="rounded-full bg-white/10 px-8 py-4 text-base font-medium">Connecting…</div>
+          <div className="rounded-full bg-gray-900 px-8 py-4 text-base font-medium text-white">Connecting…</div>
         ) : (
           <div className="flex items-center gap-3">
-            <button onClick={toggleMute}
-              className="rounded-full border border-white/20 bg-white/5 px-6 py-4 text-sm font-medium hover:bg-white/10">
+            {/* live volume ring */}
+            <div className="relative flex h-12 w-12 items-center justify-center">
+              <span className="absolute inset-0 rounded-full bg-sky-400/30 transition-transform duration-75" style={{ transform: `scale(${ring})` }} />
+              <span className="relative text-lg">{agentTalking ? '🔊' : '🎙️'}</span>
+            </div>
+            <button onClick={toggleMute} className="rounded-full border border-black/10 bg-white px-6 py-3.5 text-sm font-medium hover:bg-gray-50">
               {muted ? 'Unmute' : 'Mute'}
             </button>
-            <button onClick={() => { end(); setPhase('ended') }}
-              className="rounded-full bg-red-500 px-8 py-4 text-sm font-medium hover:bg-red-600">
+            <button onClick={() => { end(); setPhase('ended') }} className="rounded-full bg-red-500 px-7 py-3.5 text-sm font-medium text-white hover:bg-red-600">
               End call
             </button>
           </div>
         )}
 
-        {err && <p className="mt-4 text-sm text-red-300">{err}</p>}
-        {phase === 'idle' && <p className="mt-4 text-xs text-white/40">Uses your mic. Try: “Hi, I need a ride to the airport tomorrow at 6am.”</p>}
-
-        {/* live transcript */}
-        {lastLines.length > 0 && (
-          <div className="mt-8 w-full space-y-2 text-left">
-            {lastLines.map((l, i) => (
-              <div key={i} className={`text-sm ${l.role === 'agent' ? 'text-sky-200' : 'text-white/80'}`}>
-                <span className="mr-2 text-xs uppercase tracking-wide text-white/40">{l.role === 'agent' ? 'Agent' : 'You'}</span>
-                {l.content}
-              </div>
-            ))}
-          </div>
-        )}
+        {err && <p className="text-sm text-red-500">{err}</p>}
+        {phase === 'idle' && <p className="text-xs text-gray-400">Uses your mic · try “I need a ride to the airport tomorrow at 6am.”</p>}
       </div>
     </main>
   )
