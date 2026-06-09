@@ -37,7 +37,7 @@ type Desk = { v: string; biz: string; cat: string; name: string; tags: string; c
 const DESKS: Desk[] = [
   { v: 'hvac', biz: 'Apex Air & Heat', cat: 'HVAC', name: 'Mia', tags: 'AC repair · installs · emergencies', clip: '/talk-hvac.mp4', hint: '“My AC stopped working and it’s 95 out.”', orbA: '#c8e2f2', orbB: '#6fa3c4' },
   { v: 'electrical', biz: 'Bright Spark Electric', cat: 'Electrical', name: 'Dave', tags: 'Panels · outlets · 24/7 calls', clip: '/talk-law.mp4', hint: '“Half my outlets just went dead.”', orbA: '#9cc0ea', orbB: '#2a62a8' },
-  { v: 'transport', biz: 'Executive Transport', cat: 'Transport', name: 'Sam', tags: 'Airport rides · dispatch · booking', clip: '/talk-transport.mp4', hint: '“I need a ride to the airport at 6am.”', orbA: '#a3c4ea', orbB: '#356dad' },
+  { v: 'transport', biz: 'Executive Transport', cat: 'Transport', name: 'Sam', tags: 'Airport rides · dispatch · booking', clip: '/talk-transport.mp4', hint: '“How much for a ride from O’Hare to Naperville?”', orbA: '#a3c4ea', orbB: '#356dad' },
   { v: 'roofing', biz: 'Summit Roofing', cat: 'Roofing', name: 'Ava', tags: 'Repairs · replacements · free estimates', clip: '/talk-dental.mp4', hint: '“I’ve got a leak after that storm.”', orbA: '#cae2ef', orbB: '#7ba8c0' },
   { v: 'lawyer', biz: 'Hale & Co. Law', cat: 'Law', name: 'Paul', tags: 'Intakes · consults · scheduling', clip: '/talk-electrical.mp4', hint: '“I was in a car accident, can someone help?”', orbA: '#aad6ea', orbB: '#3f93bb' },
 ]
