@@ -80,11 +80,16 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
     return () => { v.removeEventListener('loadeddata', play); window.removeEventListener('pointerdown', kick); window.removeEventListener('scroll', kick) }
   }, [])
 
-  // play only the active desk's clip when we're at the desk
+  // play only the active desk's clip; always start it at frame 0 (the wave),
+  // so it links up with the zoom's final wave instead of cutting mid-motion.
   useEffect(() => {
     talkRefs.current.forEach((v, i) => {
       if (!v) return
-      if (atDesk && i === active) { v.play().catch(() => {}) } else { try { v.pause() } catch {} }
+      if (atDesk && i === active) {
+        if (v.paused) { try { v.currentTime = 0 } catch {}; v.play().catch(() => {}) }
+      } else {
+        try { v.pause(); v.currentTime = 0 } catch {}
+      }
     })
   }, [atDesk, active])
 
