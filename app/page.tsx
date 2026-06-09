@@ -36,8 +36,10 @@ export default function LandingPage() {
      Or scroll down to <span className="font-semibold text-gray-900">talk to one live</span> — or call <a href={DEMO_TEL} className="font-semibold text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-900">{DEMO_NUMBER}</a>.
     </p>
    </AgentDeskReveal>
+   {/* ROI is the section the demo's flip-zoom transition lands on - emerges
+       from the white "screen" the mascot flips toward you */}
+   <Reveal zoom><RoiCalculator /></Reveal>
    <LogoMarquee />
-   <Reveal><RoiCalculator /></Reveal>
    <Reveal><Testimonial /></Reveal>
    <Reveal><WhoItsFor /></Reveal>
    <Reveal><FinalCTA /></Reveal>
@@ -88,7 +90,7 @@ function Marquee() {
  * framer-motion whileInView quirks). Triggers when ~18% of the section
  * is on screen, so the movement is clearly visible.
  */
-function Reveal({ children }: { children: React.ReactNode }) {
+function Reveal({ children, zoom = false }: { children: React.ReactNode; zoom?: boolean }) {
  const ref = useRef<HTMLDivElement>(null)
  const [shown, setShown] = useState(false)
 
@@ -116,7 +118,7 @@ function Reveal({ children }: { children: React.ReactNode }) {
    ref={ref}
    style={{
     opacity: shown ? 1 : 0,
-    transform: shown ? 'none' : 'translateY(64px)',
+    transform: shown ? 'none' : (zoom ? 'scale(0.9)' : 'translateY(64px)'),
     transition: 'opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1)',
     willChange: 'opacity, transform',
    }}
