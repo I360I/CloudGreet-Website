@@ -146,36 +146,10 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
     }
     raf = requestAnimationFrame(render)
 
-    // direction-aware magnet (the pull scrubs the canvas as it scrolls)
-    let t: ReturnType<typeof setTimeout> | undefined
-    let snapping = false
-    let lastY = window.scrollY
-    const onScroll = () => {
-      const y = window.scrollY
-      const dir = y > lastY ? 1 : y < lastY ? -1 : 0
-      lastY = y
-      if (snapping) return
-      if (t) clearTimeout(t)
-      t = setTimeout(() => {
-        const el = trackRef.current; if (!el) return
-        const rect = el.getBoundingClientRect()
-        const total = el.offsetHeight - window.innerHeight
-        if (total <= 0) return
-        const absTop = rect.top + window.scrollY
-        const p = clamp(-rect.top / total, 0, 1)
-        let target: number | null = null
-        if (dir >= 0 && p > 0.04 && p < SCRUB_END) target = STICK
-        else if (dir < 0 && p > 0.04 && p < STICK) target = 0
-        if (target !== null) {
-          snapping = true
-          window.scrollTo({ top: absTop + target * total, behavior: 'smooth' })
-          window.setTimeout(() => { snapping = false; lastY = window.scrollY }, 900)
-        }
-      }, 150)
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
+    // No magnet: scroll position drives the frames directly, so scrolling
+    // through the zone plays the zoom (down) / reverses it (up) at your pace.
     window.addEventListener('resize', sizeCanvas)
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('scroll', onScroll); window.removeEventListener('resize', sizeCanvas); if (t) clearTimeout(t) }
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', sizeCanvas) }
   }, [reduced])
 
   const ring = 1 + Math.min(level * 1.6, 0.5) + (agentTalking ? 0.06 : 0)
