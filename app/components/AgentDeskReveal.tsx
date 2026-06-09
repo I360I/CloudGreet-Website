@@ -37,6 +37,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   const trackRef = useRef<HTMLDivElement>(null)
   const idleRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const talkRef = useRef<HTMLVideoElement>(null)
   const heroRef = useRef<HTMLDivElement>(null)
   const dockRef = useRef<HTMLDivElement>(null)
   const imgsRef = useRef<HTMLImageElement[]>([])
@@ -69,6 +70,15 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
     const loop = () => { setLevel(clientRef.current?.analyzerComponent?.calculateVolume?.() ?? 0); raf = requestAnimationFrame(loop) }
     raf = requestAnimationFrame(loop); return () => cancelAnimationFrame(raf)
   }, [phase])
+
+  // talking loop runs while the call is connecting/live, then stops
+  const talkActive = phase === 'connecting' || phase === 'live'
+  useEffect(() => {
+    const v = talkRef.current
+    if (!v) return
+    if (talkActive) { try { v.currentTime = 0 } catch {}; v.play().catch(() => {}) }
+    else { try { v.pause() } catch {} }
+  }, [talkActive])
 
   const end = useCallback(() => { try { clientRef.current?.stopCall() } catch {} clientRef.current = null }, [])
   useEffect(() => () => end(), [end])
@@ -233,6 +243,11 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
               mask so the mascots' heads dissolve to white like the idle loop. */}
           <canvas ref={canvasRef} className="absolute inset-0 h-full w-full mix-blend-multiply"
             style={{ width: '100%', height: '100%', opacity: 0, WebkitMaskImage: 'linear-gradient(to top, black 64%, transparent 100%)', maskImage: 'linear-gradient(to top, black 64%, transparent 100%)' }} />
+
+          {/* TALKING loop - takes over the desk once the call starts, loops while live */}
+          <video ref={talkRef} src="/desk-talking.mp4" muted loop playsInline preload="auto"
+            className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-500"
+            style={{ opacity: talkActive ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: 'linear-gradient(to top, black 64%, transparent 100%)', maskImage: 'linear-gradient(to top, black 64%, transparent 100%)', pointerEvents: 'none' }} />
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[55%]"
             style={{ background: 'linear-gradient(to bottom,#f6f5f1 0%,#f6f5f1 26%,rgba(246,245,241,0.4) 60%,rgba(246,245,241,0) 100%)' }} />
