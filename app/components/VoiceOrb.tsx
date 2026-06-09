@@ -53,22 +53,30 @@ void main(){
 }`
 
 // soft luminous orb: flowing internal light + soft edge glow, no hard specular
+// Apple-Intelligence swirl: domain-warped fluid iridescence + bright rim bloom
 const FRAG = `
 precision highp float;
 uniform vec3 uA; uniform vec3 uB; uniform float uTime; uniform float uLevel;
 varying vec3 vN; varying vec3 vView; varying vec3 vDir;
 ${SNOISE}
-float fbm(vec3 p){ float v=0.0,a=0.55; for(int i=0;i<4;i++){ v+=a*snoise(p); p*=2.0; a*=0.5; } return v; }
+float fbm(vec3 p){ float v=0.0,a=0.55; for(int i=0;i<5;i++){ v+=a*snoise(p); p*=2.0; a*=0.5; } return v; }
 void main(){
-  // slow flowing field across the surface
-  float f = fbm(vDir * 1.7 + vec3(0.0, uTime * 0.12, uTime * 0.08));
-  float g = smoothstep(-0.9, 0.9, vDir.y * 0.55 + f * 0.55);
-  vec3 col = mix(uB, uA, g);
-  // soft inner luminance from the flow (no hard highlight)
-  col += smoothstep(0.25, 1.0, f) * (0.12 + uLevel * 0.35);
-  // soft fresnel edge glow
-  float fres = pow(1.0 - max(dot(vN, vView), 0.0), 2.6);
-  col += fres * mix(uA, vec3(1.0), 0.35) * 0.4;
+  vec3 p = vDir * 1.6;
+  float t = uTime * (0.11 + uLevel * 0.18);
+  // domain warp -> fluid swirling motion inside the sphere
+  vec3 q = vec3(fbm(p + vec3(0.0, t, 0.0)), fbm(p + vec3(3.1, 1.7, 8.2)), fbm(p + vec3(5.3, 2.8, 1.1) - t));
+  float swirl = fbm(p + q * 1.7 + vec3(0.0, t, t * 0.6));
+  float qlen = length(q);
+  // iridescent palette: deep B -> A -> lifted bright tint, picked by the swirl
+  vec3 hi = mix(uA, vec3(1.0), 0.6);
+  float a = smoothstep(-0.7, 0.7, swirl * 1.2 + vDir.y * 0.25);
+  vec3 col = mix(uB, uA, a);
+  col = mix(col, hi, smoothstep(0.25, 0.95, qlen) * 0.65);   // bright iridescent streaks
+  // inner luminance from the swirl crests
+  col += smoothstep(0.45, 1.0, swirl) * (0.14 + uLevel * 0.4);
+  // bright soft rim bloom (the glowing Apple-Intelligence edge)
+  float fres = pow(1.0 - max(dot(vN, vView), 0.0), 2.2);
+  col += fres * mix(uA, vec3(1.0), 0.5) * (0.55 + uLevel * 0.45);
   gl_FragColor = vec4(col, 1.0);
 }`
 

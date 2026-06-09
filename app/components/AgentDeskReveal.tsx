@@ -260,7 +260,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
             {/* always-on voice orb - idle morphs, reacts during a call, color-matched to the agent */}
             <div className="pointer-events-none absolute z-[6] -translate-x-1/2 -translate-y-1/2"
-              style={{ left: '39%', top: '58%', width: 'clamp(170px,20vw,290px)', height: 'clamp(170px,20vw,290px)' }}>
+              style={{ left: '44%', top: '58%', width: 'clamp(170px,20vw,290px)', height: 'clamp(170px,20vw,290px)' }}>
               <VoiceOrb levelRef={levelRef} colorA={desk.orbA} colorB={desk.orbB} />
             </div>
 
