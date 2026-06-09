@@ -206,7 +206,9 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
         if (canvas) canvas.style.opacity = nowAtDesk ? '0' : String(cross)
         const up = norm(p, 0.04, 0.28)
         if (heroRef.current) {
-          heroRef.current.style.transform = `translateY(${-up * 26}vh)`
+          // No transform at rest: a transformed ancestor breaks the CTAs'
+          // backdrop-filter (they flicker to flat/transparent over the video).
+          heroRef.current.style.transform = up > 0.001 ? `translateY(${-up * 26}vh)` : 'none'
           heroRef.current.style.opacity = String(1 - up)
           heroRef.current.style.pointerEvents = up > 0.5 ? 'none' : 'auto'
         }
@@ -258,7 +260,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
             {/* always-on voice orb - idle morphs, reacts during a call, color-matched to the agent */}
             <div className="pointer-events-none absolute z-[6] -translate-x-1/2 -translate-y-1/2"
-              style={{ left: '50%', top: '58%', width: 'clamp(180px,21vw,300px)', height: 'clamp(180px,21vw,300px)' }}>
+              style={{ left: '45%', top: '58%', width: 'clamp(180px,21vw,300px)', height: 'clamp(180px,21vw,300px)' }}>
               <VoiceOrb levelRef={levelRef} colorA={desk.orbA} colorB={desk.orbB} />
             </div>
 
