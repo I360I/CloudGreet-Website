@@ -86,9 +86,9 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
   const toggleMute = useCallback(() => { const c = clientRef.current; if (!c) return; if (muted) { c.unmute(); setMuted(false) } else { c.mute(); setMuted(true) } }, [muted])
 
-  // Move the wording up by whichever is further: the user's scroll OR the
-  // clip's playback - so once it's zooming the copy always clears the dock,
-  // even if you stopped scrolling. Scroll only triggers play (no scrubbing).
+  // Wording moves up by whichever leads - scroll or playback - so it always
+  // clears before the dock. Play triggers once when you enter the band; reset
+  // only when you're genuinely back at the very top (so it can replay).
   useEffect(() => {
     if (reduced) return
     let raf = 0
@@ -106,8 +106,8 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
           heroRef.current.style.pointerEvents = up > 0.5 ? 'none' : 'auto'
         }
         if (v) {
-          if (p > 0.06 && !playedRef.current) { playedRef.current = true; v.play().catch(() => {}) }
-          if (p < 0.02 && playedRef.current) { playedRef.current = false; setZoomDone(false); try { v.pause(); v.currentTime = 0 } catch {} }
+          if (p > 0.05 && !playedRef.current) { playedRef.current = true; v.play().catch(() => {}) }
+          if (p <= 0.001 && playedRef.current) { playedRef.current = false; setZoomDone(false); try { v.pause(); v.currentTime = 0 } catch {} }
         }
       }
       raf = requestAnimationFrame(render)
@@ -116,16 +116,19 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
     return () => cancelAnimationFrame(raf)
   }, [reduced])
 
-  // Magnetic snap: when scrolling stops inside the entry band, pull to the
-  // nearest endpoint - back to the hero, or down into the desk (which plays
-  // the zoom). Past the end it's released so the desk "sticks" with the
-  // sideways selector. Skipped once you're committed near the end.
+  // Direction-aware magnet: nudge DOWN into the band and it pulls you to the
+  // desk (which plays the zoom) and sticks there; scroll UP and it lets you
+  // back to the hero. Never pulls back while you're heading into it (that was
+  // resetting the clip), so the zoom always plays.
   useEffect(() => {
     if (reduced) return
-    const DECIDE = 0.26 // scroll past this into the band -> magnet pulls to the desk
     let t: ReturnType<typeof setTimeout> | undefined
     let snapping = false
+    let lastY = window.scrollY
     const onScroll = () => {
+      const y = window.scrollY
+      const dir = y > lastY ? 1 : y < lastY ? -1 : 0
+      lastY = y
       if (snapping) return
       if (t) clearTimeout(t)
       t = setTimeout(() => {
@@ -135,13 +138,15 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
         if (total <= 0) return
         const absTop = rect.top + window.scrollY
         const p = clamp(-rect.top / total, 0, 1)
-        if (p > 0.02 && p < 0.9) {
-          const targetP = p < DECIDE ? 0 : 1
+        let targetP: number | null = null
+        if (dir >= 0 && p > 0.05 && p < 0.82) targetP = 0.86      // heading in -> stick at desk
+        else if (dir < 0 && p > 0.06 && p < 0.86) targetP = 0     // heading out -> back to hero
+        if (targetP !== null) {
           snapping = true
           window.scrollTo({ top: absTop + targetP * total, behavior: 'smooth' })
-          window.setTimeout(() => { snapping = false }, 750)
+          window.setTimeout(() => { snapping = false; lastY = window.scrollY }, 800)
         }
-      }, 130)
+      }, 140)
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => { window.removeEventListener('scroll', onScroll); if (t) clearTimeout(t) }
