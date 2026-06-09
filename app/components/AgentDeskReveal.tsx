@@ -235,23 +235,29 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
     <section id="hero">
       <div ref={trackRef} style={{ height: '240vh' }}>
         <div className="sticky top-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f6f5f1]">
-          {/* IDLE loop - visible at rest, fades out the instant you scroll */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 [mask-image:linear-gradient(to_top,black_78%,transparent)]">
-            <video ref={idleRef} autoPlay loop muted playsInline preload="auto" className="h-auto w-full mix-blend-multiply">
-              <source src="/cganimation.mp4" type="video/mp4" />
-            </video>
+          {/* All mix-blend-multiply media in their own isolated stacking context.
+              Without this, the blend mode makes the buttons' backdrop-filter
+              (frosted glass) flicker on/off in Chrome. Isolating keeps the blur
+              consistently frosted. */}
+          <div className="absolute inset-0" style={{ isolation: 'isolate' }}>
+            {/* IDLE loop - visible at rest, fades out the instant you scroll */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 [mask-image:linear-gradient(to_top,black_78%,transparent)]">
+              <video ref={idleRef} autoPlay loop muted playsInline preload="auto" className="h-auto w-full mix-blend-multiply">
+                <source src="/cganimation.mp4" type="video/mp4" />
+              </video>
+            </div>
+
+            {/* ZOOM - scrubbed by scroll on a canvas (not autoplayed). Top-fade
+                mask so the mascots' heads dissolve to white like the idle loop. */}
+            <canvas ref={canvasRef} className="absolute inset-0 h-full w-full mix-blend-multiply"
+              style={{ width: '100%', height: '100%', opacity: 0, WebkitMaskImage: 'linear-gradient(to top, black 64%, transparent 100%)', maskImage: 'linear-gradient(to top, black 64%, transparent 100%)' }} />
+
+            {/* TALKING loop - takes over the desk once the call starts, loops while live */}
+            <video ref={talkRef} src="/desk-talking.mp4" muted loop playsInline preload="auto"
+              onEnded={(e) => { const v = e.currentTarget; try { v.currentTime = 0; v.play().catch(() => {}) } catch {} }}
+              className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-500"
+              style={{ opacity: talkActive ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: 'linear-gradient(to top, black 64%, transparent 100%)', maskImage: 'linear-gradient(to top, black 64%, transparent 100%)', pointerEvents: 'none' }} />
           </div>
-
-          {/* ZOOM - scrubbed by scroll on a canvas (not autoplayed). Top-fade
-              mask so the mascots' heads dissolve to white like the idle loop. */}
-          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full mix-blend-multiply"
-            style={{ width: '100%', height: '100%', opacity: 0, WebkitMaskImage: 'linear-gradient(to top, black 64%, transparent 100%)', maskImage: 'linear-gradient(to top, black 64%, transparent 100%)' }} />
-
-          {/* TALKING loop - takes over the desk once the call starts, loops while live */}
-          <video ref={talkRef} src="/desk-talking.mp4" muted loop playsInline preload="auto"
-            onEnded={(e) => { const v = e.currentTarget; try { v.currentTime = 0; v.play().catch(() => {}) } catch {} }}
-            className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-500"
-            style={{ opacity: talkActive ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: 'linear-gradient(to top, black 64%, transparent 100%)', maskImage: 'linear-gradient(to top, black 64%, transparent 100%)', pointerEvents: 'none' }} />
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[55%]"
             style={{ background: 'linear-gradient(to bottom,#f6f5f1 0%,#f6f5f1 26%,rgba(246,245,241,0.4) 60%,rgba(246,245,241,0) 100%)' }} />
