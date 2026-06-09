@@ -64,8 +64,10 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   const [dir, setDir] = useState(0)
 
   const transcriptRef = useRef<HTMLDivElement>(null)
-  const transRef = useRef<HTMLVideoElement>(null)
+  const transFwdRef = useRef<HTMLVideoElement>(null)
+  const transRevRef = useRef<HTMLVideoElement>(null)
   const [transitioning, setTransitioning] = useState(false)
+  const [transRev, setTransRev] = useState(false)
   const clientRef = useRef<RetellWebClient | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [agentTalking, setAgentTalking] = useState(false)
@@ -140,9 +142,10 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
     if (n === activeRef.current) return
     activeRef.current = n
     end(); setPhase('idle'); setTranscript([]); setMuted(false)
-    const tv = transRef.current
+    const rev = d < 0
+    const tv = rev ? transRevRef.current : transFwdRef.current
     if (tv && atDeskRef.current) {
-      setTransitioning(true)
+      setTransRev(rev); setTransitioning(true)
       try { tv.currentTime = 0; tv.playbackRate = 1.5; tv.play().catch(() => {}) } catch {}
       // swap the underlying agent mid-spin so the new one is ready behind the blur
       window.setTimeout(() => { setDir(d); setActive(n) }, 380)
@@ -245,15 +248,19 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
             {DESKS.map((d, i) => (
               <video key={d.v} ref={(el) => { talkRefs.current[i] = el }} src={d.clip} muted loop playsInline preload="auto"
                 onEnded={(e) => { const v = e.currentTarget; try { v.currentTime = 0; v.play().catch(() => {}) } catch {} }}
-                className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-500"
-                style={{ opacity: atDesk && i === active ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: MASK, maskImage: MASK, pointerEvents: 'none' }} />
+                className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-300"
+                style={{ opacity: atDesk && i === active && !transitioning ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: MASK, maskImage: MASK, pointerEvents: 'none' }} />
             ))}
 
-            {/* swivel transition - plays over the agent swap */}
-            <video ref={transRef} src="/agent-transition.mp4" muted playsInline preload="auto"
+            {/* swivel transition - forward on next, reversed on back */}
+            <video ref={transFwdRef} src="/agent-transition.mp4" muted playsInline preload="auto"
               onEnded={() => setTransitioning(false)}
-              className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-200"
-              style={{ opacity: transitioning ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: MASK, maskImage: MASK, pointerEvents: 'none' }} />
+              className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-300"
+              style={{ opacity: transitioning && !transRev ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: MASK, maskImage: MASK, pointerEvents: 'none' }} />
+            <video ref={transRevRef} src="/agent-transition-rev.mp4" muted playsInline preload="auto"
+              onEnded={() => setTransitioning(false)}
+              className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-300"
+              style={{ opacity: transitioning && transRev ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: MASK, maskImage: MASK, pointerEvents: 'none' }} />
           </div>
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[55%]"
