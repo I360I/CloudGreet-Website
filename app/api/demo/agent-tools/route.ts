@@ -128,7 +128,7 @@ export async function POST(req: Request) {
         ok: true,
         miles,
         minutes,
-        result: `That's ${(r as any).spoken_summary || `about ${miles} miles, roughly ${minutes} minutes`} of drive time.`,
+        result: `Drive time: ${(r as any).spoken_summary || `about ${miles} miles, roughly ${minutes} minutes`}.`,
       })
     }
 
