@@ -276,7 +276,10 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
         if (mediaRef.current) mediaRef.current.style.opacity = String(deskFade)
         if (carouselRef.current) {
           carouselRef.current.style.opacity = String(deskFade)
-          carouselRef.current.style.pointerEvents = pt > 0.02 ? 'none' : 'auto'
+          // only intercept clicks when actually at the desks (not over the hero
+          // CTAs above, and not mid-transition) - else the full-screen wrapper
+          // eats clicks on the hero buttons.
+          carouselRef.current.style.pointerEvents = atDeskRef.current && pt <= 0.02 ? 'auto' : 'none'
         }
       }
       raf = requestAnimationFrame(render)
@@ -322,7 +325,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
               Outer wrapper opacity is rAF-driven for the transition-out fade;
               inner keeps the React atDesk reveal. Separate elements so they don't
               fight over the same style property. */}
-          <div ref={carouselRef} className="absolute inset-0 z-20">
+          <div ref={carouselRef} className="pointer-events-none absolute inset-0 z-20">
           <div className="absolute inset-0 transition-opacity duration-500" style={{ opacity: atDesk ? 1 : 0, pointerEvents: atDesk ? 'auto' : 'none' }}>
             {/* header */}
             <div className="pointer-events-none absolute inset-x-0 top-[17vh] z-10 text-center">
