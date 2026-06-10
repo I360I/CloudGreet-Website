@@ -31,6 +31,23 @@ export async function POST(request: NextRequest) {
  path: '/',
  })
 
+ // A normal login must NEVER inherit a stale impersonation. If an admin
+ // impersonated a client on this browser and didn't formally "Return to
+ // admin" (closed the tab, shared/reused machine in a demo), the
+ // impersonator_token could linger - which would (a) wrongly show the
+ // "you're signed in as a client" banner to the real user, and (b) let
+ // whoever logs in here click "Return to admin" and jump into the admin
+ // session. Setting a fresh token = a fresh, non-impersonated session, so
+ // clear the stash unconditionally.
+ response.cookies.delete('impersonator_token')
+ response.cookies.set('impersonator_token', '', {
+ httpOnly: true,
+ secure: process.env.NODE_ENV === 'production',
+ sameSite: 'lax',
+ maxAge: 0,
+ path: '/',
+ })
+
  return response
  } catch (error) {
  logger.error('Failed to set auth token', {
