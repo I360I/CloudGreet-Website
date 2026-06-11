@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
  // Pull all sales-role users joined with their sales_reps profile.
  const { data: users, error } = await supabaseAdmin
   .from('custom_users')
-  .select('id, email, first_name, last_name, name, last_login, created_at')
+  .select('id, email, first_name, last_name, name, last_login, last_active_at, created_at')
   .eq('role', 'sales')
   .order('created_at', { ascending: false })
 
@@ -104,6 +104,11 @@ export async function GET(request: NextRequest) {
     name: u.name || [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email,
     status: p.status || 'active',
     last_login: u.last_login,
+    // Whichever is most recent: API heartbeat (last_active_at) or login.
+    last_active: [u.last_active_at, u.last_login]
+     .filter(Boolean)
+     .sort()
+     .pop() || null,
     created_at: u.created_at,
     stripe_connect_account_id: p.stripe_connect_account_id || null,
     payouts_enabled: !!p.stripe_connect_payouts_enabled,

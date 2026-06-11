@@ -13,6 +13,7 @@ type Rep = {
  name: string
  status: 'active' | 'paused' | 'terminated'
  last_login: string | null
+ last_active: string | null
  created_at: string | null
  stripe_connect_account_id: string | null
  payouts_enabled: boolean
@@ -308,6 +309,8 @@ export default function AdminSalesPage() {
             <div className="text-[11px] text-gray-500 mt-0.5 inline-flex items-center gap-2 flex-wrap">
              <span>{r.email}</span>
              <span>·</span>
+             <LastActive iso={r.last_active} />
+             <span>·</span>
              <span className={r.payouts_enabled ? 'text-emerald-300/90' : 'text-amber-300/90'}>
               {r.payouts_enabled ? 'Stripe payouts ready' : 'Stripe not connected'}
              </span>
@@ -506,4 +509,27 @@ function previewStatusLabel(status: string, amount_cents: number): string {
   case 'skipped_no_owed': return 'Nothing owed'
   default: return status
  }
+}
+
+/** "Active 2h ago" with a live dot when the rep was active in the last 10 minutes. */
+function LastActive({ iso }: { iso: string | null }) {
+ if (!iso) return <span className="text-gray-600">Never signed in</span>
+ const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+ if (mins < 10) {
+  return (
+   <span className="inline-flex items-center gap-1.5 text-emerald-300/90">
+    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_currentColor] animate-breathe" />
+    Active now
+   </span>
+  )
+ }
+ const label = mins < 60
+  ? `${mins}m ago`
+  : mins < 1440
+   ? `${Math.floor(mins / 60)}h ago`
+   : mins < 10080
+    ? `${Math.floor(mins / 1440)}d ago`
+    : new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+ const stale = mins >= 4320 // 3+ days quietly flags a checked-out rep
+ return <span className={stale ? 'text-amber-300/80' : 'text-gray-400'}>Active {label}</span>
 }

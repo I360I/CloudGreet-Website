@@ -20,6 +20,28 @@ export interface AuthResult {
   impersonatorUserId?: string
 }
 
+/**
+ * Last-activity heartbeat. Fire-and-forget, throttled per user per server
+ * instance so it adds zero latency and at most one tiny write per 5 min.
+ * Powers "Active Xh ago" on the admin sales rep view.
+ */
+const lastTouch = new Map<string, number>()
+const TOUCH_INTERVAL_MS = 5 * 60 * 1000
+
+function touchLastActive(userId: string | undefined) {
+  if (!userId) return
+  const now = Date.now()
+  if (now - (lastTouch.get(userId) || 0) < TOUCH_INTERVAL_MS) return
+  lastTouch.set(userId, now)
+  void supabaseAdmin
+    .from('custom_users')
+    .update({ last_active_at: new Date().toISOString() })
+    .eq('id', userId)
+    .then(({ error }) => {
+      if (error) logger.warn('last_active touch failed', { error: error.message })
+    })
+}
+
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
   try {
     // Accept either the Authorization: Bearer header (used by fetchWithAuth)
@@ -60,6 +82,10 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
         // is still valid; the audit is just thinner for this request.
       }
     }
+
+    // Heartbeat the REAL actor: when an admin is impersonating, credit the
+    // admin, not the impersonated user, so rep activity stays truthful.
+    touchLastActive(impersonatorUserId ?? decoded.userId)
 
     return {
       success: true,
