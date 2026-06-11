@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
  }
  switch (tool.name) {
  case 'book_appointment': {
- const { name: rawName, phone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw, is_emergency: isEmergencyRaw } = tool.arguments || {}
+ const { name: rawName, phone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw, is_emergency: isEmergencyRaw, email: rawEmail } = tool.arguments || {}
  // Retell's LLM often passes the verbalized form of any digits the
  // agent spoke aloud - "AC leaking at one one one one Main Street"
  // instead of "1111". Compress runs of digit words back to numerals
@@ -337,6 +337,31 @@ export async function POST(request: NextRequest) {
  // "scheduled" row claiming the booking succeeded - the agent then
  // tells the caller "you're booked" while the calendar disagrees.
  const sideEffects: string[] = []
+
+ // Real attendee email when we have one: the agent can pass the email it
+ // confirmed on the call, else fall back to the caller's stored profile.
+ // Cal.com sends the calendar invite (and the Zoom link, when the event
+ // type has Zoom connected) to this address - the synthetic noemail+
+ // fallback below only exists to keep Cal's attendee unique.
+ const customerEmail: string | null = await (async () => {
+  const candidate = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : ''
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(candidate)) return candidate
+  try {
+   const callerPhone: string = phone || body?.call?.from_number || body?.from_number || ''
+   let digits = String(callerPhone).replace(/\D/g, '')
+   if (digits.length === 10) digits = `1${digits}`
+   if (!digits) return null
+   const { data: profile } = await supabaseAdmin
+    .from('customers')
+    .select('email')
+    .eq('business_id', business_id)
+    .eq('phone_digits', digits)
+    .maybeSingle()
+   const stored = (profile?.email || '').trim().toLowerCase()
+   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(stored) ? stored : null
+  } catch { return null }
+ })()
+
  const calApiKey = (business as any)?.cal_com_api_key as string | null
  const calEventTypeIdRaw = (business as any)?.cal_com_event_type_id
  let calBooking: { uid: string; id: number } | null = null
@@ -357,10 +382,9 @@ export async function POST(request: NextRequest) {
     eventTypeId: effectiveEventTypeId,
     attendee: {
      name: name || 'Caller',
-     // Disambiguated synthetic email - the apptId-suffixed form we
-     // used to use isn't available yet (we book Cal first now). Use
-     // business_id + epoch so Cal still sees a unique attendee.
-     email: `noemail+${business_id}+${Date.now()}@cloudgreet.com`,
+     // Real email when known (invite + Zoom link reach the caller);
+     // synthetic unique fallback otherwise so Cal's attendee is valid.
+     email: customerEmail || `noemail+${business_id}+${Date.now()}@cloudgreet.com`,
      timeZone: businessTz,
      phoneNumber: phone || undefined,
     },
@@ -416,7 +440,7 @@ export async function POST(request: NextRequest) {
  p_business_id: business_id,
  p_customer_name: name,
  p_customer_phone: phone,
- p_customer_email: null, // Email not available from voice call
+ p_customer_email: customerEmail,
  p_service_type: service,
  p_scheduled_date: startTime.toISOString(),
  p_start_time: startTime.toISOString(),
@@ -426,6 +450,18 @@ export async function POST(request: NextRequest) {
  p_estimated_value: null,
  p_is_emergency: isEmergency,
  })
+
+ // Remember the email on the caller's profile for future calls
+ // (caller history's has_email_on_file, rebookings, SMS flows).
+ if (customerEmail && typeof rawEmail === 'string') {
+  try {
+   const { saveCustomerEmail } = await import('@/lib/customers')
+   const profilePhone = phone || body?.call?.from_number || body?.from_number
+   if (profilePhone) {
+    void saveCustomerEmail({ businessId: business_id, phone: String(profilePhone), email: customerEmail, name: name || null })
+   }
+  } catch { /* best-effort */ }
+ }
 
  if (appointmentError || !appointmentId) {
  logger.error('book_appointment transaction failed', {

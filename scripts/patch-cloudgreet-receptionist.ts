@@ -27,8 +27,8 @@ const CONTENT = `RECEPTIONIST OVERRIDES (highest priority - these supersede anyt
   1. Turn the caller's requested day into a specific date (YYYY-MM-DD) yourself using the current time (resolve "tomorrow", "next Tuesday", etc.).
   2. Call lookup_availability with that date. Offer two or three of the RETURNED times in plain words. Never invent, guess, or imply times the tool did not return. If the day is full, check the next day or two and say what you found.
   3. Collect their name and best phone number for the confirmation text.
-  4. Ask for their email for the calendar invite, read it back to confirm, then call save_customer_email with it. If they'd rather not give one, no problem - move on.
-  5. Call book_appointment with their name, phone, service "CloudGreet demo", and datetime set to the EXACT ISO time of the slot they chose from lookup_availability.
+  4. Ask for their email for the calendar invite, read it back to confirm. The calendar invite (with the video link) only reaches them if you pass this email to book_appointment - so collect it BEFORE booking. If they'd rather not give one, no problem - book without it.
+  5. Call book_appointment with their name, phone, email (the one you just confirmed), service "CloudGreet demo", and datetime set to the EXACT ISO time of the slot they chose from lookup_availability. Only say the invite is on its way AFTER book_appointment succeeds. If you collected an email but the caller is NOT booking, store it with save_customer_email instead.
   6. Confirm the day and time out loud, then wrap up warmly.
 - RETURNING CALLERS: when {{returning_caller}} is true and {{caller_name}} is set, never ask "can I get your name?" - confirm it instead ("I have you down as {{caller_name}} - still right?") and use it everywhere a name is needed.
 - TEAM LANGUAGE: refer to "the team" for anything humans handle - never name a specific founder or employee.`
@@ -68,6 +68,16 @@ async function main() {
   // Tools: add save_customer_email if missing (clone an existing custom
   // tool's shape so headers/speak settings stay consistent).
   const tools: any[] = Array.isArray(llm?.general_tools) ? [...llm.general_tools] : []
+
+  // book_appointment learns an optional email arg - the handler uses it
+  // as the Cal.com attendee so the invite + Zoom link reach the caller.
+  const bookTool = tools.find((t) => t?.type === 'custom' && t?.name === 'book_appointment')
+  if (bookTool?.parameters?.properties && !bookTool.parameters.properties.email) {
+    bookTool.parameters.properties.email = {
+      type: 'string',
+      description: "The caller's email address for the calendar invite, exactly as confirmed on the call (e.g. jane@company.com). Omit if the caller declined to give one.",
+    }
+  }
   const hasEmailTool = tools.some((t) => t?.name === 'save_customer_email')
   if (!hasEmailTool) {
     const template = tools.find((t) => t?.type === 'custom' && t?.name === 'book_appointment') || {}
@@ -90,13 +100,51 @@ async function main() {
     })
   }
 
+  // Safety net: the built-in transfer_call MUST survive every patch. If a
+  // previous update dropped it, restore the known-good warm-transfer config.
+  if (!tools.some((t) => t?.type === 'transfer_call')) {
+    tools.push({
+      type: 'transfer_call',
+      name: 'transfer_call',
+      description: 'Transfer the call to a human agent',
+      execution_message_type: 'prompt',
+      execution_message_description: '',
+      speak_during_execution: true,
+      speak_after_execution: true,
+      ignore_e164_validation: false,
+      custom_sip_headers: {},
+      transfer_destination: { type: 'predefined', number: '+17372960092' },
+      transfer_option: {
+        type: 'warm_transfer',
+        opt_out_initial_message: false,
+        opt_out_human_detection: false,
+        on_hold_music: 'relaxing_sound',
+        enable_bridge_audio_cue: false,
+        agent_detection_timeout_ms: 30000,
+        private_handoff_option: { type: 'prompt', prompt: '' },
+        show_transferee_as_caller: false,
+      },
+    })
+    console.log('transfer_call was missing - restored')
+  }
+
   const uRes = await fetch(`${RETELL_BASE}/update-retell-llm/${llmId}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ general_prompt: nextPrompt, general_tools: tools }),
   })
   if (!uRes.ok) throw new Error(`update-llm ${uRes.status}: ${await uRes.text()}`)
-  console.log(`patched ✓  llm=${llmId}  prompt ${current.length} → ${nextPrompt.length} chars  email tool ${hasEmailTool ? 'already present' : 'ADDED'}`)
+
+  // Post-flight: verify nothing was silently dropped by the API.
+  const vRes = await fetch(`${RETELL_BASE}/get-retell-llm/${llmId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  const after = await vRes.json() as any
+  const names = (after?.general_tools || []).map((t: any) => t.name)
+  for (const required of ['book_appointment', 'lookup_availability', 'save_customer_email', 'transfer_call', 'end_call']) {
+    if (!names.includes(required)) throw new Error(`POST-FLIGHT FAIL: ${required} missing after update - tools now: ${names.join(', ')}`)
+  }
+  console.log(`patched ✓  llm=${llmId}  prompt ${current.length} → ${nextPrompt.length} chars  tools verified: ${names.join(', ')}`)
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })
