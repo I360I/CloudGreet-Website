@@ -450,7 +450,7 @@ function Capabilities() {
      </p>
     </div>
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 relative">
-     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+     <div aria-hidden className="cg-backlight absolute -inset-10 sm:-inset-14 rounded-[4rem] pointer-events-none -z-0" />
      {items.map(({ icon: Icon, title, body }) => (
       <div key={title} className="relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
        <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center mb-4">
@@ -585,7 +585,7 @@ function CallFlow() {
     </div>
 
     <div className="relative">
-     <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+     <div aria-hidden className="cg-backlight absolute -inset-10 sm:-inset-14 rounded-[4rem] pointer-events-none -z-0" />
      <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
       {steps.map((s, i) => (
        <div key={s.title} className="bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
@@ -628,7 +628,7 @@ function DashboardPreview() {
     <p className="text-base md:text-lg text-gray-500">One screen.</p>
    </div>
    <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-4 relative">
-    <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+    <div aria-hidden className="cg-backlight absolute -inset-10 sm:-inset-14 rounded-[4rem] pointer-events-none -z-0" />
 
     <div className="relative bg-white border border-gray-200 rounded-2xl p-5 md:p-6">
      <div className="flex items-center justify-between mb-4">
@@ -748,7 +748,8 @@ function RoiCalculator() {
   <section id="roi" className="px-5 sm:px-6 pt-6 pb-12 sm:pb-16">
    <div className="max-w-6xl mx-auto text-center mb-10">
     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
-     See <span className="text-gray-400">your numbers.</span>
+     <DiaTextReveal final="#111827">See</DiaTextReveal>{' '}
+     <DiaTextReveal final="#9ca3af" delay={0.18}>your numbers.</DiaTextReveal>
     </h2>
     <p className="text-base md:text-lg text-gray-500 max-w-md mx-auto">
      Drag the sliders to estimate what missed calls cost you each month.
@@ -756,7 +757,7 @@ function RoiCalculator() {
    </div>
 
    <div className="max-w-5xl mx-auto relative">
-    <div className="absolute -inset-8 bg-sky-100/40 blur-3xl rounded-3xl pointer-events-none -z-0" />
+    <div aria-hidden className="cg-backlight absolute -inset-10 sm:-inset-14 rounded-[4rem] pointer-events-none -z-0" />
 
     <div className="relative bg-white border border-gray-200 rounded-3xl sm:rounded-[32px] p-5 sm:p-6 md:p-12 grid md:grid-cols-2 gap-8 sm:gap-10 md:gap-16 items-center">
      {/* Sliders */}
@@ -1242,5 +1243,31 @@ function TypingText({ text, className = '' }: { text: string; className?: string
     {!done && <span className="animate-blink inline-block w-[2px] h-[1.05em] align-[-0.15em] bg-gray-500 ml-0.5" />}
    </span>
   </p>
+ )
+}
+
+/** Dia text reveal (Magic UI style): a color band sweeps across the text
+ *  with a gradient shine, then settles on the given foreground color. */
+function DiaTextReveal({ children, final, delay = 0 }: {
+ children: React.ReactNode
+ final: string
+ delay?: number
+}) {
+ return (
+  <motion.span
+   className="inline-block bg-clip-text"
+   style={{
+    WebkitBackgroundClip: 'text',
+    color: 'transparent',
+    backgroundImage: `linear-gradient(110deg, ${final} 0%, ${final} 38%, #38bdf8 46%, #6366f1 51%, #22d3ee 56%, ${final} 64%, ${final} 100%)`,
+    backgroundSize: '280% 100%',
+   }}
+   initial={{ backgroundPosition: '100% 0%' }}
+   whileInView={{ backgroundPosition: '0% 0%' }}
+   viewport={{ once: true, amount: 0.7 }}
+   transition={{ duration: 1.25, ease: [0.22, 1, 0.36, 1], delay }}
+  >
+   {children}
+  </motion.span>
  )
 }

@@ -15,7 +15,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, type MotionValue } from 'framer-motion'
 import { Microphone, MicrophoneSlash, PhoneDisconnect, Play } from '@phosphor-icons/react'
 import { RetellWebClient } from 'retell-client-js-sdk'
 
@@ -108,6 +108,28 @@ function MorphingText({ text, className = '' }: { text: string; className?: stri
   )
 }
 
+/** macOS-dock magnification for the selector pills (Magic UI Dock style). */
+function DockPill({ mouseX, className, onClick, children }: {
+  mouseX: MotionValue<number>
+  className?: string
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  const ref = useRef<HTMLButtonElement>(null)
+  const distance = useTransform(mouseX, (v: number) => {
+    const b = ref.current?.getBoundingClientRect()
+    return b ? v - (b.left + b.width / 2) : Infinity
+  })
+  const scale = useSpring(useTransform(distance, [-110, 0, 110], [1, 1.18, 1]), { stiffness: 320, damping: 22 })
+  const y = useSpring(useTransform(distance, [-110, 0, 110], [0, -6, 0]), { stiffness: 320, damping: 22 })
+  return (
+    <motion.button ref={ref} onClick={onClick} className={className}
+      style={{ scale, y, transformOrigin: 'bottom center' }}>
+      {children}
+    </motion.button>
+  )
+}
+
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const idleRef = useRef<HTMLVideoElement>(null)
@@ -127,7 +149,8 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   const lastTransRef = useRef(-1)
 
   const pillBarRef = useRef<HTMLDivElement>(null)
-  const pillRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const pillRefs = useRef<Array<HTMLDivElement | null>>([])
+  const dockX = useMotionValue<number>(Infinity)
 
   const [atDesk, setAtDesk] = useState(false)
   const [active, setActive] = useState(START)
@@ -507,13 +530,18 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                 full-width dead-zones don't eat clicks on the call controls; only
                 the pill itself is interactive. */}
             <div className="pointer-events-none absolute inset-x-0 bottom-8 max-sm:bottom-5 z-30 flex justify-center px-4 max-sm:px-3">
-              <div ref={pillBarRef} className="pointer-events-auto flex items-center gap-1 max-sm:gap-0 rounded-full border border-white/60 bg-white/40 p-1.5 max-sm:p-1 max-sm:max-w-full max-sm:overflow-x-auto max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.35),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-8px_20px_-12px_rgba(255,255,255,0.5)]">
+              <div ref={pillBarRef}
+                onMouseMove={(e) => dockX.set(e.clientX)}
+                onMouseLeave={() => dockX.set(Infinity)}
+                className="pointer-events-auto flex items-center gap-1 max-sm:gap-0 rounded-full border border-white/60 bg-white/40 p-1.5 max-sm:p-1 max-sm:max-w-full max-sm:overflow-x-auto max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.35),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-8px_20px_-12px_rgba(255,255,255,0.5)]">
                 {DESKS.map((d, i) => (
-                  <button key={d.v} ref={(el) => { pillRefs.current[i] = el }} onClick={() => go(i, i > active ? 1 : -1)}
-                    className={`relative whitespace-nowrap rounded-full px-5 py-2.5 max-sm:px-2.5 max-sm:py-2 text-sm max-sm:text-[11px] font-medium transition ${i === active ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}>
-                    {i === active && <motion.span layoutId="sel" className="absolute inset-0 -z-10 rounded-full bg-gray-900 shadow-[0_6px_16px_-6px_rgba(2,32,71,0.6)]" transition={{ type: 'spring', stiffness: 400, damping: 34 }} />}
-                    {d.cat}
-                  </button>
+                  <div key={d.v} ref={(el) => { pillRefs.current[i] = el }} className="relative">
+                    <DockPill mouseX={dockX} onClick={() => go(i, i > active ? 1 : -1)}
+                      className={`relative whitespace-nowrap rounded-full px-5 py-2.5 max-sm:px-2.5 max-sm:py-2 text-sm max-sm:text-[11px] font-medium transition ${i === active ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                      {i === active && <motion.span layoutId="sel" className="absolute inset-0 -z-10 rounded-full bg-gray-900 shadow-[0_6px_16px_-6px_rgba(2,32,71,0.6)]" transition={{ type: 'spring', stiffness: 400, damping: 34 }} />}
+                      {d.cat}
+                    </DockPill>
+                  </div>
                 ))}
               </div>
             </div>

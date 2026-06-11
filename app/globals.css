@@ -248,6 +248,22 @@ body { --font-display: var(--font-geist-sans); }
   50% { background-position: 100% 50%; }
 }
 
+/* Backlight — ambient multicolor glow behind a feature block (Magic UI style). */
+.cg-backlight {
+  background:
+    radial-gradient(46% 60% at 20% 35%, rgba(56, 189, 248, 0.75), transparent 70%),
+    radial-gradient(44% 56% at 80% 38%, rgba(99, 102, 241, 0.65), transparent 70%),
+    radial-gradient(50% 54% at 50% 82%, rgba(34, 211, 238, 0.55), transparent 72%),
+    radial-gradient(38% 46% at 74% 84%, rgba(52, 211, 153, 0.35), transparent 70%);
+  filter: blur(44px);
+  animation: cg-backlight-drift 13s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+@keyframes cg-backlight-drift {
+  0%   { transform: scale(1) translate3d(-1.5%, -1%, 0); opacity: 0.7; }
+  100% { transform: scale(1.08) translate3d(1.5%, 1.5%, 0); opacity: 0.95; }
+}
+
 /* Gentle float — used by the mascot. */
 .cg-float { animation: cg-float 5.5s ease-in-out infinite; }
 @keyframes cg-float {
@@ -269,6 +285,7 @@ body { --font-display: var(--font-geist-sans); }
 
 @media (prefers-reduced-motion: reduce) {
   .cg-aurora-text { animation: none; }
+  .cg-backlight { animation: none; opacity: 0.6; }
   .cg-meteor { display: none; }
   .cg-shiny-text { animation: none; background: none; -webkit-text-fill-color: currentColor; }
   .cg-float { animation: none; }
