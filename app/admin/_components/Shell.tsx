@@ -42,7 +42,9 @@ export function AdminShell({
 
  if (adminEmail === null) {
   return (
-   <main className="min-h-screen bg-[#0a0a0c] text-gray-100 flex">
+   <main className="min-h-screen bg-[#07080b] text-gray-100 flex">
+    <div className="cg-aurora" />
+    <div className="cg-noise" />
     <AdminSidebarSkeleton />
     <div className="flex-1" />
    </main>
@@ -50,9 +52,13 @@ export function AdminShell({
  }
 
  return (
-  <main className="min-h-screen bg-[#0a0a0c] text-gray-100 flex">
+  <main className="min-h-screen bg-[#07080b] text-gray-100 flex">
+   {/* Ambient light + grain sit behind everything */}
+   <div className="cg-aurora" />
+   <div className="cg-noise" />
+
    <AdminSidebar adminEmail={adminEmail} onSignOut={handleSignOut} activeLabel={activeLabel} />
-   <div className="flex-1 min-w-0 pb-20 lg:pb-0">
+   <div className="flex-1 min-w-0 pb-20 lg:pb-0 relative z-[1]">
     <AdminTopBar />
     <motion.div
      key={activeLabel}

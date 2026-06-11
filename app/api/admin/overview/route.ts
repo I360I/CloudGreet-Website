@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
    .select(`
     id, business_name, email, phone_number, business_type,
     subscription_status, account_status, onboarding_completed,
-    calcom_connected, forwarding_verified_at, created_at
+    calcom_connected, forwarding_verified_at, created_at,
+    monthly_price_cents
    `)
    .order('created_at', { ascending: false })
 
@@ -39,8 +40,9 @@ export async function GET(request: NextRequest) {
   const allBusinesses = businesses || []
   const ids = allBusinesses.map((b) => b.id)
 
-  // 2) Pull every call from the last 30 days for these businesses (one query)
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  // 2) Pull every call from the last 31 days for these businesses (one query).
+  // 31 (not 30) so "this month" is always fully covered, even on the 31st.
+  const thirtyDaysAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString()
   const { data: recentCalls } = ids.length
    ? await supabaseAdmin
     .from('calls')
@@ -50,6 +52,18 @@ export async function GET(request: NextRequest) {
    : { data: [] as any[] }
 
   const calls = recentCalls || []
+
+  // 2b) Bookings (appointments) over the same window, excluding cancelled
+  const { data: recentAppts } = ids.length
+   ? await supabaseAdmin
+    .from('appointments')
+    .select('id, business_id, created_at, status')
+    .in('business_id', ids)
+    .gte('created_at', thirtyDaysAgo)
+    .not('status', 'in', '(cancelled)')
+   : { data: [] as any[] }
+
+  const bookings = recentAppts || []
 
   // 3) Compute per-client aggregates
   const now = new Date()
@@ -114,6 +128,53 @@ export async function GET(request: NextRequest) {
    if (idx >= 0) overallSpark[idx]++
   }
 
+  // 4b) 30-day daily series (calls + bookings) for the dashboard charts
+  const seriesDays: string[] = []
+  for (let i = 29; i >= 0; i--) {
+   const d = new Date(now); d.setDate(d.getDate() - i); d.setHours(0, 0, 0, 0)
+   seriesDays.push(localDateKey(d))
+  }
+  const seriesIdx = new Map(seriesDays.map((k, i) => [k, i]))
+  const callsSeries = new Array(30).fill(0)
+  const bookingsSeries = new Array(30).fill(0)
+  for (const c of calls) {
+   const idx = seriesIdx.get(localDateKey(new Date(c.created_at)))
+   if (idx !== undefined) callsSeries[idx]++
+  }
+  let bookingsThisMonth = 0
+  let bookingsToday = 0
+  for (const b of bookings) {
+   const idx = seriesIdx.get(localDateKey(new Date(b.created_at)))
+   if (idx !== undefined) bookingsSeries[idx]++
+   if (b.created_at >= startOfMonth) bookingsThisMonth++
+   if (b.created_at >= startOfTodayIso) bookingsToday++
+  }
+
+  // 4c) Finance: MRR from negotiated prices vs measured cost-to-serve (MTD)
+  const KNOWN_PROVIDERS = ['retell', 'anthropic', 'telnyx', 'stripe', 'google'] as const
+  const mrrCents = allBusinesses.reduce((sum, b: any) =>
+   b.subscription_status === 'active' ? sum + ((b.monthly_price_cents as number) || 0) : sum, 0)
+  const payingClients = allBusinesses.filter((b: any) =>
+   b.subscription_status === 'active' && ((b.monthly_price_cents as number) || 0) > 0).length
+
+  const costByProvider: Record<string, number> = {
+   retell: 0, anthropic: 0, telnyx: 0, stripe: 0, google: 0, other: 0,
+  }
+  let costMtdCents = 0
+  const { data: costRows } = await supabaseAdmin
+   .from('usage_costs')
+   .select('provider, amount_cents')
+   .gte('occurred_at', startOfMonth)
+  for (const r of costRows || []) {
+   const cents = (r.amount_cents as number) || 0
+   const provider = (r.provider as string) || 'other'
+   costMtdCents += cents
+   if ((KNOWN_PROVIDERS as readonly string[]).includes(provider)) costByProvider[provider] += cents
+   else costByProvider.other += cents
+  }
+  const marginCents = mrrCents - costMtdCents
+  const marginPct = mrrCents > 0 ? Math.round((marginCents / mrrCents) * 1000) / 10 : null
+
   // 5) Stitch it together
   const enrichedClients = allBusinesses.map((b) => {
    const a = aggregateByBiz.get(b.id) || {
@@ -147,7 +208,22 @@ export async function GET(request: NextRequest) {
     inOnboarding,
     callsToday,
     callsThisMonth,
+    bookingsToday,
+    bookingsThisMonth,
     overallSpark,
+   },
+   finance: {
+    mrrCents,
+    payingClients,
+    costMtdCents,
+    costByProvider,
+    marginCents,
+    marginPct,
+   },
+   series: {
+    days: seriesDays,
+    calls: callsSeries,
+    bookings: bookingsSeries,
    },
    clients: enrichedClients,
   })

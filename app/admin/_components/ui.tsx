@@ -15,7 +15,21 @@ export function Panel({
 }) {
  const pad = padding === 'none' ? '' : padding === 'tight' ? 'p-4' : 'p-5 sm:p-6'
  return (
-  <div className={`bg-[#101015] border border-white/[0.06] rounded-2xl ${pad} ${className}`}>
+  <div className={`cg-card rounded-2xl ${pad} ${className}`}>
+   {children}
+  </div>
+ )
+}
+
+/** Hero card surface - gradient hairline + ambient glow. For headline panels. */
+export function HeroPanel({
+ className = '', children,
+}: {
+ className?: string
+ children: React.ReactNode
+}) {
+ return (
+  <div className={`cg-card-hero rounded-2xl ${className}`}>
    {children}
   </div>
  )
@@ -37,7 +51,7 @@ export function PanelHeader({
       {eyebrow}
      </div>
     )}
-    <h2 className="text-base font-medium text-white">{title}</h2>
+    <h2 className="text-base font-medium text-white tracking-tight">{title}</h2>
    </div>
    {trailing}
   </div>
@@ -56,8 +70,10 @@ export function Stat({
  return (
   <Panel>
    <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-2">{label}</div>
-   <div className={`font-mono font-medium tracking-tight tabular-nums text-3xl md:text-4xl ${
-    accent ? 'text-sky-400' : 'text-white'
+   <div className={`font-display font-semibold tracking-tight tabular-nums text-3xl md:text-4xl ${
+    accent
+     ? 'text-transparent bg-clip-text bg-gradient-to-br from-sky-300 to-sky-500'
+     : 'text-white'
    }`}>{value}</div>
    {sub && <div className="text-xs text-gray-500 mt-1.5">{sub}</div>}
   </Panel>
@@ -69,7 +85,7 @@ export function StatusPill({ status }: { status: string }) {
  const tone = STATUS_TONES[status?.toLowerCase()] || STATUS_TONES.unknown
  return (
   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider ${tone.bg} ${tone.text} border ${tone.border}`}>
-   <span className={`w-1.5 h-1.5 rounded-full ${tone.dot}`} />
+   <span className={`w-1.5 h-1.5 rounded-full ${tone.dot} shadow-[0_0_6px_currentColor]`} />
    {tone.label || status}
   </span>
  )
@@ -89,7 +105,7 @@ const STATUS_TONES: Record<string, {
  unknown:   { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/20', dot: 'bg-gray-500', label: '-' },
 }
 
-/** Primary button - sky-accented, fills/loads with spinner. */
+/** Primary button - sky→indigo gradient, lifts on hover. */
 export function PrimaryButton({
  children, onClick, type = 'button', disabled, loading, className = '',
 }: {
@@ -103,7 +119,7 @@ export function PrimaryButton({
  return (
   <button
    type={type} onClick={onClick} disabled={disabled || loading}
-   className={`inline-flex items-center justify-center gap-2 bg-sky-500 hover:bg-sky-400 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_30px_-12px_rgba(56,189,248,0.6)] ${className}`}
+   className={`inline-flex items-center justify-center gap-2 bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_8px_24px_-10px_rgba(56,189,248,0.65)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_28px_-10px_rgba(56,189,248,0.8)] hover:-translate-y-px active:translate-y-0 ${className}`}
   >
    {loading && <CircleNotch className="w-4 h-4 animate-spin" />}
    {children}
@@ -111,7 +127,7 @@ export function PrimaryButton({
  )
 }
 
-/** Secondary button - ghost on dark, fades in on hover. */
+/** Secondary button - glass ghost on dark. */
 export function GhostButton({
  children, onClick, type = 'button', disabled, className = '',
 }: {
@@ -124,7 +140,7 @@ export function GhostButton({
  return (
   <button
    type={type} onClick={onClick} disabled={disabled}
-   className={`inline-flex items-center justify-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 hover:text-white px-4 py-2 rounded-xl text-sm font-medium border border-white/[0.06] transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
+   className={`inline-flex items-center justify-center gap-2 bg-white/[0.04] hover:bg-white/[0.08] text-gray-200 hover:text-white px-4 py-2 rounded-xl text-sm font-medium border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
   >
    {children}
   </button>
@@ -153,13 +169,13 @@ export function DangerButton({
  )
 }
 
-/** Text input - dark variant. */
+/** Text input - glass dark variant. */
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
  const { className = '', ...rest } = props
  return (
   <input
    {...rest}
-   className={`w-full px-4 py-2.5 bg-[#0c0c10] border border-white/[0.06] rounded-xl text-gray-100 placeholder-gray-600 focus:outline-none focus:border-sky-400/50 transition-colors text-sm ${className}`}
+   className={`w-full px-4 py-2.5 bg-black/30 border border-white/[0.08] rounded-xl text-gray-100 placeholder-gray-600 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:outline-none focus:border-sky-400/50 focus:shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_0_3px_rgba(56,189,248,0.12)] transition-all text-sm ${className}`}
   />
  )
 }
@@ -169,31 +185,42 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
  return (
   <select
    {...rest}
-   className={`w-full px-4 py-2.5 bg-[#0c0c10] border border-white/[0.06] rounded-xl text-gray-100 focus:outline-none focus:border-sky-400/50 transition-colors text-sm ${className}`}
+   className={`w-full px-4 py-2.5 bg-black/30 border border-white/[0.08] rounded-xl text-gray-100 shadow-[inset_0_1px_2px_rgba(0,0,0,0.4)] focus:outline-none focus:border-sky-400/50 focus:shadow-[inset_0_1px_2px_rgba(0,0,0,0.4),0_0_0_3px_rgba(56,189,248,0.12)] transition-all text-sm ${className}`}
   >
    {children}
   </select>
  )
 }
 
-/** Mini sparkline used in client rows. */
+/** Mini sparkline used in client rows - gradient area + glowing line. */
 export function Sparkline({ data, accent = false }: { data: number[]; accent?: boolean }) {
  if (!data || data.length < 2) return <div className="h-4" />
  const max = Math.max(...data, 1)
  const w = 80, h = 18
- const pts = data.map((v, i) => {
-  const x = (i / (data.length - 1)) * w
-  const y = h - (v / max) * (h - 2) - 1
-  return `${x.toFixed(1)},${y.toFixed(1)}`
- }).join(' ')
+ const xy = (v: number, i: number): [number, number] => [
+  (i / (data.length - 1)) * w,
+  h - (v / max) * (h - 3) - 1.5,
+ ]
+ const pts = data.map((v, i) => xy(v, i))
+ const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
+ const area = `M0,${h} L${line.split(' ').join(' L')} L${w},${h} Z`
+ const gid = accent ? 'spark-g-a' : 'spark-g-m'
  return (
   <svg width={w} height={h} className="overflow-visible">
+   <defs>
+    <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+     <stop offset="0%" stopColor={accent ? '#38bdf8' : '#52525b'} stopOpacity="0.28" />
+     <stop offset="100%" stopColor={accent ? '#38bdf8' : '#52525b'} stopOpacity="0" />
+    </linearGradient>
+   </defs>
+   <path d={area} fill={`url(#${gid})`} />
    <polyline
     fill="none"
     stroke={accent ? '#38bdf8' : '#52525b'}
+    strokeWidth="1.5"
     strokeLinecap="round"
     strokeLinejoin="round"
-    points={pts}
+    points={line}
    />
   </svg>
  )
