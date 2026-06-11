@@ -25,11 +25,18 @@ export type GlobePoint = {
 
 export type GlobeHq = { name: string; lat: number; lng: number; city?: string }
 
+type HoverInfo = { x: number; y: number; name: string; kind: 'paying' | 'nonpaying' | 'hq'; city?: string }
+
 const PAYING_COLOR = '#34d399'
 const NONPAYING_COLOR = '#fbbf24'
 const HQ_COLOR = '#38bdf8'
 
-function GlobeObject({ points, hq, light }: { points: GlobePoint[]; hq?: GlobeHq | null; light: boolean }) {
+function GlobeObject({ points, hq, light, onHover }: {
+ points: GlobePoint[]
+ hq?: GlobeHq | null
+ light: boolean
+ onHover: (h: HoverInfo | null) => void
+}) {
  const { camera } = useThree()
 
  const globe = useMemo(() => {
@@ -115,7 +122,29 @@ function GlobeObject({ points, hq, light }: { points: GlobePoint[]; hq?: GlobeHq
   camera.lookAt(0, 0, 0)
  }, [globe, camera])
 
- return <primitive object={globe} />
+ return (
+  <primitive
+   object={globe}
+   onPointerMove={(e: any) => {
+    e.stopPropagation()
+    let obj = e.object
+    let data: any = null
+    while (obj) {
+     if (obj.__data && typeof obj.__data === 'object' && 'kind' in obj.__data && 'name' in obj.__data) {
+      data = obj.__data
+      break
+     }
+     obj = obj.parent
+    }
+    if (data) {
+     onHover({ x: e.clientX, y: e.clientY, name: data.name, kind: data.kind, city: data.city })
+    } else {
+     onHover(null)
+    }
+   }}
+   onPointerOut={() => onHover(null)}
+  />
+ )
 }
 
 class GLBoundary extends Component<
@@ -129,6 +158,12 @@ class GLBoundary extends Component<
  }
 }
 
+const HOVER_LABELS: Record<HoverInfo['kind'], { text: string; color: string }> = {
+ paying: { text: 'Paying client', color: PAYING_COLOR },
+ nonpaying: { text: 'Not paying yet', color: NONPAYING_COLOR },
+ hq: { text: 'Headquarters', color: HQ_COLOR },
+}
+
 export default function ClientGlobe({
  points, hq = null, theme = 'dark', height = 460,
 }: {
@@ -138,6 +173,8 @@ export default function ClientGlobe({
  height?: number
 }) {
  const light = theme === 'light'
+ const wrapRef = useRef<HTMLDivElement>(null)
+ const [hover, setHover] = useState<HoverInfo | null>(null)
  const reduce = useRef(
   typeof window !== 'undefined' &&
   (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false),
@@ -151,7 +188,7 @@ export default function ClientGlobe({
     </div>
    }
   >
-   <div style={{ height }} className="w-full relative">
+   <div ref={wrapRef} style={{ height, cursor: hover ? 'pointer' : 'grab' }} className="w-full relative">
     <Canvas
      dpr={[1, 2]}
      camera={{ fov: 38, near: 1, far: 2000, position: [0, 0, 320] }}
@@ -161,7 +198,7 @@ export default function ClientGlobe({
      <ambientLight intensity={light ? 1.7 : 2.9} color="#ffffff" />
      <directionalLight position={[260, 160, 280]} intensity={light ? 1.5 : 0.25} color="#ffffff" />
      {!light && <Stars radius={280} depth={50} count={1600} factor={4} saturation={0} fade speed={0.5} />}
-     <GlobeObject points={points} hq={hq} light={light} />
+     <GlobeObject points={points} hq={hq} light={light} onHover={setHover} />
      <OrbitControls
       enablePan={false}
       enableDamping
@@ -172,6 +209,30 @@ export default function ClientGlobe({
       maxDistance={420}
      />
     </Canvas>
+
+    {hover && wrapRef.current && (() => {
+     const rect = wrapRef.current!.getBoundingClientRect()
+     const left = Math.max(8, Math.min(rect.width - 208, hover.x - rect.left + 14))
+     const top = Math.max(8, hover.y - rect.top - 14)
+     const label = HOVER_LABELS[hover.kind]
+     return (
+      <div
+       data-globe-tooltip
+       className="absolute z-10 pointer-events-none rounded-xl border backdrop-blur px-3 py-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.45)]"
+       style={{ left, top, width: 200, background: 'var(--cg-tooltip-bg)', borderColor: 'var(--cg-tooltip-border)' }}
+      >
+       <div className="text-sm font-medium truncate" style={{ color: 'var(--cg-text-1)' }}>
+        {hover.name}
+       </div>
+       <div className="flex items-center gap-1.5 mt-1">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: label.color, boxShadow: `0 0 6px ${label.color}` }} />
+        <span className="text-[11px] font-mono" style={{ color: 'var(--cg-muted)' }}>
+         {hover.kind === 'hq' && hover.city ? hover.city : label.text}
+        </span>
+       </div>
+      </div>
+     )
+    })()}
    </div>
   </GLBoundary>
  )
