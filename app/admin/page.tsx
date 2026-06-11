@@ -42,6 +42,7 @@ type Client = {
  calls_today: number
  spark: number[]
  last_call_at: string | null
+ is_platform?: boolean
 }
 
 type Overview = {
@@ -604,7 +605,14 @@ function ClientRow({ client, onDelete }: { client: Client; onDelete: () => void 
       </div>
       {/* Status */}
       <div className="lg:col-span-2 mt-1.5 lg:mt-0 flex items-center gap-1.5 flex-wrap">
-       <StatusPill status={client.subscription_status || client.account_status || 'pending'} />
+       {client.is_platform ? (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-sky-400/10 text-sky-300 border border-sky-400/20">
+         <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shadow-[0_0_6px_currentColor]" />
+         HQ
+        </span>
+       ) : (
+        <StatusPill status={client.subscription_status || client.account_status || 'pending'} />
+       )}
        {!client.onboarding_completed && (
         <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300 bg-amber-400/10 border border-amber-400/20 rounded-full px-2 py-0.5">
          setup

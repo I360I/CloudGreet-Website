@@ -29,9 +29,8 @@ export async function GET(request: NextRequest) {
     id, business_name, email, phone_number, business_type,
     subscription_status, account_status, onboarding_completed,
     calcom_connected, forwarding_verified_at, created_at,
-    monthly_price_cents, city, state
+    monthly_price_cents, city, state, is_platform
    `)
-   .or('is_platform.is.null,is_platform.eq.false')
    .order('created_at', { ascending: false })
 
   if (bizError) {
@@ -114,11 +113,14 @@ export async function GET(request: NextRequest) {
    if (!a.lastCallAt || iso > a.lastCallAt) a.lastCallAt = iso
   }
 
-  // 4) Cross-tenant KPIs
-  const totalClients = allBusinesses.length
-  const activeClients = allBusinesses.filter((b) => b.subscription_status === 'active').length
-  const trialingClients = allBusinesses.filter((b) => b.subscription_status === 'trialing').length
-  const inOnboarding = allBusinesses.filter((b) => !b.onboarding_completed).length
+  // 4) Cross-tenant KPIs - computed over real clients only. The platform
+  // row (CloudGreet's own line) stays in the clients list and map, but
+  // shouldn't inflate client counts or revenue math.
+  const realClients = allBusinesses.filter((b: any) => !b.is_platform)
+  const totalClients = realClients.length
+  const activeClients = realClients.filter((b) => b.subscription_status === 'active').length
+  const trialingClients = realClients.filter((b) => b.subscription_status === 'trialing').length
+  const inOnboarding = realClients.filter((b) => !b.onboarding_completed).length
   const callsToday = calls.filter((c) => c.created_at >= startOfTodayIso).length
   const callsThisMonth = calls.filter((c) => c.created_at >= startOfMonth).length
 
@@ -154,9 +156,9 @@ export async function GET(request: NextRequest) {
 
   // 4c) Finance: MRR from negotiated prices vs measured cost-to-serve (MTD)
   const KNOWN_PROVIDERS = ['retell', 'anthropic', 'telnyx', 'stripe', 'google'] as const
-  const mrrCents = allBusinesses.reduce((sum, b: any) =>
+  const mrrCents = realClients.reduce((sum, b: any) =>
    b.subscription_status === 'active' ? sum + ((b.monthly_price_cents as number) || 0) : sum, 0)
-  const payingClients = allBusinesses.filter((b: any) =>
+  const payingClients = realClients.filter((b: any) =>
    b.subscription_status === 'active' && ((b.monthly_price_cents as number) || 0) > 0).length
 
   const costByProvider: Record<string, number> = {
@@ -181,13 +183,28 @@ export async function GET(request: NextRequest) {
   // Located from city/state when filled in, else the phone's area code.
   type MapPoint = { id: string; name: string; lat: number; lng: number; kind: 'paying' | 'nonpaying' }
   const mapPoints: MapPoint[] = []
-  for (const b of allBusinesses as any[]) {
+  for (const b of realClients as any[]) {
    const loc = geolocate({ city: b.city, state: b.state, phone: b.phone_number })
    if (!loc) continue
    const [lat, lng] = jitter(loc[0], loc[1], String(b.id))
    const paying = b.subscription_status === 'active' && ((b.monthly_price_cents as number) || 0) > 0
    mapPoints.push({ id: b.id, name: b.business_name || 'Client', lat, lng, kind: paying ? 'paying' : 'nonpaying' })
   }
+
+  // The blue HQ dot is the platform row itself (CloudGreet's own line),
+  // located like any client; falls back to Austin if the row is missing.
+  const platformRow = (allBusinesses as any[]).find((b) => b.is_platform)
+  const hqLoc = platformRow
+   ? geolocate({ city: platformRow.city, state: platformRow.state, phone: platformRow.phone_number })
+   : null
+  const hq = hqLoc
+   ? {
+      name: platformRow.business_name || 'CloudGreet HQ',
+      lat: hqLoc[0],
+      lng: hqLoc[1],
+      city: [platformRow.city, platformRow.state].filter(Boolean).join(', ') || 'HQ',
+     }
+   : { name: 'CloudGreet HQ', lat: 30.2672, lng: -97.7431, city: 'Austin, TX' }
 
   // 5) Stitch it together
   const enrichedClients = allBusinesses.map((b) => {
@@ -210,6 +227,7 @@ export async function GET(request: NextRequest) {
     calls_today: a.callsToday,
     spark: a.spark,
     last_call_at: a.lastCallAt,
+    is_platform: !!(b as any).is_platform,
    }
   })
 
@@ -241,8 +259,8 @@ export async function GET(request: NextRequest) {
    },
    map: {
     points: mapPoints,
-    // Operations hub — arcs on the admin globe fan out from here.
-    hq: { name: 'CloudGreet HQ', lat: 30.2672, lng: -97.7431, city: 'Austin, TX' },
+    // Operations hub - arcs on the admin globe fan out from here.
+    hq,
    },
    clients: enrichedClients,
   })
