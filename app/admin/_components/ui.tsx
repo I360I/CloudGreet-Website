@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { CircleNotch } from '@phosphor-icons/react'
+import { BorderBeam } from './magic'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -29,8 +30,9 @@ export function HeroPanel({
  children: React.ReactNode
 }) {
  return (
-  <div className={`cg-card-hero rounded-2xl ${className}`}>
+  <div className={`cg-card-hero rounded-2xl overflow-hidden ${className}`}>
    {children}
+   <BorderBeam size={150} duration={11} />
   </div>
  )
 }

@@ -151,6 +151,11 @@ body { --font-display: var(--font-geist-sans); }
   .cg-aurora::before { animation: none; }
 }
 
+/* Border beams need offset-path: rect(); hide cleanly where unsupported. */
+@supports not (offset-path: rect(0 0 auto auto)) {
+  .cg-border-beam { display: none; }
+}
+
 /* ------------------------------------------------------------
    Light-theme remap layer.
    The admin pages were written against dark utility classes.

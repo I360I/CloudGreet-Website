@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Eye, EyeSlash, ArrowUpRight, CircleNotch, ArrowLeft } from '@phosphor-icons/react'
 import { setAuthToken } from '@/lib/auth/token-manager'
+import { BorderBeam } from '../_components/magic'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -77,7 +78,7 @@ export default function AdminLoginPage() {
      transition={{ duration: 0.6, ease: EASE }}
      className="w-full max-w-[420px]"
     >
-     <div className="cg-card-hero rounded-2xl p-8 md:p-10">
+     <div className="cg-card-hero rounded-2xl p-8 md:p-10 relative overflow-hidden">
       <div className="flex flex-col items-center text-center mb-8">
        <div className="relative mb-5">
         <div className="absolute inset-0 rounded-full bg-sky-400/20 blur-2xl scale-125" />
@@ -154,6 +155,7 @@ export default function AdminLoginPage() {
          : (<>Sign in <ArrowUpRight className="w-4 h-4" /></>)}
        </button>
       </form>
+      <BorderBeam size={140} duration={12} />
      </div>
 
      <p className="text-center text-[11px] font-mono text-gray-600 mt-6">

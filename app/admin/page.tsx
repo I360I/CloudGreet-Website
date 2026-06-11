@@ -11,6 +11,7 @@ import { AdminShell, useAdminTheme } from './_components/Shell'
 import {
  Panel, HeroPanel, StatusPill, Input, Sparkline,
 } from './_components/ui'
+import { BorderBeam } from './_components/magic'
 import {
  AreaChart, CountUp, DonutGauge, MeterBar, fmtMoney,
 } from './_components/charts'
@@ -301,6 +302,7 @@ export default function AdminHome() {
         </span>
        </div>
        <GlobePanel points={data?.map?.points || []} hq={data?.map?.hq || null} />
+       <BorderBeam size={130} duration={14} delay={5} colorFrom="#34d399" colorTo="#38bdf8" reverse />
       </Panel>
      </motion.div>
 
