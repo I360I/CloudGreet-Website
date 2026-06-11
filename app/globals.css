@@ -248,13 +248,32 @@ body { --font-display: var(--font-geist-sans); }
   50% { background-position: 100% 50%; }
 }
 
+/* Light rays — soft beams shining down from above (Magic UI style). */
+.cg-ray {
+  position: absolute;
+  top: -14%;
+  height: 135%;
+  transform-origin: top center;
+  background: linear-gradient(to bottom,
+    rgba(125, 211, 252, var(--ray-core, 0.30)),
+    rgba(125, 211, 252, calc(var(--ray-core, 0.30) * 0.35)) 52%,
+    transparent 76%);
+  filter: blur(16px);
+  transform: rotate(var(--ray-rot, 12deg));
+  animation: cg-ray-sway ease-in-out infinite alternate;
+}
+@keyframes cg-ray-sway {
+  0%   { transform: rotate(calc(var(--ray-rot, 12deg) - 1.7deg)) translateX(-1.2%); opacity: 0.55; }
+  100% { transform: rotate(calc(var(--ray-rot, 12deg) + 1.7deg)) translateX(1.2%); opacity: 1; }
+}
+
 /* Backlight — ambient multicolor glow behind a feature block (Magic UI style). */
 .cg-backlight {
   background:
-    radial-gradient(46% 60% at 20% 35%, rgba(56, 189, 248, 0.75), transparent 70%),
-    radial-gradient(44% 56% at 80% 38%, rgba(99, 102, 241, 0.65), transparent 70%),
-    radial-gradient(50% 54% at 50% 82%, rgba(34, 211, 238, 0.55), transparent 72%),
-    radial-gradient(38% 46% at 74% 84%, rgba(52, 211, 153, 0.35), transparent 70%);
+    radial-gradient(46% 60% at 20% 35%, rgba(125, 211, 252, 0.75), transparent 70%),
+    radial-gradient(44% 56% at 80% 38%, rgba(37, 99, 235, 0.60), transparent 70%),
+    radial-gradient(50% 54% at 50% 82%, rgba(56, 189, 248, 0.55), transparent 72%),
+    radial-gradient(38% 46% at 74% 84%, rgba(96, 165, 250, 0.45), transparent 70%);
   filter: blur(44px);
   animation: cg-backlight-drift 13s ease-in-out infinite alternate;
   will-change: transform, opacity;
@@ -285,6 +304,7 @@ body { --font-display: var(--font-geist-sans); }
 
 @media (prefers-reduced-motion: reduce) {
   .cg-aurora-text { animation: none; }
+  .cg-ray { animation: none; opacity: 0.7; }
   .cg-backlight { animation: none; opacity: 0.6; }
   .cg-meteor { display: none; }
   .cg-shiny-text { animation: none; background: none; -webkit-text-fill-color: currentColor; }

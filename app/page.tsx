@@ -748,8 +748,8 @@ function RoiCalculator() {
   <section id="roi" className="px-5 sm:px-6 pt-6 pb-12 sm:pb-16">
    <div className="max-w-6xl mx-auto text-center mb-10">
     <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-medium tracking-tight leading-[1.05] mb-4">
-     <DiaTextReveal final="#111827">See</DiaTextReveal>{' '}
-     <DiaTextReveal final="#9ca3af" delay={0.18}>your numbers.</DiaTextReveal>
+     <DiaTextReveal final="#111827" faint="#d7dce3">See</DiaTextReveal>{' '}
+     <DiaTextReveal final="#9ca3af" faint="#e3e7ec" delay={0.18}>your numbers.</DiaTextReveal>
     </h2>
     <p className="text-base md:text-lg text-gray-500 max-w-md mx-auto">
      Drag the sliders to estimate what missed calls cost you each month.
@@ -1199,10 +1199,10 @@ function AuroraText({ children }: { children: React.ReactNode }) {
    <span className="sr-only">{children}</span>
    <span
     aria-hidden
-    className="cg-aurora-text bg-clip-text text-transparent drop-shadow-[0_3px_16px_rgba(56,189,248,0.45)]"
+    className="cg-aurora-text bg-clip-text text-transparent drop-shadow-[0_3px_14px_rgba(56,189,248,0.28)]"
     style={{
      backgroundImage:
-      'linear-gradient(115deg, #38bdf8 8%, #2563eb 32%, #6366f1 55%, #22d3ee 78%, #38bdf8 96%)',
+      'linear-gradient(115deg, #60a5fa 8%, #2f6fde 32%, #38a3e0 55%, #7cc4ee 78%, #60a5fa 96%)',
     }}
    >
     {children}
@@ -1248,9 +1248,10 @@ function TypingText({ text, className = '' }: { text: string; className?: string
 
 /** Dia text reveal (Magic UI style): a color band sweeps across the text
  *  with a gradient shine, then settles on the given foreground color. */
-function DiaTextReveal({ children, final, delay = 0 }: {
+function DiaTextReveal({ children, final, faint, delay = 0 }: {
  children: React.ReactNode
  final: string
+ faint: string
  delay?: number
 }) {
  return (
@@ -1259,13 +1260,13 @@ function DiaTextReveal({ children, final, delay = 0 }: {
    style={{
     WebkitBackgroundClip: 'text',
     color: 'transparent',
-    backgroundImage: `linear-gradient(110deg, ${final} 0%, ${final} 38%, #38bdf8 46%, #6366f1 51%, #22d3ee 56%, ${final} 64%, ${final} 100%)`,
+    backgroundImage: `linear-gradient(110deg, ${final} 0%, ${final} 38%, #60a5fa 46%, #38bdf8 51%, #7dd3fc 56%, ${faint} 64%, ${faint} 100%)`,
     backgroundSize: '280% 100%',
    }}
    initial={{ backgroundPosition: '100% 0%' }}
    whileInView={{ backgroundPosition: '0% 0%' }}
-   viewport={{ once: true, amount: 0.7 }}
-   transition={{ duration: 1.25, ease: [0.22, 1, 0.36, 1], delay }}
+   viewport={{ once: true, amount: 0.6 }}
+   transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1], delay }}
   >
    {children}
   </motion.span>

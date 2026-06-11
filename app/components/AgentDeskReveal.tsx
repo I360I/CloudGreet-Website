@@ -135,6 +135,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
   const idleRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const heroRef = useRef<HTMLDivElement>(null)
+  const raysRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const talkRefs = useRef<Array<HTMLVideoElement | null>>([])
   const imgsRef = useRef<HTMLImageElement[]>([])
@@ -390,6 +391,8 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
           heroRef.current.style.opacity = String(1 - up)
           heroRef.current.style.pointerEvents = up > 0.5 ? 'none' : 'auto'
         }
+        // light rays fade out with the hero copy as the zoom takes over
+        if (raysRef.current) raysRef.current.style.opacity = String(1 - up)
         // transition-out: scrub the flip-to-white in THIS same pinned stage,
         // after the desk. Fade the desk media + UI out as the flip takes over,
         // so there's never two scenes stacked.
@@ -447,6 +450,27 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
           <div className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[55%]"
             style={{ background: 'linear-gradient(to bottom,#f6f5f1 0%,#f6f5f1 26%,rgba(246,245,241,0.4) 60%,rgba(246,245,241,0) 100%)' }} />
+
+          {/* LIGHT RAYS - soft beams from above, behind the copy */}
+          <div ref={raysRef} aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-[74%] overflow-hidden">
+            {[
+              { left: '4%',  rot: '-19deg', w: '9%',  core: 0.20, dur: '11s', delay: '0s' },
+              { left: '20%', rot: '-11deg', w: '13%', core: 0.26, dur: '14s', delay: '-3s' },
+              { left: '37%', rot: '-4deg',  w: '8%',  core: 0.18, dur: '9.5s', delay: '-6s' },
+              { left: '52%', rot: '4deg',   w: '14%', core: 0.28, dur: '12.5s', delay: '-1.5s' },
+              { left: '70%', rot: '12deg',  w: '10%', core: 0.20, dur: '10.5s', delay: '-7s' },
+              { left: '85%', rot: '20deg',  w: '12%', core: 0.24, dur: '13.5s', delay: '-4.5s' },
+            ].map((r, i) => (
+              <div key={i} className="cg-ray" style={{
+                left: r.left,
+                width: r.w,
+                ['--ray-rot' as string]: r.rot,
+                ['--ray-core' as string]: r.core,
+                animationDuration: r.dur,
+                animationDelay: r.delay,
+              }} />
+            ))}
+          </div>
 
           {/* HERO COPY */}
           <div ref={heroRef} className="absolute inset-x-0 top-0 z-10 mx-auto flex w-full max-w-5xl flex-col items-center px-5 pt-24 text-center sm:pt-28">
@@ -533,11 +557,13 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
               <div ref={pillBarRef}
                 onMouseMove={(e) => dockX.set(e.clientX)}
                 onMouseLeave={() => dockX.set(Infinity)}
-                className="pointer-events-auto flex items-center gap-1 max-sm:gap-0 rounded-full border border-white/60 bg-white/40 p-1.5 max-sm:p-1 max-sm:max-w-full max-sm:overflow-x-auto max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.35),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-8px_20px_-12px_rgba(255,255,255,0.5)]">
+                className="pointer-events-auto flex items-center gap-1.5 max-sm:gap-1 rounded-full border border-white/60 bg-white/30 p-1.5 max-sm:p-1 max-sm:max-w-full max-sm:overflow-x-auto max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.35),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-8px_20px_-12px_rgba(255,255,255,0.5)]">
                 {DESKS.map((d, i) => (
                   <div key={d.v} ref={(el) => { pillRefs.current[i] = el }} className="relative">
                     <DockPill mouseX={dockX} onClick={() => go(i, i > active ? 1 : -1)}
-                      className={`relative whitespace-nowrap rounded-full px-5 py-2.5 max-sm:px-2.5 max-sm:py-2 text-sm max-sm:text-[11px] font-medium transition ${i === active ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                      className={`relative whitespace-nowrap rounded-full px-5 py-2.5 max-sm:px-2.5 max-sm:py-2 text-sm max-sm:text-[11px] font-medium transition-colors ${i === active
+                        ? 'text-white'
+                        : 'border border-white/70 bg-white/50 text-gray-600 backdrop-blur-xl shadow-[0_10px_24px_-12px_rgba(15,23,42,0.4),inset_0_1px_0_0_rgba(255,255,255,0.9)] hover:bg-white/70 hover:text-gray-900'}`}>
                       {i === active && <motion.span layoutId="sel" className="absolute inset-0 -z-10 rounded-full bg-gray-900 shadow-[0_6px_16px_-6px_rgba(2,32,71,0.6)]" transition={{ type: 'spring', stiffness: 400, damping: 34 }} />}
                       {d.cat}
                     </DockPill>
