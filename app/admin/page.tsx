@@ -3,16 +3,27 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
-import { Plus, ArrowUpRight, CircleNotch, Trash, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react'
+import { Plus, ArrowUpRight, CircleNotch, Trash, MagnifyingGlass, WarningCircle, Users, Phone, CalendarCheck, Wrench } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { AdminShell } from './_components/Shell'
+import { AdminShell, useAdminTheme } from './_components/Shell'
 import {
  Panel, HeroPanel, StatusPill, Input, Sparkline,
 } from './_components/ui'
 import {
- AreaChart, Bars3D, CountUp, DonutGauge, MeterBar, fmtMoney,
+ AreaChart, CountUp, DonutGauge, MeterBar, fmtMoney,
 } from './_components/charts'
+
+// WebGL pieces are client-only; skeletons keep panel heights stable while they load.
+const TopClients3D = dynamic(() => import('./_components/Chart3D'), {
+ ssr: false,
+ loading: () => <div className="h-[300px] rounded-xl bg-white/[0.02] animate-pulse" />,
+})
+const ClientGlobe = dynamic(() => import('./_components/ClientGlobe'), {
+ ssr: false,
+ loading: () => <div className="h-[470px] bg-white/[0.02] animate-pulse" />,
+})
 
 type Client = {
  id: string
@@ -56,6 +67,9 @@ type Overview = {
   days: string[]
   calls: number[]
   bookings: number[]
+ }
+ map?: {
+  points: { id: string; name: string; lat: number; lng: number; kind: 'client' | 'demo' }[]
  }
  clients: Client[]
 }
@@ -258,6 +272,31 @@ export default function AdminHome() {
       </HeroPanel>
      </motion.div>
 
+     {/* Live client map */}
+     <motion.div
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: EASE, delay: 0.1 }}
+      className="mb-4"
+     >
+      <Panel padding="none" className="relative overflow-hidden">
+       <div className="absolute top-5 left-6 z-10 pointer-events-none">
+        <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-1">Footprint</div>
+        <h2 className="text-sm font-medium text-white">Live client map</h2>
+       </div>
+       <div className="absolute top-5 right-6 z-10 flex items-center gap-2 flex-wrap justify-end">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono text-emerald-300 bg-emerald-400/10 border border-emerald-400/20">
+         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_currentColor]" />
+         {(data?.map?.points || []).filter((p) => p.kind === 'client').length} clients
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono text-amber-300 bg-amber-400/10 border border-amber-400/20">
+         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_currentColor]" />
+         {(data?.map?.points || []).filter((p) => p.kind === 'demo').length} demo leads
+        </span>
+       </div>
+       <GlobePanel points={data?.map?.points || []} />
+      </Panel>
+     </motion.div>
+
      {/* KPI row */}
      <motion.div
       initial="hidden" animate="show"
@@ -269,22 +308,26 @@ export default function AdminHome() {
        value={data?.kpis.activeClients ?? 0}
        sub={data && data.kpis.totalClients ? `${Math.round(((data.kpis.activeClients) / data.kpis.totalClients) * 100)}% of ${data.kpis.totalClients} total` : '-'}
        accent
+       icon={Users}
       />
       <Kpi
        label="Calls today"
        value={data?.kpis.callsToday ?? 0}
        sub={`${(data?.kpis.callsThisMonth ?? 0).toLocaleString()} this month`}
+       icon={Phone}
       />
       <Kpi
        label="Bookings this month"
        value={data?.kpis.bookingsThisMonth ?? 0}
        sub={`${data?.kpis.bookingsToday ?? 0} today`}
+       icon={CalendarCheck}
       />
       <Kpi
        label="In onboarding"
        value={data?.kpis.inOnboarding ?? 0}
        sub="Cal.com or forwarding incomplete"
        warn={(data?.kpis.inOnboarding ?? 0) > 0}
+       icon={Wrench}
       />
      </motion.div>
 
@@ -300,7 +343,7 @@ export default function AdminHome() {
         <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500">calls this month</span>
        </div>
        {topClients.length > 0 ? (
-        <Bars3D items={topClients} height={250} />
+        <TopClientsChart items={topClients} />
        ) : (
         <EmptyMascot line="No calls yet this month." />
        )}
@@ -427,18 +470,28 @@ function LegendDot({ color, label }: { color: string; label: string }) {
  )
 }
 
-function Kpi({ label, value, sub, accent = false, warn = false }: {
+function Kpi({ label, value, sub, accent = false, warn = false, icon: Icon }: {
  label: string
  value: number
  sub?: string
  accent?: boolean
  warn?: boolean
+ icon?: React.ElementType
 }) {
  return (
   <motion.div
    variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } } }}
   >
    <Panel>
+    {Icon && (
+     <div className={`absolute top-4 right-4 w-9 h-9 rounded-xl flex items-center justify-center border ${
+      warn && value > 0
+       ? 'bg-amber-400/10 border-amber-400/20 text-amber-300'
+       : 'bg-sky-400/10 border-sky-400/20 text-sky-400'
+     }`}>
+      <Icon weight="duotone" className="w-[18px] h-[18px]" />
+     </div>
+    )}
     <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-2">{label}</div>
     <div className={`font-display font-semibold tracking-tight text-3xl md:text-4xl ${
      warn && value > 0
@@ -453,6 +506,18 @@ function Kpi({ label, value, sub, accent = false, warn = false }: {
    </Panel>
   </motion.div>
  )
+}
+
+function TopClientsChart({ items }: { items: { label: string; value: number }[] }) {
+ const { theme } = useAdminTheme()
+ return <TopClients3D items={items} theme={theme} height={300} />
+}
+
+function GlobePanel({ points }: {
+ points: { id: string; name: string; lat: number; lng: number; kind: 'client' | 'demo' }[]
+}) {
+ const { theme } = useAdminTheme()
+ return <ClientGlobe points={points} theme={theme} height={470} />
 }
 
 function EmptyMascot({ line }: { line: string }) {

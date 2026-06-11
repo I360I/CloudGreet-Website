@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { geolocate, jitter } from '@/lib/geo/us-geo'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     id, business_name, email, phone_number, business_type,
     subscription_status, account_status, onboarding_completed,
     calcom_connected, forwarding_verified_at, created_at,
-    monthly_price_cents
+    monthly_price_cents, city, state
    `)
    .order('created_at', { ascending: false })
 
@@ -175,6 +176,28 @@ export async function GET(request: NextRequest) {
   const marginCents = mrrCents - costMtdCents
   const marginPct = mrrCents > 0 ? Math.round((marginCents / mrrCents) * 1000) / 10 : null
 
+  // 4d) Map points: clients (green) + demo leads (yellow). Located from
+  // city/state when filled in, else the phone's area code (metro-level).
+  type MapPoint = { id: string; name: string; lat: number; lng: number; kind: 'client' | 'demo' }
+  const mapPoints: MapPoint[] = []
+  for (const b of allBusinesses as any[]) {
+   const loc = geolocate({ city: b.city, state: b.state, phone: b.phone_number })
+   if (!loc) continue
+   const [lat, lng] = jitter(loc[0], loc[1], String(b.id))
+   mapPoints.push({ id: b.id, name: b.business_name || 'Client', lat, lng, kind: 'client' })
+  }
+  const { data: demoLeads } = await supabaseAdmin
+   .from('demo_leads')
+   .select('id, name, phone, created_at')
+   .order('created_at', { ascending: false })
+   .limit(300)
+  for (const d of demoLeads || []) {
+   const loc = geolocate({ phone: (d as any).phone })
+   if (!loc) continue
+   const [lat, lng] = jitter(loc[0], loc[1], String((d as any).id))
+   mapPoints.push({ id: (d as any).id, name: (d as any).name || 'Demo lead', lat, lng, kind: 'demo' })
+  }
+
   // 5) Stitch it together
   const enrichedClients = allBusinesses.map((b) => {
    const a = aggregateByBiz.get(b.id) || {
@@ -225,6 +248,7 @@ export async function GET(request: NextRequest) {
     calls: callsSeries,
     bookings: bookingsSeries,
    },
+   map: { points: mapPoints },
    clients: enrichedClients,
   })
  } catch (e) {

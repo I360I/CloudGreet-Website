@@ -28,9 +28,39 @@ body { --font-display: var(--font-geist-sans); }
 }
 
 /* ============================================================
-   Admin design system — "cg" surfaces
-   Deep-space base with ambient aurora light and glass cards.
+   Admin design system — "cg" surfaces + dual theme
+   Dark: deep-space base, ambient aurora, glass cards.
+   Light: porcelain base, soft shadows, same accent language.
+   Theme attribute lives on the admin root: data-cg-theme="dark|light".
    ============================================================ */
+
+[data-cg-theme] {
+  --cg-bg: #07080b;
+  --cg-text-1: #f4f6fa;
+  --cg-text-2: #c7cdd8;
+  --cg-text-3: #98a0ae;
+  --cg-muted: #6b7280;
+  --cg-grid: rgba(255, 255, 255, 0.045);
+  --cg-grid-strong: rgba(255, 255, 255, 0.09);
+  --cg-track: rgba(255, 255, 255, 0.06);
+  --cg-tooltip-bg: rgba(16, 19, 25, 0.95);
+  --cg-tooltip-border: rgba(255, 255, 255, 0.1);
+  --cg-input-bg: rgba(0, 0, 0, 0.3);
+}
+
+[data-cg-theme='light'] {
+  --cg-bg: #eef2f9;
+  --cg-text-1: #101828;
+  --cg-text-2: #344054;
+  --cg-text-3: #475467;
+  --cg-muted: #667085;
+  --cg-grid: rgba(16, 24, 40, 0.06);
+  --cg-grid-strong: rgba(16, 24, 40, 0.14);
+  --cg-track: rgba(16, 24, 40, 0.08);
+  --cg-tooltip-bg: rgba(255, 255, 255, 0.97);
+  --cg-tooltip-border: rgba(16, 24, 40, 0.1);
+  --cg-input-bg: #ffffff;
+}
 
 /* Standard card: glass over near-black, inner top highlight, deep shadow. */
 .cg-card {
@@ -42,6 +72,14 @@ body { --font-display: var(--font-geist-sans); }
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 24px 48px -28px rgba(0, 0, 0, 0.65);
+}
+[data-cg-theme='light'] .cg-card {
+  background: linear-gradient(180deg, #ffffff, #fdfdfe);
+  border: 1px solid #e7eaf0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 20px 44px -28px rgba(16, 24, 40, 0.16);
 }
 
 /* Hero card: gradient hairline border + ambient accent glow. */
@@ -56,6 +94,15 @@ body { --font-display: var(--font-geist-sans); }
     0 32px 64px -32px rgba(0, 0, 0, 0.8),
     0 0 90px -50px rgba(56, 189, 248, 0.35);
 }
+[data-cg-theme='light'] .cg-card-hero {
+  background:
+    linear-gradient(180deg, #ffffff, #fbfcfe) padding-box,
+    linear-gradient(140deg, rgba(14, 165, 233, 0.45), rgba(16, 24, 40, 0.08) 32%, rgba(99, 102, 241, 0.38) 66%, rgba(16, 24, 40, 0.06)) border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 24px 56px -28px rgba(16, 24, 40, 0.22),
+    0 0 80px -40px rgba(56, 189, 248, 0.25);
+}
 
 /* Fixed ambient backdrop behind the whole admin. */
 .cg-aurora {
@@ -67,6 +114,12 @@ body { --font-display: var(--font-geist-sans); }
     radial-gradient(55% 42% at 16% -8%, rgba(56, 189, 248, 0.10), transparent 62%),
     radial-gradient(48% 38% at 86% -6%, rgba(99, 102, 241, 0.09), transparent 64%),
     radial-gradient(75% 60% at 50% 112%, rgba(14, 165, 233, 0.05), transparent 60%);
+}
+[data-cg-theme='light'] .cg-aurora {
+  background:
+    radial-gradient(55% 42% at 16% -8%, rgba(59, 130, 246, 0.16), transparent 62%),
+    radial-gradient(48% 38% at 86% -6%, rgba(99, 102, 241, 0.14), transparent 64%),
+    radial-gradient(75% 60% at 50% 112%, rgba(37, 99, 235, 0.07), transparent 60%);
 }
 .cg-aurora::before {
   content: '';
@@ -92,7 +145,96 @@ body { --font-display: var(--font-geist-sans); }
   opacity: 0.022;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
+[data-cg-theme='light'] .cg-noise { opacity: 0.014; }
 
 @media (prefers-reduced-motion: reduce) {
   .cg-aurora::before { animation: none; }
 }
+
+/* ------------------------------------------------------------
+   Light-theme remap layer.
+   The admin pages were written against dark utility classes.
+   Rather than rewriting ~30 pages, light mode remaps the small,
+   fixed set of utilities they actually use (inventoried by grep).
+   Scoped under the theme attribute so the public site is untouched.
+   ------------------------------------------------------------ */
+
+/* Text scale */
+[data-cg-theme='light'] .text-white { color: var(--cg-text-1); }
+[data-cg-theme='light'] .text-gray-100,
+[data-cg-theme='light'] .text-gray-200 { color: #1d2433; }
+[data-cg-theme='light'] .text-gray-300 { color: var(--cg-text-2); }
+[data-cg-theme='light'] .text-gray-400 { color: var(--cg-text-3); }
+[data-cg-theme='light'] .text-gray-500 { color: var(--cg-muted); }
+[data-cg-theme='light'] .text-gray-600 { color: #98a2b3; }
+[data-cg-theme='light'] .text-gray-700 { color: #aab2c0; }
+[data-cg-theme='light'] .hover\:text-white:hover { color: var(--cg-text-1); }
+[data-cg-theme='light'] .hover\:text-gray-300:hover { color: var(--cg-text-2); }
+[data-cg-theme='light'] .placeholder-gray-600::placeholder,
+[data-cg-theme='light'] .placeholder-gray-500::placeholder,
+[data-cg-theme='light'] .placeholder-gray-400::placeholder { color: #98a2b3; }
+
+/* Keep white text on solid/gradient accent fills (buttons, CTAs) */
+[data-cg-theme='light'] :is(.bg-sky-500, .bg-sky-600, .bg-gradient-to-b, .bg-rose-500, .bg-emerald-500).text-white,
+[data-cg-theme='light'] :is(.bg-sky-500, .bg-sky-600, .bg-gradient-to-b) .text-white {
+  color: #ffffff;
+}
+
+/* Dark page/panel fills → light surfaces */
+[data-cg-theme='light'] :is(.bg-\[\#07080b\], .bg-\[\#0a0a0c\], .bg-\[\#0a0c10\]) { background-color: var(--cg-bg); }
+[data-cg-theme='light'] :is(.bg-\[\#0b0d12\], .bg-\[\#101015\], .bg-\[\#0c0c10\], .bg-\[\#101319\]) { background-color: #ffffff; }
+[data-cg-theme='light'] .bg-black\/30 { background-color: var(--cg-input-bg); }
+
+/* Frosted chrome surfaces (opacity-modified classes need exact matches) */
+[data-cg-theme='light'] :is(.bg-\[\#0a0c10\]\/85, .bg-\[\#0a0c10\]\/95, .bg-\[\#0a0a0c\]\/95, .bg-\[\#07080b\]\/75) { background-color: rgba(250, 251, 253, 0.82); }
+[data-cg-theme='light'] :is(.bg-\[\#0b0d12\]\/98, .bg-\[\#101319\]\/95) { background-color: rgba(255, 255, 255, 0.97); }
+
+/* Translucent white fills (glass) → translucent ink */
+[data-cg-theme='light'] .bg-white\/\[0\.02\] { background-color: rgba(16, 24, 40, 0.015); }
+[data-cg-theme='light'] .bg-white\/\[0\.03\] { background-color: rgba(16, 24, 40, 0.025); }
+[data-cg-theme='light'] .bg-white\/\[0\.04\] { background-color: rgba(16, 24, 40, 0.035); }
+[data-cg-theme='light'] .bg-white\/\[0\.05\] { background-color: rgba(16, 24, 40, 0.045); }
+[data-cg-theme='light'] .bg-white\/\[0\.06\] { background-color: rgba(16, 24, 40, 0.055); }
+[data-cg-theme='light'] .bg-white\/\[0\.08\] { background-color: rgba(16, 24, 40, 0.07); }
+[data-cg-theme='light'] .hover\:bg-white\/\[0\.02\]:hover { background-color: rgba(16, 24, 40, 0.02); }
+[data-cg-theme='light'] .hover\:bg-white\/\[0\.025\]:hover { background-color: rgba(16, 24, 40, 0.025); }
+[data-cg-theme='light'] .hover\:bg-white\/\[0\.03\]:hover { background-color: rgba(16, 24, 40, 0.03); }
+[data-cg-theme='light'] .hover\:bg-white\/\[0\.04\]:hover { background-color: rgba(16, 24, 40, 0.04); }
+[data-cg-theme='light'] .hover\:bg-white\/\[0\.06\]:hover { background-color: rgba(16, 24, 40, 0.05); }
+[data-cg-theme='light'] .hover\:bg-white\/\[0\.08\]:hover { background-color: rgba(16, 24, 40, 0.06); }
+
+/* Hairlines */
+[data-cg-theme='light'] .border-white\/\[0\.04\] { border-color: rgba(16, 24, 40, 0.05); }
+[data-cg-theme='light'] :is(.border-white\/\[0\.06\], .border-white\/\[0\.07\]) { border-color: #e7eaf0; }
+[data-cg-theme='light'] :is(.border-white\/\[0\.08\], .border-white\/\[0\.1\]) { border-color: #dde2ea; }
+[data-cg-theme='light'] :is(.border-white\/\[0\.12\], .border-white\/\[0\.16\]) { border-color: #cfd6e0; }
+[data-cg-theme='light'] .border-white\/10 { border-color: #dde2ea; }
+[data-cg-theme='light'] .divide-white\/\[0\.04\] > :not([hidden]) ~ :not([hidden]) { border-color: rgba(16, 24, 40, 0.06); }
+[data-cg-theme='light'] .divide-white\/\[0\.06\] > :not([hidden]) ~ :not([hidden]) { border-color: #e7eaf0; }
+
+/* Accent text shifts to royal blue for AA contrast + a bluer feel on white */
+[data-cg-theme='light'] .text-sky-300 { color: #2563eb; }
+[data-cg-theme='light'] .text-sky-400 { color: #1d4ed8; }
+[data-cg-theme='light'] .text-emerald-300 { color: #047857; }
+[data-cg-theme='light'] .text-emerald-400 { color: #059669; }
+[data-cg-theme='light'] .text-amber-300 { color: #b45309; }
+[data-cg-theme='light'] .text-rose-300 { color: #be123c; }
+[data-cg-theme='light'] .text-rose-400 { color: #e11d48; }
+[data-cg-theme='light'] .hover\:text-rose-300:hover { color: #be123c; }
+[data-cg-theme='light'] .hover\:text-rose-200:hover { color: #9f1239; }
+[data-cg-theme='light'] .hover\:text-sky-300:hover { color: #0284c7; }
+
+/* SVG text + chart fills */
+[data-cg-theme='light'] .fill-gray-600 { fill: #98a2b3; }
+[data-cg-theme='light'] .fill-gray-300 { fill: var(--cg-text-2); }
+[data-cg-theme='light'] .fill-white { fill: var(--cg-text-1); }
+
+/* Gradient display numerals stay legible on white */
+[data-cg-theme='light'] .from-sky-300 { --tw-gradient-from: #3b82f6 var(--tw-gradient-from-position); --tw-gradient-to: rgb(59 130 246 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+[data-cg-theme='light'] .to-sky-500 { --tw-gradient-to: #1d4ed8 var(--tw-gradient-to-position); }
+
+/* Primary buttons go royal blue in light mode (reference look) */
+[data-cg-theme='light'] .from-sky-400 { --tw-gradient-from: #3b82f6 var(--tw-gradient-from-position); --tw-gradient-to: rgb(59 130 246 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+[data-cg-theme='light'] .to-sky-600 { --tw-gradient-to: #1d4ed8 var(--tw-gradient-to-position); }
+[data-cg-theme='light'] .hover\:from-sky-300:hover { --tw-gradient-from: #60a5fa var(--tw-gradient-from-position); --tw-gradient-to: rgb(96 165 250 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+[data-cg-theme='light'] .hover\:to-sky-500:hover { --tw-gradient-to: #2563eb var(--tw-gradient-to-position); }

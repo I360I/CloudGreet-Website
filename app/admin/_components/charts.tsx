@@ -182,13 +182,14 @@ export function AreaChart({
        key={f}
        x1={pad.l} x2={pad.l + innerW}
        y1={pad.t + innerH * f} y2={pad.t + innerH * f}
-       stroke="rgba(255,255,255,0.045)" strokeWidth="1"
+       stroke="var(--cg-grid)" strokeWidth="1"
       />
      ))}
-     <line x1={pad.l} x2={pad.l + innerW} y1={pad.t + innerH} y2={pad.t + innerH} stroke="rgba(255,255,255,0.09)" strokeWidth="1" />
+     <line x1={pad.l} x2={pad.l + innerW} y1={pad.t + innerH} y2={pad.t + innerH} stroke="var(--cg-grid-strong)" strokeWidth="1" />
 
      <g clipPath={`url(#${uid}-reveal)`}>
       {series.map((s, si) => {
+       if (s.data.length < 2) return null
        const pts = pointsFor(s.data)
        const line = smoothPath(pts)
        const area = `${line} L${(pad.l + innerW).toFixed(2)},${(pad.t + innerH).toFixed(2)} L${pad.l},${(pad.t + innerH).toFixed(2)} Z`
@@ -205,14 +206,14 @@ export function AreaChart({
      {/* crosshair */}
      {hoverX !== null && (
       <g>
-       <line x1={hoverX} x2={hoverX} y1={pad.t} y2={pad.t + innerH} stroke="rgba(255,255,255,0.16)" strokeWidth="1" strokeDasharray="2 3" />
+       <line x1={hoverX} x2={hoverX} y1={pad.t} y2={pad.t + innerH} stroke="var(--cg-grid-strong)" strokeWidth="1" strokeDasharray="2 3" />
        {series.map((s, si) => {
         const v = s.data[hover!] ?? 0
         const y = pad.t + innerH - (v / yMax) * innerH
         return (
          <g key={si}>
           <circle cx={hoverX} cy={y} r={7} fill={s.color} opacity="0.18" />
-          <circle cx={hoverX} cy={y} r={3.2} fill="#0b0d12" stroke={s.color} strokeWidth="2" />
+          <circle cx={hoverX} cy={y} r={3.2} fill="var(--cg-bg)" stroke={s.color} strokeWidth="2" />
          </g>
         )
        })}
@@ -238,11 +239,13 @@ export function AreaChart({
    {/* tooltip */}
    {hover !== null && hoverX !== null && width > 0 && (
     <div
-     className="absolute z-10 pointer-events-none -translate-y-2 rounded-xl border border-white/10 bg-[#101319]/95 backdrop-blur px-3 py-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.8)]"
+     className="absolute z-10 pointer-events-none -translate-y-2 rounded-xl border backdrop-blur px-3 py-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.45)]"
      style={{
       top: 0,
       left: Math.max(4, Math.min(width - 148, hoverX + 10)),
       width: 144,
+      background: 'var(--cg-tooltip-bg)',
+      borderColor: 'var(--cg-tooltip-border)',
      }}
     >
      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">{labels[hover]}</div>
@@ -317,10 +320,10 @@ export function Bars3D({
        key={f}
        x1={pad.l} x2={pad.l + innerW + DX}
        y1={pad.t + innerH * f - DY * (1 - f) * 0} y2={pad.t + innerH * f}
-       stroke="rgba(255,255,255,0.04)" strokeWidth="1"
+       stroke="var(--cg-grid)" strokeWidth="1"
       />
      ))}
-     <line x1={pad.l} x2={pad.l + innerW + DX} y1={pad.t + innerH} y2={pad.t + innerH} stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+     <line x1={pad.l} x2={pad.l + innerW + DX} y1={pad.t + innerH} y2={pad.t + innerH} stroke="var(--cg-grid-strong)" strokeWidth="1" />
 
      {items.map((it, i) => {
       const hFrac = it.value / yMax
@@ -427,7 +430,7 @@ export function DonutGauge({
       )}
      </linearGradient>
     </defs>
-    <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={stroke} />
+    <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--cg-track)" strokeWidth={stroke} />
     <motion.circle
      cx={size / 2} cy={size / 2} r={r}
      fill="none"

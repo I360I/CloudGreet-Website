@@ -9,6 +9,7 @@ import {
  SquaresFour, Phone, CurrencyDollar, ListChecks, MagicWand, SignOut, Users,
  FileText, Robot, PhoneOutgoing, TestTube, ChatText, CalendarCheck, DotsThree, X,
 } from '@phosphor-icons/react'
+import { useAdminTheme } from './Shell'
 
 type Item = {
  icon: React.ElementType
@@ -65,6 +66,7 @@ export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
  activeLabel?: AdminActiveLabel
 }) {
  const pathname = usePathname() || '/admin'
+ const { theme } = useAdminTheme()
 
  return (
   <>
@@ -73,7 +75,7 @@ export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
     <div className="px-5 py-5 flex items-center gap-2.5">
      <Link href="/admin" className="flex items-center" aria-label="CloudGreet Admin">
       <Image
-       src="/cloudgreet-logo-white.png"
+       src={theme === 'light' ? '/cloudgreet-logo.png' : '/cloudgreet-logo-white.png'}
        alt="CloudGreet"
        width={140}
        height={40}
