@@ -2,17 +2,17 @@
 
 /**
  * Interactive 3D client map (three-globe inside react-three-fiber).
- * Dot-matrix continents, atmosphere glow, camera parked over North
- * America, draggable. Green dots = paying accounts (with radar rings),
- * amber dots = accounts that are not paying yet.
- * Land topology is served from /public/geo (no third-party fetch).
+ * Photorealistic NASA imagery served from /public/geo: Black Marble
+ * night lights in dark mode, Blue Marble day in light mode, terrain
+ * bump + ocean specular. Camera parked over North America, draggable.
+ * Green dots = paying accounts (radar rings), amber = not paying yet,
+ * blue = HQ with animated arcs out to every account.
  */
 
 import React, { Component, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Stars } from '@react-three/drei'
 import ThreeGlobe from 'three-globe'
-import { feature } from 'topojson-client'
 import * as THREE from 'three'
 
 export type GlobePoint = {
@@ -29,26 +29,8 @@ const PAYING_COLOR = '#34d399'
 const NONPAYING_COLOR = '#fbbf24'
 const HQ_COLOR = '#38bdf8'
 
-let landCache: any[] | null = null
-async function loadLand(): Promise<any[]> {
- if (landCache) return landCache
- // Per-country features: h3's polygonToCells chokes on the single merged
- // land MultiPolygon, so we hex-bin country by country (like globe.gl does).
- const res = await fetch('/geo/countries-110m.json')
- const topo = await res.json()
- landCache = (feature(topo, topo.objects.countries) as any).features
- return landCache!
-}
-
 function GlobeObject({ points, hq, light }: { points: GlobePoint[]; hq?: GlobeHq | null; light: boolean }) {
  const { camera } = useThree()
- const [land, setLand] = useState<any[] | null>(null)
-
- useEffect(() => {
-  let alive = true
-  loadLand().then((f) => { if (alive) setLand(f) }).catch(() => {})
-  return () => { alive = false }
- }, [])
 
  const globe = useMemo(() => {
   const g = new ThreeGlobe({ animateIn: true })
@@ -56,34 +38,29 @@ function GlobeObject({ points, hq, light }: { points: GlobePoint[]; hq?: GlobeHq
   return g
  }, [])
 
- // theme-dependent surface
+ // NASA surface — night lights in dark mode, day imagery in light mode
  useEffect(() => {
+  globe
+   .globeImageUrl(light ? '/geo/earth-day.jpg' : '/geo/earth-night.jpg')
+   .bumpImageUrl('/geo/earth-topology.png')
   const mat = globe.globeMaterial() as THREE.MeshPhongMaterial
+  mat.bumpScale = 6
   if (light) {
-   mat.color = new THREE.Color('#dbe7f7')
-   mat.emissive = new THREE.Color('#c7d8ef')
-   mat.emissiveIntensity = 0.25
-   mat.shininess = 4
-   globe.atmosphereColor('#60a5fa').atmosphereAltitude(0.14)
+   globe.atmosphereColor('#7ab8ff').atmosphereAltitude(0.15)
+   new THREE.TextureLoader().load('/geo/earth-water.png', (tex) => {
+    mat.specularMap = tex
+    mat.specular = new THREE.Color('#5a6673')
+    mat.shininess = 13
+    mat.needsUpdate = true
+   })
   } else {
-   mat.color = new THREE.Color('#13294d')
-   mat.emissive = new THREE.Color('#0d1d3a')
-   mat.emissiveIntensity = 0.85
-   mat.shininess = 6
-   globe.atmosphereColor('#4cc3ff').atmosphereAltitude(0.22)
+   globe.atmosphereColor('#3da9ff').atmosphereAltitude(0.2)
+   mat.specularMap = null
+   mat.specular = new THREE.Color('#000000')
+   mat.shininess = 4
+   mat.needsUpdate = true
   }
  }, [globe, light])
-
- // continents as hex dot-matrix
- useEffect(() => {
-  if (!land) return
-  globe
-   .hexPolygonsData(land)
-   .hexPolygonResolution(3)
-   .hexPolygonMargin(0.55)
-   .hexPolygonAltitude(0.004)
-   .hexPolygonColor(() => (light ? 'rgba(37, 99, 235, 0.55)' : 'rgba(141, 211, 255, 0.92)'))
- }, [globe, land, light])
 
  // markers + radar rings + HQ arcs
  useEffect(() => {
@@ -181,9 +158,8 @@ export default function ClientGlobe({
      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
      style={{ background: 'transparent' }}
     >
-     <ambientLight intensity={light ? 2.2 : 1.9} color="#ffffff" />
-     <directionalLight position={[200, 180, 220]} intensity={light ? 1.4 : 1.1} color="#ffffff" />
-     <directionalLight position={[-220, -60, -180]} intensity={light ? 0.4 : 0.5} color={light ? '#bfdbfe' : '#1d4ed8'} />
+     <ambientLight intensity={light ? 1.7 : 2.9} color="#ffffff" />
+     <directionalLight position={[260, 160, 280]} intensity={light ? 1.5 : 0.25} color="#ffffff" />
      {!light && <Stars radius={280} depth={50} count={1600} factor={4} saturation={0} fade speed={0.5} />}
      <GlobeObject points={points} hq={hq} light={light} />
      <OrbitControls
