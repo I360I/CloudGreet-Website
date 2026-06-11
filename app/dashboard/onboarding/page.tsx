@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { CircleNotch, WarningCircle, CheckCircle, ArrowSquareOut, Copy, Phone, Sparkle, Headphones } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
+import { ConflictCalendars } from '../_components/ConflictCalendars'
 import {
  CARRIERS, LINE_TYPES, carriersForLineType, findCarrier,
  type CarrierId, type ForwardingMode, type LineType,
@@ -704,6 +705,14 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
       <div className="flex items-start gap-2">
        <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
        <div>Connected as <strong>{success.username || 'Cal.com user'}</strong> · event: {success.eventTypeTitle}</div>
+      </div>
+
+      <div className="border-t border-emerald-200 pt-3">
+       <div className="text-sm font-medium text-gray-900 mb-1">Conflict calendars</div>
+       <div className="text-xs text-gray-600 mb-3">
+        Which calendars should we check so the AI never books over something you&apos;re already busy with?
+       </div>
+       <ConflictCalendars />
       </div>
 
       <div className="border-t border-emerald-200 pt-3">

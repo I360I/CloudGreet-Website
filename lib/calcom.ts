@@ -609,3 +609,60 @@ export async function deleteWebhook(apiKey: string, webhookId: string): Promise<
   })
  }
 }
+
+// ---------------------------------------------------------------------------
+// Connected calendars (the "Check for conflicts" toggles in Cal.com settings)
+// ---------------------------------------------------------------------------
+
+export type ConflictCalendar = {
+ name: string
+ externalId: string
+ credentialId: number
+ integration: string
+ isSelected: boolean
+ readOnly: boolean
+ primary: boolean
+}
+export type ConnectedCalendarGroup = {
+ title: string
+ integrationType: string
+ calendars: ConflictCalendar[]
+}
+
+/**
+ * List the contractor's connected calendars and which are currently checked
+ * for conflicts (isSelected). Mirrors Cal.com Settings -> Calendars.
+ */
+export async function listConnectedCalendars(apiKey: string): Promise<ConnectedCalendarGroup[]> {
+ const body = await calFetch<any>(apiKey, '/calendars', { method: 'GET' })
+ const groups = body?.data?.connectedCalendars || []
+ return groups.map((g: any) => ({
+  title: g?.integration?.title || g?.integration?.type || 'Calendar',
+  integrationType: g?.integration?.type || '',
+  calendars: (g?.calendars || []).map((c: any) => ({
+   name: c.name || c.externalId || 'Calendar',
+   externalId: c.externalId,
+   credentialId: c.credentialId,
+   integration: c.integration,
+   isSelected: !!c.isSelected,
+   readOnly: !!c.readOnly,
+   primary: !!c.primary,
+  })),
+ }))
+}
+
+/** Turn conflict-checking on (select) or off (deselect) for a single calendar. */
+export async function setCalendarConflictCheck(
+ apiKey: string,
+ cal: { integration: string; externalId: string; credentialId: number },
+ enabled: boolean,
+): Promise<void> {
+ await calFetch(apiKey, '/selected-calendars', {
+  method: enabled ? 'POST' : 'DELETE',
+  body: JSON.stringify({
+   integration: cal.integration,
+   externalId: cal.externalId,
+   credentialId: cal.credentialId,
+  }),
+ })
+}
