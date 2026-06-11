@@ -69,7 +69,7 @@ type Overview = {
   bookings: number[]
  }
  map?: {
-  points: { id: string; name: string; lat: number; lng: number; kind: 'client' | 'demo' }[]
+  points: { id: string; name: string; lat: number; lng: number; kind: 'paying' | 'nonpaying' }[]
  }
  clients: Client[]
 }
@@ -286,11 +286,11 @@ export default function AdminHome() {
        <div className="absolute top-5 right-6 z-10 flex items-center gap-2 flex-wrap justify-end">
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono text-emerald-300 bg-emerald-400/10 border border-emerald-400/20">
          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_currentColor]" />
-         {(data?.map?.points || []).filter((p) => p.kind === 'client').length} clients
+         {(data?.map?.points || []).filter((p) => p.kind === 'paying').length} paying
         </span>
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono text-amber-300 bg-amber-400/10 border border-amber-400/20">
          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_currentColor]" />
-         {(data?.map?.points || []).filter((p) => p.kind === 'demo').length} demo leads
+         {(data?.map?.points || []).filter((p) => p.kind === 'nonpaying').length} not paying yet
         </span>
        </div>
        <GlobePanel points={data?.map?.points || []} />
@@ -514,7 +514,7 @@ function TopClientsChart({ items }: { items: { label: string; value: number }[] 
 }
 
 function GlobePanel({ points }: {
- points: { id: string; name: string; lat: number; lng: number; kind: 'client' | 'demo' }[]
+ points: { id: string; name: string; lat: number; lng: number; kind: 'paying' | 'nonpaying' }[]
 }) {
  const { theme } = useAdminTheme()
  return <ClientGlobe points={points} theme={theme} height={470} />

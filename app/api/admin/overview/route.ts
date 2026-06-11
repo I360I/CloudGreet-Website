@@ -176,26 +176,16 @@ export async function GET(request: NextRequest) {
   const marginCents = mrrCents - costMtdCents
   const marginPct = mrrCents > 0 ? Math.round((marginCents / mrrCents) * 1000) / 10 : null
 
-  // 4d) Map points: clients (green) + demo leads (yellow). Located from
-  // city/state when filled in, else the phone's area code (metro-level).
-  type MapPoint = { id: string; name: string; lat: number; lng: number; kind: 'client' | 'demo' }
+  // 4d) Map points: green = paying accounts, amber = accounts not paying yet.
+  // Located from city/state when filled in, else the phone's area code.
+  type MapPoint = { id: string; name: string; lat: number; lng: number; kind: 'paying' | 'nonpaying' }
   const mapPoints: MapPoint[] = []
   for (const b of allBusinesses as any[]) {
    const loc = geolocate({ city: b.city, state: b.state, phone: b.phone_number })
    if (!loc) continue
    const [lat, lng] = jitter(loc[0], loc[1], String(b.id))
-   mapPoints.push({ id: b.id, name: b.business_name || 'Client', lat, lng, kind: 'client' })
-  }
-  const { data: demoLeads } = await supabaseAdmin
-   .from('demo_leads')
-   .select('id, name, phone, created_at')
-   .order('created_at', { ascending: false })
-   .limit(300)
-  for (const d of demoLeads || []) {
-   const loc = geolocate({ phone: (d as any).phone })
-   if (!loc) continue
-   const [lat, lng] = jitter(loc[0], loc[1], String((d as any).id))
-   mapPoints.push({ id: (d as any).id, name: (d as any).name || 'Demo lead', lat, lng, kind: 'demo' })
+   const paying = b.subscription_status === 'active' && ((b.monthly_price_cents as number) || 0) > 0
+   mapPoints.push({ id: b.id, name: b.business_name || 'Client', lat, lng, kind: paying ? 'paying' : 'nonpaying' })
   }
 
   // 5) Stitch it together
