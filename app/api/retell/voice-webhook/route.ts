@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { isPlatformLine } from '@/lib/platform-line'
 import { telnyxClient } from '@/lib/telnyx'
 import { sendBookingNotification } from '@/lib/booking-notifications'
 import { lookupCallerHistory } from '@/lib/caller-history'
@@ -116,7 +117,14 @@ export async function POST(request: NextRequest) {
   body.call?.agent_id || body.agent_id || body.metadata?.agent_id
  const eventToNumber: string | undefined =
   body.call?.to_number || body.to_number || body.call_inbound?.to_number
- const resolvedBusinessId: string | null = await resolveCallBusinessId(callingAgentId, eventToNumber)
+ let resolvedBusinessId: string | null = await resolveCallBusinessId(callingAgentId, eventToNumber)
+ // CloudGreet's own line: self-provision the dogfood tenant on first
+ // contact (and self-heal its demo-calendar creds from env) so the
+ // receptionist's booking tools work exactly like a client's.
+ if (!resolvedBusinessId && isPlatformLine(callingAgentId, eventToNumber)) {
+  const { ensurePlatformBusiness } = await import('@/lib/platform-line')
+  resolvedBusinessId = await ensurePlatformBusiness()
+ }
 
  // call_inbound fires the moment a call hits Retell, BEFORE the agent
  // greets. We respond with dynamic_variables that get substituted into

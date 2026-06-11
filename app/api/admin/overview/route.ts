@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
     calcom_connected, forwarding_verified_at, created_at,
     monthly_price_cents, city, state
    `)
+   .or('is_platform.is.null,is_platform.eq.false')
    .order('created_at', { ascending: false })
 
   if (bizError) {
