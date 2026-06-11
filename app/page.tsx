@@ -4,7 +4,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, List, X, Play, Waveform, CalendarCheck } from '@phosphor-icons/react'
+import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, List, X } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChatWidget } from './components/landing/ChatWidget'
 import AgentDeskReveal from './components/AgentDeskReveal'
@@ -756,13 +756,10 @@ function RoiCalculator() {
     </p>
    </div>
 
-   <div className="max-w-7xl mx-auto grid gap-5 lg:grid-cols-[1.04fr_1fr] lg:items-stretch">
-    <div className="order-2 lg:order-1 min-w-0"><FeatureBento /></div>
-
-    <div className="order-1 lg:order-2 relative min-w-0">
+   <div className="max-w-5xl mx-auto relative">
     <div aria-hidden className="cg-backlight absolute -inset-10 sm:-inset-14 rounded-[4rem] pointer-events-none -z-0" />
 
-    <div className="relative h-full bg-white border border-gray-200 rounded-3xl sm:rounded-[32px] p-5 sm:p-6 md:p-12 lg:p-8 xl:p-10 grid md:grid-cols-2 lg:grid-cols-1 gap-8 sm:gap-10 md:gap-16 lg:gap-8 items-center lg:content-center">
+    <div className="relative bg-white border border-gray-200 rounded-3xl sm:rounded-[32px] p-5 sm:p-6 md:p-12 grid md:grid-cols-2 gap-8 sm:gap-10 md:gap-16 items-center">
      {/* Sliders */}
      <div className="space-y-8">
       <Slider
@@ -841,109 +838,9 @@ function RoiCalculator() {
       </Link>
      </div>
     </div>
-    </div>
 
    </div>
   </section>
- )
-}
-
-/* ---------------- Feature bento beside the calculator ---------------- */
-/* Magic UI bento-grid layout; the notifications card is their animated-list idea. */
-
-const BOOKING_FEED = [
- { icon: BellRinging, tint: 'bg-sky-100 text-sky-600', title: 'New booking', sub: 'AC tune-up, Thu 9 AM' },
- { icon: PhoneIncoming, tint: 'bg-emerald-100 text-emerald-600', title: 'Missed call rescued', sub: 'Texted and booked' },
- { icon: ChatCircle, tint: 'bg-blue-100 text-blue-600', title: 'Confirmation sent', sub: 'Details texted over' },
- { icon: Lightning, tint: 'bg-amber-100 text-amber-600', title: 'Emergency flagged', sub: 'Sent to your cell' },
- { icon: Clock, tint: 'bg-indigo-100 text-indigo-600', title: 'Answered at 2 AM', sub: 'Booked while you slept' },
- { icon: FileText, tint: 'bg-cyan-100 text-cyan-600', title: 'Quote requested', sub: 'Panel upgrade' },
-]
-
-function BookingNotifications() {
- const [feed, setFeed] = useState(() => [0, 1, 2].map((i) => ({ key: i, item: BOOKING_FEED[i] })))
- const nextRef = useRef(3)
- useEffect(() => {
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return
-  const t = setInterval(() => {
-   const k = nextRef.current
-   nextRef.current += 1
-   setFeed((f) => [{ key: k, item: BOOKING_FEED[k % BOOKING_FEED.length] }, ...f].slice(0, 5))
-  }, 2200)
-  return () => clearInterval(t)
- }, [])
- return (
-  <div className="relative flex-1 min-h-[230px] overflow-hidden" aria-hidden>
-   <div className="absolute inset-x-0 top-0 space-y-[10px]">
-    <AnimatePresence initial={false}>
-     {feed.map(({ key, item }) => (
-      <motion.div key={key} layout
-       initial={{ opacity: 0, y: -22, scale: 0.96 }}
-       animate={{ opacity: 1, y: 0, scale: 1 }}
-       exit={{ opacity: 0, scale: 0.95 }}
-       transition={{ type: 'spring', stiffness: 360, damping: 30 }}
-       className="flex items-center gap-[10px] rounded-2xl border border-gray-100 bg-white px-[12px] py-[9px] shadow-[0_8px_20px_-12px_rgba(15,23,42,0.18)]">
-       <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full ${item.tint}`}>
-        <item.icon className="h-[16px] w-[16px]" weight="fill" />
-       </span>
-       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-semibold leading-[1.35] text-gray-900">{item.title}</span>
-        <span className="block truncate text-[12px] leading-[1.35] text-gray-500">{item.sub}</span>
-       </span>
-      </motion.div>
-     ))}
-    </AnimatePresence>
-   </div>
-   {/* fade-out at the bottom so the loop never looks cropped */}
-   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
-  </div>
- )
-}
-
-function BentoCard({ icon: Icon, title, body, children, className = '' }: {
- icon: React.ElementType; title: string; body: string; children?: React.ReactNode; className?: string
-}) {
- return (
-  <div className={`flex flex-col rounded-3xl border border-gray-200 bg-white p-[18px] sm:p-[22px] ${className}`}>
-   {children}
-   <Icon className="h-[24px] w-[24px] text-gray-900" />
-   <div className="mt-[10px] text-[17px] font-semibold tracking-tight text-gray-900">{title}</div>
-   <p className="mt-[5px] text-[13.5px] leading-relaxed text-gray-500">{body}</p>
-  </div>
- )
-}
-
-function FeatureBento() {
- return (
-  <div className="grid h-full grid-cols-1 gap-[16px] sm:grid-cols-[1.12fr_1fr] sm:grid-rows-[auto_auto]">
-   <BentoCard icon={BellRinging} title="Watch the work roll in"
-    body="Every booking, rescued call, and emergency shows up the moment it happens."
-    className="sm:row-span-2">
-    <BookingNotifications />
-   </BentoCard>
-   <BentoCard icon={CalendarCheck} title="Straight onto your calendar"
-    body="Real openings only. CloudGreet reads your calendar through Cal.com, checks conflicts, and books the slot before the call ends.">
-    <div className="mb-[14px] flex items-center gap-[10px] rounded-2xl border border-gray-100 bg-gray-50/70 px-[12px] py-[9px]" aria-hidden>
-     <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg bg-white border border-gray-200 text-center">
-      <span className="block text-[9px] font-semibold uppercase leading-none text-rose-500">Thu</span>
-     </span>
-     <span className="min-w-0">
-      <span className="block truncate text-[13px] font-semibold text-gray-900">Water heater</span>
-      <span className="block text-xs text-gray-500">Thu 9:00 AM</span>
-     </span>
-     <CheckCircle className="ml-auto h-[18px] w-[18px] shrink-0 text-emerald-500" weight="fill" />
-    </div>
-   </BentoCard>
-   <BentoCard icon={Play} title="Replay every call"
-    body="Every conversation is recorded, transcribed, and summarized, so you always know exactly what was said.">
-    <div className="mb-[14px] flex h-[52px] items-center gap-[3px] rounded-2xl border border-gray-100 bg-gray-50/70 px-[14px]" aria-hidden>
-     {[5, 9, 14, 8, 18, 12, 22, 10, 16, 7, 13, 19, 9, 15, 6, 11, 17, 8, 12, 5, 9, 14, 7, 10].map((h, i) => (
-      <span key={i} className="w-[3px] rounded-full bg-sky-400/80" style={{ height: `${h * 2}px` }} />
-     ))}
-     <Waveform className="ml-auto h-[18px] w-[18px] shrink-0 text-gray-400" />
-    </div>
-   </BentoCard>
-  </div>
  )
 }
 
