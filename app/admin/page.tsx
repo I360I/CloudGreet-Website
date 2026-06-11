@@ -70,6 +70,7 @@ type Overview = {
  }
  map?: {
   points: { id: string; name: string; lat: number; lng: number; kind: 'paying' | 'nonpaying' }[]
+  hq?: { name: string; lat: number; lng: number; city?: string }
  }
  clients: Client[]
 }
@@ -284,6 +285,12 @@ export default function AdminHome() {
         <h2 className="text-sm font-medium text-white">Live client map</h2>
        </div>
        <div className="absolute top-5 right-6 z-10 flex items-center gap-2 flex-wrap justify-end">
+        {data?.map?.hq && (
+         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono text-sky-300 bg-sky-400/10 border border-sky-400/20">
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 shadow-[0_0_6px_currentColor]" />
+          HQ
+         </span>
+        )}
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono text-emerald-300 bg-emerald-400/10 border border-emerald-400/20">
          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_currentColor]" />
          {(data?.map?.points || []).filter((p) => p.kind === 'paying').length} paying
@@ -293,7 +300,7 @@ export default function AdminHome() {
          {(data?.map?.points || []).filter((p) => p.kind === 'nonpaying').length} not paying yet
         </span>
        </div>
-       <GlobePanel points={data?.map?.points || []} />
+       <GlobePanel points={data?.map?.points || []} hq={data?.map?.hq || null} />
       </Panel>
      </motion.div>
 
@@ -513,11 +520,12 @@ function TopClientsChart({ items }: { items: { label: string; value: number }[] 
  return <TopClients3D items={items} theme={theme} height={300} />
 }
 
-function GlobePanel({ points }: {
+function GlobePanel({ points, hq }: {
  points: { id: string; name: string; lat: number; lng: number; kind: 'paying' | 'nonpaying' }[]
+ hq: { name: string; lat: number; lng: number; city?: string } | null
 }) {
  const { theme } = useAdminTheme()
- return <ClientGlobe points={points} theme={theme} height={470} />
+ return <ClientGlobe points={points} hq={hq} theme={theme} height={470} />
 }
 
 function EmptyMascot({ line }: { line: string }) {

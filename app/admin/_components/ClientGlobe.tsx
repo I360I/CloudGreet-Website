@@ -23,8 +23,11 @@ export type GlobePoint = {
  kind: 'paying' | 'nonpaying'
 }
 
+export type GlobeHq = { name: string; lat: number; lng: number; city?: string }
+
 const PAYING_COLOR = '#34d399'
 const NONPAYING_COLOR = '#fbbf24'
+const HQ_COLOR = '#38bdf8'
 
 let landCache: any[] | null = null
 async function loadLand(): Promise<any[]> {
@@ -37,7 +40,7 @@ async function loadLand(): Promise<any[]> {
  return landCache!
 }
 
-function GlobeObject({ points, light }: { points: GlobePoint[]; light: boolean }) {
+function GlobeObject({ points, hq, light }: { points: GlobePoint[]; hq?: GlobeHq | null; light: boolean }) {
  const { camera } = useThree()
  const [land, setLand] = useState<any[] | null>(null)
 
@@ -82,31 +85,55 @@ function GlobeObject({ points, light }: { points: GlobePoint[]; light: boolean }
    .hexPolygonColor(() => (light ? 'rgba(37, 99, 235, 0.55)' : 'rgba(141, 211, 255, 0.92)'))
  }, [globe, land, light])
 
- // markers + radar rings
+ // markers + radar rings + HQ arcs
  useEffect(() => {
+  const markerColor = (d: any) =>
+   d.kind === 'hq' ? HQ_COLOR : d.kind === 'paying' ? PAYING_COLOR : NONPAYING_COLOR
+  const markers: any[] = hq ? [...points, { ...hq, kind: 'hq' }] : [...points]
+
   globe
-   .pointsData(points)
+   .pointsData(markers)
    .pointLat((d: any) => d.lat)
    .pointLng((d: any) => d.lng)
-   .pointColor((d: any) => (d.kind === 'paying' ? PAYING_COLOR : NONPAYING_COLOR))
+   .pointColor(markerColor)
    .pointAltitude(0.025)
-   .pointRadius((d: any) => (d.kind === 'paying' ? 0.9 : 0.7))
+   .pointRadius((d: any) => (d.kind === 'hq' ? 1.0 : d.kind === 'paying' ? 0.9 : 0.7))
 
-  const clientPts = points.filter((p) => p.kind === 'paying')
+  const ringPts: any[] = [
+   ...points.filter((p) => p.kind === 'paying'),
+   ...(hq ? [{ ...hq, kind: 'hq' }] : []),
+  ]
   globe
-   .ringsData(clientPts)
+   .ringsData(ringPts)
    .ringLat((d: any) => d.lat)
    .ringLng((d: any) => d.lng)
-   .ringColor(() => (t: number) => `rgba(52, 211, 153, ${Math.max(0, 0.55 * (1 - t))})`)
+   .ringColor((d: any) => (t: number) =>
+    d.kind === 'hq'
+     ? `rgba(56, 189, 248, ${Math.max(0, 0.6 * (1 - t))})`
+     : `rgba(52, 211, 153, ${Math.max(0, 0.55 * (1 - t))})`)
    .ringAltitude(0.026)
    .ringMaxRadius(4.2)
    .ringPropagationSpeed(1.1)
    .ringRepeatPeriod(1700)
- }, [globe, points])
+
+  // animated blue arcs: HQ → every account
+  const arcColor = light ? '37, 99, 235' : '56, 189, 248'
+  globe
+   .arcsData(hq ? points.map((p) => ({
+    startLat: hq.lat, startLng: hq.lng, endLat: p.lat, endLng: p.lng,
+   })) : [])
+   .arcColor(() => [`rgba(${arcColor}, 0.85)`, `rgba(${arcColor}, 0.18)`])
+   .arcAltitudeAutoScale(0.32)
+   .arcStroke(0.34)
+   .arcDashLength(0.45)
+   .arcDashGap(0.22)
+   .arcDashAnimateTime(2400)
+   .arcsTransitionDuration(0)
+ }, [globe, points, hq, light])
 
  // park the camera over the continental US
  useEffect(() => {
-  const { x, y, z } = globe.getCoords(38, -95, 0.85)
+  const { x, y, z } = globe.getCoords(34.5, -92, 1.0)
   camera.position.set(x, y, z)
   camera.lookAt(0, 0, 0)
  }, [globe, camera])
@@ -126,9 +153,10 @@ class GLBoundary extends Component<
 }
 
 export default function ClientGlobe({
- points, theme = 'dark', height = 460,
+ points, hq = null, theme = 'dark', height = 460,
 }: {
  points: GlobePoint[]
+ hq?: GlobeHq | null
  theme?: 'dark' | 'light'
  height?: number
 }) {
@@ -157,7 +185,7 @@ export default function ClientGlobe({
      <directionalLight position={[200, 180, 220]} intensity={light ? 1.4 : 1.1} color="#ffffff" />
      <directionalLight position={[-220, -60, -180]} intensity={light ? 0.4 : 0.5} color={light ? '#bfdbfe' : '#1d4ed8'} />
      {!light && <Stars radius={280} depth={50} count={1600} factor={4} saturation={0} fade speed={0.5} />}
-     <GlobeObject points={points} light={light} />
+     <GlobeObject points={points} hq={hq} light={light} />
      <OrbitControls
       enablePan={false}
       enableDamping

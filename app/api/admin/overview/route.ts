@@ -238,7 +238,11 @@ export async function GET(request: NextRequest) {
     calls: callsSeries,
     bookings: bookingsSeries,
    },
-   map: { points: mapPoints },
+   map: {
+    points: mapPoints,
+    // Operations hub — arcs on the admin globe fan out from here.
+    hq: { name: 'CloudGreet HQ', lat: 30.2672, lng: -97.7431, city: 'Austin, TX' },
+   },
    clients: enrichedClients,
   })
  } catch (e) {

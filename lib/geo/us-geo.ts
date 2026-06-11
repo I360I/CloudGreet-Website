@@ -131,6 +131,48 @@ export const STATE_CENTROIDS: Record<string, [number, number]> = {
   WI: [44.27, -89.62], WY: [42.76, -107.30], DC: [38.91, -77.04],
 }
 
+/** "city, ST" → exact coords. Checked before any fallback. */
+export const CITY_COORDS: Record<string, [number, number]> = {
+  // Ohio first — home market
+  'columbus,OH': [39.9612, -82.9988], 'cincinnati,OH': [39.1031, -84.5120],
+  'cleveland,OH': [41.4993, -81.6944], 'toledo,OH': [41.6528, -83.5379],
+  'findlay,OH': [41.0442, -83.6499], 'dayton,OH': [39.7589, -84.1916],
+  'akron,OH': [41.0814, -81.5190], 'canton,OH': [40.7989, -81.3784],
+  'youngstown,OH': [41.0998, -80.6495], 'lima,OH': [40.7426, -84.1052],
+  'springfield,OH': [39.9242, -83.8088], 'dublin,OH': [40.0992, -83.1141],
+  'westerville,OH': [40.1262, -82.9291], 'newark,OH': [40.0581, -82.4013],
+  'mansfield,OH': [40.7584, -82.5154], 'bowling green,OH': [41.3748, -83.6513],
+  // Major metros
+  'new york,NY': [40.7128, -74.0060], 'los angeles,CA': [34.0522, -118.2437],
+  'chicago,IL': [41.8781, -87.6298], 'houston,TX': [29.7604, -95.3698],
+  'phoenix,AZ': [33.4484, -112.0740], 'philadelphia,PA': [39.9526, -75.1652],
+  'san antonio,TX': [29.4241, -98.4936], 'san diego,CA': [32.7157, -117.1611],
+  'dallas,TX': [32.7767, -96.7970], 'austin,TX': [30.2672, -97.7431],
+  'jacksonville,FL': [30.3322, -81.6557], 'fort worth,TX': [32.7555, -97.3308],
+  'charlotte,NC': [35.2271, -80.8431], 'indianapolis,IN': [39.7684, -86.1581],
+  'seattle,WA': [47.6062, -122.3321], 'denver,CO': [39.7392, -104.9903],
+  'nashville,TN': [36.1627, -86.7816], 'detroit,MI': [42.3314, -83.0458],
+  'pittsburgh,PA': [40.4406, -79.9959], 'louisville,KY': [38.2527, -85.7585],
+  'lexington,KY': [38.0406, -84.5037], 'memphis,TN': [35.1495, -90.0490],
+  'atlanta,GA': [33.7490, -84.3880], 'miami,FL': [25.7617, -80.1918],
+  'tampa,FL': [27.9506, -82.4572], 'orlando,FL': [28.5383, -81.3792],
+  'minneapolis,MN': [44.9778, -93.2650], 'st louis,MO': [38.6270, -90.1994],
+  'kansas city,MO': [39.0997, -94.5786], 'las vegas,NV': [36.1699, -115.1398],
+  'salt lake city,UT': [40.7608, -111.8910], 'portland,OR': [45.5152, -122.6784],
+  'san francisco,CA': [37.7749, -122.4194], 'san jose,CA': [37.3382, -121.8863],
+  'sacramento,CA': [38.5816, -121.4944], 'boston,MA': [42.3601, -71.0589],
+  'baltimore,MD': [39.2904, -76.6122], 'washington,DC': [38.9072, -77.0369],
+  'raleigh,NC': [35.7796, -78.6382], 'richmond,VA': [37.5407, -77.4360],
+  'milwaukee,WI': [43.0389, -87.9065], 'oklahoma city,OK': [35.4676, -97.5164],
+  'tulsa,OK': [36.1540, -95.9928], 'new orleans,LA': [29.9511, -90.0715],
+  'birmingham,AL': [33.5186, -86.8104], 'savannah,GA': [32.0809, -81.0912],
+  'fort lauderdale,FL': [26.1224, -80.1373], 'boise,ID': [43.6150, -116.2023],
+  'albuquerque,NM': [35.0844, -106.6504], 'tucson,AZ': [32.2226, -110.9747],
+  'omaha,NE': [41.2565, -95.9345], 'des moines,IA': [41.5868, -93.6250],
+  'grand rapids,MI': [42.9634, -85.6681], 'fort wayne,IN': [41.0793, -85.1394],
+  'erie,PA': [42.1292, -80.0851], 'buffalo,NY': [42.8864, -78.8784],
+}
+
 const STATE_NAMES: Record<string, string> = {
   alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA',
   colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA',
@@ -145,19 +187,26 @@ const STATE_NAMES: Record<string, string> = {
   wisconsin: 'WI', wyoming: 'WY',
 }
 
-/** Resolve a US location from whatever fields we have. Null when unknown. */
+/**
+ * Resolve a US location from whatever fields we have. Null when unknown.
+ * Accuracy order: known city+state (exact) → phone area code (metro)
+ * → state centroid (coarse, last resort).
+ */
 export function geolocate({
-  state, phone,
+  city, state, phone,
 }: {
   city?: string | null
   state?: string | null
   phone?: string | null
 }): [number, number] | null {
-  if (state) {
-    const key = state.trim().length === 2
+  const stateKey = state
+    ? (state.trim().length === 2
       ? state.trim().toUpperCase()
-      : STATE_NAMES[state.trim().toLowerCase()]
-    const c = key ? STATE_CENTROIDS[key] : undefined
+      : STATE_NAMES[state.trim().toLowerCase()])
+    : undefined
+
+  if (city && stateKey) {
+    const c = CITY_COORDS[`${city.trim().toLowerCase()},${stateKey}`]
     if (c) return c
   }
   if (phone) {
@@ -166,6 +215,10 @@ export function geolocate({
       ? digits.slice(1, 4)
       : digits.slice(0, 3)
     const c = AREA_CODES[code]
+    if (c) return c
+  }
+  if (stateKey) {
+    const c = STATE_CENTROIDS[stateKey]
     if (c) return c
   }
   return null
