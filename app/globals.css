@@ -238,6 +238,16 @@ body { --font-display: var(--font-geist-sans); }
   90%, 100% { background-position: -110% 0; }
 }
 
+/* Aurora text — flowing gradient inside display type (Magic UI style). */
+.cg-aurora-text {
+  background-size: 220% auto;
+  animation: cg-aurora-text 6.5s ease-in-out infinite;
+}
+@keyframes cg-aurora-text {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
 /* Gentle float — used by the mascot. */
 .cg-float { animation: cg-float 5.5s ease-in-out infinite; }
 @keyframes cg-float {
@@ -258,6 +268,7 @@ body { --font-display: var(--font-geist-sans); }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .cg-aurora-text { animation: none; }
   .cg-meteor { display: none; }
   .cg-shiny-text { animation: none; background: none; -webkit-text-fill-color: currentColor; }
   .cg-float { animation: none; }

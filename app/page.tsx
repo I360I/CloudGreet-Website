@@ -22,15 +22,14 @@ export default function LandingPage() {
    <AgentDeskReveal>
     <h1 className="font-display font-medium tracking-tighter leading-[0.92] text-gray-900 text-[clamp(2.25rem,7vw,6rem)]">
      Stop losing{' '}
-     <span className="bg-gradient-to-b from-sky-400 via-blue-500 to-blue-600 bg-clip-text text-transparent drop-shadow-[0_3px_16px_rgba(56,189,248,0.45)]">
-      profit
-     </span>
+     <AuroraText>profit</AuroraText>
      <br />
      to voicemail.
     </h1>
-    <p className="mt-3 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed">
-     A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back.
-    </p>
+    <TypingText
+     text="A 24/7 AI receptionist for service businesses. It answers every call, books jobs straight into your calendar, and texts customers back."
+     className="mt-3 max-w-xl text-base sm:text-lg text-gray-600 leading-relaxed"
+    />
     <div className="mt-8"><DemoCallButtons /></div>
     <p className="mt-6 text-sm font-medium text-gray-700">
      Or scroll down to <span className="font-semibold text-gray-900">talk to one live</span> — or call <a href={DEMO_TEL} className="font-semibold text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-900">{DEMO_NUMBER}</a>.
@@ -1187,5 +1186,61 @@ function FooterCard() {
     </div>
    </div>
   </section>
+ )
+}
+
+/* ------------------------- Hero text effects ------------------------- */
+/* Adapted from Magic UI (MIT): aurora-text + typing-animation. */
+
+function AuroraText({ children }: { children: React.ReactNode }) {
+ return (
+  <span className="relative inline-block">
+   <span className="sr-only">{children}</span>
+   <span
+    aria-hidden
+    className="cg-aurora-text bg-clip-text text-transparent drop-shadow-[0_3px_16px_rgba(56,189,248,0.45)]"
+    style={{
+     backgroundImage:
+      'linear-gradient(115deg, #38bdf8 8%, #2563eb 32%, #6366f1 55%, #22d3ee 78%, #38bdf8 96%)',
+    }}
+   >
+    {children}
+   </span>
+  </span>
+ )
+}
+
+function TypingText({ text, className = '' }: { text: string; className?: string }) {
+ const [n, setN] = useState(0)
+ const [done, setDone] = useState(false)
+ const reduce = useRef(
+  typeof window !== 'undefined' &&
+  (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false),
+ ).current
+
+ useEffect(() => {
+  if (reduce) { setN(text.length); setDone(true); return }
+  let i = 0
+  let interval: ReturnType<typeof setInterval>
+  const kickoff = setTimeout(() => {
+   interval = setInterval(() => {
+    i += 1
+    setN(i)
+    if (i >= text.length) { clearInterval(interval); setDone(true) }
+   }, 16)
+  }, 450)
+  return () => { clearTimeout(kickoff); clearInterval(interval) }
+ }, [text, reduce])
+
+ return (
+  <p className={`relative ${className}`}>
+   {/* invisible full text reserves the final layout so nothing shifts */}
+   <span aria-hidden className="invisible">{text}</span>
+   <span className="sr-only">{text}</span>
+   <span aria-hidden className="absolute inset-0">
+    {text.slice(0, n)}
+    {!done && <span className="animate-blink inline-block w-[2px] h-[1.05em] align-[-0.15em] bg-gray-500 ml-0.5" />}
+   </span>
+  </p>
  )
 }
