@@ -1055,7 +1055,17 @@ function WhoItsFor() {
 function Testimonial() {
  return (
   <section className="px-5 sm:px-6 py-16 sm:py-24 md:py-28">
-   <div className="max-w-4xl mx-auto">
+   <div className="max-w-5xl mx-auto md:grid md:grid-cols-[auto_1fr] md:items-end md:gap-12 lg:gap-16">
+    {/* our receptionist presenting Steve's words */}
+    <Image
+     src="/mascot-presenting.png"
+     alt=""
+     aria-hidden
+     width={466}
+     height={557}
+     className="hidden md:block w-[225px] lg:w-[260px] h-auto select-none"
+    />
+    <div>
     <Image
      src="/smartride-logo.png"
      alt="Smart Ride Central Ohio"
@@ -1070,6 +1080,7 @@ function Testimonial() {
      <span className="font-medium text-gray-900">Steve French</span>
      <span className="w-1 h-1 rounded-full bg-gray-300" />
      <span className="text-gray-500">Owner, Smart Ride Central Ohio</span>
+    </div>
     </div>
    </div>
   </section>
