@@ -51,6 +51,63 @@ const START = 0 // HVAC first (the light-blue waving mascot the zoom lands on)
 // the matching clips exist. Empty map = no transition renders or triggers.
 const TRANSITIONS: Record<string, { base: string; n: number }> = {}
 
+/**
+ * Morphing text (adapted from Magic UI, MIT): the old word melts into the
+ * new one via dual blurred layers under an alpha-threshold SVG filter.
+ */
+function MorphingText({ text, className = '' }: { text: string; className?: string }) {
+  const [pair, setPair] = useState({ from: text, to: text })
+  const fromRef = useRef<HTMLSpanElement>(null)
+  const toRef = useRef<HTMLSpanElement>(null)
+  const rafRef = useRef(0)
+
+  useEffect(() => {
+    setPair((p) => (text === p.to ? p : { from: p.to, to: text }))
+  }, [text])
+
+  useEffect(() => {
+    const a = fromRef.current, b = toRef.current
+    if (!a || !b) return
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    if (pair.from === pair.to || reduce) {
+      a.style.opacity = '0'; a.style.filter = 'none'
+      b.style.opacity = '1'; b.style.filter = 'none'
+      return
+    }
+    const DURATION = 850
+    const start = performance.now()
+    cancelAnimationFrame(rafRef.current)
+    const tick = (now: number) => {
+      const f = Math.min(1, (now - start) / DURATION)
+      const inv = 1 - f
+      b.style.filter = `blur(${Math.min(8 / Math.max(f, 0.01) - 8, 100)}px)`
+      b.style.opacity = `${Math.pow(f, 0.4) * 100}%`
+      a.style.filter = `blur(${Math.min(8 / Math.max(inv, 0.01) - 8, 100)}px)`
+      a.style.opacity = `${Math.pow(inv, 0.4) * 100}%`
+      if (f < 1) rafRef.current = requestAnimationFrame(tick)
+      else { a.style.opacity = '0'; a.style.filter = 'none'; b.style.filter = 'none' }
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [pair])
+
+  return (
+    <div className={`relative ${className}`} style={{ filter: 'url(#cg-morph-threshold)' }}>
+      {/* current text reserves layout; morph layers paint on top */}
+      <span aria-hidden className="invisible block">{pair.to}</span>
+      <span ref={fromRef} aria-hidden className="absolute inset-0">{pair.from}</span>
+      <span ref={toRef} className="absolute inset-0">{pair.to}</span>
+      <svg className="absolute h-0 w-0" aria-hidden>
+        <defs>
+          <filter id="cg-morph-threshold">
+            <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 255 -140" />
+          </filter>
+        </defs>
+      </svg>
+    </div>
+  )
+}
+
 export default function AgentDeskReveal({ children }: { children?: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null)
   const idleRef = useRef<HTMLVideoElement>(null)
@@ -387,6 +444,16 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
 
             {/* main content - left */}
             <div className="absolute left-8 top-1/2 w-[min(92vw,600px)] -translate-y-1/2 sm:left-14 md:left-24 max-sm:left-5 max-sm:top-[42%] max-sm:w-[68vw]">
+              <motion.div key={`cat-${active}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }}
+                className="mb-5 flex items-center gap-2.5">
+                <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sky-500" /></span>
+                <span className="font-gsans text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">{desk.cat}</span>
+              </motion.div>
+              {/* the business name melts between agents (Magic UI morphing text) */}
+              <MorphingText
+                text={desk.biz}
+                className="font-clash text-[clamp(2.9rem,5.8vw,5.4rem)] max-sm:text-[2.05rem] font-extrabold leading-[0.9] max-sm:leading-[0.95] tracking-[-0.03em] text-gray-900"
+              />
               <AnimatePresence mode="wait" custom={dir}>
                 <motion.div key={active} custom={dir}
                   initial={{ opacity: 0, x: dir >= 0 ? 44 : -44 }}
@@ -394,11 +461,6 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                   exit={{ opacity: 0, x: dir >= 0 ? -44 : 44 }}
                   transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <div className="mb-5 flex items-center gap-2.5">
-                    <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sky-500" /></span>
-                    <span className="font-gsans text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">{desk.cat}</span>
-                  </div>
-                  <h2 className="font-clash text-[clamp(2.9rem,5.8vw,5.4rem)] max-sm:text-[2.05rem] font-semibold leading-[0.9] max-sm:leading-[0.95] tracking-[-0.02em] text-gray-900">{desk.biz}</h2>
                   <p className="font-gsans mt-5 max-sm:mt-2.5 text-lg max-sm:text-sm leading-relaxed text-gray-500">{desk.tags}</p>
 
                   {phase === 'live' || phase === 'connecting' ? (
