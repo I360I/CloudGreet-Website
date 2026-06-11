@@ -100,19 +100,40 @@ function GlobeObject({ points, hq, light, onHover }: {
    .ringPropagationSpeed(1.1)
    .ringRepeatPeriod(1700)
 
-  // animated blue arcs: HQ → every account
-  const arcColor = light ? '37, 99, 235' : '56, 189, 248'
+  // Animated light-beam arcs: HQ → every account. Each route renders twice,
+  // a wide soft halo plus a hot thin core, with additive blending so the
+  // beams glow over the night earth instead of reading as flat lines.
+  const beams = hq
+   ? points.flatMap((p) => {
+      const route = { startLat: hq.lat, startLng: hq.lng, endLat: p.lat, endLng: p.lng }
+      return [{ ...route, halo: true }, { ...route, halo: false }]
+     })
+   : []
+  const core = light ? '59, 130, 246' : '125, 211, 252'
+  const haloC = light ? '37, 99, 235' : '56, 189, 248'
   globe
-   .arcsData(hq ? points.map((p) => ({
-    startLat: hq.lat, startLng: hq.lng, endLat: p.lat, endLng: p.lng,
-   })) : [])
-   .arcColor(() => [`rgba(${arcColor}, 0.85)`, `rgba(${arcColor}, 0.18)`])
-   .arcAltitudeAutoScale(0.32)
-   .arcStroke(0.34)
-   .arcDashLength(0.45)
-   .arcDashGap(0.22)
-   .arcDashAnimateTime(2400)
+   .arcsData(beams)
+   .arcColor((d: any) => d.halo
+    ? [`rgba(${haloC}, 0.35)`, `rgba(${haloC}, 0.05)`]
+    : [`rgba(${core}, 1)`, `rgba(${core}, 0.4)`])
+   .arcAltitudeAutoScale(0.5)
+   .arcCurveResolution(64)
+   .arcStroke((d: any) => (d.halo ? 1.5 : 0.42))
+   .arcDashLength(0.35)
+   .arcDashGap(0.18)
+   .arcDashAnimateTime((d: any) => (d.halo ? 3200 : 2200))
    .arcsTransitionDuration(0)
+
+  // additive blending on the arc meshes = light, not paint
+  requestAnimationFrame(() => {
+   globe.traverse((o: any) => {
+    if (o.__data && typeof o.__data === 'object' && 'startLat' in o.__data && o.material) {
+     o.material.blending = THREE.AdditiveBlending
+     o.material.depthWrite = false
+     o.material.needsUpdate = true
+    }
+   })
+  })
  }, [globe, points, hq, light])
 
  // park the camera over the continental US
