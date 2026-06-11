@@ -40,7 +40,19 @@ export async function ensurePlatformBusiness(): Promise<string | null> {
       .maybeSingle()
 
     const demoKey = process.env.CALCOM_DEMO_API_KEY || null
-    const demoEventType = Number(process.env.CALCOM_DEMO_EVENT_TYPE_ID) || null
+    let demoEventType = Number(process.env.CALCOM_DEMO_EVENT_TYPE_ID) || null
+    // Same fallback the website chat uses: no env id -> the 15-minute
+    // event type on the demo calendar (or the first one).
+    if (!demoEventType && demoKey && !skipPatch && !existing?.cal_com_event_type_id) {
+      try {
+        const { listEventTypes } = await import('./calcom')
+        const types: any[] = await listEventTypes(demoKey)
+        const demo = types.find((t) => (t?.lengthInMinutes ?? t?.length) === 15) || types[0]
+        if (demo?.id) demoEventType = Number(demo.id)
+      } catch (e) {
+        logger.warn('platform line: event-type discovery failed', { error: e instanceof Error ? e.message : 'unknown' })
+      }
+    }
 
     if (existing?.id) {
       if (!skipPatch) {
