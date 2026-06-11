@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { lookupDriveTime } from '@/lib/quote-engine'
+import { supabaseAdmin } from '@/lib/supabase'
+import { telnyxClient } from '@/lib/telnyx'
+import { logger } from '@/lib/monitoring'
 
 /**
  * Demo agent tool webhook.
@@ -12,9 +15,25 @@ import { lookupDriveTime } from '@/lib/quote-engine'
  * routes transport drive-time/distance through the Google Routes API so the
  * "calculate the drive" demo actually computes a real number.
  *
- * Safe by construction: nothing here writes to a DB, charges a card, sends a
- * text, or dials a phone. It just returns plausible JSON the agent can speak.
+ * Safe by construction with ONE deliberate exception: send_booking_sms sends
+ * a REAL text to the number the visitor gave during the demo - prefixed
+ * "(Demo SMS)" - so prospects experience the confirmation text their own
+ * customers would get. Hard rate-limited (2/number/day, global daily cap),
+ * fixed server-side template (the agent can't freetext it), and it falls
+ * back to the old simulation if anything is unavailable.
  */
+
+/** The five landing demo agents - used to brand the demo text. */
+const DEMO_AGENTS: Record<string, { company: string; agentName: string; vertical: string }> = {
+  agent_1a0104f504c5b963146a6d98f3: { company: 'Apex Air & Heat', agentName: 'Mia', vertical: 'hvac' },
+  agent_2800f2b423ddb542ef96a6db76: { company: 'Bright Spark Electric', agentName: 'Dave', vertical: 'electrical' },
+  agent_070b63dd536ee3d27d16c05a45: { company: 'Executive Transport', agentName: 'Sam', vertical: 'transport' },
+  agent_c6d94b0755392d61c9c2c21e45: { company: 'Summit Roofing', agentName: 'Ava', vertical: 'roofing' },
+  agent_a5136ab4471231cd16e79c29ec: { company: 'Hale & Co. Law', agentName: 'Paul', vertical: 'law' },
+}
+
+const clean = (v: unknown, max: number) =>
+  String(v ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, max)
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -83,10 +102,77 @@ export async function POST(req: Request) {
     }
 
     case 'send_booking_sms': {
-      return NextResponse.json({
+      const simulated = NextResponse.json({
         ok: true,
-        result: `Confirmation text "sent" (demo - no real SMS goes out).`,
+        result: 'Confirmation text sent (demo). Tell the caller their confirmation is on its way.',
       })
+
+      // REAL demo text. Guardrails: only to a plausible US mobile the
+      // visitor gave on the call, fixed template, strict rate limits.
+      const fromNumber = process.env.CLOUDGREET_NOTIFICATIONS_FROM
+      if (!fromNumber) return simulated
+
+      const phoneRaw = clean(args.phone || args.phone_number || args.mobile, 24)
+      let digits = phoneRaw.replace(/\D/g, '')
+      if (digits.length === 10) digits = `1${digits}`
+      if (digits.length !== 11 || !digits.startsWith('1')) {
+        return NextResponse.json({
+          ok: false,
+          result: "That phone number didn't look right. Ask the caller to repeat their mobile number digit by digit, then try again.",
+        })
+      }
+      const e164 = `+${digits}`
+
+      const agentId: string = body?.call?.agent_id || body?.agent_id || ''
+      const brand = DEMO_AGENTS[agentId] || { company: 'CloudGreet', agentName: 'your AI receptionist', vertical: 'demo' }
+
+      try {
+        // Per-number cap: 2 per 24h. Re-asks just get reassured.
+        const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+        const { count: perPhone } = await supabaseAdmin
+          .from('demo_sms_log')
+          .select('id', { count: 'exact', head: true })
+          .eq('phone_digits', digits)
+          .gte('created_at', dayAgo)
+        if ((perPhone ?? 0) >= 2) {
+          return NextResponse.json({
+            ok: true,
+            result: 'A demo text already went to that number recently - tell the caller to check their messages.',
+          })
+        }
+        // Global abuse cap: 150/day across all demos.
+        const { count: globalCount } = await supabaseAdmin
+          .from('demo_sms_log')
+          .select('id', { count: 'exact', head: true })
+          .gte('created_at', dayAgo)
+        if ((globalCount ?? 0) >= 150) {
+          logger.warn('demo sms global cap hit')
+          return simulated
+        }
+
+        const name = clean(args.name, 40)
+        const service = clean(args.service, 60)
+        const when = clean(args.datetime || args.time, 60)
+        const text =
+          `(Demo SMS) ${brand.company}: ${name ? `Hi ${name}, you` : 'You'}'re booked` +
+          `${service ? ` for ${service}` : ''}${when ? ` on ${when}` : ''}. ` +
+          `Reply here with any changes - ${brand.agentName} has you on the schedule.\n\n` +
+          'Sent by the CloudGreet demo. Your customers get these automatically.'
+
+        await telnyxClient.sendSMS(e164, text, fromNumber)
+        void supabaseAdmin
+          .from('demo_sms_log')
+          .insert({ phone_digits: digits, agent_id: agentId || null, vertical: brand.vertical })
+          .then(({ error }) => { if (error) logger.warn('demo_sms_log insert failed', { error: error.message }) })
+
+        return NextResponse.json({
+          ok: true,
+          result: "Text sent for real - tell the caller to check their phone. It starts with '(Demo SMS)' and shows exactly what their customers would receive.",
+        })
+      } catch (e) {
+        logger.warn('demo sms send failed', { error: e instanceof Error ? e.message : 'unknown' })
+        return simulated
+      }
     }
 
     case 'cancel_appointment': {
