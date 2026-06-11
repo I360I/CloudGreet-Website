@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 
 export default function LandingPage() {
  return (
-  <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
+  <main className="min-h-screen bg-[#f6f5f1] text-gray-900 overflow-x-clip">
    <Nav />
    <Marquee />
    <AgentDeskReveal>
@@ -222,14 +222,14 @@ function DemoCallButtons() {
     <button
      type="button"
      onClick={() => setOpen(true)}
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/50 bg-blue-700/55 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(29,78,216,0.5),inset_0_1px_0_0_rgba(255,255,255,0.8),inset_0_-10px_24px_-14px_rgba(255,255,255,0.45)] transition-all hover:-translate-y-0.5 hover:bg-blue-700/65"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/50 bg-blue-700/55 max-sm:bg-blue-600 max-sm:border-blue-500 max-sm:[text-shadow:none] px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(29,78,216,0.5),inset_0_1px_0_0_rgba(255,255,255,0.8),inset_0_-10px_24px_-14px_rgba(255,255,255,0.45)] transition-all hover:-translate-y-0.5 hover:bg-blue-700/65"
     >
      Test our AI
      <ArrowRight weight="bold" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
     </button>
     <Link
      href="/contact"
-     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/70 bg-white/10 px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.3),inset_0_1px_0_0_rgba(255,255,255,0.95),inset_0_-10px_24px_-14px_rgba(255,255,255,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/20"
+     className="group inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-2xl border border-white/70 bg-white/10 max-sm:bg-white max-sm:text-gray-900 max-sm:border-gray-200 max-sm:[text-shadow:none] px-7 py-4 text-base font-medium text-white [text-shadow:0_1px_4px_rgba(15,23,42,0.55)] backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.3),inset_0_1px_0_0_rgba(255,255,255,0.95),inset_0_-10px_24px_-14px_rgba(255,255,255,0.6)] transition-all hover:-translate-y-0.5 hover:bg-white/20"
     >
      Book a 15-min demo
      <ArrowUpRight weight="bold" className="h-4 w-4" />

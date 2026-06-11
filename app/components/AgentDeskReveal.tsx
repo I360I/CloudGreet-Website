@@ -209,7 +209,11 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
       const cw = canvas.width, ch = canvas.height
       const scale = Math.max(cw / im.naturalWidth, ch / im.naturalHeight)
       const w = im.naturalWidth * scale, h = im.naturalHeight * scale
-      ctx.clearRect(0, 0, cw, ch); ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2 + ch * Y_NUDGE, w, h); lastDrawnRef.current = idx
+      // Portrait phones: bias the cover-crop toward the mascot (~75% from the
+      // left in the frames). 0.5 on >=640px reproduces the old centered math
+      // exactly, so desktop is untouched.
+      const focusX = window.innerWidth < 640 ? 0.75 : 0.5
+      ctx.clearRect(0, 0, cw, ch); ctx.drawImage(im, cw / 2 - focusX * w, (ch - h) / 2 + ch * Y_NUDGE, w, h); lastDrawnRef.current = idx
     }
     // transition-out frames draw into their own canvas (self-sizing)
     const drawTransFrame = (idx: number) => {
@@ -298,7 +302,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
           {/* isolated blend media (keeps the buttons' frosted glass stable) */}
           <div ref={mediaRef} className="absolute inset-0" style={{ isolation: 'isolate' }}>
             <div className="pointer-events-none absolute inset-x-0 bottom-0 [mask-image:linear-gradient(to_top,black_78%,transparent)]">
-              <video ref={idleRef} autoPlay loop muted playsInline preload="auto" className="h-auto w-full mix-blend-multiply">
+              <video ref={idleRef} autoPlay loop muted playsInline preload="auto" className="h-auto w-full max-sm:h-[46vh] max-sm:object-cover mix-blend-multiply">
                 <source src="/cganimation.mp4" type="video/mp4" />
               </video>
             </div>
@@ -308,7 +312,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
             {DESKS.map((d, i) => (
               <video key={d.v} ref={(el) => { talkRefs.current[i] = el }} src={d.clip} muted loop playsInline preload="auto"
                 onEnded={(e) => { const v = e.currentTarget; try { v.currentTime = 0; v.play().catch(() => {}) } catch {} }}
-                className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-opacity duration-500"
+                className="absolute inset-0 h-full w-full object-cover max-sm:object-[75%_50%] mix-blend-multiply transition-opacity duration-500"
                 style={{ opacity: atDesk && i === active ? 1 : 0, transform: `translateY(${Y_NUDGE * 100}%)`, WebkitMaskImage: MASK, maskImage: MASK, pointerEvents: 'none' }} />
             ))}
           </div>
@@ -328,13 +332,13 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
           <div ref={carouselRef} className="pointer-events-none absolute inset-0 z-20">
           <div className="absolute inset-0 transition-opacity duration-500" style={{ opacity: atDesk ? 1 : 0, pointerEvents: atDesk ? 'auto' : 'none' }}>
             {/* header */}
-            <div className="pointer-events-none absolute inset-x-0 top-[17vh] z-10 text-center">
+            <div className="pointer-events-none absolute inset-x-0 top-[17vh] max-sm:top-[10vh] z-10 text-center">
               <p className="font-clash text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">Demo Agents</p>
               <p className="font-gsans mx-auto mt-1.5 max-w-xs text-sm leading-snug text-gray-400">Pick a business and talk to its AI receptionist, live.</p>
             </div>
 
             {/* main content - left */}
-            <div className="absolute left-8 top-1/2 w-[min(92vw,600px)] -translate-y-1/2 sm:left-14 md:left-24">
+            <div className="absolute left-8 top-1/2 w-[min(92vw,600px)] -translate-y-1/2 sm:left-14 md:left-24 max-sm:left-5 max-sm:top-[42%] max-sm:w-[68vw]">
               <AnimatePresence mode="wait" custom={dir}>
                 <motion.div key={active} custom={dir}
                   initial={{ opacity: 0, x: dir >= 0 ? 44 : -44 }}
@@ -346,8 +350,8 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                     <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sky-500" /></span>
                     <span className="font-gsans text-xs font-semibold uppercase tracking-[0.25em] text-gray-400">{desk.cat}</span>
                   </div>
-                  <h2 className="font-clash text-[clamp(2.9rem,5.8vw,5.4rem)] font-semibold leading-[0.9] tracking-[-0.02em] text-gray-900">{desk.biz}</h2>
-                  <p className="font-gsans mt-5 text-lg leading-relaxed text-gray-500">{desk.tags}</p>
+                  <h2 className="font-clash text-[clamp(2.9rem,5.8vw,5.4rem)] max-sm:text-[2.05rem] font-semibold leading-[0.9] max-sm:leading-[0.95] tracking-[-0.02em] text-gray-900">{desk.biz}</h2>
+                  <p className="font-gsans mt-5 max-sm:mt-2.5 text-lg max-sm:text-sm leading-relaxed text-gray-500">{desk.tags}</p>
 
                   {phase === 'live' || phase === 'connecting' ? (
                     <div className="mt-8 max-w-md">
@@ -355,12 +359,12 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                         <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-sky-500" /></span>
                         <span className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">{agentTalking ? `${desk.name} is speaking` : phase === 'connecting' ? 'Connecting' : 'Listening'}</span>
                       </div>
-                      <div ref={transcriptRef} className="mb-5 max-h-[30vh] space-y-3 overflow-y-auto pr-2 [scrollbar-width:thin]">
+                      <div ref={transcriptRef} className="mb-5 max-h-[30vh] max-sm:max-h-[22vh] space-y-3 overflow-y-auto pr-2 [scrollbar-width:thin]">
                         {transcript.length === 0 && phase === 'connecting' && <p className="text-gray-400">Connecting…</p>}
                         {transcript.map((l, i) => (
                           <div key={i}>
                             <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">{l.role === 'agent' ? desk.name : 'You'}</p>
-                            <p className={`text-[17px] leading-snug ${l.role === 'agent' ? 'text-gray-900' : 'text-gray-500'}`}>{l.content}</p>
+                            <p className={`text-[17px] max-sm:text-[15px] leading-snug ${l.role === 'agent' ? 'text-gray-900' : 'text-gray-500'}`}>{l.content}</p>
                           </div>
                         ))}
                       </div>
@@ -374,14 +378,14 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-9">
-                      <button onClick={start} className="group inline-flex items-center gap-4">
-                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-900 text-white ring-1 ring-gray-900/10 shadow-md transition-all duration-200 group-hover:bg-sky-600 group-hover:shadow-lg group-hover:scale-105">
-                          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-[22px] w-[22px] translate-x-[1px]"><path d="M8 5v14l11-7z" /></svg>
+                    <div className="mt-9 max-sm:mt-5">
+                      <button onClick={start} className="group inline-flex items-center gap-4 max-sm:gap-3">
+                        <span className="flex h-14 w-14 max-sm:h-11 max-sm:w-11 items-center justify-center rounded-full bg-gray-900 text-white ring-1 ring-gray-900/10 shadow-md transition-all duration-200 group-hover:bg-sky-600 group-hover:shadow-lg group-hover:scale-105">
+                          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-[22px] w-[22px] max-sm:h-[18px] max-sm:w-[18px] translate-x-[1px]"><path d="M8 5v14l11-7z" /></svg>
                         </span>
-                        <span className="font-clash text-3xl font-semibold tracking-tight text-gray-900 transition-colors group-hover:text-sky-700">Talk to {desk.name}</span>
+                        <span className="font-clash text-3xl max-sm:text-[1.45rem] font-semibold tracking-tight text-gray-900 transition-colors group-hover:text-sky-700">Talk to {desk.name}</span>
                       </button>
-                      <p className="font-gsans mt-5 text-[15px] italic text-gray-400">{phase === 'ended' ? 'Call ended — talk again, or pick another agent below.' : desk.hint}</p>
+                      <p className="font-gsans mt-5 max-sm:mt-3 text-[15px] max-sm:text-[13px] italic text-gray-400">{phase === 'ended' ? 'Call ended — talk again, or pick another agent below.' : desk.hint}</p>
                       {err && <p className="mt-2 text-sm text-red-500">{err}</p>}
                     </div>
                   )}
@@ -392,11 +396,11 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
             {/* Apple liquid-glass selector - container is click-through so its
                 full-width dead-zones don't eat clicks on the call controls; only
                 the pill itself is interactive. */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-8 z-30 flex justify-center px-4">
-              <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-white/60 bg-white/40 p-1.5 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.35),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-8px_20px_-12px_rgba(255,255,255,0.5)]">
+            <div className="pointer-events-none absolute inset-x-0 bottom-8 max-sm:bottom-5 z-30 flex justify-center px-4 max-sm:px-3">
+              <div className="pointer-events-auto flex items-center gap-1 max-sm:gap-0.5 rounded-full border border-white/60 bg-white/40 p-1.5 max-sm:p-1 max-sm:max-w-full max-sm:overflow-x-auto max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden backdrop-blur-2xl backdrop-saturate-150 shadow-[0_18px_44px_-16px_rgba(15,23,42,0.35),inset_0_1px_0_0_rgba(255,255,255,0.85),inset_0_-8px_20px_-12px_rgba(255,255,255,0.5)]">
                 {DESKS.map((d, i) => (
                   <button key={d.v} onClick={() => go(i, i > active ? 1 : -1)}
-                    className={`relative rounded-full px-5 py-2.5 text-sm font-medium transition ${i === active ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                    className={`relative whitespace-nowrap rounded-full px-5 py-2.5 max-sm:px-3 max-sm:py-2 text-sm max-sm:text-xs font-medium transition ${i === active ? 'text-white' : 'text-gray-600 hover:text-gray-900'}`}>
                     {i === active && <motion.span layoutId="sel" className="absolute inset-0 -z-10 rounded-full bg-gray-900 shadow-[0_6px_16px_-6px_rgba(2,32,71,0.6)]" transition={{ type: 'spring', stiffness: 400, damping: 34 }} />}
                     {d.cat}
                   </button>
