@@ -499,7 +499,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
               {/* the business name melts between agents (Magic UI morphing text) */}
               <MorphingText
                 text={desk.biz}
-                className="font-clash text-[clamp(2.9rem,5.8vw,5.4rem)] max-sm:text-[2.05rem] font-extrabold leading-[0.9] max-sm:leading-[0.95] tracking-[-0.03em] text-gray-900"
+                className="font-clash text-[clamp(2.9rem,5.8vw,5.4rem)] max-sm:text-[2.05rem] font-semibold leading-[0.9] max-sm:leading-[0.95] tracking-[-0.02em] text-gray-900"
               />
               <AnimatePresence mode="wait" custom={dir}>
                 <motion.div key={active} custom={dir}
