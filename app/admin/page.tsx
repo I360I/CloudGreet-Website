@@ -11,7 +11,7 @@ import { AdminShell, useAdminTheme } from './_components/Shell'
 import {
  Panel, HeroPanel, StatusPill, Input, Sparkline,
 } from './_components/ui'
-import { BorderBeam } from './_components/magic'
+import { BorderBeam, DotStage, Meteors, ShinyText } from './_components/magic'
 import {
  AreaChart, CountUp, DonutGauge, MeterBar, fmtMoney,
 } from './_components/charts'
@@ -198,7 +198,7 @@ export default function AdminHome() {
      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
       <div>
        <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-1.5">
-        {todayLine()}
+        <ShinyText>{todayLine()}</ShinyText>
        </div>
        <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight text-white">
         {greeting()}
@@ -206,7 +206,7 @@ export default function AdminHome() {
       </div>
       <Link
        href="/admin/clients/new"
-       className="inline-flex items-center justify-center gap-2 bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ease-out shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_8px_24px_-10px_rgba(56,189,248,0.65)] hover:-translate-y-px"
+       className="cg-btn-shine inline-flex items-center justify-center gap-2 bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ease-out shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_8px_24px_-10px_rgba(56,189,248,0.65)] hover:-translate-y-px"
       >
        <Plus className="w-4 h-4" /> New client
       </Link>
@@ -346,7 +346,8 @@ export default function AdminHome() {
       transition={{ duration: 0.5, ease: EASE, delay: 0.2 }}
       className="grid lg:grid-cols-5 gap-3 mb-6"
      >
-      <Panel className="lg:col-span-3">
+      <Panel className="lg:col-span-3 overflow-hidden">
+       <DotStage />
        <div className="flex items-baseline justify-between mb-1">
         <h2 className="text-sm font-medium text-white">Top clients</h2>
         <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500">calls this month</span>
@@ -527,7 +528,12 @@ function GlobePanel({ points, hq }: {
  hq: { name: string; lat: number; lng: number; city?: string } | null
 }) {
  const { theme } = useAdminTheme()
- return <ClientGlobe points={points} hq={hq} theme={theme} height={470} />
+ return (
+  <>
+   {theme === 'dark' && <Meteors count={7} />}
+   <ClientGlobe points={points} hq={hq} theme={theme} height={470} />
+  </>
+ )
 }
 
 function EmptyMascot({ line }: { line: string }) {
@@ -538,7 +544,7 @@ function EmptyMascot({ line }: { line: string }) {
     alt=""
     width={64}
     height={90}
-    className="w-14 h-auto opacity-90 drop-shadow-[0_8px_24px_rgba(56,189,248,0.25)]"
+    className="cg-float w-14 h-auto opacity-90 drop-shadow-[0_8px_24px_rgba(56,189,248,0.25)]"
    />
    <p className="text-sm text-gray-500 max-w-[260px]">{line}</p>
   </div>

@@ -46,6 +46,8 @@ body { --font-display: var(--font-geist-sans); }
   --cg-tooltip-bg: rgba(16, 19, 25, 0.95);
   --cg-tooltip-border: rgba(255, 255, 255, 0.1);
   --cg-input-bg: rgba(0, 0, 0, 0.3);
+  --cg-spot: rgba(56, 189, 248, 0.075);
+  --cg-dots: rgba(148, 163, 184, 0.13);
 }
 
 [data-cg-theme='light'] {
@@ -60,6 +62,8 @@ body { --font-display: var(--font-geist-sans); }
   --cg-tooltip-bg: rgba(255, 255, 255, 0.97);
   --cg-tooltip-border: rgba(16, 24, 40, 0.1);
   --cg-input-bg: #ffffff;
+  --cg-spot: rgba(37, 99, 235, 0.055);
+  --cg-dots: rgba(16, 24, 40, 0.08);
 }
 
 /* Standard card: glass over near-black, inner top highlight, deep shadow. */
@@ -154,6 +158,110 @@ body { --font-display: var(--font-geist-sans); }
 /* Border beams need offset-path: rect(); hide cleanly where unsupported. */
 @supports not (offset-path: rect(0 0 auto auto)) {
   .cg-border-beam { display: none; }
+}
+
+/* ------------------------------------------------------------
+   Life layer — cursor spotlight, shine sweeps, meteors, shimmer.
+   All transform/opacity based; everything collapses under
+   prefers-reduced-motion.
+   ------------------------------------------------------------ */
+
+/* Cursor spotlight: a soft accent glow follows the mouse inside cards. */
+.cg-spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  background: radial-gradient(360px circle at var(--cg-mx, 50%) var(--cg-my, 50%), var(--cg-spot), transparent 68%);
+}
+.cg-spotlight:hover::after { opacity: 1; }
+
+/* Shine sweep across primary buttons on hover. */
+.cg-btn-shine { position: relative; overflow: hidden; }
+.cg-btn-shine::after {
+  content: '';
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -65%;
+  width: 38%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.55s ease;
+  pointer-events: none;
+}
+.cg-btn-shine:hover::after { left: 125%; }
+
+/* Meteors — thin shooting lights (dark surfaces). */
+.cg-meteor {
+  position: absolute;
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 9999px;
+  background: #9bdcff;
+  box-shadow: 0 0 8px rgba(125, 211, 252, 0.8);
+  opacity: 0;
+  transform: rotate(215deg);
+  animation: cg-meteor linear infinite;
+}
+.cg-meteor::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 1px;
+  width: 130px;
+  height: 1px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, rgba(125, 211, 252, 0.55), transparent);
+}
+@keyframes cg-meteor {
+  0%   { opacity: 0; transform: rotate(215deg) translateX(0); }
+  6%   { opacity: 0.9; }
+  55%  { opacity: 0.9; }
+  100% { opacity: 0; transform: rotate(215deg) translateX(-480px); }
+}
+
+/* Shimmer text — a glint slides across a label. */
+.cg-shiny-text {
+  background: linear-gradient(110deg, currentColor 38%, var(--cg-text-1) 50%, currentColor 62%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: cg-shine-slide 6.5s ease-in-out infinite;
+}
+@keyframes cg-shine-slide {
+  0%, 55% { background-position: 110% 0; }
+  90%, 100% { background-position: -110% 0; }
+}
+
+/* Gentle float — used by the mascot. */
+.cg-float { animation: cg-float 5.5s ease-in-out infinite; }
+@keyframes cg-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+/* Dot-grid stage behind feature panels. */
+.cg-dot-stage {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background-image: radial-gradient(var(--cg-dots) 1px, transparent 1px);
+  background-size: 18px 18px;
+  mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 75% at 50% 35%, #000 25%, transparent 78%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-meteor { display: none; }
+  .cg-shiny-text { animation: none; background: none; -webkit-text-fill-color: currentColor; }
+  .cg-float { animation: none; }
+  .cg-btn-shine::after { display: none; }
 }
 
 /* ------------------------------------------------------------

@@ -89,7 +89,7 @@ export default function AdminLoginPage() {
           width={52}
           height={74}
           priority
-          className="w-[46px] h-auto translate-y-1.5"
+          className="cg-float w-[46px] h-auto translate-y-1.5"
          />
         </div>
        </div>
@@ -148,7 +148,7 @@ export default function AdminLoginPage() {
        <button
         type="submit"
         disabled={isLoading}
-        className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out disabled:opacity-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_8px_24px_-10px_rgba(56,189,248,0.65)] hover:-translate-y-px active:translate-y-0"
+        className="cg-btn-shine w-full inline-flex items-center justify-center gap-2 bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300 ease-out disabled:opacity-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_8px_24px_-10px_rgba(56,189,248,0.65)] hover:-translate-y-px active:translate-y-0"
        >
         {isLoading
          ? (<><CircleNotch className="w-4 h-4 animate-spin" /> Signing in…</>)

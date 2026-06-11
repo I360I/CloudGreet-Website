@@ -8,6 +8,7 @@
  * (see .cg-border-beam guard in globals.css) or reduced motion is on.
  */
 
+import React from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 
 export function BorderBeam({
@@ -45,4 +46,43 @@ export function BorderBeam({
    />
   </div>
  )
+}
+
+
+/** Shooting lights across a dark panel. Deterministic layout (no hydration drift). */
+export function Meteors({ count = 7 }: { count?: number }) {
+ const items = Array.from({ length: count }, (_, i) => {
+  const h = ((i + 3) * 2654435761) >>> 0
+  return {
+   left: 8 + (h % 84),
+   delay: (h % 90) / 9,
+   duration: 7 + ((h >>> 8) % 60) / 10,
+  }
+ })
+ return (
+  <div aria-hidden className="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+   {items.map((m, i) => (
+    <span
+     key={i}
+     className="cg-meteor"
+     style={{
+      left: `${m.left}%`,
+      top: '-1%',
+      animationDelay: `${m.delay}s`,
+      animationDuration: `${m.duration}s`,
+     }}
+    />
+   ))}
+  </div>
+ )
+}
+
+/** Faded dot-grid backdrop for feature panels. */
+export function DotStage() {
+ return <div aria-hidden className="cg-dot-stage" />
+}
+
+/** Label with a glint of light sliding across it. */
+export function ShinyText({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+ return <span className={`cg-shiny-text ${className}`}>{children}</span>
 }

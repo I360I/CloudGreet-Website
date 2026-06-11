@@ -15,8 +15,14 @@ export function Panel({
  padding?: 'normal' | 'tight' | 'none'
 }) {
  const pad = padding === 'none' ? '' : padding === 'tight' ? 'p-4' : 'p-5 sm:p-6'
+ // Cursor spotlight: cheap CSS-var update, no re-render.
+ const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const r = e.currentTarget.getBoundingClientRect()
+  e.currentTarget.style.setProperty('--cg-mx', `${e.clientX - r.left}px`)
+  e.currentTarget.style.setProperty('--cg-my', `${e.clientY - r.top}px`)
+ }
  return (
-  <div className={`cg-card rounded-2xl ${pad} ${className}`}>
+  <div onMouseMove={onMove} className={`cg-card cg-spotlight rounded-2xl ${pad} ${className}`}>
    {children}
   </div>
  )
@@ -121,7 +127,7 @@ export function PrimaryButton({
  return (
   <button
    type={type} onClick={onClick} disabled={disabled || loading}
-   className={`inline-flex items-center justify-center gap-2 bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_8px_24px_-10px_rgba(56,189,248,0.65)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_28px_-10px_rgba(56,189,248,0.8)] hover:-translate-y-px active:translate-y-0 ${className}`}
+   className={`cg-btn-shine inline-flex items-center justify-center gap-2 bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-300 hover:to-sky-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ease-out disabled:opacity-40 disabled:cursor-not-allowed shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_8px_24px_-10px_rgba(56,189,248,0.65)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.25),0_10px_28px_-10px_rgba(56,189,248,0.8)] hover:-translate-y-px active:translate-y-0 ${className}`}
   >
    {loading && <CircleNotch className="w-4 h-4 animate-spin" />}
    {children}

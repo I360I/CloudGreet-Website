@@ -135,7 +135,7 @@ export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
         alt=""
         width={30}
         height={42}
-        className="w-[26px] h-auto translate-y-1"
+        className="cg-float w-[26px] h-auto translate-y-1"
        />
       </div>
       <div className="min-w-0">
