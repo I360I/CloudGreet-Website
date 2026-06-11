@@ -60,9 +60,23 @@ export async function ensurePlatformBusiness(): Promise<string | null> {
     }
 
     lastEnsure = now
+    // businesses.owner_id is NOT NULL - own the dogfood row with the
+    // first (founding) admin account.
+    const { data: adminUser } = await supabaseAdmin
+      .from('custom_users')
+      .select('id')
+      .eq('role', 'admin')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    if (!adminUser?.id) {
+      logger.error('platform line provision failed: no admin user to own the row')
+      return null
+    }
     const { data: created, error } = await supabaseAdmin
       .from('businesses')
       .insert({
+        owner_id: adminUser.id,
         business_name: 'CloudGreet',
         business_type: 'SaaS',
         email: 'aedwards4242@gmail.com',
