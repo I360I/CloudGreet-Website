@@ -11,6 +11,7 @@ import {
  Panel, PanelHeader, Stat, StatusPill, GhostButton, DangerButton, PrimaryButton,
  Input, Select, Sparkline, RisingFade,
 } from '../../_components/ui'
+import { ProgressRing } from '../../_components/charts'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -1130,7 +1131,9 @@ function CostMarginCard({ clientId }: { clientId: string }) {
     <div className="text-sm text-rose-300">{error}</div>
    ) : mtd ? (
     <div className="space-y-5">
-     <div className="grid grid-cols-3 gap-3">
+     <div className="flex items-center gap-6">
+      <ProgressRing value={mtd.marginPct} label="margin" size={92} danger={!positive} />
+      <div className="grid grid-cols-3 gap-3 flex-1">
       <div>
        <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1.5">Revenue</div>
        <div className="font-mono font-medium tabular-nums text-xl md:text-2xl text-white">{usd(mtd.revenueCents)}</div>
@@ -1147,6 +1150,7 @@ function CostMarginCard({ clientId }: { clientId: string }) {
          <span className="text-xs text-gray-500 ml-1.5">{mtd.marginPct}%</span>
         )}
        </div>
+      </div>
       </div>
      </div>
 

@@ -394,26 +394,35 @@ export function Bars3D({
  )
 }
 
-/* ------------------------------- DonutGauge ------------------------------ */
+/* ------------------------------ ProgressRing ----------------------------- */
 
-export function DonutGauge({
- pct, label, size = 132, danger = false,
+/**
+ * Animated circular progress (Magic UI style): thick rounded ring with a
+ * sweeping fill and a big counting number in the center. The admin's one
+ * gauge for anything that reads as a percentage.
+ */
+export function ProgressRing({
+ value, label, size = 120, strokeWidth, danger = false, format,
 }: {
- pct: number | null
- label: string
+ value: number | null
+ label?: string
  size?: number
+ strokeWidth?: number
  danger?: boolean
+ format?: (n: number) => string
 }) {
  const uid = useId().replace(/:/g, '')
- const stroke = 10
+ const stroke = strokeWidth ?? Math.max(6, Math.round(size * 0.095))
  const r = (size - stroke) / 2
  const c = 2 * Math.PI * r
- const clamped = pct === null ? 0 : Math.max(0, Math.min(100, pct))
+ const clamped = value === null ? 0 : Math.max(0, Math.min(100, value))
  const offset = c * (1 - clamped / 100)
- const negative = danger || (pct !== null && pct < 0)
+ const negative = danger || (value !== null && value < 0)
+ const fmt = format || ((n: number) => `${Math.round(n)}%`)
+ const numPx = Math.max(11, Math.round(size * (label ? 0.21 : 0.24)))
 
  return (
-  <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+  <div className="relative inline-flex items-center justify-center flex-shrink-0" style={{ width: size, height: size }}>
    <svg width={size} height={size} className="-rotate-90">
     <defs>
      <linearGradient id={`${uid}-arc`} x1="0" y1="0" x2="1" y2="1">
@@ -445,13 +454,30 @@ export function DonutGauge({
     />
    </svg>
    <div className="absolute inset-0 flex flex-col items-center justify-center">
-    <div className={`font-display font-semibold tracking-tight text-2xl tabular-nums ${negative ? 'text-rose-300' : 'text-white'}`}>
-     {pct === null ? '-' : <CountUp value={pct} format={(n) => `${Math.round(n)}%`} />}
+    <div
+     className={`font-display font-semibold tracking-tight tabular-nums ${negative ? 'text-rose-300' : 'text-white'}`}
+     style={{ fontSize: numPx, lineHeight: 1.1 }}
+    >
+     {value === null ? '-' : <CountUp value={value} format={fmt} />}
     </div>
-    <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-gray-500 mt-0.5">{label}</div>
+    {label && (
+     <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-gray-500 mt-0.5">{label}</div>
+    )}
    </div>
   </div>
  )
+}
+
+/** Back-compat alias - existing call sites keep working. */
+export function DonutGauge({
+ pct, label, size = 132, danger = false,
+}: {
+ pct: number | null
+ label: string
+ size?: number
+ danger?: boolean
+}) {
+ return <ProgressRing value={pct} label={label} size={size} danger={danger} />
 }
 
 /* -------------------------------- MeterBar ------------------------------- */

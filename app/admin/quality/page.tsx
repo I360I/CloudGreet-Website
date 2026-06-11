@@ -9,6 +9,7 @@ import {
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, GhostButton, PrimaryButton, DangerButton } from '../_components/ui'
+import { ProgressRing } from '../_components/charts'
 
 type Score = { category: string; score: number; justification: string }
 type ToolCall = { tool: string; args: Record<string, unknown>; response: unknown }
@@ -505,23 +506,25 @@ function RunDetailView({ detail }: { detail: RunDetail }) {
 
    {/* Big number row */}
    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-    <BigStat
+    <RingStat
      label="Overall score"
-     value={run.overall_score !== null ? pct(run.overall_score) : '—'}
+     value={run.overall_score !== null ? run.overall_score * 100 : null}
      sub={previous?.overall_score != null && run.overall_score != null
       ? `vs ${pct(previous.overall_score)} last run`
       : 'No prior run'}
      delta={previous?.overall_score != null && run.overall_score != null
       ? run.overall_score - previous.overall_score
       : null}
+     danger={run.overall_score != null && run.overall_score < 0.6}
     />
-    <BigStat
+    <RingStat
      label="Expectation pass rate"
-     value={run.expectation_pass_rate !== null ? pct(run.expectation_pass_rate) : '—'}
+     value={run.expectation_pass_rate !== null ? run.expectation_pass_rate * 100 : null}
      sub={`${passCount} / ${completedResults.length} pairs all-pass`}
      delta={previous?.expectation_pass_rate != null && run.expectation_pass_rate != null
       ? run.expectation_pass_rate - previous.expectation_pass_rate
       : null}
+     danger={run.expectation_pass_rate != null && run.expectation_pass_rate < 0.6}
     />
     <BigStat
      label="Progress"
@@ -742,6 +745,21 @@ function AnalysisPanel({ analysis, costMicro }: { analysis: Analysis; costMicro:
      ))}
     </div>
    </details>
+  </div>
+ )
+}
+
+function RingStat({
+ label, value, sub, delta, danger = false,
+}: { label: string; value: number | null; sub: string; delta?: number | null; danger?: boolean }) {
+ return (
+  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 flex items-center gap-4">
+   <ProgressRing value={value} size={72} danger={danger} />
+   <div className="min-w-0">
+    <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">{label}</div>
+    {delta != null && <div className="mb-1"><DeltaPill delta={delta} /></div>}
+    <div className="text-xs text-gray-500">{sub}</div>
+   </div>
   </div>
  )
 }

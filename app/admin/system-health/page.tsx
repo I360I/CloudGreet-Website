@@ -14,6 +14,7 @@ import { CircleNotch, ArrowsClockwise, CheckCircle, WarningCircle, ArrowSquareOu
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader } from '../_components/ui'
+import { ProgressRing } from '../_components/charts'
 
 type Section<T> = { available: true; data: T } | { available: false; reason: string }
 type EnvFlags = Record<string, boolean>
@@ -272,7 +273,10 @@ export default function SystemHealthPage() {
                   <div className="grid grid-cols-3 gap-3 mb-3">
                     <Stat label="Total" value={d.total} />
                     <Stat label="Avg duration" value={`${d.avg_duration_secs}s`} />
-                    <Stat label="<30s (likely failed)" value={`${d.very_short_pct}%`} tone={d.very_short_pct > 30 ? 'rose' : d.very_short_pct > 15 ? 'amber' : 'gray'} />
+                    <div className="bg-black/30 border border-white/5 rounded-lg p-3 flex items-center gap-3">
+                      <ProgressRing value={d.very_short_pct} size={48} strokeWidth={5} danger={d.very_short_pct > 30} />
+                      <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-gray-500 leading-snug">&lt;30s<br />(likely failed)</div>
+                    </div>
                   </div>
                   <p className="text-[11px] text-gray-500">
                     Calls under 30 seconds usually mean the agent confused the caller and they hung up. Watch this number daily.

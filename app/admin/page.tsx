@@ -13,7 +13,7 @@ import {
 } from './_components/ui'
 import { BorderBeam, DotStage, Meteors, ShinyText } from './_components/magic'
 import {
- AreaChart, CountUp, DonutGauge, MeterBar, fmtMoney,
+ AreaChart, CountUp, DonutGauge, MeterBar, ProgressRing, fmtMoney,
 } from './_components/charts'
 
 // WebGL pieces are client-only; skeletons keep panel heights stable while they load.
@@ -318,7 +318,7 @@ export default function AdminHome() {
        value={data?.kpis.activeClients ?? 0}
        sub={data && data.kpis.totalClients ? `${Math.round(((data.kpis.activeClients) / data.kpis.totalClients) * 100)}% of ${data.kpis.totalClients} total` : '-'}
        accent
-       icon={Users}
+       ring={data && data.kpis.totalClients ? Math.round((data.kpis.activeClients / data.kpis.totalClients) * 100) : null}
       />
       <Kpi
        label="Calls today"
@@ -481,20 +481,26 @@ function LegendDot({ color, label }: { color: string; label: string }) {
  )
 }
 
-function Kpi({ label, value, sub, accent = false, warn = false, icon: Icon }: {
+function Kpi({ label, value, sub, accent = false, warn = false, icon: Icon, ring }: {
  label: string
  value: number
  sub?: string
  accent?: boolean
  warn?: boolean
  icon?: React.ElementType
+ ring?: number | null
 }) {
  return (
   <motion.div
    variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } } }}
   >
    <Panel>
-    {Icon && (
+    {ring != null && (
+     <div className="absolute top-4 right-4">
+      <ProgressRing value={ring} size={48} strokeWidth={5} />
+     </div>
+    )}
+    {Icon && ring == null && (
      <div className={`absolute top-4 right-4 w-9 h-9 rounded-xl flex items-center justify-center border ${
       warn && value > 0
        ? 'bg-amber-400/10 border-amber-400/20 text-amber-300'
