@@ -2067,8 +2067,16 @@ async function handleCallEvent(
       String(t?.content ?? t?.transcript ?? ''),
      ))
    })()
+   // A call that ended via successful live transfer needs NO callback - the
+   // caller already spoke with the owner. Without this guard the analyzer
+   // tags transfers booking_type "callback" and the owner gets a redundant
+   // "wants a callback" text right after hanging up with that same caller.
+   // A FAILED transfer never ends with disconnection_reason 'call_transfer'
+   // (the call continues to the fallback flow), so this only skips wins.
+   const transferredLive = call?.disconnection_reason === 'call_transfer'
    const dispatchIntent =
     btLower !== 'booked' &&
+    !transferredLive &&
     (/callback|dispatch|same.?day|under.?24/.test(btLower) || userAskedCallback)
    if (eventType === 'call_analyzed' && resolvedBusinessId && dispatchIntent) {
     const callerPhone = (typeof call?.from_number === 'string' && call.from_number) || patch.from_number || null
