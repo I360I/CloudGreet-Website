@@ -697,7 +697,9 @@ function LogoMarquee() {
   { src: '/logos/anthropic.svg', alt: 'Anthropic' },
   { src: '/logos/google.svg', alt: 'Google' },
  ]
- const row = [...logos, ...logos]
+ // 4 copies so one copy-width (~1.5k px) of travel loops seamlessly even
+ // on displays wider than a single copy (2 copies gapped on 1920+ screens)
+ const row = [...logos, ...logos, ...logos, ...logos]
  return (
   <section className="px-5 sm:px-6 pt-16 sm:pt-24">
    <p className="mb-8 text-center text-[10px] font-mono uppercase tracking-[0.25em] text-gray-400">
@@ -706,7 +708,7 @@ function LogoMarquee() {
    <div className="relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
     <motion.div
      className="flex w-max items-center gap-14 sm:gap-16"
-     animate={{ x: ['0%', '-50%'] }}
+     animate={{ x: ['0%', '-25%'] }}
      transition={{ duration: 26, ease: 'linear', repeat: Infinity }}
     >
      {row.map((l, i) => (

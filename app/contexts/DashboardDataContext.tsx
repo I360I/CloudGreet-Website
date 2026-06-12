@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useCallback, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import useSWR, { mutate, useSWRConfig } from 'swr'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useToast } from './ToastContext'
@@ -103,6 +104,11 @@ const swrFetcher = async (url: string) => {
 }
 
 export function DashboardDataProvider({ children }: { children: React.ReactNode }) {
+ // The provider sits in the root layout, so it also mounts on public
+ // marketing pages where these authed fetches just 401 into the console.
+ // Only fetch on the client dashboard.
+ const pathname = usePathname()
+ const onDashboard = !!pathname && pathname.startsWith('/dashboard')
  const { showError, showSuccess } = useToast()
  const { cache } = useSWRConfig()
  const [timeframe, setTimeframe] = React.useState<'7d' | '30d' | '90d' | 'custom'>('7d')
@@ -122,7 +128,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
  isLoading: appointmentsLoading,
  mutate: mutateAppointments
  } = useSWR<{ appointments: Appointment[] }>(
- `/api/dashboard/calendar?view=agenda&startDate=${appointmentsStartDate}&endDate=${appointmentsEndDate}`,
+ onDashboard ? `/api/dashboard/calendar?view=agenda&startDate=${appointmentsStartDate}&endDate=${appointmentsEndDate}` : null,
  swrFetcher,
  {
  revalidateOnFocus: false,
@@ -151,7 +157,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
  isLoading: metricsLoading,
  mutate: mutateMetrics
  } = useSWR<{ metrics: DashboardMetrics }>(
- `/api/dashboard/real-metrics?timeframe=${timeframe}`,
+ onDashboard ? `/api/dashboard/real-metrics?timeframe=${timeframe}` : null,
  swrFetcher,
  {
  revalidateOnFocus: false,
@@ -178,7 +184,7 @@ export function DashboardDataProvider({ children }: { children: React.ReactNode 
  isLoading: chartsLoading,
  mutate: mutateCharts
  } = useSWR<{ charts: ChartData }>(
- `/api/dashboard/real-charts?timeframe=${timeframe}`,
+ onDashboard ? `/api/dashboard/real-charts?timeframe=${timeframe}` : null,
  swrFetcher,
  {
  revalidateOnFocus: false,
