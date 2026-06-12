@@ -236,10 +236,7 @@ export default function BillingDashboardPage() {
   {/* glow */}
   <div className="absolute -top-32 -right-24 w-96 h-96 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
   <div className="absolute -bottom-32 -left-24 w-96 h-96 bg-sky-500/10 blur-[120px] rounded-full pointer-events-none" />
-  {/* the CFO, counting it */}
-  {/* eslint-disable-next-line @next/next/no-img-element */}
-  <img src="/mascot-money.png" alt="" aria-hidden
-   className="pointer-events-none select-none absolute bottom-0 right-8 hidden xl:block h-[185px] w-auto opacity-95 drop-shadow-[0_0_28px_rgba(56,189,248,0.14)]" />
+
 
   <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8">
    <div className="flex-1 min-w-0">
@@ -294,6 +291,10 @@ export default function BillingDashboardPage() {
       tone="amber"
      />
     )}
+    {/* the CFO's highlight reel: counts the stacks, ends up swimming in them */}
+    <div className="hidden lg:block rounded-2xl overflow-hidden border border-white/10 shadow-xl shadow-black/30 mt-1">
+     <video src="/mascot-money.mp4" autoPlay muted playsInline preload="auto" className="block w-full h-auto" />
+    </div>
    </div>
   </div>
 
