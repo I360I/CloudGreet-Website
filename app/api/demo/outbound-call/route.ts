@@ -20,10 +20,10 @@ export const runtime = 'nodejs'
  * The visitor entering their own number + tapping "Call me" is the TCPA
  * consent for this single call.
  */
-// The 737 demo line is a retell-telnyx number whose OUTBOUND leg errors at the
-// Telnyx trunk. Place the call from a retell-twilio number (reliable outbound)
-// but override to the demo agent so the caller still gets the demo experience.
-const DEMO_FROM = '+18146486307'
+// Calls go out from the real CloudGreet line so the caller ID matches the
+// brand. (Its Telnyx outbound leg used to error, which is why a spare Twilio
+// number was used here before - verified working 2026-06-12.)
+const DEMO_FROM = '+17379370084'
 const DEMO_AGENT = 'agent_56d7fa8635fdd5313c99729233'
 
 function normalizeUsPhone(raw: string): string | null {
