@@ -1,14 +1,76 @@
 "use client"
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Phone, Envelope, MapPin, Check } from '@phosphor-icons/react'
+import { Phone, Envelope, MapPin, Check, PhoneOutgoing, CircleNotch, CheckCircle } from '@phosphor-icons/react'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
 const SUPPORT_EMAIL = 'anthony@cloudgreet.com'
 const CAL_LINK = 'cloudgreet'
+
+function AICallMe() {
+ const [phone, setPhone] = useState('')
+ const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle')
+ const [err, setErr] = useState('')
+
+ const submit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  if (state !== 'idle') return
+  setErr('')
+  setState('loading')
+  try {
+   const r = await fetch('/api/demo/outbound-call', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone }),
+   })
+   const j = await r.json().catch(() => ({} as any))
+   if (!r.ok) { setErr(j.error || 'Could not place the call. Try again in a minute.'); setState('idle'); return }
+   setState('done')
+  } catch {
+   setErr('Could not place the call. Try again in a minute.')
+   setState('idle')
+  }
+ }
+
+ if (state === 'done') {
+  return (
+   <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3.5">
+    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" weight="fill" />
+    <div className="text-sm text-emerald-900">
+     <span className="font-medium">Your phone is about to ring.</span> Answer and say hi.
+    </div>
+   </div>
+  )
+ }
+
+ return (
+  <form onSubmit={submit} className="space-y-2.5">
+   <input
+    type="tel"
+    inputMode="tel"
+    autoComplete="tel"
+    required
+    placeholder="(555) 123-4567"
+    value={phone}
+    onChange={(e) => setPhone(e.target.value)}
+    className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-100"
+   />
+   <button
+    type="submit"
+    disabled={state === 'loading'}
+    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gray-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-60 shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)]"
+   >
+    {state === 'loading'
+     ? (<><CircleNotch className="w-4 h-4 animate-spin" /> Placing the call…</>)
+     : (<><PhoneOutgoing className="w-4 h-4" /> Get a call from our AI</>)}
+   </button>
+   {err && <p className="text-xs text-red-500">{err}</p>}
+  </form>
+ )
+}
 
 export default function ContactPage() {
  useEffect(() => {
@@ -92,22 +154,19 @@ export default function ContactPage() {
      <div className="relative md:col-span-2 space-y-4">
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 md:p-8">
        <p className="text-sm text-gray-500 mb-2">Want to skip the calendar?</p>
-       <p className="font-display text-2xl font-medium text-gray-900 mb-1">Call our AI yourself.</p>
-       <p className="text-sm text-gray-500 mb-5">Hear how it sounds &mdash; pretend you&apos;re a customer with an HVAC problem.</p>
-       <a
-        href={DEMO_TEL}
-        className="inline-flex items-center gap-2 bg-white text-gray-900 px-5 py-3 rounded-2xl text-sm font-medium border border-gray-200 hover:border-gray-300 transition-all shadow-[0_0_60px_-10px_rgba(56,189,248,0.45)] w-full justify-center"
-       >
-        <Phone className="w-4 h-4" />
-        {DEMO_NUMBER}
-       </a>
+       <p className="font-display text-2xl font-medium text-gray-900 mb-1">Our AI can book you in over the phone.</p>
+       <p className="text-sm text-gray-500 mb-5">Enter your number and the AI calls you in seconds. Ask it anything, then let it book your demo right on the call.</p>
+       <AICallMe />
+       <p className="mt-4 text-xs text-gray-400 text-center">
+        Rather dial yourself? Call <a href={DEMO_TEL} className="text-gray-600 hover:text-gray-900 underline underline-offset-2">{DEMO_NUMBER}</a>
+       </p>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-[28px] p-6 md:p-8">
        <p className="font-display text-lg font-medium text-gray-900 mb-4">What you&apos;ll get on the call:</p>
        <ul className="space-y-3 text-sm text-gray-700">
         <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />A demo of the AI handling a sample call for your business</li>
-        <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />Setup walkthrough &mdash; we wire it up for you, no DIY</li>
+        <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />Setup walkthrough, we wire it up for you, no DIY</li>
         <li className="flex items-start gap-2.5"><Check className="w-4 h-4 text-sky-500 mt-0.5 flex-shrink-0" />A clear ROI breakdown for your specific numbers</li>
        </ul>
       </div>
