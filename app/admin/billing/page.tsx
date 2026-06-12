@@ -291,10 +291,6 @@ export default function BillingDashboardPage() {
       tone="amber"
      />
     )}
-    {/* the CFO's highlight reel: counts the stacks, ends up swimming in them */}
-    <div className="hidden lg:block rounded-2xl overflow-hidden border border-white/10 shadow-xl shadow-black/30 mt-1">
-     <video src="/mascot-money.mp4" autoPlay muted playsInline preload="auto" className="block w-full h-auto" />
-    </div>
    </div>
   </div>
 
