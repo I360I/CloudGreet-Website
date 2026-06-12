@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, Envelope, MapPin, Check, PhoneOutgoing, CircleNotch, CheckCircle } from '@phosphor-icons/react'
+import { metaTrack, newEventId } from '@/lib/meta-pixel'
 
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
@@ -21,13 +22,15 @@ function AICallMe() {
   setErr('')
   setState('loading')
   try {
+   const eventId = newEventId()
    const r = await fetch('/api/demo/outbound-call', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ phone, meta_event_id: eventId }),
    })
    const j = await r.json().catch(() => ({} as any))
    if (!r.ok) { setErr(j.error || 'Could not place the call. Try again in a minute.'); setState('idle'); return }
+   metaTrack('Lead', { content_name: 'ai_callback' }, eventId)
    setState('done')
   } catch {
    setErr('Could not place the call. Try again in a minute.')
@@ -108,6 +111,10 @@ export default function ContactPage() {
    elementOrSelector: '#cal-inline',
    calLink: CAL_LINK,
    layout: 'month_view',
+  })
+  ;(window as any).Cal('on', {
+   action: 'bookingSuccessful',
+   callback: () => metaTrack('Schedule', { content_name: 'demo_booking' }),
   })
   ;(window as any).Cal('ui', {
    theme: 'light',

@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Phone, ArrowUpRight, ArrowRight, Calendar, Clock, PhoneIncoming, ChatCircle, FileText, PhoneOutgoing, CheckCircle, MapPin, ShieldCheck, Lightning, BellRinging, Translate, FlowArrow, List, X } from '@phosphor-icons/react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { metaTrack, metaTrackCustom, newEventId } from '@/lib/meta-pixel'
 import { ChatWidget } from './components/landing/ChatWidget'
 import AgentDeskReveal from './components/AgentDeskReveal'
 
@@ -250,10 +251,11 @@ function DemoCallModal({ onClose }: { onClose: () => void }) {
   setState('loading')
   setMsg('')
   try {
+   const eventId = newEventId()
    const r = await fetch('/api/demo/outbound-call', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ phone, meta_event_id: eventId }),
    })
    const j = await r.json().catch(() => ({}))
    if (!r.ok) {
@@ -261,6 +263,7 @@ function DemoCallModal({ onClose }: { onClose: () => void }) {
     setMsg(j?.error || 'Something went wrong. Try again.')
     return
    }
+   metaTrack('Lead', { content_name: 'ai_callback' }, eventId)
    setState('done')
    setMsg('Calling you now. Pick up and talk to it like a real receptionist.')
   } catch {

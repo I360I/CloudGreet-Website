@@ -16,6 +16,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, type MotionValue } from 'framer-motion'
+import { metaTrackCustom } from '@/lib/meta-pixel'
 import { Microphone, MicrophoneSlash, PhoneDisconnect, Play } from '@phosphor-icons/react'
 import { RetellWebClient } from 'retell-client-js-sdk'
 
@@ -252,7 +253,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
       if (!access_token) { settle(); setErr('No call token returned.'); setPhase('error'); return }
       const client = new RetellWebClient(); clientRef.current = client
       const releaseWarmup = () => { if (warmup) { try { warmup.getTracks().forEach((t) => t.stop()) } catch {} warmup = null } }
-      client.on('call_started', () => { settle(); releaseWarmup(); setPhase('live') })
+      client.on('call_started', () => { settle(); releaseWarmup(); setPhase('live'); metaTrackCustom('DemoCallStarted', { vertical: DESKS[activeRef.current]?.v }) })
       client.on('call_ended', () => { settle(); releaseWarmup(); setPhase('ended') })
       client.on('agent_start_talking', () => setAgentTalking(true))
       client.on('agent_stop_talking', () => setAgentTalking(false))

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { metaServerEvent } from '@/lib/meta-capi'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -91,5 +92,21 @@ export async function POST(request: NextRequest) {
 
  await supabaseAdmin.from('demo_calls').insert({ phone: to, ip, status: 'requested', retell_call_id: callId })
  logger.info('demo outbound-call placed', { to_last4: to.slice(-4), call_id: callId })
+
+ // Conversions API mirror (dedupes with the browser pixel via meta_event_id)
+ const cookies = request.headers.get('cookie') || ''
+ const cookie = (n: string) => (cookies.match(new RegExp(`(?:^|; )${n}=([^;]+)`)) || [])[1] || null
+ void metaServerEvent({
+  eventName: 'Lead',
+  eventId: typeof body?.meta_event_id === 'string' ? body.meta_event_id.slice(0, 64) : undefined,
+  sourceUrl: request.headers.get('referer') || 'https://cloudgreet.com',
+  phone: to,
+  clientIp: ip === 'unknown' ? null : ip,
+  userAgent: request.headers.get('user-agent'),
+  fbp: cookie('_fbp'),
+  fbc: cookie('_fbc'),
+  customData: { content_name: 'ai_callback' },
+ })
+
  return NextResponse.json({ success: true })
 }
