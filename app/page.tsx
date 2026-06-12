@@ -294,7 +294,7 @@ function DemoCallModal({ onClose }: { onClose: () => void }) {
      <div className="py-2">
       <div className="text-lg font-semibold text-gray-900">Your phone is about to ring</div>
       <p className="mt-2 text-sm text-gray-600">
-       Pick up and treat it like a real call. Ask about pricing, hours, or booking a job, and the AI will handle it just like it would for your customers.
+       That&apos;s CloudGreet&apos;s own receptionist calling, the same AI you&apos;d get. Ask how it works, what it costs, or have it book you a demo right on the call.
       </p>
      </div>
     ) : (
