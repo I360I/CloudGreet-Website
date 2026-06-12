@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, RisingFade } from '../_components/ui'
-import { CircleNotch, CalendarCheck, ChatCircle, PhoneOutgoing } from '@phosphor-icons/react'
+import { CircleNotch, CalendarCheck, ChatCircle, PhoneOutgoing, UsersThree } from '@phosphor-icons/react'
 
 type DemoItem = {
  id: string
- kind: 'cal_booking' | 'chat_lead' | 'demo_call'
+ kind: 'cal_booking' | 'chat_lead' | 'demo_call' | 'rep_demo'
  name: string | null
  email: string | null
  phone: string | null
@@ -29,7 +29,7 @@ function fmtPhone(p: string | null): string {
 function when(iso: string, kind: string): string {
  if (!iso) return ''
  const d = new Date(iso)
- if (kind === 'cal_booking') {
+ if (kind === 'cal_booking' || kind === 'rep_demo') {
   return d.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
  }
  const diff = Date.now() - d.getTime()
@@ -45,6 +45,7 @@ const KIND = {
  cal_booking: { label: 'Booked', icon: CalendarCheck, cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25' },
  chat_lead: { label: 'Chat lead', icon: ChatCircle, cls: 'bg-blue-500/15 text-blue-300 border-blue-500/25' },
  demo_call: { label: 'AI call', icon: PhoneOutgoing, cls: 'bg-violet-500/15 text-violet-300 border-violet-500/25' },
+ rep_demo: { label: 'Rep demo', icon: UsersThree, cls: 'bg-sky-500/15 text-sky-300 border-sky-500/25' },
 } as const
 
 export default function AdminDemosPage() {
@@ -72,7 +73,7 @@ export default function AdminDemosPage() {
  return (
   <AdminShell activeLabel="Demos">
    <RisingFade>
-    <PanelHeader eyebrow="Inbound demos" title="Every demo signal from the website" />
+    <PanelHeader eyebrow="Inbound demos" title="Every demo signal, website and reps" />
 
     {stats && (
      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -15,13 +15,14 @@ export const runtime = 'nodejs'
  *     (booked via the chat concierge OR the /contact embed)
  *   - chat_lead   : demo requests captured by the chat (demo_leads)
  *   - demo_call   : "have our AI call me" requests (demo_calls)
+ *   - rep_demo    : demos reps scheduled with their leads (closes.demo_scheduled_at)
  *
  * Sorted newest-first. Booked chat leads are skipped from the lead list
  * since they show up as the authoritative cal_booking.
  */
 type DemoItem = {
  id: string
- kind: 'cal_booking' | 'chat_lead' | 'demo_call'
+ kind: 'cal_booking' | 'chat_lead' | 'demo_call' | 'rep_demo'
  name: string | null
  email: string | null
  phone: string | null
@@ -106,11 +107,45 @@ export async function GET(request: NextRequest) {
   })
  }
 
+ // 4. Rep-scheduled demos (closes rows the mark-demo flow stamps).
+ //    Same window as Cal: last 14 days back, all future.
+ const { data: repDemos } = await supabaseAdmin
+  .from('closes')
+  .select('id, rep_id, prospect_business_name, prospect_contact_name, prospect_email, prospect_phone, demo_scheduled_at, status')
+  .not('demo_scheduled_at', 'is', null)
+  .gte('demo_scheduled_at', new Date(Date.now() - 14 * 86400_000).toISOString())
+  .order('demo_scheduled_at', { ascending: false })
+  .limit(300)
+ if (repDemos?.length) {
+  const repIds = Array.from(new Set(repDemos.map((d) => d.rep_id).filter(Boolean)))
+  const { data: reps } = await supabaseAdmin
+   .from('custom_users')
+   .select('id, name, first_name, email')
+   .in('id', repIds)
+  const repName = (id: string) => {
+   const r = (reps || []).find((x) => x.id === id)
+   return r?.first_name || r?.name || r?.email || 'rep'
+  }
+  for (const d of repDemos) {
+   items.push({
+    id: `rep_${d.id}`,
+    kind: 'rep_demo',
+    name: d.prospect_contact_name || d.prospect_business_name || null,
+    email: d.prospect_email || null,
+    phone: d.prospect_phone || null,
+    when: d.demo_scheduled_at,
+    status: d.status === 'pending' ? 'scheduled' : d.status,
+    detail: [d.prospect_business_name, `set by ${repName(d.rep_id)}`].filter(Boolean).join(' · '),
+    source: 'rep',
+   })
+  }
+ }
+
  items.sort((a, b) => (a.when < b.when ? 1 : -1))
 
  const stats = {
   total: items.length,
-  bookings: items.filter((i) => i.kind === 'cal_booking').length,
+  bookings: items.filter((i) => i.kind === 'cal_booking' || i.kind === 'rep_demo').length,
   leads: items.filter((i) => i.kind === 'chat_lead').length,
   calls: items.filter((i) => i.kind === 'demo_call').length,
  }
