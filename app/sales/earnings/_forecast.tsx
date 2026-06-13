@@ -330,7 +330,11 @@ function Chart({ entries, peak }: { entries: MonthlyEntry[]; peak: number }) {
           const h = peak > 0 ? Math.max(2, (m.this_month_earnings_cents / peak) * 100) : 2
           const isLast = i === entries.length - 1
           return (
-            <div key={i} className="flex-1 flex flex-col items-center group relative">
+            // h-full + justify-end give the percentage-height bar a definite
+            // parent to resolve against - without it the column is content-sized
+            // (row is items-end) and every bar collapses to 0px, leaving the
+            // chart blank even though the data is fine.
+            <div key={i} className="flex-1 h-full flex flex-col justify-end items-center group relative">
               <div
                 className={`w-full rounded-t-sm transition-colors ${
                   isLast ? 'bg-emerald-600' : 'bg-emerald-200 group-hover:bg-emerald-400'
