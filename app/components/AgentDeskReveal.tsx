@@ -291,10 +291,15 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
       if (e.key === 'ArrowLeft') go(activeRef.current - 1, -1)
     }
     let lastSwitch = 0
+    // PASSIVE listener: a non-passive wheel listener on window makes WebKit/Safari
+    // swallow the default vertical scroll entirely (even when it never calls
+    // preventDefault), so trackpad scrolling dies in Safari while arrows still
+    // work. We don't need preventDefault here - horizontal back-swipe is already
+    // blocked by `overscroll-none` on the body - so detect the sideways swipe and
+    // switch agents without touching the event.
     const onWheel = (e: WheelEvent) => {
       if (!atDeskRef.current) return
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 8) {
-        e.preventDefault()
         const now = Date.now(); if (now - lastSwitch < 420) return
         lastSwitch = now
         go(activeRef.current + (e.deltaX > 0 ? 1 : -1), e.deltaX > 0 ? 1 : -1)
@@ -308,7 +313,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
       if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(activeRef.current + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1)
     }
     window.addEventListener('keydown', onKey)
-    window.addEventListener('wheel', onWheel, { passive: false })
+    window.addEventListener('wheel', onWheel, { passive: true })
     window.addEventListener('touchstart', onTS, { passive: true })
     window.addEventListener('touchend', onTE, { passive: true })
     return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('wheel', onWheel); window.removeEventListener('touchstart', onTS); window.removeEventListener('touchend', onTE) }
