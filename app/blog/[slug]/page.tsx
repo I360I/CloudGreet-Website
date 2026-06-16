@@ -8,12 +8,15 @@ import { BlogSidebar } from '../_sidebar'
 
 const SERIF = "Georgia, 'Times New Roman', Times, serif"
 
-export function generateStaticParams() {
-  return getAllPosts().map((p) => ({ slug: p.slug }))
+export const revalidate = 300
+export const dynamicParams = true // new posts published from admin render on-demand then cache
+
+export async function generateStaticParams() {
+  return (await getAllPosts()).map((p) => ({ slug: p.slug }))
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
-  const post = getPost(params.slug)
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const post = await getPost(params.slug)
   if (!post) return { title: 'Not found — CloudGreet' }
   const url = `https://cloudgreet.com/blog/${post.slug}`
   return {
@@ -38,8 +41,8 @@ function fmtDate(d: string): string {
   return Number.isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-export default function BlogPost({ params }: { params: { slug: string } }) {
-  const post = getPost(params.slug)
+export default async function BlogPost({ params }: { params: { slug: string } }) {
+  const post = await getPost(params.slug)
   if (!post) notFound()
 
   const html = marked.parse(post.body, { async: false }) as string

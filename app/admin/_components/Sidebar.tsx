@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
  SquaresFour, Phone, CurrencyDollar, ListChecks, MagicWand, SignOut, Users,
- FileText, Robot, PhoneOutgoing, TestTube, ChatText, CalendarCheck, DotsThree, X,
+ FileText, Robot, PhoneOutgoing, TestTube, ChatText, CalendarCheck, DotsThree, X, Article,
 } from '@phosphor-icons/react'
 import { useAdminTheme } from './Shell'
 
@@ -50,6 +50,7 @@ const groups: Group[] = [
   heading: 'Intelligence',
   items: [
    { icon: Robot, label: 'Agents Due', href: '/admin/agents-due', match: (p) => p.startsWith('/admin/agents-due') },
+   { icon: Article, label: 'Blog', href: '/admin/blog', match: (p) => p.startsWith('/admin/blog') },
    { icon: MagicWand, label: 'Tools', href: '/admin/tools', match: (p) => p.startsWith('/admin/tools') },
   ],
  },
@@ -58,7 +59,7 @@ const groups: Group[] = [
 const items: Item[] = groups.flatMap((g) => g.items)
 
 export type AdminActiveLabel =
- | 'Overview' | 'Calls' | 'Texts' | 'Demos' | 'Billing' | 'Sales' | 'Dialer' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due' | 'Quality'
+ | 'Overview' | 'Calls' | 'Texts' | 'Demos' | 'Billing' | 'Sales' | 'Dialer' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due' | 'Quality' | 'Blog'
 
 export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
  adminEmail: string

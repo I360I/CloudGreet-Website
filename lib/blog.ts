@@ -1,94 +1,69 @@
 /**
- * Blog content layer. Posts are version-controlled markdown files in
- * content/blog/*.md with simple frontmatter, so "push to main" publishes
- * (cloudgreet.com auto-deploys) and every post renders statically for SEO.
- *
- * Frontmatter (between --- fences):
- *   title:       string (required)
- *   description: string (required - used as meta description + listing blurb)
- *   date:        YYYY-MM-DD (required)
- *   keywords:    comma-separated or [a, b] (optional)
- *   author:      string (optional, defaults to "The CloudGreet Team")
- *   draft:       true|false (optional - drafts are hidden in production)
- *
- * Drafts are visible in dev (NODE_ENV !== 'production') so you can preview
- * before flipping draft:false and committing.
+ * Blog content layer. Posts live in the Supabase `blog_posts` table so they
+ * can be generated, edited, and published from the admin dashboard (no git /
+ * no terminal). Public pages read PUBLISHED posts here; the admin API
+ * (app/api/admin/blog) manages all statuses.
  */
 
-import fs from 'node:fs'
-import path from 'node:path'
+import { supabaseAdmin } from './supabase'
 
 export type BlogPost = {
   slug: string
   title: string
   description: string
-  date: string
+  date: string // YYYY-MM-DD (published date, falls back to created)
   keywords: string[]
   author: string
   draft: boolean
-  body: string // raw markdown
+  body: string // markdown
 }
 
-const BLOG_DIR = path.join(process.cwd(), 'content', 'blog')
-
-/** Tiny frontmatter parser for our controlled, machine-written files. */
-function parseFrontmatter(raw: string): { data: Record<string, string>; body: string } {
-  const m = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/)
-  if (!m) return { data: {}, body: raw }
-  const data: Record<string, string> = {}
-  for (const line of m[1].split('\n')) {
-    const idx = line.indexOf(':')
-    if (idx === -1) continue
-    const key = line.slice(0, idx).trim()
-    let val = line.slice(idx + 1).trim()
-    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-      val = val.slice(1, -1)
-    }
-    data[key] = val
-  }
-  return { data, body: m[2].trim() }
+export type BlogRow = {
+  id: string
+  slug: string
+  title: string
+  description: string | null
+  body: string | null
+  keywords: string[] | null
+  author: string | null
+  status: 'draft' | 'published'
+  created_at: string
+  updated_at: string
+  published_at: string | null
 }
 
-function toPost(slug: string, raw: string): BlogPost {
-  const { data, body } = parseFrontmatter(raw)
-  const keywords = (data.keywords || '')
-    .replace(/^\[|\]$/g, '')
-    .split(',')
-    .map((k) => k.trim().replace(/^["']|["']$/g, ''))
-    .filter(Boolean)
+export function mapRow(r: BlogRow): BlogPost {
   return {
-    slug,
-    title: data.title || slug,
-    description: data.description || '',
-    date: data.date || '1970-01-01',
-    keywords,
-    author: data.author || 'The CloudGreet Team',
-    draft: String(data.draft || '').toLowerCase() === 'true',
-    body,
+    slug: r.slug,
+    title: r.title,
+    description: r.description || '',
+    date: (r.published_at || r.created_at || '').slice(0, 10) || '1970-01-01',
+    keywords: r.keywords || [],
+    author: r.author || 'The CloudGreet Team',
+    draft: r.status !== 'published',
+    body: r.body || '',
   }
 }
 
-const includeDrafts = process.env.NODE_ENV !== 'production'
-
-export function getAllPosts(): BlogPost[] {
-  let files: string[] = []
-  try {
-    files = fs.readdirSync(BLOG_DIR).filter((f) => f.endsWith('.md'))
-  } catch {
-    return [] // no content dir yet
-  }
-  const posts = files.map((f) => toPost(f.replace(/\.md$/, ''), fs.readFileSync(path.join(BLOG_DIR, f), 'utf8')))
-  return posts
-    .filter((p) => includeDrafts || !p.draft)
-    .sort((a, b) => (a.date < b.date ? 1 : -1))
+/** Published posts only, newest first. Used by the public blog + sitemap. */
+export async function getAllPosts(): Promise<BlogPost[]> {
+  const { data, error } = await supabaseAdmin
+    .from('blog_posts')
+    .select('*')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+  if (error || !data) return []
+  return (data as BlogRow[]).map(mapRow)
 }
 
-export function getPost(slug: string): BlogPost | null {
-  try {
-    const post = toPost(slug, fs.readFileSync(path.join(BLOG_DIR, `${slug}.md`), 'utf8'))
-    if (post.draft && !includeDrafts) return null
-    return post
-  } catch {
-    return null
-  }
+/** A single PUBLISHED post by slug (public). Returns null for drafts/missing. */
+export async function getPost(slug: string): Promise<BlogPost | null> {
+  const { data } = await supabaseAdmin
+    .from('blog_posts')
+    .select('*')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle()
+  return data ? mapRow(data as BlogRow) : null
 }

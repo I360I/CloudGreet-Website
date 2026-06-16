@@ -19,13 +19,17 @@ export const metadata: Metadata = {
 
 const SERIF = "Georgia, 'Times New Roman', Times, serif"
 
+// Posts live in the DB and are published from admin; re-render at most every
+// 5 min so new posts appear without a redeploy (admin also revalidates on publish).
+export const revalidate = 300
+
 function fmtDate(d: string): string {
   const dt = new Date(d + 'T00:00:00')
   return Number.isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-export default function BlogIndex() {
-  const posts = getAllPosts()
+export default async function BlogIndex() {
+  const posts = await getAllPosts()
   return (
     <main className="min-h-screen bg-white text-[#222]" style={{ fontFamily: SERIF }}>
       {/* Simple, traditional header */}

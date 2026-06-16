@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 import { getAllPosts } from '@/lib/blog'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
  const baseUrl = 'https://cloudgreet.com'
  const lastModified = new Date()
 
@@ -20,9 +20,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   { url: `${baseUrl}/cookies`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
  ]
 
- // Published blog posts (drafts filtered out by getAllPosts in production).
- const posts: MetadataRoute.Sitemap = getAllPosts()
-  .filter((p) => !p.draft)
+ // Published blog posts (getAllPosts returns published only).
+ const posts: MetadataRoute.Sitemap = (await getAllPosts())
   .map((p) => ({
    url: `${baseUrl}/blog/${p.slug}`,
    lastModified: new Date(p.date + 'T00:00:00'),

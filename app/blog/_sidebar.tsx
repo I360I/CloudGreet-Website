@@ -8,8 +8,8 @@ const SERIF = "Georgia, 'Times New Roman', Times, serif"
  * old-blog layout. Fills the horizontal space next to the article instead
  * of leaving wide empty margins.
  */
-export function BlogSidebar({ currentSlug }: { currentSlug?: string }) {
-  const recent = getAllPosts().filter((p) => p.slug !== currentSlug).slice(0, 6)
+export async function BlogSidebar({ currentSlug }: { currentSlug?: string }) {
+  const recent = (await getAllPosts()).filter((p) => p.slug !== currentSlug).slice(0, 6)
   return (
     <aside className="w-full md:w-[290px] md:shrink-0 mt-12 md:mt-0" style={{ fontFamily: SERIF }}>
       <div className="border border-gray-300 bg-[#fafafa] p-5">
