@@ -5,6 +5,8 @@ import { notFound } from 'next/navigation'
 import { marked } from 'marked'
 import { getAllPosts, getPost } from '@/lib/blog'
 
+const SERIF = "Georgia, 'Times New Roman', Times, serif"
+
 export function generateStaticParams() {
   return getAllPosts().map((p) => ({ slug: p.slug }))
 }
@@ -58,40 +60,43 @@ export default function BlogPost({ params }: { params: { slug: string } }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
+    <main className="min-h-screen bg-white text-[#222]" style={{ fontFamily: SERIF }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <nav className="sticky top-0 z-50 bg-[#f6f5f1]/80 backdrop-blur-md border-b border-black/5">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+
+      <header className="border-b border-gray-300">
+        <div className="max-w-[680px] mx-auto px-5 py-4 flex items-center justify-between">
           <Link href="/" aria-label="CloudGreet">
-            <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={160} height={48} priority className="h-9 w-auto" />
+            <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={150} height={45} priority className="h-8 w-auto" />
           </Link>
-          <Link href="/contact" className="text-sm bg-gray-900 text-white px-5 py-2.5 rounded-full font-medium hover:bg-gray-800 transition-colors">
-            Book a demo
-          </Link>
+          <Link href="/contact" className="text-[15px] text-[#1155cc] underline">Book a demo</Link>
         </div>
-      </nav>
+      </header>
 
-      <article className="px-6 pt-14 md:pt-20 pb-24 max-w-3xl mx-auto">
-        <Link href="/blog" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">← All posts</Link>
-        <div className="mt-6 text-xs font-mono uppercase tracking-wider text-gray-400">
-          {fmtDate(post.date)} · {post.author}
-        </div>
-        <h1 className="mt-3 font-display text-4xl md:text-5xl font-medium tracking-tight leading-[1.08]">{post.title}</h1>
-        <p className="mt-5 text-lg text-gray-500 leading-relaxed">{post.description}</p>
+      <article className="max-w-[680px] mx-auto px-5 py-10">
+        <p><Link href="/blog" className="text-[#1155cc] underline text-[15px]">&laquo; Back to the blog</Link></p>
 
-        <div
-          className="cg-prose mt-10 text-[17px] leading-[1.75] text-gray-800"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+        <h1 className="mt-5 text-[34px] md:text-[40px] font-bold leading-[1.15] text-[#1a1a1a]" style={{ fontFamily: SERIF }}>
+          {post.title}
+        </h1>
+        <p className="mt-3 text-[14px] text-gray-500">
+          Posted on {fmtDate(post.date)} by {post.author}
+        </p>
+        <hr className="my-7 border-gray-300" />
 
-        <div className="mt-14 rounded-3xl border border-gray-200 bg-white p-7 md:p-9 text-center">
-          <h2 className="font-display text-2xl font-medium tracking-tight">Stop losing jobs to voicemail.</h2>
-          <p className="mt-2 text-gray-500">CloudGreet answers every call and books the job, even when you can't pick up.</p>
-          <Link href="/contact" className="mt-5 inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3.5 rounded-2xl text-sm font-medium hover:bg-gray-800 transition-colors">
-            Book a 15-minute demo →
-          </Link>
+        <div className="blog-prose" dangerouslySetInnerHTML={{ __html: html }} />
+
+        <hr className="my-9 border-gray-300" />
+        <div className="text-[17px] leading-[1.7]">
+          <p className="font-bold text-[#1a1a1a]">Stop losing jobs to voicemail.</p>
+          <p className="mt-1 text-[#333]">CloudGreet answers every call and books the job, even when you can&apos;t pick up. <Link href="/contact" className="text-[#1155cc] underline">Book a 15-minute demo</Link> or <Link href="/#roi" className="text-[#1155cc] underline">see what missed calls cost you</Link>.</p>
         </div>
       </article>
+
+      <footer className="border-t border-gray-300 mt-8">
+        <div className="max-w-[680px] mx-auto px-5 py-6 text-[14px] text-gray-500">
+          &copy; {new Date().getFullYear()} CloudGreet &middot; <Link href="/" className="text-[#1155cc] underline">Home</Link> &middot; <Link href="/blog" className="text-[#1155cc] underline">Blog</Link>
+        </div>
+      </footer>
     </main>
   )
 }

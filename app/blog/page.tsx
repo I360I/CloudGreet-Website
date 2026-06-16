@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   },
 }
 
+const SERIF = "Georgia, 'Times New Roman', Times, serif"
+
 function fmtDate(d: string): string {
   const dt = new Date(d + 'T00:00:00')
   return Number.isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -24,50 +26,51 @@ function fmtDate(d: string): string {
 export default function BlogIndex() {
   const posts = getAllPosts()
   return (
-    <main className="min-h-screen bg-[#f6f5f1] text-gray-900">
-      <nav className="sticky top-0 z-50 bg-[#f6f5f1]/80 backdrop-blur-md border-b border-black/5">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+    <main className="min-h-screen bg-white text-[#222]" style={{ fontFamily: SERIF }}>
+      {/* Simple, traditional header */}
+      <header className="border-b border-gray-300">
+        <div className="max-w-[680px] mx-auto px-5 py-4 flex items-center justify-between">
           <Link href="/" aria-label="CloudGreet">
-            <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={160} height={48} priority className="h-9 w-auto" />
+            <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={150} height={45} priority className="h-8 w-auto" />
           </Link>
-          <Link href="/contact" className="text-sm bg-gray-900 text-white px-5 py-2.5 rounded-full font-medium hover:bg-gray-800 transition-colors">
-            Book a demo
-          </Link>
+          <Link href="/contact" className="text-[15px] text-[#1155cc] underline">Book a demo</Link>
         </div>
-      </nav>
+      </header>
 
-      <section className="px-6 pt-16 md:pt-24 pb-10 max-w-3xl mx-auto">
-        <p className="text-[11px] font-mono uppercase tracking-[0.25em] text-gray-400 mb-3">The CloudGreet Blog</p>
-        <h1 className="font-display text-4xl md:text-5xl font-medium tracking-tight leading-[1.05]">
-          Never miss the call that pays the bills.
+      <div className="max-w-[680px] mx-auto px-5 py-10">
+        <h1 className="text-[34px] font-bold leading-tight text-[#1a1a1a]" style={{ fontFamily: SERIF }}>
+          The CloudGreet Blog
         </h1>
-        <p className="mt-5 text-lg text-gray-500 max-w-xl">
-          Practical, no-fluff advice for service-business owners: capturing every call, booking more jobs, and growing without hiring a front desk.
+        <p className="mt-2 text-[17px] italic text-gray-600">
+          Practical, plain-spoken advice for service-business owners: capturing every call, booking more jobs, and growing without hiring a front desk.
         </p>
-      </section>
+        <hr className="my-8 border-gray-300" />
 
-      <section className="px-6 pb-28 max-w-3xl mx-auto">
         {posts.length === 0 ? (
-          <p className="text-gray-500">New posts are on the way.</p>
+          <p className="text-gray-600">New posts are on the way.</p>
         ) : (
-          <ul className="divide-y divide-black/5 border-t border-black/5">
-            {posts.map((p) => (
-              <li key={p.slug}>
-                <Link href={`/blog/${p.slug}`} className="group block py-7">
-                  <div className="text-xs font-mono uppercase tracking-wider text-gray-400 mb-2">
-                    {fmtDate(p.date)}{p.draft ? ' · DRAFT' : ''}
-                  </div>
-                  <h2 className="font-display text-2xl font-medium tracking-tight group-hover:text-sky-700 transition-colors">
-                    {p.title}
-                  </h2>
-                  <p className="mt-2 text-gray-600 leading-relaxed">{p.description}</p>
-                  <span className="mt-3 inline-block text-sm font-medium text-sky-700">Read more →</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          posts.map((p, i) => (
+            <article key={p.slug} className={i > 0 ? 'mt-10 pt-10 border-t border-gray-200' : ''}>
+              <h2 className="text-[26px] font-bold leading-snug" style={{ fontFamily: SERIF }}>
+                <Link href={`/blog/${p.slug}`} className="text-[#1155cc] hover:underline">{p.title}</Link>
+              </h2>
+              <p className="mt-1 text-[14px] text-gray-500">
+                Posted on {fmtDate(p.date)} by {p.author}{p.draft ? ' · DRAFT' : ''}
+              </p>
+              <p className="mt-3 text-[17px] leading-[1.7] text-[#333]">{p.description}</p>
+              <p className="mt-3">
+                <Link href={`/blog/${p.slug}`} className="text-[#1155cc] underline text-[16px]">Read more &raquo;</Link>
+              </p>
+            </article>
+          ))
         )}
-      </section>
+      </div>
+
+      <footer className="border-t border-gray-300 mt-8">
+        <div className="max-w-[680px] mx-auto px-5 py-6 text-[14px] text-gray-500">
+          &copy; {new Date().getFullYear()} CloudGreet &middot; <Link href="/" className="text-[#1155cc] underline">Home</Link> &middot; <Link href="/contact" className="text-[#1155cc] underline">Book a demo</Link>
+        </div>
+      </footer>
     </main>
   )
 }
