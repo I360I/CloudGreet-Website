@@ -315,6 +315,53 @@ export async function sendDispatchRequest(args: {
     || (biz as any).escalation_phone
   if (!ownerPhone) return { ok: false, error: 'no_owner_phone' }
 
+  // Idempotency guard. The agent (voice or SMS) sometimes re-fires
+  // send_dispatch_request when the customer adds details AFTER an initial
+  // dispatch (party size, email, "actually make it 8am") - which blasted the
+  // owner with duplicate texts for the same ride (Robin Sorrentino got 4).
+  // Dedupe on the stable trip identity: customer phone + pickup + dropoff +
+  // requested time. The two legs of a round trip differ on pickup/dropoff/time
+  // so they still send; only a re-fire of the SAME leg is suppressed. Party
+  // size / notes deliberately excluded from the key so "same ride, now with
+  // passenger count" is caught as the duplicate it is.
+  const norm = (s: string) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ')
+  const custDigits = (args.customerPhone || '').replace(/\D/g, '')
+  try {
+    const sinceIso = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+    const { data: recent } = await supabaseAdmin
+      .from('dispatch_notifications')
+      .select('body, created_at')
+      .eq('business_id', args.businessId)
+      .eq('recipient_phone', ownerPhone)
+      .gte('created_at', sinceIso)
+      .order('created_at', { ascending: false })
+      .limit(25)
+    const dup = (recent || []).some((r: any) => {
+      const raw = String(r.body || '')
+      const b = norm(raw)
+      const phoneHit = custDigits.length >= 7 && raw.replace(/\D/g, '').includes(custDigits)
+      const pickupHit = b.includes('pickup: ' + norm(args.pickup))
+      const dropHit = !args.dropoff || b.includes('dropoff: ' + norm(args.dropoff))
+      if (!(phoneHit && pickupHit && dropHit)) return false
+      // Same customer + same route counts as a duplicate when EITHER the
+      // requested time matches exactly (true re-book of the same ride, any
+      // time within 6h) OR it was fired in the last 10 min (a rapid re-fire,
+      // even if the time string drifted between turns).
+      const whenHit = b.includes('when: ' + norm(args.requestedTime))
+      const ageMs = Date.now() - new Date(r.created_at).getTime()
+      return whenHit || ageMs < 10 * 60 * 1000
+    })
+    if (dup) {
+      logger.info('sendDispatchRequest deduped - identical trip already dispatched within 6h', {
+        businessId: args.businessId,
+      })
+      return { ok: true, ownerPhone }
+    }
+  } catch (e) {
+    // Dedupe is best-effort - never block a real dispatch because the lookup failed.
+    logger.warn('dispatch dedupe check failed - sending anyway', { error: e instanceof Error ? e.message : 'unknown' })
+  }
+
   const businessName = (biz as any).business_name || 'CloudGreet'
   const lines = [
     `${businessName} dispatch request:`,
