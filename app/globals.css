@@ -399,3 +399,18 @@ body { --font-display: var(--font-geist-sans); }
 [data-cg-theme='light'] .to-sky-600 { --tw-gradient-to: #1d4ed8 var(--tw-gradient-to-position); }
 [data-cg-theme='light'] .hover\:from-sky-300:hover { --tw-gradient-from: #60a5fa var(--tw-gradient-from-position); --tw-gradient-to: rgb(96 165 250 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
 [data-cg-theme='light'] .hover\:to-sky-500:hover { --tw-gradient-to: #2563eb var(--tw-gradient-to-position); }
+
+/* Blog post prose (rendered markdown) - app/blog/[slug] */
+.cg-prose h2 { font-family: var(--font-display, inherit); font-size: 1.6rem; font-weight: 500; letter-spacing: -0.02em; margin: 2.2rem 0 0.8rem; color: #111827; }
+.cg-prose h3 { font-size: 1.25rem; font-weight: 600; margin: 1.6rem 0 0.6rem; color: #111827; }
+.cg-prose p { margin: 0 0 1.15rem; }
+.cg-prose ul, .cg-prose ol { margin: 0 0 1.15rem; padding-left: 1.4rem; }
+.cg-prose ol { list-style: decimal; }
+.cg-prose ul { list-style: disc; }
+.cg-prose li { margin: 0.4rem 0; }
+.cg-prose li > strong:first-child { color: #111827; }
+.cg-prose a { color: #0369a1; text-decoration: underline; text-underline-offset: 2px; text-decoration-color: #bae6fd; }
+.cg-prose a:hover { text-decoration-color: #0369a1; }
+.cg-prose strong { color: #111827; font-weight: 600; }
+.cg-prose blockquote { border-left: 3px solid #e5e7eb; padding-left: 1rem; color: #6b7280; margin: 1.2rem 0; }
+.cg-prose code { background: #eef1f4; padding: 1px 6px; border-radius: 5px; font-size: 0.9em; }

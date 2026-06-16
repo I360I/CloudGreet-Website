@@ -13,8 +13,6 @@ import AgentDeskReveal from './components/AgentDeskReveal'
 const DEMO_NUMBER = '+1 (737) 937-0084'
 const DEMO_TEL = 'tel:+17379370084'
 
-export const dynamic = 'force-dynamic'
-
 export default function LandingPage() {
  return (
   <main className="min-h-screen bg-[#f6f5f1] text-gray-900 overflow-x-clip">

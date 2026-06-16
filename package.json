@@ -82,6 +82,7 @@
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.294.0",
+    "marked": "^18.0.5",
     "next": "^14.2.5",
     "openai": "^4.20.1",
     "react": "^18",
