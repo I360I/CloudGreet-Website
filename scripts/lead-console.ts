@@ -12,13 +12,13 @@
 
 import http from 'node:http'
 import Anthropic from '@anthropic-ai/sdk'
-import { MODEL, envReady, runTurn, getLastResults, buildCsv } from './lead-core'
+import { MODEL, makeClient, envReady, runTurn, getLastResults, buildCsv } from './lead-core'
 
 const PORT = Number(process.env.LEAD_CONSOLE_PORT) || 4317
 const ready = envReady()
 if (!ready.ok) { console.error(`Missing env: ${ready.missing.join(', ')}. Run: npx tsx --env-file=.env.local scripts/lead-console.ts`); process.exit(1) }
 
-const client = new Anthropic()
+const client = makeClient()
 let messages: Anthropic.MessageParam[] = []
 
 const PAGE = `<!doctype html><html><head><meta charset="utf8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -83,17 +83,38 @@ function add(who, html, cls){
   d.innerHTML = '<div class="who">'+who+'</div><div class="'+(cls==='user'?'body':'bubble')+'">'+html+'</div>'
   log.appendChild(d); window.scrollTo(0,document.body.scrollHeight); return d
 }
-function status(s){ const d=document.createElement('div'); d.className='status'; d.textContent='… '+s; log.appendChild(d); window.scrollTo(0,document.body.scrollHeight) }
+// live status line with elapsed timer + last activity
+function liveStatus(){
+  const d=document.createElement('div'); d.className='status'; log.appendChild(d)
+  const started=Date.now(); let phase='thinking…'
+  const fmt=()=>{ const s=Math.floor((Date.now()-started)/1000); const m=Math.floor(s/60); return (m? m+'m ':'')+(s%60)+'s' }
+  const render=()=>{ d.textContent='… '+phase+'  ·  '+fmt() }
+  render(); const iv=setInterval(render,1000)
+  window.scrollTo(0,document.body.scrollHeight)
+  return { set:(p)=>{ phase=p; render(); window.scrollTo(0,document.body.scrollHeight) }, done:()=>{ clearInterval(iv); d.remove() } }
+}
 async function send(){
   const text = q.value.trim(); if(!text) return
   q.value=''; add('you', esc(text), 'user')
-  const sp = status('thinking…')
+  const st = liveStatus()
   try {
     const r = await fetch('/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:text})})
-    const j = await r.json(); sp.remove()
-    if (j.error) add('agent', '<span style="color:#ff8a8a">'+esc(j.error)+'</span>')
-    else add('agent', md(j.text))
-  } catch(e){ sp.remove(); add('agent','<span style="color:#ff8a8a">'+esc(String(e))+'</span>') }
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf=''
+    for(;;){
+      const {value,done} = await reader.read(); if(done) break
+      buf += dec.decode(value,{stream:true})
+      const parts = buf.split('\\n\\n'); buf = parts.pop()||''
+      for(const p of parts){
+        const ev=(p.match(/^event: (.*)$/m)||[])[1]; const dm=(p.match(/^data: (.*)$/m)||[])[1]
+        if(!ev||!dm) continue
+        let data={}; try{ data=JSON.parse(dm) }catch{}
+        if(ev==='status') st.set(data.line)
+        else if(ev==='done'){ st.done(); add('agent', md(data.text)) }
+        else if(ev==='error'){ st.done(); add('agent','<span style="color:#ff8a8a">'+esc(data.message)+'</span>') }
+      }
+    }
+    st.done()
+  } catch(e){ st.done(); add('agent','<span style="color:#ff8a8a">'+esc(String(e))+'</span>') }
 }
 f.onsubmit = e => { e.preventDefault(); send() }
 q.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send() } }
@@ -121,14 +142,23 @@ const server = http.createServer(async (req, res) => {
     let raw = ''
     req.on('data', (c) => { raw += c })
     req.on('end', async () => {
+      const msg = String((() => { try { return JSON.parse(raw || '{}').message } catch { return '' } })() || '').trim()
+      if (!msg) { json(res, 400, { error: 'empty message' }); return }
+      // Stream progress as Server-Sent Events so the browser can show what
+      // the agent is doing live instead of a silent "thinking…".
+      res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' })
+      const sse = (event: string, data: unknown) => { try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`) } catch { /* client gone */ } }
+      // heartbeat so proxies/timers know it's alive even between phases
+      const beat = setInterval(() => sse('ping', { t: Date.now() }), 5000)
       try {
-        const msg = String(JSON.parse(raw || '{}').message || '').trim()
-        if (!msg) { json(res, 400, { error: 'empty message' }); return }
         messages.push({ role: 'user', content: msg })
-        const text = await runTurn(client, messages)
-        json(res, 200, { text })
+        const text = await runTurn(client, messages, (line) => sse('status', { line }))
+        sse('done', { text })
       } catch (e) {
-        json(res, 200, { error: e instanceof Error ? e.message : String(e) })
+        sse('error', { message: e instanceof Error ? e.message : String(e) })
+      } finally {
+        clearInterval(beat)
+        res.end()
       }
     })
     return

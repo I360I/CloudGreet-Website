@@ -15,6 +15,12 @@ import { US_METROS, type UsMetro } from '../lib/scrapers/us-metros'
 
 export const MODEL = process.env.LEAD_FINDER_MODEL || 'claude-sonnet-4-6'
 
+// Per-request cap so a stalled model/tool call fails loudly in ~2.5 min
+// instead of silently hanging at the SDK's 10-minute default.
+export function makeClient(): Anthropic {
+  return new Anthropic({ timeout: 150_000, maxRetries: 1 })
+}
+
 export function envReady(): { ok: boolean; missing: string[] } {
   const missing: string[] = []
   if (!process.env.ANTHROPIC_API_KEY) missing.push('ANTHROPIC_API_KEY')
@@ -366,11 +372,14 @@ export async function runTurn(
 ): Promise<string> {
   const texts: string[] = []
   for (let hop = 0; hop < 8; hop++) {
+    onStatus?.(hop === 0 ? 'thinking…' : 'reading what came back…')
     const resp = await client.messages.create({
       model: MODEL, max_tokens: 2048, system: SYSTEM,
       tools: [SEARCH_TOOL, ENRICH_TOOL, WEB_SEARCH_TOOL], messages,
     })
     messages.push({ role: 'assistant', content: resp.content })
+    // web_search runs server-side; surface that it happened.
+    if (resp.content.some((b: any) => b.type === 'server_tool_use' && b.name === 'web_search')) onStatus?.('ran a web search')
     for (const block of resp.content) {
       if (block.type === 'text' && block.text.trim()) texts.push(block.text.trim())
     }
@@ -380,12 +389,15 @@ export async function runTurn(
     for (const tu of toolUses) {
       if (tu.name === 'search_leads') {
         const inp = tu.input as any
-        onStatus?.(`searching "${inp?.query}" in ${inp?.city}, ${inp?.state}${inp?.max_reviews ? ` (≤${inp.max_reviews} reviews)` : ''}`)
-        toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(await executeSearch(inp)) })
+        onStatus?.(`searching "${inp?.query}" in ${inp?.city || '?'}, ${inp?.state || '?'}${inp?.max_reviews ? ` (≤${inp.max_reviews} reviews)` : ''}`)
+        const out = await executeSearch(inp)
+        onStatus?.(typeof (out as any)?.count === 'number' ? `found ${(out as any).count} leads — writing them up…` : 'search done — writing up…')
+        toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(out) })
       } else if (tu.name === 'enrich_lead') {
         const inp = tu.input as any
-        onStatus?.(`enriching ${inp?.business_name} (reviews + website)`)
+        onStatus?.(`digging into ${inp?.business_name}: pulling reviews + their website…`)
         toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(await executeEnrich(inp)) })
+        onStatus?.(`analyzing ${inp?.business_name}…`)
       } else {
         toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify({ error: 'unknown_tool' }), is_error: true })
       }

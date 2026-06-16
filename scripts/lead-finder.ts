@@ -11,7 +11,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import * as readline from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process'
 import { writeFileSync } from 'node:fs'
-import { MODEL, envReady, runTurn, getLastResults, lastQueryDesc, buildCsv } from './lead-core'
+import { MODEL, makeClient, envReady, runTurn, getLastResults, lastQueryDesc, buildCsv } from './lead-core'
 
 function exportCsv(filename?: string): void {
   const rows = getLastResults()
@@ -26,7 +26,7 @@ async function main() {
   const ready = envReady()
   if (!ready.ok) { console.error(`Missing env: ${ready.missing.join(', ')}. Run with: npx tsx --env-file=.env.local scripts/lead-finder.ts`); process.exit(1) }
 
-  const client = new Anthropic()
+  const client = makeClient()
   const messages: Anthropic.MessageParam[] = []
   const rl = readline.createInterface({ input, output })
 
