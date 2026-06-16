@@ -33,6 +33,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import * as readline from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process'
 import { writeFileSync } from 'node:fs'
+import * as cheerio from 'cheerio'
 import { discoverPlaces, isGooglePlacesConfigured } from '../lib/scrapers/google-places'
 import { US_METROS, type UsMetro } from '../lib/scrapers/us-metros'
 
@@ -230,6 +231,219 @@ function titleCase(s: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// enrich_lead - deeper, ToS-respecting intel on ONE business:
+//   - Google Places Details: review TEXT + summary + hours (sanctioned API).
+//   - Their OWN public website: owner/team/fleet language, emails, and any
+//     LinkedIn/Facebook links THEY published (their site, not a walled
+//     platform - fetched politely, a couple of pages, with a timeout).
+//   - LinkedIn: we do NOT scrape it (ToS). We surface any LinkedIn URL found
+//     on their site / via web search, and build a search deep-link to OPEN.
+// The agent's own web_search tool (Anthropic-hosted) covers general lookups.
+// ---------------------------------------------------------------------------
+const PLACES_DETAILS_MASK = [
+  'displayName', 'rating', 'userRatingCount', 'websiteUri', 'nationalPhoneNumber',
+  'editorialSummary', 'regularOpeningHours.weekdayDescriptions',
+  'reviews.rating', 'reviews.text', 'reviews.authorAttribution.displayName',
+  'reviews.relativePublishTimeDescription',
+].join(',')
+
+type PlaceDetails = {
+  rating: number | null
+  review_count: number | null
+  website: string | null
+  phone: string | null
+  editorial: string | null
+  hours: string[]
+  reviews: { rating: number | null; author: string; when: string; text: string }[]
+}
+
+async function placeDetails(placeId: string): Promise<PlaceDetails | null> {
+  const key = process.env.GOOGLE_PLACES_API_KEY
+  if (!key || !placeId) return null
+  try {
+    const r = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`, {
+      headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': PLACES_DETAILS_MASK },
+    })
+    const d: any = await r.json()
+    if (!r.ok || d?.error) return null
+    return {
+      rating: d.rating ?? null,
+      review_count: d.userRatingCount ?? null,
+      website: d.websiteUri ?? null,
+      phone: d.nationalPhoneNumber ?? null,
+      editorial: d.editorialSummary?.text ?? null,
+      hours: d.regularOpeningHours?.weekdayDescriptions ?? [],
+      reviews: (d.reviews ?? []).slice(0, 5).map((rv: any) => ({
+        rating: rv.rating ?? null,
+        author: rv.authorAttribution?.displayName ?? '?',
+        when: rv.relativePublishTimeDescription ?? '',
+        text: (rv.text?.text ?? '').replace(/\s+/g, ' ').trim().slice(0, 320),
+      })),
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Find a place_id for a name we don't already have one for (from LAST_RESULTS). */
+async function findPlaceId(name: string, city?: string, state?: string): Promise<string | null> {
+  const hit = LAST_RESULTS.find((r) => r.business_name.toLowerCase() === name.toLowerCase())
+  if (hit?.google_place_id) return hit.google_place_id
+  const key = process.env.GOOGLE_PLACES_API_KEY
+  if (!key) return null
+  try {
+    const q = [name, city, state].filter(Boolean).join(' ')
+    const r = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'places.id' },
+      body: JSON.stringify({ textQuery: q, maxResultCount: 1, regionCode: 'US' }),
+    })
+    const d: any = await r.json()
+    return d?.places?.[0]?.id ?? null
+  } catch {
+    return null
+  }
+}
+
+type WebsiteSignals = {
+  fetched: string[]
+  emails: string[]
+  linkedin_urls: string[]
+  facebook_urls: string[]
+  owner_hints: string[]
+  language_signals: string[]
+  error?: string
+}
+
+const OWNER_RE = /\b(owner|founder|president|proprietor|owner[- ]operator)\b/i
+const SOLO_LANG = [
+  /\bowner[- ]operated\b/i, /\bfamily[- ]owned\b/i, /\bowner[- ]operator\b/i,
+  /\bi (?:personally )?(?:drive|chauffeur)\b/i, /\bmy (?:car|vehicle|business)\b/i,
+  /\bone[- ]man\b/i, /\bsince \d{4}\b/i,
+]
+const FLEET_LANG = [
+  /\bfleet of\b/i, /\bour (?:drivers|chauffeurs|team of|fleet)\b/i, /\b\d{2,}\+? (?:vehicles|cars|drivers|chauffeurs)\b/i,
+  /\bnationwide\b/i, /\bworldwide\b/i, /\blocations\b/i, /\bcorporate accounts\b/i,
+]
+
+async function fetchWebsiteSignals(rawUrl: string): Promise<WebsiteSignals> {
+  const out: WebsiteSignals = { fetched: [], emails: [], linkedin_urls: [], facebook_urls: [], owner_hints: [], language_signals: [] }
+  let base = (rawUrl || '').trim()
+  if (!base) { out.error = 'no website'; return out }
+  if (!/^https?:\/\//i.test(base)) base = 'https://' + base
+  base = base.replace(/\/+$/, '')
+  const pages = [base, base + '/about', base + '/about-us', base + '/team']
+  const emails = new Set<string>(), li = new Set<string>(), fb = new Set<string>(), owners = new Set<string>(), lang = new Set<string>()
+
+  for (const url of pages) {
+    if (out.fetched.length >= 3) break // a couple of their own pages, politely
+    try {
+      const ctrl = new AbortController()
+      const t = setTimeout(() => ctrl.abort(), 8000)
+      const res = await fetch(url, {
+        signal: ctrl.signal,
+        redirect: 'follow',
+        headers: { 'User-Agent': 'CloudGreet-LeadResearch/1.0 (B2B prospect research; contact admin@cloudgreet.com)' },
+      })
+      clearTimeout(t)
+      if (!res.ok) continue
+      const html = await res.text()
+      out.fetched.push(url)
+      const $ = cheerio.load(html)
+      $('script,style,noscript').remove()
+      // Convert tag boundaries to spaces so adjacent inline tokens (e.g. an
+      // email immediately followed by a "Facebook" link) don't merge into
+      // garbage like "x@y.comfacebook". cheerio's .text() concatenates them.
+      const text = ($('body').html() || '').replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ').trim()
+      Array.from(text.matchAll(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,24}\b/g)).forEach((m) => emails.add(m[0].toLowerCase()))
+      $('a[href*="linkedin.com"]').each((_, el) => { const h = $(el).attr('href'); if (h) li.add(h.split('?')[0]) })
+      $('a[href*="facebook.com"]').each((_, el) => { const h = $(el).attr('href'); if (h) fb.add(h.split('?')[0]) })
+      // owner hint: a sentence mentioning owner/founder + a Capitalized name nearby
+      Array.from(text.matchAll(/\b(owner|founder|president|proprietor)\b[^.]{0,40}?\b([A-Z][a-z]+ [A-Z][a-z]+)\b/g)).forEach((m) => owners.add(`${m[2]} (${m[1]})`))
+      Array.from(text.matchAll(/\b([A-Z][a-z]+ [A-Z][a-z]+)\b[^.]{0,20}?\b(owner|founder|president)\b/g)).forEach((m) => owners.add(`${m[1]} (${m[2]})`))
+      for (const rx of SOLO_LANG) { const hit = text.match(rx); if (hit) lang.add('solo: "' + hit[0] + '"') }
+      for (const rx of FLEET_LANG) { const hit = text.match(rx); if (hit) lang.add('fleet: "' + hit[0] + '"') }
+    } catch {
+      // page fetch failed/timed out - skip it
+    }
+  }
+  if (out.fetched.length === 0) out.error = 'could not load site'
+  out.emails = Array.from(emails).slice(0, 6)
+  out.linkedin_urls = Array.from(li).slice(0, 5)
+  out.facebook_urls = Array.from(fb).slice(0, 5)
+  out.owner_hints = Array.from(owners).slice(0, 5)
+  out.language_signals = Array.from(lang).slice(0, 8)
+  return out
+}
+
+function linkedInLinks(name: string, city?: string): { company_search: string; people_search: string } {
+  const co = encodeURIComponent(name)
+  const ppl = encodeURIComponent(`${name} owner ${city || ''}`.trim())
+  return {
+    company_search: `https://www.linkedin.com/search/results/companies/?keywords=${co}`,
+    people_search: `https://www.linkedin.com/search/results/people/?keywords=${ppl}`,
+  }
+}
+
+const ENRICH_TOOL: Anthropic.Tool = {
+  name: 'enrich_lead',
+  description:
+    'Pull deeper intel on ONE business to sharpen the solo-vs-fleet read and prep outreach. Returns Google review TEXT + place summary + hours (official Places API), signals from the business\'s OWN website (owner/team/fleet language, emails, LinkedIn/Facebook links they published), and LinkedIn search deep-links to open manually. Does NOT scrape LinkedIn. Call after a search when the user wants detail on a specific lead, or to verify "is this really solo".',
+  input_schema: {
+    type: 'object',
+    properties: {
+      business_name: { type: 'string', description: 'Exact business name, ideally one from the last search.' },
+      place_id: { type: 'string', description: 'Google place_id if known (from a prior search result). Optional - we look it up by name if absent.' },
+      website: { type: 'string', description: 'Website URL if known. Optional - we use the one Places returns.' },
+      city: { type: 'string', description: 'City, to disambiguate the lookup. Optional.' },
+      state: { type: 'string', description: 'Two-letter state. Optional.' },
+    },
+    required: ['business_name'],
+  },
+}
+
+// Anthropic-hosted web search (sanctioned). Runs server-side; results return
+// in the same response, so the runner loop doesn't execute it.
+const WEB_SEARCH_TOOL = { type: 'web_search_20250305', name: 'web_search', max_uses: 4 } as unknown as Anthropic.Tool
+
+async function executeEnrich(input: any): Promise<Record<string, unknown>> {
+  const name = String(input?.business_name || '').trim()
+  if (!name) return { error: 'missing_name', message: 'business_name is required.' }
+  const placeId = input?.place_id ? String(input.place_id) : await findPlaceId(name, input?.city, input?.state)
+  const details = placeId ? await placeDetails(placeId) : null
+  const knownRow = LAST_RESULTS.find((r) => r.business_name.toLowerCase() === name.toLowerCase())
+  const website = (input?.website && String(input.website)) || details?.website || knownRow?.website || null
+  const site = website ? await fetchWebsiteSignals(website) : { error: 'no website on file' } as WebsiteSignals
+
+  // Solo signals enriched with review-text + site language.
+  const reviewBlob = (details?.reviews || []).map((r) => r.text).join(' ').toLowerCase()
+  const reviewSignals: string[] = []
+  if (/\bthe owner\b|\bowner (?:drove|picked|was)\b/.test(reviewBlob)) reviewSignals.push('reviews mention "the owner" driving - owner-operated signal')
+  if (/\b(?:driver|chauffeur)s\b|\bteam\b|\bfleet\b/.test(reviewBlob)) reviewSignals.push('reviews mention drivers/team/fleet - may be larger')
+  const firstName = name.replace(/'s\b.*/, '').split(/\s+/)[0]?.toLowerCase()
+  if (firstName && firstName.length > 2 && new RegExp(`\\b${firstName}\\b`).test(reviewBlob)) {
+    reviewSignals.push(`reviewers name "${titleCase(firstName)}" - likely the owner by name`)
+  }
+
+  return {
+    business_name: name,
+    google: details
+      ? {
+          rating: details.rating, review_count: details.review_count, phone: details.phone,
+          summary: details.editorial, hours: details.hours, reviews: details.reviews,
+        }
+      : { error: 'no Google details found' },
+    website: { url: website, ...site },
+    review_text_signals: reviewSignals,
+    linkedin: {
+      note: 'We do NOT scrape LinkedIn (ToS). Open these to check it yourself; also see any linkedin_urls found on their site above.',
+      ...linkedInLinks(name, input?.city),
+    },
+    honesty_note: 'Solo-vs-fleet remains INFERRED. Use review text + site language as evidence, not proof.',
+  }
+}
+
+// ---------------------------------------------------------------------------
 // System prompt - the lead-search assistant persona + ICP + honesty rules.
 // ---------------------------------------------------------------------------
 const SYSTEM = `You are a private lead-search assistant for CloudGreet, used by the founder to find and qualify prospect businesses to hand to sales reps. You are not customer-facing.
@@ -253,7 +467,14 @@ OUTREACH (only when asked to draft it):
 - Lead with same-industry social proof: "I work with Steve French at SmartRide Central Ohio, a similar executive transport operation - we make sure he never misses a booking while he's driving." Keep it warm, short, specific to a solo operator's pain (missing calls while driving). 3-5 sentences max.
 - Remind the founder once that these are unverified prospects and outreach is his to review and send through compliant channels (TCPA/DNC apply downstream). Don't nag every time.
 
-STYLE: concise, direct, founder-to-founder. Give the final answer plainly - no filler, no restating these instructions. When you call search_leads, you may say one short line about what you're searching.`
+TOOLS YOU HAVE:
+- search_leads: the Google Places search (the only way to FIND new businesses). Always start here.
+- enrich_lead: deeper intel on ONE business - Google review TEXT, place summary/hours, and signals scraped from the business's OWN website (owner/team/fleet language, emails, LinkedIn/Facebook links they posted), plus LinkedIn search links to open. Use it when the user wants detail on a specific lead, asks "is this one really solo", or before drafting outreach to a particular prospect. The review text is your best solo evidence (e.g. reviewers naming "the owner" who drove them).
+- web_search: general web search (Anthropic-hosted, sanctioned). Use to confirm ownership, find their LinkedIn/site, recent news, or anything Places/their site doesn't show.
+
+LINKEDIN - IMPORTANT: You may NOT present LinkedIn data as if scraped. We never scrape LinkedIn (their ToS forbids it). To get LinkedIn info: use web_search (public results) and surface any LinkedIn URL found on the business's own website (enrich_lead returns those), and hand the user the LinkedIn search link to open themselves. Never fabricate a LinkedIn profile or claim headcount you didn't actually find in a sanctioned source - say what you found and where.
+
+STYLE: concise, direct, founder-to-founder. Give the final answer plainly - no filler, no restating these instructions. When you call a tool, you may say one short line about what you're doing.`
 
 // ---------------------------------------------------------------------------
 // Runner: tool-use loop + REPL.
@@ -264,7 +485,7 @@ async function runAgent(client: Anthropic, messages: Anthropic.MessageParam[]): 
       model: MODEL,
       max_tokens: 2048,
       system: SYSTEM,
-      tools: [SEARCH_TOOL],
+      tools: [SEARCH_TOOL, ENRICH_TOOL, WEB_SEARCH_TOOL],
       messages,
     })
     messages.push({ role: 'assistant', content: resp.content })
@@ -282,6 +503,11 @@ async function runAgent(client: Anthropic, messages: Anthropic.MessageParam[]): 
         const inp = tu.input as any
         process.stdout.write(`  …searching: "${inp?.query}" in ${inp?.city}, ${inp?.state}${inp?.max_reviews ? ` (≤${inp.max_reviews} reviews)` : ''}\n`)
         const result = await executeSearch(inp)
+        toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(result) })
+      } else if (tu.name === 'enrich_lead') {
+        const inp = tu.input as any
+        process.stdout.write(`  …enriching: ${inp?.business_name} (reviews + website${inp?.city ? ', ' + inp.city : ''})\n`)
+        const result = await executeEnrich(inp)
         toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(result) })
       } else {
         toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify({ error: 'unknown_tool' }), is_error: true })
@@ -326,8 +552,12 @@ Reuses the rep scraper's official Google Places search. Transport-ICP aware.
 
 Try:  "find me 20 solo black car services in Columbus OH"
       "now only ones with under 50 reviews"
+      "dig into Danny's Car Service - is it really solo?"  (reviews + website + web search)
       "draft outreach for the top 5"
 Commands:  /csv [path]   export last results    |    /quit
+
+Sources: Google Places API (search + reviews), the prospect's own website, and
+web search. LinkedIn is link-only (never scraped).
 `)
 
   for (;;) {
