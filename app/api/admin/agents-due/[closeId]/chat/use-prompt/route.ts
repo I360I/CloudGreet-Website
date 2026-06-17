@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { composeFinalPrompt } from '@/lib/agent-builder/universal-layer'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -37,10 +38,16 @@ export async function POST(
     )
   }
 
+  // Append the universal CloudGreet behavior layer (anti-injection / off-task
+  // refusal, numbers-as-words, email readback, SMS consent, etc.). The
+  // generator writes the business-specific prompt; these operational rules are
+  // owned in one place. Idempotent - won't double-append.
+  const finalPrompt = composeFinalPrompt(prompt)
+
   const { error } = await supabaseAdmin
     .from('closes')
     .update({
-      agent_draft_prompt: prompt,
+      agent_draft_prompt: finalPrompt,
       agent_draft_status: 'ready',
       agent_draft_error: null,
       agent_draft_generated_at: new Date().toISOString(),
