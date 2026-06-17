@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CircleNotch, Clock, Calendar, ArrowSquareOut, Robot, Archive, ArrowUUpLeft, Trash } from '@phosphor-icons/react'
+import { CircleNotch, Clock, Calendar, ArrowSquareOut, Robot, Archive, ArrowUUpLeft, Trash, Plus, X } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel } from '../_components/ui'
@@ -53,12 +54,14 @@ const STATUS_TONE: Record<Item['demo']['status'], { pill: string; label: string 
 }
 
 export default function AgentsDuePage() {
+  const router = useRouter()
   const [items, setItems] = useState<Item[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [view, setView] = useState<'active' | 'archived'>('active')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
+  const [showNew, setShowNew] = useState(false)
 
   const reload = async (nextView: 'active' | 'archived' = view) => {
     setLoading(true)
@@ -153,8 +156,17 @@ export default function AgentsDuePage() {
               Demo agents to build before each rep&apos;s demo. Click a row to open its workspace.
             </p>
           </div>
-          <div className="text-xs text-gray-500 font-mono tabular-nums">
-            {sorted.length} {view === 'archived' ? 'archived' : 'in queue'}
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500 font-mono tabular-nums">
+              {sorted.length} {view === 'archived' ? 'archived' : 'in queue'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowNew(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-sky-500 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-400"
+            >
+              <Plus className="w-4 h-4" weight="bold" /> New client
+            </button>
           </div>
         </div>
 
@@ -269,7 +281,85 @@ export default function AgentsDuePage() {
           </ul>
         )}
       </div>
+
+      {showNew && (
+        <NewClientModal
+          onClose={() => setShowNew(false)}
+          onCreated={(closeId) => router.push(`/admin/agents-due/${closeId}`)}
+        />
+      )}
     </AdminShell>
+  )
+}
+
+/**
+ * Create a brand-new client and jump straight into its prompt-generator
+ * workspace. The whole onboarding flow without leaving Agents Due.
+ */
+function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: (closeId: string) => void }) {
+  const [form, setForm] = useState({ business_name: '', contact_name: '', phone: '', email: '', website: '' })
+  const [creating, setCreating] = useState(false)
+  const [err, setErr] = useState('')
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value })
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (creating || !form.business_name.trim()) return
+    setCreating(true); setErr('')
+    try {
+      const r = await fetchWithAuth('/api/admin/agents-due/new-client', { method: 'POST', body: JSON.stringify(form) })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.close_id) { setErr(j?.error || 'Could not create client'); setCreating(false); return }
+      onCreated(j.close_id) // navigates to the workspace
+    } catch {
+      setErr('Could not create client'); setCreating(false)
+    }
+  }
+
+  const input = 'w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-sky-400/50 focus:outline-none'
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => !creating && onClose()}>
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0c0e12] p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-semibold text-white">New client</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white" aria-label="Close"><X className="w-5 h-5" /></button>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">Just the business name is required. You&apos;ll jump straight into the prompt generator next.</p>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Business name *</label>
+            <input className={input} placeholder="Rainbow Fashions Bridal" value={form.business_name} onChange={set('business_name')} autoFocus />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Contact name</label>
+              <input className={input} placeholder="optional" value={form.contact_name} onChange={set('contact_name')} />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Phone</label>
+              <input className={input} placeholder="optional" value={form.phone} onChange={set('phone')} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Email</label>
+            <input className={input} placeholder="optional" value={form.email} onChange={set('email')} />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Website</label>
+            <input className={input} placeholder="optional — helps the generator research them" value={form.website} onChange={set('website')} />
+          </div>
+          {err && <p className="text-xs text-rose-400">{err}</p>}
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button type="button" onClick={onClose} disabled={creating} className="rounded-lg border border-white/10 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">Cancel</button>
+            <button type="submit" disabled={creating || !form.business_name.trim()} className="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-50">
+              {creating ? <><CircleNotch className="w-4 h-4 animate-spin" /> Creating…</> : 'Create & build prompt'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 
