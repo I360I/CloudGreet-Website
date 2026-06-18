@@ -10,6 +10,7 @@
  */
 
 import React, { Component, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Stars } from '@react-three/drei'
 import ThreeGlobe from 'three-globe'
@@ -31,11 +32,12 @@ const PAYING_COLOR = '#34d399'
 const NONPAYING_COLOR = '#fbbf24'
 const HQ_COLOR = '#38bdf8'
 
-function GlobeObject({ points, hq, light, onHover }: {
+function GlobeObject({ points, hq, light, onHover, onSelect }: {
  points: GlobePoint[]
  hq?: GlobeHq | null
  light: boolean
  onHover: (h: HoverInfo | null) => void
+ onSelect: (id: string) => void
 }) {
  const { camera } = useThree()
 
@@ -80,7 +82,10 @@ function GlobeObject({ points, hq, light, onHover }: {
    .pointLat((d: any) => d.lat)
    .pointLng((d: any) => d.lng)
    .pointColor(markerColor)
-   .pointAltitude(0.012)
+   // Dots sit ABOVE the radar rings so the ring disc doesn't intercept hover/
+   // click for the dots underneath it (that's why only the paying client - the
+   // one with a ring - was hoverable in a cluster).
+   .pointAltitude(0.02)
    .pointResolution(18)
    // Slim, crisp dots - the old 0.7-1.0 radii were fat cylinders that merged
    // into a blob when several clients sat close together (the Ohio cluster).
@@ -98,10 +103,12 @@ function GlobeObject({ points, hq, light, onHover }: {
     d.kind === 'hq'
      ? `rgba(56, 189, 248, ${Math.max(0, 0.45 * (1 - t))})`
      : `rgba(52, 211, 153, ${Math.max(0, 0.4 * (1 - t))})`)
-   .ringAltitude(0.014)
-   .ringMaxRadius(2.6)
+   // Rings sit BELOW the dots (lower altitude) and stay tight, so the radar
+   // halo is purely decorative and never steals hover/clicks from dots near it.
+   .ringAltitude(0.005)
+   .ringMaxRadius(1.8)
    .ringPropagationSpeed(1.0)
-   .ringRepeatPeriod(2000)
+   .ringRepeatPeriod(2200)
 
   // Animated light-beam arcs: HQ → every account. Each route renders twice,
   // a wide soft halo plus a hot thin core, with additive blending so the
@@ -167,6 +174,19 @@ function GlobeObject({ points, hq, light, onHover }: {
     }
    }}
    onPointerOut={() => onHover(null)}
+   onClick={(e: any) => {
+    e.stopPropagation()
+    let obj = e.object
+    while (obj) {
+     const d = obj.__data
+     if (d && typeof d === 'object' && 'kind' in d) {
+      // Click a client dot -> open their profile. HQ has no profile.
+      if (d.kind !== 'hq' && d.id) onSelect(d.id)
+      return
+     }
+     obj = obj.parent
+    }
+   }}
   />
  )
 }
@@ -197,6 +217,7 @@ export default function ClientGlobe({
  height?: number
 }) {
  const light = theme === 'light'
+ const router = useRouter()
  const wrapRef = useRef<HTMLDivElement>(null)
  const [hover, setHover] = useState<HoverInfo | null>(null)
  const reduce = useRef(
@@ -222,7 +243,7 @@ export default function ClientGlobe({
      <ambientLight intensity={light ? 1.7 : 2.9} color="#ffffff" />
      <directionalLight position={[260, 160, 280]} intensity={light ? 1.5 : 0.25} color="#ffffff" />
      {!light && <Stars radius={280} depth={50} count={1600} factor={4} saturation={0} fade speed={0.5} />}
-     <GlobeObject points={points} hq={hq} light={light} onHover={setHover} />
+     <GlobeObject points={points} hq={hq} light={light} onHover={setHover} onSelect={(id) => router.push(`/admin/clients/${id}`)} />
      <OrbitControls
       enablePan={false}
       enableDamping
