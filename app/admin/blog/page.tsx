@@ -42,7 +42,7 @@ export default function AdminBlogPage() {
   useEffect(() => { void load() }, [load])
 
   const generate = async () => {
-    if (!topic.trim() || generating) return
+    if (generating) return
     setGenerating(true); setError('')
     try {
       const r = await fetchWithAuth('/api/admin/blog', { method: 'POST', body: JSON.stringify({ topic: topic.trim() }) })
@@ -96,11 +96,11 @@ export default function AdminBlogPage() {
         {/* Generate */}
         <Panel className="mb-5">
           <div className="text-sm font-medium text-white mb-1">Generate a post</div>
-          <div className="text-xs text-gray-500 mb-3">Enter a topic or search phrase. Claude drafts an SEO post; it saves as a draft for you to review and publish.</div>
+          <div className="text-xs text-gray-500 mb-3">Drop in a rough idea and Claude sharpens it into a strong title + angle, or <span className="text-gray-300">leave it blank and Claude picks a fresh topic for you</span>. Either way it saves as a draft to review and publish.</div>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
               className={inputCls}
-              placeholder='e.g. "how much does an answering service cost"'
+              placeholder='Optional - e.g. "answering service cost" (or leave blank to let Claude choose)'
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') generate() }}
@@ -108,10 +108,10 @@ export default function AdminBlogPage() {
             />
             <button
               onClick={generate}
-              disabled={generating || !topic.trim()}
+              disabled={generating}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-50 whitespace-nowrap"
             >
-              {generating ? <><CircleNotch className="h-4 w-4 animate-spin" /> Drafting…</> : <><Sparkle className="h-4 w-4" weight="fill" /> Generate draft</>}
+              {generating ? <><CircleNotch className="h-4 w-4 animate-spin" /> Drafting…</> : <><Sparkle className="h-4 w-4" weight="fill" /> {topic.trim() ? 'Generate draft' : 'Pick topic & draft'}</>}
             </button>
           </div>
           {generating && <div className="mt-2 text-xs text-gray-500">Writing the post… this takes ~30-60 seconds.</div>}

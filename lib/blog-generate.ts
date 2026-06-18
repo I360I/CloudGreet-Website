@@ -48,24 +48,51 @@ export function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
 }
 
-export async function generatePost(topic: string): Promise<GeneratedPost> {
+/** Normalize keywords to a clean string[] - the model sometimes returns a
+ *  comma-joined STRING despite the array schema, which broke the text[] insert
+ *  ("malformed array literal"). */
+function normalizeKeywords(k: unknown): string[] {
+  if (Array.isArray(k)) return k.map((x) => String(x).trim()).filter(Boolean).slice(0, 12)
+  if (typeof k === 'string') return k.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 12)
+  return []
+}
+
+/**
+ * Draft an SEO post. `topic` is optional:
+ *   - empty  -> Claude PICKS a strong, fresh topic for CloudGreet's audience
+ *               (avoiding the existing titles you pass in).
+ *   - given  -> Claude treats it as a seed and SHARPENS it into a better SEO
+ *               angle + title (improves rough phrasing), then writes the post.
+ */
+export async function generatePost(
+  topic: string,
+  opts: { existingTitles?: string[] } = {},
+): Promise<GeneratedPost> {
   const client = new Anthropic({ timeout: 180_000, maxRetries: 1 })
+  const avoid = (opts.existingTitles || []).filter(Boolean).slice(0, 50)
+  const avoidBlock = avoid.length
+    ? `\n\nWe've ALREADY published or drafted these - pick a genuinely different angle, do not duplicate:\n- ${avoid.join('\n- ')}`
+    : ''
+  const instruction = topic.trim()
+    ? `The user gave this rough topic/idea: "${topic.trim()}". Treat it as a seed: sharpen it into a strong, specific, search-friendly angle and title (improve on their phrasing - don't just echo it), then write the post.${avoidBlock}`
+    : `No topic was given. Choose a high-value, buyer-intent SEO topic for CloudGreet's audience that we have NOT covered yet, then write the post.${avoidBlock}`
+
   const resp = await client.messages.create({
     model: BLOG_MODEL,
     max_tokens: 4096,
     system: SYSTEM,
     tools: [{ name: 'emit_post', description: 'Return the finished blog post.', input_schema: SCHEMA as any }],
     tool_choice: { type: 'tool', name: 'emit_post' },
-    messages: [{ role: 'user', content: `Write a blog post targeting this topic/keyword: "${topic}"` }],
+    messages: [{ role: 'user', content: instruction }],
   })
   const block = resp.content.find((b: any) => b.type === 'tool_use') as any
   if (!block) throw new Error('Model did not return a post')
-  const p = block.input as { title: string; slug: string; description: string; keywords: string[]; body_markdown: string }
+  const p = block.input as { title: string; slug: string; description: string; keywords: unknown; body_markdown: string }
   return {
     title: p.title,
     slug: slugify(p.slug || p.title),
     description: p.description,
-    keywords: p.keywords || [],
+    keywords: normalizeKeywords(p.keywords),
     body: (p.body_markdown || '').trim(),
   }
 }

@@ -41,15 +41,24 @@ export async function POST(request: NextRequest) {
 
   let row: { slug: string; title: string; description: string; body: string; keywords: string[] }
 
-  if (typeof body.topic === 'string' && body.topic.trim()) {
+  // Manual save only when a title is given WITHOUT a topic field. Otherwise
+  // (the admin "Generate draft" button always sends `topic`, possibly empty)
+  // we generate - an empty topic means "Claude picks a fresh topic for me".
+  const isManualSave = typeof body.title === 'string' && body.title.trim() && !('topic' in body)
+
+  if (!isManualSave) {
     try {
-      const post = await generatePost(body.topic.trim())
+      const topic = typeof body.topic === 'string' ? body.topic : ''
+      // Hand the generator our existing titles so it doesn't duplicate.
+      const { data: existing } = await supabaseAdmin.from('blog_posts').select('title')
+      const existingTitles = (existing || []).map((r: any) => r.title).filter(Boolean)
+      const post = await generatePost(topic, { existingTitles })
       row = { slug: post.slug, title: post.title, description: post.description, body: post.body, keywords: post.keywords }
     } catch (e) {
       logger.error('blog generate failed', { error: e instanceof Error ? e.message : 'unknown' })
       return NextResponse.json({ error: 'Generation failed: ' + (e instanceof Error ? e.message : 'unknown') }, { status: 502 })
     }
-  } else if (typeof body.title === 'string' && body.title.trim()) {
+  } else {
     row = {
       slug: slugify(String(body.slug || body.title)),
       title: String(body.title).trim(),
@@ -57,8 +66,6 @@ export async function POST(request: NextRequest) {
       body: String(body.body || '').trim(),
       keywords: Array.isArray(body.keywords) ? body.keywords : [],
     }
-  } else {
-    return NextResponse.json({ error: 'Provide a topic (to generate) or a title (to save).' }, { status: 400 })
   }
 
   // Ensure unique slug.
