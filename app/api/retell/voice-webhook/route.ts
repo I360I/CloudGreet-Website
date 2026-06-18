@@ -24,6 +24,23 @@ type RetellToolCall = {
  arguments: Record<string, any>
 }
 
+/**
+ * Pull a real US street address (house number + street + suffix, optional
+ * city/state/zip) out of a free-text string. Used as a recovery when the
+ * agent put the pickup in the `service`/`notes` field instead of the
+ * dedicated `pickup` argument. Returns null if no street address is found.
+ */
+const STREET_SUFFIX = 'street|st|drive|dr|road|rd|avenue|ave|lane|ln|court|ct|circle|cir|way|boulevard|blvd|place|pl|terrace|ter|parkway|pkwy|highway|hwy|trail|trl|loop|run|pike|row|square|sq|crossing|xing|cove|cv|path|trace|trce|bend|pass|point|pt'
+function extractStreetAddress(s: string): string | null {
+ if (!s) return null
+ const re = new RegExp(
+  `\\b\\d{1,6}\\s+[A-Za-z0-9.'\\-]+(?:\\s+[A-Za-z0-9.'\\-]+){0,4}?\\s+(?:${STREET_SUFFIX})\\b(?:,\\s*[A-Za-z][A-Za-z. ]{0,28})?(?:,?\\s*[A-Z]{2})?(?:\\s+\\d{5}(?:-\\d{4})?)?`,
+  'i',
+ )
+ const m = s.match(re)
+ return m ? m[0].replace(/\s+/g, ' ').trim() : null
+}
+
 export async function POST(request: NextRequest) {
  try {
  // Read raw body for signature verification
@@ -275,7 +292,18 @@ export async function POST(request: NextRequest) {
  // Airports / named places are exempt. Enforced only on a definitive
  // geocode, so a Geocoding outage degrades to not blocking.
  if ((business as any).dispatch_mode) {
- const pickup = String((tool.arguments as any)?.pickup || '').trim()
+ let pickup = String((tool.arguments as any)?.pickup || '').trim()
+ if (!pickup) {
+ // Recovery: the agent sometimes jams the pickup into `service`/`notes`
+ // instead of the `pickup` arg - which silently failed the booking and
+ // left the caller falsely told they were booked (Jeff Forster, 6/17).
+ // Pull a real street address out of the other fields before rejecting.
+ const a = tool.arguments as any
+ for (const cand of [rawService, a?.service_address, a?.address, a?.pickup_address, a?.notes]) {
+ const got = extractStreetAddress(String(cand || ''))
+ if (got) { pickup = got; break }
+ }
+ }
  if (!pickup) {
  return NextResponse.json({
  success: false,
@@ -2163,6 +2191,52 @@ async function handleCallEvent(
       } catch (e) {
        logger.warn('dispatch safety net threw', { retellCallId, error: e instanceof Error ? e.message : 'unknown' })
       }
+     }
+    }
+   }
+
+   // FAILED-BOOKING SAFETY NET. The agent claimed a booking ("booked") but
+   // no appointment actually landed - e.g. book_appointment errored and the
+   // agent falsely told the caller they were set (Jeff Forster, 6/17). Alert
+   // the owner so they can call the customer and rebook. Idempotent via
+   // dispatch_sent_at.
+   if (eventType === 'call_analyzed' && resolvedBusinessId && btLower === 'booked' && !transferredLive) {
+    const callerPhone = (typeof call?.from_number === 'string' && call.from_number) || patch.from_number || null
+    if (callerPhone && callerPhone !== 'unknown') {
+     try {
+      const since = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+      const { data: recentAppts } = await supabaseAdmin
+       .from('appointments')
+       .select('id, retell_call_id, customer_phone, created_at')
+       .eq('business_id', resolvedBusinessId)
+       .gte('created_at', since)
+      const cd = String(callerPhone).replace(/\D/g, '')
+      const bookingLanded = (recentAppts || []).some((apptRow: any) =>
+       apptRow.retell_call_id === retellCallId ||
+       (cd.length >= 10 && apptRow.customer_phone && String(apptRow.customer_phone).replace(/\D/g, '').includes(cd)),
+      )
+      const { data: prevBk } = await supabaseAdmin
+       .from('calls').select('dispatch_sent_at, caller_name')
+       .eq('retell_call_id', retellCallId).maybeSingle()
+      const alreadyAlerted = !!(prevBk as any)?.dispatch_sent_at
+      if (!bookingLanded && !alreadyAlerted) {
+       logger.warn('failed-booking detected - agent claimed booked, no appointment landed', { retellCallId, businessId: resolvedBusinessId })
+       const knownName = (prevBk as any)?.caller_name || patch.caller_name || (flat.customer_name as string) || 'Caller'
+       const { sendDispatchRequest } = await import('@/lib/quote-engine')
+       const r = await sendDispatchRequest({
+        businessId: resolvedBusinessId,
+        customerName: knownName,
+        customerPhone: String(callerPhone),
+        pickup: (flat.service_address as string) || 'see call details',
+        requestedTime: (flat.preferred_callback as string) || (flat.requested_time as string) || 'ASAP - see call',
+        notes: 'BOOKING DID NOT COMPLETE - the AI told this caller they were booked, but it failed. Call them to confirm and rebook.',
+        retellCallId,
+       })
+       if (r.ok) patch.dispatch_sent_at = new Date().toISOString()
+       else logger.warn('failed-booking safety net send failed', { retellCallId, error: (r as any).error })
+      }
+     } catch (e) {
+      logger.warn('failed-booking safety net threw', { retellCallId, error: e instanceof Error ? e.message : 'unknown' })
      }
     }
    }
