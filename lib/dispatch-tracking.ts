@@ -21,6 +21,8 @@ export async function recordDispatchSend(args: {
   fromNumber: string
   body: string
   telnyxMessageId: string | null
+  /** 'dispatch' (owner call-back text) or 'report_alert' (text-to-book report link). */
+  kind?: 'dispatch' | 'report_alert'
 }): Promise<void> {
   try {
     await supabaseAdmin.from('dispatch_notifications').insert({
@@ -32,6 +34,7 @@ export async function recordDispatchSend(args: {
       telnyx_message_id: args.telnyxMessageId,
       status: 'sent',
       attempts: 1,
+      kind: args.kind ?? 'dispatch',
     })
   } catch (e) {
     logger.warn('recordDispatchSend failed', { error: e instanceof Error ? e.message : 'unknown' })

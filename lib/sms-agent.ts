@@ -167,7 +167,7 @@ export async function handleInboundSms(args: {
   // Load business config + system prompt.
   const { data: biz } = await supabaseAdmin
     .from('businesses')
-    .select('id, business_name, retell_agent_id, dispatch_mode, timezone, phone_number, sms_phone_number')
+    .select('id, business_name, retell_agent_id, dispatch_mode, timezone, phone_number, sms_phone_number, notifications_phone, notification_phone, escalation_phone')
     .eq('id', args.businessId)
     .maybeSingle()
   if (!biz) return { ok: false, error: 'business_not_found' }
@@ -404,14 +404,17 @@ export async function handleInboundSms(args: {
   // fresh conversation, and a "BOOKED"/"DISPATCH" alert when this turn
   // produced an outcome - both carry the login-free report link.
   const businessName = (biz as any).business_name || 'Client'
+  const ownerPhone = (biz as any).notifications_phone || (biz as any).notification_phone || (biz as any).escalation_phone || null
   if (isNewConversation) {
+    // Admin-only on the first inbound - don't ping the owner for every "hi".
     void alertAdminTextToBook({
-      kind: 'new', businessName, customerPhone: fromPhone, reportToken, fromNumber, preview: args.body,
+      kind: 'new', businessId: args.businessId, businessName, customerPhone: fromPhone, reportToken, preview: args.body,
     })
   }
   if (outcomeKind) {
+    // Outcome (booked/dispatch): notify admin AND the owner with the report link.
     void alertAdminTextToBook({
-      kind: outcomeKind, businessName, customerPhone: fromPhone, reportToken, fromNumber,
+      kind: outcomeKind, businessId: args.businessId, businessName, customerPhone: fromPhone, reportToken, ownerPhone,
     })
   }
 
@@ -441,19 +444,29 @@ async function getOrCreateConversation(
 }
 
 /**
- * Texts the admin (CLOUDGREET_ADMIN_NOTIFY_PHONE) a labeled text-to-book
- * alert with a login-free "view full report" link to the conversation.
+ * Sends a labeled text-to-book alert with a login-free "view full report"
+ * link. Goes to the admin (CLOUDGREET_ADMIN_NOTIFY_PHONE) always, and to the
+ * business OWNER too on an outcome (booked/dispatch) so they can open the full
+ * conversation, not just the dispatch summary. Each send is recorded in
+ * dispatch_notifications (kind='report_alert') so it's delivery-tracked +
+ * retried by the SMS DLR webhook, instead of vanishing silently.
  * Fire-and-forget: never throws into the agent's hot path.
  */
 async function alertAdminTextToBook(opts: {
   kind: 'new' | 'booked' | 'dispatch'
+  businessId: string
   businessName: string
   customerPhone: string
   reportToken: string | null
-  fromNumber: string
+  ownerPhone?: string | null
   preview?: string
 }): Promise<void> {
   try {
+    // Notifications go from the dedicated CloudGreet notifications number (the
+    // same one dispatches come from, so it's recognizable), not the two-way
+    // conversation line.
+    const fromNumber = process.env.CLOUDGREET_NOTIFICATIONS_FROM
+    if (!fromNumber) { logger.warn('alertAdminTextToBook: CLOUDGREET_NOTIFICATIONS_FROM unset'); return }
     const adminPhone = (process.env.CLOUDGREET_ADMIN_NOTIFY_PHONE || '+17372960092').trim()
     const base = process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'
     const link = opts.reportToken ? `${base}/r/${opts.reportToken}` : base
@@ -463,7 +476,28 @@ async function alertAdminTextToBook(opts: {
       'text-to-book DISPATCH'
     const preview = opts.preview ? `\n"${opts.preview.replace(/\s+/g, ' ').trim().slice(0, 120)}"` : ''
     const body = `[${opts.businessName}] ${label}\nFrom ${opts.customerPhone}${preview}\nView full report: ${link}`
-    await telnyxClient.sendSMS(adminPhone, body, opts.fromNumber)
+
+    // Recipients: admin always; owner too on an outcome (not on every "new").
+    const recipients = new Set<string>([adminPhone])
+    if (opts.kind !== 'new' && opts.ownerPhone) recipients.add(opts.ownerPhone.trim())
+
+    const { recordDispatchSend } = await import('./dispatch-tracking')
+    for (const to of Array.from(recipients)) {
+      if (!to) continue
+      try {
+        const sent = await telnyxClient.sendSMS(to, body, fromNumber)
+        void recordDispatchSend({
+          businessId: opts.businessId,
+          recipientPhone: to,
+          fromNumber,
+          body,
+          telnyxMessageId: (sent as any)?.data?.id || null,
+          kind: 'report_alert',
+        })
+      } catch (e) {
+        logger.warn('alertAdminTextToBook send failed', { to, error: e instanceof Error ? e.message : 'unknown' })
+      }
+    }
   } catch (e) {
     logger.warn('alertAdminTextToBook failed', { error: e instanceof Error ? e.message : 'unknown' })
   }
