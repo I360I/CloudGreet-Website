@@ -80,8 +80,11 @@ function GlobeObject({ points, hq, light, onHover }: {
    .pointLat((d: any) => d.lat)
    .pointLng((d: any) => d.lng)
    .pointColor(markerColor)
-   .pointAltitude(0.025)
-   .pointRadius((d: any) => (d.kind === 'hq' ? 1.0 : d.kind === 'paying' ? 0.9 : 0.7))
+   .pointAltitude(0.012)
+   .pointResolution(18)
+   // Slim, crisp dots - the old 0.7-1.0 radii were fat cylinders that merged
+   // into a blob when several clients sat close together (the Ohio cluster).
+   .pointRadius((d: any) => (d.kind === 'hq' ? 0.5 : d.kind === 'paying' ? 0.42 : 0.36))
 
   const ringPts: any[] = [
    ...points.filter((p) => p.kind === 'paying'),
@@ -93,12 +96,12 @@ function GlobeObject({ points, hq, light, onHover }: {
    .ringLng((d: any) => d.lng)
    .ringColor((d: any) => (t: number) =>
     d.kind === 'hq'
-     ? `rgba(56, 189, 248, ${Math.max(0, 0.6 * (1 - t))})`
-     : `rgba(52, 211, 153, ${Math.max(0, 0.55 * (1 - t))})`)
-   .ringAltitude(0.026)
-   .ringMaxRadius(4.2)
-   .ringPropagationSpeed(1.1)
-   .ringRepeatPeriod(1700)
+     ? `rgba(56, 189, 248, ${Math.max(0, 0.45 * (1 - t))})`
+     : `rgba(52, 211, 153, ${Math.max(0, 0.4 * (1 - t))})`)
+   .ringAltitude(0.014)
+   .ringMaxRadius(2.6)
+   .ringPropagationSpeed(1.0)
+   .ringRepeatPeriod(2000)
 
   // Animated light-beam arcs: HQ → every account. Each route renders twice,
   // a wide soft halo plus a hot thin core, with additive blending so the
