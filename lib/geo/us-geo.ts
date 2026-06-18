@@ -151,7 +151,7 @@ export const CITY_COORDS: Record<string, [number, number]> = {
   'jacksonville,FL': [30.3322, -81.6557], 'fort worth,TX': [32.7555, -97.3308],
   'charlotte,NC': [35.2271, -80.8431], 'indianapolis,IN': [39.7684, -86.1581],
   'seattle,WA': [47.6062, -122.3321], 'denver,CO': [39.7392, -104.9903],
-  'nashville,TN': [36.1627, -86.7816], 'detroit,MI': [42.3314, -83.0458],
+  'nashville,TN': [36.1627, -86.7816], 'gallatin,TN': [36.3884, -86.4467], 'detroit,MI': [42.3314, -83.0458],
   'pittsburgh,PA': [40.4406, -79.9959], 'louisville,KY': [38.2527, -85.7585],
   'lexington,KY': [38.0406, -84.5037], 'memphis,TN': [35.1495, -90.0490],
   'atlanta,GA': [33.7490, -84.3880], 'miami,FL': [25.7617, -80.1918],
