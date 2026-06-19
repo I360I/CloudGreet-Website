@@ -421,6 +421,204 @@ export async function handleInboundSms(args: {
   return { ok: true, reply_sent: true, reply }
 }
 
+/**
+ * Web-chat sibling of handleInboundSms. Same brain (buildSystemPrompt + TOOLS
+ * + runTool), same per-business config, same persistence + owner alerts, so a
+ * booking from the website chat behaves exactly like one over text. The ONLY
+ * differences: the reply is returned over HTTP instead of sent via Telnyx, and
+ * a short addendum tells the agent it's on the website (not SMS) and that the
+ * visitor's name + mobile were already collected by the widget.
+ *
+ * Conversation is keyed by (businessId, customerPhone) - the SAME key as SMS -
+ * so a web visitor who later texts from the same number continues one unified
+ * thread, and every web chat shows up in /admin/conversations with its report
+ * link. The widget collects the mobile up front, which also gives the owner a
+ * real callback number even if the visitor bails mid-booking.
+ */
+export async function handleWebChat(args: {
+  businessId: string
+  customerPhone: string
+  customerName?: string
+  body: string
+}): Promise<{ ok: true; reply: string } | { ok: false; error: string }> {
+  const phone = normalisePhone(args.customerPhone)
+  if (!phone) return { ok: false, error: 'bad_phone' }
+
+  const { data: biz } = await supabaseAdmin
+    .from('businesses')
+    .select('id, business_name, retell_agent_id, dispatch_mode, timezone, notifications_phone, notification_phone, escalation_phone')
+    .eq('id', args.businessId)
+    .maybeSingle()
+  if (!biz) return { ok: false, error: 'business_not_found' }
+
+  const anthropicKey = process.env.ANTHROPIC_API_KEY
+  if (!anthropicKey) return { ok: false, error: 'no_anthropic_key' }
+  const anthropic = new Anthropic({ apiKey: anthropicKey })
+
+  const { id: conversationId, reportToken, isNew: isNewConversation } =
+    await getOrCreateConversation(args.businessId, phone)
+
+  // Per-visitor rate limit (same window/threshold as SMS). Silent reject.
+  const rateWindow = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const { count: recentInbound } = await supabaseAdmin
+    .from('sms_agent_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('conversation_id', conversationId)
+    .eq('direction', 'inbound')
+    .gte('created_at', rateWindow)
+  if ((recentInbound || 0) >= INBOUND_RATE_LIMIT_5MIN) {
+    logger.warn('web-chat rate limited', { phone, businessId: args.businessId })
+    return { ok: false, error: 'rate_limited' }
+  }
+
+  // Persist inbound first.
+  await supabaseAdmin.from('sms_agent_messages').insert({
+    conversation_id: conversationId,
+    business_id: args.businessId,
+    direction: 'inbound',
+    body: args.body,
+  })
+  await supabaseAdmin
+    .from('sms_conversations')
+    .update({ last_inbound_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', conversationId)
+
+  // Sliding 24h history.
+  const sinceIso = new Date(Date.now() - CONTEXT_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
+  const { data: history } = await supabaseAdmin
+    .from('sms_agent_messages')
+    .select('direction, body, tool_calls, created_at')
+    .eq('conversation_id', conversationId)
+    .gte('created_at', sinceIso)
+    .order('created_at', { ascending: true })
+
+  const messages: Anthropic.Messages.MessageParam[] = []
+  for (const row of (history || []) as any[]) {
+    if (row.direction === 'inbound') messages.push({ role: 'user', content: row.body })
+    else if (row.direction === 'outbound') messages.push({ role: 'assistant', content: row.body })
+  }
+  if (messages.length === 0) messages.push({ role: 'user', content: args.body })
+
+  const { lookupCallerHistory } = await import('./caller-history')
+  const callerHistory = await lookupCallerHistory(args.businessId, phone)
+
+  const businessName = (biz as any).business_name || 'us'
+  const basePrompt = await buildSystemPrompt({
+    businessId: args.businessId,
+    businessName,
+    customerPhone: phone,
+    timezone: (biz as any).timezone || 'America/New_York',
+    dispatchMode: !!(biz as any).dispatch_mode,
+    customerName: (args.customerName || '').trim() || callerHistory.caller_name,
+    customerEmail: callerHistory.customer_email,
+    hasEmailOnFile: callerHistory.has_email_on_file === 'true',
+  })
+  const systemPrompt = `${basePrompt}
+
+CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
+- You are NOT on SMS or a phone call. You are the live chat widget on ${businessName}'s website. Ignore any instruction above that says "over SMS", "plain SMS", or "you're texting".
+- The visitor ALREADY gave their name and mobile number through the chat form before this started (shown above as the customer on file / customer phone). Do NOT ask for their phone number again, and do not ask their name if it's on file.
+- Open warmly, answer their questions, and book or dispatch exactly as you would over text. Keep replies short, friendly, and in plain text (no markdown, no asterisks).`
+
+  let reply: string | null = null
+  const collectedToolCalls: any[] = []
+  let outcomeKind: 'booked' | 'dispatch' | null = null
+  let usageInTokens = 0
+  let usageOutTokens = 0
+  for (let loop = 0; loop < MAX_TOOL_LOOPS; loop++) {
+    const resp = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 800,
+      system: systemPrompt,
+      tools: TOOLS,
+      messages,
+    })
+    usageInTokens += resp.usage?.input_tokens || 0
+    usageOutTokens += resp.usage?.output_tokens || 0
+
+    let say = ''
+    const toolUses: any[] = []
+    for (const block of resp.content) {
+      if (block.type === 'text') say += (say ? ' ' : '') + block.text
+      if (block.type === 'tool_use') toolUses.push(block)
+    }
+    messages.push({ role: 'assistant', content: resp.content as any })
+
+    if (toolUses.length === 0) {
+      reply = say.trim() || null
+      break
+    }
+
+    const toolResults: any[] = []
+    for (const tu of toolUses) {
+      const result = await runTool({
+        name: tu.name,
+        args: tu.input || {},
+        businessId: args.businessId,
+        retellAgentId: (biz as any).retell_agent_id || null,
+        customerPhone: phone,
+      })
+      collectedToolCalls.push({ name: tu.name, args: tu.input, result })
+      if (tu.name === 'book_appointment' && (result as any)?.success === true) outcomeKind = 'booked'
+      if (tu.name === 'send_dispatch_request' && ((result as any)?.ok === true || (result as any)?.success === true)) {
+        outcomeKind = 'dispatch'
+      }
+      toolResults.push({
+        type: 'tool_result',
+        tool_use_id: tu.id,
+        content: typeof result === 'string' ? result : JSON.stringify(result),
+      })
+    }
+    messages.push({ role: 'user', content: toolResults })
+  }
+
+  if (!reply) reply = 'Got it - someone will get back to you shortly.'
+  if (reply.length > 1500) reply = reply.slice(0, 1497) + '...'
+
+  // Persist outbound (no Telnyx send - the reply goes back over HTTP).
+  await supabaseAdmin.from('sms_agent_messages').insert({
+    conversation_id: conversationId,
+    business_id: args.businessId,
+    direction: 'outbound',
+    body: reply,
+    tool_calls: collectedToolCalls.length ? collectedToolCalls : null,
+  })
+  await supabaseAdmin
+    .from('sms_conversations')
+    .update({ last_outbound_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', conversationId)
+
+  // Cost-to-serve: only the Anthropic tokens (no SMS segment cost on web).
+  if (usageInTokens > 0 || usageOutTokens > 0) {
+    void recordUsageCost({
+      businessId: args.businessId,
+      provider: 'anthropic',
+      kind: 'llm',
+      amountCents: anthropicCostCents(usageInTokens, usageOutTokens),
+      quantity: usageInTokens + usageOutTokens,
+      unit: 'token',
+      refType: 'message',
+      refId: `llm:web:${conversationId}:${Date.now()}`,
+      metadata: { input_tokens: usageInTokens, output_tokens: usageOutTokens, model: MODEL, channel: 'web' },
+    })
+  }
+
+  // Same alerts as SMS: admin on a brand-new thread, admin + owner on outcomes.
+  const ownerPhone = (biz as any).notifications_phone || (biz as any).notification_phone || (biz as any).escalation_phone || null
+  if (isNewConversation) {
+    void alertAdminTextToBook({
+      kind: 'new', businessId: args.businessId, businessName, customerPhone: phone, reportToken, preview: args.body,
+    })
+  }
+  if (outcomeKind) {
+    void alertAdminTextToBook({
+      kind: outcomeKind, businessId: args.businessId, businessName, customerPhone: phone, reportToken, ownerPhone,
+    })
+  }
+
+  return { ok: true, reply }
+}
+
 async function getOrCreateConversation(
   businessId: string,
   customerPhone: string,
