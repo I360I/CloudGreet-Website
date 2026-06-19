@@ -1,156 +1,140 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { X, PaperPlaneRight } from '@phosphor-icons/react'
 
-type Msg = { role: 'user' | 'assistant'; text: string }
+type Msg = { role: 'user' | 'assistant'; content: string }
 
-const ACCENT = '#2563eb'
+// Quick-reply chips (transport-flavored for Smart Ride, the first tenant).
+const QUICK = ['Book a ride', 'Airport pickup quote', 'What areas do you serve?']
 
-// Inline styles throughout so the widget renders identically no matter what
-// CSS the host WordPress theme ships - the iframe gives us a clean document,
-// and we don't rely on Tailwind being present at this route.
-const S = {
-  page: { display: 'flex', flexDirection: 'column', height: '100vh', background: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', color: '#111827' } as const,
-  header: { display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', borderBottom: '1px solid #eceef2', flexShrink: 0 } as const,
-  dot: { width: 8, height: 8, borderRadius: 999, background: '#22c55e', boxShadow: '0 0 0 3px rgba(34,197,94,0.18)' } as const,
-  body: { flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10, background: '#f7f8fa' } as const,
-  inputBar: { display: 'flex', gap: 8, padding: '12px', borderTop: '1px solid #eceef2', flexShrink: 0, background: '#fff' } as const,
-  input: { flex: 1, border: '1px solid #d8dce2', borderRadius: 10, padding: '10px 12px', fontSize: 15, outline: 'none', fontFamily: 'inherit', color: '#111827' } as const,
-  send: { border: 'none', background: ACCENT, color: '#fff', borderRadius: 10, padding: '0 16px', fontSize: 15, fontWeight: 600, cursor: 'pointer' } as const,
-  poweredBy: { textAlign: 'center', fontSize: 11, color: '#9aa3af', padding: '6px 0 8px' } as const,
-}
-
-function bubbleStyle(role: 'user' | 'assistant'): React.CSSProperties {
-  const base: React.CSSProperties = {
-    maxWidth: '82%', padding: '9px 12px', borderRadius: 14, fontSize: 14.5, lineHeight: 1.45, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-  }
-  return role === 'user'
-    ? { ...base, alignSelf: 'flex-end', background: ACCENT, color: '#fff', borderBottomRightRadius: 4 }
-    : { ...base, alignSelf: 'flex-start', background: '#fff', color: '#111827', border: '1px solid #e7e9ee', borderBottomLeftRadius: 4 }
-}
-
-export default function EmbedChat({ businessId, name }: { businessId: string; name: string }) {
-  const [phase, setPhase] = useState<'intro' | 'chat'>('intro')
-  const [visitorName, setVisitorName] = useState('')
-  const [visitorPhone, setVisitorPhone] = useState('')
-  const [formError, setFormError] = useState('')
-  const [messages, setMessages] = useState<Msg[]>([])
-  const [draft, setDraft] = useState('')
-  const [sending, setSending] = useState(false)
-  const bodyRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  // Remember the visitor so they skip the intro next time.
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(`cg_embed_${businessId}`) || 'null')
-      if (saved?.name && saved?.phone) {
-        setVisitorName(saved.name); setVisitorPhone(saved.phone)
-        setPhase('chat')
-        setMessages([{ role: 'assistant', text: `Hey${saved.name ? ' ' + saved.name.split(' ')[0] : ''}, welcome back to ${name}. How can I help?` }])
-      }
-    } catch { /* ignore */ }
-  }, [businessId, name])
-
-  useEffect(() => {
-    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
-  }, [messages, sending])
-
-  const startChat = (e: React.FormEvent) => {
-    e.preventDefault()
-    const digits = visitorPhone.replace(/\D/g, '')
-    if (!visitorName.trim()) { setFormError('Please enter your name.'); return }
-    if (digits.length !== 10 && !(digits.length === 11 && digits.startsWith('1'))) {
-      setFormError('Please enter a valid US mobile number.'); return
+function getSessionId(businessId: string): string {
+  const key = `cg_embed_sess_${businessId}`
+  try {
+    let id = localStorage.getItem(key)
+    if (!id) {
+      id = (crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`)
+      localStorage.setItem(key, id)
     }
-    setFormError('')
-    try { localStorage.setItem(`cg_embed_${businessId}`, JSON.stringify({ name: visitorName.trim(), phone: visitorPhone })) } catch { /* ignore */ }
-    setPhase('chat')
-    setMessages([{ role: 'assistant', text: `Hi ${visitorName.trim().split(' ')[0]}! Thanks for reaching out to ${name}. What can I help you with?` }])
-    setTimeout(() => inputRef.current?.focus(), 50)
+    return id
+  } catch {
+    return `${Date.now()}-${Math.random().toString(36).slice(2)}`
   }
+}
 
-  const send = async () => {
-    const text = draft.trim()
-    if (!text || sending) return
-    setDraft('')
-    setMessages((m) => [...m, { role: 'user', text }])
-    setSending(true)
+// Matches the look of the landing ChatWidget: dark header, dark user bubbles,
+// white assistant bubbles, typing dots, pill input + dark send button. Renders
+// as the full panel inside the widget iframe (no intro form - it just chats).
+export default function EmbedChat({ businessId, name }: { businessId: string; name: string }) {
+  const greeting: Msg = {
+    role: 'assistant',
+    content: `Hi! Thanks for visiting ${name}. I can answer questions and get you booked. How can I help?`,
+  }
+  const [messages, setMessages] = useState<Msg[]>([greeting])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const sessionRef = useRef<string>('')
+
+  useEffect(() => { sessionRef.current = getSessionId(businessId) }, [businessId])
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [messages, loading])
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 200) }, [])
+
+  const send = async (override?: string) => {
+    const text = (override ?? input).trim()
+    if (!text || loading) return
+    setMessages((m) => [...m, { role: 'user', content: text }])
+    setInput('')
+    setLoading(true)
     try {
       const r = await fetch('/api/embed/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ businessId, name: visitorName, phone: visitorPhone, message: text }),
+        body: JSON.stringify({ businessId, sessionId: sessionRef.current, message: text }),
       })
       const j = await r.json().catch(() => ({}))
       const reply = r.ok ? (j.reply || 'Got it.') : (j.error || 'Sorry, I hit a snag. Please try again.')
-      setMessages((m) => [...m, { role: 'assistant', text: reply }])
+      setMessages((m) => [...m, { role: 'assistant', content: reply }])
     } catch {
-      setMessages((m) => [...m, { role: 'assistant', text: 'Connection issue. Please try again in a moment.' }])
+      setMessages((m) => [...m, { role: 'assistant', content: 'Sorry, I lost connection. Try again in a moment.' }])
     } finally {
-      setSending(false)
+      setLoading(false)
       setTimeout(() => inputRef.current?.focus(), 50)
     }
   }
 
+  // Closing the panel is owned by the launcher (widget.js) on the host page;
+  // tell it to close via postMessage when the visitor taps the X.
+  const close = () => { try { window.parent?.postMessage({ type: 'cg-widget-close' }, '*') } catch { /* ignore */ } }
+
+  const showChips = messages.length <= 1 && !loading
+
   return (
-    <div style={S.page}>
-      <div style={S.header}>
-        <span style={S.dot} />
-        <div style={{ lineHeight: 1.25 }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
-          <div style={{ fontSize: 12, color: '#6b7280' }}>Online now, replies instantly</div>
+    <div className="flex h-screen flex-col bg-white">
+      {/* Header */}
+      <div className="relative flex items-center justify-between bg-[#0a0a0b] px-5 py-4 text-white">
+        <div>
+          <div className="text-[15px] font-semibold tracking-tight">{name}</div>
+          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-white/55">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_2px_rgba(52,211,153,0.5)]" /> Online · replies in seconds
+          </div>
         </div>
+        <button type="button" onClick={close} aria-label="Close" className="-mr-1.5 rounded-full p-1.5 text-white/50 transition-colors hover:bg-white/10 hover:text-white">
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
-      {phase === 'intro' ? (
-        <form onSubmit={startChat} style={{ ...S.body, justifyContent: 'flex-start', gap: 12 }}>
-          <div style={{ ...bubbleStyle('assistant'), maxWidth: '100%' }}>
-            Hi! I&apos;m the {name} assistant. I can answer questions and book you in. First, who am I chatting with?
+      {/* Messages */}
+      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-white px-4 py-4">
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[84%] whitespace-pre-wrap px-3.5 py-2.5 text-sm leading-relaxed ${
+              m.role === 'user'
+                ? 'rounded-2xl rounded-br-md bg-[#0a0a0b] text-white'
+                : 'rounded-2xl rounded-bl-md border border-black/[0.08] bg-white text-[#101015] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+            }`}>
+              {m.content}
+            </div>
           </div>
-          <input
-            style={S.input}
-            placeholder="Your name"
-            value={visitorName}
-            onChange={(e) => setVisitorName(e.target.value)}
-            autoFocus
-          />
-          <input
-            style={S.input}
-            placeholder="Mobile number (so we can text you back)"
-            inputMode="tel"
-            value={visitorPhone}
-            onChange={(e) => setVisitorPhone(e.target.value)}
-          />
-          {formError && <div style={{ color: '#dc2626', fontSize: 13 }}>{formError}</div>}
-          <button type="submit" style={{ ...S.send, padding: '11px 16px' }}>Start chat</button>
-          <div style={{ fontSize: 11.5, color: '#9aa3af' }}>We only use your number to follow up about your request.</div>
-        </form>
-      ) : (
-        <>
-          <div ref={bodyRef} style={S.body}>
-            {messages.map((m, i) => (
-              <div key={i} style={bubbleStyle(m.role)}>{m.text}</div>
+        ))}
+
+        {loading && (
+          <div className="flex justify-start">
+            <div className="flex items-center gap-1 rounded-2xl rounded-bl-md border border-black/[0.08] bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.2s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.1s]" />
+              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400" />
+            </div>
+          </div>
+        )}
+
+        {showChips && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {QUICK.map((q) => (
+              <button key={q} type="button" onClick={() => send(q)} className="rounded-full border border-black/[0.12] bg-white px-3 py-1.5 text-xs font-medium text-[#101015] transition-colors hover:border-black/25 hover:bg-black/[0.04]">
+                {q}
+              </button>
             ))}
-            {sending && (
-              <div style={{ ...bubbleStyle('assistant'), color: '#9aa3af' }}>typing…</div>
-            )}
           </div>
-          <div style={S.inputBar}>
-            <input
-              ref={inputRef}
-              style={S.input}
-              placeholder="Type your message…"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-              disabled={sending}
-            />
-            <button style={{ ...S.send, opacity: sending || !draft.trim() ? 0.5 : 1 }} onClick={send} disabled={sending || !draft.trim()}>Send</button>
-          </div>
-        </>
-      )}
-      <div style={S.poweredBy}>Powered by CloudGreet</div>
+        )}
+      </div>
+
+      {/* Input */}
+      <form onSubmit={(e) => { e.preventDefault(); send() }} className="flex items-center gap-2 border-t border-black/[0.08] bg-white p-3">
+        <input
+          ref={inputRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type a message..."
+          className="min-w-0 flex-1 rounded-full border border-black/10 bg-[#fafafa] px-4 py-2.5 text-sm text-[#101015] outline-none transition-colors placeholder:text-gray-400 focus:border-black/30 focus:bg-white"
+        />
+        <button type="submit" disabled={loading || !input.trim()} aria-label="Send" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0a0a0b] text-white transition-all hover:bg-black disabled:opacity-30">
+          <PaperPlaneRight className="h-4 w-4" weight="fill" />
+        </button>
+      </form>
     </div>
   )
 }

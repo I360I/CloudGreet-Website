@@ -437,12 +437,17 @@ export async function handleInboundSms(args: {
  */
 export async function handleWebChat(args: {
   businessId: string
-  customerPhone: string
+  sessionId: string
   customerName?: string
   body: string
 }): Promise<{ ok: true; reply: string } | { ok: false; error: string }> {
-  const phone = normalisePhone(args.customerPhone)
-  if (!phone) return { ok: false, error: 'bad_phone' }
+  // Web visitors have no phone up front (no intro form - it just chats like the
+  // landing widget), so we key the conversation by a synthetic per-browser
+  // session id. The agent collects the real name + mobile in-conversation when
+  // it's actually booking/dispatching, and passes them in the tool args.
+  const sessionId = String(args.sessionId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64)
+  if (!sessionId) return { ok: false, error: 'bad_session' }
+  const phone = `web-${sessionId}`
 
   const { data: biz } = await supabaseAdmin
     .from('businesses')
@@ -517,8 +522,10 @@ export async function handleWebChat(args: {
 
 CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
 - You are NOT on SMS or a phone call. You are the live chat widget on ${businessName}'s website. Ignore any instruction above that says "over SMS", "plain SMS", or "you're texting".
-- The visitor ALREADY gave their name and mobile number through the chat form before this started (shown above as the customer on file / customer phone). Do NOT ask for their phone number again, and do not ask their name if it's on file.
-- Open warmly, answer their questions, and book or dispatch exactly as you would over text. Keep replies short, friendly, and in plain text (no markdown, no asterisks).`
+- IGNORE the "Customer phone" value shown above - it is an internal web session id, NOT a real phone number. You do NOT know the visitor's name or mobile number yet.
+- Just answer questions freely. You do NOT need any contact info to answer questions or give quotes.
+- BEFORE you book or dispatch (book_appointment / send_dispatch_request), you MUST collect the visitor's name AND mobile number, then pass that real mobile number in the tool's phone/customer_phone argument (never the session id). If you don't have their real mobile, ask for it first.
+- Open warmly, keep replies short, friendly, and in plain text (no markdown, no asterisks).`
 
   let reply: string | null = null
   const collectedToolCalls: any[] = []

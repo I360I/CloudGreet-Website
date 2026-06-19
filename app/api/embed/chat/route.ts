@@ -29,13 +29,6 @@ const CORS = {
 
 const since = (mins: number) => new Date(Date.now() - mins * 60_000).toISOString()
 
-function normUsPhone(raw: unknown): string | null {
-  const digits = String(raw || '').replace(/\D/g, '')
-  if (digits.length === 10) return '+1' + digits
-  if (digits.length === 11 && digits.startsWith('1')) return '+' + digits
-  return null
-}
-
 function json(obj: any, status = 200) {
   return NextResponse.json(obj, { status, headers: CORS })
 }
@@ -51,12 +44,12 @@ export async function POST(request: NextRequest) {
   if (!body) return json({ error: 'Invalid request.' }, 400)
 
   const businessId = String(body.businessId || '').trim()
+  const sessionId = String(body.sessionId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64)
   const name = String(body.name || '').trim().slice(0, 80)
-  const phone = normUsPhone(body.phone)
   const message = String(body.message || '').trim().slice(0, 1500)
 
   if (!businessId) return json({ error: 'Missing businessId.' }, 400)
-  if (!phone) return json({ error: 'A valid US mobile number is required.' }, 400)
+  if (!sessionId) return json({ error: 'Missing session.' }, 400)
   if (!message) return json({ error: 'Message is empty.' }, 400)
 
   // Per-IP throttle (reuses the landing chat's web_chat_log table).
@@ -71,7 +64,7 @@ export async function POST(request: NextRequest) {
   } catch { /* if the log table is unavailable, fall through to the phone-level limit */ }
 
   try {
-    const res = await handleWebChat({ businessId, customerPhone: phone, customerName: name || undefined, body: message })
+    const res = await handleWebChat({ businessId, sessionId, customerName: name || undefined, body: message })
     if (res.ok) return json({ reply: res.reply })
     const err = (res as { error: string }).error
     if (err === 'rate_limited') return json({ error: 'You are sending messages too fast. One moment.' }, 429)
