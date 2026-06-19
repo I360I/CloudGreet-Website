@@ -126,6 +126,18 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Embeddable widget surfaces (the website chat). These must load on
+  // customer sites: the /embed page is iframed cross-origin and widget.js is
+  // pulled in as a cross-origin <script>, so they must NOT get the
+  // X-Frame-Options: DENY / same-origin CORP that the blocks below stamp on
+  // everything else. Allow cross-origin and bail early.
+  if (pathname === '/widget.js' || pathname === '/embed' || pathname.startsWith('/embed/')) {
+    const res = NextResponse.next()
+    res.headers.set('Cross-Origin-Resource-Policy', 'cross-origin')
+    res.headers.set('X-Content-Type-Options', 'nosniff')
+    return res
+  }
+
   // Skip middleware for public routes
   if (
     pathname.startsWith('/_next') ||

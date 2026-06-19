@@ -106,7 +106,29 @@ const nextConfig = {
         ]
       },
       {
-        source: '/(.*)',
+        // Embeddable widget surfaces must load on customer websites: the /embed
+        // iframe needs to be framable cross-origin, and widget.js is loaded
+        // cross-origin as a <script>. These get frame-ancestors * + a
+        // cross-origin resource policy instead of the global DENY below.
+        source: '/embed/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
+      },
+      {
+        source: '/widget.js',
+        headers: [
+          { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
+          { key: 'Cache-Control', value: 'public, max-age=600' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+        ],
+      },
+      {
+        // Everything EXCEPT the embed surfaces above (negative lookahead) gets
+        // the strict security headers, including X-Frame-Options: DENY.
+        source: '/((?!embed/|widget\\.js).*)',
         headers: [
           {
             key: 'Content-Security-Policy',
