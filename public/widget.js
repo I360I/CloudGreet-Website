@@ -38,13 +38,14 @@
   style.textContent = '@keyframes cgPing{75%,100%{transform:scale(2);opacity:0}}';
   document.head.appendChild(style);
 
-  // Launcher button (white circle, blue glow).
+  // Launcher button (green circle, white chat icon).
+  var GREEN = '#16a34a';
   var btn = document.createElement('button');
   btn.setAttribute('aria-label', label);
   btn.style.cssText = [
     'position:fixed', 'bottom:20px', 'right:20px', 'width:56px', 'height:56px',
-    'border-radius:50%', 'border:1px solid rgba(0,0,0,0.05)', 'cursor:pointer', 'background:#fff',
-    'box-shadow:0 18px 44px -10px rgba(37,99,235,0.55)', 'z-index:' + (Z + 1),
+    'border-radius:50%', 'border:none', 'cursor:pointer', 'background:' + GREEN,
+    'box-shadow:0 14px 36px -8px rgba(22,163,74,0.55)', 'z-index:' + (Z + 1),
     'display:flex', 'align-items:center', 'justify-content:center', 'padding:0', 'overflow:visible',
     'transition:transform .15s ease'
   ].join(';');
@@ -53,20 +54,13 @@
 
   // Ping ring (only while closed).
   var ping = document.createElement('span');
-  ping.style.cssText = 'position:absolute;inset:0;border-radius:50%;background:rgba(59,130,246,0.3);animation:cgPing 2.5s cubic-bezier(0,0,0.2,1) infinite;';
+  ping.style.cssText = 'position:absolute;inset:0;border-radius:50%;background:rgba(34,197,94,0.45);animation:cgPing 2.5s cubic-bezier(0,0,0.2,1) infinite;';
 
-  // Avatar (closed state).
-  var avatarWrap = document.createElement('span');
-  avatarWrap.style.cssText = 'position:relative;display:block;width:100%;height:100%;border-radius:50%;overflow:hidden;';
-  var avatar = document.createElement('img');
-  avatar.src = origin + '/chat-agent.png';
-  avatar.alt = '';
-  avatar.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:top;display:block;';
-  avatarWrap.appendChild(avatar);
+  // White chat-bubble icon (closed state) - inline SVG, no external image.
+  var chatIcon = '<span style="position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>';
+  var closeIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 
-  var closeIcon = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-
-  function renderClosed() { btn.innerHTML = ''; btn.appendChild(ping); btn.appendChild(avatarWrap); }
+  function renderClosed() { btn.innerHTML = ''; btn.appendChild(ping); btn.insertAdjacentHTML('beforeend', chatIcon); }
   function renderOpen() { btn.innerHTML = closeIcon; }
   renderClosed();
 
