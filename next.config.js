@@ -115,6 +115,9 @@ const nextConfig = {
           { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
+          // Per-business, dynamic page: never let any CDN/browser cache it, so a
+          // copy rendered mid-deploy (or for another business) can't be reused.
+          { key: 'Cache-Control', value: 'no-store, must-revalidate' },
         ],
       },
       {
