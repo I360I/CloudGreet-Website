@@ -29,7 +29,7 @@
 
   var label = script.getAttribute('data-label') || 'Chat with us';
   var ringText = script.getAttribute('data-ring');
-  if (ringText === null) ringText = 'BOOK A RIDE · CHAT · ';
+  if (ringText === null) ringText = 'BOOK A RIDE|CHAT';
   var origin = (function () {
     try { return new URL(script.src).origin; } catch (e) { return 'https://cloudgreet.com'; }
   })();
@@ -54,9 +54,16 @@
   // Curved rotating text ring (green text on a circular path, repeated to fill).
   var ring = document.createElement('div');
   ring.style.cssText = 'position:absolute;inset:0;animation:cgSpin 34s linear infinite;transition:opacity .2s ease;';
-  // One pass is enough - textLength stretches it evenly around the whole
-  // circle, so the letters end up nicely tracked out (doubled only if short).
-  var repeated = ringText.length < 16 ? ringText + ringText : ringText;
+  // Build a balanced ring string from "TOP|BOTTOM": a dot + each word padded to
+  // equal length, so the two separator dots land EXACTLY opposite each other
+  // (top word centered on the top arc, bottom word centered on the bottom).
+  // textLength then stretches the whole thing evenly around the full circle.
+  function cgPad(s, L) { var t = L - s.length; if (t <= 0) return s; var l = Math.floor(t / 2); return new Array(l + 1).join(' ') + s + new Array(t - l + 1).join(' '); }
+  var rparts = ringText.split('|');
+  var rTop = (rparts[0] || '').trim();
+  var rBot = (rparts.length > 1 ? rparts[1] : '').trim();
+  var rLen = Math.max(rTop.length, rBot.length);
+  var repeated = rBot ? ('·' + cgPad(rTop, rLen) + '·' + cgPad(rBot, rLen)) : rTop;
   ring.innerHTML =
     '<svg width="116" height="116" viewBox="0 0 116 116" style="display:block;overflow:visible">' +
     '<defs><path id="cgRingPath" d="M58,58 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs>' +
