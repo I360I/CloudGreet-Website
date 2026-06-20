@@ -27,6 +27,10 @@
   if (!businessId) { console.error('[CloudGreet] widget.js is missing data-business="<id>"'); return; }
 
   var label = script.getAttribute('data-label') || 'Chat with us';
+  // Text shown in a little bubble next to the launcher so visitors know what it
+  // is. Override with data-greeting="..."; set data-greeting="" to hide it.
+  var greeting = script.getAttribute('data-greeting');
+  if (greeting === null) greeting = 'Need a ride? Chat with us';
   var origin = (function () {
     try { return new URL(script.src).origin; } catch (e) { return 'https://cloudgreet.com'; }
   })();
@@ -82,10 +86,51 @@
   iframe.setAttribute('allow', 'clipboard-write');
   panel.appendChild(iframe);
 
+  // Greeting label next to the launcher ("Need a ride? Chat with us"). Floats
+  // to the left of the button, dismissable, and remembers dismissal so it
+  // doesn't nag on every page.
+  var labelEl = null;
+  if (greeting) {
+    labelEl = document.createElement('div');
+    labelEl.style.cssText = [
+      'position:fixed', 'bottom:32px', 'right:88px', 'max-width:230px',
+      'background:#fff', 'color:#111827', 'padding:10px 12px 10px 14px', 'border-radius:14px',
+      'box-shadow:0 10px 30px -8px rgba(0,0,0,0.28)', 'border:1px solid rgba(0,0,0,0.06)',
+      'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif',
+      'font-size:14px', 'line-height:1.3', 'font-weight:500', 'cursor:pointer', 'z-index:' + Z,
+      'display:flex', 'align-items:center', 'gap:8px',
+      'opacity:0', 'transform:translateX(8px)', 'pointer-events:none',
+      'transition:opacity .25s ease, transform .25s ease'
+    ].join(';');
+    var labelText = document.createElement('span');
+    labelText.textContent = greeting;
+    var labelClose = document.createElement('span');
+    labelClose.setAttribute('aria-label', 'Dismiss');
+    labelClose.style.cssText = 'flex-shrink:0;color:#9aa3af;font-size:16px;line-height:1;padding:0 2px;';
+    labelClose.innerHTML = '&times;';
+    labelEl.appendChild(labelText);
+    labelEl.appendChild(labelClose);
+  }
+  function showLabel() {
+    if (!labelEl) return;
+    try { if (localStorage.getItem('cg_label_dismissed_' + businessId)) return; } catch (e) {}
+    labelEl.style.opacity = '1';
+    labelEl.style.transform = 'translateX(0)';
+    labelEl.style.pointerEvents = 'auto';
+  }
+  function hideLabel(remember) {
+    if (!labelEl) return;
+    labelEl.style.opacity = '0';
+    labelEl.style.transform = 'translateX(8px)';
+    labelEl.style.pointerEvents = 'none';
+    if (remember) { try { localStorage.setItem('cg_label_dismissed_' + businessId, '1'); } catch (e) {} }
+  }
+
   var open = false;
   function setOpen(v) {
     open = v;
     if (open) {
+      hideLabel(true);
       panel.style.opacity = '1';
       panel.style.transform = 'translateY(0) scale(1)';
       panel.style.pointerEvents = 'auto';
@@ -98,6 +143,10 @@
     }
   }
   btn.addEventListener('click', function () { setOpen(!open); });
+  if (labelEl) {
+    labelText.addEventListener('click', function () { setOpen(true); });
+    labelClose.addEventListener('click', function (e) { e.stopPropagation(); hideLabel(true); });
+  }
 
   // The chat UI inside the iframe can ask us to close (the X in its header).
   window.addEventListener('message', function (e) {
@@ -106,7 +155,9 @@
 
   function mount() {
     document.body.appendChild(panel);
+    if (labelEl) document.body.appendChild(labelEl);
     document.body.appendChild(btn);
+    if (labelEl) setTimeout(function () { if (!open) showLabel(); }, 1400);
   }
   if (document.body) mount();
   else document.addEventListener('DOMContentLoaded', mount);
