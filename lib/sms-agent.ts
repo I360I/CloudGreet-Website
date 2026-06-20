@@ -31,7 +31,7 @@ const MAX_TOOL_LOOPS = 6
 // both by texting in a tight loop, so we drop silently once they
 // exceed sane human-pace limits.
 const INBOUND_RATE_LIMIT_5MIN = 10
-const DISPATCH_CAP_PER_HOUR = 3
+const DISPATCH_CAP_PER_HOUR = 2
 
 const TOOLS: Anthropic.Messages.Tool[] = [
   {
@@ -314,6 +314,7 @@ export async function handleInboundSms(args: {
         businessId: args.businessId,
         retellAgentId: (biz as any).retell_agent_id || null,
         customerPhone: fromPhone,
+        conversationId,
       })
       collectedToolCalls.push({ name: tu.name, args: tu.input, result })
       if (tu.name === 'book_appointment' && (result as any)?.success === true) outcomeKind = 'booked'
@@ -564,6 +565,7 @@ CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
         businessId: args.businessId,
         retellAgentId: (biz as any).retell_agent_id || null,
         customerPhone: phone,
+        conversationId,
       })
       collectedToolCalls.push({ name: tu.name, args: tu.input, result })
       if (tu.name === 'book_appointment' && (result as any)?.success === true) outcomeKind = 'booked'
@@ -875,6 +877,7 @@ async function runTool(args: {
   businessId: string
   retellAgentId: string | null
   customerPhone: string
+  conversationId?: string
 }): Promise<any> {
   // Pure-function tools handled inline - no need for an HTTP round-trip.
   if (args.name === 'lookup_drive_time') {
@@ -896,11 +899,38 @@ async function runTool(args: {
     })
   }
   if (args.name === 'send_dispatch_request') {
-    // Per-sender dispatch cap. Caps Steve's exposure to a single
-    // customer hammering the dispatch button. We count send_dispatch_
-    // request entries inside this customer's tool_calls history over
-    // the last hour. The agent gets a clear error so it can tell the
-    // customer to wait instead of silently failing.
+    // Hard conversation-level guard: one dispatch per conversation, full stop.
+    // The model prompt says not to re-dispatch, but the model ignores it when
+    // follow-up messages arrive (e.g. customer gives email or says "thx" and
+    // the agent re-calls dispatch). This check is the authoritative gate.
+    if (args.conversationId) {
+      const { data: convMsgs } = await supabaseAdmin
+        .from('sms_agent_messages')
+        .select('tool_calls')
+        .eq('conversation_id', args.conversationId)
+        .not('tool_calls', 'is', null)
+      const alreadyDispatched = (convMsgs || []).some((row: any) =>
+        Array.isArray(row.tool_calls) &&
+        row.tool_calls.some((tc: any) =>
+          tc?.name === 'send_dispatch_request' &&
+          (tc?.result?.ok === true || tc?.result?.success === true)
+        )
+      )
+      if (alreadyDispatched) {
+        logger.warn('sms dispatch already sent in this conversation', {
+          conversationId: args.conversationId, customerPhone: args.customerPhone,
+        })
+        return {
+          ok: false,
+          error: 'already_dispatched_in_conversation',
+          detail: 'A dispatch was already sent to Steve for this conversation. Do NOT send another. Just acknowledge the customer and let them know Steve will be in touch.',
+        }
+      }
+    }
+
+    // Hourly backstop across conversations (guards against a customer opening
+    // fresh conversations to spam dispatches — cap now set to 2 to allow a
+    // round-trip booking in two separate chats, but block obvious abuse).
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const { data: recentMsgs } = await supabaseAdmin
       .from('sms_agent_messages')
@@ -913,14 +943,13 @@ async function runTool(args: {
       const tcs = Array.isArray(row.tool_calls) ? row.tool_calls : []
       for (const tc of tcs) {
         if (tc?.name === 'send_dispatch_request') {
-          // Only count dispatches for this sender (look at the args).
           const phone = tc?.args?.customer_phone
           if (phone === args.customerPhone) dispatchCount++
         }
       }
     }
     if (dispatchCount >= DISPATCH_CAP_PER_HOUR) {
-      logger.warn('sms dispatch cap hit', {
+      logger.warn('sms dispatch hourly cap hit', {
         customerPhone: args.customerPhone, dispatchCount,
       })
       return {
