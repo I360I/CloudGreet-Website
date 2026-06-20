@@ -29,7 +29,7 @@
 
   var label = script.getAttribute('data-label') || 'Chat with us';
   var ringText = script.getAttribute('data-ring');
-  if (ringText === null) ringText = 'BOOK A RIDE|CHAT';
+  if (ringText === null) ringText = 'BOOK A RIDE · CHAT · ';
   var origin = (function () {
     try { return new URL(script.src).origin; } catch (e) { return 'https://cloudgreet.com'; }
   })();
@@ -54,29 +54,17 @@
   // Curved rotating text ring (green text on a circular path, repeated to fill).
   var ring = document.createElement('div');
   ring.style.cssText = 'position:absolute;inset:0;animation:cgSpin 34s linear infinite;transition:opacity .2s ease;';
-  // "TOP|BOTTOM" -> top word centered on the top arc (25%), bottom word centered
-  // on the bottom arc (75%), and a dot pinned to each side (0% = 9 o'clock,
-  // 50% = 3 o'clock). text-anchor=middle centers each piece exactly on its
-  // offset, so it's perfectly symmetric regardless of word lengths.
-  function cgEsc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-  var rparts = ringText.split('|');
-  var rTop = (rparts[0] || '').trim();
-  var rBot = (rparts.length > 1 ? rparts[1] : '').trim();
-  var FONT = '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif';
-  var svg =
+  // One pass is enough - textLength stretches it evenly around the whole
+  // circle, so the letters end up nicely tracked out (doubled only if short).
+  var repeated = ringText.length < 16 ? ringText + ringText : ringText;
+  ring.innerHTML =
     '<svg width="116" height="116" viewBox="0 0 116 116" style="display:block;overflow:visible">' +
     '<defs><path id="cgRingPath" d="M58,58 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs>' +
-    '<g font-family="' + FONT + '" font-weight="800" fill="' + GREEN + '" ' +
-    'stroke="#ffffff" stroke-width="3" paint-order="stroke" stroke-linejoin="round" text-anchor="middle">' +
-    '<text font-size="13" letter-spacing="1.5"><textPath href="#cgRingPath" startOffset="25%">' + cgEsc(rTop) + '</textPath></text>';
-  if (rBot) {
-    svg +=
-      '<text font-size="13" letter-spacing="1.5"><textPath href="#cgRingPath" startOffset="75%">' + cgEsc(rBot) + '</textPath></text>' +
-      '<text font-size="17"><textPath href="#cgRingPath" startOffset="0%">·</textPath></text>' +
-      '<text font-size="17"><textPath href="#cgRingPath" startOffset="50%">·</textPath></text>';
-  }
-  svg += '</g></svg>';
-  ring.innerHTML = svg;
+    '<text font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" ' +
+    'font-size="13" font-weight="800" letter-spacing="1.5" fill="' + GREEN + '" ' +
+    'stroke="#ffffff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">' +
+    '<textPath href="#cgRingPath" startOffset="0" textLength="289" lengthAdjust="spacing">' +
+    repeated + '</textPath></text></svg>';
 
   // Launcher button (green circle, white chat icon), centered in the ring.
   var btn = document.createElement('button');
