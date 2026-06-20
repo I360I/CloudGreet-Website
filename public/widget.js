@@ -54,17 +54,24 @@
   // Curved rotating text ring (green text on a circular path, repeated to fill).
   var ring = document.createElement('div');
   ring.style.cssText = 'position:absolute;inset:0;animation:cgSpin 34s linear infinite;transition:opacity .2s ease;';
-  // One pass is enough - textLength stretches it evenly around the whole
-  // circle, so the letters end up nicely tracked out (doubled only if short).
-  var repeated = ringText.length < 16 ? ringText + ringText : ringText;
+  // The words keep their EXACT positions (dots pulled out of the string so the
+  // letters don't move). Each dot is its own element positioned by an offset (%)
+  // around the circle - so a dot can be nudged to any precise spot by changing
+  // just DOT1 / DOT2, nothing else shifts.
+  var DOT1 = '57.5%'; // dot between RIDE and CHAT
+  var DOT2 = '90.5%'; // dot between CHAT and BOOK
+  var words = ringText.replace(/·/g, ' '); // same length -> letters stay put
+  var repeated = words.length < 16 ? words + words : words;
+  var FONT = '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif';
   ring.innerHTML =
     '<svg width="116" height="116" viewBox="0 0 116 116" style="display:block;overflow:visible">' +
     '<defs><path id="cgRingPath" d="M58,58 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs>' +
-    '<text font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif" ' +
-    'font-size="13" font-weight="800" letter-spacing="1.5" fill="' + GREEN + '" ' +
+    '<g font-family="' + FONT + '" font-weight="800" fill="' + GREEN + '" ' +
     'stroke="#ffffff" stroke-width="3" paint-order="stroke" stroke-linejoin="round">' +
-    '<textPath href="#cgRingPath" startOffset="0" textLength="289" lengthAdjust="spacing">' +
-    repeated + '</textPath></text></svg>';
+    '<text font-size="13" letter-spacing="1.5"><textPath href="#cgRingPath" startOffset="0" textLength="289" lengthAdjust="spacing">' + repeated + '</textPath></text>' +
+    '<text font-size="17" text-anchor="middle"><textPath href="#cgRingPath" startOffset="' + DOT1 + '">·</textPath></text>' +
+    '<text font-size="17" text-anchor="middle"><textPath href="#cgRingPath" startOffset="' + DOT2 + '">·</textPath></text>' +
+    '</g></svg>';
 
   // Launcher button (green circle, white chat icon), centered in the ring.
   var btn = document.createElement('button');
