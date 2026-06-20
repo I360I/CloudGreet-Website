@@ -124,7 +124,8 @@ const nextConfig = {
         source: '/widget.js',
         headers: [
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
-          { key: 'Cache-Control', value: 'public, max-age=600' },
+          // Short cache while we're iterating on the widget so changes show fast.
+          { key: 'Cache-Control', value: 'public, max-age=60' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
         ],
       },

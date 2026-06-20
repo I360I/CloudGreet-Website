@@ -54,8 +54,9 @@
   // Curved rotating text ring (green text on a circular path, repeated to fill).
   var ring = document.createElement('div');
   ring.style.cssText = 'position:absolute;inset:0;animation:cgSpin 16s linear infinite;transition:opacity .2s ease;';
-  var repeated = '';
-  while (repeated.length < 44) repeated += ringText;
+  // One pass is enough - textLength stretches it evenly around the whole
+  // circle, so the letters end up nicely tracked out (doubled only if short).
+  var repeated = ringText.length < 16 ? ringText + ringText : ringText;
   ring.innerHTML =
     '<svg width="116" height="116" viewBox="0 0 116 116" style="display:block;overflow:visible">' +
     '<defs><path id="cgRingPath" d="M58,58 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs>' +
