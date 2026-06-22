@@ -103,12 +103,12 @@ export async function GET(request: NextRequest) {
   // 4) Phone numbers bound to this agent
   let boundNumbers: string[] = []
   try {
-   const phonesRes = await fetch('https://api.retellai.com/list-phone-numbers', {
+   const phonesRes = await fetch('https://api.retellai.com/v2/list-phone-numbers', {
     headers: { Authorization: `Bearer ${apiKey}` },
     cache: 'no-store',
    })
    if (phonesRes.ok) {
-    const phones = (await phonesRes.json().catch(() => [])) as any[]
+    const phones = ((await phonesRes.json().catch(() => ({}))).items ?? []) as any[]
     boundNumbers = (Array.isArray(phones) ? phones : [])
      .filter((p) => p?.inbound_agent_id === agentId || p?.outbound_agent_id === agentId || p?.agent_id === agentId)
      .map((p) => p?.phone_number || p?.phone_number_pretty || '?')

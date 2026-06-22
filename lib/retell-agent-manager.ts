@@ -283,7 +283,7 @@ class RetellAgentManager {
     // version. Without this, phones pinned to a specific version_id
     // keep playing the old config no matter how many times we PATCH.
     try {
-      const phonesRes = await fetch('https://api.retellai.com/list-phone-numbers', {
+      const phonesRes = await fetch('https://api.retellai.com/v2/list-phone-numbers', {
         headers: { Authorization: `Bearer ${this.apiKey}` },
         cache: 'no-store',
       })
@@ -291,7 +291,7 @@ class RetellAgentManager {
         t(`list-phone-numbers ${phonesRes.status} - couldn't refresh phone bindings`)
         return
       }
-      const phones = (await phonesRes.json().catch(() => [])) as any[]
+      const phones = ((await phonesRes.json().catch(() => ({}))).items ?? []) as any[]
       const bound = (Array.isArray(phones) ? phones : []).filter(
         (p) =>
           p?.inbound_agent_id === retellAgentId ||
@@ -666,11 +666,11 @@ class RetellAgentManager {
           const verified = await verifyAgentRes.json().catch(() => ({}))
           t(`verify agent: voice_id=${verified?.voice_id ?? '∅'} voice_speed=${verified?.voice_speed ?? '∅'}`)
         }
-        const phoneListRes = await fetch('https://api.retellai.com/list-phone-numbers', {
+        const phoneListRes = await fetch('https://api.retellai.com/v2/list-phone-numbers', {
           headers: { Authorization: `Bearer ${this.apiKey}` },
         })
         if (phoneListRes.ok) {
-          const phones = await phoneListRes.json().catch(() => []) as any[]
+          const phones = ((await phoneListRes.json().catch(() => ({}))).items ?? []) as any[]
           const bound = (Array.isArray(phones) ? phones : []).filter(
             (p) =>
               p?.inbound_agent_id === agentData.retell_agent_id ||

@@ -112,11 +112,11 @@ export async function PUT(
     synced = true
     // Re-bind phones so the new analysis schema goes live.
     try {
-     const phones = await fetch('https://api.retellai.com/list-phone-numbers', {
+     const phones = await fetch('https://api.retellai.com/v2/list-phone-numbers', {
       headers: { Authorization: `Bearer ${apiKey}` },
      })
      if (phones.ok) {
-      const list = (await phones.json().catch(() => [])) as any[]
+      const list = ((await phones.json().catch(() => ({}))).items ?? []) as any[]
       for (const p of list) {
        const num = p.phone_number || p.phone_number_pretty
        if (!num) continue
