@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('blog_posts')
-    .select('id, slug, title, description, status, author, created_at, updated_at, published_at')
+    .select('id, slug, title, description, status, author, created_at, updated_at, published_at, scheduled_for')
     .order('updated_at', { ascending: false })
   if (error) {
     if (/blog_posts|does not exist/.test(error.message)) {
@@ -76,9 +76,11 @@ export async function POST(request: NextRequest) {
     slug = `${row.slug}-${i}`
   }
 
+  const scheduledFor = typeof body.scheduled_for === 'string' && body.scheduled_for ? body.scheduled_for : null
+
   const { data, error } = await supabaseAdmin
     .from('blog_posts')
-    .insert({ ...row, slug, status: 'draft' })
+    .insert({ ...row, slug, status: 'draft', scheduled_for: scheduledFor })
     .select('*')
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

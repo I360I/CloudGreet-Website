@@ -40,6 +40,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (body.status === 'published' || body.status === 'draft') {
     patch.status = body.status
     if (body.status === 'published' && !current.published_at) patch.published_at = new Date().toISOString()
+    if (body.status === 'published') patch.scheduled_for = null // clear schedule when manually publishing
+  }
+
+  // scheduled_for: ISO date string or null to clear
+  if ('scheduled_for' in body) {
+    patch.scheduled_for = body.scheduled_for || null
   }
 
   const { data, error } = await supabaseAdmin.from('blog_posts').update(patch).eq('id', params.id).select('*').single()
