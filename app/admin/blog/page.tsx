@@ -6,7 +6,7 @@ import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, RisingFade } from '../_components/ui'
 import {
   CircleNotch, Sparkle, ArrowSquareOut, TrashSimple,
-  PencilSimple, CaretLeft, CaretRight, CheckCircle, Clock, Plus,
+  PencilSimple, CaretLeft, CaretRight, CheckCircle, Clock, Plus, CalendarDots,
 } from '@phosphor-icons/react'
 
 type PostSummary = {
@@ -32,6 +32,9 @@ function fmt(d: string | null) {
   if (!d) return ''
   const dt = new Date(d)
   return isNaN(dt.getTime()) ? '' : dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -61,7 +64,7 @@ export default function AdminBlogPage() {
 
   // Calendar nav state
   const today = useMemo(() => new Date(), [])
-  const todayStr = useMemo(() => today.toISOString().slice(0, 10), [today])
+  const todayStr = useMemo(() => localDateStr(today), [today])
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
 
@@ -69,6 +72,14 @@ export default function AdminBlogPage() {
   const [generateDay, setGenerateDay] = useState<string | null>(null)
   const [topic, setTopic] = useState('')
   const [generating, setGenerating] = useState(false)
+
+  // Auto Schedule bulk generation
+  const [autoScheduleDays, setAutoScheduleDays] = useState(5)
+  type FillItem = { date: string; status: 'pending' | 'generating' | 'done' | 'error' }
+  const [fillQueue, setFillQueue] = useState<FillItem[]>([])
+  const [filling, setFilling] = useState(false)
+  const [fillStopped, setFillStopped] = useState(false)
+  const fillStopRef = useState<{ stop: boolean }>(() => ({ stop: false }))[0]
 
   const load = useCallback(async () => {
     try {
@@ -194,6 +205,56 @@ export default function AdminBlogPage() {
     finally { setBusy(false) }
   }
 
+  // Next N empty weekdays (Mon-Fri) with no existing post
+  const nextEmptyWeekdays = useCallback((count: number): string[] => {
+    const dates: string[] = []
+    const cursor = new Date(todayStr + 'T12:00:00')
+    let guard = 365
+    while (dates.length < count && guard-- > 0) {
+      const dow = cursor.getDay() // 0=Sun, 6=Sat
+      const d = localDateStr(cursor)
+      if (dow >= 1 && dow <= 5 && !byDate[d]) dates.push(d)
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    return dates
+  }, [todayStr, byDate])
+
+  const fillPreview = useMemo(
+    () => nextEmptyWeekdays(autoScheduleDays),
+    [autoScheduleDays, nextEmptyWeekdays],
+  )
+
+  const startFill = async () => {
+    if (fillPreview.length === 0 || filling) return
+    const queue: FillItem[] = fillPreview.map((date) => ({ date, status: 'pending' }))
+    setFillQueue(queue)
+    setFilling(true)
+    setFillStopped(false)
+    fillStopRef.stop = false
+
+    const live = [...queue]
+    for (let i = 0; i < live.length; i++) {
+      if (fillStopRef.stop) { setFillStopped(true); break }
+      live[i] = { ...live[i], status: 'generating' }
+      setFillQueue([...live])
+      try {
+        const r = await fetchWithAuth('/api/admin/blog', {
+          method: 'POST',
+          body: JSON.stringify({ topic: '', scheduled_for: live[i].date }),
+        })
+        live[i] = { ...live[i], status: r.ok ? 'done' : 'error' }
+      } catch {
+        live[i] = { ...live[i], status: 'error' }
+      }
+      setFillQueue([...live])
+    }
+
+    setFilling(false)
+    await load()
+  }
+
+  const stopFill = () => { fillStopRef.stop = true }
+
   return (
     <AdminShell activeLabel="Blog">
       <RisingFade>
@@ -240,7 +301,7 @@ export default function AdminBlogPage() {
             <div className="grid grid-cols-7">
               {cells.map((cell, i) => {
                 if (!cell.day || !cell.dateStr) {
-                  return <div key={i} className="h-[88px] border-b border-r border-white/[0.04]" />
+                  return <div key={i} className={`h-[88px] border-b border-white/[0.04] ${i % 7 !== 6 ? 'border-r' : ''}`} />
                 }
                 const postsOnDay = byDate[cell.dateStr] || []
                 const isPast = cell.dateStr < todayStr
@@ -254,7 +315,7 @@ export default function AdminBlogPage() {
                     key={i}
                     onClick={() => handleDayClick(cell.dateStr!)}
                     className={[
-                      'group relative h-[88px] cursor-pointer border-b border-r border-white/[0.04] p-2 transition-colors',
+                      `group relative h-[88px] cursor-pointer border-b border-white/[0.04] p-2 transition-colors${i % 7 !== 6 ? ' border-r' : ''}`,
                       isToday ? 'bg-sky-500/5' : '',
                       !isPast || post ? 'hover:bg-white/[0.03]' : 'cursor-default',
                     ].join(' ')}
@@ -365,6 +426,89 @@ export default function AdminBlogPage() {
             {generating && <div className="mt-2 text-xs text-gray-500">Writing the post… takes ~30-60 seconds.</div>}
           </Panel>
         )}
+
+        {/* Auto Schedule */}
+        <Panel className="mb-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-medium text-white mb-0.5">
+                <CalendarDots className="h-4 w-4 text-sky-400" weight="fill" />
+                Auto Schedule
+              </div>
+              <div className="text-xs text-gray-500">
+                Generates one post per weekday (Mon-Fri), skipping days that already have content.
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-gray-500 whitespace-nowrap">Fill next</span>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                className="w-14 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-2 text-center text-sm text-white focus:border-sky-400/50 focus:outline-none"
+                value={autoScheduleDays}
+                onChange={(e) => setAutoScheduleDays(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
+                disabled={filling}
+              />
+              <span className="text-xs text-gray-500 whitespace-nowrap">weekdays</span>
+              {filling ? (
+                <button
+                  onClick={stopFill}
+                  className="rounded-lg border border-rose-400/30 px-4 py-2 text-sm text-rose-300 hover:bg-rose-500/10 whitespace-nowrap"
+                >
+                  Stop
+                </button>
+              ) : (
+                <button
+                  onClick={startFill}
+                  disabled={fillPreview.length === 0}
+                  className="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-40 whitespace-nowrap"
+                >
+                  <Sparkle className="h-4 w-4" weight="fill" />
+                  Schedule
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Date preview chips */}
+          {!filling && fillPreview.length > 0 && fillQueue.length === 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {fillPreview.map((d) => (
+                <span key={d} className="rounded-md bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-300">
+                  {new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Progress list */}
+          {fillQueue.length > 0 && (
+            <div className="mt-4 space-y-1.5 max-h-48 overflow-y-auto">
+              {fillQueue.map((item) => (
+                <div key={item.date} className="flex items-center gap-2.5 text-xs">
+                  {item.status === 'done' && <CheckCircle weight="fill" className="h-3.5 w-3.5 shrink-0 text-emerald-400" />}
+                  {item.status === 'error' && <span className="h-3.5 w-3.5 shrink-0 rounded-full bg-rose-500/30 text-rose-300 text-[9px] flex items-center justify-center font-bold">!</span>}
+                  {item.status === 'generating' && <CircleNotch className="h-3.5 w-3.5 shrink-0 animate-spin text-sky-400" />}
+                  {item.status === 'pending' && <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-white/10" />}
+                  <span className={item.status === 'done' ? 'text-gray-300' : item.status === 'generating' ? 'text-sky-300' : item.status === 'error' ? 'text-rose-300' : 'text-gray-600'}>
+                    {new Date(item.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  </span>
+                  {item.status === 'error' && <span className="text-rose-400">failed — retry manually</span>}
+                  {item.status === 'generating' && <span className="text-gray-500">writing…</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          {fillStopped && (
+            <div className="mt-3 text-xs text-amber-400">Stopped. Posts generated so far are saved and scheduled.</div>
+          )}
+          {!filling && fillQueue.length > 0 && !fillStopped && fillQueue.every((i) => i.status === 'done' || i.status === 'error') && (
+            <div className="mt-3 text-xs text-emerald-400">
+              Done — {fillQueue.filter((i) => i.status === 'done').length} posts scheduled. They'll auto-publish at 9 AM UTC each day.
+            </div>
+          )}
+        </Panel>
 
         {/* Unscheduled drafts */}
         {unscheduled.length > 0 && (
