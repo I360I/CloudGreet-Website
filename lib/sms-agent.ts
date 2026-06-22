@@ -218,6 +218,22 @@ export async function handleInboundSms(args: {
     return { ok: true, reply_sent: false, reply: null }
   }
 
+  // Reset keyword: "NEW", "RESET", or "START OVER" expires the current
+  // conversation so the next message opens a clean session. Useful for
+  // Steve testing or a customer wanting to start a new booking.
+  const trimmedBody = (args.body || '').trim().toLowerCase()
+  if (trimmedBody === 'new' || trimmedBody === 'reset' || trimmedBody === 'start over') {
+    // Expire the conversation by back-dating updated_at so getOrCreateConversation
+    // will create a new record on the next inbound message.
+    await supabaseAdmin
+      .from('sms_conversations')
+      .update({ updated_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() })
+      .eq('id', conversationId)
+    const resetReply = "Got it — starting fresh! What can I help you with?"
+    await telnyxClient.sendSMS(fromPhone, resetReply, fromNumber)
+    return { ok: true, reply_sent: true, reply: resetReply }
+  }
+
   // Persist the inbound turn FIRST so even if the agent fails we
   // have a record of what the customer sent.
   await supabaseAdmin.from('sms_agent_messages').insert({
