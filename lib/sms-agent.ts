@@ -632,13 +632,19 @@ async function getOrCreateConversation(
   businessId: string,
   customerPhone: string,
 ): Promise<{ id: string; reportToken: string | null; isNew: boolean }> {
+  // Reuse the existing conversation only if there was activity in the last 4 hours.
+  // Older conversations are treated as expired so a new booking session starts fresh
+  // and doesn't inherit old dispatch guards from a different session.
+  const activeWindow = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
   const { data: existing } = await supabaseAdmin
     .from('sms_conversations')
-    .select('id, report_token')
+    .select('id, report_token, updated_at')
     .eq('business_id', businessId)
     .eq('customer_phone', customerPhone)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
-  if ((existing as any)?.id) {
+  if ((existing as any)?.id && (existing as any).updated_at >= activeWindow) {
     return { id: (existing as any).id, reportToken: (existing as any).report_token ?? null, isNew: false }
   }
   const { data: created, error } = await supabaseAdmin
@@ -943,16 +949,20 @@ async function runTool(args: {
     })
   }
   if (args.name === 'send_dispatch_request') {
-    // Hard conversation-level guard: one dispatch per conversation, full stop.
+    // Hard conversation-level guard: one dispatch per booking session (4-hour window).
     // The model prompt says not to re-dispatch, but the model ignores it when
     // follow-up messages arrive (e.g. customer gives email or says "thx" and
     // the agent re-calls dispatch). This check is the authoritative gate.
+    // Window is 4 hours so different booking sessions from the same number
+    // (e.g. a test at noon, a real customer at 6pm) are treated independently.
     if (args.conversationId) {
+      const windowStart = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
       const { data: convMsgs } = await supabaseAdmin
         .from('sms_agent_messages')
         .select('tool_calls')
         .eq('conversation_id', args.conversationId)
         .not('tool_calls', 'is', null)
+        .gte('created_at', windowStart)
       const alreadyDispatched = (convMsgs || []).some((row: any) =>
         Array.isArray(row.tool_calls) &&
         row.tool_calls.some((tc: any) =>
@@ -961,7 +971,7 @@ async function runTool(args: {
         )
       )
       if (alreadyDispatched) {
-        logger.warn('sms dispatch already sent in this conversation', {
+        logger.warn('sms dispatch already sent in this conversation window', {
           conversationId: args.conversationId, customerPhone: args.customerPhone,
         })
         return {
