@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { SquaresFour, PhoneCall, Calendar, Gear, CreditCard, SignOut, MagicWand } from '@phosphor-icons/react'
+import { SquaresFour, PhoneCall, Calendar, ChatTeardropDots, Gear, CreditCard, SignOut, MagicWand } from '@phosphor-icons/react'
 import { SupportButton } from './SupportButton'
 
 type Item = { icon: React.ElementType; label: string; href: string; match: (pathname: string) => boolean }
@@ -11,6 +11,7 @@ type Item = { icon: React.ElementType; label: string; href: string; match: (path
 const items: Item[] = [
  { icon: SquaresFour, label: 'Overview', href: '/dashboard', match: (p) => p === '/dashboard' },
  { icon: PhoneCall, label: 'Calls', href: '/dashboard/calls', match: (p) => p.startsWith('/dashboard/calls') },
+ { icon: ChatTeardropDots, label: 'Conversations', href: '/dashboard/conversations', match: (p) => p.startsWith('/dashboard/conversations') },
  { icon: Calendar, label: 'Bookings', href: '/dashboard/appointments', match: (p) => p.startsWith('/dashboard/appointments') },
  { icon: Gear, label: 'Settings', href: '/dashboard/settings', match: (p) => p.startsWith('/dashboard/settings') },
  { icon: CreditCard, label: 'Billing', href: '/dashboard/billing', match: (p) => p.startsWith('/dashboard/billing') },
@@ -20,7 +21,7 @@ const items: Item[] = [
 export function Sidebar({ businessName, onSignOut, activeLabel }: {
  businessName: string
  onSignOut: () => void
- activeLabel?: 'Overview' | 'Calls' | 'Bookings' | 'Settings' | 'Billing' | 'Setup'
+ activeLabel?: 'Overview' | 'Calls' | 'Conversations' | 'Bookings' | 'Settings' | 'Billing' | 'Setup'
 }) {
  const pathname = usePathname() || '/dashboard'
 

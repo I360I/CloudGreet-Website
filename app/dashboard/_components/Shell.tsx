@@ -18,7 +18,7 @@ export function DashShell({
  activeLabel,
  children,
 }: {
- activeLabel: 'Overview' | 'Calls' | 'Bookings' | 'Settings' | 'Billing' | 'Setup'
+ activeLabel: 'Overview' | 'Calls' | 'Conversations' | 'Bookings' | 'Settings' | 'Billing' | 'Setup'
  children: React.ReactNode
 }) {
  const router = useRouter()
