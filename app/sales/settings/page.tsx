@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { CircleNotch, CheckCircle, WarningCircle, CalendarBlank, ArrowSquareOut, Key, X, Eye, EyeSlash, Lock } from '@phosphor-icons/react'
+import { CircleNotch, CheckCircle, WarningCircle, CalendarBlank, ArrowSquareOut, Key, X, Eye, EyeSlash, Lock, Voicemail, Play, Pause } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -235,6 +235,8 @@ export default function SalesSettingsPage() {
               {calKeySet && <RepEventTypeSection />}
             </div>
 
+            <VoicemailSection />
+
             <PasswordSection />
           </motion.div>
         )}
@@ -460,6 +462,116 @@ function RepEventTypeSection() {
 
       {msg && !eventTypes && (
         <div className={`text-sm ${msg.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>{msg.text}</div>
+      )}
+    </div>
+  )
+}
+
+function VoicemailSection() {
+  type VM = {
+    id: string
+    from_number: string | null
+    to_number: string | null
+    recording_url: string | null
+    duration_seconds: number | null
+    listened_at: string | null
+    created_at: string
+  }
+  const [vms, setVms] = useState<VM[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const r = await fetchWithAuth('/api/sales/voicemails')
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j?.success) setVms(j.voicemails || [])
+    } finally { setLoading(false) }
+  }
+
+  const markListened = async (id: string) => {
+    await fetchWithAuth(`/api/sales/voicemails/${id}`, { method: 'PATCH' }).catch(() => {})
+    setVms(prev => prev?.map(v => v.id === id ? { ...v, listened_at: new Date().toISOString() } : v) ?? null)
+  }
+
+  const togglePlay = (vm: VM) => {
+    if (!vm.recording_url) return
+    if (playingId === vm.id) {
+      audioRef.current?.pause()
+      setPlayingId(null)
+    } else {
+      if (audioRef.current) audioRef.current.pause()
+      const audio = new Audio(vm.recording_url)
+      audioRef.current = audio
+      audio.onended = () => setPlayingId(null)
+      audio.play()
+      setPlayingId(vm.id)
+      if (!vm.listened_at) markListened(vm.id)
+    }
+  }
+
+  const unread = (vms || []).filter(v => !v.listened_at).length
+
+  return (
+    <div className="border-t border-gray-100 pt-5">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <div className="flex items-center gap-1.5">
+          <Voicemail weight="duotone" className="w-4 h-4 text-indigo-500" />
+          <span className="text-sm font-medium text-gray-900">Voicemails</span>
+          {unread > 0 && (
+            <span className="text-[10px] font-mono bg-indigo-100 text-indigo-700 rounded-full px-1.5 py-0.5">{unread} new</span>
+          )}
+        </div>
+        <button
+          onClick={load}
+          disabled={loading}
+          className="text-xs text-gray-500 hover:text-gray-900 disabled:opacity-50"
+        >
+          {loading ? <CircleNotch className="w-3 h-3 inline animate-spin" /> : vms === null ? 'Load' : 'Refresh'}
+        </button>
+      </div>
+
+      {vms === null && !loading && (
+        <p className="text-xs text-gray-400">Calls to your CloudGreet number that you missed will appear here.</p>
+      )}
+
+      {vms !== null && vms.length === 0 && (
+        <p className="text-xs text-gray-400">No voicemails yet.</p>
+      )}
+
+      {vms !== null && vms.length > 0 && (
+        <div className="space-y-2">
+          {vms.map((vm) => (
+            <div
+              key={vm.id}
+              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+                vm.listened_at ? 'border-gray-100 bg-white' : 'border-indigo-100 bg-indigo-50/40'
+              }`}
+            >
+              <button
+                onClick={() => togglePlay(vm)}
+                disabled={!vm.recording_url}
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-30 flex-shrink-0"
+              >
+                {playingId === vm.id
+                  ? <Pause weight="fill" className="w-3 h-3" />
+                  : <Play weight="fill" className="w-3 h-3" />}
+              </button>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-mono text-gray-900 truncate">{vm.from_number || 'Unknown'}</div>
+                <div className="text-[11px] text-gray-500">
+                  {new Date(vm.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  {vm.duration_seconds ? ` · ${vm.duration_seconds}s` : ''}
+                </div>
+              </div>
+              {!vm.listened_at && (
+                <span className="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0" />
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )

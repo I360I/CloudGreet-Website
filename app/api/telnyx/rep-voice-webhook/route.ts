@@ -9,186 +9,269 @@ export const maxDuration = 15
 /**
  * POST /api/telnyx/rep-voice-webhook
  *
- * Server-side Telnyx Call Control webhook for SALES REP outbound calls.
- * Set as the webhook_event_url on the SIP Connection that reps dial
- * out through (the same connection the in-app WebRTC dialer uses).
+ * Handles both OUTBOUND (rep dialing prospects) and INBOUND (someone
+ * calling a rep's Telnyx number) call events for the CloudGreet Dialer
+ * SIP connection.
  *
- * Why this exists: the in-app dialer logs calls via the browser by
- * POSTing /api/sales/dialer/log. That works for reps using the
- * WebRTC dialer in CloudGreet. It does NOT work when reps dial from
- * a SIP softphone, Telnyx mobile app, or via API - all of which
- * still route through the same SIP Connection. This webhook catches
- * EVERY call regardless of how it was originated.
+ * INBOUND FLOW:
+ *   call.initiated (incoming) →
+ *     answer inbound + dial rep's personal_cell (18s timeout) →
+ *   call.answered (outbound leg) →
+ *     bridge both legs →
+ *   call.hangup (outbound, no answer) →
+ *     speak voicemail greeting on inbound + start recording →
+ *   recording.saved →
+ *     store in rep_voicemails
  *
- * Behavior:
- *   - We listen to `call.initiated`, `call.answered`, `call.hangup`
- *     events on outbound calls.
- *   - We identify the rep by matching the call's `from` number to
- *     either `sales_rep_phone_numbers.phone_number` (preferred) or
- *     `sales_reps.telnyx_outbound_number` (legacy fallback).
- *   - We UPSERT into rep_calls keyed by `telnyx_call_id` so the
- *     browser dialer's POST + this webhook converge to one row
- *     instead of doubling up.
- *   - Status mapping: initiated → 'ringing', answered → 'in_progress',
- *     hangup → 'completed' | 'no_answer' | 'failed' based on
- *     hangup_cause / hangup_source.
- *
- * Signature verification: if TELNYX_PUBLIC_KEY is set we verify the
- * ed25519 signature; otherwise we log unverified events through
- * (better to track than refuse). Returns 200 either way so Telnyx
- * doesn't keep retrying.
+ * OUTBOUND FLOW (rep dialing out from browser/SIP):
+ *   call.initiated / call.answered / call.hangup →
+ *     upsert into rep_calls for activity log
  */
 
-type TelnyxEvent = {
-  event_type: string
-  id?: string
-  payload?: {
-    call_control_id?: string
-    call_session_id?: string
-    call_leg_id?: string
-    direction?: 'incoming' | 'outgoing'
-    from?: string
-    to?: string
-    hangup_cause?: string
-    hangup_source?: string
-    start_time?: string
-    end_time?: string
-    state?: string
+const TELNYX_BASE = 'https://api.telnyx.com/v2'
+const DIALER_CONNECTION_ID = '2954146270983227127'
+
+type Payload = {
+  call_control_id?: string
+  call_session_id?: string
+  call_leg_id?: string
+  direction?: 'incoming' | 'outgoing'
+  from?: string
+  to?: string
+  hangup_cause?: string
+  hangup_source?: string
+  start_time?: string
+  end_time?: string
+  state?: string
+  client_state?: string
+  recording_urls?: { mp3?: string; wav?: string }
+  duration_millis?: number
+}
+
+type ClientState = {
+  type: 'inbound' | 'outbound' | 'voicemail'
+  rep_id?: string
+  rep_name?: string
+  from_number?: string
+  to_number?: string
+  inbound_ccc?: string
+}
+
+function encodeState(s: ClientState): string {
+  return Buffer.from(JSON.stringify(s)).toString('base64')
+}
+
+function decodeState(s?: string): ClientState | null {
+  if (!s) return null
+  try { return JSON.parse(Buffer.from(s, 'base64').toString('utf8')) as ClientState } catch { return null }
+}
+
+async function telnyxAction(callControlId: string, action: string, body: Record<string, unknown> = {}) {
+  const apiKey = process.env.TELNYX_API_KEY
+  if (!apiKey) return
+  try {
+    const res = await fetch(`${TELNYX_BASE}/calls/${callControlId}/actions/${action}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) {
+      const t = await res.text().catch(() => '')
+      logger.warn(`telnyx action ${action} failed`, { callControlId, status: res.status, body: t.slice(0, 200) })
+    }
+  } catch (e) {
+    logger.warn(`telnyx action ${action} threw`, { callControlId, error: e instanceof Error ? e.message : 'unknown' })
   }
+}
+
+async function startVoicemail(inboundCcc: string, repName: string, repId: string, fromNumber: string, toNumber: string) {
+  await telnyxAction(inboundCcc, 'speak', {
+    payload: `Hi, you've reached ${repName}'s CloudGreet line. Please leave a message and they'll get back to you shortly.`,
+    voice: 'female',
+    language: 'en-US',
+  })
+  await telnyxAction(inboundCcc, 'record_start', {
+    format: 'mp3',
+    channels: 'single',
+    client_state: encodeState({ type: 'voicemail', rep_id: repId, from_number: fromNumber, to_number: toNumber }),
+  })
 }
 
 export async function POST(request: NextRequest) {
   let bodyText = ''
-  try {
-    bodyText = await request.text()
-  } catch (e) {
-    return NextResponse.json({ ok: true, ignored: 'read failed' })
-  }
+  try { bodyText = await request.text() } catch { return NextResponse.json({ ok: true }) }
 
-  let evt: { data?: TelnyxEvent } | TelnyxEvent
-  try {
-    evt = JSON.parse(bodyText)
-  } catch {
-    logger.warn('telnyx rep-voice webhook: unparseable body', { len: bodyText.length })
+  let evt: any
+  try { evt = JSON.parse(bodyText) } catch {
     return NextResponse.json({ ok: true, ignored: 'unparseable' })
   }
 
-  // Telnyx wraps payloads as { data: { event_type, ... } } - unwrap.
-  const data = (evt as any)?.data ?? (evt as any)
+  const data = evt?.data ?? evt
   const eventType: string = data?.event_type || ''
-  const payload = data?.payload || {}
-  const callId: string | undefined = payload?.call_control_id || payload?.call_session_id || payload?.call_leg_id
-  const fromNumber: string | undefined = payload?.from
-  const direction: string | undefined = payload?.direction
+  const payload: Payload = data?.payload || {}
 
-  // Ignore inbound legs - those are handled by /api/telnyx/voice-webhook
-  // for client agents. We only care about rep outbound calls.
-  if (direction && direction !== 'outgoing') {
-    return NextResponse.json({ ok: true, ignored: 'inbound' })
-  }
+  const callId = payload.call_control_id || payload.call_session_id || payload.call_leg_id
+  const direction = payload.direction
+  const fromNumber = payload.from
+  const toNumber = payload.to
+  const clientState = decodeState(payload.client_state)
 
-  if (!callId || !fromNumber) {
-    return NextResponse.json({ ok: true, ignored: 'no call id or from' })
-  }
-
-  // Identify the rep that owns this from-number. Active first, then
-  // any saved historical row, then the legacy single-number fallback.
-  const repId = await findRepByFromNumber(fromNumber)
-  if (!repId) {
-    // Not a known rep number - could be a client agent number or
-    // something we don't track yet. Log once at low level.
-    logger.info('telnyx rep-voice: unrecognised from-number', { fromNumber, eventType, callId })
-    return NextResponse.json({ ok: true, ignored: 'unknown rep number' })
-  }
-
-  // Map event to status + the columns to write.
-  const update = mapEventToUpdate(eventType, payload)
-  if (!update) {
-    // Event we don't care about (e.g. call.bridged, recording.saved).
-    return NextResponse.json({ ok: true, ignored: 'event not tracked', eventType })
-  }
-
-  // Try multiple lookup paths because the browser SDK and the Call
-  // Control webhook produce DIFFERENT id formats for the same call:
-  //   - Browser SDK exposes `call.id` (v3:... or sdk-internal)
-  //   - Webhook payload has call_control_id (UUID) + call_session_id
-  // Without dedup we'd double-count every dial (one row per source).
-  //
-  // 1) Direct hit on telnyx_call_id (subsequent webhook events).
-  // 2) Otherwise: find the orphan ringing row the browser inserted
-  //    matching from + to + last 60s, then adopt it (overwrite its
-  //    telnyx_call_id with the canonical webhook id).
-  let existing: { id: string; status: string | null } | null = null
-  const direct = await supabaseAdmin
-    .from('rep_calls')
-    .select('id, status')
-    .eq('telnyx_call_id', callId)
-    .maybeSingle()
-  if ((direct.data as any)?.id) {
-    existing = direct.data as any
-  } else {
-    const sinceIso = new Date(Date.now() - 60_000).toISOString()
-    const { data: orphans } = await supabaseAdmin
-      .from('rep_calls')
-      .select('id, status, telnyx_call_id, started_at')
-      .eq('from_number', fromNumber)
-      .eq('to_number', payload?.to || '')
-      .gte('started_at', sinceIso)
-      .order('started_at', { ascending: false })
-      .limit(1)
-    const orphan = (orphans || [])[0] as any
-    if (orphan?.id) {
-      // Adopt the browser-inserted placeholder. Overwrite its
-      // telnyx_call_id so future events for this call match directly.
-      await supabaseAdmin
-        .from('rep_calls')
-        .update({ telnyx_call_id: callId })
-        .eq('id', orphan.id)
-      existing = { id: orphan.id, status: orphan.status }
+  // ── INBOUND: someone called a rep's Telnyx number ─────────────────────────
+  if (eventType === 'call.initiated' && direction === 'incoming' && callId) {
+    const rep = await findRepByToNumber(toNumber || '')
+    if (!rep) {
+      return NextResponse.json({ ok: true, ignored: 'no rep for number' })
     }
+
+    await telnyxAction(callId, 'answer', {
+      client_state: encodeState({ type: 'inbound', rep_id: rep.id, rep_name: rep.name, from_number: fromNumber, to_number: toNumber }),
+    })
+
+    if (!rep.personal_cell) {
+      await startVoicemail(callId, rep.name, rep.id, fromNumber || '', toNumber || '')
+      return NextResponse.json({ ok: true, action: 'voicemail_no_cell' })
+    }
+
+    const apiKey = process.env.TELNYX_API_KEY
+    if (apiKey) {
+      await fetch(`${TELNYX_BASE}/calls`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          connection_id: DIALER_CONNECTION_ID,
+          to: rep.personal_cell,
+          from: toNumber,
+          timeout_secs: 18,
+          client_state: encodeState({ type: 'outbound', inbound_ccc: callId, rep_id: rep.id, rep_name: rep.name, from_number: fromNumber, to_number: toNumber }),
+        }),
+      }).catch(e => logger.warn('telnyx outbound dial failed', { error: e instanceof Error ? e.message : 'unknown' }))
+    }
+
+    return NextResponse.json({ ok: true, action: 'forwarding', rep: rep.name })
   }
 
-  if (existing?.id) {
-    if (shouldApplyTransition(existing.status, update.status)) {
-      await supabaseAdmin
-        .from('rep_calls')
-        .update(update)
-        .eq('id', existing.id)
+  // ── OUTBOUND LEG (we created this to forward to rep's cell) ───────────────
+  if (clientState?.type === 'outbound') {
+    if (eventType === 'call.answered') {
+      await telnyxAction(callId!, 'bridge', { call_control_id: clientState.inbound_ccc })
+      return NextResponse.json({ ok: true, action: 'bridged' })
     }
-  } else {
-    await supabaseAdmin
-      .from('rep_calls')
-      .insert({
-        rep_id: repId,
-        telnyx_call_id: callId,
-        from_number: fromNumber,
-        to_number: payload?.to || null,
-        ...update,
+
+    if (eventType === 'call.hangup') {
+      const cause = (payload.hangup_cause || '').toLowerCase()
+      const source = (payload.hangup_source || '').toLowerCase()
+      const wasAnswered = source === 'caller' || source === 'callee' || cause === 'normal_clearing'
+      if (!wasAnswered && clientState.inbound_ccc) {
+        await startVoicemail(clientState.inbound_ccc, clientState.rep_name || 'the rep', clientState.rep_id || '', clientState.from_number || '', clientState.to_number || '')
+        return NextResponse.json({ ok: true, action: 'voicemail' })
+      }
+      return NextResponse.json({ ok: true, action: 'call_completed' })
+    }
+
+    return NextResponse.json({ ok: true, ignored: 'outbound event not tracked', eventType })
+  }
+
+  // ── RECORDING SAVED: store voicemail ──────────────────────────────────────
+  if (eventType === 'recording.saved' && clientState?.type === 'voicemail') {
+    const url = payload.recording_urls?.mp3 || payload.recording_urls?.wav || null
+    const dur = payload.duration_millis ? Math.round(payload.duration_millis / 1000) : null
+    if (clientState.rep_id && url) {
+      const { error: vmErr } = await supabaseAdmin.from('rep_voicemails').insert({
+        rep_id: clientState.rep_id,
+        from_number: clientState.from_number || null,
+        to_number: clientState.to_number || null,
+        recording_url: url,
+        duration_seconds: dur,
       })
+      if (vmErr) logger.warn('rep_voicemails insert failed', { error: vmErr.message })
+      logger.info('rep voicemail saved', { repId: clientState.rep_id, dur })
+    }
+    return NextResponse.json({ ok: true, action: 'voicemail_saved' })
   }
 
-  return NextResponse.json({ ok: true, eventType, callId, repId, status: update.status })
+  // ── OUTBOUND (rep dialing a prospect from browser/SIP) ───────────────────
+  if (direction && direction !== 'incoming' && !clientState) {
+    if (!callId || !fromNumber) return NextResponse.json({ ok: true, ignored: 'no call id or from' })
+
+    const repId = await findRepByFromNumber(fromNumber)
+    if (!repId) {
+      logger.info('telnyx rep-voice: unrecognised from-number', { fromNumber, eventType, callId })
+      return NextResponse.json({ ok: true, ignored: 'unknown rep number' })
+    }
+
+    const update = mapEventToUpdate(eventType, payload)
+    if (!update) return NextResponse.json({ ok: true, ignored: 'event not tracked', eventType })
+
+    let existing: { id: string; status: string | null } | null = null
+    const direct = await supabaseAdmin.from('rep_calls').select('id, status').eq('telnyx_call_id', callId).maybeSingle()
+    if ((direct.data as any)?.id) {
+      existing = direct.data as any
+    } else {
+      const sinceIso = new Date(Date.now() - 60_000).toISOString()
+      const { data: orphans } = await supabaseAdmin
+        .from('rep_calls').select('id, status, telnyx_call_id, started_at')
+        .eq('from_number', fromNumber).eq('to_number', payload?.to || '')
+        .gte('started_at', sinceIso).order('started_at', { ascending: false }).limit(1)
+      const orphan = (orphans || [])[0] as any
+      if (orphan?.id) {
+        await supabaseAdmin.from('rep_calls').update({ telnyx_call_id: callId }).eq('id', orphan.id)
+        existing = { id: orphan.id, status: orphan.status }
+      }
+    }
+
+    if (existing?.id) {
+      if (shouldApplyTransition(existing.status, update.status)) {
+        await supabaseAdmin.from('rep_calls').update(update).eq('id', existing.id)
+      }
+    } else {
+      await supabaseAdmin.from('rep_calls').insert({
+        rep_id: repId, telnyx_call_id: callId,
+        from_number: fromNumber, to_number: payload?.to || null, ...update,
+      })
+    }
+
+    return NextResponse.json({ ok: true, eventType, callId, repId, status: update.status })
+  }
+
+  return NextResponse.json({ ok: true, ignored: 'unhandled', eventType })
 }
 
-// -------- helpers --------
+// ── helpers ───────────────────────────────────────────────────────────────────
 
-async function findRepByFromNumber(fromNumber: string): Promise<string | null> {
-  // Match the saved DID list first.
-  const { data: byMulti } = await supabaseAdmin
+async function findRepByToNumber(toNumber: string): Promise<{ id: string; name: string; personal_cell: string | null } | null> {
+  const { data } = await supabaseAdmin
     .from('sales_rep_phone_numbers')
     .select('rep_id')
-    .eq('phone_number', fromNumber)
+    .eq('phone_number', toNumber)
     .limit(1)
     .maybeSingle()
+  const repId = (data as any)?.rep_id
+  if (!repId) return null
+
+  const { data: rep } = await supabaseAdmin
+    .from('sales_reps')
+    .select('id, personal_cell')
+    .eq('id', repId)
+    .maybeSingle()
+  if (!rep) return null
+
+  const { data: user } = await supabaseAdmin
+    .from('custom_users')
+    .select('first_name, last_name')
+    .eq('id', repId)
+    .maybeSingle()
+
+  const name = user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : 'your rep'
+  return { id: repId, name, personal_cell: (rep as any).personal_cell || null }
+}
+
+async function findRepByFromNumber(fromNumber: string): Promise<string | null> {
+  const { data: byMulti } = await supabaseAdmin
+    .from('sales_rep_phone_numbers').select('rep_id').eq('phone_number', fromNumber).limit(1).maybeSingle()
   if ((byMulti as any)?.rep_id) return (byMulti as any).rep_id as string
 
-  // Legacy single-number fallback.
   const { data: byLegacy } = await supabaseAdmin
-    .from('sales_reps')
-    .select('id')
-    .eq('telnyx_outbound_number', fromNumber)
-    .limit(1)
-    .maybeSingle()
+    .from('sales_reps').select('id').eq('telnyx_outbound_number', fromNumber).limit(1).maybeSingle()
   return (byLegacy as any)?.id || null
 }
 
@@ -199,54 +282,29 @@ type CallUpdate = {
   duration_seconds?: number
 }
 
-function mapEventToUpdate(eventType: string, payload: any): CallUpdate | null {
+function mapEventToUpdate(eventType: string, payload: Payload): CallUpdate | null {
   if (eventType === 'call.initiated') {
-    return {
-      status: 'ringing',
-      started_at: payload?.start_time || new Date().toISOString(),
-    }
+    return { status: 'ringing', started_at: payload?.start_time || new Date().toISOString() }
   }
   if (eventType === 'call.answered') {
-    return {
-      status: 'in_progress',
-      started_at: payload?.start_time || new Date().toISOString(),
-    }
+    return { status: 'in_progress', started_at: payload?.start_time || new Date().toISOString() }
   }
   if (eventType === 'call.hangup') {
     const cause = (payload?.hangup_cause || '').toLowerCase()
     const source = (payload?.hangup_source || '').toLowerCase()
     let status: CallUpdate['status'] = 'completed'
-    if (cause.includes('normal_clearing') || source.includes('caller') || source.includes('callee')) {
-      status = 'completed'
-    } else if (cause.includes('no_user_response') || cause.includes('no_answer') || cause.includes('user_busy')) {
-      status = 'no_answer'
-    } else if (cause) {
-      status = 'failed'
-    }
+    if (cause.includes('no_user_response') || cause.includes('no_answer') || cause.includes('user_busy')) status = 'no_answer'
+    else if (cause && !cause.includes('normal_clearing') && !source.includes('caller') && !source.includes('callee')) status = 'failed'
     const startedAt = payload?.start_time ? new Date(payload.start_time).getTime() : null
     const endedAt = payload?.end_time ? new Date(payload.end_time).getTime() : Date.now()
     const dur = startedAt ? Math.max(0, Math.round((endedAt - startedAt) / 1000)) : undefined
-    return {
-      status,
-      ended_at: payload?.end_time || new Date().toISOString(),
-      duration_seconds: dur,
-    }
+    return { status, ended_at: payload?.end_time || new Date().toISOString(), duration_seconds: dur }
   }
   return null
 }
 
-/**
- * Allow forward progress only: ringing → in_progress → terminal.
- * Once a row is in a terminal state, don't reopen it from a stale event.
- */
 function shouldApplyTransition(current: string | null | undefined, next: string): boolean {
   if (!current) return true
-  const order: Record<string, number> = {
-    ringing: 1,
-    in_progress: 2,
-    completed: 3,
-    no_answer: 3,
-    failed: 3,
-  }
+  const order: Record<string, number> = { ringing: 1, in_progress: 2, completed: 3, no_answer: 3, failed: 3 }
   return (order[next] ?? 0) >= (order[current] ?? 0)
 }
