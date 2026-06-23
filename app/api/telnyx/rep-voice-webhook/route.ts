@@ -86,13 +86,14 @@ async function telnyxAction(callControlId: string, action: string, body: Record<
 
 async function startVoicemail(inboundCcc: string, repName: string, repId: string, fromNumber: string, toNumber: string) {
   await telnyxAction(inboundCcc, 'speak', {
-    payload: `Hi, you've reached ${repName}'s CloudGreet line. Please leave a message and they'll get back to you shortly.`,
-    voice: 'female',
+    payload: `Hi, you've reached ${repName}'s CloudGreet line. Please leave a message after the tone and they'll get back to you shortly.`,
+    voice: 'Polly.Joanna',
     language: 'en-US',
   })
   await telnyxAction(inboundCcc, 'record_start', {
     format: 'mp3',
     channels: 'single',
+    play_beep: true,
     client_state: encodeState({ type: 'voicemail', rep_id: repId, from_number: fromNumber, to_number: toNumber }),
   })
 }
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true, ignored: 'no rep for number' })
     }
 
+    // Answer with client_state so we can identify this leg in later events
     await telnyxAction(callId, 'answer', {
       client_state: encodeState({ type: 'inbound', rep_id: rep.id, rep_name: rep.name, from_number: fromNumber, to_number: toNumber }),
     })
@@ -131,6 +133,13 @@ export async function POST(request: NextRequest) {
       await startVoicemail(callId, rep.name, rep.id, fromNumber || '', toNumber || '')
       return NextResponse.json({ ok: true, action: 'voicemail_no_cell' })
     }
+
+    // Play hold message immediately so caller never hears dead air
+    await telnyxAction(callId, 'speak', {
+      payload: 'Please hold while I connect your call.',
+      voice: 'Polly.Joanna',
+      language: 'en-US',
+    })
 
     const apiKey = process.env.TELNYX_API_KEY
     if (apiKey) {
@@ -152,6 +161,8 @@ export async function POST(request: NextRequest) {
         await startVoicemail(callId, rep.name, rep.id, fromNumber || '', toNumber || '')
         return NextResponse.json({ ok: true, action: 'voicemail_dial_failed' })
       }
+
+      logger.info('telnyx rep inbound: dialing cell', { rep: rep.name, cell: rep.personal_cell })
     }
 
     return NextResponse.json({ ok: true, action: 'forwarding', rep: rep.name })
@@ -160,19 +171,27 @@ export async function POST(request: NextRequest) {
   // ── OUTBOUND LEG (we created this to forward to rep's cell) ───────────────
   if (clientState?.type === 'outbound') {
     if (eventType === 'call.answered') {
+      // Rep picked up — bridge both legs together
       await telnyxAction(callId!, 'bridge', { call_control_id: clientState.inbound_ccc })
+      logger.info('telnyx rep inbound: bridged', { rep: clientState.rep_name })
       return NextResponse.json({ ok: true, action: 'bridged' })
     }
 
     if (eventType === 'call.hangup') {
-      const cause = (payload.hangup_cause || '').toLowerCase()
-      const source = (payload.hangup_source || '').toLowerCase()
-      const wasAnswered = source === 'caller' || source === 'callee' || cause === 'normal_clearing'
-      if (!wasAnswered && clientState.inbound_ccc) {
+      // Outbound leg ended without being bridged — go to voicemail regardless
+      // of hangup_cause (NORMAL_CLEARING can mean routing failure, not real answer)
+      const startedAt = payload.start_time ? new Date(payload.start_time).getTime() : null
+      const endedAt = payload.end_time ? new Date(payload.end_time).getTime() : Date.now()
+      const talkSecs = startedAt ? Math.round((endedAt - startedAt) / 1000) : 0
+
+      if (talkSecs < 5 && clientState.inbound_ccc) {
+        // Short/failed call — leave voicemail
+        logger.info('telnyx rep inbound: no answer, starting voicemail', { rep: clientState.rep_name, talkSecs, cause: payload.hangup_cause })
         await startVoicemail(clientState.inbound_ccc, clientState.rep_name || 'the rep', clientState.rep_id || '', clientState.from_number || '', clientState.to_number || '')
         return NextResponse.json({ ok: true, action: 'voicemail' })
       }
-      return NextResponse.json({ ok: true, action: 'call_completed' })
+      // Real conversation ended — nothing to do
+      return NextResponse.json({ ok: true, action: 'call_completed', talkSecs })
     }
 
     return NextResponse.json({ ok: true, ignored: 'outbound event not tracked', eventType })
