@@ -29,7 +29,7 @@ export const maxDuration = 15
  */
 
 const TELNYX_BASE = 'https://api.telnyx.com/v2'
-const DIALER_CONNECTION_ID = '2954146270983227127'
+const REP_INBOUND_APP_ID = '2988928027930396604'
 
 type Payload = {
   call_control_id?: string
@@ -134,17 +134,24 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.TELNYX_API_KEY
     if (apiKey) {
-      await fetch(`${TELNYX_BASE}/calls`, {
+      const dialRes = await fetch(`${TELNYX_BASE}/calls`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          connection_id: DIALER_CONNECTION_ID,
+          connection_id: REP_INBOUND_APP_ID,
           to: rep.personal_cell,
           from: toNumber,
           timeout_secs: 18,
           client_state: encodeState({ type: 'outbound', inbound_ccc: callId, rep_id: rep.id, rep_name: rep.name, from_number: fromNumber, to_number: toNumber }),
         }),
-      }).catch(e => logger.warn('telnyx outbound dial failed', { error: e instanceof Error ? e.message : 'unknown' }))
+      }).catch(e => { logger.warn('telnyx outbound dial threw', { error: e instanceof Error ? e.message : 'unknown' }); return null })
+
+      if (!dialRes || !dialRes.ok) {
+        const errBody = dialRes ? await dialRes.text().catch(() => '') : 'fetch failed'
+        logger.warn('telnyx outbound dial failed, falling back to voicemail', { status: dialRes?.status, body: errBody.slice(0, 200) })
+        await startVoicemail(callId, rep.name, rep.id, fromNumber || '', toNumber || '')
+        return NextResponse.json({ ok: true, action: 'voicemail_dial_failed' })
+      }
     }
 
     return NextResponse.json({ ok: true, action: 'forwarding', rep: rep.name })
