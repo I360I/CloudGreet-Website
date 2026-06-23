@@ -15,11 +15,11 @@ export const maxDuration = 15
  *
  * INBOUND FLOW:
  *   call.initiated (incoming) →
- *     answer inbound + dial rep's personal_cell (18s timeout) →
- *   call.answered (outbound leg) →
- *     bridge both legs →
- *   call.hangup (outbound, no answer) →
- *     speak voicemail greeting on inbound + start recording →
+ *     dial rep's personal_cell — do NOT answer yet, caller hears ringback →
+ *   call.answered (outbound leg, rep picks up) →
+ *     answer inbound + bridge both legs →
+ *   call.hangup (outbound, no answer / timeout) →
+ *     answer inbound + speak voicemail greeting + start recording →
  *   recording.saved →
  *     store in rep_voicemails
  *
@@ -118,29 +118,23 @@ export async function POST(request: NextRequest) {
   const clientState = decodeState(payload.client_state)
 
   // ── INBOUND: someone called a rep's Telnyx number ─────────────────────────
+  // Do NOT answer here — caller hears normal ringback while we dial the rep's
+  // cell. We answer + bridge only when the rep picks up, or answer + voicemail
+  // if they don't. This way the caller experience is identical to a real call.
   if (eventType === 'call.initiated' && direction === 'incoming' && callId) {
     const rep = await findRepByToNumber(toNumber || '')
     if (!rep) {
       return NextResponse.json({ ok: true, ignored: 'no rep for number' })
     }
 
-    // Answer with client_state so we can identify this leg in later events
-    await telnyxAction(callId, 'answer', {
-      client_state: encodeState({ type: 'inbound', rep_id: rep.id, rep_name: rep.name, from_number: fromNumber, to_number: toNumber }),
-    })
-
     if (!rep.personal_cell) {
+      // No cell on file — answer and go straight to voicemail
+      await telnyxAction(callId, 'answer', {})
       await startVoicemail(callId, rep.name, rep.id, fromNumber || '', toNumber || '')
       return NextResponse.json({ ok: true, action: 'voicemail_no_cell' })
     }
 
-    // Play hold message immediately so caller never hears dead air
-    await telnyxAction(callId, 'speak', {
-      payload: 'Please hold while I connect your call.',
-      voice: 'Polly.Joanna',
-      language: 'en-US',
-    })
-
+    // Dial the rep's cell. Caller keeps hearing ringback until we bridge.
     const apiKey = process.env.TELNYX_API_KEY
     if (apiKey) {
       const dialRes = await fetch(`${TELNYX_BASE}/calls`, {
@@ -157,40 +151,41 @@ export async function POST(request: NextRequest) {
 
       if (!dialRes || !dialRes.ok) {
         const errBody = dialRes ? await dialRes.text().catch(() => '') : 'fetch failed'
-        logger.warn('telnyx outbound dial failed, falling back to voicemail', { status: dialRes?.status, body: errBody.slice(0, 200) })
+        logger.warn('telnyx outbound dial failed, going to voicemail', { status: dialRes?.status, body: errBody.slice(0, 200) })
+        await telnyxAction(callId, 'answer', {})
         await startVoicemail(callId, rep.name, rep.id, fromNumber || '', toNumber || '')
         return NextResponse.json({ ok: true, action: 'voicemail_dial_failed' })
       }
 
-      logger.info('telnyx rep inbound: dialing cell', { rep: rep.name, cell: rep.personal_cell })
+      logger.info('telnyx rep inbound: dialing cell', { rep: rep.name })
     }
 
-    return NextResponse.json({ ok: true, action: 'forwarding', rep: rep.name })
+    return NextResponse.json({ ok: true, action: 'ringing_cell', rep: rep.name })
   }
 
-  // ── OUTBOUND LEG (we created this to forward to rep's cell) ───────────────
+  // ── OUTBOUND LEG (the call we placed to the rep's cell) ───────────────────
   if (clientState?.type === 'outbound') {
     if (eventType === 'call.answered') {
-      // Rep picked up — bridge both legs together
+      // Rep picked up — answer the inbound and bridge both legs
+      await telnyxAction(clientState.inbound_ccc!, 'answer', {})
       await telnyxAction(callId!, 'bridge', { call_control_id: clientState.inbound_ccc })
       logger.info('telnyx rep inbound: bridged', { rep: clientState.rep_name })
       return NextResponse.json({ ok: true, action: 'bridged' })
     }
 
     if (eventType === 'call.hangup') {
-      // Outbound leg ended without being bridged — go to voicemail regardless
-      // of hangup_cause (NORMAL_CLEARING can mean routing failure, not real answer)
       const startedAt = payload.start_time ? new Date(payload.start_time).getTime() : null
       const endedAt = payload.end_time ? new Date(payload.end_time).getTime() : Date.now()
       const talkSecs = startedAt ? Math.round((endedAt - startedAt) / 1000) : 0
 
       if (talkSecs < 5 && clientState.inbound_ccc) {
-        // Short/failed call — leave voicemail
-        logger.info('telnyx rep inbound: no answer, starting voicemail', { rep: clientState.rep_name, talkSecs, cause: payload.hangup_cause })
+        // Rep didn't answer — answer the inbound and take a voicemail
+        logger.info('telnyx rep inbound: no answer, voicemail', { rep: clientState.rep_name, talkSecs, cause: payload.hangup_cause })
+        await telnyxAction(clientState.inbound_ccc, 'answer', {})
         await startVoicemail(clientState.inbound_ccc, clientState.rep_name || 'the rep', clientState.rep_id || '', clientState.from_number || '', clientState.to_number || '')
         return NextResponse.json({ ok: true, action: 'voicemail' })
       }
-      // Real conversation ended — nothing to do
+
       return NextResponse.json({ ok: true, action: 'call_completed', talkSecs })
     }
 
