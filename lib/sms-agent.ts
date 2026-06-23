@@ -25,13 +25,16 @@ import { anthropicCostCents, smsSegments, COST_RATES } from './billing/cost-rate
 
 const MODEL = 'claude-sonnet-4-6'
 const CONTEXT_WINDOW_HOURS = 24
-const MAX_TOOL_LOOPS = 6
+const MAX_TOOL_LOOPS = 10
 // Abuse caps. The dollar-cost surface here is Anthropic (per-message)
 // and Telnyx (per-outbound). A determined sender could blow through
 // both by texting in a tight loop, so we drop silently once they
 // exceed sane human-pace limits.
 const INBOUND_RATE_LIMIT_5MIN = 10
-const DISPATCH_CAP_PER_HOUR = 2
+// Cap is per-phone per-hour across conversations. Kept high enough that
+// multi-leg bookings (4+ legs) clear it; the real dedup lives in the
+// per-requested_time guard above.
+const DISPATCH_CAP_PER_HOUR = 8
 
 const TOOLS: Anthropic.Messages.Tool[] = [
   {
@@ -347,7 +350,7 @@ export async function handleInboundSms(args: {
   }
 
   if (!reply) {
-    reply = "Got it — Steve will get back to you shortly."
+    reply = "Something went wrong on our end. Steve has been notified and will reach out to you directly."
   }
 
   // SMS body length cap. Telnyx will segment longer messages but we
@@ -597,7 +600,7 @@ CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
     messages.push({ role: 'user', content: toolResults })
   }
 
-  if (!reply) reply = 'Got it - someone will get back to you shortly.'
+  if (!reply) reply = 'Something went wrong on our end. Someone from the team will reach out to you directly.'
   if (reply.length > 1500) reply = reply.slice(0, 1497) + '...'
 
   // Persist outbound (no Telnyx send - the reply goes back over HTTP).
