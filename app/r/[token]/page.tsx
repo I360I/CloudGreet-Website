@@ -79,8 +79,8 @@ export default async function ReportPage({ params }: { params: { token: string }
           )}
           {messages.map((m, i) => {
             const inbound = m.direction === 'inbound'
-            const toolNames: string[] = Array.isArray(m.tool_calls)
-              ? m.tool_calls.map((t: any) => t?.name).filter(Boolean)
+            const toolCalls: Array<{ name?: string; result?: any }> = Array.isArray(m.tool_calls)
+              ? m.tool_calls.filter((t: any) => t?.name)
               : []
             return (
               <div key={i} className={`flex ${inbound ? 'justify-start' : 'justify-end'}`}>
@@ -94,11 +94,33 @@ export default async function ReportPage({ params }: { params: { token: string }
                   >
                     {m.body}
                   </div>
+                  {toolCalls.length > 0 && (
+                    <div className={`flex flex-wrap gap-1 mt-1.5 px-0.5 ${inbound ? '' : 'justify-end'}`}>
+                      {toolCalls.map((tc, j) => {
+                        const r = tc.result || {}
+                        const ok = r.success === true || r.ok === true
+                        const failed = r.success === false || r.ok === false || !!r.error
+                        return (
+                          <span
+                            key={j}
+                            title={failed && r.error ? String(r.error) : undefined}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-medium border ${
+                              failed
+                                ? 'bg-red-50 border-red-200 text-red-600'
+                                : ok
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                : 'bg-amber-50 border-amber-200 text-amber-700'
+                            }`}
+                          >
+                            <span>{failed ? '✗' : ok ? '✓' : '·'}</span>
+                            <span>{tc.name}</span>
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
                   <div className="text-[11px] text-gray-400 mt-1 px-1">
                     {inbound ? fmtPhone((convo as any).customer_phone) : 'Agent'} · {fmtTime(m.created_at, tz)}
-                    {toolNames.length > 0 && (
-                      <span className="ml-1 text-gray-400">· ran {toolNames.join(', ')}</span>
-                    )}
                   </div>
                 </div>
               </div>
