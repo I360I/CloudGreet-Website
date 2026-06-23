@@ -16,6 +16,17 @@ export async function GET(request: NextRequest) {
   const businessId = authResult.businessId
 
   try {
+    // Gate: only businesses with an SMS number provisioned can access conversations.
+    const { data: biz } = await supabaseAdmin
+      .from('businesses')
+      .select('sms_phone_number, sms_agent_enabled')
+      .eq('id', businessId)
+      .maybeSingle()
+
+    if (!biz || !((biz as any).sms_phone_number)) {
+      return NextResponse.json({ conversations: [], total: 0, feature_enabled: false })
+    }
+
     const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || String(PAGE_SIZE), 10), 100)
     const offset = parseInt(searchParams.get('offset') || '0', 10)
@@ -80,7 +91,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ conversations, total: count ?? rows.length })
+    return NextResponse.json({ conversations, total: count ?? rows.length, feature_enabled: true })
   } catch (e) {
     logger.error('dashboard conversations failed', { error: e instanceof Error ? e.message : 'Unknown' })
     return NextResponse.json({ error: 'internal_error' }, { status: 500 })

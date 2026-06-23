@@ -9,6 +9,7 @@ import {
   CircleNotch,
   DeviceMobile,
   GlobeSimple,
+  Lock,
   MagnifyingGlass,
   WarningCircle,
   X,
@@ -249,6 +250,7 @@ function ConvoDrawer({ convoId, onClose }: { convoId: string; onClose: () => voi
 export default function ConversationsPage() {
   const [convos, setConvos] = useState<ConvoSummary[] | null>(null)
   const [total, setTotal] = useState(0)
+  const [featureEnabled, setFeatureEnabled] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
@@ -270,6 +272,7 @@ export default function ConversationsPage() {
         const j = await res.json()
         if (cancelled) return
         if (!res.ok) throw new Error(j?.error || `Failed (${res.status})`)
+        setFeatureEnabled(j.feature_enabled !== false)
         setConvos(j.conversations || [])
         setTotal(j.total ?? 0)
       } catch (e) {
@@ -305,7 +308,28 @@ export default function ConversationsPage() {
             {total > 0 && <span className="text-sm text-gray-500 font-mono">{total} total</span>}
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+          {featureEnabled === false && !loading && (
+            <div className="bg-white border border-gray-200 rounded-2xl p-10 flex flex-col items-center text-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                <Lock className="w-5 h-5 text-gray-400" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-gray-900 mb-1">Text-to-book not active</h2>
+                <p className="text-sm text-gray-500 max-w-sm">
+                  SMS and web chat conversations will appear here once your text-to-book number is set up.
+                  Contact us to add it to your plan.
+                </p>
+              </div>
+              <a
+                href="mailto:hello@cloudgreet.com?subject=Add text-to-book"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors"
+              >
+                Contact us to get started
+              </a>
+            </div>
+          )}
+
+          {featureEnabled !== false && <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             {/* Filters */}
             <div className="px-6 pt-5 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2 flex-wrap">
@@ -420,7 +444,7 @@ export default function ConversationsPage() {
                 </div>
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </section>
 
