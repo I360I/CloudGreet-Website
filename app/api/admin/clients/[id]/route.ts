@@ -269,6 +269,10 @@ export async function PATCH(
    rep_id: true,
    monthly_price_cents: true,
    setup_fee_cents: true,
+   agent_sms_prompt: true,
+   notifications_phone: true,
+   dispatch_mode: true,
+   sms_agent_enabled: true,
   }
   const AGENT_TUNING_FIELDS = new Set(['greeting_message', 'voice_id'])
   const update: Record<string, any> = {}

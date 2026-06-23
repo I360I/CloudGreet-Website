@@ -36,7 +36,7 @@ export async function GET(
 
   const { data: biz } = await supabaseAdmin
     .from('businesses')
-    .select('business_name, phone_number, sms_phone_number, sms_agent_enabled')
+    .select('business_name, phone_number, sms_phone_number, sms_agent_enabled, notifications_phone, dispatch_mode, agent_sms_prompt')
     .eq('id', params.id)
     .maybeSingle()
   if (!biz) return NextResponse.json({ error: 'Client not found' }, { status: 404 })
@@ -50,6 +50,9 @@ export async function GET(
     sms_phone_number: number,
     voice_phone_number: (biz as any).phone_number,
     sms_agent_enabled: (biz as any).sms_agent_enabled !== false,
+    notifications_phone: (biz as any).notifications_phone || null,
+    dispatch_mode: !!(biz as any).dispatch_mode,
+    agent_sms_prompt: (biz as any).agent_sms_prompt || null,
     tfv: tfvStatus,
   })
 }

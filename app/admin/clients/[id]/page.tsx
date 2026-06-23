@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -2251,82 +2251,30 @@ type RepOption = { id: string; name: string; email: string; status: string }
 
 /* ----------------------- SMS booking number ----------------------- */
 
-type SmsNumberState = {
- sms_phone_number: string | null
- voice_phone_number: string | null
- sms_agent_enabled: boolean
- tfv: {
-  request_id: string | null
-  status: string
-  reason: string | null
-  submitted_at: string | null
-  updated_at: string | null
- } | null
-}
-
 function SmsBookingCard({ clientId }: { clientId: string | undefined }) {
- const [state, setState] = useState<SmsNumberState | null>(null)
+ const [state, setState] = useState<{
+  sms_phone_number: string | null
+  sms_agent_enabled: boolean
+  tfv: { status: string; reason: string | null } | null
+ } | null>(null)
  const [loading, setLoading] = useState(true)
- const [input, setInput] = useState('')
- const [busy, setBusy] = useState(false)
- const [err, setErr] = useState('')
- const [msg, setMsg] = useState('')
 
- const load = useCallback(async () => {
+ useEffect(() => {
   if (!clientId) return
-  setLoading(true)
-  try {
-   const r = await fetchWithAuth(`/api/admin/clients/${clientId}/sms-number`)
-   const j = await r.json().catch(() => ({}))
-   if (r.ok && j?.success) {
-    setState(j as any)
-    setInput(j.sms_phone_number || '')
-   }
-  } finally { setLoading(false) }
+  fetchWithAuth(`/api/admin/clients/${clientId}/sms-number`)
+   .then(r => r.json().catch(() => ({})))
+   .then(j => { if (j?.success) setState(j) })
+   .finally(() => setLoading(false))
  }, [clientId])
 
- useEffect(() => { load() }, [load])
-
- const assign = async () => {
-  if (!clientId) return
-  setBusy(true); setErr(''); setMsg('')
-  try {
-   const r = await fetchWithAuth(`/api/admin/clients/${clientId}/sms-number`, {
-    method: 'POST',
-    body: JSON.stringify({ phone_number: input.trim() }),
-   })
-   const j = await r.json().catch(() => ({}))
-   if (!r.ok || !j.success) throw new Error(j?.error || 'Failed')
-   setMsg(`Assigned ${j.sms_phone_number}.`)
-   await load()
-  } catch (e) {
-   setErr(e instanceof Error ? e.message : 'Failed')
-  } finally { setBusy(false) }
- }
-
- const clear = async () => {
-  if (!clientId) return
-  if (!confirm('Unassign the SMS number from this client? The number stays on the Telnyx account.')) return
-  setBusy(true); setErr(''); setMsg('')
-  try {
-   const r = await fetchWithAuth(`/api/admin/clients/${clientId}/sms-number`, { method: 'DELETE' })
-   const j = await r.json().catch(() => ({}))
-   if (!r.ok || !j.success) throw new Error(j?.error || 'Failed')
-   await load()
-   setInput('')
-  } catch (e) {
-   setErr(e instanceof Error ? e.message : 'Failed')
-  } finally { setBusy(false) }
- }
-
  if (loading) return (
-  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-4 text-sm text-gray-500">Loading SMS booking...</div>
+  <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-4 text-sm text-gray-500">Loading SMS line...</div>
  )
 
  const status = (state?.tfv?.status || '').toLowerCase()
  const isLive = status.includes('verified')
  const isPending = status.includes('waiting') || status.includes('pending')
- const isAction = status.includes('waiting for customer')
+ const isAction = status.includes('waiting for customer') || status.includes('action')
  const badgeTone =
   isLive ? 'border-emerald-400/40 bg-emerald-500/[0.08] text-emerald-200'
   : isAction ? 'border-rose-400/40 bg-rose-500/[0.08] text-rose-200'
@@ -2338,69 +2286,39 @@ function SmsBookingCard({ clientId }: { clientId: string | undefined }) {
   : isPending ? 'Pending review'
   : state?.sms_phone_number ? 'Not submitted'
   : 'Not provisioned'
+ const hasLine = !!state?.sms_phone_number
 
  return (
   <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-4">
    <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
     <div>
      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Text-to-book</div>
-     <div className="text-sm text-gray-300">SMS booking number for this client&apos;s customers</div>
+     <div className="text-sm text-gray-300">SMS line for this client</div>
     </div>
     <span className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full border ${badgeTone}`}>
      {badge}
     </span>
    </div>
 
-   {state?.sms_phone_number && (
-    <div className="mb-3 flex items-baseline gap-3 flex-wrap">
-     <div className="font-mono text-base text-white">{state.sms_phone_number}</div>
-     {state.tfv?.request_id && (
-      <div className="text-[11px] font-mono text-gray-500">TFV {state.tfv.request_id.slice(0, 8)}</div>
-     )}
-     {state.tfv?.updated_at && (
-      <div className="text-[11px] text-gray-500">updated {new Date(state.tfv.updated_at).toLocaleString()}</div>
-     )}
-    </div>
+   {hasLine ? (
+    <div className="mb-3 font-mono text-base text-white">{state!.sms_phone_number}</div>
+   ) : (
+    <div className="mb-3 text-xs text-gray-500">No SMS line provisioned yet.</div>
    )}
 
-   {state?.tfv?.reason && (isAction || !isLive) && (
+   {state?.tfv?.reason && !isLive && (
     <div className="mb-3 rounded-xl border border-rose-400/30 bg-rose-500/[0.05] px-3 py-2 text-xs text-rose-200">
      <div className="font-medium mb-0.5">Telnyx feedback</div>
      <div className="text-rose-100/90">{state.tfv.reason}</div>
     </div>
    )}
 
-   <div className="flex flex-col sm:flex-row gap-2 items-start">
-    <input
-     value={input}
-     onChange={(e) => setInput(e.target.value)}
-     placeholder="+18336940507"
-     className="flex-1 bg-[#0a0a0c] border border-white/[0.08] rounded-xl px-3 py-2 text-sm font-mono text-gray-200 placeholder-gray-500 focus:outline-none focus:border-sky-400/40"
-    />
-    <button
-     onClick={assign}
-     disabled={busy || !input.trim() || input.trim() === state?.sms_phone_number}
-     className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium disabled:opacity-50 transition-colors"
-    >
-     {busy ? 'Saving...' : (state?.sms_phone_number ? 'Reassign' : 'Assign')}
-    </button>
-    {state?.sms_phone_number && (
-     <button
-      onClick={clear}
-      disabled={busy}
-      className="px-4 py-2 rounded-xl border border-white/[0.08] hover:bg-white/[0.04] text-gray-300 text-sm transition-colors"
-     >
-      Unassign
-     </button>
-    )}
-   </div>
-
-   {err && <div className="mt-2 text-xs text-rose-300">{err}</div>}
-   {msg && <div className="mt-2 text-xs text-emerald-300">{msg}</div>}
-
-   <div className="mt-3 text-[11px] text-gray-500 leading-relaxed">
-    Buy a toll-free in the Telnyx portal first (under the CloudGreet messaging profile), then paste the E.164 number here. Carrier TFV is required before delivery to T-Mobile/AT&T/Verizon.
-   </div>
+   <Link
+    href={`/admin/clients/${clientId}/sms-setup`}
+    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium transition-colors"
+   >
+    {hasLine ? 'Configure SMS line' : 'Add SMS line'}
+   </Link>
   </div>
  )
 }

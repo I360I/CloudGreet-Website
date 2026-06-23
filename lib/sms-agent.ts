@@ -170,7 +170,7 @@ export async function handleInboundSms(args: {
   // Load business config + system prompt.
   const { data: biz } = await supabaseAdmin
     .from('businesses')
-    .select('id, business_name, retell_agent_id, dispatch_mode, timezone, phone_number, sms_phone_number, notifications_phone, notification_phone, escalation_phone')
+    .select('id, business_name, retell_agent_id, dispatch_mode, timezone, phone_number, sms_phone_number, notifications_phone, notification_phone, escalation_phone, agent_sms_prompt')
     .eq('id', args.businessId)
     .maybeSingle()
   if (!biz) return { ok: false, error: 'business_not_found' }
@@ -288,6 +288,7 @@ export async function handleInboundSms(args: {
     customerName: callerHistory.caller_name,
     customerEmail: callerHistory.customer_email,
     hasEmailOnFile: callerHistory.has_email_on_file === 'true',
+    agentSmsPrompt: (biz as any).agent_sms_prompt || null,
   })
 
   // Tool-use loop.
@@ -471,7 +472,7 @@ export async function handleWebChat(args: {
 
   const { data: biz } = await supabaseAdmin
     .from('businesses')
-    .select('id, business_name, retell_agent_id, dispatch_mode, timezone, notifications_phone, notification_phone, escalation_phone')
+    .select('id, business_name, retell_agent_id, dispatch_mode, timezone, notifications_phone, notification_phone, escalation_phone, agent_sms_prompt')
     .eq('id', args.businessId)
     .maybeSingle()
   if (!biz) return { ok: false, error: 'business_not_found' }
@@ -537,6 +538,7 @@ export async function handleWebChat(args: {
     customerName: (args.customerName || '').trim() || callerHistory.caller_name,
     customerEmail: callerHistory.customer_email,
     hasEmailOnFile: callerHistory.has_email_on_file === 'true',
+    agentSmsPrompt: (biz as any).agent_sms_prompt || null,
   })
   const systemPrompt = `${basePrompt}
 
@@ -744,17 +746,29 @@ async function buildSystemPrompt(args: {
   customerName?: string
   customerEmail?: string
   hasEmailOnFile?: boolean
+  agentSmsPrompt?: string | null
 }): Promise<string> {
-  // SmartRide-specific full prompt (matches the live voice prompt's
-  // pricing rules) until we wire per-business prompt overrides. The
-  // SMS surface keeps the same brand voice and uses the same tools,
-  // just optimized for text length.
   const now = new Date()
   const nowLocal = now.toLocaleString('en-US', { timeZone: args.timezone, hour12: false })
   const knownName = (args.customerName || '').trim()
   const knownEmail = (args.customerEmail || '').trim()
   const hasEmail = !!args.hasEmailOnFile
 
+  const header = `You are the AI receptionist for ${args.businessName}, working over SMS.
+
+Current time (local): ${nowLocal}
+Customer phone: ${args.customerPhone}
+Customer on file: ${knownName ? `name="${knownName}"` : 'no name yet'}, ${hasEmail ? `email="${knownEmail}"` : 'no email yet'}.`
+
+  // Per-business custom prompt: stored in businesses.agent_sms_prompt.
+  // The header above is always prepended so runtime context (time, phone,
+  // customer name) stays fresh regardless of what's stored.
+  if (args.agentSmsPrompt) {
+    return `${header}\n\n${args.agentSmsPrompt}`.trim()
+  }
+
+  // Fallback: hardcoded SmartRide template (used until a custom prompt
+  // is saved for this business via admin → client → SMS setup).
   return `You are the AI receptionist for ${args.businessName}, working over SMS.
 
 Current time (local): ${nowLocal}
