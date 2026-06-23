@@ -965,35 +965,35 @@ async function runTool(args: {
     })
   }
   if (args.name === 'send_dispatch_request') {
-    // Hard conversation-level guard: one dispatch per booking session (4-hour window).
-    // The model prompt says not to re-dispatch, but the model ignores it when
-    // follow-up messages arrive (e.g. customer gives email or says "thx" and
-    // the agent re-calls dispatch). This check is the authoritative gate.
-    // Window is 4 hours so different booking sessions from the same number
-    // (e.g. a test at noon, a real customer at 6pm) are treated independently.
+    // Dedup guard: block re-dispatching the same trip, but allow multiple
+    // different bookings from the same persistent conversation (e.g. a customer
+    // who books rides for two different dates in separate texts). We match on
+    // requested_time rather than a fixed time window so each unique trip gets
+    // its own dispatch regardless of when in the conversation it came in.
     if (args.conversationId) {
-      const windowStart = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+      const currentTime = String(args.args.requested_time || '').trim().toLowerCase()
       const { data: convMsgs } = await supabaseAdmin
         .from('sms_agent_messages')
         .select('tool_calls')
         .eq('conversation_id', args.conversationId)
         .not('tool_calls', 'is', null)
-        .gte('created_at', windowStart)
-      const alreadyDispatched = (convMsgs || []).some((row: any) =>
+      const alreadyDispatched = currentTime && (convMsgs || []).some((row: any) =>
         Array.isArray(row.tool_calls) &&
-        row.tool_calls.some((tc: any) =>
-          tc?.name === 'send_dispatch_request' &&
-          (tc?.result?.ok === true || tc?.result?.success === true)
-        )
+        row.tool_calls.some((tc: any) => {
+          if (tc?.name !== 'send_dispatch_request') return false
+          if (!(tc?.result?.ok === true || tc?.result?.success === true)) return false
+          const prevTime = String(tc?.args?.requested_time || '').trim().toLowerCase()
+          return prevTime && prevTime === currentTime
+        })
       )
       if (alreadyDispatched) {
-        logger.warn('sms dispatch already sent in this conversation window', {
-          conversationId: args.conversationId, customerPhone: args.customerPhone,
+        logger.warn('sms dispatch already sent for this trip time', {
+          conversationId: args.conversationId, customerPhone: args.customerPhone, requestedTime: currentTime,
         })
         return {
           ok: false,
           error: 'already_dispatched_in_conversation',
-          detail: 'A dispatch was already sent to Steve for this conversation. Do NOT send another. Just acknowledge the customer and let them know Steve will be in touch.',
+          detail: 'A dispatch was already sent to Steve for this exact trip time. Do NOT send another. Just acknowledge the customer and let them know Steve will be in touch.',
         }
       }
     }
