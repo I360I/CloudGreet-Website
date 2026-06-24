@@ -6,11 +6,11 @@ import { handleInboundSms } from '@/lib/sms-agent'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-// The SMS agent loop (Anthropic + Cal.com + Telnyx send) can take
-// 15-20s on a complex turn. Bump from default 10s. Telnyx waits for
-// up to ~30s for the webhook response before considering it failed,
-// so this still fits inside their tolerance.
-export const maxDuration = 30
+// The SMS agent loop can take 30-50s on turns with multiple sequential
+// tool calls (e.g. 4x send_dispatch_request each sending an SMS).
+// Telnyx gives up waiting for the webhook after ~60s; respond fast
+// (200 OK first) or stay under 60s to avoid dropped replies.
+export const maxDuration = 60
 
 /**
  * Telnyx inbound SMS webhook.
