@@ -28,6 +28,7 @@ type ConvoSummary = {
   id: string
   channel: Channel
   customerPhone: string
+  customerName: string | null
   messageCount: number
   lastMessage: { direction: string; body: string; at: string } | null
   lastActivity: string
@@ -85,9 +86,17 @@ function fmtTime(iso: string): string {
   })
 }
 
-function displayName(c: ConvoSummary): string {
-  if (c.channel === 'web') return 'Web visitor'
-  return fmtPhone(c.customerPhone) || c.customerPhone
+function CustomerLabel({ c }: { c: ConvoSummary }) {
+  if (c.channel === 'web') return <span className="text-sm font-medium text-gray-900">Web visitor</span>
+  if (c.customerName) {
+    return (
+      <div>
+        <div className="text-sm font-medium text-gray-900">{c.customerName}</div>
+        <div className="text-xs text-gray-400">{fmtPhone(c.customerPhone) || c.customerPhone}</div>
+      </div>
+    )
+  }
+  return <span className="text-sm font-medium text-gray-900">{fmtPhone(c.customerPhone) || c.customerPhone}</span>
 }
 
 function OutcomeBadge({ outcome }: { outcome: Outcome }) {
@@ -393,9 +402,11 @@ export default function ConversationsPage() {
                       <ChannelDot channel={c.channel} />
                       <div className="flex-1 min-w-0 lg:grid lg:grid-cols-12 lg:gap-4 lg:items-baseline">
                         <div className="lg:col-span-3 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-gray-900 truncate">{displayName(c)}</span>
-                            <span className="lg:hidden text-xs text-gray-400">{relTime(c.lastActivity)}</span>
+                          <div className="flex items-start gap-2 flex-wrap">
+                            <div className="min-w-0 truncate flex-1">
+                              <CustomerLabel c={c} />
+                            </div>
+                            <span className="lg:hidden text-xs text-gray-400 flex-shrink-0">{relTime(c.lastActivity)}</span>
                           </div>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <OutcomeBadge outcome={c.outcome} />

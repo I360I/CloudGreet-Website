@@ -66,12 +66,16 @@ export async function GET(request: NextRequest) {
       const last = ms[ms.length - 1] || null
 
       let outcome: 'booked' | 'dispatch' | null = null
+      let customerName: string | null = null
       for (const m of ms) {
         const tcs = Array.isArray(m.tool_calls) ? m.tool_calls : []
         for (const tc of tcs) {
           if (tc?.name === 'book_appointment' && tc?.result?.success === true) outcome = 'booked'
           else if (tc?.name === 'send_dispatch_request' && (tc?.result?.ok === true || tc?.result?.success === true)) {
             outcome = outcome || 'dispatch'
+          }
+          if (!customerName && (tc?.name === 'book_appointment' || tc?.name === 'send_dispatch_request') && tc?.args?.customer_name) {
+            customerName = String(tc.args.customer_name)
           }
         }
       }
@@ -83,6 +87,7 @@ export async function GET(request: NextRequest) {
         id: c.id,
         channel,
         customerPhone: phone,
+        customerName,
         messageCount: ms.length,
         lastMessage: last ? { direction: last.direction as string, body: last.body as string, at: last.created_at as string } : null,
         lastActivity: last?.created_at || c.updated_at || c.created_at,
