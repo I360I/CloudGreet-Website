@@ -145,13 +145,18 @@ export async function runSmsHealthCheck(opts?: {
           if (tc?.result?.ok === true || tc?.result?.success === true) {
             dispatches++
           } else if (tc?.result?.ok === false || tc?.result?.success === false) {
+            const errCode = tc?.result?.error
+            // These are guards working as designed, not real failures -- skip them
+            if (errCode === 'already_dispatched_in_conversation' || errCode === 'dispatch_cap_exceeded') {
+              continue
+            }
             issues.push({
               severity: 'critical',
               type: 'failed_dispatch',
               customerPhone: phone,
               businessName: business,
               conversationId: c.id,
-              detail: tc?.result?.error || 'send_dispatch_request returned ok:false',
+              detail: errCode || 'send_dispatch_request returned ok:false',
             })
           }
         }
