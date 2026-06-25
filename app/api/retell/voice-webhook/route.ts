@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
  }
  switch (tool.name) {
  case 'book_appointment': {
- const { name: rawName, phone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw, is_emergency: isEmergencyRaw, email: rawEmail } = tool.arguments || {}
+ const { name: rawName, phone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw, is_emergency: isEmergencyRaw, email: rawEmail, flight_number: rawFlightNumber, airline: rawAirline } = tool.arguments || {}
  // Retell's LLM often passes the verbalized form of any digits the
  // agent spoke aloud - "AC leaking at one one one one Main Street"
  // instead of "1111". Compress runs of digit words back to numerals
@@ -244,6 +244,8 @@ export async function POST(request: NextRequest) {
  // ride description tipped over. 1000 chars is well above any
  // realistic message Steve scans on his phone.
  const service = compressDigitWords(rawService)?.slice?.(0, 1000) ?? rawService
+ const flightNumber = typeof rawFlightNumber === 'string' ? rawFlightNumber.trim().toUpperCase() : ''
+ const airline = typeof rawAirline === 'string' ? rawAirline.trim() : ''
  // Coerce review_consent to a strict boolean - the agent may pass true/false,
  // "true"/"false", "yes"/"no", or omit entirely. Anything ambiguous = false
  // so we never text without an explicit yes.
@@ -421,7 +423,12 @@ export async function POST(request: NextRequest) {
      customer_phone: phone || '',
      is_emergency: isEmergency ? 'true' : 'false',
     },
-    notes: `${isEmergency ? '🚨 EMERGENCY · ' : ''}Booked by CloudGreet AI receptionist. Service requested: ${service || 'unspecified'}. Caller phone: ${phone || 'unknown'}.`,
+    notes: [
+      `${isEmergency ? '🚨 EMERGENCY · ' : ''}Booked by CloudGreet AI receptionist.`,
+      `Service requested: ${service || 'unspecified'}.`,
+      `Caller phone: ${phone || 'unknown'}.`,
+      ...(flightNumber ? [`Flight: ${airline ? `${airline} ` : ''}${flightNumber}.`] : []),
+    ].join(' '),
    })
    calBooking = { uid: created.uid, id: created.id }
    sideEffects.push('calcom_synced')
@@ -474,7 +481,7 @@ export async function POST(request: NextRequest) {
  p_start_time: startTime.toISOString(),
  p_end_time: endTime.toISOString(),
  p_duration: 60,
- p_notes: null,
+ p_notes: flightNumber ? `Flight: ${airline ? `${airline} ` : ''}${flightNumber}` : null,
  p_estimated_value: null,
  p_is_emergency: isEmergency,
  })
@@ -1264,6 +1271,9 @@ export async function POST(request: NextRequest) {
  const dropoff = String(args.dropoff || '').trim()
  const partySize = args.party_size
  const requestedTime = String(args.requested_time || '').trim()
+ const dispatchEmail = String(args.email || '').trim()
+ const dispatchFlightNumber = String(args.flight_number || '').trim().toUpperCase()
+ const dispatchAirline = String(args.airline || '').trim()
  const notes = String(args.notes || '').trim()
 
  if (!customerName || !customerPhone || !pickup || !requestedTime) {
@@ -1305,9 +1315,11 @@ export async function POST(request: NextRequest) {
  const lines = [
  `${businessName} dispatch request:`,
  `${customerName} (${customerPhone})`,
- `Pickup: ${pickup}`,
  ]
+ if (dispatchEmail) lines.push(`Email: ${dispatchEmail}`)
+ lines.push(`Pickup: ${pickup}`)
  if (dropoff) lines.push(`Dropoff: ${dropoff}`)
+ if (dispatchFlightNumber) lines.push(`Flight: ${dispatchAirline ? `${dispatchAirline} ` : ''}${dispatchFlightNumber}`)
  if (typeof partySize === 'number' && partySize > 0) lines.push(`Party: ${partySize}`)
  lines.push(`When: ${requestedTime}`)
  if (notes) lines.push(`Notes: ${notes}`)

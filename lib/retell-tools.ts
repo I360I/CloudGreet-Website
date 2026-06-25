@@ -121,6 +121,21 @@ export function getRetellGeneralTools(
             description:
               "ISO-8601 start time WITH the explicit timezone offset for the business, e.g., '2026-05-14T14:00:00-05:00' for 2 PM Central. MUST include both the date AND the time AND the offset - never pass a date-only string like '2026-05-14', never pass a time without offset like '2026-05-14T14:00:00'. The offset must reflect the contractor's local timezone, not UTC. A missing offset will silently shift the booking by several hours.",
           },
+          email: {
+            type: 'string',
+            description:
+              "Caller's email address, confirmed letter-by-letter per the EMAIL READBACK PROCEDURE. Pass only a valid email you've confirmed. Omit if the caller doesn't provide one.",
+          },
+          flight_number: {
+            type: 'string',
+            description:
+              "Flight number for airport pickups, e.g. 'UA1692' or 'United 1692'. Only set when the pickup or dropoff is an airport. Omit for non-airport trips.",
+          },
+          airline: {
+            type: 'string',
+            description:
+              "Airline name for airport pickups, e.g. 'United', 'Delta'. Only set when the pickup or dropoff is an airport. Omit for non-airport trips.",
+          },
           review_consent: {
             type: 'boolean',
             description:
@@ -285,6 +300,21 @@ export function getRetellGeneralTools(
             type: 'string',
             description:
               "When the caller wants service. Use 'now' or 'ASAP' for immediate, or a short phrase like 'in 30 minutes', '7pm tonight'. Plain text - no ISO required.",
+          },
+          email: {
+            type: 'string',
+            description:
+              "Caller's email address, confirmed letter-by-letter per the EMAIL READBACK PROCEDURE. Pass only a valid email you've confirmed. Omit if the caller doesn't provide one.",
+          },
+          flight_number: {
+            type: 'string',
+            description:
+              "Flight number for airport pickups, e.g. 'UA1692' or 'United 1692'. Only set when the pickup or dropoff is an airport. Omit for non-airport trips.",
+          },
+          airline: {
+            type: 'string',
+            description:
+              "Airline name for airport pickups, e.g. 'United', 'Delta'. Only set when the pickup or dropoff is an airport. Omit for non-airport trips.",
           },
           notes: {
             type: 'string',
