@@ -38,13 +38,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, leads: [] })
     }
 
-    // Fetch the lead records that have an email
+    // Fetch all lead records (email-less leads shown in modal with "Find emails" option)
     const { data: leadRows, error: lErr } = await supabaseAdmin
       .from('leads')
-      .select('id, business_name, contact_name, phone, email, city')
+      .select('id, business_name, contact_name, phone, email, city, website')
       .in('id', ids)
-      .not('email', 'is', null)
-      .neq('email', '')
 
     if (lErr) {
       logger.error('my-leads body query failed', { userId: auth.userId, error: lErr.message })

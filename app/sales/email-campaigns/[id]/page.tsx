@@ -69,7 +69,8 @@ type RepLead = {
   business_name: string
   contact_name: string | null
   phone: string | null
-  email: string
+  email: string | null
+  website: string | null
   city: string | null
   status: string
 }
@@ -137,6 +138,8 @@ function AddLeadsModal({
   const [myLeadsLoading, setMyLeadsLoading] = useState(false)
   const [myLeadsSearch, setMyLeadsSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [findingEmails, setFindingEmails] = useState(false)
+  const [findMsg, setFindMsg] = useState('')
 
   // CSV tab state
   const [csvText, setCsvText] = useState('')
@@ -169,6 +172,37 @@ function AddLeadsModal({
       l.email?.toLowerCase().includes(q),
     )
   }, [myLeads, myLeadsSearch])
+
+  // Leads selected that have no email but have a website to scrape
+  const selectedNoEmail = useMemo(
+    () => filteredMyLeads.filter((l) => selected.has(l.id) && !l.email && l.website),
+    [filteredMyLeads, selected],
+  )
+
+  const handleFindEmails = async () => {
+    if (selectedNoEmail.length === 0) return
+    setFindingEmails(true); setFindMsg(''); setErr('')
+    try {
+      const res = await fetchWithAuth('/api/sales/leads/find-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadIds: selectedNoEmail.map((l) => l.id) }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
+      // Update local lead state with found emails
+      const emailMap = new Map<string, string | null>(
+        (json.results as { leadId: string; email: string | null }[]).map((r) => [r.leadId, r.email]),
+      )
+      setMyLeads((prev) => prev.map((l) => emailMap.has(l.id) ? { ...l, email: emailMap.get(l.id) || null } : l))
+      const found = (json.results as { email: string | null }[]).filter((r) => r.email).length
+      setFindMsg(`Found ${found} of ${selectedNoEmail.length} email${selectedNoEmail.length === 1 ? '' : 's'}.`)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to find emails')
+    } finally {
+      setFindingEmails(false)
+    }
+  }
 
   const toggleLead = (id: string) => {
     setSelected((prev) => {
@@ -205,12 +239,12 @@ function AddLeadsModal({
   }
 
   const submitMyLeads = async () => {
-    const toAdd = myLeads.filter((l) => selected.has(l.id))
-    if (toAdd.length === 0) return
+    const toAdd = myLeads.filter((l) => selected.has(l.id) && !!l.email)
+    if (toAdd.length === 0) { setErr('No selected leads have an email address yet. Use Find emails first.'); return }
     setSaving(true); setErr(''); setSuccessMsg('')
     try {
       const leads = toAdd.map((l) => ({
-        email: l.email,
+        email: l.email!,
         owner_name: l.contact_name || null,
         business_name: l.business_name || null,
         city: l.city || null,
@@ -308,24 +342,40 @@ function AddLeadsModal({
                   <CircleNotch className="w-4 h-4 animate-spin" /> Loading your leads...
                 </div>
               ) : myLeads.length === 0 ? (
-                <div className="text-sm text-gray-500 py-4">
-                  No leads with email addresses found in your pipeline.
-                </div>
+                <div className="text-sm text-gray-500 py-4">No leads in your pipeline yet.</div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <input
-                      type="checkbox"
-                      checked={selected.size === filteredMyLeads.length && filteredMyLeads.length > 0}
-                      onChange={toggleAll}
-                      className="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
-                    />
-                    <span>
-                      {selected.size > 0
-                        ? `${selected.size} selected`
-                        : `${filteredMyLeads.length} lead${filteredMyLeads.length === 1 ? '' : 's'} with email`}
-                    </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <input
+                        type="checkbox"
+                        checked={selected.size === filteredMyLeads.length && filteredMyLeads.length > 0}
+                        onChange={toggleAll}
+                        className="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
+                      />
+                      <span>
+                        {selected.size > 0 ? `${selected.size} selected` : `${filteredMyLeads.length} leads`}
+                      </span>
+                    </div>
+                    {selectedNoEmail.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleFindEmails}
+                        disabled={findingEmails}
+                        className="inline-flex items-center gap-1.5 text-xs bg-sky-600 text-white hover:bg-sky-700 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-60"
+                      >
+                        {findingEmails
+                          ? <CircleNotch className="w-3 h-3 animate-spin" />
+                          : <MagnifyingGlass className="w-3 h-3" />}
+                        {findingEmails ? 'Finding...' : `Find emails (${selectedNoEmail.length})`}
+                      </button>
+                    )}
                   </div>
+                  {findMsg && (
+                    <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                      {findMsg}
+                    </div>
+                  )}
                   <div className="space-y-1 max-h-56 overflow-y-auto">
                     {filteredMyLeads.map((l) => (
                       <label
@@ -342,7 +392,11 @@ function AddLeadsModal({
                           <div className="text-sm font-medium text-gray-900 truncate">{l.business_name}</div>
                           <div className="text-[11px] text-gray-500 truncate">
                             {l.contact_name && <span>{l.contact_name} &middot; </span>}
-                            {l.email}
+                            {l.email
+                              ? l.email
+                              : l.website
+                                ? <span className="text-amber-500">No email &middot; has website</span>
+                                : <span className="text-gray-400">No email</span>}
                           </div>
                         </div>
                       </label>
@@ -418,7 +472,10 @@ function AddLeadsModal({
               <Plus weight="bold" className="w-4 h-4" />
             )}
             {tab === 'myLeads'
-              ? `Add ${selected.size > 0 ? selected.size : ''} selected`
+              ? (() => {
+                  const withEmail = filteredMyLeads.filter((l) => selected.has(l.id) && !!l.email).length
+                  return withEmail > 0 ? `Add ${withEmail} to campaign` : 'Add selected'
+                })()
               : `Add ${csvParsed.length > 0 ? csvParsed.length : ''} leads`}
           </button>
         </div>
