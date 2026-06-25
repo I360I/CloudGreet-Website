@@ -234,8 +234,14 @@ export async function handleInboundSms(args: {
   // Steve testing or a customer wanting to start a new booking.
   const trimmedBody = (args.body || '').trim().toLowerCase()
   if (trimmedBody === 'new' || trimmedBody === 'reset' || trimmedBody === 'start over') {
-    // Expire the conversation by back-dating updated_at so getOrCreateConversation
-    // will create a new record on the next inbound message.
+    // Wipe the message history so the agent starts with a genuinely empty
+    // context on the next turn. Without this, history is loaded by conversation_id
+    // within a 24h window and the old messages are still visible.
+    await supabaseAdmin
+      .from('sms_agent_messages')
+      .delete()
+      .eq('conversation_id', conversationId)
+    // Expire the conversation so getOrCreateConversation opens a fresh session.
     await supabaseAdmin
       .from('sms_conversations')
       .update({ updated_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString() })
