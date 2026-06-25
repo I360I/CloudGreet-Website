@@ -294,6 +294,9 @@ export async function sendDispatchRequest(args: {
   dropoff?: string
   partySize?: number
   requestedTime: string
+  email?: string
+  flightNumber?: string
+  airline?: string
   notes?: string
   retellCallId?: string | null
 }): Promise<{ ok: true; ownerPhone: string } | { ok: false; error: string; detail?: string }> {
@@ -371,6 +374,8 @@ export async function sendDispatchRequest(args: {
   if (args.dropoff) lines.push(`Dropoff: ${args.dropoff}`)
   if (typeof args.partySize === 'number' && args.partySize > 0) lines.push(`Party: ${args.partySize}`)
   lines.push(`When: ${args.requestedTime}`)
+  if (args.email) lines.push(`Email: ${args.email}`)
+  if (args.flightNumber) lines.push(`Flight: ${args.airline ? `${args.airline} ` : ''}${args.flightNumber}`)
   if (args.notes) lines.push(`Notes: ${args.notes}`)
   lines.push('Call or text them back to accept.')
 

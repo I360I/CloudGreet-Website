@@ -1094,6 +1094,9 @@ async function runTool(args: {
       dropoff: args.args.dropoff ? String(args.args.dropoff) : undefined,
       partySize: typeof args.args.party_size === 'number' ? args.args.party_size : undefined,
       requestedTime: String(args.args.requested_time || ''),
+      email: args.args.email ? String(args.args.email).trim() : undefined,
+      flightNumber: args.args.flight_number ? String(args.args.flight_number).trim().toUpperCase() : undefined,
+      airline: args.args.airline ? String(args.args.airline).trim() : undefined,
       notes: args.args.notes ? String(args.args.notes) : undefined,
     })
   }
