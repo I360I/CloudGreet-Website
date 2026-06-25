@@ -387,14 +387,28 @@ export async function sendDispatchRequest(args: {
         telnyxMessageId: (sent as any)?.data?.id || null,
       }),
     ).catch(() => { /* tracking is best-effort */ })
-    void import('./admin-notify').then(({ sendAdminCopyIfDistinct }) =>
-      sendAdminCopyIfDistinct({
-        clientName: businessName,
-        ownerPhone,
-        kind: 'dispatch',
-        body,
-      }),
-    ).catch(() => { /* admin-copy is best-effort */ })
+    // Send admin the same dispatch text as the owner (not a report-link summary).
+    // Gated on admin !== owner so testing against your own number doesn't double-send.
+    const adminPhone = (process.env.CLOUDGREET_ADMIN_NOTIFY_PHONE || '+17372960092').trim()
+    if (adminPhone && adminPhone.replace(/\D/g, '') !== ownerPhone.replace(/\D/g, '')) {
+      void (async () => {
+        try {
+          const adminSent = await telnyxClient.sendSMS(adminPhone, body, fromNumber)
+          void import('./dispatch-tracking').then(({ recordDispatchSend }) =>
+            recordDispatchSend({
+              businessId: args.businessId,
+              retellCallId: args.retellCallId ?? null,
+              recipientPhone: adminPhone,
+              fromNumber,
+              body,
+              telnyxMessageId: (adminSent as any)?.data?.id || null,
+            }),
+          ).catch(() => {})
+        } catch (e) {
+          logger.warn('sendDispatchRequest: admin copy failed', { error: e instanceof Error ? e.message : 'unknown' })
+        }
+      })()
+    }
     return { ok: true, ownerPhone }
   } catch (e) {
     return { ok: false, error: 'sms_send_failed', detail: e instanceof Error ? e.message : 'unknown' }

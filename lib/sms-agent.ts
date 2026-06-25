@@ -424,8 +424,10 @@ export async function handleInboundSms(args: {
   }
 
   // Admin alerts (fire-and-forget). A "NEW" alert on the first message of a
-  // fresh conversation, and a "BOOKED"/"DISPATCH" alert when this turn
-  // produced an outcome - both carry the login-free report link.
+  // fresh conversation, and a "BOOKED" alert when this turn produced a calendar
+  // booking - both carry the login-free report link.
+  // Dispatch outcomes are NOT alerted here because sendDispatchRequest already
+  // sends the admin an exact copy of the full dispatch text.
   const businessName = (biz as any).business_name || 'Client'
   const ownerPhone = (biz as any).notifications_phone || (biz as any).notification_phone || (biz as any).escalation_phone || null
   if (isNewConversation) {
@@ -434,8 +436,7 @@ export async function handleInboundSms(args: {
       kind: 'new', businessId: args.businessId, businessName, customerPhone: fromPhone, reportToken, preview: args.body,
     })
   }
-  if (outcomeKind) {
-    // Outcome (booked/dispatch): notify admin AND the owner with the report link.
+  if (outcomeKind && outcomeKind !== 'dispatch') {
     void alertAdminTextToBook({
       kind: outcomeKind, businessId: args.businessId, businessName, customerPhone: fromPhone, reportToken, ownerPhone,
     })
@@ -635,14 +636,16 @@ CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
     })
   }
 
-  // Same alerts as SMS: admin on a brand-new thread, admin + owner on outcomes.
+  // Same alerts as SMS: admin on a brand-new thread, admin + owner on booked
+  // outcomes. Dispatch outcomes are skipped here (sendDispatchRequest sends admin
+  // the full dispatch text directly).
   const ownerPhone = (biz as any).notifications_phone || (biz as any).notification_phone || (biz as any).escalation_phone || null
   if (isNewConversation) {
     void alertAdminTextToBook({
       kind: 'new', businessId: args.businessId, businessName, customerPhone: phone, reportToken, preview: args.body,
     })
   }
-  if (outcomeKind) {
+  if (outcomeKind && outcomeKind !== 'dispatch') {
     void alertAdminTextToBook({
       kind: outcomeKind, businessId: args.businessId, businessName, customerPhone: phone, reportToken, ownerPhone,
     })
