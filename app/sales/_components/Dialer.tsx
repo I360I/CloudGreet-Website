@@ -89,8 +89,6 @@ export function Dialer() {
   const callRef = useRef<any>(null)
   const callRowIdRef = useRef<string | null>(null)
   const fromNumberRef = useRef<string | null>(null)
-  const forwardingNumberRef = useRef<string | null>(null)
-  const bridgeCallIdRef = useRef<string | null>(null)
   const startedAtRef = useRef<number | null>(null)
   // Telnyx WebRTC needs an <audio> element to pump the remote (callee)
   // audio into. Without this you hear ringing but nothing else - the
@@ -106,49 +104,14 @@ export function Dialer() {
 
     const setup = async (opts?: { fromUserGesture?: boolean }) => {
       setError(null)
-      setStatus('loading_token')
 
-      // Fetch the token first so we know if bridge mode is active before
-      // deciding whether we need mic permission + WebRTC at all.
-      let tokenJson: any = null
-      try {
-        const r = await fetchWithAuth('/api/sales/dialer/token', { method: 'POST' })
-        if (cancelled) return
-        if (r.status === 503) {
-          setStatus('unconfigured')
-          return
-        }
-        const j = await r.json().catch(() => ({}))
-        if (!r.ok || !j?.success) {
-          setStatus('error')
-          setError(j?.error || `Token mint failed (${r.status})`)
-          retryTimer = setTimeout(setup, 15_000)
-          return
-        }
-        tokenJson = j
-      } catch (e) {
-        if (cancelled) return
-        setStatus('error')
-        setError(e instanceof Error ? e.message : 'Could not initialise dialer')
-        retryTimer = setTimeout(setup, 15_000)
-        return
-      }
-
-      fromNumberRef.current = tokenJson.from_number || null
-      forwardingNumberRef.current = tokenJson.forwarding_number || null
-
-      // Bridge mode: rep has a forwarding number (e.g. Google Voice).
-      // No WebRTC needed - calls are bridged through Telnyx Call Control.
-      if (forwardingNumberRef.current) {
-        setStatus('ready')
-        return
-      }
-
-      // Non-bridge: need mic permission before setting up WebRTC.
       // On mount: use Permissions API to detect a pre-existing grant. If
-      // it says 'granted', skip straight to WebRTC. Otherwise show the
-      // click-to-allow UI - we do NOT auto-call getUserMedia here, since
-      // that would fire a fresh OS prompt on every page reload.
+      // it says 'granted', skip straight to token mint. Otherwise show
+      // the click-to-allow UI - we do NOT auto-call getUserMedia here,
+      // since that would fire a fresh OS prompt on every page reload.
+      // When called from grantMicrophone (fromUserGesture), we know the
+      // user just granted via a synchronous getUserMedia and can proceed
+      // straight to connecting.
       if (!opts?.fromUserGesture) {
         let granted = false
         try {
@@ -163,12 +126,28 @@ export function Dialer() {
         }
       }
 
+      setStatus('loading_token')
       try {
+        const r = await fetchWithAuth('/api/sales/dialer/token', { method: 'POST' })
+        if (cancelled) return
+        if (r.status === 503) {
+          setStatus('unconfigured')
+          return
+        }
+        const j = await r.json().catch(() => ({}))
+        if (!r.ok || !j?.success) {
+          setStatus('error')
+          setError(j?.error || `Token mint failed (${r.status})`)
+          retryTimer = setTimeout(setup, 15_000)
+          return
+        }
+        fromNumberRef.current = j.from_number || null
+
         // Lazy-import the Telnyx SDK so SSR doesn't choke on `window`.
         const mod = await import('@telnyx/webrtc')
         if (cancelled) return
         const TelnyxRTC = (mod as any).TelnyxRTC
-        const client = new TelnyxRTC({ login_token: tokenJson.login_token })
+        const client = new TelnyxRTC({ login_token: j.login_token })
 
         client.on('telnyx.ready', () => { if (!cancelled) setStatus('ready') })
         client.on('telnyx.socket.close', () => {
@@ -355,38 +334,6 @@ export function Dialer() {
       setError('Dialer not ready yet - try again in a second.')
       return
     }
-
-    // Bridge mode: route through rep's forwarding number (Google Voice etc.)
-    if (forwardingNumberRef.current) {
-      if (bridgeCallIdRef.current) return // already bridging
-      setError(null)
-      setOpen(true)
-      setActiveLeadId(leadId || null)
-      setDestination(number)
-      setCallState('connecting')
-      startedAtRef.current = null
-      try {
-        const r = await fetchWithAuth('/api/sales/dialer/bridge', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: number, leadId: leadId || null }),
-        })
-        const j = await r.json().catch(() => ({}))
-        if (!r.ok) {
-          setError(j?.error || 'Bridge call failed')
-          setCallState('idle')
-          return
-        }
-        bridgeCallIdRef.current = j.call_control_id || null
-        startedAtRef.current = Date.now()
-        setCallState('ringing') // Telnyx is now calling rep's phone
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Bridge call failed')
-        setCallState('idle')
-      }
-      return
-    }
-
     if (callRef.current) {
       // Already on a call; ignore.
       return
@@ -575,18 +522,6 @@ export function Dialer() {
   }, [dial])
 
   const hangup = useCallback(() => {
-    if (bridgeCallIdRef.current) {
-      const id = bridgeCallIdRef.current
-      bridgeCallIdRef.current = null
-      void fetchWithAuth('/api/sales/dialer/bridge', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ call_control_id: id }),
-      })
-      setCallState('ended')
-      setTimeout(() => setCallState('idle'), 1500)
-      return
-    }
     try { callRef.current?.hangup?.() } catch {}
   }, [])
 
@@ -948,11 +883,7 @@ export function Dialer() {
                         </span>
                       ) : (
                         <span className="text-xs text-amber-800 inline-flex items-center">
-                          {callState === 'connecting'
-                            ? 'Dialing'
-                            : forwardingNumberRef.current
-                              ? 'Calling your phone'
-                              : 'Ringing'}
+                          {callState === 'connecting' ? 'Dialing' : 'Ringing'}
                           <RingingDots />
                         </span>
                       )}
@@ -1033,13 +964,7 @@ export function Dialer() {
                     </div>
                   )}
 
-                  {forwardingNumberRef.current && status === 'ready' && !inCall && (
-                    <div className="mt-3 mx-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-violet-200 bg-violet-50 text-xs text-violet-700">
-                      <Phone className="w-3 h-3" weight="fill" />
-                      Bridging to {formatFromNumber(forwardingNumberRef.current)}
-                    </div>
-                  )}
-                  {!forwardingNumberRef.current && fromNumberRef.current && status === 'ready' && !inCall && (
+                  {fromNumberRef.current && status === 'ready' && !inCall && (
                     <button
                       type="button"
                       onClick={() => setPickerOpen(true)}

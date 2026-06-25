@@ -44,11 +44,10 @@ export async function POST(request: NextRequest) {
   // for legacy reps whose provisioning failed or hasn't run yet.
   const { data: rep } = await supabaseAdmin
     .from('sales_reps')
-    .select('telnyx_outbound_number, forwarding_number')
+    .select('telnyx_outbound_number')
     .eq('id', auth.userId)
     .maybeSingle()
   const fromNumber = rep?.telnyx_outbound_number || envFromNumber
-  const forwardingNumber = rep?.forwarding_number || null
 
   if (!apiKey || !credentialId || !fromNumber) {
     return NextResponse.json({
@@ -100,7 +99,6 @@ export async function POST(request: NextRequest) {
       success: true,
       login_token: token,
       from_number: fromNumber,
-      forwarding_number: forwardingNumber,
     })
   } catch (e) {
     logger.error('telnyx token threw', { error: e instanceof Error ? e.message : 'Unknown' })
