@@ -754,6 +754,26 @@ function AgentCard({
  const [savingAgent, setSavingAgent] = useState(false)
  const [agentErr, setAgentErr] = useState('')
 
+ const [wiringTools, setWiringTools] = useState(false)
+ const [wireResult, setWireResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+ const rewireTools = async () => {
+  setWiringTools(true); setWireResult(null)
+  try {
+   const res = await fetchWithAuth('/api/admin/retell/wire-tools', {
+    method: 'POST',
+    body: JSON.stringify({ businessId: clientId }),
+   })
+   const j = await res.json().catch(() => ({}))
+   if (!res.ok || !j.success) throw new Error(j?.error || 'Wire failed')
+   setWireResult({ ok: true, msg: 'Tools pushed to Retell agent.' })
+  } catch (e) {
+   setWireResult({ ok: false, msg: e instanceof Error ? e.message : 'Failed' })
+  } finally {
+   setWiringTools(false)
+  }
+ }
+
  useEffect(() => { setPhoneInput(retellPhone || '') }, [retellPhone])
  useEffect(() => { setAgentInput(currentAgentId) }, [currentAgentId])
 
@@ -917,6 +937,28 @@ function AgentCard({
       </div>
      )}
     </div>
+    {currentAgentId && (
+     <div className="pt-3 border-t border-white/[0.06]">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1.5">
+       Tool definitions
+      </div>
+      <div className="flex items-center gap-3 flex-wrap">
+       <GhostButton onClick={rewireTools} disabled={wiringTools}>
+        {wiringTools ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <ArrowCounterClockwise className="w-3.5 h-3.5" />}
+        Re-wire tools
+       </GhostButton>
+       {wireResult && (
+        <span className={`text-xs ${wireResult.ok ? 'text-emerald-400' : 'text-rose-300'}`}>
+         {wireResult.msg}
+        </span>
+       )}
+      </div>
+      <p className="text-[10px] text-gray-500 mt-1.5">
+       Pushes the latest tool definitions (book_appointment, send_dispatch_request, etc.) to the Retell agent. Run after any tool schema change.
+      </p>
+     </div>
+    )}
+
     {client.cal_com_username && (
      <div className="pt-3 border-t border-white/[0.06] text-xs text-gray-500 space-y-2">
       <div>
