@@ -25,6 +25,7 @@ type Campaign = {
   reply_to: string | null
   subject: string
   body_template: string
+  signature: string | null
   status: string
   sent_count: number
   bounce_count: number
@@ -112,7 +113,7 @@ export async function sendCampaignBatch(
 
   const { data: campaign, error: campErr } = await supabaseAdmin
     .from('email_campaigns')
-    .select('id, name, from_name, from_email, reply_to, subject, body_template, status, sent_count, bounce_count')
+    .select('id, name, from_name, from_email, reply_to, subject, body_template, signature, status, sent_count, bounce_count')
     .eq('id', campaignId)
     .single()
 
@@ -156,7 +157,7 @@ export async function sendCampaignBatch(
         campaign.body_template,
         lead,
         campaign.from_name,
-      )
+      ) + (campaign.signature ? `\n\n${campaign.signature}` : '')
 
       const firstName = getFirstName(lead.owner_name)
       const personalizedSubject = campaign.subject

@@ -50,3 +50,39 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+// PATCH /api/sales/email-campaigns/[id] - update editable fields (signature, name, subject, body_template)
+export async function PATCH(request: NextRequest, { params }: RouteContext) {
+  const auth = await requireAuth(request)
+  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+    return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
+  }
+
+  try {
+    const { id } = params
+    const body = await request.json().catch(() => ({}))
+
+    const allowed = ['signature', 'name', 'subject', 'body_template', 'reply_to'] as const
+    const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    for (const key of allowed) {
+      if (key in body) update[key] = body[key]
+    }
+
+    const { error } = await supabaseAdmin
+      .from('email_campaigns')
+      .update(update)
+      .eq('id', id)
+      .eq('created_by', auth.userId)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    logger.error('PATCH /api/sales/email-campaigns/[id] failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

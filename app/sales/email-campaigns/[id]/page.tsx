@@ -27,6 +27,7 @@ type Campaign = {
   reply_to: string | null
   subject: string
   body_template: string
+  signature: string | null
   status: CampaignStatus
   sent_count: number
   bounce_count: number
@@ -431,6 +432,9 @@ export default function SalesEmailCampaignDetailPage() {
   const [sending, setSending] = useState(false)
   const [pausing, setPausing] = useState(false)
   const [search, setSearch] = useState('')
+  const [sig, setSig] = useState('')
+  const [sigSaving, setSigSaving] = useState(false)
+  const [sigSaved, setSigSaved] = useState(false)
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -440,6 +444,7 @@ export default function SalesEmailCampaignDetailPage() {
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to load')
       setCampaign(json.campaign)
       setLeads(json.leads || [])
+      setSig(json.campaign?.signature || '')
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load campaign')
     } finally {
@@ -512,6 +517,21 @@ export default function SalesEmailCampaignDetailPage() {
     }
     if (!confirm(`Power dial through ${items.length} emailed lead${items.length === 1 ? '' : 's'}?`)) return
     window.cgPowerDial(items)
+  }
+
+  const handleSaveSig = async () => {
+    setSigSaving(true); setSigSaved(false)
+    try {
+      await fetchWithAuth(`/api/sales/email-campaigns/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signature: sig }),
+      })
+      setSigSaved(true)
+      setTimeout(() => setSigSaved(false), 2500)
+    } catch { /* non-fatal */ } finally {
+      setSigSaving(false)
+    }
   }
 
   const filteredLeads = useMemo(() => {
@@ -670,6 +690,40 @@ export default function SalesEmailCampaignDetailPage() {
               <div className="text-2xl font-display font-semibold text-gray-900 tabular-nums">{s.value}</div>
             </div>
           ))}
+        </motion.div>
+
+        {/* Signature */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE, delay: 0.04 }}
+          className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-4 p-5"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-0.5">Signature</div>
+              <p className="text-xs text-gray-500">Appended to every email in this campaign.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSaveSig}
+              disabled={sigSaving}
+              className="inline-flex items-center gap-1.5 text-xs bg-gray-900 text-white hover:bg-gray-800 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+            >
+              {sigSaving
+                ? <CircleNotch className="w-3 h-3 animate-spin" />
+                : sigSaved
+                  ? <CheckCircle weight="fill" className="w-3 h-3 text-emerald-400" />
+                  : null}
+              {sigSaved ? 'Saved' : 'Save'}
+            </button>
+          </div>
+          <textarea
+            value={sig}
+            onChange={(e) => setSig(e.target.value)}
+            placeholder={"Paste your email signature here...\n\nBest,\nYour Name\nTitle | Company\n(555) 000-0000"}
+            rows={5}
+            className="w-full text-sm font-mono bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-gray-900 focus:bg-white transition-colors resize-y"
+          />
         </motion.div>
 
         {/* Leads table */}
