@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CaretLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X,
   PaperPlaneTilt, Pause, PhoneCall, MagnifyingGlass, EnvelopeSimple,
-  ArrowBendUpLeft, PencilSimple, Trash, ArrowClockwise,
+  ArrowBendUpLeft, PencilSimple, Trash, ArrowClockwise, ThermometerSimple,
 } from '@phosphor-icons/react'
 import { SalesShell } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -428,6 +428,88 @@ function AddLeadsModal({
 }
 
 // ---------------------------------------------------------------------------
+// Email Warming Warning
+// ---------------------------------------------------------------------------
+
+const WARMING_KEY = 'cg_warmup_warning_dismissed'
+
+function WarmingWarning({ onClose }: { onClose: () => void }) {
+  const [dontShow, setDontShow] = useState(false)
+
+  const dismiss = () => {
+    if (dontShow) localStorage.setItem(WARMING_KEY, '1')
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4">
+      <div className="bg-white border border-gray-200 rounded-2xl shadow-xl w-full max-w-lg">
+        <div className="p-6">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
+              <ThermometerSimple weight="fill" className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Email sending limits</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Read this before your first send</p>
+            </div>
+          </div>
+
+          <div className="space-y-3 text-sm text-gray-700">
+            <p>
+              Email providers like Gmail and Outlook track the reputation of every sending address. A brand-new address that suddenly sends hundreds of emails looks like spam -- and once you get flagged, deliverability tanks for weeks.
+            </p>
+            <p>
+              The fix is called <span className="font-medium text-gray-900">warming</span>: start small and increase gradually over 2-4 weeks so providers learn to trust the address.
+            </p>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 space-y-1.5">
+              <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider">Recommended ramp</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-amber-900 font-mono">
+                <span>Week 1</span><span>20-30 / day</span>
+                <span>Week 2</span><span>50-75 / day</span>
+                <span>Week 3</span><span>100-150 / day</span>
+                <span>Week 4+</span><span>200+ / day</span>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3.5">
+              <p className="text-xs font-semibold text-gray-700 mb-1">Right now in CloudGreet</p>
+              <p className="text-xs text-gray-600">
+                There is no automatic daily cap. The Send batch button fires up to 50 at once with no guardrail. <span className="font-medium text-gray-800">You are responsible for staying within your warm-up budget.</span> Click Send batch only as many times as your daily limit allows.
+              </p>
+            </div>
+
+            <p className="text-xs text-gray-500">
+              If you are sending from a personal address you have used for months (like your M365 Outlook), it already has reputation and you can ramp faster. If the sending domain is new, go slow.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between px-6 pb-5">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={dontShow}
+              onChange={(e) => setDontShow(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
+            />
+            <span className="text-xs text-gray-500">Don't show again</span>
+          </label>
+          <button
+            type="button"
+            onClick={dismiss}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Step Edit Modal
 // ---------------------------------------------------------------------------
 
@@ -557,6 +639,7 @@ export default function SalesEmailCampaignDetailPage() {
   const [seqSaving, setSeqSaving] = useState(false)
   const [seqSaved, setSeqSaved] = useState(false)
   const [editingStep, setEditingStep] = useState<SequenceStep | null>(null)
+  const [showWarmingWarning, setShowWarmingWarning] = useState(false)
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -579,7 +662,13 @@ export default function SalesEmailCampaignDetailPage() {
     }
   }
 
-  useEffect(() => { void load() }, [campaignId])
+  useEffect(() => {
+    void load().then(() => {
+      if (typeof window !== 'undefined' && !localStorage.getItem(WARMING_KEY)) {
+        setShowWarmingWarning(true)
+      }
+    })
+  }, [campaignId])
 
   const queuedCount = leads.filter((l) => l.status === 'queued').length
   const sentLeads = leads.filter((l) => l.status === 'sent')
@@ -773,6 +862,10 @@ export default function SalesEmailCampaignDetailPage() {
           onClose={() => setShowAddLeads(false)}
           onAdded={() => { void load() }}
         />
+      )}
+
+      {showWarmingWarning && (
+        <WarmingWarning onClose={() => setShowWarmingWarning(false)} />
       )}
 
       {/* Step editor modal */}
