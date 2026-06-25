@@ -93,6 +93,7 @@ function NewCampaignModal({
   const [form, setForm] = useState({
     name: '',
     from_name: 'CloudGreet',
+    from_email: repEmail,
     reply_to: repEmail,
     subject: '',
     body_template: '',
@@ -114,7 +115,10 @@ function NewCampaignModal({
     try {
       const res = await fetchWithAuth('/api/sales/email-campaigns', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          from_email: form.from_email || repEmail,
+        }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to create campaign')
@@ -167,16 +171,19 @@ function NewCampaignModal({
               <input
                 value={form.from_name}
                 onChange={(e) => set('from_name', e.target.value)}
+                placeholder="Your name"
                 className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900 transition-colors"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">From email</label>
               <input
-                value={repEmail}
-                readOnly
-                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-500 cursor-not-allowed"
+                value={form.from_email}
+                onChange={(e) => set('from_email', e.target.value)}
+                placeholder={repEmail}
+                className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900 transition-colors"
               />
+              <p className="text-[11px] text-gray-400 mt-1">e.g. sales@getcloudgreet.com</p>
             </div>
           </div>
 

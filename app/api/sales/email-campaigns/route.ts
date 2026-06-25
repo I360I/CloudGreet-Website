@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null)
     if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
 
-    const { name, subject, body_template, from_name, reply_to } = body as Record<string, string | undefined>
+    const { name, subject, body_template, from_name, from_email: fromEmailBody, reply_to } = body as Record<string, string | undefined>
 
     if (!name || !subject || !body_template) {
       return NextResponse.json(
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Look up the rep's email address to use as from_email
+    // Look up the rep's email address as fallback from_email
     const { data: userRow, error: userErr } = await supabaseAdmin
       .from('custom_users')
       .select('email')
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Could not determine your email address' }, { status: 500 })
     }
 
-    const from_email = userRow.email
+    const from_email = fromEmailBody?.trim() || userRow.email
 
     const { data, error } = await supabaseAdmin
       .from('email_campaigns')
