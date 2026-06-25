@@ -93,7 +93,7 @@ function NewCampaignModal({
   const [form, setForm] = useState({
     name: '',
     from_name: 'CloudGreet',
-    from_email: repEmail,
+    from_email_prefix: repEmail.split('@')[0] || '',
     reply_to: repEmail,
     subject: '',
     body_template: '',
@@ -113,12 +113,12 @@ function NewCampaignModal({
     if (!form.body_template.trim()) { setErr('Body template is required.'); return }
     setSaving(true); setErr('')
     try {
+      const from_email = form.from_email_prefix
+        ? `${form.from_email_prefix}@getcloudgreet.com`
+        : repEmail
       const res = await fetchWithAuth('/api/sales/email-campaigns', {
         method: 'POST',
-        body: JSON.stringify({
-          ...form,
-          from_email: form.from_email || repEmail,
-        }),
+        body: JSON.stringify({ ...form, from_email }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to create campaign')
@@ -177,13 +177,17 @@ function NewCampaignModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">From email</label>
-              <input
-                value={form.from_email}
-                onChange={(e) => set('from_email', e.target.value)}
-                placeholder={repEmail}
-                className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900 transition-colors"
-              />
-              <p className="text-[11px] text-gray-400 mt-1">e.g. sales@getcloudgreet.com</p>
+              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-gray-900 transition-colors">
+                <input
+                  value={form.from_email_prefix}
+                  onChange={(e) => set('from_email_prefix', e.target.value.replace(/[@\s]/g, ''))}
+                  placeholder="sales"
+                  className="flex-1 min-w-0 px-3.5 py-2.5 bg-white text-sm focus:outline-none"
+                />
+                <span className="px-3 py-2.5 bg-gray-50 border-l border-gray-200 text-sm text-gray-500 select-none whitespace-nowrap">
+                  @getcloudgreet.com
+                </span>
+              </div>
             </div>
           </div>
 
