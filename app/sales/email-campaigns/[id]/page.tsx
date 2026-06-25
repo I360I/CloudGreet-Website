@@ -358,6 +358,15 @@ function AddLeadsModal({
                       <span>
                         {selected.size > 0 ? `${selected.size} selected` : `${filteredMyLeads.length} leads`}
                       </span>
+                      {filteredMyLeads.some((l) => !l.email && l.website) && (
+                        <button
+                          type="button"
+                          onClick={() => setSelected(new Set(filteredMyLeads.filter((l) => !l.email && l.website).map((l) => l.id)))}
+                          className="text-sky-600 hover:text-sky-800 underline-offset-2 hover:underline ml-1"
+                        >
+                          Select all with website
+                        </button>
+                      )}
                     </div>
                     {selectedNoEmail.length > 0 && (
                       <button
