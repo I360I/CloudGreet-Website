@@ -192,7 +192,7 @@ function NewCampaignModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">Reply-to</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Forward replies to</label>
             <input
               value={form.reply_to}
               onChange={(e) => set('reply_to', e.target.value)}
