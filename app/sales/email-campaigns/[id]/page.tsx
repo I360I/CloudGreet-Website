@@ -164,20 +164,18 @@ function AddLeadsModal({
   }, [tab])
 
   const filteredMyLeads = useMemo(() => {
-    // Only show leads we can do something with: has email OR has a website to scrape
-    const actionable = myLeads.filter((l) => !!l.email || !!l.website)
-    if (!myLeadsSearch.trim()) return actionable
+    if (!myLeadsSearch.trim()) return myLeads
     const q = myLeadsSearch.toLowerCase()
-    return actionable.filter((l) =>
+    return myLeads.filter((l) =>
       l.business_name?.toLowerCase().includes(q) ||
       l.contact_name?.toLowerCase().includes(q) ||
       l.email?.toLowerCase().includes(q),
     )
   }, [myLeads, myLeadsSearch])
 
-  // Leads selected that have no email but have a website to scrape
+  // Any selected lead without an email -- directories can find emails for all of them now
   const selectedNoEmail = useMemo(
-    () => filteredMyLeads.filter((l) => selected.has(l.id) && !l.email && l.website),
+    () => filteredMyLeads.filter((l) => selected.has(l.id) && !l.email),
     [filteredMyLeads, selected],
   )
 
@@ -358,13 +356,13 @@ function AddLeadsModal({
                       <span>
                         {selected.size > 0 ? `${selected.size} selected` : `${filteredMyLeads.length} leads`}
                       </span>
-                      {filteredMyLeads.some((l) => !l.email && l.website) && (
+                      {filteredMyLeads.some((l) => !!l.email) && (
                         <button
                           type="button"
-                          onClick={() => setSelected(new Set(filteredMyLeads.filter((l) => !l.email && l.website).map((l) => l.id)))}
+                          onClick={() => setSelected(new Set(filteredMyLeads.filter((l) => !!l.email).map((l) => l.id)))}
                           className="text-sky-600 hover:text-sky-800 underline-offset-2 hover:underline ml-1"
                         >
-                          Select all with website
+                          Select all with email
                         </button>
                       )}
                     </div>
@@ -405,9 +403,7 @@ function AddLeadsModal({
                             {l.contact_name && <span>{l.contact_name} &middot; </span>}
                             {l.email
                               ? l.email
-                              : l.website
-                                ? <span className="text-amber-500">No email &middot; has website</span>
-                                : <span className="text-gray-400">No email</span>}
+                              : <span className="text-amber-500">No email found yet</span>}
                           </div>
                         </div>
                       </label>
@@ -542,9 +538,9 @@ function WarmingWarning({ onClose }: { onClose: () => void }) {
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-3.5">
-              <p className="text-xs font-semibold text-gray-700 mb-1">Right now in CloudGreet</p>
+              <p className="text-xs font-semibold text-gray-700 mb-1">How CloudGreet handles this</p>
               <p className="text-xs text-gray-600">
-                There is no automatic daily cap. The Send batch button fires up to 50 at once with no guardrail. <span className="font-medium text-gray-800">You are responsible for staying within your warm-up budget.</span> Click Send batch only as many times as your daily limit allows.
+                The daily cap is enforced automatically and increases by 10 each week (10 on week 1, 20 on week 2, up to 200). The Send batch button disables once you hit the day's cap. You'll see your usage on the campaign page at all times.
               </p>
             </div>
 
@@ -708,6 +704,8 @@ export default function SalesEmailCampaignDetailPage() {
   const [seqSaved, setSeqSaved] = useState(false)
   const [editingStep, setEditingStep] = useState<SequenceStep | null>(null)
   const [showWarmingWarning, setShowWarmingWarning] = useState(false)
+  const [sentToday, setSentToday] = useState(0)
+  const [dailyCap, setDailyCap] = useState(10)
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -721,6 +719,8 @@ export default function SalesEmailCampaignDetailPage() {
       setCampaign(campJson.campaign)
       setLeads(campJson.leads || [])
       setSig(campJson.campaign?.signature || '')
+      setSentToday(campJson.sentToday ?? 0)
+      setDailyCap(campJson.dailyCap ?? 10)
       const seqJson = await seqRes.json().catch(() => ({}))
       setSeqSteps(seqJson.steps || [])
     } catch (e) {
@@ -741,6 +741,10 @@ export default function SalesEmailCampaignDetailPage() {
   const queuedCount = leads.filter((l) => l.status === 'queued').length
   const sentLeads = leads.filter((l) => l.status === 'sent')
   const repliedCount = leads.filter((l) => l.status === 'replied').length
+  const warmupWeek = campaign
+    ? Math.floor(Math.max(0, Date.now() - new Date(campaign.created_at).getTime()) / (1000 * 60 * 60 * 24 * 7)) + 1
+    : 1
+  const isCapped = sentToday >= dailyCap
 
   const handleSend = async () => {
     if (!confirm(
@@ -754,9 +758,13 @@ export default function SalesEmailCampaignDetailPage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) throw new Error(json.error || 'Send failed')
-      const msg = `Sent ${json.sent}${json.errors > 0 ? `, ${json.errors} bounced` : ''}.`
+      if (typeof json.sentToday === 'number') setSentToday(json.sentToday)
+      if (typeof json.dailyCap === 'number') setDailyCap(json.dailyCap)
+      const msg = json.cappedOut
+        ? `Daily limit of ${json.dailyCap} reached. Resets midnight UTC.`
+        : `Sent ${json.sent}${json.errors > 0 ? `, ${json.errors} bounced` : ''}.`
       setFlash(msg)
-      setTimeout(() => setFlash(''), 4000)
+      setTimeout(() => setFlash(''), 5000)
       await load()
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Send failed')
@@ -1003,8 +1011,9 @@ export default function SalesEmailCampaignDetailPage() {
             <button
               type="button"
               onClick={handleSend}
-              disabled={sending || queuedCount === 0 || campaign.status === 'paused'}
+              disabled={sending || queuedCount === 0 || campaign.status === 'paused' || isCapped}
               className="inline-flex items-center gap-1.5 text-sm bg-gray-900 text-white hover:bg-gray-800 rounded-lg px-3.5 py-2 transition-colors shadow-sm disabled:opacity-50"
+              title={isCapped ? `Daily cap of ${dailyCap} reached. Resets midnight UTC.` : undefined}
             >
               {sending
                 ? <CircleNotch className="w-4 h-4 animate-spin" />
@@ -1053,6 +1062,33 @@ export default function SalesEmailCampaignDetailPage() {
             </div>
           ))}
         </motion.div>
+
+        {/* Warmup cap status */}
+        <div className={`flex items-center justify-between mb-4 rounded-xl px-4 py-2.5 text-xs ${
+          isCapped
+            ? 'bg-amber-50 border border-amber-200'
+            : 'bg-gray-50 border border-gray-100'
+        }`}>
+          <div className="flex items-center gap-2">
+            <ThermometerSimple className={`w-3.5 h-3.5 ${isCapped ? 'text-amber-500' : 'text-gray-400'}`} />
+            <span className={isCapped ? 'text-amber-800' : 'text-gray-600'}>
+              Week {warmupWeek} warmup cap:
+              {' '}
+              <span className="font-semibold">{sentToday}</span>
+              {' of '}
+              <span className="font-semibold">{dailyCap}</span>
+              {' sent today'}
+            </span>
+          </div>
+          {isCapped && (
+            <span className="text-amber-700 font-medium">Daily limit reached, resets midnight UTC</span>
+          )}
+          {!isCapped && dailyCap < 200 && (
+            <span className="text-gray-400">
+              Increases to {Math.min(dailyCap + 10, 200)}/day next week
+            </span>
+          )}
+        </div>
 
         {/* Follow-up Sequence */}
         <motion.div

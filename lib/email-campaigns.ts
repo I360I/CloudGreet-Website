@@ -28,6 +28,26 @@ type Campaign = {
   status: string
   sent_count: number
   bounce_count: number
+  created_at: string
+}
+
+// Cap escalates 10/week starting at 10, ceiling 200
+export function getDailyCapForCampaign(createdAt: string): number {
+  const daysSince = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
+  const weekNumber = Math.floor(daysSince / 7)
+  return Math.min((weekNumber + 1) * 10, 200)
+}
+
+async function getSentTodayCount(campaignId: string): Promise<number> {
+  const todayStart = new Date()
+  todayStart.setUTCHours(0, 0, 0, 0)
+  const { count } = await supabaseAdmin
+    .from('email_leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('campaign_id', campaignId)
+    .gte('sent_at', todayStart.toISOString())
+    .not('sent_at', 'is', null)
+  return count || 0
 }
 
 type SequenceStep = {
@@ -185,7 +205,7 @@ async function sendOneEmail(
 export async function sendCampaignBatch(
   campaignId: string,
   batchSize = 50,
-): Promise<{ sent: number; errors: number }> {
+): Promise<{ sent: number; errors: number; dailyCap: number; sentToday: number; cappedOut: boolean }> {
   if (!process.env.BREVO_API_KEY) {
     throw new Error('BREVO_API_KEY is not set')
   }
@@ -193,13 +213,23 @@ export async function sendCampaignBatch(
 
   const { data: campaign, error: campErr } = await supabaseAdmin
     .from('email_campaigns')
-    .select('id, name, from_name, from_email, reply_to, subject, body_template, signature, status, sent_count, bounce_count')
+    .select('id, name, from_name, from_email, reply_to, subject, body_template, signature, status, sent_count, bounce_count, created_at')
     .eq('id', campaignId)
     .single()
 
   if (campErr || !campaign) {
     throw new Error(`Campaign not found: ${campErr?.message}`)
   }
+
+  const dailyCap = getDailyCapForCampaign(campaign.created_at)
+  const sentToday = await getSentTodayCount(campaignId)
+  const remaining = dailyCap - sentToday
+
+  if (remaining <= 0) {
+    return { sent: 0, errors: 0, dailyCap, sentToday, cappedOut: true }
+  }
+
+  const effectiveBatchSize = Math.min(batchSize, remaining)
 
   const sequences = await getSequenceSteps(campaignId)
   const firstStep = sequences[0] || null
@@ -209,10 +239,10 @@ export async function sendCampaignBatch(
     .select('id, campaign_id, email, owner_name, business_name, city, phone, source, status')
     .eq('campaign_id', campaignId)
     .eq('status', 'queued')
-    .limit(batchSize)
+    .limit(effectiveBatchSize)
 
   if (leadsErr) throw new Error(`Failed to fetch leads: ${leadsErr.message}`)
-  if (!leads || leads.length === 0) return { sent: 0, errors: 0 }
+  if (!leads || leads.length === 0) return { sent: 0, errors: 0, dailyCap, sentToday, cappedOut: false }
 
   let sent = 0
   let errors = 0
@@ -289,7 +319,7 @@ export async function sendCampaignBatch(
       .eq('id', campaignId)
   }
 
-  return { sent, errors }
+  return { sent, errors, dailyCap, sentToday: sentToday + sent, cappedOut: false }
 }
 
 // ---------------------------------------------------------------------------

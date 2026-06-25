@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { getDailyCapForCampaign } from '@/lib/email-campaigns'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -19,7 +20,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const { id } = params
 
-    const [campaignRes, leadsRes] = await Promise.all([
+    const todayStart = new Date()
+    todayStart.setUTCHours(0, 0, 0, 0)
+
+    const [campaignRes, leadsRes, sentTodayRes] = await Promise.all([
       supabaseAdmin
         .from('email_campaigns')
         .select('*')
@@ -32,16 +36,28 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         .eq('campaign_id', id)
         .order('created_at', { ascending: false })
         .limit(500),
+      supabaseAdmin
+        .from('email_leads')
+        .select('id', { count: 'exact', head: true })
+        .eq('campaign_id', id)
+        .gte('sent_at', todayStart.toISOString())
+        .not('sent_at', 'is', null),
     ])
 
     if (campaignRes.error || !campaignRes.data) {
       return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
+    const campaign = campaignRes.data
+    const dailyCap = getDailyCapForCampaign(campaign.created_at)
+    const sentToday = sentTodayRes.count || 0
+
     return NextResponse.json({
       success: true,
-      campaign: campaignRes.data,
+      campaign,
       leads: leadsRes.data || [],
+      sentToday,
+      dailyCap,
     })
   } catch (err) {
     logger.error('GET /api/sales/email-campaigns/[id] failed', {

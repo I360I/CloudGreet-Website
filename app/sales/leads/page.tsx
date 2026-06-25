@@ -535,15 +535,15 @@ export default function SalesLeadsPage() {
                     >
                       {selected.size === filtered.length ? 'Deselect all' : `Select all ${filtered.length}`}
                     </button>
-                    {filtered.some((l) => l.website && !l.email) && (
+                    {filtered.some((l) => !!l.email) && (
                       <button
                         onClick={() => {
-                          const withSite = new Set(filtered.filter((l) => l.website && !l.email).map((l) => l.id))
-                          setSelected(withSite)
+                          const withEmail = new Set(filtered.filter((l) => !!l.email).map((l) => l.id))
+                          setSelected(withEmail)
                         }}
                         className="text-xs text-sky-700 hover:text-sky-900 underline-offset-2 hover:underline"
                       >
-                        Select all with website
+                        Select all with email
                       </button>
                     )}
                   </div>
