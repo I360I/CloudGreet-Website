@@ -726,9 +726,11 @@ async function alertAdminTextToBook(opts: {
     const preview = opts.preview ? `\n"${opts.preview.replace(/\s+/g, ' ').trim().slice(0, 120)}"` : ''
     const body = `[${opts.businessName}] ${label}\nFrom ${opts.customerPhone}${preview}\nView full report: ${link}`
 
-    // Recipients: admin always; owner too on an outcome (not on every "new").
+    // Recipients: admin always; owner too on a calendar booking outcome.
+    // For dispatch outcomes the owner already received the full dispatch text
+    // (pickup/dropoff/time/quote), so a second report_alert would be redundant.
     const recipients = new Set<string>([adminPhone])
-    if (opts.kind !== 'new' && opts.ownerPhone) recipients.add(opts.ownerPhone.trim())
+    if (opts.kind === 'booked' && opts.ownerPhone) recipients.add(opts.ownerPhone.trim())
 
     const { recordDispatchSend } = await import('./dispatch-tracking')
     for (const to of Array.from(recipients)) {
