@@ -457,7 +457,7 @@ function WarmingWarning({ onClose }: { onClose: () => void }) {
 
           <div className="space-y-3 text-sm text-gray-700">
             <p>
-              Email providers like Gmail and Outlook track the reputation of every sending address. A brand-new address that suddenly sends hundreds of emails looks like spam -- and once you get flagged, deliverability tanks for weeks.
+              Email providers like Gmail and Outlook track the reputation of every sending address. A brand-new address that suddenly sends hundreds of emails looks like spam. Once you get flagged, deliverability tanks for weeks.
             </p>
             <p>
               The fix is called <span className="font-medium text-gray-900">warming</span>: start small and increase gradually over 2-4 weeks so providers learn to trust the address.
@@ -775,7 +775,7 @@ export default function SalesEmailCampaignDetailPage() {
       subject_template: 'Re: {{original_subject}}',
       body_template: nextNum === 1
         ? `Hi {{first_name}},\n\nJust wanted to make sure this didn't get buried. Did you get a chance to look?\n\n{{from_name}}`
-        : `Hi {{first_name}},\n\nI'll leave it here -- don't want to be a pest. If the timing ever makes sense for {{business_name}}, I'd love to chat.\n\n{{from_name}}`,
+        : `Hi {{first_name}},\n\nI'll leave it here. Don't want to be a pest. If the timing ever makes sense for {{business_name}}, I'd love to chat.\n\n{{from_name}}`,
     })
   }
 
@@ -1206,7 +1206,7 @@ export default function SalesEmailCampaignDetailPage() {
                             type="button"
                             onClick={() => handleMarkReplied(lead.id)}
                             className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-300 rounded-lg px-2 py-1 transition-colors"
-                            title="They replied — stop follow-ups"
+                            title="They replied, stop follow-ups"
                           >
                             <ArrowBendUpLeft className="w-3 h-3" /> Replied
                           </button>
