@@ -177,6 +177,10 @@ export async function sendCampaignBatch(
         },
       })
 
+      if (response.error) {
+        throw new Error(response.error.message || 'Resend API error')
+      }
+
       const messageId = response.data?.id || null
 
       await supabaseAdmin
