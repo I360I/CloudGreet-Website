@@ -346,13 +346,9 @@ export async function sendDispatchRequest(args: {
       const pickupHit = b.includes('pickup: ' + norm(args.pickup))
       const dropHit = !args.dropoff || b.includes('dropoff: ' + norm(args.dropoff))
       if (!(phoneHit && pickupHit && dropHit)) return false
-      // Same customer + same route counts as a duplicate when EITHER the
-      // requested time matches exactly (true re-book of the same ride, any
-      // time within 6h) OR it was fired in the last 10 min (a rapid re-fire,
-      // even if the time string drifted between turns).
+      // Duplicate only when the exact requested time matches (same ride re-fired).
       const whenHit = b.includes('when: ' + norm(args.requestedTime))
-      const ageMs = Date.now() - new Date(r.created_at).getTime()
-      return whenHit || ageMs < 10 * 60 * 1000
+      return whenHit
     })
     if (dup) {
       logger.info('sendDispatchRequest deduped - identical trip already dispatched within 6h', {
