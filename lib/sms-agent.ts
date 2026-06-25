@@ -668,6 +668,19 @@ async function getOrCreateConversation(
   if ((existing as any)?.id && (existing as any).updated_at >= activeWindow) {
     return { id: (existing as any).id, reportToken: (existing as any).report_token ?? null, isNew: false }
   }
+  // If an expired conversation exists, reset it (fresh session, new report token)
+  // rather than inserting - the unique constraint on (business_id, customer_phone)
+  // would throw on the insert if a prior row exists.
+  if ((existing as any)?.id) {
+    const { data: reset, error: resetErr } = await supabaseAdmin
+      .from('sms_conversations')
+      .update({ updated_at: new Date().toISOString(), status: 'active' })
+      .eq('id', (existing as any).id)
+      .select('id, report_token')
+      .single()
+    if (resetErr || !reset) throw new Error(`Failed to reset conversation: ${resetErr?.message || 'no row'}`)
+    return { id: (reset as any).id, reportToken: (reset as any).report_token ?? null, isNew: true }
+  }
   const { data: created, error } = await supabaseAdmin
     .from('sms_conversations')
     .insert({ business_id: businessId, customer_phone: customerPhone })
