@@ -164,9 +164,11 @@ function AddLeadsModal({
   }, [tab])
 
   const filteredMyLeads = useMemo(() => {
-    if (!myLeadsSearch.trim()) return myLeads
+    // Only show leads we can do something with: has email OR has a website to scrape
+    const actionable = myLeads.filter((l) => !!l.email || !!l.website)
+    if (!myLeadsSearch.trim()) return actionable
     const q = myLeadsSearch.toLowerCase()
-    return myLeads.filter((l) =>
+    return actionable.filter((l) =>
       l.business_name?.toLowerCase().includes(q) ||
       l.contact_name?.toLowerCase().includes(q) ||
       l.email?.toLowerCase().includes(q),
