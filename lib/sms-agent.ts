@@ -92,6 +92,8 @@ const TOOLS: Anthropic.Messages.Tool[] = [
         phone: { type: 'string', description: 'Customer phone in E.164. Defaults to the SMS sender if omitted.' },
         service: { type: 'string', description: 'Short trip description, e.g., "Airport pickup CMH to OhioHealth".' },
         datetime: { type: 'string', description: 'ISO-8601 start time WITH timezone offset, e.g., "2026-05-27T16:00:00-04:00".' },
+        pickup: { type: 'string', description: 'Full street-level pickup address, e.g., "3816 Saint Malo Way, Columbus, OH 43221". Required for ride businesses.' },
+        dropoff: { type: 'string', description: 'Full destination address or airport code, e.g., "CMH Airport" or "8515 Lyra Dr, Dublin, OH".' },
         review_consent: { type: 'boolean', description: 'true if the customer agreed to a post-trip review request text.' },
         is_emergency: { type: 'boolean', description: 'true for emergencies. Default false.' },
       },
