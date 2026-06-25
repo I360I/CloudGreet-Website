@@ -1,5 +1,4 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 
@@ -124,7 +123,7 @@ async function getSequenceSteps(campaignId: string): Promise<SequenceStep[]> {
 }
 
 async function sendOneEmail(
-  resend: Resend,
+  apiKey: string,
   opts: {
     fromName: string
     fromEmail: string
@@ -140,30 +139,43 @@ async function sendOneEmail(
 ): Promise<{ messageId: string | null; error: string | null }> {
   const fullBody = opts.body + (opts.signature ? `\n\n${opts.signature}` : '')
 
-  const headers: Record<string, string> = {
+  const extraHeaders: Record<string, string> = {
     'X-Campaign-Id': opts.campaignId,
     'X-Lead-Id': opts.leadId,
   }
   // Thread follow-ups under the original email in the recipient's inbox
   if (opts.prevMessageId) {
-    const msgRef = `<${opts.prevMessageId}@resend.dev>`
-    headers['In-Reply-To'] = msgRef
-    headers['References'] = msgRef
+    const msgRef = opts.prevMessageId.startsWith('<')
+      ? opts.prevMessageId
+      : `<${opts.prevMessageId}>`
+    extraHeaders['In-Reply-To'] = msgRef
+    extraHeaders['References'] = msgRef
   }
 
-  const response = await resend.emails.send({
-    from: `${opts.fromName} <${opts.fromEmail}>`,
-    to: opts.to,
-    subject: opts.subject,
-    text: fullBody,
-    replyTo: opts.replyTo,
-    headers,
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: opts.fromName, email: opts.fromEmail },
+      to: [{ email: opts.to }],
+      replyTo: { email: opts.replyTo },
+      subject: opts.subject,
+      textContent: fullBody,
+      headers: extraHeaders,
+    }),
   })
 
-  if (response.error) {
-    return { messageId: null, error: response.error.message || 'Resend API error' }
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({})) as { message?: string }
+    return { messageId: null, error: errBody.message || `Brevo error ${res.status}` }
   }
-  return { messageId: response.data?.id || null, error: null }
+
+  const data = await res.json() as { messageId?: string }
+  return { messageId: data.messageId || null, error: null }
 }
 
 // ---------------------------------------------------------------------------
@@ -174,9 +186,10 @@ export async function sendCampaignBatch(
   campaignId: string,
   batchSize = 50,
 ): Promise<{ sent: number; errors: number }> {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error('RESEND_API_KEY is not set')
+  if (!process.env.BREVO_API_KEY) {
+    throw new Error('BREVO_API_KEY is not set')
   }
+  const brevoKey = process.env.BREVO_API_KEY
 
   const { data: campaign, error: campErr } = await supabaseAdmin
     .from('email_campaigns')
@@ -201,7 +214,6 @@ export async function sendCampaignBatch(
   if (leadsErr) throw new Error(`Failed to fetch leads: ${leadsErr.message}`)
   if (!leads || leads.length === 0) return { sent: 0, errors: 0 }
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
   let sent = 0
   let errors = 0
 
@@ -220,7 +232,7 @@ export async function sendCampaignBatch(
         .replace(/\{\{business_name\}\}/g, lead.business_name || '')
         .replace(/\{\{city\}\}/g, lead.city || '')
 
-      const { messageId, error: sendErr } = await sendOneEmail(resend, {
+      const { messageId, error: sendErr } = await sendOneEmail(brevoKey, {
         fromName: campaign.from_name,
         fromEmail: campaign.from_email,
         replyTo: campaign.reply_to || campaign.from_email,
@@ -285,9 +297,10 @@ export async function sendCampaignBatch(
 // ---------------------------------------------------------------------------
 
 export async function sendFollowUps(): Promise<{ sent: number; errors: number; skipped: number }> {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error('RESEND_API_KEY is not set')
+  if (!process.env.BREVO_API_KEY) {
+    throw new Error('BREVO_API_KEY is not set')
   }
+  const brevoKey = process.env.BREVO_API_KEY
 
   // Find all leads past their next_follow_up_at that haven't replied or bounced
   const { data: dueleads, error: fetchErr } = await supabaseAdmin
@@ -316,7 +329,6 @@ export async function sendFollowUps(): Promise<{ sent: number; errors: number; s
     campaignMap.set(cid, { campaign: camp as Campaign, sequences })
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
   let sent = 0
   let errors = 0
   let skipped = 0
@@ -352,7 +364,7 @@ export async function sendFollowUps(): Promise<{ sent: number; errors: number; s
         .replace(/\{\{city\}\}/g, lead.city || '')
         .replace(/\{\{original_subject\}\}/g, campaign.subject)
 
-      const { messageId, error: sendErr } = await sendOneEmail(resend, {
+      const { messageId, error: sendErr } = await sendOneEmail(brevoKey, {
         fromName: campaign.from_name,
         fromEmail: campaign.from_email,
         replyTo: campaign.reply_to || campaign.from_email,
