@@ -35,6 +35,14 @@
     {
       "path": "/api/cron/voice-daily-health",
       "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/email-follow-ups",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/email-follow-ups",
+      "schedule": "0 20 * * *"
     }
   ]
 }

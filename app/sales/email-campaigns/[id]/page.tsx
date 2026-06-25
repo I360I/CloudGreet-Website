@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CaretLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X,
   PaperPlaneTilt, Pause, PhoneCall, MagnifyingGlass, EnvelopeSimple,
+  ArrowBendUpLeft, PencilSimple, Trash, ArrowClockwise,
 } from '@phosphor-icons/react'
 import { SalesShell } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -48,8 +49,19 @@ type EmailLead = {
   source: string
   status: LeadStatus
   sent_at: string | null
+  replied_at: string | null
+  next_follow_up_at: string | null
+  sequence_step: number
   error: string | null
   created_at: string
+}
+
+type SequenceStep = {
+  id?: string
+  step_number: number
+  delay_days: number
+  subject_template: string
+  body_template: string
 }
 
 type RepLead = {
@@ -416,6 +428,112 @@ function AddLeadsModal({
 }
 
 // ---------------------------------------------------------------------------
+// Step Edit Modal
+// ---------------------------------------------------------------------------
+
+function StepEditModal({
+  step,
+  onSave,
+  onClose,
+}: {
+  step: SequenceStep
+  onSave: (s: SequenceStep) => void
+  onClose: () => void
+}) {
+  const [form, setForm] = useState<SequenceStep>({ ...step })
+
+  const valid =
+    form.delay_days >= 1 &&
+    form.subject_template.trim().length > 0 &&
+    form.body_template.trim().length > 0
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white border border-gray-200 rounded-2xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+          <div>
+            <h2 className="text-base font-medium text-gray-900">
+              Follow-up step {form.step_number}
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Sent {form.delay_days} day{form.delay_days === 1 ? '' : 's'} after the previous email
+            </p>
+          </div>
+          <button onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:text-gray-700 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              Send after (days since previous email)
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={60}
+              value={form.delay_days}
+              onChange={(e) => setForm((f) => ({ ...f, delay_days: parseInt(e.target.value) || 1 }))}
+              className="w-24 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Subject</label>
+            <input
+              type="text"
+              value={form.subject_template}
+              onChange={(e) => setForm((f) => ({ ...f, subject_template: e.target.value }))}
+              placeholder="Re: {{original_subject}}"
+              className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors font-mono"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">Use <code>{'{{original_subject}}'}</code> to thread under the first email.</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Body</label>
+            <textarea
+              rows={8}
+              value={form.body_template}
+              onChange={(e) => setForm((f) => ({ ...f, body_template: e.target.value }))}
+              className="w-full px-3 py-2.5 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors font-mono resize-y"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">
+              Variables: <code>{'{{first_name}}'}</code> <code>{'{{business_name}}'}</code> <code>{'{{from_name}}'}</code>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => valid && onSave(form)}
+            disabled={!valid}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-gray-800 disabled:opacity-50 transition-colors"
+          >
+            <CheckCircle weight="fill" className="w-4 h-4" /> Save step
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Campaign Detail Page
 // ---------------------------------------------------------------------------
 
@@ -435,16 +553,25 @@ export default function SalesEmailCampaignDetailPage() {
   const [sig, setSig] = useState('')
   const [sigSaving, setSigSaving] = useState(false)
   const [sigSaved, setSigSaved] = useState(false)
+  const [seqSteps, setSeqSteps] = useState<SequenceStep[]>([])
+  const [seqSaving, setSeqSaving] = useState(false)
+  const [seqSaved, setSeqSaved] = useState(false)
+  const [editingStep, setEditingStep] = useState<SequenceStep | null>(null)
 
   const load = async () => {
     setLoading(true); setErr('')
     try {
-      const res = await fetchWithAuth(`/api/sales/email-campaigns/${campaignId}`)
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to load')
-      setCampaign(json.campaign)
-      setLeads(json.leads || [])
-      setSig(json.campaign?.signature || '')
+      const [campRes, seqRes] = await Promise.all([
+        fetchWithAuth(`/api/sales/email-campaigns/${campaignId}`),
+        fetchWithAuth(`/api/sales/email-campaigns/${campaignId}/sequences`),
+      ])
+      const campJson = await campRes.json().catch(() => ({}))
+      if (!campRes.ok || !campJson.success) throw new Error(campJson.error || 'Failed to load')
+      setCampaign(campJson.campaign)
+      setLeads(campJson.leads || [])
+      setSig(campJson.campaign?.signature || '')
+      const seqJson = await seqRes.json().catch(() => ({}))
+      setSeqSteps(seqJson.steps || [])
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load campaign')
     } finally {
@@ -519,6 +646,71 @@ export default function SalesEmailCampaignDetailPage() {
     window.cgPowerDial(items)
   }
 
+  const handleSaveSequence = async () => {
+    setSeqSaving(true); setSeqSaved(false)
+    try {
+      const res = await fetchWithAuth(`/api/sales/email-campaigns/${campaignId}/sequences`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ steps: seqSteps }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) throw new Error(json.error || 'Save failed')
+      setSeqSaved(true)
+      setTimeout(() => setSeqSaved(false), 2500)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to save sequence')
+    } finally {
+      setSeqSaving(false)
+    }
+  }
+
+  const handleMarkReplied = async (leadId: string) => {
+    setLeads((prev) => prev.map((l) => l.id === leadId
+      ? { ...l, status: 'replied' as LeadStatus, replied_at: new Date().toISOString(), next_follow_up_at: null }
+      : l,
+    ))
+    await fetchWithAuth(`/api/sales/email-campaigns/${campaignId}/leads/${leadId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ replied: true }),
+    }).catch(() => {})
+  }
+
+  const addStep = () => {
+    const nextNum = seqSteps.length + 1
+    const defaultDelay = nextNum === 1 ? 3 : 4
+    setEditingStep({
+      step_number: nextNum,
+      delay_days: defaultDelay,
+      subject_template: 'Re: {{original_subject}}',
+      body_template: nextNum === 1
+        ? `Hi {{first_name}},\n\nJust wanted to make sure this didn't get buried. Did you get a chance to look?\n\n{{from_name}}`
+        : `Hi {{first_name}},\n\nI'll leave it here -- don't want to be a pest. If the timing ever makes sense for {{business_name}}, I'd love to chat.\n\n{{from_name}}`,
+    })
+  }
+
+  const saveEditingStep = (step: SequenceStep) => {
+    setSeqSteps((prev) => {
+      const exists = prev.findIndex((s) => s.step_number === step.step_number)
+      if (exists >= 0) {
+        const next = [...prev]
+        next[exists] = step
+        return next
+      }
+      return [...prev, step].sort((a, b) => a.step_number - b.step_number)
+    })
+    setEditingStep(null)
+  }
+
+  const deleteStep = (stepNumber: number) => {
+    setSeqSteps((prev) =>
+      prev
+        .filter((s) => s.step_number !== stepNumber)
+        .map((s, i) => ({ ...s, step_number: i + 1 })),
+    )
+  }
+
   const handleSaveSig = async () => {
     setSigSaving(true); setSigSaved(false)
     try {
@@ -580,6 +772,15 @@ export default function SalesEmailCampaignDetailPage() {
           campaignId={campaignId}
           onClose={() => setShowAddLeads(false)}
           onAdded={() => { void load() }}
+        />
+      )}
+
+      {/* Step editor modal */}
+      {editingStep && (
+        <StepEditModal
+          step={editingStep}
+          onSave={saveEditingStep}
+          onClose={() => setEditingStep(null)}
         />
       )}
 
@@ -692,10 +893,102 @@ export default function SalesEmailCampaignDetailPage() {
           ))}
         </motion.div>
 
-        {/* Signature */}
+        {/* Follow-up Sequence */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE, delay: 0.04 }}
+          className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-4 p-5"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-0.5">Follow-up Sequence</div>
+              <p className="text-xs text-gray-500">Emails sent automatically after the initial send.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={addStep}
+                className="inline-flex items-center gap-1.5 text-xs border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                <Plus weight="bold" className="w-3 h-3" /> Add follow-up
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSequence}
+                disabled={seqSaving}
+                className="inline-flex items-center gap-1.5 text-xs bg-gray-900 text-white hover:bg-gray-800 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+              >
+                {seqSaving
+                  ? <CircleNotch className="w-3 h-3 animate-spin" />
+                  : seqSaved
+                    ? <CheckCircle weight="fill" className="w-3 h-3 text-emerald-400" />
+                    : null}
+                {seqSaved ? 'Saved' : 'Save sequence'}
+              </button>
+            </div>
+          </div>
+
+          {seqSteps.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-200 py-8 text-center">
+              <ArrowClockwise className="w-6 h-6 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-400">No follow-ups yet.</p>
+              <button
+                type="button"
+                onClick={addStep}
+                className="mt-2 text-xs text-sky-600 hover:text-sky-700 transition-colors"
+              >
+                Add your first follow-up
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {seqSteps.map((step, idx) => (
+                <div
+                  key={step.step_number}
+                  className="flex items-start gap-3 p-3.5 bg-gray-50 rounded-xl border border-gray-100"
+                >
+                  <div className="flex-shrink-0 text-center">
+                    <div className="bg-white border border-gray-200 rounded-lg px-2.5 py-1 text-[10px] font-mono text-gray-600 shadow-sm">
+                      Day {step.delay_days}
+                    </div>
+                    {idx > 0 && (
+                      <div className="text-[9px] text-gray-400 mt-0.5">after prev</div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-800 truncate">{step.subject_template}</div>
+                    <div className="text-xs text-gray-400 truncate mt-0.5">
+                      {step.body_template.split('\n').find((l) => l.trim()) || ''}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setEditingStep(step)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+                      title="Edit"
+                    >
+                      <PencilSimple className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteStep(step.step_number)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+
+        {/* Signature */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE, delay: 0.05 }}
           className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-4 p-5"
         >
           <div className="flex items-center justify-between mb-3">
@@ -729,7 +1022,7 @@ export default function SalesEmailCampaignDetailPage() {
         {/* Leads table */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE, delay: 0.05 }}
+          transition={{ duration: 0.4, ease: EASE, delay: 0.06 }}
           className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm"
         >
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
@@ -767,7 +1060,7 @@ export default function SalesEmailCampaignDetailPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    {['Email', 'Owner', 'Business', 'City', 'Status', 'Sent'].map((h) => (
+                    {['Email', 'Owner', 'Business', 'City', 'Status', 'Sent', ''].map((h) => (
                       <th
                         key={h}
                         className="px-4 py-2.5 text-left text-[10px] font-mono uppercase tracking-wider text-gray-500 font-normal"
@@ -797,6 +1090,11 @@ export default function SalesEmailCampaignDetailPage() {
                       </td>
                       <td className="px-4 py-2.5">
                         <LeadStatusBadge status={lead.status} />
+                        {lead.status === 'sent' && lead.next_follow_up_at && (
+                          <p className="text-[10px] text-sky-500 mt-0.5">
+                            Follow-up step {(lead.sequence_step || 0) + 1} &middot; {fmtDate(lead.next_follow_up_at)}
+                          </p>
+                        )}
                         {lead.error && (
                           <p
                             className="text-[10px] text-red-500 mt-0.5 truncate max-w-[160px]"
@@ -808,6 +1106,18 @@ export default function SalesEmailCampaignDetailPage() {
                       </td>
                       <td className="px-4 py-2.5 text-gray-400 text-xs">
                         {lead.sent_at ? fmtDate(lead.sent_at) : <span className="text-gray-300">--</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {lead.status === 'sent' && (
+                          <button
+                            type="button"
+                            onClick={() => handleMarkReplied(lead.id)}
+                            className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-300 rounded-lg px-2 py-1 transition-colors"
+                            title="They replied — stop follow-ups"
+                          >
+                            <ArrowBendUpLeft className="w-3 h-3" /> Replied
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
