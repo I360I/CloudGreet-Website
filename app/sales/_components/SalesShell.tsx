@@ -12,13 +12,13 @@ const Dialer = dynamicImport(
   () => import('./Dialer').then((m) => ({ default: m.Dialer })),
   { ssr: false },
 )
-import { SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch, Gear, Users, GraduationCap, BookOpen, UserPlus, Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch, Gear, Users, GraduationCap, BookOpen, UserPlus, EnvelopeSimple, Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { NotificationsBell } from '@/components/NotificationsBell'
 import { ImpersonationBanner } from '@/app/dashboard/_components/ImpersonationBanner'
 
-type ActiveLabel = 'Overview' | 'Leads' | 'Prospects' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook'
+type ActiveLabel = 'Overview' | 'Leads' | 'Prospects' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook' | 'Emails'
 
 type NavItem = {
   label: ActiveLabel
@@ -34,6 +34,7 @@ const NAV: NavItem[] = [
   { label: 'Clients',  href: '/sales/clients',  icon: Users,         match: (p) => p.startsWith('/sales/clients') },
   { label: 'Earnings', href: '/sales/earnings', icon: CurrencyDollar, match: (p) => p.startsWith('/sales/earnings') },
   { label: 'Playbook',  href: '/sales/playbook',  icon: BookOpen,       match: (p) => p.startsWith('/sales/playbook') },
+  { label: 'Emails',   href: '/sales/email-campaigns', icon: EnvelopeSimple, match: (p) => p.startsWith('/sales/email-campaigns') },
   // Onboarding tab hidden from the sidebar - the underlying /sales/onboarding
   // route still works (banner CTAs link to it for Stripe Connect / quiz),
   // but reps shouldn't have a top-level entry to a page that's mostly
@@ -179,7 +180,7 @@ export function SalesShell({
         {children}
       </div>
 
-      {pathname.startsWith('/sales/leads') && <Dialer />}
+      {(pathname.startsWith('/sales/leads') || pathname.startsWith('/sales/email-campaigns')) && <Dialer />}
     </main>
     </>
   )

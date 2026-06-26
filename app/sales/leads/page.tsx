@@ -75,6 +75,7 @@ export default function SalesLeadsPage() {
   // Page-scoped modal so any row can pop the demo-set picker without
   // each row having to own its own state.
   const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
+  const [findingEmails, setFindingEmails] = useState(false)
   const fileRef = useRef<HTMLInputElement | null>(null)
 
   const toggleSelected = (id: string) => {
@@ -104,6 +105,36 @@ export default function SalesLeadsPage() {
       await load()
     } finally {
       setBulkBusy(false)
+    }
+  }
+
+  const bulkFindEmails = async () => {
+    const ids = Array.from(selected).filter((id) => {
+      const l = leads.find((l) => l.id === id)
+      return l?.website && !l.email
+    })
+    if (ids.length === 0) return
+    setFindingEmails(true)
+    try {
+      const res = await fetchWithAuth('/api/sales/leads/find-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadIds: ids }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (json.results) {
+        const emailMap = new Map<string, string | null>(
+          (json.results as { leadId: string; email: string | null }[]).map((r) => [r.leadId, r.email]),
+        )
+        setLeads((prev) => prev.map((l) => emailMap.has(l.id) ? { ...l, email: emailMap.get(l.id) || l.email } : l))
+        const found = (json.results as { email: string | null }[]).filter((r) => r.email).length
+        setFlash(`Found ${found} of ${ids.length} email${ids.length === 1 ? '' : 's'}.`)
+        setTimeout(() => setFlash(''), 3000)
+      }
+    } catch {
+      // non-fatal
+    } finally {
+      setFindingEmails(false)
     }
   }
 
@@ -494,16 +525,41 @@ export default function SalesLeadsPage() {
                     <span className="inline-flex items-center justify-center w-5 h-5 bg-sky-600 text-white rounded-full text-[10px] font-mono tabular-nums">{selected.size}</span>
                     selected
                   </span>
-                  <button
-                    onClick={() => {
-                      if (selected.size === filtered.length) clearSelected()
-                      else setSelected(new Set(filtered.map((l) => l.id)))
-                    }}
-                    className="text-xs text-sky-700 hover:text-sky-900 underline-offset-2 hover:underline"
-                  >
-                    {selected.size === filtered.length ? 'Deselect all' : `Select all ${filtered.length}`}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (selected.size === filtered.length) clearSelected()
+                        else setSelected(new Set(filtered.map((l) => l.id)))
+                      }}
+                      className="text-xs text-sky-700 hover:text-sky-900 underline-offset-2 hover:underline"
+                    >
+                      {selected.size === filtered.length ? 'Deselect all' : `Select all ${filtered.length}`}
+                    </button>
+                    {filtered.some((l) => !!l.email) && (
+                      <button
+                        onClick={() => {
+                          const withEmail = new Set(filtered.filter((l) => !!l.email).map((l) => l.id))
+                          setSelected(withEmail)
+                        }}
+                        className="text-xs text-sky-700 hover:text-sky-900 underline-offset-2 hover:underline"
+                      >
+                        Select all with email
+                      </button>
+                    )}
+                  </div>
                   <div className="flex-1" />
+                  {Array.from(selected).some((id) => { const l = leads.find((l) => l.id === id); return l?.website && !l.email }) && (
+                    <button
+                      onClick={bulkFindEmails}
+                      disabled={findingEmails || bulkBusy}
+                      className="inline-flex items-center gap-1.5 text-xs bg-sky-600 text-white hover:bg-sky-700 rounded-lg px-3 py-1.5 disabled:opacity-50"
+                    >
+                      {findingEmails
+                        ? <CircleNotch className="w-3 h-3 animate-spin" />
+                        : <EnvelopeSimple weight="bold" className="w-3 h-3" />}
+                      {findingEmails ? 'Finding emails...' : 'Find emails'}
+                    </button>
+                  )}
                   <select
                     onChange={(e) => { if (e.target.value) bulkUpdateStatus(e.target.value); e.target.value = '' }}
                     disabled={bulkBusy}
