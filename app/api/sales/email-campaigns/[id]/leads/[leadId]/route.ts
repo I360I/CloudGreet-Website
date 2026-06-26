@@ -29,17 +29,39 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   if (!camp) return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
 
   if (body.replied === true) {
+    // Only increment reply_count if the lead wasn't already replied
+    const { data: existing } = await supabaseAdmin
+      .from('email_leads')
+      .select('status')
+      .eq('id', leadId)
+      .eq('campaign_id', campaignId)
+      .single()
+
     const { error } = await supabaseAdmin
       .from('email_leads')
       .update({
         status: 'replied',
         replied_at: new Date().toISOString(),
-        next_follow_up_at: null, // stop the sequence
+        next_follow_up_at: null,
       })
       .eq('id', leadId)
       .eq('campaign_id', campaignId)
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    if (existing && existing.status !== 'replied') {
+      const { data: camp } = await supabaseAdmin
+        .from('email_campaigns')
+        .select('reply_count')
+        .eq('id', campaignId)
+        .single()
+      if (camp) {
+        await supabaseAdmin
+          .from('email_campaigns')
+          .update({ reply_count: (camp.reply_count || 0) + 1 })
+          .eq('id', campaignId)
+      }
+    }
   }
 
   return NextResponse.json({ success: true })

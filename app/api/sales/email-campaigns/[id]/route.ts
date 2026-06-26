@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
         .single(),
       supabaseAdmin
         .from('email_leads')
-        .select('id, email, owner_name, business_name, city, phone, source, status, sent_at, resend_message_id, error, created_at')
+        .select('id, email, owner_name, business_name, city, phone, source, status, sent_at, replied_at, next_follow_up_at, sequence_step, resend_message_id, error, created_at')
         .eq('campaign_id', id)
         .order('created_at', { ascending: false })
         .limit(500),

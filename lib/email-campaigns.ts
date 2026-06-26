@@ -71,6 +71,7 @@ function simpleReplace(template: string, lead: EmailLead): string {
     .replace(/\{\{first_name\}\}/g, firstName)
     .replace(/\{\{business_name\}\}/g, lead.business_name || '')
     .replace(/\{\{city\}\}/g, lead.city || '')
+    .replace(/\{\{unsubscribe_url\}\}/g, `https://cloudgreet.com/unsubscribe/${lead.id}`)
 }
 
 export async function personalizeLead(
@@ -86,11 +87,13 @@ export async function personalizeLead(
     return simpleReplace(withFromName, lead)
   }
 
-  const hasVariables = /\{\{(owner_name|first_name|business_name|city)\}\}/.test(withFromName)
+  const hasVariables = /\{\{(owner_name|first_name|business_name|city|unsubscribe_url)\}\}/.test(withFromName)
   if (!hasVariables) return withFromName
 
   try {
     const client = new Anthropic({ timeout: 15_000, maxRetries: 1 })
+
+    const unsubUrl = `https://cloudgreet.com/unsubscribe/${lead.id}`
 
     const prompt = `Fill in the template variables for this cold outreach email. Return only the completed email text, nothing else.
 
@@ -102,6 +105,7 @@ Variables:
 - {{owner_name}} = ${lead.owner_name || ''}
 - {{business_name}} = ${lead.business_name || ''}
 - {{city}} = ${lead.city || ''}
+- {{unsubscribe_url}} = ${unsubUrl}
 
 Rules: Replace every {{variable}} with the value. Keep the email natural. Return plain text only.`
 
@@ -266,7 +270,7 @@ export async function sendCampaignBatch(
       const { messageId, error: sendErr } = await sendOneEmail(brevoKey, {
         fromName: campaign.from_name,
         fromEmail: campaign.from_email,
-        replyTo: campaign.reply_to || campaign.from_email,
+        replyTo: `r+${lead.id}@replies.getcloudgreet.com`,
         to: lead.email,
         subject: personalizedSubject,
         body: personalizedBody,
@@ -311,13 +315,25 @@ export async function sendCampaignBatch(
     .single()
 
   if (updated) {
+    // Check if queue is now empty to auto-complete the campaign
+    const { count: remainingQueued } = await supabaseAdmin
+      .from('email_leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('campaign_id', campaignId)
+      .eq('status', 'queued')
+
+    const campaignUpdate: Record<string, unknown> = {
+      sent_count: (updated.sent_count || 0) + sent,
+      bounce_count: (updated.bounce_count || 0) + errors,
+      updated_at: new Date().toISOString(),
+    }
+    if ((remainingQueued || 0) === 0 && campaign.status === 'sending') {
+      campaignUpdate.status = 'complete'
+    }
+
     await supabaseAdmin
       .from('email_campaigns')
-      .update({
-        sent_count: (updated.sent_count || 0) + sent,
-        bounce_count: (updated.bounce_count || 0) + errors,
-        updated_at: new Date().toISOString(),
-      })
+      .update(campaignUpdate)
       .eq('id', campaignId)
   }
 
@@ -372,7 +388,7 @@ export async function sendSingleLead(
     const { messageId, error: sendErr } = await sendOneEmail(brevoKey, {
       fromName: campaign.from_name,
       fromEmail: campaign.from_email,
-      replyTo: campaign.reply_to || campaign.from_email,
+      replyTo: `r+${leadId}@replies.getcloudgreet.com`,
       to: lead.email,
       subject: personalizedSubject,
       body: personalizedBody,
@@ -487,7 +503,7 @@ export async function sendFollowUps(): Promise<{ sent: number; errors: number; s
       const { messageId, error: sendErr } = await sendOneEmail(brevoKey, {
         fromName: campaign.from_name,
         fromEmail: campaign.from_email,
-        replyTo: campaign.reply_to || campaign.from_email,
+        replyTo: `r+${lead.id}@replies.getcloudgreet.com`,
         to: lead.email,
         subject: personalizedSubject,
         body: personalizedBody,

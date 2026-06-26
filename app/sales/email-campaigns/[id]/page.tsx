@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, Fragment } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  CaretLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X,
+  CaretLeft, CaretDown, CaretRight, CircleNotch, WarningCircle, CheckCircle, Plus, X,
   PaperPlaneTilt, Pause, GearSix, MagnifyingGlass, EnvelopeSimple,
   ArrowBendUpLeft, PencilSimple, Trash, ArrowClockwise, ThermometerSimple,
 } from '@phosphor-icons/react'
@@ -854,6 +854,10 @@ export default function SalesEmailCampaignDetailPage() {
   const [settingsSaved, setSettingsSaved] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [sendingLeadId, setSendingLeadId] = useState<string | null>(null)
+  const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null)
+  const [threadCache, setThreadCache] = useState<Record<string, { lead: any; replies: any[] }>>({})
+  const [threadLoading, setThreadLoading] = useState<string | null>(null)
+  const [testSending, setTestSending] = useState(false)
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -987,6 +991,43 @@ export default function SalesEmailCampaignDetailPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ replied: true }),
     }).catch(() => {})
+  }
+
+  const loadThread = async (leadId: string) => {
+    if (threadCache[leadId]) return
+    setThreadLoading(leadId)
+    try {
+      const res = await fetchWithAuth(`/api/sales/email-campaigns/${campaignId}/leads/${leadId}/replies`)
+      const json = await res.json().catch(() => ({}))
+      if (res.ok && json.success) {
+        setThreadCache((prev) => ({ ...prev, [leadId]: { lead: json.lead, replies: json.replies } }))
+      }
+    } catch {}
+    setThreadLoading(null)
+  }
+
+  const toggleThread = (leadId: string) => {
+    if (expandedLeadId === leadId) {
+      setExpandedLeadId(null)
+    } else {
+      setExpandedLeadId(leadId)
+      void loadThread(leadId)
+    }
+  }
+
+  const handleSendTest = async () => {
+    setTestSending(true)
+    try {
+      const res = await fetchWithAuth(`/api/sales/email-campaigns/${campaignId}/test-send`, { method: 'POST' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed')
+      setFlash(`Test email sent to ${json.sentTo}`)
+      setTimeout(() => setFlash(''), 5000)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Test send failed')
+    } finally {
+      setTestSending(false)
+    }
   }
 
   const handleSendOne = async (leadId: string) => {
@@ -1173,6 +1214,18 @@ export default function SalesEmailCampaignDetailPage() {
             </button>
             <button
               type="button"
+              onClick={handleSendTest}
+              disabled={testSending}
+              className="inline-flex items-center gap-1.5 text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-3.5 py-2 transition-colors disabled:opacity-50"
+              title="Send a preview email to yourself"
+            >
+              {testSending
+                ? <CircleNotch className="w-4 h-4 animate-spin" />
+                : <EnvelopeSimple className="w-4 h-4" />}
+              Send test
+            </button>
+            <button
+              type="button"
               onClick={() => setShowAddLeads(true)}
               className="inline-flex items-center gap-1.5 text-sm border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-3.5 py-2 transition-colors"
             >
@@ -1345,7 +1398,7 @@ export default function SalesEmailCampaignDetailPage() {
                   className="w-full px-3 py-2.5 text-sm font-mono bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors resize-y"
                 />
                 <p className="text-[10px] text-gray-400 mt-1">
-                  Variables: <code>{'{{first_name}}'}</code> <code>{'{{business_name}}'}</code> <code>{'{{city}}'}</code> <code>{'{{from_name}}'}</code>
+                  Variables: <code>{'{{first_name}}'}</code> <code>{'{{business_name}}'}</code> <code>{'{{city}}'}</code> <code>{'{{from_name}}'}</code> <code>{'{{signature}}'}</code> <code>{'{{unsubscribe_url}}'}</code>
                 </p>
               </div>
               <div>
@@ -1464,9 +1517,9 @@ export default function SalesEmailCampaignDetailPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    {['Email', 'Owner', 'Business', 'City', 'Status', 'Sent', '', ''].map((h) => (
+                    {['', 'Email', 'Owner', 'Business', 'City', 'Status', 'Sent', '', ''].map((h, idx) => (
                       <th
-                        key={h}
+                        key={idx}
                         className="px-4 py-2.5 text-left text-[10px] font-mono uppercase tracking-wider text-gray-500 font-normal"
                       >
                         {h}
@@ -1475,71 +1528,142 @@ export default function SalesEmailCampaignDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLeads.map((lead, i) => (
-                    <tr
-                      key={lead.id}
-                      className={`border-b border-gray-50 hover:bg-gray-50/60 transition-colors ${
-                        i === filteredLeads.length - 1 ? 'border-b-0' : ''
-                      }`}
-                    >
-                      <td className="px-4 py-2.5 text-gray-700 font-mono text-xs">{lead.email}</td>
-                      <td className="px-4 py-2.5 text-gray-700">
-                        {lead.owner_name || <span className="text-gray-300">--</span>}
-                      </td>
-                      <td className="px-4 py-2.5 text-gray-700">
-                        {lead.business_name || <span className="text-gray-300">--</span>}
-                      </td>
-                      <td className="px-4 py-2.5 text-gray-500">
-                        {lead.city || <span className="text-gray-300">--</span>}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <LeadStatusBadge status={lead.status} />
-                        {lead.status === 'sent' && lead.next_follow_up_at && (
-                          <p className="text-[10px] text-sky-500 mt-0.5">
-                            Follow-up step {(lead.sequence_step || 0) + 1} &middot; {fmtDate(lead.next_follow_up_at)}
-                          </p>
+                  {filteredLeads.map((lead, i) => {
+                    const isExpandable = lead.status === 'sent' || lead.status === 'replied'
+                    const isExpanded = expandedLeadId === lead.id
+                    const thread = threadCache[lead.id]
+                    const isLoadingThread = threadLoading === lead.id
+
+                    return (
+                      <Fragment key={lead.id}>
+                        <tr
+                          onClick={isExpandable ? () => toggleThread(lead.id) : undefined}
+                          className={`border-b border-gray-50 transition-colors ${
+                            isExpandable ? 'cursor-pointer hover:bg-sky-50/40' : 'hover:bg-gray-50/60'
+                          } ${isExpanded ? 'bg-sky-50/30' : ''} ${
+                            i === filteredLeads.length - 1 && !isExpanded ? 'border-b-0' : ''
+                          }`}
+                        >
+                          <td className="pl-3 pr-1 py-2.5 w-6">
+                            {isExpandable && (
+                              <span className="text-gray-300">
+                                {isExpanded
+                                  ? <CaretDown className="w-3.5 h-3.5" />
+                                  : <CaretRight className="w-3.5 h-3.5" />}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 text-gray-700 font-mono text-xs">{lead.email}</td>
+                          <td className="px-4 py-2.5 text-gray-700">
+                            {lead.owner_name || <span className="text-gray-300">--</span>}
+                          </td>
+                          <td className="px-4 py-2.5 text-gray-700">
+                            {lead.business_name || <span className="text-gray-300">--</span>}
+                          </td>
+                          <td className="px-4 py-2.5 text-gray-500">
+                            {lead.city || <span className="text-gray-300">--</span>}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <LeadStatusBadge status={lead.status} />
+                            {lead.status === 'sent' && lead.next_follow_up_at && (
+                              <p className="text-[10px] text-sky-500 mt-0.5">
+                                Follow-up step {(lead.sequence_step || 0) + 1} &middot; {fmtDate(lead.next_follow_up_at)}
+                              </p>
+                            )}
+                            {lead.error && (
+                              <p
+                                className="text-[10px] text-red-500 mt-0.5 truncate max-w-[160px]"
+                                title={lead.error}
+                              >
+                                {lead.error}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 text-gray-400 text-xs">
+                            {lead.sent_at ? fmtDate(lead.sent_at) : <span className="text-gray-300">--</span>}
+                          </td>
+                          <td className="px-4 py-2.5" onClick={(e) => e.stopPropagation()}>
+                            {lead.status === 'sent' && (
+                              <button
+                                type="button"
+                                onClick={() => handleMarkReplied(lead.id)}
+                                className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-300 rounded-lg px-2 py-1 transition-colors"
+                                title="They replied, stop follow-ups"
+                              >
+                                <ArrowBendUpLeft className="w-3 h-3" /> Replied
+                              </button>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                            {lead.status === 'queued' && (
+                              <button
+                                type="button"
+                                onClick={() => handleSendOne(lead.id)}
+                                disabled={sendingLeadId === lead.id}
+                                className="inline-flex items-center gap-1 text-[11px] bg-gray-900 text-white hover:bg-gray-700 rounded-lg px-2.5 py-1 transition-colors disabled:opacity-50"
+                              >
+                                {sendingLeadId === lead.id
+                                  ? <CircleNotch className="w-3 h-3 animate-spin" />
+                                  : <PaperPlaneTilt className="w-3 h-3" />}
+                                Send
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="border-b border-gray-50 bg-gray-50/50">
+                            <td colSpan={9} className="px-6 py-4">
+                              {isLoadingThread ? (
+                                <div className="flex items-center gap-2 text-xs text-gray-400">
+                                  <CircleNotch className="w-3.5 h-3.5 animate-spin" /> Loading thread...
+                                </div>
+                              ) : thread ? (
+                                <div className="space-y-3 max-w-2xl">
+                                  {/* Original email */}
+                                  <div className="bg-white border border-gray-200 rounded-xl p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Original email</span>
+                                      <span className="text-[10px] text-gray-400">{fmtDate(thread.lead.sent_at)}</span>
+                                    </div>
+                                    {thread.lead.personalized_subject && (
+                                      <p className="text-xs font-medium text-gray-700 mb-2">{thread.lead.personalized_subject}</p>
+                                    )}
+                                    <pre className="text-xs text-gray-600 whitespace-pre-wrap font-sans leading-relaxed max-h-40 overflow-y-auto">
+                                      {thread.lead.personalized_body || <span className="text-gray-300">Body not stored</span>}
+                                    </pre>
+                                  </div>
+
+                                  {/* Replies */}
+                                  {thread.replies.length > 0 ? (
+                                    thread.replies.map((reply: any) => (
+                                      <div key={reply.id} className="bg-blue-50 border border-blue-100 rounded-xl p-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <span className="text-xs font-medium text-blue-800">
+                                            {reply.from_name ? `${reply.from_name} ` : ''}<span className="font-mono font-normal text-[11px]">&lt;{reply.from_email}&gt;</span>
+                                          </span>
+                                          <span className="text-[10px] text-blue-400">{fmtDate(reply.received_at)}</span>
+                                        </div>
+                                        {reply.subject && (
+                                          <p className="text-xs text-blue-700 mb-1.5">{reply.subject}</p>
+                                        )}
+                                        <pre className="text-xs text-blue-900 whitespace-pre-wrap font-sans leading-relaxed max-h-40 overflow-y-auto">
+                                          {reply.body}
+                                        </pre>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <p className="text-xs text-gray-400 pl-1">No replies tracked yet. Replies show here automatically when they come in via the tracking address.</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-400">Could not load thread.</p>
+                              )}
+                            </td>
+                          </tr>
                         )}
-                        {lead.error && (
-                          <p
-                            className="text-[10px] text-red-500 mt-0.5 truncate max-w-[160px]"
-                            title={lead.error}
-                          >
-                            {lead.error}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-gray-400 text-xs">
-                        {lead.sent_at ? fmtDate(lead.sent_at) : <span className="text-gray-300">--</span>}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {lead.status === 'sent' && (
-                          <button
-                            type="button"
-                            onClick={() => handleMarkReplied(lead.id)}
-                            className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-300 rounded-lg px-2 py-1 transition-colors"
-                            title="They replied, stop follow-ups"
-                          >
-                            <ArrowBendUpLeft className="w-3 h-3" /> Replied
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        {lead.status === 'queued' && (
-                          <button
-                            type="button"
-                            onClick={() => handleSendOne(lead.id)}
-                            disabled={sendingLeadId === lead.id}
-                            className="inline-flex items-center gap-1 text-[11px] bg-gray-900 text-white hover:bg-gray-700 rounded-lg px-2.5 py-1 transition-colors disabled:opacity-50"
-                          >
-                            {sendingLeadId === lead.id
-                              ? <CircleNotch className="w-3 h-3 animate-spin" />
-                              : <PaperPlaneTilt className="w-3 h-3" />}
-                            Send
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                      </Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
