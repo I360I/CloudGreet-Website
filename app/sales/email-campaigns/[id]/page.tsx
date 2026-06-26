@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -852,16 +852,6 @@ export default function SalesEmailCampaignDetailPage() {
   } | null>(null)
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
-  const settingsSigRef = useRef<HTMLDivElement>(null)
-
-  // Set the contenteditable signature HTML when entering edit mode
-  const isEditingSettings = settingsEdit !== null
-  useEffect(() => {
-    if (isEditingSettings && settingsSigRef.current) {
-      settingsSigRef.current.innerHTML = settingsEdit?.signature || ''
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditingSettings])
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -1035,18 +1025,14 @@ export default function SalesEmailCampaignDetailPage() {
     if (!settingsEdit) return
     setSettingsSaving(true); setSettingsSaved(false)
     try {
-      const payload = {
-        ...settingsEdit,
-        signature: settingsSigRef.current?.innerHTML || settingsEdit.signature || null,
-      }
       const res = await fetchWithAuth(`/api/sales/email-campaigns/${campaignId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(settingsEdit),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) throw new Error(json.error || 'Save failed')
-      setCampaign((prev) => prev ? { ...prev, ...payload } : prev)
+      setCampaign((prev) => prev ? { ...prev, ...settingsEdit } : prev)
       setSettingsSaved(true)
       setSettingsEdit(null)
       setTimeout(() => setSettingsSaved(false), 2500)
@@ -1335,13 +1321,14 @@ export default function SalesEmailCampaignDetailPage() {
                 <label className="block text-xs font-medium text-gray-600 mb-1">
                   Signature <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
-                <div
-                  ref={settingsSigRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  className="w-full min-h-[80px] px-3 py-2.5 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
+                <textarea
+                  rows={4}
+                  value={settingsEdit.signature}
+                  onChange={(e) => setSettingsEdit((f) => f ? { ...f, signature: e.target.value } : f)}
+                  placeholder={"Best,\nYour Name\nTitle | Company\n(555) 000-0000"}
+                  className="w-full px-3 py-2.5 text-sm font-mono bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors resize-y"
                 />
-                <p className="text-[10px] text-gray-400 mt-1">Paste from Outlook, Apple Mail, or any email client to preserve images and formatting.</p>
+                <p className="text-[10px] text-gray-400 mt-1">Appended to every email in this campaign.</p>
               </div>
             </div>
           ) : (

@@ -142,23 +142,6 @@ async function getSequenceSteps(campaignId: string): Promise<SequenceStep[]> {
   return (data || []) as SequenceStep[]
 }
 
-function containsHtml(s: string | null | undefined): boolean {
-  return !!s && /<[a-zA-Z][^>]*>/i.test(s)
-}
-
-function plainToHtml(text: string): string {
-  return text
-    .trim()
-    .split(/\n\n+/)
-    .filter(Boolean)
-    .map((p) => `<p style="margin:0 0 1em 0">${p.trim().replace(/\n/g, '<br>')}</p>`)
-    .join('\n')
-}
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim()
-}
-
 async function sendOneEmail(
   apiKey: string,
   opts: {
@@ -174,6 +157,8 @@ async function sendOneEmail(
     prevMessageId?: string | null
   },
 ): Promise<{ messageId: string | null; error: string | null }> {
+  const fullBody = opts.body + (opts.signature ? `\n\n${opts.signature}` : '')
+
   const extraHeaders: Record<string, string> = {
     'X-Campaign-Id': opts.campaignId,
     'X-Lead-Id': opts.leadId,
@@ -184,37 +169,6 @@ async function sendOneEmail(
       : `<${opts.prevMessageId}>`
     extraHeaders['In-Reply-To'] = msgRef
     extraHeaders['References'] = msgRef
-  }
-
-  // Detect whether we need to send as HTML (signature is rich HTML from e.g. Outlook)
-  const sigIsHtml = containsHtml(opts.signature)
-  const bodyHasHtml = containsHtml(opts.body)
-  const sendAsHtml = sigIsHtml || bodyHasHtml
-
-  let emailBody: Record<string, string>
-
-  if (sendAsHtml) {
-    let plainPart: string
-    let htmlSigPart: string
-
-    if (bodyHasHtml && !opts.signature) {
-      // {{signature}} placeholder was used -- signature HTML is already inline in body
-      // Body = "plain text\n\n<HTML SIGNATURE>"
-      const firstTagIdx = opts.body.search(/<[a-zA-Z][^>]*>/i)
-      plainPart = firstTagIdx > 0 ? opts.body.slice(0, firstTagIdx) : ''
-      htmlSigPart = firstTagIdx >= 0 ? opts.body.slice(firstTagIdx) : ''
-    } else {
-      // Plain body + HTML signature appended separately
-      plainPart = opts.body
-      htmlSigPart = opts.signature || ''
-    }
-
-    const htmlContent = plainToHtml(plainPart) + (htmlSigPart ? `<br>${htmlSigPart}` : '')
-    const textContent = plainPart.trim() + (htmlSigPart ? `\n\n${stripHtml(htmlSigPart)}` : '')
-    emailBody = { htmlContent, textContent }
-  } else {
-    const fullBody = opts.body + (opts.signature ? `\n\n${opts.signature}` : '')
-    emailBody = { textContent: fullBody }
   }
 
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -229,7 +183,7 @@ async function sendOneEmail(
       to: [{ email: opts.to }],
       replyTo: { email: opts.replyTo },
       subject: opts.subject,
-      ...emailBody,
+      textContent: fullBody,
       headers: extraHeaders,
     }),
   })

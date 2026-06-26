@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -101,7 +101,6 @@ function NewCampaignModal({
   })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const sigRef = useRef<HTMLDivElement>(null)
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -118,10 +117,9 @@ function NewCampaignModal({
       const from_email = form.from_email_prefix
         ? `${form.from_email_prefix}@getcloudgreet.com`
         : repEmail
-      const signature = sigRef.current?.innerHTML || form.signature || null
       const res = await fetchWithAuth('/api/sales/email-campaigns', {
         method: 'POST',
-        body: JSON.stringify({ ...form, from_email, signature }),
+        body: JSON.stringify({ ...form, from_email }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || !json.success) throw new Error(json.error || 'Failed to create campaign')
@@ -246,24 +244,20 @@ function NewCampaignModal({
               {lastSignature && !form.signature && (
                 <button
                   type="button"
-                  onClick={() => {
-                    set('signature', lastSignature)
-                    if (sigRef.current) sigRef.current.innerHTML = lastSignature
-                  }}
+                  onClick={() => set('signature', lastSignature)}
                   className="text-[11px] text-sky-600 hover:text-sky-700 font-medium transition-colors"
                 >
                   Reuse last signature
                 </button>
               )}
             </div>
-            <div
-              ref={sigRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={() => set('signature', sigRef.current?.innerHTML || '')}
-              className="w-full min-h-[80px] px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900 transition-colors"
+            <textarea
+              rows={4}
+              value={form.signature}
+              onChange={(e) => set('signature', e.target.value)}
+              placeholder={"Best,\nYour Name\nTitle | Company\n(555) 000-0000"}
+              className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:border-gray-900 transition-colors resize-y"
             />
-            <p className="text-[11px] text-gray-400 mt-1">Paste directly from Outlook, Apple Mail, or any email client to preserve images and formatting.</p>
           </div>
 
           {err && (
