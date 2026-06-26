@@ -251,18 +251,40 @@ function AddLeadsModal({
     return fields
   }
 
+  function sniffHeaders(rows: string[][]): string[] {
+    const colCount = Math.max(...rows.map((r) => r.length), 0)
+    const result: string[] = new Array(colCount).fill('')
+    const textOrder = ['owner_name', 'business_name', 'city']
+    let textIdx = 0
+    for (let i = 0; i < colCount; i++) {
+      const samples = rows.map((r) => (r[i] || '').trim()).filter(Boolean)
+      if (samples.some((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))) {
+        result[i] = 'email'
+      } else if (samples.length > 0 && samples.every((v) => /^[\d\s()\-+.]{7,15}$/.test(v))) {
+        result[i] = 'phone'
+      } else if (textIdx < textOrder.length) {
+        result[i] = textOrder[textIdx++]
+      }
+    }
+    return result
+  }
+
   function importText(text: string) {
     const lines = text.trim().split(/\r?\n/).filter(Boolean)
     if (lines.length < 1) { setCsvParsed([]); setCsvSkipped(0); setCsvNoEmailCol(false); return }
 
     const delim = (lines[0].match(/\t/g) || []).length >= (lines[0].match(/,/g) || []).length ? '\t' : ','
-    const rawHeaders = splitRow(lines[0], delim)
-    const headers = rawHeaders.map(normalizeHeader)
+    const firstVals = splitRow(lines[0], delim)
+
+    // If first row contains an email address, it's data -- sniff column types
+    const isHeaderless = firstVals.some((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()))
+    const allRows = lines.map((l) => splitRow(l, delim))
+    const headers = isHeaderless ? sniffHeaders(allRows) : firstVals.map(normalizeHeader)
+    const dataLines = isHeaderless ? lines : lines.slice(1)
 
     const hasEmailCol = headers.includes('email')
     setCsvNoEmailCol(!hasEmailCol)
 
-    const dataLines = lines.length > 1 ? lines.slice(1) : []
     const valid: CsvRow[] = []
     let skipped = 0
 
