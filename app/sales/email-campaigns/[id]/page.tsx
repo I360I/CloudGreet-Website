@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   CaretLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X,
-  PaperPlaneTilt, Pause, PhoneCall, MagnifyingGlass, EnvelopeSimple,
+  PaperPlaneTilt, Pause, GearSix, MagnifyingGlass, EnvelopeSimple,
   ArrowBendUpLeft, PencilSimple, Trash, ArrowClockwise, ThermometerSimple,
 } from '@phosphor-icons/react'
 import { SalesShell } from '../../_components/SalesShell'
@@ -852,6 +852,8 @@ export default function SalesEmailCampaignDetailPage() {
   } | null>(null)
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [sendingLeadId, setSendingLeadId] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -987,6 +989,21 @@ export default function SalesEmailCampaignDetailPage() {
     }).catch(() => {})
   }
 
+  const handleSendOne = async (leadId: string) => {
+    setSendingLeadId(leadId)
+    try {
+      const res = await fetchWithAuth(`/api/sales/email-campaigns/${campaignId}/leads/${leadId}/send`, { method: 'POST' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) throw new Error(json.error || 'Failed to send')
+      setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, status: 'sent' as LeadStatus, sent_at: new Date().toISOString() } : l))
+      setCampaign((prev) => prev ? { ...prev, sent_count: prev.sent_count + 1 } : prev)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Send failed')
+    } finally {
+      setSendingLeadId(null)
+    }
+  }
+
   const addStep = () => {
     const nextNum = seqSteps.length + 1
     const defaultDelay = nextNum === 1 ? 3 : 4
@@ -1035,6 +1052,7 @@ export default function SalesEmailCampaignDetailPage() {
       setCampaign((prev) => prev ? { ...prev, ...settingsEdit } : prev)
       setSettingsSaved(true)
       setSettingsEdit(null)
+      setShowSettings(false)
       setTimeout(() => setSettingsSaved(false), 2500)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to save')
@@ -1130,16 +1148,29 @@ export default function SalesEmailCampaignDetailPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {campaign.sent_count > 0 && (
-              <button
-                type="button"
-                onClick={handlePowerDial}
-                className="inline-flex items-center gap-1.5 text-sm bg-violet-600 text-white hover:bg-violet-700 rounded-lg px-3.5 py-2 transition-colors shadow-sm"
-                title="Call everyone you emailed"
-              >
-                <PhoneCall weight="fill" className="w-4 h-4" /> Power dial sent
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                setShowSettings((v) => !v)
+                if (!settingsEdit) {
+                  setSettingsEdit({
+                    name: campaign.name,
+                    from_name: campaign.from_name,
+                    reply_to: campaign.reply_to || '',
+                    subject: campaign.subject,
+                    body_template: campaign.body_template,
+                    signature: campaign.signature || '',
+                  })
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 text-sm border rounded-lg px-3.5 py-2 transition-colors ${
+                showSettings
+                  ? 'border-gray-900 text-gray-900 bg-gray-50'
+                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <GearSix weight={showSettings ? 'fill' : 'regular'} className="w-4 h-4" /> Settings
+            </button>
             <button
               type="button"
               onClick={() => setShowAddLeads(true)}
@@ -1215,10 +1246,10 @@ export default function SalesEmailCampaignDetailPage() {
           ))}
         </motion.div>
 
-        {/* Campaign Settings */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE, delay: 0.02 }}
+        {/* Campaign Settings (toggled via gear button) */}
+        {showSettings && <motion.div
+          initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.3, ease: EASE }}
           className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-4 p-5"
         >
           <div className="flex items-center justify-between mb-4">
@@ -1231,7 +1262,7 @@ export default function SalesEmailCampaignDetailPage() {
                 <>
                   <button
                     type="button"
-                    onClick={() => setSettingsEdit(null)}
+                    onClick={() => { setSettingsEdit(null); setShowSettings(false) }}
                     className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 transition-colors"
                   >
                     Cancel
@@ -1363,7 +1394,7 @@ export default function SalesEmailCampaignDetailPage() {
               )}
             </div>
           )}
-        </motion.div>
+        </motion.div>}
 
         {/* Warmup cap status */}
         <div className={`flex items-center justify-between mb-4 rounded-xl px-4 py-2.5 text-xs ${
@@ -1391,6 +1422,129 @@ export default function SalesEmailCampaignDetailPage() {
             </span>
           )}
         </div>
+
+        {/* Leads table */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE, delay: 0.06 }}
+          className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm mb-4"
+        >
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="text-sm font-medium text-gray-900">
+              Leads{' '}
+              <span className="text-gray-400 font-normal">({leads.length})</span>
+            </h2>
+            <div className="relative">
+              <MagnifyingGlass className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="w-44 sm:w-56 pl-8 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 focus:bg-white transition-colors"
+              />
+            </div>
+          </div>
+
+          {leads.length === 0 ? (
+            <div className="px-6 py-10 text-center">
+              <EnvelopeSimple weight="duotone" className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">No leads yet.</p>
+              <button
+                type="button"
+                onClick={() => setShowAddLeads(true)}
+                className="mt-3 inline-flex items-center gap-1.5 text-sm text-sky-600 hover:text-sky-700 transition-colors"
+              >
+                <Plus weight="bold" className="w-3.5 h-3.5" /> Add leads
+              </button>
+            </div>
+          ) : filteredLeads.length === 0 ? (
+            <div className="px-6 py-8 text-center text-sm text-gray-500">No results.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    {['Email', 'Owner', 'Business', 'City', 'Status', 'Sent', '', ''].map((h) => (
+                      <th
+                        key={h}
+                        className="px-4 py-2.5 text-left text-[10px] font-mono uppercase tracking-wider text-gray-500 font-normal"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeads.map((lead, i) => (
+                    <tr
+                      key={lead.id}
+                      className={`border-b border-gray-50 hover:bg-gray-50/60 transition-colors ${
+                        i === filteredLeads.length - 1 ? 'border-b-0' : ''
+                      }`}
+                    >
+                      <td className="px-4 py-2.5 text-gray-700 font-mono text-xs">{lead.email}</td>
+                      <td className="px-4 py-2.5 text-gray-700">
+                        {lead.owner_name || <span className="text-gray-300">--</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-700">
+                        {lead.business_name || <span className="text-gray-300">--</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-500">
+                        {lead.city || <span className="text-gray-300">--</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <LeadStatusBadge status={lead.status} />
+                        {lead.status === 'sent' && lead.next_follow_up_at && (
+                          <p className="text-[10px] text-sky-500 mt-0.5">
+                            Follow-up step {(lead.sequence_step || 0) + 1} &middot; {fmtDate(lead.next_follow_up_at)}
+                          </p>
+                        )}
+                        {lead.error && (
+                          <p
+                            className="text-[10px] text-red-500 mt-0.5 truncate max-w-[160px]"
+                            title={lead.error}
+                          >
+                            {lead.error}
+                          </p>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-gray-400 text-xs">
+                        {lead.sent_at ? fmtDate(lead.sent_at) : <span className="text-gray-300">--</span>}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        {lead.status === 'sent' && (
+                          <button
+                            type="button"
+                            onClick={() => handleMarkReplied(lead.id)}
+                            className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-300 rounded-lg px-2 py-1 transition-colors"
+                            title="They replied, stop follow-ups"
+                          >
+                            <ArrowBendUpLeft className="w-3 h-3" /> Replied
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {lead.status === 'queued' && (
+                          <button
+                            type="button"
+                            onClick={() => handleSendOne(lead.id)}
+                            disabled={sendingLeadId === lead.id}
+                            className="inline-flex items-center gap-1 text-[11px] bg-gray-900 text-white hover:bg-gray-700 rounded-lg px-2.5 py-1 transition-colors disabled:opacity-50"
+                          >
+                            {sendingLeadId === lead.id
+                              ? <CircleNotch className="w-3 h-3 animate-spin" />
+                              : <PaperPlaneTilt className="w-3 h-3" />}
+                            Send
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </motion.div>
 
         {/* Follow-up Sequence */}
         <motion.div
@@ -1484,113 +1638,6 @@ export default function SalesEmailCampaignDetailPage() {
           )}
         </motion.div>
 
-        {/* Leads table */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE, delay: 0.06 }}
-          className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm"
-        >
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-sm font-medium text-gray-900">
-              Leads{' '}
-              <span className="text-gray-400 font-normal">({leads.length})</span>
-            </h2>
-            <div className="relative">
-              <MagnifyingGlass className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search..."
-                className="w-44 sm:w-56 pl-8 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 focus:bg-white transition-colors"
-              />
-            </div>
-          </div>
-
-          {leads.length === 0 ? (
-            <div className="px-6 py-10 text-center">
-              <EnvelopeSimple weight="duotone" className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-500">No leads yet.</p>
-              <button
-                type="button"
-                onClick={() => setShowAddLeads(true)}
-                className="mt-3 inline-flex items-center gap-1.5 text-sm text-sky-600 hover:text-sky-700 transition-colors"
-              >
-                <Plus weight="bold" className="w-3.5 h-3.5" /> Add leads
-              </button>
-            </div>
-          ) : filteredLeads.length === 0 ? (
-            <div className="px-6 py-8 text-center text-sm text-gray-500">No results.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    {['Email', 'Owner', 'Business', 'City', 'Status', 'Sent', ''].map((h) => (
-                      <th
-                        key={h}
-                        className="px-4 py-2.5 text-left text-[10px] font-mono uppercase tracking-wider text-gray-500 font-normal"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLeads.map((lead, i) => (
-                    <tr
-                      key={lead.id}
-                      className={`border-b border-gray-50 hover:bg-gray-50/60 transition-colors ${
-                        i === filteredLeads.length - 1 ? 'border-b-0' : ''
-                      }`}
-                    >
-                      <td className="px-4 py-2.5 text-gray-700 font-mono text-xs">{lead.email}</td>
-                      <td className="px-4 py-2.5 text-gray-700">
-                        {lead.owner_name || <span className="text-gray-300">--</span>}
-                      </td>
-                      <td className="px-4 py-2.5 text-gray-700">
-                        {lead.business_name || <span className="text-gray-300">--</span>}
-                      </td>
-                      <td className="px-4 py-2.5 text-gray-500">
-                        {lead.city || <span className="text-gray-300">--</span>}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <LeadStatusBadge status={lead.status} />
-                        {lead.status === 'sent' && lead.next_follow_up_at && (
-                          <p className="text-[10px] text-sky-500 mt-0.5">
-                            Follow-up step {(lead.sequence_step || 0) + 1} &middot; {fmtDate(lead.next_follow_up_at)}
-                          </p>
-                        )}
-                        {lead.error && (
-                          <p
-                            className="text-[10px] text-red-500 mt-0.5 truncate max-w-[160px]"
-                            title={lead.error}
-                          >
-                            {lead.error}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5 text-gray-400 text-xs">
-                        {lead.sent_at ? fmtDate(lead.sent_at) : <span className="text-gray-300">--</span>}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        {lead.status === 'sent' && (
-                          <button
-                            type="button"
-                            onClick={() => handleMarkReplied(lead.id)}
-                            className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-blue-600 border border-gray-200 hover:border-blue-300 rounded-lg px-2 py-1 transition-colors"
-                            title="They replied, stop follow-ups"
-                          >
-                            <ArrowBendUpLeft className="w-3 h-3" /> Replied
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </motion.div>
       </section>
     </SalesShell>
   )

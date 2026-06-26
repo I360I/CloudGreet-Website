@@ -325,6 +325,92 @@ export async function sendCampaignBatch(
 }
 
 // ---------------------------------------------------------------------------
+// Send a single queued lead immediately (bypasses daily cap)
+// ---------------------------------------------------------------------------
+
+export async function sendSingleLead(
+  campaignId: string,
+  leadId: string,
+): Promise<{ sent: boolean; error: string | null }> {
+  if (!process.env.BREVO_API_KEY) throw new Error('BREVO_API_KEY is not set')
+  const brevoKey = process.env.BREVO_API_KEY
+
+  const [{ data: campaign }, { data: lead }] = await Promise.all([
+    supabaseAdmin
+      .from('email_campaigns')
+      .select('id, name, from_name, from_email, reply_to, subject, body_template, signature, status, sent_count, bounce_count, created_at')
+      .eq('id', campaignId)
+      .single(),
+    supabaseAdmin
+      .from('email_leads')
+      .select('id, campaign_id, email, owner_name, business_name, city, phone, status')
+      .eq('id', leadId)
+      .eq('campaign_id', campaignId)
+      .single(),
+  ])
+
+  if (!campaign) return { sent: false, error: 'Campaign not found' }
+  if (!lead) return { sent: false, error: 'Lead not found' }
+  if (lead.status !== 'queued') return { sent: false, error: `Lead status is "${lead.status}", expected "queued"` }
+
+  const sequences = await getSequenceSteps(campaignId)
+  const firstStep = sequences[0] || null
+
+  await supabaseAdmin.from('email_leads').update({ status: 'sending' }).eq('id', leadId)
+
+  try {
+    const rawBody = await personalizeLead(campaign.body_template, lead as EmailLead, campaign.from_name)
+    const hasSignaturePlaceholder = rawBody.includes('{{signature}}')
+    const personalizedBody = rawBody.replace(/\{\{signature\}\}/g, campaign.signature || '')
+    const firstName = getFirstName(lead.owner_name)
+    const personalizedSubject = campaign.subject
+      .replace(/\{\{first_name\}\}/g, firstName)
+      .replace(/\{\{owner_name\}\}/g, lead.owner_name || '')
+      .replace(/\{\{business_name\}\}/g, lead.business_name || '')
+      .replace(/\{\{city\}\}/g, lead.city || '')
+
+    const { messageId, error: sendErr } = await sendOneEmail(brevoKey, {
+      fromName: campaign.from_name,
+      fromEmail: campaign.from_email,
+      replyTo: campaign.reply_to || campaign.from_email,
+      to: lead.email,
+      subject: personalizedSubject,
+      body: personalizedBody,
+      signature: hasSignaturePlaceholder ? null : campaign.signature,
+      campaignId,
+      leadId,
+    })
+
+    if (sendErr) throw new Error(sendErr)
+
+    await supabaseAdmin
+      .from('email_leads')
+      .update({
+        status: 'sent',
+        sent_at: new Date().toISOString(),
+        resend_message_id: messageId,
+        personalized_subject: personalizedSubject,
+        personalized_body: personalizedBody,
+        sequence_step: 0,
+        next_follow_up_at: firstStep ? daysFromNow(firstStep.delay_days) : null,
+        error: null,
+      })
+      .eq('id', leadId)
+
+    await supabaseAdmin
+      .from('email_campaigns')
+      .update({ sent_count: (campaign.sent_count || 0) + 1, updated_at: new Date().toISOString() })
+      .eq('id', campaignId)
+
+    return { sent: true, error: null }
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err)
+    await supabaseAdmin.from('email_leads').update({ status: 'queued', error: errMsg }).eq('id', leadId)
+    return { sent: false, error: errMsg }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Follow-up cron: sends next sequence step for all due leads
 // ---------------------------------------------------------------------------
 
