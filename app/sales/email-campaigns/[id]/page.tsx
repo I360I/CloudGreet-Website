@@ -829,9 +829,6 @@ export default function SalesEmailCampaignDetailPage() {
   const [sending, setSending] = useState(false)
   const [pausing, setPausing] = useState(false)
   const [search, setSearch] = useState('')
-  const [sig, setSig] = useState('')
-  const [sigSaving, setSigSaving] = useState(false)
-  const [sigSaved, setSigSaved] = useState(false)
   const [seqSteps, setSeqSteps] = useState<SequenceStep[]>([])
   const [seqSaving, setSeqSaving] = useState(false)
   const [seqSaved, setSeqSaved] = useState(false)
@@ -840,7 +837,7 @@ export default function SalesEmailCampaignDetailPage() {
   const [sentToday, setSentToday] = useState(0)
   const [dailyCap, setDailyCap] = useState(10)
   const [settingsEdit, setSettingsEdit] = useState<{
-    name: string; from_name: string; reply_to: string; subject: string; body_template: string
+    name: string; from_name: string; reply_to: string; subject: string; body_template: string; signature: string
   } | null>(null)
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
@@ -856,7 +853,6 @@ export default function SalesEmailCampaignDetailPage() {
       if (!campRes.ok || !campJson.success) throw new Error(campJson.error || 'Failed to load')
       setCampaign(campJson.campaign)
       setLeads(campJson.leads || [])
-      setSig(campJson.campaign?.signature || '')
       setSentToday(campJson.sentToday ?? 0)
       setDailyCap(campJson.dailyCap ?? 10)
       const seqJson = await seqRes.json().catch(() => ({}))
@@ -1033,21 +1029,6 @@ export default function SalesEmailCampaignDetailPage() {
       setErr(e instanceof Error ? e.message : 'Failed to save')
     } finally {
       setSettingsSaving(false)
-    }
-  }
-
-  const handleSaveSig = async () => {
-    setSigSaving(true); setSigSaved(false)
-    try {
-      await fetchWithAuth(`/api/sales/email-campaigns/${campaignId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signature: sig }),
-      })
-      setSigSaved(true)
-      setTimeout(() => setSigSaved(false), 2500)
-    } catch { /* non-fatal */ } finally {
-      setSigSaving(false)
     }
   }
 
@@ -1265,6 +1246,7 @@ export default function SalesEmailCampaignDetailPage() {
                     reply_to: campaign.reply_to || '',
                     subject: campaign.subject,
                     body_template: campaign.body_template,
+                    signature: campaign.signature || '',
                   })}
                   className="inline-flex items-center gap-1.5 text-xs border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-3 py-1.5 transition-colors"
                 >
@@ -1324,6 +1306,19 @@ export default function SalesEmailCampaignDetailPage() {
                   Variables: <code>{'{{first_name}}'}</code> <code>{'{{business_name}}'}</code> <code>{'{{city}}'}</code> <code>{'{{from_name}}'}</code>
                 </p>
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Signature <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  rows={4}
+                  value={settingsEdit.signature}
+                  onChange={(e) => setSettingsEdit((f) => f ? { ...f, signature: e.target.value } : f)}
+                  placeholder={"Best,\nYour Name\nTitle | Company\n(555) 000-0000"}
+                  className="w-full px-3 py-2.5 text-sm font-mono bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors resize-y"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">Appended to every email in this campaign.</p>
+              </div>
             </div>
           ) : (
             <div className="space-y-2 text-sm">
@@ -1349,6 +1344,12 @@ export default function SalesEmailCampaignDetailPage() {
                 <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Body</span>
                 <pre className="text-gray-600 text-xs mt-0.5 whitespace-pre-wrap font-sans line-clamp-3">{campaign.body_template}</pre>
               </div>
+              {campaign.signature && (
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Signature</span>
+                  <pre className="text-gray-600 text-xs mt-0.5 whitespace-pre-wrap font-sans line-clamp-2">{campaign.signature}</pre>
+                </div>
+              )}
             </div>
           )}
         </motion.div>
@@ -1470,40 +1471,6 @@ export default function SalesEmailCampaignDetailPage() {
               ))}
             </div>
           )}
-        </motion.div>
-
-        {/* Signature */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE, delay: 0.05 }}
-          className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-4 p-5"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-0.5">Signature</div>
-              <p className="text-xs text-gray-500">Appended to every email in this campaign.</p>
-            </div>
-            <button
-              type="button"
-              onClick={handleSaveSig}
-              disabled={sigSaving}
-              className="inline-flex items-center gap-1.5 text-xs bg-gray-900 text-white hover:bg-gray-800 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
-            >
-              {sigSaving
-                ? <CircleNotch className="w-3 h-3 animate-spin" />
-                : sigSaved
-                  ? <CheckCircle weight="fill" className="w-3 h-3 text-emerald-400" />
-                  : null}
-              {sigSaved ? 'Saved' : 'Save'}
-            </button>
-          </div>
-          <textarea
-            value={sig}
-            onChange={(e) => setSig(e.target.value)}
-            placeholder={"Paste your email signature here...\n\nBest,\nYour Name\nTitle | Company\n(555) 000-0000"}
-            rows={5}
-            className="w-full text-sm font-mono bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-gray-900 focus:bg-white transition-colors resize-y"
-          />
         </motion.div>
 
         {/* Leads table */}
