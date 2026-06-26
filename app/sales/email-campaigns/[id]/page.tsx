@@ -141,11 +141,12 @@ function AddLeadsModal({
   const [findingEmails, setFindingEmails] = useState(false)
   const [findMsg, setFindMsg] = useState('')
 
-  // Manual entry tab state
+  // Import tab state
   type CsvRow = { email: string; owner_name?: string; business_name?: string; city?: string; phone?: string }
   type ManualRow = { email: string; owner_name: string; business_name: string; city: string; phone: string }
   const emptyRow = (): ManualRow => ({ email: '', owner_name: '', business_name: '', city: '', phone: '' })
   const [manualRows, setManualRows] = useState<ManualRow[]>([emptyRow()])
+  const [csvDragging, setCsvDragging] = useState(false)
 
   const csvParsed: CsvRow[] = manualRows
     .filter((r) => r.email.includes('@'))
@@ -156,6 +157,89 @@ function AddLeadsModal({
       city: city || undefined,
       phone: phone || undefined,
     }))
+
+  function normalizeHeader(h: string): string {
+    const c = h.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (['email','emailaddress','mail','emails'].includes(c)) return 'email'
+    if (['ownername','owner','contactname','contact','fullname','name','person'].includes(c)) return 'owner_name'
+    if (['firstname','fname','givenname'].includes(c)) return 'first_name'
+    if (['lastname','lname','surname','familyname'].includes(c)) return 'last_name'
+    if (['businessname','business','company','companyname','organization','org','biz','account'].includes(c)) return 'business_name'
+    if (['city','location','town','area','metro'].includes(c)) return 'city'
+    if (['state','province','region'].includes(c)) return 'state'
+    if (['phone','phonenumber','mobile','cell','telephone','tel','number'].includes(c)) return 'phone'
+    if (['website','web','url','site','homepage','domain'].includes(c)) return 'website'
+    return c
+  }
+
+  function splitRow(line: string, delimiter: string): string[] {
+    if (delimiter !== ',') return line.split(delimiter).map((v) => v.trim())
+    const fields: string[] = []
+    let cur = ''; let inQ = false
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ }
+      else if (ch === ',' && !inQ) { fields.push(cur.trim()); cur = '' }
+      else { cur += ch }
+    }
+    fields.push(cur.trim())
+    return fields
+  }
+
+  function sniffHeaders(rows: string[][]): string[] {
+    const colCount = Math.max(...rows.map((r) => r.length), 0)
+    const result: string[] = new Array(colCount).fill('')
+    const textOrder = ['owner_name', 'business_name', 'city']
+    let textIdx = 0
+    for (let i = 0; i < colCount; i++) {
+      const samples = rows.map((r) => (r[i] || '').trim()).filter(Boolean)
+      if (samples.some((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))) {
+        result[i] = 'email'
+      } else if (samples.length > 0 && samples.every((v) => /^[\d\s()\-+.]{7,15}$/.test(v))) {
+        result[i] = 'phone'
+      } else if (textIdx < textOrder.length) {
+        result[i] = textOrder[textIdx++]
+      }
+    }
+    return result
+  }
+
+  function importText(text: string) {
+    const lines = text.trim().split(/\r?\n/).filter(Boolean)
+    if (lines.length < 1) return
+    const delim = (lines[0].match(/\t/g) || []).length >= (lines[0].match(/,/g) || []).length ? '\t' : ','
+    const firstVals = splitRow(lines[0], delim)
+    const isHeaderless = firstVals.some((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()))
+    const allRows = lines.map((l) => splitRow(l, delim))
+    const headers = isHeaderless ? sniffHeaders(allRows) : firstVals.map(normalizeHeader)
+    const dataLines = isHeaderless ? lines : lines.slice(1)
+    const parsed: ManualRow[] = []
+    for (const line of dataLines) {
+      if (!line.trim()) continue
+      const vals = splitRow(line, delim)
+      const row: Record<string, string> = {}
+      headers.forEach((h, i) => { if (vals[i]) row[h] = vals[i].replace(/^"|"$/g, '').trim() })
+      if (!row.owner_name && (row.first_name || row.last_name)) {
+        row.owner_name = [row.first_name, row.last_name].filter(Boolean).join(' ')
+      }
+      if (row.state && row.city && !row.city.includes(row.state)) {
+        row.city = `${row.city}, ${row.state}`
+      }
+      parsed.push({
+        email: row.email || '',
+        owner_name: row.owner_name || '',
+        business_name: row.business_name || '',
+        city: row.city || '',
+        phone: row.phone || '',
+      })
+    }
+    if (parsed.length > 0) setManualRows(parsed)
+  }
+
+  function handleFileUpload(file: File) {
+    const reader = new FileReader()
+    reader.onload = (e) => importText(e.target?.result as string)
+    reader.readAsText(file)
+  }
 
   // Shared state
   const [saving, setSaving] = useState(false)
@@ -459,6 +543,45 @@ function AddLeadsModal({
                 <Plus weight="bold" className="w-3.5 h-3.5" />
                 Add row
               </button>
+
+              <div className="flex items-center gap-2 mt-4">
+                <div className="flex-1 h-px bg-gray-100" />
+                <span className="text-[11px] text-gray-400">or import</span>
+                <div className="flex-1 h-px bg-gray-100" />
+              </div>
+
+              {/* File drop zone */}
+              <div
+                className={`mt-3 relative border-2 border-dashed rounded-xl p-4 text-center transition-colors cursor-pointer ${
+                  csvDragging ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400'
+                }`}
+                onClick={() => document.getElementById('csv-file-input')?.click()}
+                onDragOver={(e) => { e.preventDefault(); setCsvDragging(true) }}
+                onDragLeave={() => setCsvDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault(); setCsvDragging(false)
+                  const file = e.dataTransfer.files[0]
+                  if (file) handleFileUpload(file)
+                }}
+              >
+                <input
+                  id="csv-file-input"
+                  type="file"
+                  accept=".csv,.tsv,.txt"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(f) }}
+                />
+                <p className="text-xs font-medium text-gray-600">Drop a file or click to upload</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">CSV, TSV, or Excel export</p>
+              </div>
+
+              {/* Paste area */}
+              <textarea
+                rows={3}
+                onChange={(e) => { if (e.target.value.trim()) importText(e.target.value) }}
+                placeholder={'Paste from Excel or Google Sheets — populates the table above'}
+                className="mt-2 w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-mono focus:outline-none focus:border-gray-900 transition-colors resize-none placeholder:text-gray-300"
+              />
             </div>
           )}
 
