@@ -97,6 +97,7 @@ function NewCampaignModal({
     reply_to: repEmail,
     subject: '',
     body_template: '',
+    signature: '',
   })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -233,6 +234,19 @@ function NewCampaignModal({
             <p className="text-[11px] text-gray-400 mt-1">
               Supports: {'{{first_name}}'}, {'{{business_name}}'}, {'{{city}}'}, {'{{from_name}}'}
             </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              Signature <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              rows={4}
+              value={form.signature}
+              onChange={(e) => set('signature', e.target.value)}
+              placeholder={"Best,\nYour Name\nTitle | Company\n(555) 000-0000"}
+              className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:border-gray-900 transition-colors resize-y"
+            />
           </div>
 
           {err && (

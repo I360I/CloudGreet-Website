@@ -78,7 +78,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     const { id } = params
     const body = await request.json().catch(() => ({}))
 
-    const allowed = ['signature', 'name', 'subject', 'body_template', 'reply_to'] as const
+    const allowed = ['signature', 'name', 'subject', 'body_template', 'reply_to', 'from_name'] as const
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() }
     for (const key of allowed) {
       if (key in body) update[key] = body[key]

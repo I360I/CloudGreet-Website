@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null)
     if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
 
-    const { name, subject, body_template, from_name, from_email: fromEmailBody, reply_to } = body as Record<string, string | undefined>
+    const { name, subject, body_template, from_name, from_email: fromEmailBody, reply_to, signature } = body as Record<string, string | undefined>
 
     if (!name || !subject || !body_template) {
       return NextResponse.json(
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         reply_to: reply_to || from_email,
         subject,
         body_template,
+        signature: signature || null,
         created_by: auth.userId,
         status: 'draft',
       })

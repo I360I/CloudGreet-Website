@@ -839,6 +839,11 @@ export default function SalesEmailCampaignDetailPage() {
   const [showWarmingWarning, setShowWarmingWarning] = useState(false)
   const [sentToday, setSentToday] = useState(0)
   const [dailyCap, setDailyCap] = useState(10)
+  const [settingsEdit, setSettingsEdit] = useState<{
+    name: string; from_name: string; reply_to: string; subject: string; body_template: string
+  } | null>(null)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsSaved, setSettingsSaved] = useState(false)
 
   const load = async () => {
     setLoading(true); setErr('')
@@ -1007,6 +1012,28 @@ export default function SalesEmailCampaignDetailPage() {
         .filter((s) => s.step_number !== stepNumber)
         .map((s, i) => ({ ...s, step_number: i + 1 })),
     )
+  }
+
+  const handleSaveSettings = async () => {
+    if (!settingsEdit) return
+    setSettingsSaving(true); setSettingsSaved(false)
+    try {
+      const res = await fetchWithAuth(`/api/sales/email-campaigns/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settingsEdit),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) throw new Error(json.error || 'Save failed')
+      setCampaign((prev) => prev ? { ...prev, ...settingsEdit } : prev)
+      setSettingsSaved(true)
+      setSettingsEdit(null)
+      setTimeout(() => setSettingsSaved(false), 2500)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to save')
+    } finally {
+      setSettingsSaving(false)
+    }
   }
 
   const handleSaveSig = async () => {
@@ -1194,6 +1221,136 @@ export default function SalesEmailCampaignDetailPage() {
               <div className="text-2xl font-display font-semibold text-gray-900 tabular-nums">{s.value}</div>
             </div>
           ))}
+        </motion.div>
+
+        {/* Campaign Settings */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE, delay: 0.02 }}
+          className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-4 p-5"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-0.5">Campaign Settings</div>
+              <p className="text-xs text-gray-500">Name, sender, subject, and email body.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {settingsEdit ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setSettingsEdit(null)}
+                    className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveSettings}
+                    disabled={settingsSaving}
+                    className="inline-flex items-center gap-1.5 text-xs bg-gray-900 text-white hover:bg-gray-800 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+                  >
+                    {settingsSaving
+                      ? <CircleNotch className="w-3 h-3 animate-spin" />
+                      : <CheckCircle weight="fill" className="w-3 h-3" />}
+                    Save changes
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSettingsEdit({
+                    name: campaign.name,
+                    from_name: campaign.from_name,
+                    reply_to: campaign.reply_to || '',
+                    subject: campaign.subject,
+                    body_template: campaign.body_template,
+                  })}
+                  className="inline-flex items-center gap-1.5 text-xs border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  {settingsSaved
+                    ? <><CheckCircle weight="fill" className="w-3 h-3 text-emerald-500" /> Saved</>
+                    : <><PencilSimple className="w-3 h-3" /> Edit</>}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {settingsEdit ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Campaign name</label>
+                  <input
+                    value={settingsEdit.name}
+                    onChange={(e) => setSettingsEdit((f) => f ? { ...f, name: e.target.value } : f)}
+                    className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">From name</label>
+                  <input
+                    value={settingsEdit.from_name}
+                    onChange={(e) => setSettingsEdit((f) => f ? { ...f, from_name: e.target.value } : f)}
+                    className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Forward replies to</label>
+                <input
+                  value={settingsEdit.reply_to}
+                  onChange={(e) => setSettingsEdit((f) => f ? { ...f, reply_to: e.target.value } : f)}
+                  className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+                <input
+                  value={settingsEdit.subject}
+                  onChange={(e) => setSettingsEdit((f) => f ? { ...f, subject: e.target.value } : f)}
+                  className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Body template</label>
+                <textarea
+                  rows={8}
+                  value={settingsEdit.body_template}
+                  onChange={(e) => setSettingsEdit((f) => f ? { ...f, body_template: e.target.value } : f)}
+                  className="w-full px-3 py-2.5 text-sm font-mono bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-gray-900 transition-colors resize-y"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Variables: <code>{'{{first_name}}'}</code> <code>{'{{business_name}}'}</code> <code>{'{{city}}'}</code> <code>{'{{from_name}}'}</code>
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 text-sm">
+              <div className="flex gap-6">
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Name</span>
+                  <p className="text-gray-800 mt-0.5">{campaign.name}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400">From</span>
+                  <p className="text-gray-800 mt-0.5">{campaign.from_name}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Replies to</span>
+                  <p className="text-gray-800 mt-0.5">{campaign.reply_to || campaign.from_email}</p>
+                </div>
+              </div>
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Subject</span>
+                <p className="text-gray-800 mt-0.5 font-mono text-xs">{campaign.subject}</p>
+              </div>
+              <div>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Body</span>
+                <pre className="text-gray-600 text-xs mt-0.5 whitespace-pre-wrap font-sans line-clamp-3">{campaign.body_template}</pre>
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* Warmup cap status */}
