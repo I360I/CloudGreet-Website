@@ -8,7 +8,6 @@ import {
   CaretLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X,
   PaperPlaneTilt, Pause, PhoneCall, MagnifyingGlass, EnvelopeSimple,
   ArrowBendUpLeft, PencilSimple, Trash, ArrowClockwise, ThermometerSimple,
-  UploadSimple, Table,
 } from '@phosphor-icons/react'
 import { SalesShell } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -142,13 +141,21 @@ function AddLeadsModal({
   const [findingEmails, setFindingEmails] = useState(false)
   const [findMsg, setFindMsg] = useState('')
 
-  // CSV tab state
-  const [csvText, setCsvText] = useState('')
+  // Manual entry tab state
   type CsvRow = { email: string; owner_name?: string; business_name?: string; city?: string; phone?: string }
-  const [csvParsed, setCsvParsed] = useState<CsvRow[]>([])
-  const [csvSkipped, setCsvSkipped] = useState(0)
-  const [csvNoEmailCol, setCsvNoEmailCol] = useState(false)
-  const [csvDragging, setCsvDragging] = useState(false)
+  type ManualRow = { email: string; owner_name: string; business_name: string; city: string; phone: string }
+  const emptyRow = (): ManualRow => ({ email: '', owner_name: '', business_name: '', city: '', phone: '' })
+  const [manualRows, setManualRows] = useState<ManualRow[]>([emptyRow()])
+
+  const csvParsed: CsvRow[] = manualRows
+    .filter((r) => r.email.includes('@'))
+    .map(({ email, owner_name, business_name, city, phone }) => ({
+      email,
+      owner_name: owner_name || undefined,
+      business_name: business_name || undefined,
+      city: city || undefined,
+      phone: phone || undefined,
+    }))
 
   // Shared state
   const [saving, setSaving] = useState(false)
@@ -222,111 +229,6 @@ function AddLeadsModal({
     } else {
       setSelected(new Set(filteredMyLeads.map((l) => l.id)))
     }
-  }
-
-  function normalizeHeader(h: string): string {
-    const c = h.toLowerCase().replace(/[^a-z0-9]/g, '')
-    if (['email','emailaddress','mail','emails'].includes(c)) return 'email'
-    if (['ownername','owner','contactname','contact','fullname','name','person'].includes(c)) return 'owner_name'
-    if (['firstname','fname','givenname'].includes(c)) return 'first_name'
-    if (['lastname','lname','surname','familyname'].includes(c)) return 'last_name'
-    if (['businessname','business','company','companyname','organization','org','biz','account'].includes(c)) return 'business_name'
-    if (['city','location','town','area','metro'].includes(c)) return 'city'
-    if (['state','province','region'].includes(c)) return 'state'
-    if (['phone','phonenumber','mobile','cell','telephone','tel','number'].includes(c)) return 'phone'
-    if (['website','web','url','site','homepage','domain'].includes(c)) return 'website'
-    return c
-  }
-
-  function splitRow(line: string, delimiter: string): string[] {
-    if (delimiter !== ',') return line.split(delimiter).map((v) => v.trim())
-    const fields: string[] = []
-    let cur = ''; let inQ = false
-    for (const ch of line) {
-      if (ch === '"') { inQ = !inQ }
-      else if (ch === ',' && !inQ) { fields.push(cur.trim()); cur = '' }
-      else { cur += ch }
-    }
-    fields.push(cur.trim())
-    return fields
-  }
-
-  function sniffHeaders(rows: string[][]): string[] {
-    const colCount = Math.max(...rows.map((r) => r.length), 0)
-    const result: string[] = new Array(colCount).fill('')
-    const textOrder = ['owner_name', 'business_name', 'city']
-    let textIdx = 0
-    for (let i = 0; i < colCount; i++) {
-      const samples = rows.map((r) => (r[i] || '').trim()).filter(Boolean)
-      if (samples.some((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))) {
-        result[i] = 'email'
-      } else if (samples.length > 0 && samples.every((v) => /^[\d\s()\-+.]{7,15}$/.test(v))) {
-        result[i] = 'phone'
-      } else if (textIdx < textOrder.length) {
-        result[i] = textOrder[textIdx++]
-      }
-    }
-    return result
-  }
-
-  function importText(text: string) {
-    const lines = text.trim().split(/\r?\n/).filter(Boolean)
-    if (lines.length < 1) { setCsvParsed([]); setCsvSkipped(0); setCsvNoEmailCol(false); return }
-
-    const delim = (lines[0].match(/\t/g) || []).length >= (lines[0].match(/,/g) || []).length ? '\t' : ','
-    const firstVals = splitRow(lines[0], delim)
-
-    // If first row contains an email address, it's data -- sniff column types
-    const isHeaderless = firstVals.some((v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()))
-    const allRows = lines.map((l) => splitRow(l, delim))
-    const headers = isHeaderless ? sniffHeaders(allRows) : firstVals.map(normalizeHeader)
-    const dataLines = isHeaderless ? lines : lines.slice(1)
-
-    const hasEmailCol = headers.includes('email')
-    setCsvNoEmailCol(!hasEmailCol)
-
-    const valid: CsvRow[] = []
-    let skipped = 0
-
-    for (const line of dataLines) {
-      if (!line.trim()) continue
-      const vals = splitRow(line, delim)
-      const row: Record<string, string> = {}
-      headers.forEach((h, i) => { if (vals[i]) row[h] = vals[i].replace(/^"|"$/g, '').trim() })
-
-      // Combine first + last name if no full name column
-      if (!row.owner_name && (row.first_name || row.last_name)) {
-        row.owner_name = [row.first_name, row.last_name].filter(Boolean).join(' ')
-      }
-      // Append state to city if present
-      if (row.state && row.city && !row.city.includes(row.state)) {
-        row.city = `${row.city}, ${row.state}`
-      }
-
-      const email = row.email || ''
-      if (!email.includes('@')) { skipped++; continue }
-
-      valid.push({
-        email,
-        owner_name: row.owner_name || undefined,
-        business_name: row.business_name || undefined,
-        city: row.city || undefined,
-        phone: row.phone || undefined,
-      })
-    }
-
-    setCsvParsed(valid)
-    setCsvSkipped(skipped)
-  }
-
-  function handleFileUpload(file: File) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = e.target?.result as string
-      setCsvText(text)
-      importText(text)
-    }
-    reader.readAsText(file)
   }
 
   const submitMyLeads = async () => {
@@ -506,93 +408,57 @@ function AddLeadsModal({
           )}
 
           {tab === 'csv' && (
-            <div className="space-y-3">
-              {/* Drop zone */}
-              <div
-                className={`relative border-2 border-dashed rounded-xl p-5 text-center transition-colors cursor-pointer ${
-                  csvDragging ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:border-gray-400'
-                }`}
-                onClick={() => document.getElementById('csv-file-input')?.click()}
-                onDragOver={(e) => { e.preventDefault(); setCsvDragging(true) }}
-                onDragLeave={() => setCsvDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault(); setCsvDragging(false)
-                  const file = e.dataTransfer.files[0]
-                  if (file) handleFileUpload(file)
-                }}
-              >
-                <input
-                  id="csv-file-input"
-                  type="file"
-                  accept=".csv,.tsv,.txt,.xls,.xlsx"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(f) }}
-                />
-                <UploadSimple className="w-5 h-5 text-gray-400 mx-auto mb-1.5" />
-                <p className="text-sm font-medium text-gray-700">Upload a file</p>
-                <p className="text-xs text-gray-400 mt-0.5">CSV, TSV, or export from Excel / Google Sheets</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-gray-100" />
-                <span className="text-xs text-gray-400">or paste directly</span>
-                <div className="flex-1 h-px bg-gray-100" />
-              </div>
-
-              <textarea
-                rows={5}
-                value={csvText}
-                onChange={(e) => { setCsvText(e.target.value); importText(e.target.value) }}
-                placeholder={'Paste from Excel, Google Sheets, or any CSV.\nColumn order does not matter — just include a header row.\n\nExample:\nEmail, First Name, Last Name, Company, City, Phone'}
-                className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:border-gray-900 transition-colors resize-none"
-              />
-
-              {/* Parse results + preview */}
-              {csvNoEmailCol && csvText.trim().length > 10 && (
-                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-800">
-                  <WarningCircle weight="fill" className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-                  No email column detected. Make sure your header row has a column named Email or Email Address.
-                </div>
-              )}
-
-              {csvParsed.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <CheckCircle weight="fill" className="w-3.5 h-3.5 text-emerald-500" />
-                    <span className="font-medium text-gray-900">{csvParsed.length} leads ready to import</span>
-                    {csvSkipped > 0 && (
-                      <span className="text-gray-400">&middot; {csvSkipped} skipped (no email)</span>
-                    )}
-                  </div>
-                  {/* Preview table */}
-                  <div className="rounded-lg border border-gray-100 overflow-hidden">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-gray-50 border-b border-gray-100">
-                          {['Email','Name','Business','City'].map((h) => (
-                            <th key={h} className="px-3 py-2 text-left font-medium text-gray-500 font-mono uppercase tracking-wide text-[10px]">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {csvParsed.slice(0, 3).map((row, i) => (
-                          <tr key={i} className="border-b border-gray-50 last:border-0">
-                            <td className="px-3 py-1.5 text-gray-700 font-mono truncate max-w-[120px]">{row.email}</td>
-                            <td className="px-3 py-1.5 text-gray-600 truncate max-w-[90px]">{row.owner_name || <span className="text-gray-300">--</span>}</td>
-                            <td className="px-3 py-1.5 text-gray-600 truncate max-w-[90px]">{row.business_name || <span className="text-gray-300">--</span>}</td>
-                            <td className="px-3 py-1.5 text-gray-600 truncate max-w-[80px]">{row.city || <span className="text-gray-300">--</span>}</td>
-                          </tr>
+            <div>
+              <div className="rounded-xl border border-gray-200 overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      {['Email *', 'Name', 'Business', 'City', 'Phone'].map((h) => (
+                        <th key={h} className="px-3 py-2.5 text-left text-[10px] font-mono uppercase tracking-wider text-gray-500 font-normal whitespace-nowrap">
+                          {h}
+                        </th>
+                      ))}
+                      <th className="w-8" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {manualRows.map((row, i) => (
+                      <tr key={i} className="border-b border-gray-100 last:border-0">
+                        {(['email', 'owner_name', 'business_name', 'city', 'phone'] as const).map((field) => (
+                          <td key={field} className="px-1.5 py-1.5">
+                            <input
+                              value={row[field]}
+                              onChange={(e) => setManualRows((rows) => rows.map((r, ri) => ri === i ? { ...r, [field]: e.target.value } : r))}
+                              placeholder={field === 'email' ? 'name@example.com' : ''}
+                              className="w-full px-2 py-1.5 text-xs bg-transparent border border-transparent rounded-md focus:outline-none focus:border-gray-300 focus:bg-white transition-colors placeholder:text-gray-300"
+                            />
+                          </td>
                         ))}
-                      </tbody>
-                    </table>
-                    {csvParsed.length > 3 && (
-                      <div className="px-3 py-1.5 text-[10px] text-gray-400 bg-gray-50 border-t border-gray-100">
-                        + {csvParsed.length - 3} more rows
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                        <td className="pr-2 text-center">
+                          {manualRows.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setManualRows((rows) => rows.filter((_, ri) => ri !== i))}
+                              className="p-1 text-gray-300 hover:text-red-400 transition-colors rounded"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setManualRows((rows) => [...rows, emptyRow()])}
+                className="mt-2.5 flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors px-1"
+              >
+                <Plus weight="bold" className="w-3.5 h-3.5" />
+                Add row
+              </button>
             </div>
           )}
 
