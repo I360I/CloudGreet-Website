@@ -254,7 +254,9 @@ export async function sendCampaignBatch(
     await supabaseAdmin.from('email_leads').update({ status: 'sending' }).eq('id', lead.id)
 
     try {
-      const personalizedBody = await personalizeLead(campaign.body_template, lead, campaign.from_name)
+      const rawBody = await personalizeLead(campaign.body_template, lead, campaign.from_name)
+      const hasSignaturePlaceholder = rawBody.includes('{{signature}}')
+      const personalizedBody = rawBody.replace(/\{\{signature\}\}/g, campaign.signature || '')
       const firstName = getFirstName(lead.owner_name)
       const personalizedSubject = campaign.subject
         .replace(/\{\{first_name\}\}/g, firstName)
@@ -269,7 +271,8 @@ export async function sendCampaignBatch(
         to: lead.email,
         subject: personalizedSubject,
         body: personalizedBody,
-        signature: campaign.signature,
+        // Don't double-append if the template already placed {{signature}}
+        signature: hasSignaturePlaceholder ? null : campaign.signature,
         campaignId,
         leadId: lead.id,
       })
@@ -385,7 +388,9 @@ export async function sendFollowUps(): Promise<{ sent: number; errors: number; s
     }
 
     try {
-      const personalizedBody = await personalizeLead(nextStep.body_template, lead as EmailLead, campaign.from_name)
+      const rawFollowUpBody = await personalizeLead(nextStep.body_template, lead as EmailLead, campaign.from_name)
+      const hasFollowUpSigPlaceholder = rawFollowUpBody.includes('{{signature}}')
+      const personalizedBody = rawFollowUpBody.replace(/\{\{signature\}\}/g, campaign.signature || '')
       const firstName = getFirstName(lead.owner_name)
       const personalizedSubject = nextStep.subject_template
         .replace(/\{\{first_name\}\}/g, firstName)
@@ -401,7 +406,7 @@ export async function sendFollowUps(): Promise<{ sent: number; errors: number; s
         to: lead.email,
         subject: personalizedSubject,
         body: personalizedBody,
-        signature: campaign.signature,
+        signature: hasFollowUpSigPlaceholder ? null : campaign.signature,
         campaignId: lead.campaign_id,
         leadId: lead.id,
         prevMessageId: lead.resend_message_id,

@@ -73,10 +73,7 @@ Most clients see more booked appointments within the first week without hiring a
 
 Worth a quick 10-minute call to see if it makes sense for {{business_name}}?
 
-Best,
-{{from_name}}
-CloudGreet
-cloudgreet.com`
+{{signature}}`
 
 // ---------------------------------------------------------------------------
 // New Campaign Modal
@@ -235,7 +232,7 @@ function NewCampaignModal({
               className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:border-gray-900 transition-colors resize-y"
             />
             <p className="text-[11px] text-gray-400 mt-1">
-              Supports: {'{{first_name}}'}, {'{{business_name}}'}, {'{{city}}'}, {'{{from_name}}'}
+              Variables: {'{{first_name}}'}, {'{{business_name}}'}, {'{{city}}'}, {'{{from_name}}'}, {'{{signature}}'}
             </p>
           </div>
 
