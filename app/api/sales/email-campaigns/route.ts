@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     const { data, error } = await supabaseAdmin
       .from('email_campaigns')
-      .select('id, name, from_name, from_email, reply_to, subject, status, sent_count, bounce_count, reply_count, created_by, created_at, updated_at')
+      .select('id, name, from_name, from_email, reply_to, subject, signature, status, sent_count, bounce_count, reply_count, created_by, created_at, updated_at')
       .eq('created_by', auth.userId)
       .order('created_at', { ascending: false })
 

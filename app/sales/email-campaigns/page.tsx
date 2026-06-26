@@ -25,6 +25,7 @@ type Campaign = {
   from_email: string
   reply_to: string | null
   subject: string
+  signature: string | null
   status: CampaignStatus
   sent_count: number
   bounce_count: number
@@ -83,10 +84,12 @@ cloudgreet.com`
 
 function NewCampaignModal({
   repEmail,
+  lastSignature,
   onClose,
   onCreate,
 }: {
   repEmail: string
+  lastSignature: string | null
   onClose: () => void
   onCreate: (campaign: Campaign) => void
 }) {
@@ -237,9 +240,20 @@ function NewCampaignModal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-              Signature <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-medium text-gray-700">
+                Signature <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              {lastSignature && !form.signature && (
+                <button
+                  type="button"
+                  onClick={() => set('signature', lastSignature)}
+                  className="text-[11px] text-sky-600 hover:text-sky-700 font-medium transition-colors"
+                >
+                  Reuse last signature
+                </button>
+              )}
+            </div>
             <textarea
               rows={4}
               value={form.signature}
@@ -327,6 +341,7 @@ export default function SalesEmailCampaignsPage() {
       {showNew && (
         <NewCampaignModal
           repEmail={repEmail}
+          lastSignature={campaigns.find((c) => c.signature)?.signature ?? null}
           onClose={() => setShowNew(false)}
           onCreate={(c) => {
             setShowNew(false)
