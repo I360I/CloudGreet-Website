@@ -377,6 +377,31 @@ export function getRetellGeneralTools(
       },
     })
 
+    // Venue-specific event transportation fee lookup. Agent calls this
+    // before compute_quote on any ride to a stadium, arena, theater,
+    // zoo, convention center, etc. Returns the flat fee to add on top
+    // of the mileage quote, or not_found if the destination isn't in
+    // the venue list.
+    tools.push({
+      type: 'custom',
+      name: 'check_venue_fee',
+      description:
+        "Check if a pickup or dropoff destination is a known event venue with an event transportation fee. Call this BEFORE compute_quote on ANY ride to or from a stadium, arena, theater, concert venue, convention center, park, zoo, golf club, or named event space. Returns the flat fee to add on top of the mileage quote, or not_found if no fee applies. ALWAYS call the fee an 'event transportation fee', never a 'surcharge'.",
+      url: webhookUrl,
+      speak_during_execution: true,
+      speak_after_execution: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          destination: {
+            type: 'string',
+            description: 'The destination venue name or address as the caller gave it.',
+          },
+        },
+        required: ['destination'],
+      },
+    })
+
     // Rideshare-specific: agent needs real drive-time estimates to give
     // callers a realistic pickup ETA + total trip duration. Hits Google
     // Routes API with TRAFFIC_AWARE so the number reflects ACTUAL

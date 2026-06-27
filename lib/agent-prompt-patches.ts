@@ -22,12 +22,16 @@ import { supabaseAdmin } from './supabase'
 
 const RETELL_BASE = 'https://api.retellai.com'
 
-type BlockId = 'service_hours'
+type BlockId = 'service_hours' | 'venue_fees'
 
 const MARKERS: Record<BlockId, { start: string; end: string }> = {
   service_hours: {
     start: '<!-- cg:service_hours:start -->',
     end: '<!-- cg:service_hours:end -->',
+  },
+  venue_fees: {
+    start: '<!-- cg:venue_fees:start -->',
+    end: '<!-- cg:venue_fees:end -->',
   },
 }
 
@@ -100,6 +104,72 @@ export async function syncServiceHoursToPrompt(args: {
   return { ok: true, updated: true }
 }
 
+/**
+ * Sync venue-fee rules into the live Retell agent prompt. Inserts (or
+ * replaces) the <!-- cg:venue_fees --> block with a terse rule set the
+ * voice agent can follow without making mistakes on the fee math.
+ */
+export async function syncVenueFeesToPrompt(args: {
+  businessId: string
+}): Promise<{ ok: boolean; updated?: boolean; reason?: string }> {
+  const apiKey = process.env.RETELL_API_KEY
+  if (!apiKey) return { ok: false, reason: 'no_retell_api_key' }
+
+  const { data: biz } = await supabaseAdmin
+    .from('businesses')
+    .select('retell_agent_id, business_name')
+    .eq('id', args.businessId)
+    .maybeSingle()
+  const agentId = (biz as any)?.retell_agent_id
+  if (!agentId) return { ok: true, updated: false, reason: 'no_agent' }
+
+  // Fetch the venue list for this business to build the block content.
+  const { data: venues } = await supabaseAdmin
+    .from('venue_fees')
+    .select('venue_name, category, fee_dollars')
+    .eq('business_id', args.businessId)
+    .order('fee_dollars', { ascending: false })
+  if (!venues || venues.length === 0) return { ok: true, updated: false, reason: 'no_venues' }
+
+  const aRes = await fetch(`https://api.retellai.com/get-agent/${agentId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  if (!aRes.ok) return { ok: false, reason: `get-agent ${aRes.status}` }
+  const agent = await aRes.json() as any
+  const engine = agent?.response_engine
+  if (engine?.type !== 'retell-llm' || !engine?.llm_id) {
+    return { ok: false, reason: `engine ${engine?.type || 'unknown'}` }
+  }
+  const llmId = engine.llm_id
+
+  const lRes = await fetch(`https://api.retellai.com/get-retell-llm/${llmId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  if (!lRes.ok) return { ok: false, reason: `get-llm ${lRes.status}` }
+  const llm = await lRes.json() as any
+  const current: string = llm?.general_prompt || ''
+  if (!current) return { ok: false, reason: 'empty_prompt' }
+
+  const next = upsertBlock(current, 'venue_fees', renderVenueFeesBlock(venues as any[]))
+  if (next === current) return { ok: true, updated: false, reason: 'no_change' }
+
+  const pRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ general_prompt: next }),
+  })
+  if (!pRes.ok) {
+    const txt = await pRes.text().catch(() => pRes.statusText)
+    logger.warn('syncVenueFeesToPrompt: update-retell-llm failed', {
+      businessId: args.businessId, llmId, status: pRes.status, body: txt.slice(0, 200),
+    })
+    return { ok: false, reason: `update-llm ${pRes.status}` }
+  }
+
+  logger.info('venue_fees synced to live prompt', { businessId: args.businessId, llmId, count: venues.length })
+  return { ok: true, updated: true }
+}
+
 /* ---------- helpers ---------- */
 
 function renderServiceHoursBlock(hours: string | null): string {
@@ -113,6 +183,30 @@ function renderServiceHoursBlock(hours: string | null): string {
   // Plain "BUSINESS HOURS: ..." line. Single paragraph - keeps the
   // injection unobtrusive against the rest of the prompt.
   return `BUSINESS HOURS (use these to answer when-are-you-open and to avoid quoting unavailable times): ${trimmed}`
+}
+
+function renderVenueFeesBlock(venues: Array<{ venue_name: string; category: string; fee_dollars: number }>): string {
+  if (!venues.length) return ''
+  const premiums = venues.filter(v => v.category === 'premium')
+  const majors = venues.filter(v => v.category === 'major')
+  const standards = venues.filter(v => v.category === 'standard')
+
+  const lines: string[] = [
+    'EVENT TRANSPORTATION FEE (separate from the mileage quote):',
+    '- Before quoting any ride to/from a stadium, arena, theater, concert venue, zoo, convention center, park, golf club, or named event space: call check_venue_fee(destination).',
+    '- If a fee is returned: add it on top of the mileage quote total and tell the caller both amounts.',
+    '  Example: "The ride is sixty-five dollars, plus a thirty-dollar event transportation fee, bringing the total to ninety-five dollars."',
+    '- ALWAYS say "event transportation fee" — never "surcharge."',
+    '- Applies both directions: drop-off TO the venue AND pickup FROM the venue after the event.',
+    '- If check_venue_fee returns not_found: quote the standard mileage rate only.',
+    '',
+    'Known venue tiers (for reference — always call check_venue_fee to confirm):',
+  ]
+  if (premiums.length) lines.push(`  Premium ($50): ${premiums.slice(0, 6).map(v => v.venue_name).join(', ')}${premiums.length > 6 ? `, and ${premiums.length - 6} more` : ''}.`)
+  if (majors.length) lines.push(`  Major ($25-$35): ${majors.slice(0, 6).map(v => v.venue_name).join(', ')}${majors.length > 6 ? `, and ${majors.length - 6} more` : ''}.`)
+  if (standards.length) lines.push(`  Standard ($15): ${standards.slice(0, 6).map(v => v.venue_name).join(', ')}${standards.length > 6 ? `, and ${standards.length - 6} more` : ''}.`)
+
+  return lines.join('\n')
 }
 
 /**

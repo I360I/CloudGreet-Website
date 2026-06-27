@@ -144,6 +144,18 @@ const TOOLS: Anthropic.Messages.Tool[] = [
     },
   },
   {
+    name: 'check_venue_fee',
+    description:
+      'Check if a pickup or dropoff destination is a known event venue with an event transportation fee. Call this BEFORE compute_quote on ANY ride to or from a stadium, arena, theater, concert venue, convention center, park, zoo, golf club, or named event space. Returns the flat fee to add on top of the mileage quote, or not_found if no fee applies.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        destination: { type: 'string', description: 'The destination venue name or address as the customer gave it.' },
+      },
+      required: ['destination'],
+    },
+  },
+  {
     name: 'send_dispatch_request',
     description:
       "Text the owner a summary of an immediate-pickup or near-term request so they can call/text the customer back to confirm. Use this for SmartRide's typical flow - the owner doesn't use a calendar. Don't book a ride yourself.",
@@ -850,9 +862,18 @@ $50 MINIMUM (CRITICAL, applies to ALL distance-based rides):
 - Floor is $50 plus tax. compute_quote enforces this server-side; you read the total it returns. Never quote below $50 + tax. Never offer or hint at exceptions ("might do it for less"). If asked "but it's only 3 miles" reply: "Yeah, that's just Steve's flat minimum - covers his time and the trip out."
 - Minimum does NOT apply to Hourly/Event (own minimum $100) or Independent Living (own $35).
 
+EVENT TRANSPORTATION FEE:
+- For rides to/from ticketed venues or named event spaces, call check_venue_fee(destination) BEFORE compute_quote.
+- If found: quote the ride total (from compute_quote) PLUS the flat event transportation fee as separate items.
+  Example: "$65.00 ride + $30.00 event transportation fee = $95.00 total"
+- ALWAYS say "event transportation fee" — never "surcharge."
+- Applies both ways: going TO the venue and leaving FROM it after the event.
+- If check_venue_fee returns not found: standard mileage quote only, no additional fee.
+
 QUOTING RULES:
 - NEVER do the math yourself. Always call compute_quote.
 - For distance rides: call lookup_drive_time FIRST to get miles + origin county.
+- For event/venue rides (stadium, arena, theater, concert venue, zoo, convention center, park, golf club, arts center): call check_venue_fee FIRST. If a fee is found, add it on top of the compute_quote total.
 - For hourly: ask how many hours, then call compute_quote.
 - Sales tax: compute_quote handles county tax. Quote the total it returns.
 - Out-of-state: skip compute_quote, route to dispatch.
@@ -1022,6 +1043,9 @@ async function runTool(args: {
       name: args.args.name ? String(args.args.name) : null,
     })
   }
+  if (args.name === 'check_venue_fee') {
+    return await checkVenueFee(args.businessId, String(args.args.destination || ''))
+  }
   if (args.name === 'send_dispatch_request') {
     // Dedup guard: block re-dispatching the same trip, but allow multiple
     // different bookings from the same persistent conversation (e.g. a customer
@@ -1156,6 +1180,62 @@ async function runTool(args: {
       tool: args.name, error: detail,
     })
     return { ok: false, error: 'network_error', detail }
+  }
+}
+
+async function checkVenueFee(businessId: string, destination: string): Promise<any> {
+  const dest = destination.trim()
+  if (!dest) return { found: false, message: 'No destination provided.' }
+
+  // Strategy 1: full destination string as substring match on name or address
+  const { data: direct } = await supabaseAdmin
+    .from('venue_fees')
+    .select('venue_name, canonical_address, category, fee_dollars')
+    .eq('business_id', businessId)
+    .or(`venue_name.ilike.%${dest}%,canonical_address.ilike.%${dest}%`)
+    .order('fee_dollars', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (direct) {
+    const fee = Number((direct as any).fee_dollars)
+    return {
+      found: true,
+      venue_name: (direct as any).venue_name,
+      category: (direct as any).category,
+      fee_dollars: fee,
+      note: `Add $${fee.toFixed(2)} event transportation fee on top of the ride quote. Call it "event transportation fee" not "surcharge".`,
+    }
+  }
+
+  // Strategy 2: keyword search — split into significant words and try each
+  const stopWords = new Set(['the', 'and', 'for', 'from', 'with', 'this', 'that', 'ohio', 'columbus', 'street', 'avenue', 'drive', 'road', 'blvd', 'north', 'south', 'west', 'east', 'suite', 'floor'])
+  const keywords = dest.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !stopWords.has(w))
+
+  for (const kw of keywords) {
+    const { data: kwMatch } = await supabaseAdmin
+      .from('venue_fees')
+      .select('venue_name, canonical_address, category, fee_dollars')
+      .eq('business_id', businessId)
+      .ilike('venue_name', `%${kw}%`)
+      .order('fee_dollars', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (kwMatch) {
+      const fee = Number((kwMatch as any).fee_dollars)
+      return {
+        found: true,
+        venue_name: (kwMatch as any).venue_name,
+        category: (kwMatch as any).category,
+        fee_dollars: fee,
+        note: `Add $${fee.toFixed(2)} event transportation fee on top of the ride quote. Call it "event transportation fee" not "surcharge".`,
+      }
+    }
+  }
+
+  return {
+    found: false,
+    message: 'No event transportation fee for this destination. Standard mileage quote applies with no additional fee.',
   }
 }
 

@@ -1799,6 +1799,65 @@ export async function POST(request: NextRequest) {
  return NextResponse.json({ success: true, slots: fallbackSlots, source: 'fallback' })
  }
  }
+ case 'check_venue_fee': {
+  if (!resolvedBusinessId) {
+   return NextResponse.json({ success: false, error: 'agent_not_linked_to_business' }, { status: 403 })
+  }
+  const vfDest = String((tool.arguments as any)?.destination || '').trim()
+  if (!vfDest) {
+   return NextResponse.json({ found: false, message: 'No destination provided.' })
+  }
+
+  // Strategy 1: full destination string match against name or address
+  const { data: vfDirect } = await supabaseAdmin
+   .from('venue_fees')
+   .select('venue_name, canonical_address, category, fee_dollars')
+   .eq('business_id', resolvedBusinessId)
+   .or(`venue_name.ilike.%${vfDest}%,canonical_address.ilike.%${vfDest}%`)
+   .order('fee_dollars', { ascending: false })
+   .limit(1)
+   .maybeSingle()
+
+  if (vfDirect) {
+   const fee = Number((vfDirect as any).fee_dollars)
+   return NextResponse.json({
+    found: true,
+    venue_name: (vfDirect as any).venue_name,
+    category: (vfDirect as any).category,
+    fee_dollars: fee,
+    note: `Add $${fee.toFixed(2)} event transportation fee on top of the ride quote. Call it "event transportation fee" not "surcharge".`,
+   })
+  }
+
+  // Strategy 2: keyword search — try each significant word individually
+  const vfStop = new Set(['the', 'and', 'for', 'from', 'with', 'this', 'that', 'ohio', 'columbus', 'street', 'avenue', 'drive', 'road', 'blvd', 'north', 'south', 'west', 'east', 'suite', 'floor'])
+  const vfKws = vfDest.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !vfStop.has(w))
+  for (const kw of vfKws) {
+   const { data: vfKw } = await supabaseAdmin
+    .from('venue_fees')
+    .select('venue_name, canonical_address, category, fee_dollars')
+    .eq('business_id', resolvedBusinessId)
+    .ilike('venue_name', `%${kw}%`)
+    .order('fee_dollars', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+   if (vfKw) {
+    const fee = Number((vfKw as any).fee_dollars)
+    return NextResponse.json({
+     found: true,
+     venue_name: (vfKw as any).venue_name,
+     category: (vfKw as any).category,
+     fee_dollars: fee,
+     note: `Add $${fee.toFixed(2)} event transportation fee on top of the ride quote. Call it "event transportation fee" not "surcharge".`,
+    })
+   }
+  }
+
+  return NextResponse.json({
+   found: false,
+   message: 'No event transportation fee for this destination. Standard mileage quote applies with no additional fee.',
+  })
+ }
  default:
  return NextResponse.json({ success: false, error: 'unknown_tool' }, { status: 400 })
  }
