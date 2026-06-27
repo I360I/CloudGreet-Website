@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise, Plug, Trash, ArrowSquareOut, Phone, Copy, CaretDown } from '@phosphor-icons/react'
+import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise, Plug, Trash, ArrowSquareOut, Phone, Copy, CaretDown, CurrencyDollar } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 import {
@@ -29,6 +29,7 @@ type Profile = {
  forwardingLineType?: string | null
  forwardingMode?: string | null
  forwardingVerifiedAt?: string | null
+ hasVenueFees?: boolean
 }
 
 type AgentState = {
@@ -173,6 +174,13 @@ function SettingsGroups({
     { key: 'password', label: 'Change password', subtitle: 'Update your login password.', icon: Key, render: () => <PasswordSection /> },
    ],
   },
+  ...(profile.hasVenueFees ? [{
+   title: 'Pricing',
+   subtitle: 'Fees the AI applies automatically for specific destinations.',
+   rows: [
+    { key: 'venue_fees', label: 'Event transportation fees', subtitle: 'Venues the AI adds a fee for on pickup or dropoff.', icon: CurrencyDollar, render: () => <VenueFeesSection /> },
+   ],
+  }] : []),
  ]
 
  return (
@@ -2822,6 +2830,250 @@ function SmsBookingSection() {
       </div>
      )}
     </>
+   )}
+  </div>
+ )
+}
+
+/* ------------------- Venue Fees Section ------------------- */
+
+type VenueFee = {
+ id: string
+ venue_name: string
+ canonical_address: string | null
+ category: string
+ fee_dollars: number
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+ premium: 'bg-purple-50 text-purple-700 border-purple-200',
+ major: 'bg-sky-50 text-sky-700 border-sky-100',
+ standard: 'bg-gray-50 text-gray-600 border-gray-200',
+}
+
+function VenueFeesSection() {
+ const [venues, setVenues] = useState<VenueFee[]>([])
+ const [loading, setLoading] = useState(true)
+ const [adding, setAdding] = useState(false)
+ const [form, setForm] = useState({ venue_name: '', canonical_address: '', category: 'standard', fee_dollars: '' })
+ const [saving, setSaving] = useState(false)
+ const [addError, setAddError] = useState('')
+ const [editingId, setEditingId] = useState<string | null>(null)
+ const [editForm, setEditForm] = useState({ category: 'standard', fee_dollars: '' })
+
+ const load = async () => {
+  setLoading(true)
+  try {
+   const r = await fetchWithAuth('/api/dashboard/venue-fees')
+   const j = await r.json().catch(() => ({}))
+   if (r.ok) setVenues(j.venues || [])
+  } finally {
+   setLoading(false)
+  }
+ }
+
+ useEffect(() => { load() }, [])
+
+ const sortVenues = (vs: VenueFee[]) =>
+  [...vs].sort((a, b) => b.fee_dollars - a.fee_dollars || a.venue_name.localeCompare(b.venue_name))
+
+ const addVenue = async () => {
+  const fee = parseFloat(form.fee_dollars)
+  if (!form.venue_name.trim()) { setAddError('Venue name is required'); return }
+  if (!Number.isFinite(fee) || fee < 0) { setAddError('Enter a valid fee amount'); return }
+  setSaving(true); setAddError('')
+  try {
+   const r = await fetchWithAuth('/api/dashboard/venue-fees', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ venue_name: form.venue_name.trim(), canonical_address: form.canonical_address.trim() || null, category: form.category, fee_dollars: fee }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok) { setAddError(j?.error || 'Save failed'); return }
+   setVenues(prev => sortVenues([...prev, j.venue]))
+   setForm({ venue_name: '', canonical_address: '', category: 'standard', fee_dollars: '' })
+   setAdding(false)
+  } finally {
+   setSaving(false)
+  }
+ }
+
+ const deleteVenue = async (id: string) => {
+  setVenues(prev => prev.filter(v => v.id !== id))
+  try {
+   await fetchWithAuth(`/api/dashboard/venue-fees/${id}`, { method: 'DELETE' })
+  } catch {
+   load()
+  }
+ }
+
+ const saveEdit = async (id: string) => {
+  const fee = parseFloat(editForm.fee_dollars)
+  if (!Number.isFinite(fee) || fee < 0) return
+  setSaving(true)
+  try {
+   const r = await fetchWithAuth(`/api/dashboard/venue-fees/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ category: editForm.category, fee_dollars: fee }),
+   })
+   const j = await r.json().catch(() => ({}))
+   if (r.ok && j.venue) {
+    setVenues(prev => sortVenues(prev.map(v => v.id === id ? j.venue : v)))
+    setEditingId(null)
+   }
+  } finally {
+   setSaving(false)
+  }
+ }
+
+ const inputCls = 'px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-gray-900 transition-colors'
+
+ return (
+  <div className="bg-white border border-gray-200 rounded-2xl p-6">
+   <div className="flex items-start justify-between gap-4 mb-4">
+    <div>
+     <h2 className="text-sm font-medium text-gray-700">Event transportation fees</h2>
+     <p className="text-xs text-gray-500 mt-1 max-w-prose leading-relaxed">
+      When the AI quotes a ride to or from one of these venues, it adds the listed event transportation fee automatically. Both voice and SMS apply these.
+     </p>
+    </div>
+    {!adding && (
+     <button
+      onClick={() => setAdding(true)}
+      className="flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-medium text-sky-700 hover:text-sky-900 bg-sky-50 border border-sky-100 px-3 py-1.5 rounded-lg transition-colors"
+     >
+      + Add venue
+     </button>
+    )}
+   </div>
+
+   {loading ? (
+    <div className="flex items-center gap-2 text-xs text-gray-400">
+     <CircleNotch className="w-4 h-4 animate-spin" /> Loading…
+    </div>
+   ) : venues.length === 0 && !adding ? (
+    <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-xl p-4">
+     No venues configured. Add one and the AI will quote event transportation fees for rides to or from that venue.
+    </div>
+   ) : (
+    <div className="space-y-0.5">
+     {venues.map(v =>
+      editingId === v.id ? (
+       <div key={v.id} className="flex flex-wrap items-center gap-2 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200">
+        <div className="flex-1 min-w-0 text-sm font-medium text-gray-900 truncate">{v.venue_name}</div>
+        <select
+         value={editForm.category}
+         onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
+         className={`${inputCls} text-xs`}
+        >
+         <option value="standard">Standard</option>
+         <option value="major">Major</option>
+         <option value="premium">Premium</option>
+        </select>
+        <div className="flex items-center gap-1">
+         <span className="text-xs text-gray-500">$</span>
+         <input
+          type="number" min={0} step={1}
+          value={editForm.fee_dollars}
+          onChange={e => setEditForm(f => ({ ...f, fee_dollars: e.target.value }))}
+          className={`${inputCls} w-16 text-xs`}
+         />
+        </div>
+        <button
+         onClick={() => saveEdit(v.id)}
+         disabled={saving}
+         className="text-xs font-medium text-white bg-gray-900 px-3 py-1.5 rounded-lg hover:bg-gray-800 disabled:opacity-50"
+        >
+         {saving ? <CircleNotch className="w-3 h-3 animate-spin inline" /> : 'Save'}
+        </button>
+        <button onClick={() => setEditingId(null)} className="text-xs text-gray-500 hover:text-gray-900">Cancel</button>
+       </div>
+      ) : (
+       <div key={v.id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 group transition-colors">
+        <div className="flex-1 min-w-0">
+         <div className="text-sm text-gray-900 truncate">{v.venue_name}</div>
+         {v.canonical_address && (
+          <div className="text-[10px] text-gray-400 truncate font-mono">{v.canonical_address}</div>
+         )}
+        </div>
+        <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${CATEGORY_COLORS[v.category] || CATEGORY_COLORS.standard}`}>
+         {v.category}
+        </span>
+        <span className="text-sm font-medium text-gray-900 tabular-nums">${Number(v.fee_dollars).toFixed(0)}</span>
+        <button
+         onClick={() => { setEditingId(v.id); setEditForm({ category: v.category, fee_dollars: String(v.fee_dollars) }) }}
+         className="opacity-0 group-hover:opacity-100 text-xs text-gray-400 hover:text-gray-900 transition-opacity"
+        >
+         Edit
+        </button>
+        <button
+         onClick={() => deleteVenue(v.id)}
+         className="opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-700 transition-opacity"
+         aria-label="Delete venue"
+        >
+         <Trash className="w-4 h-4" />
+        </button>
+       </div>
+      )
+     )}
+    </div>
+   )}
+
+   {adding && (
+    <div className="mt-3 p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-3">
+     <div className="text-xs font-medium text-gray-700">Add venue</div>
+     <input
+      type="text"
+      value={form.venue_name}
+      onChange={e => setForm(f => ({ ...f, venue_name: e.target.value }))}
+      placeholder="Venue name (e.g. Nationwide Arena)"
+      className={`w-full ${inputCls}`}
+     />
+     <input
+      type="text"
+      value={form.canonical_address}
+      onChange={e => setForm(f => ({ ...f, canonical_address: e.target.value }))}
+      placeholder="Address (optional — helps fuzzy matching)"
+      className={`w-full ${inputCls}`}
+     />
+     <div className="flex flex-wrap items-center gap-3">
+      <select
+       value={form.category}
+       onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+       className={inputCls}
+      >
+       <option value="standard">Standard</option>
+       <option value="major">Major</option>
+       <option value="premium">Premium</option>
+      </select>
+      <div className="flex items-center gap-1.5">
+       <span className="text-sm text-gray-500">$</span>
+       <input
+        type="number" min={0} step={1}
+        value={form.fee_dollars}
+        onChange={e => setForm(f => ({ ...f, fee_dollars: e.target.value }))}
+        placeholder="25"
+        className={`w-20 ${inputCls}`}
+       />
+      </div>
+      <button
+       onClick={addVenue}
+       disabled={saving}
+       className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+      >
+       {saving ? <CircleNotch className="w-4 h-4 animate-spin" /> : <FloppyDisk className="w-4 h-4" />}
+       Add
+      </button>
+      <button
+       onClick={() => { setAdding(false); setAddError(''); setForm({ venue_name: '', canonical_address: '', category: 'standard', fee_dollars: '' }) }}
+       className="text-sm text-gray-500 hover:text-gray-900"
+      >
+       Cancel
+      </button>
+     </div>
+     {addError && <p className="text-xs text-rose-700">{addError}</p>}
+    </div>
    )}
   </div>
  )

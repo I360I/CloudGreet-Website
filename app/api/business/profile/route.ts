@@ -51,9 +51,18 @@ export async function GET(request: NextRequest) {
  )
  }
 
+ // Check whether this business has venue_fees rows so the
+ // settings page can gate the venue management card.
+ const { count: venueCount } = await supabaseAdmin
+  .from('venue_fees')
+  .select('id', { count: 'exact', head: true })
+  .eq('business_id', businessId)
+
  return NextResponse.json({
  success: true,
  data: {
+ businessId,
+ hasVenueFees: (venueCount || 0) > 0,
  businessName: business.business_name,
  businessType: business.business_type,
  services: business.services || [],
