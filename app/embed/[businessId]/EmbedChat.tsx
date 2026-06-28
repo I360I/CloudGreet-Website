@@ -25,7 +25,7 @@ function getSessionId(businessId: string): string {
 // Matches the look of the landing ChatWidget: dark header, dark user bubbles,
 // white assistant bubbles, typing dots, pill input + dark send button. Renders
 // as the full panel inside the widget iframe (no intro form - it just chats).
-export default function EmbedChat({ businessId, name }: { businessId: string; name: string }) {
+export default function EmbedChat({ businessId, name, autoOpen }: { businessId: string; name: string; autoOpen?: boolean }) {
   const greeting: Msg = {
     role: 'assistant',
     content: `Hi! Thanks for visiting ${name}. I can answer questions and get you booked. How can I help?`,
@@ -38,6 +38,9 @@ export default function EmbedChat({ businessId, name }: { businessId: string; na
   const sessionRef = useRef<string>('')
 
   useEffect(() => { sessionRef.current = getSessionId(businessId) }, [businessId])
+  useEffect(() => {
+    if (autoOpen) setTimeout(() => { try { window.parent?.postMessage({ type: 'cg-widget-autoopen' }, '*') } catch { /* ignore */ } }, 600)
+  }, [autoOpen])
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading])

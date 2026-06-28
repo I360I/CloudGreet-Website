@@ -128,9 +128,12 @@
   }
   btn.addEventListener('click', function () { setOpen(!open); });
 
-  // The chat UI inside the iframe can ask us to close (the X in its header).
+  // The chat UI inside the iframe can ask us to close (the X in its header)
+  // or auto-open (when the business has auto_open enabled server-side).
   window.addEventListener('message', function (e) {
-    if (e && e.data && e.data.type === 'cg-widget-close') setOpen(false);
+    if (!e || !e.data) return;
+    if (e.data.type === 'cg-widget-close') setOpen(false);
+    if (e.data.type === 'cg-widget-autoopen') setOpen(true);
   });
 
   function mount() {

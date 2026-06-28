@@ -16,7 +16,7 @@ export default async function EmbedChatPage({ params }: { params: { businessId: 
 
   const { data: biz, error } = await supabaseAdmin
     .from('businesses')
-    .select('id, business_name')
+    .select('id, business_name, auto_open')
     .eq('id', businessId)
     .maybeSingle()
 
@@ -31,5 +31,5 @@ export default async function EmbedChatPage({ params }: { params: { businessId: 
     )
   }
 
-  return <EmbedChat businessId={(biz as any).id} name={(biz as any).business_name || 'us'} />
+  return <EmbedChat businessId={(biz as any).id} name={(biz as any).business_name || 'us'} autoOpen={!!(biz as any).auto_open} />
 }
