@@ -149,4 +149,7 @@
     var delay = parseInt(autoOpen, 10);
     setTimeout(function () { setOpen(true); }, isNaN(delay) ? 0 : delay);
   }
+
+  // Global API — any button on the page can call CloudGreet.open() / .close() / .toggle()
+  window.CloudGreet = { open: function () { setOpen(true); }, close: function () { setOpen(false); }, toggle: function () { setOpen(!open); } };
 })();
