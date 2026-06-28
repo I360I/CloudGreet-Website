@@ -8,6 +8,7 @@
  *   data-label="Chat with us"            launcher aria-label
  *   data-ring="BOOK A RIDE · CHAT · "     curved text around the button
  *                                         (set data-ring="" to hide the ring)
+ *   data-autoopen="2000"                  auto-open the chat after N ms (0 = immediately)
  *
  * Injects a floating green launcher with curved rotating text around it, that
  * opens an iframe at /embed/<businessId> on this origin. Namespaced + very
@@ -28,6 +29,7 @@
   if (!businessId) { console.error('[CloudGreet] widget.js is missing data-business="<id>"'); return; }
 
   var label = script.getAttribute('data-label') || 'Chat with us';
+  var autoOpen = script.getAttribute('data-autoopen');
   var ringText = script.getAttribute('data-ring');
   if (ringText === null) ringText = 'BOOK A RIDE · CHAT · ';
   var origin = (function () {
@@ -139,4 +141,9 @@
   }
   if (document.body) mount();
   else document.addEventListener('DOMContentLoaded', mount);
+
+  if (autoOpen !== null) {
+    var delay = parseInt(autoOpen, 10);
+    setTimeout(function () { setOpen(true); }, isNaN(delay) ? 0 : delay);
+  }
 })();
