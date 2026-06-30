@@ -43,12 +43,13 @@
   style.textContent =
     '@keyframes cgPing{75%,100%{transform:scale(2);opacity:0}}' +
     '@keyframes cgSpin{to{transform:rotate(360deg)}}' +
-    // Full-screen panel on mobile regardless of WP viewport meta settings.
-    // max-device-width uses the physical device pixels, not the CSS viewport,
-    // so it works even when the host site forces width=1024.
+    // On mobile: anchor panel at top so the keyboard (always at bottom) can't
+    // cover it. max-device-width uses physical pixels so it works even when the
+    // host WP theme forces a non-device viewport width.
     '@media(max-device-width:640px){#__cg_panel__{' +
-    'top:0!important;left:0!important;right:0!important;bottom:0!important;' +
-    'width:100%!important;height:100%!important;border-radius:0!important;box-shadow:none!important}}';
+    'top:8px!important;left:8px!important;right:8px!important;bottom:auto!important;' +
+    'width:calc(100% - 16px)!important;height:55vh!important;' +
+    'border-radius:16px!important;transform-origin:top right!important}}';
   document.head.appendChild(style);
 
   // Launcher container holds the curved-text ring + the button, anchored in the
@@ -62,8 +63,6 @@
   // Curved rotating text ring (green text on a circular path, repeated to fill).
   var ring = document.createElement('div');
   ring.style.cssText = 'position:absolute;inset:0;animation:cgSpin 34s linear infinite;transition:opacity .2s ease;';
-  // One pass is enough - textLength stretches it evenly around the whole
-  // circle, so the letters end up nicely tracked out (doubled only if short).
   var repeated = ringText.length < 16 ? ringText + ringText : ringText;
   ring.innerHTML =
     '<svg width="116" height="116" viewBox="0 0 116 116" style="display:block;overflow:visible">' +
@@ -97,12 +96,7 @@
   function renderOpen() { btn.innerHTML = closeIcon; }
   renderClosed();
 
-  // screen.width is the physical device pixel width — unaffected by the host
-  // site's viewport meta tag (some WP themes force width=1024 which makes
-  // window.innerWidth report 1024 on a 390px phone).
-  function isMobile() { return screen.width <= 640; }
-
-  // Chat panel (iframe wrapper) - matches the landing panel styling.
+  // Chat panel (iframe wrapper).
   var panel = document.createElement('div');
   panel.id = '__cg_panel__';
   panel.style.cssText = [
@@ -114,20 +108,6 @@
     'pointer-events:none', 'transition:opacity .22s cubic-bezier(.22,1,.36,1), transform .22s cubic-bezier(.22,1,.36,1)'
   ].join(';');
 
-  function applyPanelSize() {
-    if (isMobile()) {
-      panel.style.top = '0'; panel.style.left = '0'; panel.style.right = '0'; panel.style.bottom = '0';
-      panel.style.width = '100%'; panel.style.height = '100%';
-      panel.style.borderRadius = '0'; panel.style.boxShadow = 'none';
-      panel.style.transformOrigin = 'center';
-    } else {
-      panel.style.top = 'auto'; panel.style.left = 'auto'; panel.style.right = '20px'; panel.style.bottom = '140px';
-      panel.style.width = 'min(93vw, 392px)'; panel.style.height = 'min(72vh, 600px)';
-      panel.style.borderRadius = '20px'; panel.style.boxShadow = '0 30px 70px -22px rgba(0,0,0,0.45)';
-      panel.style.transformOrigin = 'bottom right';
-    }
-  }
-
   var iframe = document.createElement('iframe');
   iframe.src = origin + '/embed/' + encodeURIComponent(businessId);
   iframe.title = 'Chat';
@@ -135,30 +115,46 @@
   iframe.setAttribute('allow', 'clipboard-write');
   panel.appendChild(iframe);
 
+  // iOS scroll lock: prevents the host page from jumping when the iframe input
+  // is focused. Saves and restores scroll position around the lock.
+  var _savedScroll = 0;
+  function lockScroll() {
+    _savedScroll = window.pageYOffset || document.documentElement.scrollTop || 0;
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-' + _savedScroll + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.overflow = 'hidden';
+  }
+  function unlockScroll() {
+    if (!document.body.style.position) return;
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.overflow = '';
+    window.scrollTo(0, _savedScroll);
+  }
+
   var open = false;
   function setOpen(v) {
     open = v;
     if (open) {
-      applyPanelSize();
+      lockScroll();
       if (ringText) ring.style.opacity = '0';
-      // Hide launcher entirely on mobile — the iframe has its own X button
-      wrap.style.opacity = isMobile() ? '0' : '1';
-      wrap.style.pointerEvents = isMobile() ? 'none' : 'auto';
       panel.style.opacity = '1';
       panel.style.transform = 'translateY(0) scale(1)';
       panel.style.pointerEvents = 'auto';
       renderOpen();
     } else {
+      unlockScroll();
       if (ringText) ring.style.opacity = '1';
-      wrap.style.opacity = '1';
-      wrap.style.pointerEvents = 'auto';
       panel.style.opacity = '0';
       panel.style.transform = 'translateY(24px) scale(.96)';
       panel.style.pointerEvents = 'none';
       renderClosed();
     }
   }
-  window.addEventListener('resize', function () { if (open) applyPanelSize(); });
   btn.addEventListener('click', function () { setOpen(!open); });
 
   // The chat UI inside the iframe can ask us to close (the X in its header)
