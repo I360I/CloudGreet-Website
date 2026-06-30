@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { PaperPlaneRight, ArrowRight } from '@phosphor-icons/react'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
@@ -17,6 +17,94 @@ function getSessionId(businessId: string): string {
   } catch {
     return `${Date.now()}-${Math.random().toString(36).slice(2)}`
   }
+}
+
+function AddressInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  onSubmit,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+  onSubmit?: () => void
+}) {
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(-1)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  const fetchSuggestions = useCallback((q: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (q.length < 3) { setSuggestions([]); setOpen(false); return }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/embed/places?input=${encodeURIComponent(q)}`)
+        const j = await r.json().catch(() => ({ predictions: [] }))
+        setSuggestions(j.predictions || [])
+        setOpen((j.predictions || []).length > 0)
+        setActive(-1)
+      } catch { /* ignore */ }
+    }, 280)
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const pick = (s: string) => { onChange(s); setOpen(false); setSuggestions([]); setActive(-1) }
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!open) {
+      if (e.key === 'Enter') onSubmit?.()
+      return
+    }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => Math.min(a + 1, suggestions.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => Math.max(a - 1, -1)) }
+    else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (active >= 0 && suggestions[active]) pick(suggestions[active])
+      else { setOpen(false); onSubmit?.() }
+    } else if (e.key === 'Escape') setOpen(false)
+  }
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+        {label}
+      </label>
+      <input
+        value={value}
+        onChange={(e) => { onChange(e.target.value); fetchSuggestions(e.target.value) }}
+        onKeyDown={onKeyDown}
+        onFocus={() => { if (suggestions.length > 0) setOpen(true) }}
+        placeholder={placeholder}
+        autoComplete="off"
+        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-800 focus:bg-white"
+      />
+      {open && suggestions.length > 0 && (
+        <ul className="absolute z-50 mt-1 w-full rounded-xl border border-black/10 bg-white shadow-lg overflow-hidden">
+          {suggestions.map((s, i) => (
+            <li
+              key={s}
+              onMouseDown={() => pick(s)}
+              className={`px-4 py-2.5 text-[14px] text-gray-800 cursor-pointer leading-snug transition-colors ${i === active ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+            >
+              {s}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 export default function QuoteEmbed({ businessId, name }: { businessId: string; name: string }) {
@@ -99,32 +187,20 @@ export default function QuoteEmbed({ businessId, name }: { businessId: string; n
         <Header subtitle="Instant price quote" />
         <div className="flex flex-1 flex-col justify-center px-6 gap-3">
           <div className="space-y-3">
-            <div>
-              <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-                Pickup
-              </label>
-              <input
-                value={pickup}
-                onChange={(e) => setPickup(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && submitQuote()}
-                placeholder="e.g. 123 Main St, Columbus"
-                autoComplete="off"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-800 focus:bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-                Destination
-              </label>
-              <input
-                value={dropoff}
-                onChange={(e) => setDropoff(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && submitQuote()}
-                placeholder="e.g. Columbus Airport (CMH)"
-                autoComplete="off"
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-800 focus:bg-white"
-              />
-            </div>
+            <AddressInput
+              label="Pickup"
+              value={pickup}
+              onChange={setPickup}
+              placeholder="e.g. 123 Main St, Columbus"
+              onSubmit={submitQuote}
+            />
+            <AddressInput
+              label="Destination"
+              value={dropoff}
+              onChange={setDropoff}
+              placeholder="e.g. Columbus Airport (CMH)"
+              onSubmit={submitQuote}
+            />
           </div>
           <button
             onClick={submitQuote}
