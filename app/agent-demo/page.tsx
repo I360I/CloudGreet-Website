@@ -1,12 +1,4 @@
-"use client"
-
-/**
- * PROTOTYPE - one desk, live voice. Validates the core landing concept:
- * arrive at a mascot's desk (he waves hello) and actually talk to the AI
- * receptionist in-browser. Dedicated DEMO agent via /api/demo/web-call
- * (no real client calendars/SMS). Next: the sideways row of 5 verticals
- * (solo shots already staged in /public as desk-*.jpg).
- */
+'use client'
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { RetellWebClient } from 'retell-client-js-sdk'
@@ -14,17 +6,52 @@ import { RetellWebClient } from 'retell-client-js-sdk'
 type Phase = 'idle' | 'connecting' | 'live' | 'ended' | 'error'
 type Line = { role: string; content: string }
 
-const DESK = {
-  vertical: 'carservice',
-  name: "Steve's Car Service",
-  tag: 'Airport rides · dispatch · booking',
-  video: '/desk-carservice.mp4',
-  poster: '/desk-carservice-poster.jpg',
-}
-const ROSTER = ['HVAC', 'Electrical', "Steve's Car Service", 'Dentist', 'Lawyer']
-const ACTIVE = 2
+const VERTICALS = [
+  {
+    id: 'hvac',
+    label: 'HVAC',
+    name: 'Apex Air & Heat',
+    tag: 'Quotes · service calls · 24/7 dispatch',
+    bg: '/desk-hvac.jpg',
+    hint: 'Try: "My AC stopped working, can someone come today?"',
+  },
+  {
+    id: 'electrical',
+    label: 'Electrical',
+    name: 'Bright Spark Electric',
+    tag: 'Estimates · scheduling · emergency callouts',
+    bg: '/desk-electrical.jpg',
+    hint: 'Try: "I need an estimate for a panel upgrade."',
+  },
+  {
+    id: 'carservice',
+    label: 'Car Service',
+    name: 'Executive Transport',
+    tag: 'Airport rides · dispatch · booking',
+    bg: '/desk-carservice-poster.jpg',
+    video: '/desk-carservice.mp4',
+    hint: 'Try: "I need a ride to the airport tomorrow at 6am."',
+  },
+  {
+    id: 'roofing',
+    label: 'Roofing',
+    name: 'Summit Roofing',
+    tag: 'Inspections · estimates · storm damage',
+    bg: '/desk-dentist.jpg',
+    hint: 'Try: "I think my roof is leaking after the storm."',
+  },
+  {
+    id: 'lawyer',
+    label: 'Law Firm',
+    name: 'Hale & Co. Law',
+    tag: 'Consultations · intake · scheduling',
+    bg: '/desk-lawyer.jpg',
+    hint: 'Try: "I need to speak with an attorney about a contract dispute."',
+  },
+]
 
 export default function AgentDemoPage() {
+  const [active, setActive] = useState(2) // Car Service default
   const clientRef = useRef<RetellWebClient | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [agentTalking, setAgentTalking] = useState(false)
@@ -32,6 +59,24 @@ export default function AgentDemoPage() {
   const [transcript, setTranscript] = useState<Line[]>([])
   const [level, setLevel] = useState(0)
   const [err, setErr] = useState('')
+
+  const v = VERTICALS[active]
+
+  const endCall = useCallback(() => {
+    try { clientRef.current?.stopCall() } catch {}
+    clientRef.current = null
+  }, [])
+
+  useEffect(() => () => endCall(), [endCall])
+
+  const selectVertical = useCallback((idx: number) => {
+    if (idx === active) return
+    endCall()
+    setPhase('idle')
+    setTranscript([])
+    setErr('')
+    setActive(idx)
+  }, [active, endCall])
 
   useEffect(() => {
     if (phase !== 'live') return
@@ -44,21 +89,16 @@ export default function AgentDemoPage() {
     return () => cancelAnimationFrame(raf)
   }, [phase])
 
-  const end = useCallback(() => {
-    try { clientRef.current?.stopCall() } catch {}
-    clientRef.current = null
-  }, [])
-  useEffect(() => () => end(), [end])
-
   const start = useCallback(async () => {
     setErr(''); setTranscript([]); setPhase('connecting')
     try {
       const res = await fetch('/api/demo/web-call', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ vertical: DESK.vertical }),
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ vertical: v.id }),
       })
       if (!res.ok) {
-        setErr(res.status === 429 ? 'Too many demo calls from here — give it a few minutes.' : 'Could not start the call.')
+        setErr(res.status === 429 ? 'Too many demo calls right now — give it a minute.' : 'Could not start the call.')
         setPhase('error'); return
       }
       const { access_token } = await res.json()
@@ -70,13 +110,13 @@ export default function AgentDemoPage() {
       client.on('agent_start_talking', () => setAgentTalking(true))
       client.on('agent_stop_talking', () => setAgentTalking(false))
       client.on('update', (u: any) => { if (Array.isArray(u?.transcript)) setTranscript(u.transcript) })
-      client.on('error', (e: any) => { setErr(String(e?.message || e || 'call error')); end(); setPhase('error') })
+      client.on('error', (e: any) => { setErr(String(e?.message || e || 'call error')); endCall(); setPhase('error') })
       await client.startCall({ accessToken: access_token })
     } catch (e: any) {
       setErr(e?.name === 'NotAllowedError' ? 'Microphone access is needed to talk to the agent.' : (e?.message || 'Failed to start.'))
       setPhase('error')
     }
-  }, [end])
+  }, [v.id, endCall])
 
   const toggleMute = useCallback(() => {
     const c = clientRef.current; if (!c) return
@@ -88,73 +128,137 @@ export default function AgentDemoPage() {
   const live = phase === 'live'
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden bg-[#f6f5f1] text-gray-900">
-      {/* arrival: mascot zooms in and waves, then holds on last frame */}
-      <video src={DESK.video} poster={DESK.poster} autoPlay muted playsInline
-        className="absolute inset-0 h-full w-full object-cover"
-        onEnded={(e) => (e.currentTarget as HTMLVideoElement).pause()} />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#f6f5f1] to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-[#f6f5f1] via-[#f6f5f1]/80 to-transparent" />
+    <main className="relative w-full overflow-hidden bg-gray-900 text-white" style={{ height: '100dvh' }}>
 
-      {/* roster - the sideways carousel to come */}
-      <div className="absolute top-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 text-xs text-gray-400">
-        {ROSTER.map((r, i) => (
-          <span key={r} className={`flex items-center gap-1.5 ${i === ACTIVE ? 'text-gray-900' : ''}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${i === ACTIVE ? 'bg-sky-500' : 'bg-gray-300'}`} />
-            {r}
-          </span>
-        ))}
+      {/* Background — image always, video overlaid for carservice */}
+      <div className="absolute inset-0">
+        <img
+          key={`bg-${v.id}`}
+          src={v.bg}
+          alt=""
+          className="h-full w-full object-cover transition-opacity duration-500"
+        />
+        {v.video && (
+          <video
+            key={`vid-${v.id}`}
+            src={v.video}
+            autoPlay muted playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+            onEnded={(e) => (e.currentTarget as HTMLVideoElement).pause()}
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-black/75" />
       </div>
 
-      {/* title, top-left in the open space */}
-      <div className="absolute left-8 top-20 z-10 sm:left-14 sm:top-28">
-        <p className="mb-2 text-xs uppercase tracking-[0.2em] text-sky-600">Live demo</p>
-        <h1 className="font-display text-4xl font-medium tracking-tight sm:text-5xl">{DESK.name}</h1>
-        <p className="mt-2 text-gray-500">{DESK.tag}</p>
-      </div>
+      {/* Content */}
+      <div className="relative z-10 flex h-full flex-col">
 
-      {/* call dock, bottom-center */}
-      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-4 px-6 pb-10">
-        {lastLines.length > 0 && (
-          <div className="w-full max-w-xl space-y-1.5 rounded-2xl border border-black/5 bg-white/80 p-4 backdrop-blur">
-            {lastLines.map((l, i) => (
-              <div key={i} className="text-sm">
-                <span className="mr-2 text-xs uppercase tracking-wide text-gray-400">{l.role === 'agent' ? 'Agent' : 'You'}</span>
-                <span className={l.role === 'agent' ? 'text-sky-700' : 'text-gray-800'}>{l.content}</span>
-              </div>
+        {/* Top bar */}
+        <div
+          className="flex flex-col gap-3 px-5 pt-6"
+          style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top) + 0.75rem)' }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40">
+            CloudGreet · Live demo
+          </p>
+
+          {/* Vertical picker — horizontal scroll on mobile */}
+          <div
+            className="flex gap-2 overflow-x-auto"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', paddingBottom: 2 }}
+          >
+            {VERTICALS.map((vert, i) => (
+              <button
+                key={vert.id}
+                onClick={() => selectVertical(i)}
+                className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
+                  i === active
+                    ? 'bg-white text-gray-900 shadow'
+                    : 'bg-white/10 text-white/70 hover:bg-white/20 active:bg-white/25'
+                }`}
+              >
+                {vert.label}
+              </button>
             ))}
           </div>
-        )}
+        </div>
 
-        {!live && phase !== 'connecting' ? (
-          <button onClick={start}
-            className="group relative inline-flex items-center gap-2 rounded-full bg-gray-900 px-8 py-4 text-base font-medium text-white shadow-xl transition hover:bg-gray-800">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-500" />
-            </span>
-            {phase === 'ended' ? 'Talk again' : 'Talk to the receptionist'}
-          </button>
-        ) : phase === 'connecting' ? (
-          <div className="rounded-full bg-gray-900 px-8 py-4 text-base font-medium text-white">Connecting…</div>
-        ) : (
-          <div className="flex items-center gap-3">
-            {/* live volume ring */}
-            <div className="relative flex h-12 w-12 items-center justify-center">
-              <span className="absolute inset-0 rounded-full bg-sky-400/30 transition-transform duration-75" style={{ transform: `scale(${ring})` }} />
-              <span className="relative text-lg">{agentTalking ? '🔊' : '🎙️'}</span>
+        {/* Business name — grows to fill space */}
+        <div className="flex flex-1 flex-col justify-center px-6">
+          <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-6xl">
+            {v.name}
+          </h1>
+          <p className="mt-2 text-sm text-white/55 sm:text-base">{v.tag}</p>
+        </div>
+
+        {/* Call controls */}
+        <div
+          className="flex flex-col items-center gap-4 px-5 pb-10"
+          style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom) + 1.5rem)' }}
+        >
+          {/* Transcript */}
+          {lastLines.length > 0 && (
+            <div className="w-full max-w-sm space-y-2 rounded-2xl border border-white/10 bg-black/50 p-4 backdrop-blur-md">
+              {lastLines.map((l, i) => (
+                <div key={i} className="text-sm leading-snug">
+                  <span className="mr-2 text-[10px] font-semibold uppercase tracking-wider text-white/35">
+                    {l.role === 'agent' ? 'AI' : 'You'}
+                  </span>
+                  <span className={l.role === 'agent' ? 'text-sky-300' : 'text-white/85'}>
+                    {l.content}
+                  </span>
+                </div>
+              ))}
             </div>
-            <button onClick={toggleMute} className="rounded-full border border-black/10 bg-white px-6 py-3.5 text-sm font-medium hover:bg-gray-50">
-              {muted ? 'Unmute' : 'Mute'}
-            </button>
-            <button onClick={() => { end(); setPhase('ended') }} className="rounded-full bg-red-500 px-7 py-3.5 text-sm font-medium text-white hover:bg-red-600">
-              End call
-            </button>
-          </div>
-        )}
+          )}
 
-        {err && <p className="text-sm text-red-500">{err}</p>}
-        {phase === 'idle' && <p className="text-xs text-gray-400">Uses your mic · try “I need a ride to the airport tomorrow at 6am.”</p>}
+          {/* Button states */}
+          {!live && phase !== 'connecting' ? (
+            <div className="flex flex-col items-center gap-3">
+              <button
+                onClick={start}
+                className="relative inline-flex items-center gap-3 rounded-full bg-white px-8 py-4 text-base font-semibold text-gray-900 shadow-2xl transition-transform hover:scale-105 active:scale-95"
+              >
+                <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-500" />
+                </span>
+                {phase === 'ended' ? 'Talk again' : 'Talk to the AI receptionist'}
+              </button>
+              {phase === 'idle' && (
+                <p className="text-center text-xs text-white/35">{v.hint}</p>
+              )}
+            </div>
+          ) : phase === 'connecting' ? (
+            <div className="rounded-full bg-white/10 px-8 py-4 text-sm font-medium text-white backdrop-blur">
+              Connecting…
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-12 w-12 items-center justify-center">
+                <span
+                  className="absolute inset-0 rounded-full bg-sky-400/30 transition-transform duration-75"
+                  style={{ transform: `scale(${ring})` }}
+                />
+                <span className="relative text-xl">{agentTalking ? '🔊' : '🎙️'}</span>
+              </div>
+              <button
+                onClick={toggleMute}
+                className="rounded-full border border-white/15 bg-white/10 px-6 py-3.5 text-sm font-medium backdrop-blur hover:bg-white/20 active:bg-white/25"
+              >
+                {muted ? 'Unmute' : 'Mute'}
+              </button>
+              <button
+                onClick={() => { endCall(); setPhase('ended') }}
+                className="rounded-full bg-red-500 px-7 py-3.5 text-sm font-medium hover:bg-red-600 active:bg-red-700"
+              >
+                End call
+              </button>
+            </div>
+          )}
+
+          {err && <p className="text-center text-sm text-red-400">{err}</p>}
+        </div>
       </div>
     </main>
   )
