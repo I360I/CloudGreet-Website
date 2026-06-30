@@ -3,12 +3,22 @@ import QuoteEmbed from './QuoteEmbed'
 
 export const dynamic = 'force-dynamic'
 
+function hex(val: string | undefined, fallback: string) {
+  return /^#[0-9a-fA-F]{3,6}$/.test(val || '') ? val! : fallback
+}
+
 export default async function QuoteEmbedPage({
   params,
   searchParams,
 }: {
   params: { businessId: string }
-  searchParams: { accent?: string; ring?: string }
+  searchParams: {
+    accent?: string
+    bg?: string
+    radius?: string
+    label?: string
+    header?: string
+  }
 }) {
   const raw = params.businessId || ''
   let id = raw
@@ -30,9 +40,25 @@ export default async function QuoteEmbedPage({
     )
   }
 
-  // Sanitize accent to a hex color only
-  const rawAccent = searchParams.accent || ''
-  const accent = /^#[0-9a-fA-F]{3,6}$/.test(rawAccent) ? rawAccent : '#0a0a0b'
+  const accent = hex(searchParams.accent, '#0a0a0b')
+  const bg     = hex(searchParams.bg, '#ffffff')
 
-  return <QuoteEmbed businessId={(biz as any).id} name={(biz as any).business_name || 'us'} accent={accent} />
+  const rawRadius = parseInt(searchParams.radius || '', 10)
+  const radius = isNaN(rawRadius) ? 12 : Math.min(Math.max(rawRadius, 0), 24)
+
+  const label = searchParams.label?.slice(0, 40).trim() || 'Get Quote'
+
+  const showHeader = searchParams.header !== 'false'
+
+  return (
+    <QuoteEmbed
+      businessId={(biz as any).id}
+      name={(biz as any).business_name || 'us'}
+      accent={accent}
+      bg={bg}
+      radius={radius}
+      label={label}
+      showHeader={showHeader}
+    />
+  )
 }

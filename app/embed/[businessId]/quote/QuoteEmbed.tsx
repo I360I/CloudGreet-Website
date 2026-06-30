@@ -31,6 +31,7 @@ function AddressInput({
   placeholder,
   onSubmit,
   accent,
+  radius = '12px',
 }: {
   label: string
   value: string
@@ -38,6 +39,7 @@ function AddressInput({
   placeholder: string
   onSubmit?: () => void
   accent: string
+  radius?: string
 }) {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [open, setOpen] = useState(false)
@@ -96,7 +98,8 @@ function AddressInput({
           onFocus={() => { if (suggestions.length > 0) setOpen(true) }}
           placeholder={placeholder}
           autoComplete="off"
-          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-400 focus:bg-white"
+          className="w-full border border-gray-200 bg-gray-50 px-3.5 py-2 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-400 focus:bg-white"
+          style={{ borderRadius: radius }}
         />
         {open && suggestions.length > 0 && (
           <ul className="absolute z-50 mt-1 w-full rounded-xl border border-black/10 bg-white shadow-lg overflow-hidden">
@@ -133,7 +136,23 @@ function AddressInput({
   )
 }
 
-export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { businessId: string; name: string; accent?: string }) {
+export default function QuoteEmbed({
+  businessId,
+  name,
+  accent = '#0a0a0b',
+  bg = '#ffffff',
+  radius = 12,
+  label = 'Get Quote',
+  showHeader = true,
+}: {
+  businessId: string
+  name: string
+  accent?: string
+  bg?: string
+  radius?: number
+  label?: string
+  showHeader?: boolean
+}) {
   const [step, setStep] = useState<'form' | 'chat'>('form')
   const [pickup, setPickup] = useState('')
   const [dropoff, setDropoff] = useState('')
@@ -199,10 +218,12 @@ export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { b
     </div>
   )
 
+  const r = `${radius}px`
+
   if (step === 'form') {
     return (
-      <div className="flex h-screen flex-col bg-white">
-        <Header subtitle="Instant price quote" />
+      <div className="flex h-screen flex-col" style={{ background: bg }}>
+        {showHeader && <Header subtitle="Instant price quote" />}
         <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col min-h-full justify-center px-4 py-4 gap-2">
           <div className="space-y-3">
@@ -213,6 +234,7 @@ export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { b
               placeholder="e.g. 123 Main St, Columbus"
               onSubmit={submitQuote}
               accent={accent}
+              radius={r}
             />
             <AddressInput
               label="Destination"
@@ -221,15 +243,16 @@ export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { b
               placeholder="e.g. Columbus Airport (CMH)"
               onSubmit={submitQuote}
               accent={accent}
+              radius={r}
             />
           </div>
           <button
             onClick={submitQuote}
             disabled={!pickup.trim() || !dropoff.trim()}
-            className="w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-white transition-all disabled:opacity-35 mt-1"
-            style={{ background: accent }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[14px] font-semibold text-white transition-all disabled:opacity-35 mt-1"
+            style={{ background: accent, borderRadius: r }}
           >
-            Get Quote <ArrowRight weight="bold" className="w-4 h-4" />
+            {label} <ArrowRight weight="bold" className="w-4 h-4" />
           </button>
           <p className="text-center text-[10px] text-gray-400">Instant quote · no obligation</p>
         </div>
@@ -239,8 +262,8 @@ export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { b
   }
 
   return (
-    <div className="flex h-screen flex-col bg-white">
-      <Header subtitle="Online · replies in seconds" />
+    <div className="flex h-screen flex-col" style={{ background: bg }}>
+      {showHeader && <Header subtitle="Online · replies in seconds" />}
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -268,7 +291,8 @@ export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { b
       </div>
       <form
         onSubmit={(e) => { e.preventDefault(); void sendChat() }}
-        className="flex items-center gap-2 border-t border-black/[0.08] bg-white p-3 flex-shrink-0"
+        className="flex items-center gap-2 border-t border-black/[0.08] p-3 flex-shrink-0"
+        style={{ background: bg }}
       >
         <input
           ref={chatInputRef}
