@@ -7,11 +7,11 @@ type Phase = 'idle' | 'connecting' | 'live' | 'ended' | 'error'
 type Line = { role: string; content: string }
 
 const VERTICALS = [
-  { id: 'hvac',       label: 'HVAC',        name: 'Apex Air & Heat',       tag: 'Quotes · service calls · 24/7 dispatch',    hint: '"My AC stopped working, can someone come today?"' },
-  { id: 'electrical', label: 'Electrical',   name: 'Bright Spark Electric', tag: 'Estimates · scheduling · emergency callouts', hint: '"I need an estimate for a panel upgrade."' },
-  { id: 'carservice', label: 'Car Service',  name: 'Executive Transport',   tag: 'Airport rides · dispatch · booking',          hint: '"I need a ride to the airport tomorrow at 6am."' },
-  { id: 'roofing',    label: 'Roofing',      name: 'Summit Roofing',        tag: 'Inspections · estimates · storm damage',      hint: '"I think my roof is leaking after the storm."' },
-  { id: 'lawyer',     label: 'Law Firm',     name: 'Hale & Co. Law',        tag: 'Consultations · intake · scheduling',         hint: '"I need to speak with an attorney."' },
+  { id: 'hvac',       label: 'HVAC',       name: 'Apex Air & Heat',       tag: 'Quotes · service calls · 24/7 dispatch',    img: '/desk-hvac.jpg',             hint: '"My AC stopped working, can someone come today?"' },
+  { id: 'electrical', label: 'Electrical',  name: 'Bright Spark Electric', tag: 'Estimates · scheduling · emergency callouts', img: '/desk-electrical.jpg',       hint: '"I need an estimate for a panel upgrade."' },
+  { id: 'carservice', label: 'Car Service', name: 'Executive Transport',   tag: 'Airport rides · dispatch · booking',          img: '/desk-carservice-solo.jpg',  hint: '"I need a ride to the airport tomorrow at 6am."' },
+  { id: 'roofing',    label: 'Roofing',     name: 'Summit Roofing',        tag: 'Inspections · estimates · storm damage',      img: '/desk-dentist.jpg',          hint: '"I think my roof is leaking after the storm."' },
+  { id: 'lawyer',     label: 'Law Firm',    name: 'Hale & Co. Law',        tag: 'Consultations · intake · scheduling',         img: '/desk-lawyer.jpg',           hint: '"I need to speak with an attorney."' },
 ]
 
 export default function AgentDemoPage() {
@@ -68,12 +68,12 @@ export default function AgentDemoPage() {
       if (!access_token) { setErr('No call token returned.'); setPhase('error'); return }
       const client = new RetellWebClient()
       clientRef.current = client
-      client.on('call_started',       () => setPhase('live'))
-      client.on('call_ended',         () => setPhase('ended'))
-      client.on('agent_start_talking',() => setAgentTalking(true))
-      client.on('agent_stop_talking', () => setAgentTalking(false))
-      client.on('update', (u: any)    => { if (Array.isArray(u?.transcript)) setTranscript(u.transcript) })
-      client.on('error', (e: any)     => { setErr(String(e?.message || e || 'call error')); endCall(); setPhase('error') })
+      client.on('call_started',        () => setPhase('live'))
+      client.on('call_ended',          () => setPhase('ended'))
+      client.on('agent_start_talking', () => setAgentTalking(true))
+      client.on('agent_stop_talking',  () => setAgentTalking(false))
+      client.on('update', (u: any)     => { if (Array.isArray(u?.transcript)) setTranscript(u.transcript) })
+      client.on('error', (e: any)      => { setErr(String(e?.message || e || 'call error')); endCall(); setPhase('error') })
       await client.startCall({ accessToken: access_token })
     } catch (e: any) {
       setErr(e?.name === 'NotAllowedError' ? 'Microphone access is needed to talk to the agent.' : (e?.message || 'Failed to start.'))
@@ -87,171 +87,143 @@ export default function AgentDemoPage() {
   }, [muted])
 
   const live = phase === 'live'
-  const scale = live ? 1 + Math.min(level * 2, 0.35) + (agentTalking ? 0.08 : 0) : 1
   const lastLines = transcript.slice(-3)
+  const ringScale = live ? 1 + Math.min(level * 2, 0.4) + (agentTalking ? 0.08 : 0) : 1
 
   return (
     <main
-      className="relative flex w-full flex-col overflow-hidden bg-[#09090f] text-white"
+      className="flex w-full flex-col overflow-hidden bg-[#f7f7f5]"
       style={{ height: '100dvh' }}
     >
-      {/* Ambient glow behind orb */}
+      {/* ── Mascot image panel ── */}
       <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: live
-            ? `radial-gradient(ellipse 60% 50% at 50% 55%, rgba(14,165,233,${0.1 + level * 0.15}) 0%, transparent 70%)`
-            : 'radial-gradient(ellipse 55% 40% at 50% 55%, rgba(14,165,233,0.07) 0%, transparent 70%)',
-          transition: 'background 0.2s ease',
-        }}
-      />
-
-      {/* Top bar */}
-      <div
-        className="relative z-10 flex flex-col gap-3 px-5"
-        style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top) + 0.5rem)' }}
+        className="relative w-full flex-shrink-0 overflow-hidden"
+        style={{ height: '52dvh' }}
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/30">
-          CloudGreet · Live demo
-        </p>
+        <img
+          key={v.id}
+          src={v.img}
+          alt={v.name}
+          className="h-full w-full object-cover transition-opacity duration-300"
+          style={{
+            objectPosition: '68% 25%',
+            opacity: live ? 0.75 : 1,
+          }}
+        />
 
-        {/* Vertical pills */}
-        <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {VERTICALS.map((vert, i) => (
-            <button
-              key={vert.id}
-              onClick={() => selectVertical(i)}
-              className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-200 ${
-                i === active
-                  ? 'bg-white text-gray-900'
-                  : 'bg-white/8 text-white/50 hover:bg-white/14 hover:text-white/80'
-              }`}
-            >
-              {vert.label}
-            </button>
-          ))}
-        </div>
-      </div>
+        {/* Fade bottom into page bg */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f7f7f5] to-transparent" />
 
-      {/* Center — orb + identity */}
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 px-6">
-        {/* Orb */}
-        <div className="relative flex items-center justify-center">
-          {/* Outer pulse ring — only when live */}
-          {live && (
-            <span
-              className="absolute rounded-full bg-sky-500/15"
-              style={{
-                width: 200,
-                height: 200,
-                transform: `scale(${scale})`,
-                transition: 'transform 80ms ease-out',
-              }}
-            />
-          )}
-          {/* Idle breathe ring */}
-          {!live && phase !== 'connecting' && (
-            <span
-              className="absolute rounded-full border border-sky-500/20"
-              style={{ width: 180, height: 180, animation: 'ping 2.5s cubic-bezier(0,0,0.2,1) infinite' }}
-            />
-          )}
-          {/* Core orb */}
-          <div
-            className={`relative flex items-center justify-center rounded-full transition-all duration-300 ${
-              live
-                ? 'bg-sky-500/20 shadow-[0_0_40px_10px_rgba(14,165,233,0.25)]'
-                : phase === 'connecting'
-                ? 'bg-white/5'
-                : 'bg-white/6 hover:bg-white/10'
-            }`}
-            style={{
-              width: 148,
-              height: 148,
-              border: live ? '1.5px solid rgba(14,165,233,0.5)' : '1.5px solid rgba(255,255,255,0.1)',
-              transform: live ? `scale(${scale})` : 'scale(1)',
-              transition: live ? 'transform 80ms ease-out' : 'transform 0.3s ease',
-            }}
-          >
-            {phase === 'connecting' ? (
-              <svg className="h-8 w-8 animate-spin text-white/30" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            ) : live ? (
-              <span className="text-4xl select-none">{agentTalking ? '🔊' : '🎙️'}</span>
-            ) : (
-              <svg className="h-10 w-10 text-white/25" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 1a4 4 0 014 4v7a4 4 0 01-8 0V5a4 4 0 014-4zm0 2a2 2 0 00-2 2v7a2 2 0 004 0V5a2 2 0 00-2-2zm-7 8h2a5 5 0 0010 0h2a7 7 0 01-6 6.93V20h3v2H8v-2h3v-2.07A7 7 0 015 11z"/>
-              </svg>
-            )}
+        {/* Top bar overlaid on image */}
+        <div
+          className="absolute inset-x-0 top-0 flex flex-col gap-3 px-5"
+          style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top) + 0.5rem)' }}
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-400">
+            CloudGreet · Live demo
+          </p>
+
+          {/* Vertical pills */}
+          <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            {VERTICALS.map((vert, i) => (
+              <button
+                key={vert.id}
+                onClick={() => selectVertical(i)}
+                className={`flex-shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium shadow-sm backdrop-blur-sm transition-all duration-200 ${
+                  i === active
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-white/80 text-gray-600 hover:bg-white hover:text-gray-900'
+                }`}
+              >
+                {vert.label}
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Live indicator on image */}
+        {live && (
+          <div className="absolute bottom-8 left-5 flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-full bg-sky-500 transition-transform duration-75"
+              style={{ transform: `scale(${ringScale})` }}
+            />
+            <span className="text-xs font-medium text-gray-600">
+              {agentTalking ? 'AI is speaking…' : 'Listening…'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Bottom UI ── */}
+      <div
+        className="flex flex-1 flex-col justify-between px-5"
+        style={{ paddingBottom: 'max(1.75rem, env(safe-area-inset-bottom) + 1rem)' }}
+      >
         {/* Business identity */}
-        <div className="text-center">
-          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+        <div className="pt-1">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
             {v.name}
           </h1>
-          <p className="mt-1 text-sm text-white/40">{v.tag}</p>
+          <p className="mt-0.5 text-sm text-gray-400">{v.tag}</p>
         </div>
 
-        {/* Live transcript */}
+        {/* Transcript — grows in middle */}
         {lastLines.length > 0 && (
-          <div className="w-full max-w-xs space-y-2 rounded-2xl border border-white/8 bg-white/5 p-4 backdrop-blur-sm">
+          <div className="my-3 space-y-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
             {lastLines.map((l, i) => (
               <div key={i} className="text-sm leading-snug">
-                <span className="mr-1.5 text-[9px] font-bold uppercase tracking-widest text-white/25">
+                <span className="mr-1.5 text-[9px] font-bold uppercase tracking-widest text-gray-300">
                   {l.role === 'agent' ? 'AI' : 'You'}
                 </span>
-                <span className={l.role === 'agent' ? 'text-sky-300' : 'text-white/80'}>
+                <span className={l.role === 'agent' ? 'text-sky-600' : 'text-gray-800'}>
                   {l.content}
                 </span>
               </div>
             ))}
           </div>
         )}
-      </div>
 
-      {/* Bottom controls */}
-      <div
-        className="relative z-10 flex flex-col items-center gap-3 px-5"
-        style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom) + 1.25rem)' }}
-      >
-        {!live && phase !== 'connecting' ? (
-          <>
-            <button
-              onClick={start}
-              className="w-full max-w-xs rounded-2xl bg-white py-4 text-sm font-semibold text-gray-900 shadow-lg transition-all hover:bg-gray-100 active:scale-95"
-            >
-              {phase === 'ended' ? 'Talk again' : 'Talk to the AI receptionist'}
-            </button>
-            {phase === 'idle' && (
-              <p className="text-center text-xs text-white/25">Try saying {v.hint}</p>
-            )}
-          </>
-        ) : phase === 'connecting' ? (
-          <div className="w-full max-w-xs rounded-2xl bg-white/8 py-4 text-center text-sm font-medium text-white/50">
-            Connecting…
-          </div>
-        ) : (
-          <div className="flex w-full max-w-xs gap-3">
-            <button
-              onClick={toggleMute}
-              className="flex-1 rounded-2xl border border-white/10 bg-white/8 py-4 text-sm font-medium text-white/70 transition hover:bg-white/14 active:scale-95"
-            >
-              {muted ? 'Unmute' : 'Mute'}
-            </button>
-            <button
-              onClick={() => { endCall(); setPhase('ended') }}
-              className="flex-1 rounded-2xl bg-red-500/90 py-4 text-sm font-medium text-white transition hover:bg-red-500 active:scale-95"
-            >
-              End call
-            </button>
-          </div>
-        )}
+        {/* Spacer when no transcript */}
+        {lastLines.length === 0 && <div className="flex-1" />}
 
-        {err && <p className="text-center text-xs text-red-400">{err}</p>}
+        {/* Call controls */}
+        <div className="flex flex-col gap-3">
+          {!live && phase !== 'connecting' ? (
+            <>
+              <button
+                onClick={start}
+                className="w-full rounded-2xl bg-gray-900 py-4 text-sm font-semibold text-white shadow-md transition-all hover:bg-gray-800 active:scale-[0.98]"
+              >
+                {phase === 'ended' ? 'Talk again' : 'Talk to the AI receptionist'}
+              </button>
+              {phase === 'idle' && (
+                <p className="text-center text-xs text-gray-400">Try saying {v.hint}</p>
+              )}
+            </>
+          ) : phase === 'connecting' ? (
+            <div className="w-full rounded-2xl border border-gray-200 bg-white py-4 text-center text-sm font-medium text-gray-400">
+              Connecting…
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <button
+                onClick={toggleMute}
+                className="flex-1 rounded-2xl border border-gray-200 bg-white py-4 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 active:scale-[0.98]"
+              >
+                {muted ? 'Unmute' : 'Mute'}
+              </button>
+              <button
+                onClick={() => { endCall(); setPhase('ended') }}
+                className="flex-1 rounded-2xl bg-red-500 py-4 text-sm font-medium text-white shadow-sm transition hover:bg-red-600 active:scale-[0.98]"
+              >
+                End call
+              </button>
+            </div>
+          )}
+
+          {err && <p className="text-center text-xs text-red-500">{err}</p>}
+        </div>
       </div>
     </main>
   )
