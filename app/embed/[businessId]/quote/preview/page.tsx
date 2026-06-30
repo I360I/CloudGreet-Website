@@ -2,15 +2,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-const STYLES = [
-  { label: 'Midnight',    accent: '#0a0a0b', bg: '#f9f9f9',   card: '#fff' },
-  { label: 'Navy',        accent: '#1e3a8a', bg: '#eff6ff',   card: '#fff' },
-  { label: 'Forest',      accent: '#15803d', bg: '#f0fdf4',   card: '#fff' },
-  { label: 'Violet',      accent: '#6d28d9', bg: '#f5f3ff',   card: '#fff' },
-  { label: 'Crimson',     accent: '#be123c', bg: '#fff1f2',   card: '#fff' },
-  { label: 'Slate',       accent: '#334155', bg: '#f1f5f9',   card: '#fff' },
-]
-
 export default async function QuotePreviewPage({ params }: { params: { businessId: string } }) {
   const raw = params.businessId || ''
   let id = raw
@@ -26,117 +17,321 @@ export default async function QuotePreviewPage({ params }: { params: { businessI
 
   const name = (biz as { business_name?: string } | null)?.business_name || 'Your Business'
   const origin = process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'
+  const src = (accent = '#0a0a0b') => `${origin}/embed/${businessId}/quote?accent=${encodeURIComponent(accent)}`
 
   return (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>{name} — Widget Styles</title>
+        <title>{name} — Quote Widget Layouts</title>
         <style>{`
           *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f4f4f2; color: #1a1a1a; }
+          html { scroll-behavior: smooth; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f0ee; color: #1a1a1a; }
 
-          .banner { background: #2563eb; color: #fff; font-size: 13px; font-weight: 600; text-align: center; padding: 10px 16px; }
+          /* ── Top nav ── */
+          .topnav { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 1px solid #e5e5e5; display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 0 20px; }
+          .topnav a { flex-shrink: 0; font-size: 13px; font-weight: 600; color: #555; text-decoration: none; padding: 16px 14px; border-bottom: 2px solid transparent; white-space: nowrap; }
+          .topnav a:hover { color: #0a0a0b; }
+          .topnav-logo { font-size: 14px; font-weight: 800; letter-spacing: -0.3px; color: #0a0a0b; padding: 16px 20px 16px 0; border-right: 1px solid #e5e5e5; margin-right: 8px; white-space: nowrap; flex-shrink: 0; }
 
-          .page-header { background: #fff; border-bottom: 1px solid #e5e5e5; padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
-          .page-header-logo { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
-          .page-header-sub { font-size: 12px; color: #999; }
+          /* ── Section shell ── */
+          .variant { margin: 32px auto; max-width: 1200px; padding: 0 24px; }
+          .variant-label { font-size: 10px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; color: #aaa; margin-bottom: 4px; }
+          .variant-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 16px; }
+          .mocksite { border-radius: 16px; overflow: hidden; box-shadow: 0 8px 40px -8px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06); background: #fff; }
+          .mocksite-bar { background: #f7f7f7; border-bottom: 1px solid #e5e5e5; padding: 10px 14px; display: flex; align-items: center; gap: 6px; }
+          .mocksite-dot { width: 10px; height: 10px; border-radius: 50%; }
+          .mocksite-url { flex: 1; background: #eee; border-radius: 5px; height: 22px; margin: 0 8px; }
 
-          .hero { background: linear-gradient(135deg, #0a0a0b 0%, #1a2744 100%); color: #fff; padding: 56px 32px 48px; text-align: center; }
-          .hero h1 { font-size: clamp(24px, 4vw, 42px); font-weight: 800; letter-spacing: -1px; line-height: 1.15; max-width: 560px; margin: 0 auto 12px; }
-          .hero p { font-size: 16px; color: rgba(255,255,255,0.6); max-width: 420px; margin: 0 auto 28px; line-height: 1.6; }
-          .hero-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 100px; margin-bottom: 20px; }
-          .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; }
+          /* shared mock page chrome */
+          .mock-nav { background: #fff; border-bottom: 1px solid #eee; padding: 0 28px; height: 52px; display: flex; align-items: center; justify-content: space-between; }
+          .mock-nav-logo { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+          .mock-nav-links { display: flex; gap: 20px; }
+          .mock-nav-links span { font-size: 12px; color: #888; }
+          .mock-footer { background: #f7f7f7; border-top: 1px solid #eee; padding: 18px 28px; font-size: 12px; color: #bbb; text-align: center; }
 
-          .grid-section { padding: 48px 32px; max-width: 1200px; margin: 0 auto; }
-          .grid-label { font-size: 11px; font-weight: 700; letter-spacing: 1.4px; color: #888; text-transform: uppercase; text-align: center; margin-bottom: 6px; }
-          .grid-title { font-size: clamp(20px, 3vw, 30px); font-weight: 800; letter-spacing: -0.5px; text-align: center; margin-bottom: 6px; }
-          .grid-sub { font-size: 15px; color: #666; text-align: center; max-width: 480px; margin: 0 auto 40px; line-height: 1.6; }
+          /* 1. Split */
+          .split-body { display: grid; grid-template-columns: 1fr 380px; gap: 0; }
+          .split-content { padding: 40px 32px; background: #fff; }
+          .split-content h2 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
+          .split-content p { font-size: 14px; color: #666; line-height: 1.7; margin-bottom: 20px; max-width: 340px; }
+          .split-content ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+          .split-content li { font-size: 13px; color: #444; display: flex; align-items: center; gap: 8px; }
+          .check { color: #16a34a; font-size: 14px; }
+          .split-widget { border-left: 1px solid #eee; }
+          .split-widget iframe { width: 100%; height: 460px; border: none; display: block; }
 
-          .style-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-          .style-card { border-radius: 20px; overflow: hidden; box-shadow: 0 4px 24px -4px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06); }
-          .style-card-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
-          .style-card-name { font-size: 13px; font-weight: 700; color: #1a1a1a; }
-          .style-card-hex { font-size: 11px; color: #999; font-family: monospace; }
-          .style-card-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-          .style-card-dot-wrap { display: flex; align-items: center; gap: 6px; }
-          .style-card iframe { display: block; width: 100%; height: 420px; border: none; }
+          /* 2. Hero embed */
+          .hero-body { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); padding: 48px 32px; display: grid; grid-template-columns: 1fr 360px; gap: 40px; align-items: center; }
+          .hero-text h2 { font-size: 30px; font-weight: 800; letter-spacing: -0.8px; color: #fff; line-height: 1.2; margin-bottom: 10px; }
+          .hero-text p { font-size: 14px; color: rgba(255,255,255,0.6); line-height: 1.7; max-width: 340px; }
+          .hero-widget iframe { width: 100%; height: 420px; border: none; border-radius: 14px; display: block; box-shadow: 0 20px 60px -10px rgba(0,0,0,0.5); }
 
-          .bottom-section { background: #fff; border-top: 1px solid #e5e5e5; padding: 48px 32px; }
-          .bottom-inner { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
-          .bottom-title { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 8px; }
-          .bottom-sub { font-size: 14px; color: #666; line-height: 1.7; margin-bottom: 20px; }
-          .code-block { background: #0a0a0b; color: #e5e7eb; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; line-height: 1.7; padding: 18px 20px; border-radius: 12px; overflow-x: auto; white-space: pre; }
-          .code-comment { color: #6b7280; }
-          .code-attr { color: #93c5fd; }
-          .code-val { color: #86efac; }
+          /* 3. Centered card */
+          .centered-body { background: #f8f8f6; padding: 48px 32px; }
+          .centered-head { text-align: center; margin-bottom: 28px; }
+          .centered-head h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px; }
+          .centered-head p { font-size: 14px; color: #666; }
+          .centered-card { max-width: 420px; margin: 0 auto; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px -8px rgba(0,0,0,0.14); }
+          .centered-card iframe { width: 100%; height: 440px; border: none; display: block; }
 
-          footer { padding: 28px 32px; text-align: center; font-size: 12px; color: #aaa; }
+          /* 4. Sidebar */
+          .sidebar-body { display: grid; grid-template-columns: 1fr 300px; gap: 0; min-height: 500px; }
+          .sidebar-content { padding: 36px 32px; background: #fff; }
+          .sidebar-content h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; margin-bottom: 10px; }
+          .sidebar-content p { font-size: 13px; color: #666; line-height: 1.7; margin-bottom: 16px; }
+          .sidebar-img { width: 100%; height: 130px; background: linear-gradient(120deg,#e0e7ff,#dbeafe); border-radius: 10px; margin-bottom: 12px; }
+          .sidebar-img2 { width: 100%; height: 90px; background: linear-gradient(120deg,#f0fdf4,#dcfce7); border-radius: 10px; }
+          .sidebar-right { background: #f8f8f6; border-left: 1px solid #eee; padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+          .sidebar-widget-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #aaa; text-transform: uppercase; }
+          .sidebar-right iframe { width: 100%; flex: 1; border: none; border-radius: 12px; box-shadow: 0 4px 16px -4px rgba(0,0,0,0.12); display: block; min-height: 420px; }
 
-          @media (max-width: 900px) { .style-grid { grid-template-columns: repeat(2, 1fr); } .bottom-inner { grid-template-columns: 1fr; } }
-          @media (max-width: 560px) { .style-grid { grid-template-columns: 1fr; } .grid-section { padding: 32px 16px; } }
+          /* 5. Full-width banner */
+          .fullwidth-top { background: #0a0a0b; padding: 32px 36px; display: flex; align-items: center; justify-content: space-between; }
+          .fullwidth-top h2 { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.4px; }
+          .fullwidth-top p { font-size: 13px; color: rgba(255,255,255,0.55); margin-top: 4px; }
+          .fullwidth-widget iframe { width: 100%; height: 360px; border: none; display: block; }
+
+          /* 6. Compact pop-in */
+          .compact-body { background: #fff; padding: 40px 32px; display: flex; gap: 36px; align-items: flex-start; }
+          .compact-text { flex: 1; }
+          .compact-text h2 { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; margin-bottom: 8px; }
+          .compact-text p { font-size: 13px; color: #666; line-height: 1.7; margin-bottom: 16px; max-width: 360px; }
+          .compact-steps { display: flex; flex-direction: column; gap: 14px; }
+          .compact-step { display: flex; gap: 12px; align-items: flex-start; }
+          .compact-step-num { width: 24px; height: 24px; border-radius: 50%; background: #0a0a0b; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+          .compact-step-text strong { font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px; }
+          .compact-step-text span { font-size: 12px; color: #888; }
+          .compact-widget { width: 320px; flex-shrink: 0; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px -8px rgba(0,0,0,0.16); }
+          .compact-widget iframe { width: 100%; height: 420px; border: none; display: block; }
+
+          .divider-section { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+          .divider-line { border: none; border-top: 1px solid #e0e0de; margin: 8px 0; }
         `}</style>
       </head>
       <body>
-        <div className="banner">Widget preview — share this link with clients to show them how it looks</div>
 
-        <div className="page-header">
-          <span className="page-header-logo">{name}</span>
-          <span className="page-header-sub">Powered by CloudGreet</span>
+        <div className="topnav">
+          <span className="topnav-logo">{name}</span>
+          <a href="#split">Split</a>
+          <a href="#hero">Hero</a>
+          <a href="#centered">Centered</a>
+          <a href="#sidebar">Sidebar</a>
+          <a href="#fullwidth">Full-width</a>
+          <a href="#compact">Compact</a>
         </div>
 
-        <div className="hero">
-          <div className="hero-badge"><span className="hero-dot" /> Instant AI quotes</div>
-          <h1>Reliable rides, on your schedule</h1>
-          <p>Professional transportation for airports, events, and everyday travel across Central Ohio.</p>
-        </div>
-
-        <div className="grid-section">
-          <div className="grid-label">Customizable styles</div>
-          <div className="grid-title">Pick a look that fits your brand</div>
-          <div className="grid-sub">Every color, same great experience. Add <code style={{fontFamily:'monospace',background:'#f0f0f0',padding:'1px 5px',borderRadius:4}}>?accent=#HEX</code> to the embed URL to match your site.</div>
-
-          <div className="style-grid">
-            {STYLES.map((s) => (
-              <div key={s.label} className="style-card" style={{ background: s.card }}>
-                <div className="style-card-header" style={{ background: s.bg }}>
-                  <div className="style-card-dot-wrap">
-                    <div className="style-card-dot" style={{ background: s.accent }} />
-                    <span className="style-card-name">{s.label}</span>
-                  </div>
-                  <span className="style-card-hex">{s.accent}</span>
-                </div>
-                <iframe
-                  src={`${origin}/embed/${businessId}/quote?accent=${encodeURIComponent(s.accent)}`}
-                  title={`${s.label} style`}
-                  allow="clipboard-write"
-                />
+        {/* 1. Split */}
+        <div className="variant" id="split">
+          <div className="variant-label">Layout 1</div>
+          <div className="variant-title">Split — text left, widget right</div>
+          <div className="mocksite">
+            <div className="mocksite-bar">
+              <div className="mocksite-dot" style={{background:'#ff5f57'}} />
+              <div className="mocksite-dot" style={{background:'#febc2e'}} />
+              <div className="mocksite-dot" style={{background:'#28c840'}} />
+              <div className="mocksite-url" />
+            </div>
+            <div className="mock-nav">
+              <span className="mock-nav-logo">{name}</span>
+              <div className="mock-nav-links"><span>Services</span><span>About</span><span>Contact</span></div>
+            </div>
+            <div className="split-body">
+              <div className="split-content">
+                <h2>Get an instant quote</h2>
+                <p>Know your fare before you book. Our AI gives you an exact price in seconds — no phone calls, no waiting.</p>
+                <ul>
+                  <li><span className="check">✓</span> Airport pickups & drop-offs</li>
+                  <li><span className="check">✓</span> CMH and Rickenbacker covered</li>
+                  <li><span className="check">✓</span> Book right in the chat</li>
+                  <li><span className="check">✓</span> No account needed</li>
+                </ul>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bottom-section">
-          <div className="bottom-inner">
-            <div>
-              <div className="bottom-title">Drop it on any website</div>
-              <div className="bottom-sub">
-                One iframe, any platform — WordPress, Squarespace, Wix, raw HTML. Set the <code style={{fontFamily:'monospace',background:'#f0f0f0',padding:'1px 4px',borderRadius:3}}>accent</code> param to your brand color and it just works.
+              <div className="split-widget">
+                <iframe src={src()} title="Quote widget" allow="clipboard-write" />
               </div>
             </div>
-            <div className="code-block">{`<iframe
-  src="${origin}/embed/${businessId}/quote
-      ?accent=%230a0a0b"
-  width="100%"
-  height="460"
-  frameborder="0"
-  style="border-radius:16px;border:none"
-></iframe>`}</div>
+            <div className="mock-footer">&copy; {new Date().getFullYear()} {name}</div>
           </div>
         </div>
 
-        <footer>&copy; {new Date().getFullYear()} {name} · All rights reserved</footer>
+        <div className="divider-section"><div className="divider-line" /></div>
+
+        {/* 2. Hero embed */}
+        <div className="variant" id="hero">
+          <div className="variant-label">Layout 2</div>
+          <div className="variant-title">Hero — widget in the banner</div>
+          <div className="mocksite">
+            <div className="mocksite-bar">
+              <div className="mocksite-dot" style={{background:'#ff5f57'}} />
+              <div className="mocksite-dot" style={{background:'#febc2e'}} />
+              <div className="mocksite-dot" style={{background:'#28c840'}} />
+              <div className="mocksite-url" />
+            </div>
+            <div className="hero-body">
+              <div className="hero-text">
+                <h2>Professional rides across Central Ohio</h2>
+                <p>Airports, events, or anywhere you need to go. Get your price instantly on the right.</p>
+              </div>
+              <div className="hero-widget">
+                <iframe src={src('#1e3a8a')} title="Quote widget" allow="clipboard-write" />
+              </div>
+            </div>
+            <div className="mock-footer">&copy; {new Date().getFullYear()} {name}</div>
+          </div>
+        </div>
+
+        <div className="divider-section"><div className="divider-line" /></div>
+
+        {/* 3. Centered */}
+        <div className="variant" id="centered">
+          <div className="variant-label">Layout 3</div>
+          <div className="variant-title">Centered — standalone quote section</div>
+          <div className="mocksite">
+            <div className="mocksite-bar">
+              <div className="mocksite-dot" style={{background:'#ff5f57'}} />
+              <div className="mocksite-dot" style={{background:'#febc2e'}} />
+              <div className="mocksite-dot" style={{background:'#28c840'}} />
+              <div className="mocksite-url" />
+            </div>
+            <div className="mock-nav">
+              <span className="mock-nav-logo">{name}</span>
+              <div className="mock-nav-links"><span>Services</span><span>About</span><span>Contact</span></div>
+            </div>
+            <div className="centered-body">
+              <div className="centered-head">
+                <h2>How much will my ride cost?</h2>
+                <p>Enter your pickup and destination and get a price instantly.</p>
+              </div>
+              <div className="centered-card">
+                <iframe src={src('#15803d')} title="Quote widget" allow="clipboard-write" />
+              </div>
+            </div>
+            <div className="mock-footer">&copy; {new Date().getFullYear()} {name}</div>
+          </div>
+        </div>
+
+        <div className="divider-section"><div className="divider-line" /></div>
+
+        {/* 4. Sidebar */}
+        <div className="variant" id="sidebar">
+          <div className="variant-label">Layout 4</div>
+          <div className="variant-title">Sidebar — pinned quote widget beside content</div>
+          <div className="mocksite">
+            <div className="mocksite-bar">
+              <div className="mocksite-dot" style={{background:'#ff5f57'}} />
+              <div className="mocksite-dot" style={{background:'#febc2e'}} />
+              <div className="mocksite-dot" style={{background:'#28c840'}} />
+              <div className="mocksite-url" />
+            </div>
+            <div className="mock-nav">
+              <span className="mock-nav-logo">{name}</span>
+              <div className="mock-nav-links"><span>Services</span><span>About</span><span>Contact</span></div>
+            </div>
+            <div className="sidebar-body">
+              <div className="sidebar-content">
+                <h2>Airport Transportation</h2>
+                <p>We provide reliable, on-time airport transportation to and from both Columbus airports. Track your flight, meet you at arrivals, and get you there stress-free.</p>
+                <div className="sidebar-img" />
+                <p>Whether it's an early morning departure or a late-night arrival, we have you covered with professional drivers who know the area.</p>
+                <div className="sidebar-img2" />
+              </div>
+              <div className="sidebar-right">
+                <span className="sidebar-widget-label">Quick quote</span>
+                <iframe src={src('#6d28d9')} title="Quote widget" allow="clipboard-write" />
+              </div>
+            </div>
+            <div className="mock-footer">&copy; {new Date().getFullYear()} {name}</div>
+          </div>
+        </div>
+
+        <div className="divider-section"><div className="divider-line" /></div>
+
+        {/* 5. Full-width */}
+        <div className="variant" id="fullwidth">
+          <div className="variant-label">Layout 5</div>
+          <div className="variant-title">Full-width — quote as a page-wide block</div>
+          <div className="mocksite">
+            <div className="mocksite-bar">
+              <div className="mocksite-dot" style={{background:'#ff5f57'}} />
+              <div className="mocksite-dot" style={{background:'#febc2e'}} />
+              <div className="mocksite-dot" style={{background:'#28c840'}} />
+              <div className="mocksite-url" />
+            </div>
+            <div className="mock-nav">
+              <span className="mock-nav-logo">{name}</span>
+              <div className="mock-nav-links"><span>Services</span><span>About</span><span>Contact</span></div>
+            </div>
+            <div className="fullwidth-top">
+              <div>
+                <h2>Ready to book your ride?</h2>
+                <p>Get an instant price and lock in your trip below.</p>
+              </div>
+            </div>
+            <div className="fullwidth-widget">
+              <iframe src={src('#be123c')} title="Quote widget" allow="clipboard-write" />
+            </div>
+            <div className="mock-footer">&copy; {new Date().getFullYear()} {name}</div>
+          </div>
+        </div>
+
+        <div className="divider-section"><div className="divider-line" /></div>
+
+        {/* 6. Compact pop-in */}
+        <div className="variant" id="compact">
+          <div className="variant-label">Layout 6</div>
+          <div className="variant-title">Compact — steps left, widget right</div>
+          <div className="mocksite">
+            <div className="mocksite-bar">
+              <div className="mocksite-dot" style={{background:'#ff5f57'}} />
+              <div className="mocksite-dot" style={{background:'#febc2e'}} />
+              <div className="mocksite-dot" style={{background:'#28c840'}} />
+              <div className="mocksite-url" />
+            </div>
+            <div className="mock-nav">
+              <span className="mock-nav-logo">{name}</span>
+              <div className="mock-nav-links"><span>Services</span><span>About</span><span>Contact</span></div>
+            </div>
+            <div className="compact-body">
+              <div className="compact-text">
+                <h2>Booking is simple</h2>
+                <p>Three steps and you're done — no app, no account, no hassle.</p>
+                <div className="compact-steps">
+                  <div className="compact-step">
+                    <div className="compact-step-num">1</div>
+                    <div className="compact-step-text">
+                      <strong>Enter your route</strong>
+                      <span>Pickup address and destination — use the quick buttons for airports.</span>
+                    </div>
+                  </div>
+                  <div className="compact-step">
+                    <div className="compact-step-num">2</div>
+                    <div className="compact-step-text">
+                      <strong>Get your price</strong>
+                      <span>The AI responds instantly with an exact fare.</span>
+                    </div>
+                  </div>
+                  <div className="compact-step">
+                    <div className="compact-step-num">3</div>
+                    <div className="compact-step-text">
+                      <strong>Confirm & you're booked</strong>
+                      <span>Give your name, number, and pickup time — that's it.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="compact-widget">
+                <iframe src={src('#334155')} title="Quote widget" allow="clipboard-write" />
+              </div>
+            </div>
+            <div className="mock-footer">&copy; {new Date().getFullYear()} {name}</div>
+          </div>
+        </div>
+
+        <div style={{height: '48px'}} />
+
       </body>
     </html>
   )
