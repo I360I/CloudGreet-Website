@@ -496,7 +496,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
             </div>
 
             {/* main content - left */}
-            <div className="absolute left-8 top-1/2 w-[min(92vw,600px)] -translate-y-1/2 sm:left-14 md:left-24 max-sm:left-5 max-sm:top-[42%] max-sm:w-[68vw]">
+            <div className="absolute left-8 top-1/2 w-[min(92vw,600px)] -translate-y-1/2 sm:left-14 md:left-24 max-sm:left-4 max-sm:top-[44%] max-sm:w-[72vw]">
               <motion.div key={`cat-${active}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.45 }}
                 className="mb-5 flex items-center gap-2.5">
                 <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sky-500" /></span>
@@ -505,7 +505,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
               {/* the business name melts between agents (Magic UI morphing text) */}
               <MorphingText
                 text={desk.biz}
-                className="font-clash text-[clamp(2.9rem,5.8vw,5.4rem)] max-sm:text-[2.05rem] font-semibold leading-[0.9] max-sm:leading-[0.95] tracking-[-0.02em] text-gray-900"
+                className="font-clash text-[clamp(2.9rem,5.8vw,5.4rem)] max-sm:text-[1.6rem] font-semibold leading-[0.9] max-sm:leading-[1.05] tracking-[-0.02em] text-gray-900"
               />
               <AnimatePresence mode="wait" custom={dir}>
                 <motion.div key={active} custom={dir}
@@ -567,7 +567,7 @@ export default function AgentDeskReveal({ children }: { children?: React.ReactNo
                 {DESKS.map((d, i) => (
                   <div key={d.v} ref={(el) => { pillRefs.current[i] = el }} className="relative">
                     <DockPill mouseX={dockX} onClick={() => go(i, i > active ? 1 : -1)}
-                      className={`relative whitespace-nowrap rounded-full px-5 py-2.5 max-sm:px-2.5 max-sm:py-2 text-sm max-sm:text-[11px] font-medium transition-colors ${i === active
+                      className={`relative whitespace-nowrap rounded-full px-5 py-2.5 max-sm:px-3.5 max-sm:py-2 text-sm max-sm:text-[12px] font-medium transition-colors ${i === active
                         ? 'text-white'
                         : 'border border-white/70 bg-white/50 text-gray-600 backdrop-blur-xl shadow-[0_10px_24px_-12px_rgba(15,23,42,0.4),inset_0_1px_0_0_rgba(255,255,255,0.9)] hover:bg-white/70 hover:text-gray-900'}`}>
                       {i === active && <motion.span layoutId="sel" className="absolute inset-0 -z-10 rounded-full bg-gray-900 shadow-[0_6px_16px_-6px_rgba(2,32,71,0.6)]" transition={{ type: 'spring', stiffness: 400, damping: 34 }} />}
