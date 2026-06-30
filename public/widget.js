@@ -91,6 +91,8 @@
   function renderOpen() { btn.innerHTML = closeIcon; }
   renderClosed();
 
+  function isMobile() { return window.innerWidth <= 600; }
+
   // Chat panel (iframe wrapper) - matches the landing panel styling.
   var panel = document.createElement('div');
   panel.style.cssText = [
@@ -101,6 +103,20 @@
     'opacity:0', 'transform:translateY(24px) scale(.96)', 'transform-origin:bottom right',
     'pointer-events:none', 'transition:opacity .22s cubic-bezier(.22,1,.36,1), transform .22s cubic-bezier(.22,1,.36,1)'
   ].join(';');
+
+  function applyPanelSize() {
+    if (isMobile()) {
+      panel.style.top = '0'; panel.style.left = '0'; panel.style.right = '0'; panel.style.bottom = '0';
+      panel.style.width = '100%'; panel.style.height = '100%';
+      panel.style.borderRadius = '0'; panel.style.boxShadow = 'none';
+      panel.style.transformOrigin = 'center';
+    } else {
+      panel.style.top = 'auto'; panel.style.left = 'auto'; panel.style.right = '20px'; panel.style.bottom = '140px';
+      panel.style.width = 'min(93vw, 392px)'; panel.style.height = 'min(72vh, 600px)';
+      panel.style.borderRadius = '20px'; panel.style.boxShadow = '0 30px 70px -22px rgba(0,0,0,0.45)';
+      panel.style.transformOrigin = 'bottom right';
+    }
+  }
 
   var iframe = document.createElement('iframe');
   iframe.src = origin + '/embed/' + encodeURIComponent(businessId);
@@ -113,19 +129,26 @@
   function setOpen(v) {
     open = v;
     if (open) {
+      applyPanelSize();
       if (ringText) ring.style.opacity = '0';
+      // Hide launcher entirely on mobile — the iframe has its own X button
+      wrap.style.opacity = isMobile() ? '0' : '1';
+      wrap.style.pointerEvents = isMobile() ? 'none' : 'auto';
       panel.style.opacity = '1';
       panel.style.transform = 'translateY(0) scale(1)';
       panel.style.pointerEvents = 'auto';
       renderOpen();
     } else {
       if (ringText) ring.style.opacity = '1';
+      wrap.style.opacity = '1';
+      wrap.style.pointerEvents = 'auto';
       panel.style.opacity = '0';
       panel.style.transform = 'translateY(24px) scale(.96)';
       panel.style.pointerEvents = 'none';
       renderClosed();
     }
   }
+  window.addEventListener('resize', function () { if (open) applyPanelSize(); });
   btn.addEventListener('click', function () { setOpen(!open); });
 
   // The chat UI inside the iframe can ask us to close (the X in its header)
