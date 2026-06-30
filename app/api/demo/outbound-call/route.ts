@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
   const r = await fetch('https://api.retellai.com/v2/create-phone-call', {
    method: 'POST',
    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-   body: JSON.stringify({ from_number: DEMO_FROM, to_number: to, override_agent_id: DEMO_AGENT, begin_message_delay_ms: 2000 }),
+   body: JSON.stringify({ from_number: DEMO_FROM, to_number: to, override_agent_id: DEMO_AGENT }),
   })
   const j = await r.json().catch(() => ({} as any))
   if (!r.ok) {
