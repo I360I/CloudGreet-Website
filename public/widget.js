@@ -42,7 +42,13 @@
   var style = document.createElement('style');
   style.textContent =
     '@keyframes cgPing{75%,100%{transform:scale(2);opacity:0}}' +
-    '@keyframes cgSpin{to{transform:rotate(360deg)}}';
+    '@keyframes cgSpin{to{transform:rotate(360deg)}}' +
+    // Full-screen panel on mobile regardless of WP viewport meta settings.
+    // max-device-width uses the physical device pixels, not the CSS viewport,
+    // so it works even when the host site forces width=1024.
+    '@media(max-device-width:640px){#__cg_panel__{' +
+    'top:0!important;left:0!important;right:0!important;bottom:0!important;' +
+    'width:100%!important;height:100%!important;border-radius:0!important;box-shadow:none!important}}';
   document.head.appendChild(style);
 
   // Launcher container holds the curved-text ring + the button, anchored in the
@@ -91,10 +97,14 @@
   function renderOpen() { btn.innerHTML = closeIcon; }
   renderClosed();
 
-  function isMobile() { return window.innerWidth <= 600; }
+  // screen.width is the physical device pixel width — unaffected by the host
+  // site's viewport meta tag (some WP themes force width=1024 which makes
+  // window.innerWidth report 1024 on a 390px phone).
+  function isMobile() { return screen.width <= 640; }
 
   // Chat panel (iframe wrapper) - matches the landing panel styling.
   var panel = document.createElement('div');
+  panel.id = '__cg_panel__';
   panel.style.cssText = [
     'position:fixed', 'bottom:140px', 'right:20px',
     'width:min(93vw, 392px)', 'height:min(72vh, 600px)',

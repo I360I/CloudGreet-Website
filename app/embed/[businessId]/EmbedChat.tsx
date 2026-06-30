@@ -35,6 +35,7 @@ export default function EmbedChat({ businessId, name, autoOpen }: { businessId: 
   const [loading, setLoading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const sessionRef = useRef<string>('')
 
   useEffect(() => { sessionRef.current = getSessionId(businessId) }, [businessId])
@@ -45,6 +46,27 @@ export default function EmbedChat({ businessId, name, autoOpen }: { businessId: 
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading])
   useEffect(() => { setTimeout(() => inputRef.current?.focus(), 200) }, [])
+
+  // Visual Viewport API: shrink container to visible area above keyboard on iOS.
+  // Standard 100vh / 100dvh both fail inside cross-origin iframes on iOS Safari;
+  // this is the only approach that reliably keeps the header + input visible.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => {
+      const el = containerRef.current
+      if (!el) return
+      el.style.height = vv.height + 'px'
+      el.style.top = vv.offsetTop + 'px'
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
 
   const send = async (override?: string) => {
     const text = (override ?? input).trim()
@@ -76,7 +98,7 @@ export default function EmbedChat({ businessId, name, autoOpen }: { businessId: 
   const showChips = messages.length <= 1 && !loading
 
   return (
-    <div className="flex h-dvh flex-col bg-white overflow-hidden">
+    <div ref={containerRef} className="flex flex-col bg-white overflow-hidden" style={{ position: 'fixed', inset: 0 }}>
       {/* Header */}
       <div className="relative flex items-center justify-between bg-[#0a0a0b] px-5 py-4 text-white">
         <div>
