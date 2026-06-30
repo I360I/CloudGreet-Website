@@ -85,7 +85,7 @@ function AddressInput({
 
   return (
     <div ref={wrapRef}>
-      <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+      <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
         {label}
       </label>
       <div className="relative">
@@ -96,7 +96,7 @@ function AddressInput({
           onFocus={() => { if (suggestions.length > 0) setOpen(true) }}
           placeholder={placeholder}
           autoComplete="off"
-          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-400 focus:bg-white"
+          className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-400 focus:bg-white"
         />
         {open && suggestions.length > 0 && (
           <ul className="absolute z-50 mt-1 w-full rounded-xl border border-black/10 bg-white shadow-lg overflow-hidden">
@@ -104,7 +104,7 @@ function AddressInput({
               <li
                 key={s}
                 onMouseDown={() => pick(s)}
-                className={`px-4 py-2.5 text-[14px] text-gray-800 cursor-pointer leading-snug transition-colors ${i === active ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+                className={`px-3.5 py-2 text-[13px] text-gray-800 cursor-pointer leading-snug transition-colors ${i === active ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
               >
                 {s}
               </li>
@@ -112,13 +112,13 @@ function AddressInput({
           </ul>
         )}
       </div>
-      <div className="flex gap-2 mt-2">
+      <div className="flex gap-1.5 mt-1.5">
         {AIRPORTS.map((a) => (
           <button
             key={a.label}
             type="button"
             onMouseDown={() => pick(a.value)}
-            className="rounded-full border px-3 py-1 text-[12px] font-medium transition-colors"
+            className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors"
             style={
               value === a.value
                 ? { background: accent, borderColor: accent, color: '#fff' }
@@ -179,10 +179,10 @@ export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { b
   }
 
   const Header = ({ subtitle }: { subtitle: string }) => (
-    <div className="flex items-center justify-between px-5 py-4 text-white flex-shrink-0" style={{ background: accent }}>
+    <div className="flex items-center justify-between px-4 py-3 text-white flex-shrink-0" style={{ background: accent }}>
       <div>
-        <div className="text-[15px] font-semibold tracking-tight">{name}</div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/55">
+        <div className="text-[14px] font-semibold tracking-tight">{name}</div>
+        <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-white/55">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_2px_rgba(52,211,153,0.5)]" />
           {subtitle}
         </div>
@@ -204,8 +204,8 @@ export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { b
       <div className="flex h-screen flex-col bg-white">
         <Header subtitle="Instant price quote" />
         <div className="flex-1 overflow-y-auto">
-        <div className="flex flex-col min-h-full justify-center px-6 py-6 gap-3">
-          <div className="space-y-4">
+        <div className="flex flex-col min-h-full justify-center px-4 py-4 gap-2">
+          <div className="space-y-3">
             <AddressInput
               label="Pickup"
               value={pickup}
@@ -226,12 +226,12 @@ export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { b
           <button
             onClick={submitQuote}
             disabled={!pickup.trim() || !dropoff.trim()}
-            className="w-full flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-[15px] font-semibold text-white transition-all disabled:opacity-35 mt-2"
+            className="w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-white transition-all disabled:opacity-35 mt-1"
             style={{ background: accent }}
           >
             Get Quote <ArrowRight weight="bold" className="w-4 h-4" />
           </button>
-          <p className="text-center text-[11px] text-gray-400">Instant quote · no obligation</p>
+          <p className="text-center text-[10px] text-gray-400">Instant quote · no obligation</p>
         </div>
         </div>
       </div>
