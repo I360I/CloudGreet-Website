@@ -42,14 +42,7 @@
   var style = document.createElement('style');
   style.textContent =
     '@keyframes cgPing{75%,100%{transform:scale(2);opacity:0}}' +
-    '@keyframes cgSpin{to{transform:rotate(360deg)}}' +
-    // On mobile: anchor panel at top so the keyboard (always at bottom) can't
-    // cover it. max-device-width uses physical pixels so it works even when the
-    // host WP theme forces a non-device viewport width.
-    '@media(max-device-width:640px){#__cg_panel__{' +
-    'top:8px!important;left:8px!important;right:8px!important;bottom:auto!important;' +
-    'width:calc(100% - 16px)!important;height:55vh!important;' +
-    'border-radius:16px!important;transform-origin:top right!important}}';
+    '@keyframes cgSpin{to{transform:rotate(360deg)}}';
   document.head.appendChild(style);
 
   // Launcher container holds the curved-text ring + the button, anchored in the
@@ -63,6 +56,8 @@
   // Curved rotating text ring (green text on a circular path, repeated to fill).
   var ring = document.createElement('div');
   ring.style.cssText = 'position:absolute;inset:0;animation:cgSpin 34s linear infinite;transition:opacity .2s ease;';
+  // One pass is enough - textLength stretches it evenly around the whole
+  // circle, so the letters end up nicely tracked out (doubled only if short).
   var repeated = ringText.length < 16 ? ringText + ringText : ringText;
   ring.innerHTML =
     '<svg width="116" height="116" viewBox="0 0 116 116" style="display:block;overflow:visible">' +
@@ -96,9 +91,8 @@
   function renderOpen() { btn.innerHTML = closeIcon; }
   renderClosed();
 
-  // Chat panel (iframe wrapper).
+  // Chat panel (iframe wrapper) - matches the landing panel styling.
   var panel = document.createElement('div');
-  panel.id = '__cg_panel__';
   panel.style.cssText = [
     'position:fixed', 'bottom:140px', 'right:20px',
     'width:min(93vw, 392px)', 'height:min(72vh, 600px)',
@@ -115,39 +109,16 @@
   iframe.setAttribute('allow', 'clipboard-write');
   panel.appendChild(iframe);
 
-  // iOS scroll lock: prevents the host page from jumping when the iframe input
-  // is focused. Saves and restores scroll position around the lock.
-  var _savedScroll = 0;
-  function lockScroll() {
-    _savedScroll = window.pageYOffset || document.documentElement.scrollTop || 0;
-    document.body.style.position = 'fixed';
-    document.body.style.top = '-' + _savedScroll + 'px';
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    document.body.style.overflow = 'hidden';
-  }
-  function unlockScroll() {
-    if (!document.body.style.position) return;
-    document.body.style.position = '';
-    document.body.style.top = '';
-    document.body.style.left = '';
-    document.body.style.right = '';
-    document.body.style.overflow = '';
-    window.scrollTo(0, _savedScroll);
-  }
-
   var open = false;
   function setOpen(v) {
     open = v;
     if (open) {
-      lockScroll();
       if (ringText) ring.style.opacity = '0';
       panel.style.opacity = '1';
       panel.style.transform = 'translateY(0) scale(1)';
       panel.style.pointerEvents = 'auto';
       renderOpen();
     } else {
-      unlockScroll();
       if (ringText) ring.style.opacity = '1';
       panel.style.opacity = '0';
       panel.style.transform = 'translateY(24px) scale(.96)';

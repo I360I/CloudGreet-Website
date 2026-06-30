@@ -76,7 +76,7 @@ export default function EmbedChat({ businessId, name, autoOpen }: { businessId: 
   const showChips = messages.length <= 1 && !loading
 
   return (
-    <div className="flex h-screen flex-col bg-white overflow-hidden">
+    <div className="flex h-screen flex-col bg-white">
       {/* Header */}
       <div className="relative flex items-center justify-between bg-[#0a0a0b] px-5 py-4 text-white">
         <div>
