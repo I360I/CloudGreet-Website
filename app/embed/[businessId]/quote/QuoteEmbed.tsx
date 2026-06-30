@@ -5,6 +5,11 @@ import { PaperPlaneRight, ArrowRight } from '@phosphor-icons/react'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
+const AIRPORTS = [
+  { label: 'CMH', value: 'John Glenn Columbus International Airport (CMH), Columbus, OH' },
+  { label: 'Rickenbacker', value: 'Rickenbacker International Airport (LCK), Columbus, OH' },
+]
+
 function getSessionId(businessId: string): string {
   const key = `cg_quote_sess_${businessId}`
   try {
@@ -25,12 +30,14 @@ function AddressInput({
   onChange,
   placeholder,
   onSubmit,
+  accent,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   placeholder: string
   onSubmit?: () => void
+  accent: string
 }) {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [open, setOpen] = useState(false)
@@ -77,37 +84,56 @@ function AddressInput({
   }
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div ref={wrapRef}>
       <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
         {label}
       </label>
-      <input
-        value={value}
-        onChange={(e) => { onChange(e.target.value); fetchSuggestions(e.target.value) }}
-        onKeyDown={onKeyDown}
-        onFocus={() => { if (suggestions.length > 0) setOpen(true) }}
-        placeholder={placeholder}
-        autoComplete="off"
-        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-800 focus:bg-white"
-      />
-      {open && suggestions.length > 0 && (
-        <ul className="absolute z-50 mt-1 w-full rounded-xl border border-black/10 bg-white shadow-lg overflow-hidden">
-          {suggestions.map((s, i) => (
-            <li
-              key={s}
-              onMouseDown={() => pick(s)}
-              className={`px-4 py-2.5 text-[14px] text-gray-800 cursor-pointer leading-snug transition-colors ${i === active ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
-            >
-              {s}
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="relative">
+        <input
+          value={value}
+          onChange={(e) => { onChange(e.target.value); fetchSuggestions(e.target.value) }}
+          onKeyDown={onKeyDown}
+          onFocus={() => { if (suggestions.length > 0) setOpen(true) }}
+          placeholder={placeholder}
+          autoComplete="off"
+          className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-400 focus:bg-white"
+        />
+        {open && suggestions.length > 0 && (
+          <ul className="absolute z-50 mt-1 w-full rounded-xl border border-black/10 bg-white shadow-lg overflow-hidden">
+            {suggestions.map((s, i) => (
+              <li
+                key={s}
+                onMouseDown={() => pick(s)}
+                className={`px-4 py-2.5 text-[14px] text-gray-800 cursor-pointer leading-snug transition-colors ${i === active ? 'bg-gray-100' : 'hover:bg-gray-50'}`}
+              >
+                {s}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="flex gap-2 mt-2">
+        {AIRPORTS.map((a) => (
+          <button
+            key={a.label}
+            type="button"
+            onMouseDown={() => pick(a.value)}
+            className="rounded-full border px-3 py-1 text-[12px] font-medium transition-colors"
+            style={
+              value === a.value
+                ? { background: accent, borderColor: accent, color: '#fff' }
+                : { background: '#fff', borderColor: '#d1d5db', color: '#374151' }
+            }
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
 
-export default function QuoteEmbed({ businessId, name }: { businessId: string; name: string }) {
+export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { businessId: string; name: string; accent?: string }) {
   const [step, setStep] = useState<'form' | 'chat'>('form')
   const [pickup, setPickup] = useState('')
   const [dropoff, setDropoff] = useState('')
@@ -152,16 +178,8 @@ export default function QuoteEmbed({ businessId, name }: { businessId: string; n
     await callChat(text)
   }
 
-  const sendChat = async () => {
-    const text = chatInput.trim()
-    if (!text || loading) return
-    setMessages((m) => [...m, { role: 'user', content: text }])
-    setChatInput('')
-    await callChat(text)
-  }
-
   const Header = ({ subtitle }: { subtitle: string }) => (
-    <div className="flex items-center justify-between bg-[#0a0a0b] px-5 py-4 text-white flex-shrink-0">
+    <div className="flex items-center justify-between px-5 py-4 text-white flex-shrink-0" style={{ background: accent }}>
       <div>
         <div className="text-[15px] font-semibold tracking-tight">{name}</div>
         <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/55">
@@ -185,14 +203,15 @@ export default function QuoteEmbed({ businessId, name }: { businessId: string; n
     return (
       <div className="flex h-screen flex-col bg-white">
         <Header subtitle="Instant price quote" />
-        <div className="flex flex-1 flex-col justify-center px-6 gap-3">
-          <div className="space-y-3">
+        <div className="flex flex-1 flex-col justify-center px-6 gap-3 overflow-y-auto py-6">
+          <div className="space-y-4">
             <AddressInput
               label="Pickup"
               value={pickup}
               onChange={setPickup}
               placeholder="e.g. 123 Main St, Columbus"
               onSubmit={submitQuote}
+              accent={accent}
             />
             <AddressInput
               label="Destination"
@@ -200,12 +219,14 @@ export default function QuoteEmbed({ businessId, name }: { businessId: string; n
               onChange={setDropoff}
               placeholder="e.g. Columbus Airport (CMH)"
               onSubmit={submitQuote}
+              accent={accent}
             />
           </div>
           <button
             onClick={submitQuote}
             disabled={!pickup.trim() || !dropoff.trim()}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#0a0a0b] px-6 py-3.5 text-[15px] font-semibold text-white transition-all hover:bg-black/80 disabled:opacity-35 mt-1"
+            className="w-full flex items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-[15px] font-semibold text-white transition-all disabled:opacity-35 mt-2"
+            style={{ background: accent }}
           >
             Get Quote <ArrowRight weight="bold" className="w-4 h-4" />
           </button>
@@ -221,11 +242,14 @@ export default function QuoteEmbed({ businessId, name }: { businessId: string; n
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[84%] whitespace-pre-wrap px-3.5 py-2.5 text-sm leading-relaxed ${
-              m.role === 'user'
-                ? 'rounded-2xl rounded-br-md bg-[#0a0a0b] text-white'
-                : 'rounded-2xl rounded-bl-md border border-black/[0.08] bg-white text-[#101015] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
-            }`}>
+            <div
+              className={`max-w-[84%] whitespace-pre-wrap px-3.5 py-2.5 text-sm leading-relaxed ${
+                m.role === 'user'
+                  ? 'rounded-2xl rounded-br-md text-white'
+                  : 'rounded-2xl rounded-bl-md border border-black/[0.08] bg-white text-[#101015] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+              }`}
+              style={m.role === 'user' ? { background: accent } : {}}
+            >
               {m.content}
             </div>
           </div>
@@ -255,11 +279,20 @@ export default function QuoteEmbed({ businessId, name }: { businessId: string; n
           type="submit"
           disabled={loading || !chatInput.trim()}
           aria-label="Send"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0a0a0b] text-white transition-all hover:bg-black disabled:opacity-30"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-all disabled:opacity-30"
+          style={{ background: accent }}
         >
           <PaperPlaneRight className="h-4 w-4" weight="fill" />
         </button>
       </form>
     </div>
   )
+
+  function sendChat() {
+    const text = chatInput.trim()
+    if (!text || loading) return
+    setMessages((m) => [...m, { role: 'user', content: text }])
+    setChatInput('')
+    return callChat(text)
+  }
 }

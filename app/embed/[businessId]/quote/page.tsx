@@ -3,7 +3,13 @@ import QuoteEmbed from './QuoteEmbed'
 
 export const dynamic = 'force-dynamic'
 
-export default async function QuoteEmbedPage({ params }: { params: { businessId: string } }) {
+export default async function QuoteEmbedPage({
+  params,
+  searchParams,
+}: {
+  params: { businessId: string }
+  searchParams: { accent?: string; ring?: string }
+}) {
   const raw = params.businessId || ''
   let id = raw
   try { id = decodeURIComponent(raw) } catch { /* keep raw */ }
@@ -24,5 +30,9 @@ export default async function QuoteEmbedPage({ params }: { params: { businessId:
     )
   }
 
-  return <QuoteEmbed businessId={(biz as any).id} name={(biz as any).business_name || 'us'} />
+  // Sanitize accent to a hex color only
+  const rawAccent = searchParams.accent || ''
+  const accent = /^#[0-9a-fA-F]{3,6}$/.test(rawAccent) ? rawAccent : '#0a0a0b'
+
+  return <QuoteEmbed businessId={(biz as any).id} name={(biz as any).business_name || 'us'} accent={accent} />
 }
