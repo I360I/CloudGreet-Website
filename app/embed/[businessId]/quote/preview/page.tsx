@@ -17,7 +17,49 @@ export default async function QuotePreviewPage({ params }: { params: { businessI
 
   const name = (biz as { business_name?: string } | null)?.business_name || 'Your Business'
   const origin = process.env.NEXT_PUBLIC_APP_URL || 'https://cloudgreet.com'
-  const src = (accent = '#0a0a0b') => `${origin}/embed/${businessId}/quote?accent=${encodeURIComponent(accent)}`
+  const base = `${origin}/embed/${businessId}/quote`
+  const src = (accent = '#0a0a0b') => `${base}?accent=${encodeURIComponent(accent)}`
+  const p = (params: Record<string, string>) =>
+    `${base}?` + Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
+
+  const PARAM_EXAMPLES = [
+    {
+      name: 'Sharp corners',
+      description: '?radius=0',
+      url: p({ accent: '#0a0a0b', radius: '0' }),
+      code: '?radius=0',
+    },
+    {
+      name: 'Extra rounded',
+      description: '?radius=24',
+      url: p({ accent: '#15803d', radius: '24' }),
+      code: '?radius=24',
+    },
+    {
+      name: 'No header',
+      description: '?header=false',
+      url: p({ accent: '#1e3a8a', header: 'false' }),
+      code: '?header=false',
+    },
+    {
+      name: 'Dark background',
+      description: '?bg=+?accent=',
+      url: p({ accent: '#3b82f6', bg: '#0f172a' }),
+      code: '?bg=%230f172a\n&accent=%233b82f6',
+    },
+    {
+      name: 'Custom button label',
+      description: '?label=',
+      url: p({ accent: '#6d28d9', label: 'Check My Price' }),
+      code: '?label=Check+My+Price',
+    },
+    {
+      name: 'No header + custom label',
+      description: 'combined',
+      url: p({ accent: '#be123c', header: 'false', label: 'Get My Fare', radius: '6' }),
+      code: '?header=false\n&label=Get+My+Fare\n&radius=6',
+    },
+  ]
 
   return (
     <html lang="en">
@@ -109,6 +151,18 @@ export default async function QuotePreviewPage({ params }: { params: { businessI
 
           .divider-section { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
           .divider-line { border: none; border-top: 1px solid #e0e0de; margin: 8px 0; }
+
+          /* params section */
+          .params-section { margin: 32px auto 48px; max-width: 1200px; padding: 0 24px; }
+          .params-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+          .param-card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px -4px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05); }
+          .param-card iframe { display: block; width: 100%; height: 400px; border: none; }
+          .param-card-footer { padding: 14px 16px; border-top: 1px solid #f0f0f0; }
+          .param-card-name { font-size: 12px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; }
+          .param-card-code { font-family: 'SF Mono','Fira Code',monospace; font-size: 11px; color: #555; background: #f5f5f5; border-radius: 7px; padding: 8px 10px; line-height: 1.6; word-break: break-all; }
+
+          @media (max-width: 900px) { .params-grid { grid-template-columns: repeat(2,1fr); } }
+          @media (max-width: 560px) { .params-grid { grid-template-columns: 1fr; } }
         `}</style>
       </head>
       <body>
@@ -121,6 +175,7 @@ export default async function QuotePreviewPage({ params }: { params: { businessI
           <a href="#sidebar">Sidebar</a>
           <a href="#fullwidth">Full-width</a>
           <a href="#compact">Compact</a>
+          <a href="#params">Style params</a>
         </div>
 
         {/* 1. Split */}
@@ -327,6 +382,25 @@ export default async function QuotePreviewPage({ params }: { params: { businessI
               </div>
             </div>
             <div className="mock-footer">&copy; {new Date().getFullYear()} {name}</div>
+          </div>
+        </div>
+
+        <div className="divider-section"><div className="divider-line" /></div>
+
+        {/* Style params */}
+        <div className="params-section" id="params">
+          <div className="variant-label">Style params</div>
+          <div className="variant-title">Customize with URL params — mix and match</div>
+          <div className="params-grid">
+            {PARAM_EXAMPLES.map((ex) => (
+              <div key={ex.name} className="param-card">
+                <iframe src={ex.url} title={ex.name} allow="clipboard-write" />
+                <div className="param-card-footer">
+                  <div className="param-card-name">{ex.name}</div>
+                  <div className="param-card-code">{ex.code}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
