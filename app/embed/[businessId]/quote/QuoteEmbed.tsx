@@ -203,7 +203,8 @@ export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { b
     return (
       <div className="flex h-screen flex-col bg-white">
         <Header subtitle="Instant price quote" />
-        <div className="flex flex-1 flex-col justify-center px-6 gap-3 overflow-y-auto py-6">
+        <div className="flex-1 overflow-y-auto">
+        <div className="flex flex-col min-h-full justify-center px-6 py-6 gap-3">
           <div className="space-y-4">
             <AddressInput
               label="Pickup"
@@ -231,6 +232,7 @@ export default function QuoteEmbed({ businessId, name, accent = '#0a0a0b' }: { b
             Get Quote <ArrowRight weight="bold" className="w-4 h-4" />
           </button>
           <p className="text-center text-[11px] text-gray-400">Instant quote · no obligation</p>
+        </div>
         </div>
       </div>
     )

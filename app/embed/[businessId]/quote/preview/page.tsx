@@ -40,7 +40,7 @@ export default async function QuotePreviewPage({ params }: { params: { businessI
           .section-title { font-size: clamp(22px, 3vw, 32px); font-weight: 700; letter-spacing: -0.5px; margin-bottom: 12px; }
           .section-sub { font-size: 16px; color: #666; line-height: 1.6; max-width: 520px; margin-bottom: 40px; }
           .quote-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
-          .quote-layout iframe { border: none; border-radius: 16px; box-shadow: 0 20px 60px -15px rgba(0,0,0,0.18); width: 100%; height: 580px; display: block; }
+          .quote-layout iframe { border: none; border-radius: 16px; box-shadow: 0 20px 60px -15px rgba(0,0,0,0.18); width: 100%; height: min(72vh, 560px); min-height: 460px; display: block; }
           .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
           .feature { background: #fff; border-radius: 14px; padding: 24px; border: 1px solid #e8e8e8; }
           .feature-icon { font-size: 28px; margin-bottom: 12px; }
