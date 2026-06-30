@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch, Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass, CaretRight, Clock, CalendarBlank } from '@phosphor-icons/react'
+import { Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch, Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass, CaretRight, Clock, CalendarBlank, PaperPlaneTilt, CopySimple } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
@@ -76,7 +76,35 @@ export default function SalesLeadsPage() {
   // each row having to own its own state.
   const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
   const [findingEmails, setFindingEmails] = useState(false)
+  const [outreachModal, setOutreachModal] = useState<{
+    leads: Pick<Lead, 'id' | 'business_name'>[]
+    results: Map<string, string>
+    loading: boolean
+  } | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
+
+  const generateOutreach = async (ids: string[]) => {
+    const targetLeads = leads.filter((l) => ids.includes(l.id)).map((l) => ({ id: l.id, business_name: l.business_name }))
+    setOutreachModal({ leads: targetLeads, results: new Map(), loading: true })
+    try {
+      const res = await fetchWithAuth('/api/sales/leads/generate-outreach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadIds: ids }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (json.results) {
+        const map = new Map<string, string>(
+          (json.results as { leadId: string; draft: string }[]).map((r) => [r.leadId, r.draft]),
+        )
+        setOutreachModal((prev) => prev ? { ...prev, results: map, loading: false } : null)
+      } else {
+        setOutreachModal((prev) => prev ? { ...prev, loading: false } : null)
+      }
+    } catch {
+      setOutreachModal((prev) => prev ? { ...prev, loading: false } : null)
+    }
+  }
 
   const toggleSelected = (id: string) => {
     setSelected((prev) => {
@@ -560,6 +588,14 @@ export default function SalesLeadsPage() {
                       {findingEmails ? 'Finding emails...' : 'Find emails'}
                     </button>
                   )}
+                  <button
+                    onClick={() => void generateOutreach(Array.from(selected))}
+                    disabled={bulkBusy}
+                    className="inline-flex items-center gap-1.5 text-xs bg-violet-600 text-white hover:bg-violet-700 rounded-lg px-3 py-1.5 disabled:opacity-50"
+                  >
+                    <PaperPlaneTilt weight="bold" className="w-3 h-3" />
+                    Generate DMs
+                  </button>
                   <select
                     onChange={(e) => { if (e.target.value) bulkUpdateStatus(e.target.value); e.target.value = '' }}
                     disabled={bulkBusy}
@@ -705,6 +741,15 @@ export default function SalesLeadsPage() {
                           >
                             <CheckCircle weight="fill" className="w-4 h-4" />
                           </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); void generateOutreach([l.id]) }}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-violet-500 hover:text-violet-700 hover:bg-violet-50 transition-colors"
+                            aria-label="Generate DM"
+                            title="Generate outreach DM"
+                          >
+                            <PaperPlaneTilt weight="fill" className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
 
@@ -765,6 +810,14 @@ export default function SalesLeadsPage() {
             setFlash('Demo set - the team has been pinged.')
             setTimeout(() => setFlash(''), 3500)
           }}
+        />
+      )}
+      {outreachModal && (
+        <OutreachModal
+          leads={outreachModal.leads}
+          results={outreachModal.results}
+          loading={outreachModal.loading}
+          onClose={() => setOutreachModal(null)}
         />
       )}
     </SalesShell>
@@ -857,6 +910,106 @@ function LeadsDemoSetModal({ leadId, onClose, onSaved }: {
             Mark demo set
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function OutreachModal({ leads, results, loading, onClose }: {
+  leads: Pick<Lead, 'id' | 'business_name'>[]
+  results: Map<string, string>
+  loading: boolean
+  onClose: () => void
+}) {
+  const [copied, setCopied] = useState<string | null>(null)
+
+  const copy = (text: string, id: string) => {
+    void navigator.clipboard.writeText(text)
+    setCopied(id)
+    setTimeout(() => setCopied(null), 1500)
+  }
+
+  const copyAll = () => {
+    const all = leads
+      .map((l) => {
+        const draft = results.get(l.id)
+        return draft ? `--- ${l.business_name} ---\n${draft}` : null
+      })
+      .filter(Boolean)
+      .join('\n\n')
+    void navigator.clipboard.writeText(all)
+    setCopied('__all__')
+    setTimeout(() => setCopied(null), 1500)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4" onClick={onClose}>
+      <div
+        className="bg-white border border-gray-200 rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <PaperPlaneTilt weight="fill" className="w-4 h-4 text-violet-500" />
+            <h3 className="text-base font-medium text-gray-900">
+              {loading
+                ? `Writing ${leads.length} message${leads.length === 1 ? '' : 's'}...`
+                : `${results.size} DM${results.size === 1 ? '' : 's'} ready`}
+            </h3>
+          </div>
+          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700">Done</button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-4 space-y-3">
+          {loading ? (
+            <div className="flex items-center justify-center py-12 gap-3 text-gray-500">
+              <CircleNotch className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Generating...</span>
+            </div>
+          ) : (
+            leads.map((lead) => {
+              const draft = results.get(lead.id)
+              if (!draft) return null
+              const id = lead.id
+              return (
+                <div key={id} className="bg-gray-50 rounded-xl p-4 space-y-2.5">
+                  <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wider">{lead.business_name}</div>
+                  <p className="text-sm text-gray-900 leading-relaxed">{draft}</p>
+                  <button
+                    onClick={() => copy(draft, id)}
+                    className={`inline-flex items-center gap-1.5 text-xs rounded-lg px-3 py-1.5 transition-colors ${
+                      copied === id
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    {copied === id
+                      ? <CheckCircle weight="fill" className="w-3 h-3" />
+                      : <CopySimple weight="bold" className="w-3 h-3" />}
+                    {copied === id ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              )
+            })
+          )}
+        </div>
+        {!loading && results.size > 1 && (
+          <div className="px-6 py-4 border-t border-gray-100 flex justify-between items-center">
+            <span className="text-xs text-gray-400">Copy one at a time or grab all below</span>
+            <button
+              onClick={copyAll}
+              className={`inline-flex items-center gap-1.5 text-xs rounded-lg px-3 py-1.5 transition-colors ${
+                copied === '__all__'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-400'
+              }`}
+            >
+              {copied === '__all__'
+                ? <CheckCircle weight="fill" className="w-3 h-3" />
+                : <CopySimple weight="bold" className="w-3 h-3" />}
+              {copied === '__all__' ? 'Copied all!' : 'Copy all'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
