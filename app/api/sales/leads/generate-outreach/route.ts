@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: leads, error } = await supabaseAdmin
-    .from('sales_leads')
+    .from('leads')
     .select('id, business_name, business_type, city, state')
     .in('id', leadIds)
 
