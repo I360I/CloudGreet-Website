@@ -150,6 +150,7 @@ export default function QuoteEmbed({
   radius = 12,
   label = 'Get Quote',
   showHeader = true,
+  layout = 'stacked',
 }: {
   businessId: string
   name: string
@@ -158,6 +159,7 @@ export default function QuoteEmbed({
   radius?: number
   label?: string
   showHeader?: boolean
+  layout?: 'stacked' | 'side'
 }) {
   const [step, setStep] = useState<'form' | 'chat'>('form')
   const [pickup, setPickup] = useState('')
@@ -226,6 +228,49 @@ export default function QuoteEmbed({
 
   const r = `${radius}px`
 
+  const expand = () => postToParent('cg-quote-expand')
+
+  if (step === 'form' && layout === 'side') {
+    return (
+      <div className="flex h-screen flex-col" style={{ background: bg }}>
+        {showHeader && <Header subtitle="Instant price quote" />}
+        <div className="flex flex-1 flex-col justify-center px-4 py-4 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
+            <AddressInput
+              label="Pickup"
+              value={pickup}
+              onChange={setPickup}
+              placeholder="Address or place"
+              onSubmit={submitQuote}
+              onFocused={expand}
+              accent={accent}
+              radius={r}
+            />
+            <AddressInput
+              label="Destination"
+              value={dropoff}
+              onChange={setDropoff}
+              placeholder="Address or place"
+              onSubmit={submitQuote}
+              onFocused={expand}
+              accent={accent}
+              radius={r}
+            />
+          </div>
+          <button
+            onClick={submitQuote}
+            disabled={!pickup.trim() || !dropoff.trim()}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[14px] font-semibold text-white transition-all disabled:opacity-35"
+            style={{ background: accent, borderRadius: r }}
+          >
+            {label} <ArrowRight weight="bold" className="w-4 h-4" />
+          </button>
+          <p className="text-center text-[10px] text-gray-400">Instant quote · no obligation</p>
+        </div>
+      </div>
+    )
+  }
+
   if (step === 'form') {
     return (
       <div className="flex h-screen flex-col" style={{ background: bg }}>
@@ -239,7 +284,7 @@ export default function QuoteEmbed({
               onChange={setPickup}
               placeholder="e.g. 123 Main St, Columbus"
               onSubmit={submitQuote}
-              onFocused={() => postToParent('cg-quote-expand')}
+              onFocused={expand}
               accent={accent}
               radius={r}
             />
@@ -249,7 +294,7 @@ export default function QuoteEmbed({
               onChange={setDropoff}
               placeholder="e.g. Columbus Airport (CMH)"
               onSubmit={submitQuote}
-              onFocused={() => postToParent('cg-quote-expand')}
+              onFocused={expand}
               accent={accent}
               radius={r}
             />

@@ -18,6 +18,7 @@ export default async function QuoteEmbedPage({
     radius?: string
     label?: string
     header?: string
+    layout?: string
   }
 }) {
   const raw = params.businessId || ''
@@ -49,6 +50,7 @@ export default async function QuoteEmbedPage({
   const label = searchParams.label?.slice(0, 40).trim() || 'Get Quote'
 
   const showHeader = searchParams.header !== 'false'
+  const layout = searchParams.layout === 'side' ? 'side' : 'stacked'
 
   return (
     <QuoteEmbed
@@ -59,6 +61,7 @@ export default async function QuoteEmbedPage({
       radius={radius}
       label={label}
       showHeader={showHeader}
+      layout={layout}
     />
   )
 }
