@@ -98,7 +98,7 @@ function AddressInput({
           onFocus={() => { if (suggestions.length > 0) setOpen(true) }}
           placeholder={placeholder}
           autoComplete="off"
-          className="w-full border border-gray-200 bg-gray-50 px-3.5 py-2 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-400 focus:bg-white"
+          className="w-full border border-gray-200 bg-gray-50 px-3.5 py-1.5 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-400 focus:bg-white"
           style={{ borderRadius: radius }}
         />
         {open && suggestions.length > 0 && (
@@ -225,8 +225,8 @@ export default function QuoteEmbed({
       <div className="flex h-screen flex-col" style={{ background: bg }}>
         {showHeader && <Header subtitle="Instant price quote" />}
         <div className="flex-1 overflow-y-auto">
-        <div className="flex flex-col min-h-full justify-center px-4 py-4 gap-2">
-          <div className="space-y-3">
+        <div className="flex flex-col min-h-full justify-center px-4 py-3 gap-1.5">
+          <div className="space-y-2.5">
             <AddressInput
               label="Pickup"
               value={pickup}
