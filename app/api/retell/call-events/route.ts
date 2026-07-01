@@ -7,6 +7,14 @@ import { notifyAdmin } from '@/lib/notifications/notify'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+const DEMO_AGENTS: Record<string, string> = {
+  agent_1a0104f504c5b963146a6d98f3: 'hvac',
+  agent_2800f2b423ddb542ef96a6db76: 'electrical',
+  agent_070b63dd536ee3d27d16c05a45: 'transport',
+  agent_c6d94b0755392d61c9c2c21e45: 'roofing',
+  agent_a5136ab4471231cd16e79c29ec: 'law',
+}
+
 /**
  * POST /api/retell/call-events
  *
@@ -92,10 +100,26 @@ export async function POST(request: NextRequest) {
    if (byBizPhone) businessId = byBizPhone.id
   }
   if (!businessId) {
-   // Silent-drop path: Retell saw a call we can't tie to a business.
-   // Log loud + fire admin notification so this never disappears
-   // unnoticed. 200 still since retries won't help if our DB is missing
-   // the mapping - the operator has to fix the number-to-business link.
+   // Check if this is a landing-page demo agent call
+   const vertical = agentId ? DEMO_AGENTS[agentId] : undefined
+   if (vertical && (eventType === 'call_ended' || eventType === 'call_analyzed')) {
+    const demoSummary = callAnalysis?.call_summary || callAnalysis?.summary || null
+    let demoDuration: number | null = null
+    if (typeof durationMs === 'number') demoDuration = Math.round(durationMs / 1000)
+    else if (startTs && endTs) demoDuration = Math.round((endTs - startTs) / 1000)
+    await supabaseAdmin.from('demo_agent_calls').upsert({
+     retell_call_id: callId,
+     agent_id: agentId,
+     vertical,
+     from_number: fromNumber || null,
+     duration_sec: demoDuration,
+     status: 'completed',
+     summary: demoSummary,
+    }, { onConflict: 'retell_call_id' })
+    return NextResponse.json({ ok: true, logged: 'demo_agent_call', vertical })
+   }
+   if (vertical) return NextResponse.json({ ok: true, ignored: true, reason: 'demo_agent_non_final' })
+
    logger.error('Retell call-events: no business match', { callId, agentId, toNumber, fromNumber, eventType })
    await notifyAdmin({
     type: 'call.unmatched',

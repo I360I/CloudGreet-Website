@@ -107,6 +107,27 @@ export async function GET(request: NextRequest) {
   })
  }
 
+ // 3b. Direct calls to the 5 landing-page demo agents.
+ const { data: agentCalls } = await supabaseAdmin
+  .from('demo_agent_calls')
+  .select('id, from_number, vertical, duration_sec, summary, created_at')
+  .order('created_at', { ascending: false })
+  .limit(300)
+ for (const c of agentCalls || []) {
+  const dur = c.duration_sec ? `${c.duration_sec}s call` : null
+  items.push({
+   id: `agentcall_${c.id}`,
+   kind: 'landing_call' as any,
+   name: null,
+   email: null,
+   phone: c.from_number || null,
+   when: c.created_at,
+   status: c.vertical || null,
+   detail: [dur, c.summary].filter(Boolean).join(' · ') || 'Called the demo agent',
+   source: 'demo_agent',
+  })
+ }
+
  // 4. Rep-scheduled demos (closes rows the mark-demo flow stamps).
  //    Same window as Cal: last 14 days back, all future.
  const { data: repDemos } = await supabaseAdmin
@@ -147,7 +168,7 @@ export async function GET(request: NextRequest) {
   total: items.length,
   bookings: items.filter((i) => i.kind === 'cal_booking' || i.kind === 'rep_demo').length,
   leads: items.filter((i) => i.kind === 'chat_lead').length,
-  calls: items.filter((i) => i.kind === 'demo_call').length,
+  calls: items.filter((i) => i.kind === 'demo_call' || (i.kind as string) === 'landing_call').length,
  }
 
  return NextResponse.json({ items: items.slice(0, 400), stats })

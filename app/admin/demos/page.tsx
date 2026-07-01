@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, RisingFade } from '../_components/ui'
-import { CircleNotch, CalendarCheck, ChatCircle, PhoneOutgoing, UsersThree } from '@phosphor-icons/react'
+import { CircleNotch, CalendarCheck, ChatCircle, PhoneOutgoing, UsersThree, PhoneIncoming } from '@phosphor-icons/react'
 
 type DemoItem = {
  id: string
- kind: 'cal_booking' | 'chat_lead' | 'demo_call' | 'rep_demo'
+ kind: 'cal_booking' | 'chat_lead' | 'demo_call' | 'rep_demo' | 'landing_call'
  name: string | null
  email: string | null
  phone: string | null
@@ -42,10 +42,11 @@ function when(iso: string, kind: string): string {
 }
 
 const KIND = {
- cal_booking: { label: 'Booked', icon: CalendarCheck, cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25' },
- chat_lead: { label: 'Chat lead', icon: ChatCircle, cls: 'bg-blue-500/15 text-blue-300 border-blue-500/25' },
- demo_call: { label: 'AI call', icon: PhoneOutgoing, cls: 'bg-violet-500/15 text-violet-300 border-violet-500/25' },
- rep_demo: { label: 'Rep demo', icon: UsersThree, cls: 'bg-sky-500/15 text-sky-300 border-sky-500/25' },
+ cal_booking:  { label: 'Booked',       icon: CalendarCheck,  cls: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25' },
+ chat_lead:    { label: 'Chat lead',     icon: ChatCircle,     cls: 'bg-blue-500/15 text-blue-300 border-blue-500/25' },
+ demo_call:    { label: 'AI call',       icon: PhoneOutgoing,  cls: 'bg-violet-500/15 text-violet-300 border-violet-500/25' },
+ rep_demo:     { label: 'Rep demo',      icon: UsersThree,     cls: 'bg-sky-500/15 text-sky-300 border-sky-500/25' },
+ landing_call: { label: 'Landing call',  icon: PhoneIncoming,  cls: 'bg-orange-500/15 text-orange-300 border-orange-500/25' },
 } as const
 
 export default function AdminDemosPage() {
