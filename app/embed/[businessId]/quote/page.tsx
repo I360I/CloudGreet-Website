@@ -19,6 +19,7 @@ export default async function QuoteEmbedPage({
     label?: string
     header?: string
     layout?: string
+    expand?: string
   }
 }) {
   const raw = params.businessId || ''
@@ -51,6 +52,7 @@ export default async function QuoteEmbedPage({
 
   const showHeader = searchParams.header !== 'false'
   const layout = searchParams.layout === 'side' ? 'side' : 'stacked'
+  const expandOnFocus = searchParams.expand !== 'false'
 
   return (
     <QuoteEmbed
@@ -62,6 +64,7 @@ export default async function QuoteEmbedPage({
       label={label}
       showHeader={showHeader}
       layout={layout}
+      expandOnFocus={expandOnFocus}
     />
   )
 }

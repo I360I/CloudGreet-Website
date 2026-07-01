@@ -153,6 +153,7 @@ export default function QuoteEmbed({
   label = 'Get Quote',
   showHeader = true,
   layout = 'stacked',
+  expandOnFocus = true,
 }: {
   businessId: string
   name: string
@@ -162,6 +163,7 @@ export default function QuoteEmbed({
   label?: string
   showHeader?: boolean
   layout?: 'stacked' | 'side'
+  expandOnFocus?: boolean
 }) {
   const [step, setStep] = useState<'form' | 'chat'>('form')
   const [pickup, setPickup] = useState('')
@@ -230,7 +232,7 @@ export default function QuoteEmbed({
 
   const r = `${radius}px`
 
-  const expand = () => postToParent('cg-quote-expand')
+  const expand = () => { if (expandOnFocus) postToParent('cg-quote-expand') }
 
   if (step === 'form' && layout === 'side') {
     return (
