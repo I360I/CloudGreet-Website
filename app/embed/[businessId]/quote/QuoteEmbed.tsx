@@ -24,12 +24,17 @@ function getSessionId(businessId: string): string {
   }
 }
 
+function postToParent(type: string) {
+  try { window.parent?.postMessage({ type }, '*') } catch { /* ignore */ }
+}
+
 function AddressInput({
   label,
   value,
   onChange,
   placeholder,
   onSubmit,
+  onFocused,
   accent,
   radius = '12px',
 }: {
@@ -38,6 +43,7 @@ function AddressInput({
   onChange: (v: string) => void
   placeholder: string
   onSubmit?: () => void
+  onFocused?: () => void
   accent: string
   radius?: string
 }) {
@@ -95,7 +101,7 @@ function AddressInput({
           value={value}
           onChange={(e) => { onChange(e.target.value); fetchSuggestions(e.target.value) }}
           onKeyDown={onKeyDown}
-          onFocus={() => { if (suggestions.length > 0) setOpen(true) }}
+          onFocus={() => { if (suggestions.length > 0) setOpen(true); onFocused?.() }}
           placeholder={placeholder}
           autoComplete="off"
           className="w-full border border-gray-200 bg-gray-50 px-3.5 py-1.5 text-[16px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-gray-400 focus:bg-white"
@@ -209,7 +215,7 @@ export default function QuoteEmbed({
       {step === 'chat' && (
         <button
           type="button"
-          onClick={() => { setStep('form'); setMessages([]); setLoading(false) }}
+          onClick={() => { setStep('form'); setMessages([]); setLoading(false); postToParent('cg-quote-collapse') }}
           className="text-[11px] text-white/40 hover:text-white/70 transition-colors px-2 py-1"
         >
           New quote
@@ -233,6 +239,7 @@ export default function QuoteEmbed({
               onChange={setPickup}
               placeholder="e.g. 123 Main St, Columbus"
               onSubmit={submitQuote}
+              onFocused={() => postToParent('cg-quote-expand')}
               accent={accent}
               radius={r}
             />
@@ -242,6 +249,7 @@ export default function QuoteEmbed({
               onChange={setDropoff}
               placeholder="e.g. Columbus Airport (CMH)"
               onSubmit={submitQuote}
+              onFocused={() => postToParent('cg-quote-expand')}
               accent={accent}
               radius={r}
             />
