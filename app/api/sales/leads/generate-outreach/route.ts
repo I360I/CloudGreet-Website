@@ -27,19 +27,19 @@ async function draftDM(
     messages: [
       {
         role: 'user',
-        content: `Write a 2-sentence Instagram DM to the owner of "${business_name}", a ${type}${location ? ` in ${location}` : ''}.
+        content: `Write a short Instagram DM to the owner of "${business_name}", a ${type}${location ? ` in ${location}` : ''}.
 
-Goal: get them curious enough to try a live AI phone receptionist demo at cloudgreet.com/#demo — it answers calls and books jobs automatically.
+Goal: get them to check out cloudgreet.com/#demo without it feeling like a pitch.
 
 Rules:
-- Casual, direct — like a person reaching out, not a salesperson blasting a list
-- No hashtags, no emojis
-- Mention their specific trade or location naturally if it helps it feel personal
-- Do NOT list features or use buzzwords like "cutting-edge" or "revolutionary"
-- End with: cloudgreet.com/#demo
-- 2 sentences max
+- 1-2 sentences max, very short
+- Sound like a real person, not a marketer
+- No em dashes, no hashtags, no emojis
+- No buzzwords, no feature lists
+- Mention their trade or location only if it sounds natural
+- End with cloudgreet.com/#demo
 
-Write only the DM text, nothing else.`,
+Write only the message, nothing else.`,
       },
     ],
   })
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         const draft = await draftDM(lead.business_name, lead.business_type, lead.city, lead.state)
         return { leadId: lead.id, draft }
       } catch {
-        const fallback = `Hey ${lead.business_name} — built something that answers your calls and books jobs automatically, even when you're tied up on a job. Took 30 seconds to see it: cloudgreet.com/#demo`
+        const fallback = `Hey, saw ${lead.business_name} and wanted to share something quick. cloudgreet.com/#demo`
         return { leadId: lead.id, draft: fallback }
       }
     }),
