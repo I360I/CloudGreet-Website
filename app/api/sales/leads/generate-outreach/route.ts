@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
     .from('sales_leads')
     .select('id, business_name, business_type, city, state')
     .in('id', leadIds)
-    .eq('claimed_by', auth.userId)
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
