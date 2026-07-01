@@ -237,30 +237,6 @@ export default function QuoteEmbed({
       <div className="flex h-screen flex-col" style={{ background: bg }}>
         {showHeader && <Header subtitle="Instant price quote" />}
         <div className="flex flex-1 flex-col justify-center px-4 py-3 gap-3">
-
-          {/* car graphic */}
-          <svg viewBox="0 0 280 44" xmlns="http://www.w3.org/2000/svg" className="w-full" style={{ maxHeight: 44 }}>
-            {/* road */}
-            <line x1="4" y1="36" x2="266" y2="36" stroke="#e5e7eb" strokeWidth="2.5" strokeLinecap="round" />
-            {/* arrowhead */}
-            <polygon points="262,29 276,36 262,43" fill="#e5e7eb" />
-            {/* car body */}
-            <rect x="72" y="17" width="64" height="21" rx="5" fill={accent} />
-            {/* car roof */}
-            <rect x="84" y="7" width="42" height="16" rx="4" fill={accent} />
-            {/* windshield tint */}
-            <rect x="86" y="9" width="16" height="11" rx="2" fill="rgba(255,255,255,0.25)" />
-            <rect x="106" y="9" width="16" height="11" rx="2" fill="rgba(255,255,255,0.18)" />
-            {/* wheels */}
-            <circle cx="88" cy="38" r="6" fill="#1f2937" />
-            <circle cx="88" cy="38" r="2.5" fill="#9ca3af" />
-            <circle cx="120" cy="38" r="6" fill="#1f2937" />
-            <circle cx="120" cy="38" r="2.5" fill="#9ca3af" />
-            {/* headlight */}
-            <rect x="134" y="23" width="5" height="4" rx="1" fill="rgba(255,255,255,0.6)" />
-          </svg>
-
-          {/* pickup / destination */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Pickup</p>

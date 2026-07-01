@@ -21,22 +21,16 @@ export default async function QuotePreviewPage({ params }: { params: { businessI
   const p = (ps: Record<string, string>) =>
     `${base}?` + Object.entries(ps).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
 
-  const STACKED = [
-    { label: 'Default',           url: base },
-    { label: 'Navy',              url: p({ accent: '#1e3a8a' }) },
-    { label: 'Green',             url: p({ accent: '#15803d' }) },
-    { label: 'Sharp corners',     url: p({ accent: '#0a0a0b', radius: '0' }) },
-    { label: 'Extra rounded',     url: p({ accent: '#6d28d9', radius: '24' }) },
-    { label: 'No header',         url: p({ accent: '#be123c', header: 'false' }) },
-    { label: 'Dark background',   url: p({ accent: '#3b82f6', bg: '#0f172a' }) },
-    { label: 'Custom label',      url: p({ accent: '#15803d', label: 'Check My Price' }) },
-    { label: 'Combined',          url: p({ accent: '#1e3a8a', radius: '6', header: 'false', label: 'Get My Fare' }) },
+  const STACKED_EXAMPLES = [
+    { label: 'Default',         url: base },
+    { label: 'Navy',            url: p({ accent: '#1e3a8a' }) },
+    { label: 'No header',       url: p({ accent: '#be123c', header: 'false' }) },
   ]
 
-  const SIDE = [
-    { label: 'Side — Default',         url: p({ layout: 'side' }) },
-    { label: 'Side — Navy',            url: p({ layout: 'side', accent: '#1e3a8a' }) },
-    { label: 'Side — No header',       url: p({ layout: 'side', header: 'false', accent: '#0a0a0b' }) },
+  const SIDE_EXAMPLES = [
+    { label: 'Default',         url: p({ layout: 'side' }) },
+    { label: 'Navy',            url: p({ layout: 'side', accent: '#1e3a8a' }) },
+    { label: 'No header',       url: p({ layout: 'side', header: 'false' }) },
   ]
 
   const expandSnippet = `<div id="cg-wrap" style="position:fixed;bottom:24px;right:24px;width:340px;height:520px;z-index:9999;border-radius:16px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.18);transition:all .3s ease">
@@ -70,8 +64,8 @@ window.addEventListener('message',function(e){
           .grid-2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
           .card { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
           .card-label { font-size: 12px; font-weight: 600; color: #555; padding: 10px 14px; border-bottom: 1px solid #f0f0f0; }
-          .card iframe { display: block; width: 100%; height: 420px; border: none; }
-          .card.side-card iframe { height: 280px; }
+          .card iframe { display: block; width: 100%; height: 400px; border: none; }
+          .card.side-card iframe { height: 240px; }
           pre { background: #1a1a1a; color: #e5e7eb; font-size: 11.5px; line-height: 1.6; padding: 18px 20px; border-radius: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin-top: 8px; }
           .expand-demo { background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-top: 8px; }
           .expand-demo-inner { position: relative; background: #e8e9ed; min-height: 480px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -85,24 +79,25 @@ window.addEventListener('message',function(e){
         `}</style>
       </head>
       <body>
-        <h1>{name} — Quote Widget Preview</h1>
-        <p className="sub">All examples are live and interactive.</p>
+        <h1>{name} — Quote Widget</h1>
+        <p className="sub">Two layout options — pick whichever fits your site best. Both are live and interactive below.</p>
 
-        <h2>Stacked layout (default)</h2>
+        <h2>Option A — Side by side (short &amp; wide)</h2>
+        <p className="sub">Both fields in one row. Works great as a banner or inline block. Embed with <code>?layout=side</code>.</p>
         <div className="grid">
-          {STACKED.map((ex) => (
-            <div key={ex.label} className="card">
+          {SIDE_EXAMPLES.map((ex) => (
+            <div key={ex.label} className="card side-card">
               <div className="card-label">{ex.label}</div>
               <iframe src={ex.url} title={ex.label} allow="clipboard-write" />
             </div>
           ))}
         </div>
 
-        <h2>Side-by-side layout — compact, no scrolling</h2>
-        <p className="sub">Both fields sit in one row. Great for wider widgets or desktop sidebars. Add <code>?layout=side</code> to the embed URL.</p>
-        <div className="grid-2">
-          {SIDE.map((ex) => (
-            <div key={ex.label} className="card side-card">
+        <h2>Option B — Stacked (taller &amp; slim)</h2>
+        <p className="sub">Fields stacked vertically. Fits naturally in a sidebar or floating corner widget.</p>
+        <div className="grid">
+          {STACKED_EXAMPLES.map((ex) => (
+            <div key={ex.label} className="card">
               <div className="card-label">{ex.label}</div>
               <iframe src={ex.url} title={ex.label} allow="clipboard-write" />
             </div>
