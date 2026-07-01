@@ -741,15 +741,6 @@ export default function SalesLeadsPage() {
                           >
                             <CheckCircle weight="fill" className="w-4 h-4" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); void generateOutreach([l.id]) }}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-violet-500 hover:text-violet-700 hover:bg-violet-50 transition-colors"
-                            aria-label="Generate DM"
-                            title="Generate outreach DM"
-                          >
-                            <PaperPlaneTilt weight="fill" className="w-4 h-4" />
-                          </button>
                         </div>
                       </div>
 
