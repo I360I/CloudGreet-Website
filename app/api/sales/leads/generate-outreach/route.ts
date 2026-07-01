@@ -35,8 +35,8 @@ Rules:
 - 1-2 sentences max, very short
 - Sound like a real person, not a marketer
 - No em dashes, no hashtags, no emojis
-- No buzzwords, no feature lists
-- Mention their trade or location only if it sounds natural
+- No buzzwords, no feature lists, nothing vague like "managing customer stuff"
+- Be specific to their trade if possible (e.g. "missing calls while on a job site", "booking roofing estimates")
 - End with cloudgreet.com/#demo
 
 Write only the message, nothing else.`,
