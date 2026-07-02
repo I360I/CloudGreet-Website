@@ -240,7 +240,7 @@ export default function QuoteEmbed({
     return (
       <div className="flex h-screen flex-col" style={{ background: bg }}>
         {showHeader && <Header subtitle="Instant price quote" />}
-        <div className="flex flex-1 flex-col justify-center px-4 py-3 gap-3">
+        <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4 gap-3" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-2">
             <div>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Pickup</p>
@@ -288,8 +288,8 @@ export default function QuoteEmbed({
     return (
       <div className="flex h-screen flex-col" style={{ background: bg }}>
         {showHeader && <Header subtitle="Instant price quote" />}
-        <div className="flex-1 overflow-y-auto">
-        <div className="flex flex-col min-h-full justify-center px-4 py-3 gap-1.5">
+        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex flex-col px-4 py-4 gap-1.5">
           <div className="space-y-2.5">
             <AddressInput
               label="Pickup"
