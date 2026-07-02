@@ -100,7 +100,9 @@ const TOOLS: Anthropic.Messages.Tool[] = [
         review_consent: { type: 'boolean', description: 'true if the customer agreed to a post-trip review request text.' },
         is_emergency: { type: 'boolean', description: 'true for emergencies. Default false.' },
       },
-      required: ['name', 'phone', 'service', 'datetime'],
+      // phone is NOT required: on SMS it defaults to the sender. On web chat
+      // the agent must collect a real mobile (runTool rejects a web- session id).
+      required: ['name', 'service', 'datetime'],
     },
   },
   {
@@ -1026,6 +1028,24 @@ async function runTool(args: {
   customerPhone: string
   conversationId?: string
 }): Promise<any> {
+  // Web-chat visitors are keyed by a synthetic `web-<session>` id, not a real
+  // phone. Side-effect tools must run against a real mobile so the owner has a
+  // callback number and cancel/reschedule-by-phone can match. If the agent
+  // tries to book/dispatch before collecting one, refuse and make it ask.
+  const SIDE_EFFECT_TOOLS = new Set([
+    'send_dispatch_request', 'book_appointment', 'cancel_appointment', 'reschedule_appointment',
+  ])
+  if (SIDE_EFFECT_TOOLS.has(args.name)) {
+    const effectivePhone = String(args.args.customer_phone || args.args.phone || args.customerPhone || '')
+    if (effectivePhone.startsWith('web-')) {
+      return {
+        ok: false,
+        error: 'missing_real_phone',
+        detail: 'No real mobile number collected yet. Ask the visitor for their mobile number and pass it as the phone/customer_phone argument before booking or dispatching.',
+      }
+    }
+  }
+
   // Pure-function tools handled inline - no need for an HTTP round-trip.
   if (args.name === 'lookup_drive_time') {
     return await lookupDriveTime({
