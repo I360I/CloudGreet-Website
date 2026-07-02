@@ -22,7 +22,7 @@ import { normalizePhoneForLookup } from '@/lib/phone-normalization'
 import { notifyAdmin } from '@/lib/notifications/notify'
 
 export const DEFAULT_BOOKING_SMS_TEMPLATE =
-  '[CloudGreet] New booking: {name}, {time}. Service: {service}. Caller: {phone}'
+  '[CloudGreet] New booking: {name}, {time}. Service: {service}. Customer: {phone}'
 
 /**
  * Hard default for emergency bookings. Visually distinct prefix so the
@@ -40,12 +40,14 @@ export const TEMPLATE_MAX_LENGTH = 320
  * as fill-me hints. Order = how they appear in the help text.
  */
 export const TEMPLATE_VARIABLES: { name: string; description: string; sample: string }[] = [
-  { name: 'name',     description: "caller's name",         sample: 'John Smith' },
-  { name: 'phone',    description: "caller's phone",        sample: '+1 (555) 123-4567' },
-  { name: 'time',     description: 'appointment date/time', sample: 'Tue Jul 8, 2:00 PM' },
-  { name: 'service',  description: 'what they booked',      sample: 'AC repair' },
-  { name: 'address',  description: 'service address',       sample: '123 Main St' },
-  { name: 'business', description: "the business's name",   sample: 'Mike\'s HVAC' },
+  { name: 'name',     description: "customer's name",        sample: 'John Smith' },
+  { name: 'phone',    description: "customer's phone",       sample: '+1 (555) 123-4567' },
+  { name: 'time',     description: 'appointment date/time',  sample: 'Tue Jul 8, 2:00 PM' },
+  { name: 'service',  description: 'what they booked',       sample: 'AC repair' },
+  { name: 'address',  description: 'service address',        sample: '123 Main St' },
+  { name: 'email',    description: "customer's email",       sample: 'john@example.com' },
+  { name: 'flight',   description: 'flight number',          sample: 'AA123' },
+  { name: 'business', description: "the business's name",    sample: 'Mike\'s HVAC' },
 ]
 
 export type BookingNotificationContext = {
@@ -54,6 +56,8 @@ export type BookingNotificationContext = {
   time?: string | null      // pre-formatted display string
   service?: string | null
   address?: string | null
+  email?: string | null
+  flight?: string | null    // flight number (+ airline if provided)
   business?: string | null
   /**
    * When true, sendBookingNotification picks the emergency template

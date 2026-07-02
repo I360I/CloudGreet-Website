@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
  }
  switch (tool.name) {
  case 'book_appointment': {
- const { name: rawName, phone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw, is_emergency: isEmergencyRaw, email: rawEmail, flight_number: rawFlightNumber, airline: rawAirline } = tool.arguments || {}
+ const { name: rawName, phone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw, is_emergency: isEmergencyRaw, email: rawEmail, flight_number: rawFlightNumber, airline: rawAirline, pickup: rawPickup } = tool.arguments || {}
  // Retell's LLM often passes the verbalized form of any digits the
  // agent spoke aloud - "AC leaking at one one one one Main Street"
  // instead of "1111". Compress runs of digit words back to numerals
@@ -798,6 +798,11 @@ export async function POST(request: NextRequest) {
  phone,
  time: formattedTime,
  service,
+ address: rawPickup ? String(rawPickup).trim() : null,
+ email: rawEmail ? String(rawEmail).trim() : null,
+ flight: flightNumber
+   ? (airline ? `${airline} ${flightNumber}` : flightNumber)
+   : null,
  business: (business as any).business_name || null,
  is_emergency: isEmergency,
  })

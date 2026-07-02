@@ -601,6 +601,7 @@ CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
   let reply: string | null = null
   const collectedToolCalls: any[] = []
   let outcomeKind: 'booked' | 'dispatch' | null = null
+  let bookedCustomerPhone: string | null = null
   let usageInTokens = 0
   let usageOutTokens = 0
   for (let loop = 0; loop < MAX_TOOL_LOOPS; loop++) {
@@ -638,7 +639,14 @@ CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
         conversationId,
       })
       collectedToolCalls.push({ name: tu.name, args: tu.input, result })
-      if (tu.name === 'book_appointment' && (result as any)?.success === true) outcomeKind = 'booked'
+      if (tu.name === 'book_appointment' && (result as any)?.success === true) {
+        outcomeKind = 'booked'
+        // Capture the real phone the agent collected so alerts show it instead of web-{sessionId}.
+        const realPhone = (tu.input as any)?.phone
+        if (realPhone && typeof realPhone === 'string' && !realPhone.startsWith('web-')) {
+          bookedCustomerPhone = realPhone
+        }
+      }
       if (tu.name === 'send_dispatch_request' && ((result as any)?.ok === true || (result as any)?.success === true)) {
         outcomeKind = 'dispatch'
       }
@@ -693,7 +701,9 @@ CHANNEL OVERRIDE (READ THIS LAST, IT WINS):
   }
   if (outcomeKind && outcomeKind !== 'dispatch') {
     void alertAdminTextToBook({
-      kind: outcomeKind, businessId: args.businessId, businessName, customerPhone: phone, reportToken, ownerPhone,
+      kind: outcomeKind, businessId: args.businessId, businessName,
+      customerPhone: bookedCustomerPhone || phone,
+      reportToken, ownerPhone,
     })
   }
 
