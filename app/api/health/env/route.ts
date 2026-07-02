@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/auth-middleware'
 
 // Environment variable definitions for health check endpoint
 const envVarDefinitions = {
@@ -38,7 +39,6 @@ const envVarDefinitions = {
  },
  {
  name: 'RETELL_API_KEY',
- altNames: ['NEXT_PUBLIC_RETELL_API_KEY'],
  description: 'Retell AI API key',
  validation: (val: string) => val && val.length > 20,
  whatBreaks: 'Voice AI conversations, call handling'
@@ -88,7 +88,13 @@ interface EnvVarStatus {
  fallback?: string
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+ // This reveals the full integration matrix (which secrets are set/missing/
+ // invalid) - useful recon for an attacker picking a weak link. Admin only.
+ const admin = await requireAdmin(request)
+ if (!admin.success) {
+ return NextResponse.json({ error: 'Admin access required' }, { status: 401 })
+ }
  try {
  const status: {
  critical: EnvVarStatus[]

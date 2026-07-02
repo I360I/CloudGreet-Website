@@ -141,7 +141,7 @@ export async function testTelnyxAPI(): Promise<HealthCheckResult> {
 export async function testRetellAPI(): Promise<HealthCheckResult> {
   const startTime = Date.now()
   
-  const retellKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY
+  const retellKey = process.env.RETELL_API_KEY
   if (!retellKey) {
     return {
       status: 'not_configured',

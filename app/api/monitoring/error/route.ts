@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/monitoring'
+import { moderateRateLimit } from '@/lib/rate-limiting-redis'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -10,6 +11,16 @@ export const runtime = 'nodejs'
  */
 export async function POST(request: NextRequest) {
  try {
+ // Public, unauthenticated endpoint - rate limit so it can't be used to
+ // flood our logs / Sentry quota (cost + alert fatigue).
+ const rl = await moderateRateLimit(request)
+ if (!rl.allowed) {
+ return NextResponse.json(
+ { success: false, message: 'Too many requests.' },
+ { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetTime - Date.now()) / 1000)) } },
+ )
+ }
+
  let body
  try {
  body = await request.json()

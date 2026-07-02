@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { JWTManager } from '@/lib/jwt-manager'
 import { logger } from '@/lib/monitoring'
 import { provisionRepNumber } from '@/lib/telnyx/provision-number'
+import { authRateLimit } from '@/lib/rate-limiting-redis'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -23,6 +24,16 @@ const AGREEMENT_VERSION = '2026-05-07'
  * their bank info.
  */
 export async function POST(request: NextRequest) {
+ // Token is one-time, but brute-forcing it provisions a Telnyx number on
+ // any hit - throttle per IP so guessing isn't free.
+ const rl = await authRateLimit(request)
+ if (!rl.allowed) {
+ return NextResponse.json(
+ { error: 'Too many attempts. Please try again later.' },
+ { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetTime - Date.now()) / 1000)) } },
+ )
+ }
+
  const body = await request.json().catch(() => ({})) as Record<string, any>
  const token = (body.token || '').trim()
  const password = (body.password || '').trim()

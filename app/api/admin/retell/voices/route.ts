@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY
+  const apiKey = process.env.RETELL_API_KEY
   if (!apiKey) {
     return NextResponse.json(
       { error: 'RETELL_API_KEY is not configured in this deployment.' },

@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
   })
  }
 
- const apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY
+ const apiKey = process.env.RETELL_API_KEY
  if (!apiKey) {
   return NextResponse.json({ success: false, error: 'RETELL_API_KEY missing' }, { status: 500 })
  }

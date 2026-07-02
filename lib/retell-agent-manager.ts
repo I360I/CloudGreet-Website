@@ -52,7 +52,7 @@ class RetellAgentManager {
 
   constructor() {
     // Try both env var names for compatibility
-    this.apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY || '';
+    this.apiKey = process.env.RETELL_API_KEY || '';
     if (!this.apiKey) {
       throw new Error('Retell API key not configured. Set RETELL_API_KEY in environment variables.');
     }

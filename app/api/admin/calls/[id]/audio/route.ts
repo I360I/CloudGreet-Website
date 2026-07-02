@@ -41,7 +41,7 @@ export async function GET(
  let url: string | null = (call as any).recording_url || null
  const retellCallId = (call as any).retell_call_id as string | null
  if (retellCallId) {
-  const key = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY || ''
+  const key = process.env.RETELL_API_KEY || ''
   if (key) {
    try {
     const r = await fetch(`https://api.retellai.com/v2/get-call/${retellCallId}`, {

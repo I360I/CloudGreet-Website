@@ -30,7 +30,7 @@ export async function attachRetellAgentToBusiness(opts: {
   toolsError: string | null
 } | { ok: false; error: string; status: number }> {
   const { businessId, agentId } = opts
-  const apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY
+  const apiKey = process.env.RETELL_API_KEY
   if (!apiKey) return { ok: false, error: 'RETELL_API_KEY is not set', status: 500 }
 
   const verifyRes = await fetch(

@@ -8,7 +8,7 @@
 const RETELL_BASE = 'https://api.retellai.com'
 
 function apiKey(): string {
- return process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY || ''
+ return process.env.RETELL_API_KEY || ''
 }
 
 export type KnowledgeBaseSource = {

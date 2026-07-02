@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
 import { randomUUID } from 'crypto'
+import { moderateRateLimit } from '@/lib/rate-limiting-redis'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -29,6 +30,16 @@ const VIDEO_TYPES = new Set([
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit signed-URL minting so an attacker can't spin up thousands
+    // of upload slots per second (storage fill / cost vector).
+    const rl = await moderateRateLimit(request)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetTime - Date.now()) / 1000)) } },
+      )
+    }
+
     const body = await request.json().catch(() => ({} as any))
     const { kind, filename, content_type, size } = body || {}
 

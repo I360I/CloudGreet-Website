@@ -81,7 +81,7 @@ export async function PUT(
 
  // 2. Push to Retell agent.post_call_analysis_data so the post-call
  //    pass actually fills them in.
- const apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY
+ const apiKey = process.env.RETELL_API_KEY
  const { data: biz } = await supabaseAdmin
   .from('businesses')
   .select('retell_agent_id')

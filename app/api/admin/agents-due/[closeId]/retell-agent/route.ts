@@ -130,7 +130,7 @@ export async function PUT(
   // Verify with Retell (we deferred verification to here for the
   // pre-conversion case so a typo doesn't sit unflagged on the close
   // until conversion).
-  const apiKey = process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY
+  const apiKey = process.env.RETELL_API_KEY
   if (apiKey) {
     const verifyRes = await fetch(`https://api.retellai.com/get-agent/${encodeURIComponent(raw)}`, {
       headers: { Authorization: `Bearer ${apiKey}` },

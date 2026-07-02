@@ -260,7 +260,6 @@ export function verifyRetellSignature(
   const candidates = [
     process.env.RETELL_WEBHOOK_SECRET,
     process.env.RETELL_API_KEY,
-    process.env.NEXT_PUBLIC_RETELL_API_KEY,
   ].filter((s): s is string => typeof s === 'string' && s.length > 0)
 
   if (candidates.length === 0) {

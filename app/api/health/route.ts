@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
  const startTime = Date.now()
  const checks: Record<string, unknown> = {
  SUPABASE: isSupabaseConfigured(),
- RETELL_API_KEY: !!(process.env.RETELL_API_KEY || process.env.NEXT_PUBLIC_RETELL_API_KEY),
+ RETELL_API_KEY: !!(process.env.RETELL_API_KEY),
  TELNYX_API_KEY: !!process.env.TELNYX_API_KEY,
  STRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
  }
@@ -70,21 +70,22 @@ export async function GET(request: NextRequest) {
 
  const responseTime = Date.now() - startTime
 
- const response = {
- status: isHealthy ? 'ok' : 'degraded',
- timestamp: new Date().toISOString(),
- checks,
- responseTime: `${responseTime}ms`,
- version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
- environment: process.env.NODE_ENV || 'development'
- }
-
- // Log health check
+ // Detailed per-secret presence + DB error strings are recon material, so
+ // they stay server-side (logs) only. The public body is the minimum a
+ // load balancer needs: overall status + timestamp.
  logger.info('Health check', {
- status: response.status,
+ status: isHealthy ? 'ok' : 'degraded',
+ checks,
  dbStatus,
  responseTime
  })
+
+ const response = {
+ status: isHealthy ? 'ok' : 'degraded',
+ timestamp: new Date().toISOString(),
+ responseTime: `${responseTime}ms`,
+ version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+ }
 
  return NextResponse.json(response, {
  status: isHealthy ? 200 : 503,

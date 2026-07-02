@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { moderateRateLimit } from '@/lib/rate-limiting-redis'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -10,10 +11,20 @@ export const runtime = 'nodejs'
  * POST /api/applications
  *
  * Public endpoint. Captures a rep job application and emails Anthony
- * a heads-up. Validates basic shape; rate-limits via the unique
- * email constraint (only one active application per email).
+ * a heads-up. Validates basic shape; rate-limits per IP (the unique
+ * email constraint only stops dupes, not spam from fresh addresses).
  */
 export async function POST(request: NextRequest) {
+  // Public form that emails a founder + writes a row on every submit;
+  // rate limit per IP so it can't be used as an inbox/DB spam vector.
+  const rl = await moderateRateLimit(request)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetTime - Date.now()) / 1000)) } },
+    )
+  }
+
   let body: any
   try { body = await request.json() } catch { body = null }
   if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
