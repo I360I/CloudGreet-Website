@@ -179,7 +179,7 @@ export default function QuoteEmbed({
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     if (step === 'chat') {
-      const h = Math.min(document.documentElement.scrollHeight + 8, 640)
+      const h = document.documentElement.scrollHeight + 8
       try { window.parent?.postMessage({ type: 'cg-quote-height', height: h }, '*') } catch { /* ignore */ }
     }
   }, [messages, loading, step])
