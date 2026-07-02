@@ -205,6 +205,7 @@ export default function QuoteEmbed({
     if (!from || !to) return
     const text = `I need a quote from ${from} to ${to}`
     setStep('chat')
+    postToParent('cg-quote-resize-chat')
     setMessages([{ role: 'user', content: text }])
     await callChat(text)
   }
@@ -221,7 +222,7 @@ export default function QuoteEmbed({
       {step === 'chat' && (
         <button
           type="button"
-          onClick={() => { setStep('form'); setMessages([]); setLoading(false); postToParent('cg-quote-collapse') }}
+          onClick={() => { setStep('form'); setMessages([]); setLoading(false); postToParent('cg-quote-collapse'); postToParent('cg-quote-resize-form') }}
           aria-label="New quote"
           className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors"
         >
