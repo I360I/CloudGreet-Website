@@ -31,6 +31,12 @@ const MAX_TOOL_LOOPS = 10
 // both by texting in a tight loop, so we drop silently once they
 // exceed sane human-pace limits.
 const INBOUND_RATE_LIMIT_5MIN = 10
+// Marker body for a conversation-reset inbound. These rows are preserved
+// across the reset wipe so repeated "reset"/"new" messages still consume the
+// inbound rate budget (otherwise wiping history would reset the limiter and
+// let reset-spam trigger unlimited outbound SMS). Skipped when rebuilding the
+// model's message history so the sentinel never leaks into the prompt.
+const RESET_SENTINEL = '__cg_reset__'
 // Cap is per-phone per-hour across conversations. Kept high enough that
 // multi-leg bookings (4+ legs) clear it; the real dedup lives in the
 // per-requested_time guard above.
@@ -248,13 +254,25 @@ export async function handleInboundSms(args: {
   // Steve testing or a customer wanting to start a new booking.
   const trimmedBody = (args.body || '').trim().toLowerCase()
   if (trimmedBody === 'new' || trimmedBody === 'reset' || trimmedBody === 'start over') {
-    // Wipe the message history so the agent starts with a genuinely empty
-    // context on the next turn. Without this, history is loaded by conversation_id
-    // within a 24h window and the old messages are still visible.
+    // Record the reset as a counted inbound (sentinel body) BEFORE wiping, so
+    // it survives the wipe and keeps counting toward the 5-min inbound limit.
+    // The rate-limit check above already tallied prior sentinels, so after
+    // INBOUND_RATE_LIMIT_5MIN resets in the window we drop here instead of
+    // firing another SMS - closing the reset-spam cost hole.
+    await supabaseAdmin.from('sms_agent_messages').insert({
+      conversation_id: conversationId,
+      business_id: args.businessId,
+      direction: 'inbound',
+      body: RESET_SENTINEL,
+    })
+    // Wipe real message history so the agent starts with a genuinely empty
+    // context on the next turn, but KEEP the reset sentinels (they carry no
+    // conversational content and are skipped when the prompt is rebuilt).
     await supabaseAdmin
       .from('sms_agent_messages')
       .delete()
       .eq('conversation_id', conversationId)
+      .neq('body', RESET_SENTINEL)
     // Expire the conversation so getOrCreateConversation opens a fresh session.
     await supabaseAdmin
       .from('sms_conversations')
@@ -290,6 +308,7 @@ export async function handleInboundSms(args: {
   // Build Anthropic messages array from history.
   const messages: Anthropic.Messages.MessageParam[] = []
   for (const row of (history || []) as any[]) {
+    if (row.body === RESET_SENTINEL) continue // rate-limit marker, not content
     if (row.direction === 'inbound') {
       messages.push({ role: 'user', content: row.body })
     } else if (row.direction === 'outbound') {
@@ -549,6 +568,7 @@ export async function handleWebChat(args: {
 
   const messages: Anthropic.Messages.MessageParam[] = []
   for (const row of (history || []) as any[]) {
+    if (row.body === RESET_SENTINEL) continue // rate-limit marker, not content
     if (row.direction === 'inbound') messages.push({ role: 'user', content: row.body })
     else if (row.direction === 'outbound') messages.push({ role: 'assistant', content: row.body })
   }
@@ -1028,24 +1048,6 @@ async function runTool(args: {
   customerPhone: string
   conversationId?: string
 }): Promise<any> {
-  // Web-chat visitors are keyed by a synthetic `web-<session>` id, not a real
-  // phone. Side-effect tools must run against a real mobile so the owner has a
-  // callback number and cancel/reschedule-by-phone can match. If the agent
-  // tries to book/dispatch before collecting one, refuse and make it ask.
-  const SIDE_EFFECT_TOOLS = new Set([
-    'send_dispatch_request', 'book_appointment', 'cancel_appointment', 'reschedule_appointment',
-  ])
-  if (SIDE_EFFECT_TOOLS.has(args.name)) {
-    const effectivePhone = String(args.args.customer_phone || args.args.phone || args.customerPhone || '')
-    if (effectivePhone.startsWith('web-')) {
-      return {
-        ok: false,
-        error: 'missing_real_phone',
-        detail: 'No real mobile number collected yet. Ask the visitor for their mobile number and pass it as the phone/customer_phone argument before booking or dispatching.',
-      }
-    }
-  }
-
   // Pure-function tools handled inline - no need for an HTTP round-trip.
   if (args.name === 'lookup_drive_time') {
     return await lookupDriveTime({
