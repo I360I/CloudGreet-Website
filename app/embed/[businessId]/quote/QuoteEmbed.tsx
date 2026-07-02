@@ -369,28 +369,36 @@ export default function QuoteEmbed({
           </div>
         )}
       </div>
-      <form
-        onSubmit={(e) => { e.preventDefault(); void sendChat() }}
-        className="flex items-center gap-2 border-t border-black/[0.08] p-3 flex-shrink-0"
+      <div
+        className="flex items-end gap-2 border-t border-black/[0.08] p-3 flex-shrink-0"
         style={{ background: bg }}
       >
-        <input
-          ref={chatInputRef}
+        <textarea
+          ref={chatInputRef as any}
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
-          placeholder="Type a message..."
-          className="min-w-0 flex-1 rounded-full border border-black/10 bg-[#fafafa] px-4 py-2.5 text-[16px] leading-snug text-[#101015] outline-none transition-colors placeholder:text-gray-400 focus:border-black/30 focus:bg-white"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault()
+              void sendChat()
+            }
+          }}
+          placeholder="Type a message… Shift+Enter for new line"
+          rows={1}
+          className="min-w-0 flex-1 resize-none rounded-2xl border border-black/10 bg-[#fafafa] px-4 py-2.5 text-[16px] leading-snug text-[#101015] outline-none transition-colors placeholder:text-gray-400 focus:border-black/30 focus:bg-white"
+          style={{ maxHeight: '120px', overflowY: 'auto' }}
         />
         <button
-          type="submit"
+          type="button"
+          onClick={() => void sendChat()}
           disabled={loading || !chatInput.trim()}
           aria-label="Send"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white transition-all disabled:opacity-30"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white transition-all disabled:opacity-30 mb-0.5"
           style={{ background: accent }}
         >
           <PaperPlaneRight className="h-3.5 w-3.5" weight="fill" />
         </button>
-      </form>
+      </div>
     </div>
   )
 

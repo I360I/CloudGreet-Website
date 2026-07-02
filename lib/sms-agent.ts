@@ -942,6 +942,8 @@ Pass all collected fields as DEDICATED ARGS (not in notes):
 After send_dispatch_request succeeds: reply "Sent! Steve will text you shortly to confirm." Then call save_customer_email if email was just collected.
 After book_appointment succeeds: reply "Booked! Steve will reach out closer to your trip."
 
+ONCE BOOKING OR DISPATCH IS COMPLETE: Do NOT call lookup_drive_time, compute_quote, lookup_availability, book_appointment, or send_dispatch_request again unless the customer explicitly asks to make a NEW booking or change something. Casual replies ("ok", "thanks", "haha", "great") after a completed booking require only a short friendly text response — zero tool calls.
+
 DISPATCH EACH TRIP EXACTLY ONCE. Once sent, do NOT call send_dispatch_request again. A round trip = two legs = two dispatches total.
 
 CALENDAR BOOKING FLOW (rare — only when customer explicitly wants calendar):
@@ -1076,6 +1078,25 @@ async function runTool(args: {
           ok: false,
           error: 'already_dispatched_in_conversation',
           detail: 'A dispatch was already sent to Steve for this exact trip time. Do NOT send another. Just acknowledge the customer and let them know Steve will be in touch.',
+        }
+      }
+      // Also block dispatch if book_appointment already succeeded in this conversation.
+      // Prevents the pattern: book succeeds → customer sends casual reply → agent retries
+      // book (gets 409) → falls back to dispatch, double-notifying Steve.
+      const alreadyBooked = (convMsgs || []).some((row: any) =>
+        Array.isArray(row.tool_calls) &&
+        row.tool_calls.some((tc: any) =>
+          tc?.name === 'book_appointment' && tc?.result?.success === true
+        )
+      )
+      if (alreadyBooked) {
+        logger.warn('sms dispatch blocked: booking already completed in conversation', {
+          conversationId: args.conversationId, customerPhone: args.customerPhone,
+        })
+        return {
+          ok: false,
+          error: 'already_booked_in_conversation',
+          detail: 'A calendar booking was already completed for this customer in this conversation. Do NOT dispatch. Just tell the customer they are all set and Steve will be in touch.',
         }
       }
     }
