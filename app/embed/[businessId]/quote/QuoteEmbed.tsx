@@ -5,9 +5,19 @@ import { PaperPlaneRight, ArrowRight, ArrowCounterClockwise } from '@phosphor-ic
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
-const AIRPORTS = [
-  { label: 'CMH', value: 'John Glenn Columbus International Airport (CMH), Columbus, OH' },
-  { label: 'Rickenbacker', value: 'Rickenbacker International Airport (LCK), Columbus, OH' },
+// Ride categories. Optional - lets a visitor signal what the trip is for,
+// which both reinforces that the widget handles any ride (not just airports)
+// and gives the AI context to tailor the conversation from the first message.
+const RIDE_TYPES = [
+  'Airport',
+  'Wedding',
+  'Medical',
+  'Event / Concert',
+  'Business',
+  'Cruise Port',
+  'Senior Transportation',
+  'Hourly / As Directed',
+  'Other',
 ]
 
 function getSessionId(businessId: string): string {
@@ -35,7 +45,6 @@ function AddressInput({
   placeholder,
   onSubmit,
   onFocused,
-  accent,
   radius = '12px',
 }: {
   label: string
@@ -44,7 +53,6 @@ function AddressInput({
   placeholder: string
   onSubmit?: () => void
   onFocused?: () => void
-  accent: string
   radius?: string
 }) {
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -123,23 +131,38 @@ function AddressInput({
           </ul>
         )}
       </div>
-      <div className="flex gap-1.5 mt-1.5">
-        {AIRPORTS.map((a) => (
-          <button
-            key={a.label}
-            type="button"
-            onMouseDown={() => pick(a.value)}
-            className="rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors"
-            style={
-              value === a.value
-                ? { background: accent, borderColor: accent, color: '#fff' }
-                : { background: '#fff', borderColor: '#d1d5db', color: '#374151' }
-            }
-          >
-            {a.label}
-          </button>
+    </div>
+  )
+}
+
+function RideTypeSelect({
+  value,
+  onChange,
+  onFocused,
+  radius = '12px',
+}: {
+  value: string
+  onChange: (v: string) => void
+  onFocused?: () => void
+  radius?: string
+}) {
+  return (
+    <div>
+      <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+        What kind of ride?
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocused}
+        className="w-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-[16px] text-gray-900 outline-none transition-colors focus:border-gray-400 focus:bg-white"
+        style={{ borderRadius: radius }}
+      >
+        <option value="">Any ride</option>
+        {RIDE_TYPES.map((t) => (
+          <option key={t} value={t}>{t}</option>
         ))}
-      </div>
+      </select>
     </div>
   )
 }
@@ -166,6 +189,7 @@ export default function QuoteEmbed({
   expandOnFocus?: boolean
 }) {
   const [step, setStep] = useState<'form' | 'chat'>('form')
+  const [rideType, setRideType] = useState('')
   const [pickup, setPickup] = useState('')
   const [dropoff, setDropoff] = useState('')
   const [messages, setMessages] = useState<Msg[]>([])
@@ -189,7 +213,8 @@ export default function QuoteEmbed({
     if (step === 'chat') return // chat resize is handled by submitQuote
     const narrow = window.innerWidth < 380
     const headerH = showHeader ? 56 : 0
-    const formH = narrow || layout === 'stacked' ? 360 : 200
+    // Extra row for the optional "What kind of ride?" select (~56px).
+    const formH = narrow || layout === 'stacked' ? 420 : 260
     postToParent('cg-quote-resize-form')
     try { window.parent?.postMessage({ type: 'cg-quote-height', height: headerH + formH }, '*') } catch { /* ignore */ }
   }, [step, layout, showHeader])
@@ -217,7 +242,11 @@ export default function QuoteEmbed({
     const from = pickup.trim()
     const to = dropoff.trim()
     if (!from || !to) return
-    const text = `I need a quote from ${from} to ${to}`
+    // Fold the ride type into the opening message so the AI has context from
+    // the first turn (e.g. "a Wedding ride"). Falls back to a plain quote.
+    const text = rideType
+      ? `I need a quote for a ${rideType} ride from ${from} to ${to}`
+      : `I need a quote from ${from} to ${to}`
     setStep('chat')
     postToParent('cg-quote-resize-chat')
     setMessages([{ role: 'user', content: text }])
@@ -255,6 +284,7 @@ export default function QuoteEmbed({
       <div className="flex h-screen flex-col" style={{ background: bg }}>
         {showHeader && <Header subtitle="Instant price quote" />}
         <div className="flex flex-1 flex-col overflow-y-scroll px-4 py-4 gap-3" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+          <RideTypeSelect value={rideType} onChange={setRideType} onFocused={expand} radius={r} />
           <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-2">
             <div>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Pickup</p>
@@ -262,10 +292,9 @@ export default function QuoteEmbed({
                 label=""
                 value={pickup}
                 onChange={setPickup}
-                placeholder="Address or airport"
+                placeholder="Pickup location"
                 onSubmit={submitQuote}
                 onFocused={expand}
-                accent={accent}
                 radius={r}
               />
             </div>
@@ -275,10 +304,9 @@ export default function QuoteEmbed({
                 label=""
                 value={dropoff}
                 onChange={setDropoff}
-                placeholder="Address or airport"
+                placeholder="Where to?"
                 onSubmit={submitQuote}
                 onFocused={expand}
-                accent={accent}
                 radius={r}
               />
             </div>
@@ -305,6 +333,7 @@ export default function QuoteEmbed({
         <div className="flex-1 overflow-y-scroll" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         <div className="flex flex-col px-4 py-4 gap-1.5">
           <div className="space-y-2.5">
+            <RideTypeSelect value={rideType} onChange={setRideType} onFocused={expand} radius={r} />
             <AddressInput
               label="Pickup"
               value={pickup}
@@ -312,17 +341,15 @@ export default function QuoteEmbed({
               placeholder="e.g. 123 Main St, Columbus"
               onSubmit={submitQuote}
               onFocused={expand}
-              accent={accent}
               radius={r}
             />
             <AddressInput
               label="Destination"
               value={dropoff}
               onChange={setDropoff}
-              placeholder="e.g. Columbus Airport (CMH)"
+              placeholder="e.g. 456 High St, Dublin"
               onSubmit={submitQuote}
               onFocused={expand}
-              accent={accent}
               radius={r}
             />
           </div>
