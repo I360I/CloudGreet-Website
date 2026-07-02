@@ -9,6 +9,10 @@
  *   data-ring="BOOK A RIDE · CHAT · "     curved text around the button
  *                                         (set data-ring="" to hide the ring)
  *   data-autoopen="2000"                  auto-open the chat after N ms (0 = immediately)
+ *   data-launcher="off"                   hide the floating button entirely; the chat
+ *                                         then opens ONLY from your own buttons via
+ *                                         onclick="CloudGreet.open()". Close is the X
+ *                                         inside the chat panel.
  *
  * Injects a floating green launcher with curved rotating text around it, that
  * opens an iframe at /embed/<businessId> on this origin. Namespaced + very
@@ -30,6 +34,12 @@
 
   var label = script.getAttribute('data-label') || 'Chat with us';
   var autoOpen = script.getAttribute('data-autoopen');
+  // data-launcher="off" (or false/none/hidden/0) hides the floating button.
+  // The chat panel + CloudGreet.open() API still work, so the host page drives
+  // opening entirely from its own buttons.
+  var launcherAttr = (script.getAttribute('data-launcher') || '').toLowerCase();
+  var launcherHidden = launcherAttr === 'off' || launcherAttr === 'false' ||
+    launcherAttr === 'none' || launcherAttr === 'hidden' || launcherAttr === '0';
   var ringText = script.getAttribute('data-ring');
   if (ringText === null) ringText = 'BOOK A RIDE · CHAT · ';
   var origin = (function () {
@@ -137,9 +147,12 @@
   });
 
   function mount() {
+    // The panel (chat iframe) always mounts so CloudGreet.open() works. The
+    // floating launcher only mounts when it hasn't been turned off.
+    document.body.appendChild(panel);
+    if (launcherHidden) return;
     if (ringText) wrap.appendChild(ring);
     wrap.appendChild(btn);
-    document.body.appendChild(panel);
     document.body.appendChild(wrap);
   }
   if (document.body) mount();
