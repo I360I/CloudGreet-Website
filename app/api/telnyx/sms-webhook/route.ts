@@ -3,6 +3,7 @@ import { logger } from '@/lib/monitoring'
 import { markPhoneOptedOut } from '@/lib/review-requests'
 import { supabaseAdmin } from '@/lib/supabase'
 import { handleInboundSms } from '@/lib/sms-agent'
+import { verifyTelynyxSignature } from '@/lib/webhook-verification'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -38,7 +39,31 @@ const OPT_OUT_KEYWORDS = new Set([
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => null) as any
+    // Read the raw body for signature verification BEFORE parsing. This
+    // endpoint writes opt-outs (markPhoneOptedOut) and drives the paid AI
+    // agent (handleInboundSms) straight from the request body, so an
+    // unauthenticated caller could forge STOP for any customer or run up
+    // Anthropic/Telnyx costs. Verify whenever we're in production OR a
+    // Telnyx public key is configured (matches /api/sms/webhook), so a
+    // missing NODE_ENV can't silently open the door.
+    const rawBody = await request.text()
+    const signature = request.headers.get('telnyx-signature-ed25519')
+    const timestamp = request.headers.get('telnyx-timestamp')
+    const shouldVerify =
+      process.env.NODE_ENV === 'production' || !!process.env.TELNYX_PUBLIC_KEY
+    if (shouldVerify && !verifyTelynyxSignature(rawBody, signature, timestamp)) {
+      logger.warn('Telnyx inbound SMS webhook signature verification failed', {
+        hasSignature: !!signature,
+        hasTimestamp: !!timestamp,
+      })
+      return NextResponse.json(
+        { success: false, error: 'Invalid webhook signature' },
+        { status: 401 },
+      )
+    }
+
+    let body: any = null
+    try { body = JSON.parse(rawBody) } catch { body = null }
     if (!body) return NextResponse.json({ received: true })
 
     const event = body?.data?.event_type || body?.event_type || ''

@@ -160,7 +160,11 @@ export async function GET(request: NextRequest) {
  const authHeader = request.headers.get('authorization')
  const cronSecret = process.env.CRON_SECRET
 
- if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+ // Fail closed: if CRON_SECRET is unset in production this endpoint would
+ // otherwise be public, and it pings every upstream API (Stripe, Telnyx,
+ // Retell, OpenAI, Resend, Redis, Supabase) on each hit - unbounded cost
+ // and rate-limit drain. Only skip the check in non-production.
+ if (!cronSecret ? process.env.NODE_ENV === 'production' : authHeader !== `Bearer ${cronSecret}`) {
  logger.warn('Unauthorized cron job attempt', {
  hasAuthHeader: !!authHeader,
  hasCronSecret: !!cronSecret

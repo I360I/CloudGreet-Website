@@ -29,9 +29,10 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
   const url = new URL(request.url)
   const isVercelCron = request.headers.get('x-vercel-cron') === '1'
-  // Manual triggers from a logged-in admin in the browser bypass the
-  // bearer check; cron callers must pass it.
-  if (cronSecret && !isVercelCron && authHeader !== `Bearer ${cronSecret}`) {
+  // Vercel's own cron caller is trusted via the x-vercel-cron header.
+  // For everyone else, fail closed: reject when CRON_SECRET is unset in
+  // production, or when it's set and the bearer doesn't match.
+  if (!isVercelCron && (!cronSecret ? process.env.NODE_ENV === 'production' : authHeader !== `Bearer ${cronSecret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

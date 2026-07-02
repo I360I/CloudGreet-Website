@@ -1,10 +1,17 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { fetchComplianceEvents } from '@/lib/compliance/logging'
+import { requireAdmin } from '@/lib/auth-middleware'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+ // Compliance events carry tenant ids, paths, and scrubbed-but-meaningful
+ // request metadata (PII + cross-tenant business intelligence). Admin only.
+ const admin = await requireAdmin(request)
+ if (!admin.success) {
+ return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 401 })
+ }
  try {
  const events = await fetchComplianceEvents(50)
  return NextResponse.json({ success: true, ...events })

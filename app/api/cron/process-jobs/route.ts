@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
  const authHeader = request.headers.get('authorization')
  const cronSecret = process.env.CRON_SECRET
 
- if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+ // Fail closed: reject when CRON_SECRET is unset in production (otherwise
+ // the job queue drains to any anonymous caller). Skip only in non-prod.
+ if (!cronSecret ? process.env.NODE_ENV === 'production' : authHeader !== `Bearer ${cronSecret}`) {
  logger.warn('Unauthorized cron job attempt', {
  hasAuthHeader: !!authHeader,
  hasCronSecret: !!cronSecret
