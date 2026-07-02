@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { PaperPlaneRight, ArrowRight } from '@phosphor-icons/react'
+import { PaperPlaneRight, ArrowRight, ArrowCounterClockwise } from '@phosphor-icons/react'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
@@ -210,9 +210,9 @@ export default function QuoteEmbed({
   }
 
   const Header = ({ subtitle }: { subtitle: string }) => (
-    <div className="flex items-center justify-between px-4 py-3 text-white flex-shrink-0" style={{ background: accent }}>
-      <div>
-        <div className="text-[14px] font-semibold tracking-tight">{name}</div>
+    <div className="flex items-center gap-2 px-4 py-3 text-white flex-shrink-0" style={{ background: accent }}>
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-semibold tracking-tight truncate">{name}</div>
         <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-white/55">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_2px_rgba(52,211,153,0.5)]" />
           {subtitle}
@@ -222,9 +222,10 @@ export default function QuoteEmbed({
         <button
           type="button"
           onClick={() => { setStep('form'); setMessages([]); setLoading(false); postToParent('cg-quote-collapse') }}
-          className="text-[11px] text-white/40 hover:text-white/70 transition-colors px-2 py-1"
+          aria-label="New quote"
+          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors"
         >
-          New quote
+          <ArrowCounterClockwise weight="bold" className="h-3.5 w-3.5" />
         </button>
       )}
     </div>
@@ -328,11 +329,11 @@ export default function QuoteEmbed({
   return (
     <div className="flex h-screen flex-col" style={{ background: bg }}>
       {showHeader && <Header subtitle="Online · replies in seconds" />}
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
-              className={`max-w-[84%] whitespace-pre-wrap px-3.5 py-2.5 text-sm leading-relaxed ${
+              className={`max-w-[88%] min-w-0 whitespace-pre-wrap px-3.5 py-2.5 text-sm leading-relaxed ${
                 m.role === 'user'
                   ? 'rounded-2xl rounded-br-md text-white'
                   : 'rounded-2xl rounded-bl-md border border-black/[0.08] bg-white text-[#101015] shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
@@ -369,10 +370,10 @@ export default function QuoteEmbed({
           type="submit"
           disabled={loading || !chatInput.trim()}
           aria-label="Send"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-all disabled:opacity-30"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white transition-all disabled:opacity-30"
           style={{ background: accent }}
         >
-          <PaperPlaneRight className="h-4 w-4" weight="fill" />
+          <PaperPlaneRight className="h-3.5 w-3.5" weight="fill" />
         </button>
       </form>
     </div>
