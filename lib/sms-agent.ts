@@ -1080,10 +1080,19 @@ async function runTool(args: {
           detail: 'A dispatch was already sent to Steve for this exact trip time. Do NOT send another. Just acknowledge the customer and let them know Steve will be in touch.',
         }
       }
-      // Also block dispatch if book_appointment already succeeded in this conversation.
-      // Prevents the pattern: book succeeds → customer sends casual reply → agent retries
-      // book (gets 409) → falls back to dispatch, double-notifying Steve.
-      const alreadyBooked = (convMsgs || []).some((row: any) =>
+      // Also block dispatch if book_appointment already succeeded recently in this
+      // conversation (last 30 min). Prevents: book succeeds → customer sends casual
+      // reply → agent retries book (409) → falls back to dispatch, double-notifying Steve.
+      // Scoped to 30 min so a returning customer booking a new ride days/hours later
+      // is never blocked.
+      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+      const { data: recentConvMsgs } = await supabaseAdmin
+        .from('sms_agent_messages')
+        .select('tool_calls')
+        .eq('conversation_id', args.conversationId)
+        .gte('created_at', thirtyMinAgo)
+        .not('tool_calls', 'is', null)
+      const alreadyBooked = (recentConvMsgs || []).some((row: any) =>
         Array.isArray(row.tool_calls) &&
         row.tool_calls.some((tc: any) =>
           tc?.name === 'book_appointment' && tc?.result?.success === true
