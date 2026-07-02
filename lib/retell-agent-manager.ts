@@ -142,7 +142,8 @@ class RetellAgentManager {
         voice_id: this.selectOptimalVoice(mergedConfig.businessType),
         language: 'en-US',
         response_engine: { type: 'retell-llm', llm_id: llmId },
-        max_call_duration_ms: 480000, // 8 minutes
+        max_call_duration_ms: 900000, // 15 minutes
+        end_call_after_silence_ms: 20000, // hang up after 20s of silence
         webhook_url: webhookUrl,
         // Tell Retell what structured fields to extract from each call's
         // transcript. Without this, post_call_analysis fires but
