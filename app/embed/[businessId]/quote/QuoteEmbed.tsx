@@ -199,6 +199,12 @@ export default function QuoteEmbed({
   const chatInputRef = useRef<HTMLInputElement>(null)
   const sessionRef = useRef<string>('')
 
+  // Hourly/As Directed rides are priced by the hour, not by destination, so
+  // the widget shouldn't collect (or require) a dropoff for this ride type -
+  // the AI asks how many hours instead once the conversation starts.
+  const isHourly = rideType === 'Hourly / As Directed'
+  useEffect(() => { if (isHourly) setDropoff('') }, [isHourly])
+
   useEffect(() => { sessionRef.current = getSessionId(businessId) }, [businessId])
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -241,12 +247,15 @@ export default function QuoteEmbed({
   const submitQuote = async () => {
     const from = pickup.trim()
     const to = dropoff.trim()
-    if (!from || !to) return
+    if (!from || (!isHourly && !to)) return
     // Fold the ride type into the opening message so the AI has context from
-    // the first turn (e.g. "a Wedding ride"). Falls back to a plain quote.
-    const text = rideType
-      ? `I need a quote for a ${rideType} ride from ${from} to ${to}`
-      : `I need a quote from ${from} to ${to}`
+    // the first turn (e.g. "a Wedding ride"). Hourly has no destination - the
+    // AI asks how many hours once the conversation starts.
+    const text = isHourly
+      ? `I need a quote for an Hourly / As Directed ride, pickup at ${from}`
+      : rideType
+        ? `I need a quote for a ${rideType} ride from ${from} to ${to}`
+        : `I need a quote from ${from} to ${to}`
     setStep('chat')
     postToParent('cg-quote-resize-chat')
     setMessages([{ role: 'user', content: text }])
@@ -285,7 +294,7 @@ export default function QuoteEmbed({
         {showHeader && <Header subtitle="Instant price quote" />}
         <div className="flex flex-1 flex-col overflow-y-scroll px-4 py-4 gap-3" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
           <RideTypeSelect value={rideType} onChange={setRideType} onFocused={expand} radius={r} />
-          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-2">
+          <div className={isHourly ? '' : 'grid grid-cols-1 min-[380px]:grid-cols-2 gap-2'}>
             <div>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Pickup</p>
               <AddressInput
@@ -298,23 +307,25 @@ export default function QuoteEmbed({
                 radius={r}
               />
             </div>
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Destination</p>
-              <AddressInput
-                label=""
-                value={dropoff}
-                onChange={setDropoff}
-                placeholder="Where to?"
-                onSubmit={submitQuote}
-                onFocused={expand}
-                radius={r}
-              />
-            </div>
+            {!isHourly && (
+              <div>
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Destination</p>
+                <AddressInput
+                  label=""
+                  value={dropoff}
+                  onChange={setDropoff}
+                  placeholder="Where to?"
+                  onSubmit={submitQuote}
+                  onFocused={expand}
+                  radius={r}
+                />
+              </div>
+            )}
           </div>
 
           <button
             onClick={submitQuote}
-            disabled={!pickup.trim() || !dropoff.trim()}
+            disabled={!pickup.trim() || (!isHourly && !dropoff.trim())}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[14px] font-semibold text-white transition-all disabled:opacity-35"
             style={{ background: accent, borderRadius: r }}
           >
@@ -343,19 +354,21 @@ export default function QuoteEmbed({
               onFocused={expand}
               radius={r}
             />
-            <AddressInput
-              label="Destination"
-              value={dropoff}
-              onChange={setDropoff}
-              placeholder="e.g. 456 High St, Dublin"
-              onSubmit={submitQuote}
-              onFocused={expand}
-              radius={r}
-            />
+            {!isHourly && (
+              <AddressInput
+                label="Destination"
+                value={dropoff}
+                onChange={setDropoff}
+                placeholder="e.g. 456 High St, Dublin"
+                onSubmit={submitQuote}
+                onFocused={expand}
+                radius={r}
+              />
+            )}
           </div>
           <button
             onClick={submitQuote}
-            disabled={!pickup.trim() || !dropoff.trim()}
+            disabled={!pickup.trim() || (!isHourly && !dropoff.trim())}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[14px] font-semibold text-white transition-all disabled:opacity-35 mt-1"
             style={{ background: accent, borderRadius: r }}
           >
