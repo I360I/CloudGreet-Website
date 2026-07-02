@@ -1080,14 +1080,20 @@ async function runTool(args: {
           detail: 'A dispatch was already sent to Steve for this exact trip time. Do NOT send another. Just acknowledge the customer and let them know Steve will be in touch.',
         }
       }
-      // Also block dispatch if book_appointment already succeeded in this conversation
-      // for the SAME trip (matching pickup + dropoff). Prevents: book succeeds →
-      // customer sends casual reply → agent retries book (409) → falls back to dispatch.
-      // Matched on trip details (not time) so a new booking from the same address to a
-      // different destination is never blocked.
+      // Block dispatch if book_appointment already succeeded in the last 10 min for
+      // the SAME trip (matching pickup + dropoff). Prevents: book succeeds → casual
+      // reply → agent retries book (409) → falls back to dispatch, double-notifying Steve.
+      // 10-min window ensures a customer booking the same route a week later is never blocked.
+      const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
       const dispatchPickup = String(args.args.pickup || '').trim().toLowerCase()
       const dispatchDropoff = String(args.args.dropoff || '').trim().toLowerCase()
-      const alreadyBooked = dispatchPickup && dispatchDropoff && (convMsgs || []).some((row: any) =>
+      const { data: recentConvMsgs } = await supabaseAdmin
+        .from('sms_agent_messages')
+        .select('tool_calls')
+        .eq('conversation_id', args.conversationId)
+        .gte('created_at', tenMinAgo)
+        .not('tool_calls', 'is', null)
+      const alreadyBooked = dispatchPickup && dispatchDropoff && (recentConvMsgs || []).some((row: any) =>
         Array.isArray(row.tool_calls) &&
         row.tool_calls.some((tc: any) => {
           if (tc?.name !== 'book_appointment') return false
