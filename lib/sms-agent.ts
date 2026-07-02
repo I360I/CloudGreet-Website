@@ -1080,32 +1080,32 @@ async function runTool(args: {
           detail: 'A dispatch was already sent to Steve for this exact trip time. Do NOT send another. Just acknowledge the customer and let them know Steve will be in touch.',
         }
       }
-      // Also block dispatch if book_appointment already succeeded recently in this
-      // conversation (last 30 min). Prevents: book succeeds → customer sends casual
-      // reply → agent retries book (409) → falls back to dispatch, double-notifying Steve.
-      // Scoped to 30 min so a returning customer booking a new ride days/hours later
-      // is never blocked.
-      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
-      const { data: recentConvMsgs } = await supabaseAdmin
-        .from('sms_agent_messages')
-        .select('tool_calls')
-        .eq('conversation_id', args.conversationId)
-        .gte('created_at', thirtyMinAgo)
-        .not('tool_calls', 'is', null)
-      const alreadyBooked = (recentConvMsgs || []).some((row: any) =>
+      // Also block dispatch if book_appointment already succeeded in this conversation
+      // for the SAME trip (matching pickup + dropoff). Prevents: book succeeds →
+      // customer sends casual reply → agent retries book (409) → falls back to dispatch.
+      // Matched on trip details (not time) so a new booking from the same address to a
+      // different destination is never blocked.
+      const dispatchPickup = String(args.args.pickup || '').trim().toLowerCase()
+      const dispatchDropoff = String(args.args.dropoff || '').trim().toLowerCase()
+      const alreadyBooked = dispatchPickup && dispatchDropoff && (convMsgs || []).some((row: any) =>
         Array.isArray(row.tool_calls) &&
-        row.tool_calls.some((tc: any) =>
-          tc?.name === 'book_appointment' && tc?.result?.success === true
-        )
+        row.tool_calls.some((tc: any) => {
+          if (tc?.name !== 'book_appointment') return false
+          if (tc?.result?.success !== true) return false
+          const bookedPickup = String(tc?.args?.pickup || '').trim().toLowerCase()
+          const bookedDropoff = String(tc?.args?.dropoff || '').trim().toLowerCase()
+          return bookedPickup && bookedDropoff && bookedPickup === dispatchPickup && bookedDropoff === dispatchDropoff
+        })
       )
       if (alreadyBooked) {
-        logger.warn('sms dispatch blocked: booking already completed in conversation', {
+        logger.warn('sms dispatch blocked: same trip already booked in conversation', {
           conversationId: args.conversationId, customerPhone: args.customerPhone,
+          pickup: dispatchPickup, dropoff: dispatchDropoff,
         })
         return {
           ok: false,
           error: 'already_booked_in_conversation',
-          detail: 'A calendar booking was already completed for this customer in this conversation. Do NOT dispatch. Just tell the customer they are all set and Steve will be in touch.',
+          detail: 'A calendar booking was already completed for this exact trip in this conversation. Do NOT dispatch. Just tell the customer they are all set and Steve will be in touch.',
         }
       }
     }
