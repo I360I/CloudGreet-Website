@@ -44,7 +44,8 @@ export const TEMPLATE_VARIABLES: { name: string; description: string; sample: st
   { name: 'phone',    description: "customer's phone",       sample: '+1 (555) 123-4567' },
   { name: 'time',     description: 'appointment date/time',  sample: 'Tue Jul 8, 2:00 PM' },
   { name: 'service',  description: 'what they booked',       sample: 'AC repair' },
-  { name: 'address',  description: 'service address',        sample: '123 Main St' },
+  { name: 'address',  description: 'pickup / service address', sample: '123 Main St' },
+  { name: 'dropoff',  description: 'dropoff address',        sample: 'CMH Airport' },
   { name: 'email',    description: "customer's email",       sample: 'john@example.com' },
   { name: 'flight',   description: 'flight number',          sample: 'AA123' },
   { name: 'business', description: "the business's name",    sample: 'Mike\'s HVAC' },
@@ -56,6 +57,7 @@ export type BookingNotificationContext = {
   time?: string | null      // pre-formatted display string
   service?: string | null
   address?: string | null
+  dropoff?: string | null
   email?: string | null
   flight?: string | null    // flight number (+ airline if provided)
   business?: string | null
@@ -70,17 +72,36 @@ export type BookingNotificationContext = {
 
 /**
  * Substitute {var} placeholders in a template. Missing values render
- * as empty strings rather than the literal "{var}" so the SMS is
- * still readable when, e.g., we never collected the address.
+ * as empty strings. Lines where every {var} resolved to empty AND
+ * nothing remains after stripping the label prefix are dropped — so
+ * optional fields like Email/Flight don't leave orphaned labels when a
+ * voice caller didn't provide them.
  */
 export function renderTemplate(
   template: string,
   ctx: BookingNotificationContext,
 ): string {
-  return template.replace(/\{(\w+)\}/g, (_, key) => {
-    const v = (ctx as any)[key]
-    return typeof v === 'string' ? v.trim() : ''
-  }).replace(/[ \t]+/g, ' ').replace(/[ \t]+([,.!?])/g, '$1').trim()
+  const lines = template.split('\n').map(line => {
+    let hasVar = false
+    let hasNonEmptyVar = false
+    const substituted = line.replace(/\{(\w+)\}/g, (_, key) => {
+      hasVar = true
+      const v = (ctx as any)[key]
+      if (typeof v === 'string' && v.trim()) { hasNonEmptyVar = true; return v.trim() }
+      return ''
+    })
+    // If the line had vars but ALL resolved to empty, drop it only if
+    // there's no remaining content beyond a "Label: " prefix.
+    if (hasVar && !hasNonEmptyVar) {
+      const stripped = substituted.replace(/^[\w ]+:\s*/, '').trim()
+      if (!stripped) return null
+    }
+    return substituted
+      .replace(/[ \t]+/g, ' ')
+      .replace(/[ \t]+([,.!?])/g, '$1')
+      .trim()
+  })
+  return lines.filter(l => l !== null && l !== '').join('\n').trim()
 }
 
 /**
