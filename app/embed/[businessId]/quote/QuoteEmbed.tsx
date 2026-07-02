@@ -330,7 +330,7 @@ export default function QuoteEmbed({
   return (
     <div className="flex h-screen flex-col" style={{ background: bg }}>
       {showHeader && <Header subtitle="Online · replies in seconds" />}
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
+      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-4" style={{ WebkitOverflowScrolling: 'touch' }}>
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
