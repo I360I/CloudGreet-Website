@@ -180,6 +180,16 @@ export default function QuoteEmbed({
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages, loading])
 
+  // Tell the parent iframe what height we need so it never clips content
+  useEffect(() => {
+    if (step === 'chat') return // chat resize is handled by submitQuote
+    const narrow = window.innerWidth < 380
+    const headerH = showHeader ? 56 : 0
+    const formH = narrow || layout === 'stacked' ? 360 : 200
+    postToParent('cg-quote-resize-form')
+    try { window.parent?.postMessage({ type: 'cg-quote-height', height: headerH + formH }, '*') } catch { /* ignore */ }
+  }, [step, layout, showHeader])
+
   const callChat = async (text: string) => {
     setLoading(true)
     try {
@@ -240,7 +250,7 @@ export default function QuoteEmbed({
     return (
       <div className="flex h-screen flex-col" style={{ background: bg }}>
         {showHeader && <Header subtitle="Instant price quote" />}
-        <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4 gap-3" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex flex-1 flex-col overflow-y-scroll px-4 py-4 gap-3" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
           <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-2">
             <div>
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Pickup</p>
@@ -288,7 +298,7 @@ export default function QuoteEmbed({
     return (
       <div className="flex h-screen flex-col" style={{ background: bg }}>
         {showHeader && <Header subtitle="Instant price quote" />}
-        <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 overflow-y-scroll" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         <div className="flex flex-col px-4 py-4 gap-1.5">
           <div className="space-y-2.5">
             <AddressInput
@@ -330,7 +340,7 @@ export default function QuoteEmbed({
   return (
     <div className="flex h-screen flex-col" style={{ background: bg }}>
       {showHeader && <Header subtitle="Online · replies in seconds" />}
-      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-scroll px-3 py-4" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
