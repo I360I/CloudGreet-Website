@@ -697,6 +697,7 @@ function LogoMarquee() {
   { src: '/logos/retell.svg', alt: 'Retell AI' },
   { src: '/logos/anthropic.svg', alt: 'Anthropic' },
   { src: '/logos/google.svg', alt: 'Google' },
+  { src: '/logos/elevenlabs.svg', alt: 'ElevenLabs', cls: 'scale-[1.15]' },
  ]
  // 4 copies so one copy-width (~1.5k px) of travel loops seamlessly even
  // on displays wider than a single copy (2 copies gapped on 1920+ screens)
