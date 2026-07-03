@@ -1170,7 +1170,6 @@ function FooterCard() {
         <li><Link href="/blog" className="hover:text-sky-600 transition-colors">Blog</Link></li>
         <li><Link href="/contact" className="hover:text-sky-600 transition-colors">Contact</Link></li>
         <li><Link href="/login" className="hover:text-sky-600 transition-colors">Sign in</Link></li>
-        <li><Link href="/apply" className="hover:text-sky-600 transition-colors">Sales careers</Link></li>
        </ul>
       </div>
 
