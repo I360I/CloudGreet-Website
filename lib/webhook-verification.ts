@@ -169,15 +169,31 @@ export function verifyTelynyxSignature(
   }
 
   try {
-    // Verify Ed25519 signature
+    // Verify Ed25519 signature. Node's createSign/createVerify streaming
+    // classes don't support Ed25519 at all - it must go through the
+    // one-shot crypto.verify(null, ...) API, and the key needs to be a
+    // KeyObject built from Telnyx's raw base64 public key (not a PEM/DER
+    // string createVerify would take for RSA/EC). Building it as a JWK
+    // is the documented way to turn 32 raw Ed25519 key bytes into a
+    // KeyObject without hand-rolling DER.
     const signedPayload = `${timestamp}|${payload}`
-    
-    const verify = crypto.createVerify('sha256')
-    verify.update(signedPayload)
-    verify.end()
-    
-    const isValid = verify.verify(publicKey, signature, 'base64')
-    
+
+    const keyObject = crypto.createPublicKey({
+      key: {
+        kty: 'OKP',
+        crv: 'Ed25519',
+        x: Buffer.from(publicKey, 'base64').toString('base64url'),
+      },
+      format: 'jwk',
+    })
+
+    const isValid = crypto.verify(
+      null,
+      Buffer.from(signedPayload),
+      keyObject,
+      Buffer.from(signature, 'base64'),
+    )
+
     /**
 
     
