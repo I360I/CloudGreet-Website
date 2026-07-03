@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { runSmsHealthCheck } from '@/lib/sms-health'
+import { pingSmsPipeline } from '@/lib/sms-agent'
 import { postToSlack } from '@/lib/notifications/slack'
 import { notifyAdmin } from '@/lib/notifications/notify'
 import { telnyxClient } from '@/lib/telnyx'
 import { logger } from '@/lib/monitoring'
 import { checkCronAuth } from '@/lib/cron-auth'
+
+const STEVE_ID = '650406c3-5585-446e-958d-0fbcccf54795'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -23,14 +26,22 @@ export async function GET(request: NextRequest) {
   if (denial) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const report = await runSmsHealthCheck({ windowHours: 24 })
+    const [report, pingResult] = await Promise.all([
+      runSmsHealthCheck({ windowHours: 24 }),
+      pingSmsPipeline(STEVE_ID),
+    ])
 
     const criticalCount = report.issues.filter((i) => i.severity === 'critical').length
     const status = report.healthy ? 'HEALTHY' : `${criticalCount} CRITICAL ISSUE${criticalCount !== 1 ? 'S' : ''}`
 
+    const pingLine = pingResult.ok
+      ? `Agent ping: live (${pingResult.ms}ms)`
+      : `Agent ping: FAILED -- ${pingResult.error}`
+
     // Build a concise text for SMS / Slack
     const lines: string[] = [
       `CloudGreet SMS Daily (${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}) -- ${status}`,
+      pingLine,
       '',
       report.aiSummary,
     ]
