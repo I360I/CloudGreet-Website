@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { requireAuth } from '@/lib/auth-middleware'
+import { requireAuth, REP_TOOL_ROLES } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import { nextBusinessSlot, clampToBusinessHours } from '@/lib/sales/business-hours'
 
@@ -20,7 +20,7 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   const auth = await requireAuth(request)
-  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+  if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
   }
 
@@ -129,7 +129,7 @@ export async function PATCH(
   { params }: { params: { id: string } },
 ) {
   const auth = await requireAuth(request)
-  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+  if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
   }
 
@@ -220,7 +220,7 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   const auth = await requireAuth(request)
-  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+  if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
   }
   const { error } = await supabaseAdmin

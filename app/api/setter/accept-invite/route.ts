@@ -1,0 +1,103 @@
+import { NextRequest, NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
+import { supabaseAdmin } from '@/lib/supabase'
+import { JWTManager } from '@/lib/jwt-manager'
+import { logger } from '@/lib/monitoring'
+import { authRateLimit } from '@/lib/rate-limiting-redis'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+/**
+ * POST /api/setter/accept-invite
+ * body: { token, password, first_name, last_name }
+ *
+ * Consumes a one-time setter invite token and creates the account. No
+ * Stripe Connect / contractor agreement step (mirrors
+ * /api/sales/accept-invite structurally but a setter doesn't earn
+ * commission, so it skips the sales_reps profile insert and the
+ * personal Telnyx number provisioning - both are commission/payout-
+ * specific and unnecessary for v1; see plan's explicit scope note.
+ */
+export async function POST(request: NextRequest) {
+  const rl = await authRateLimit(request)
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'Too many attempts. Please try again later.' },
+      { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetTime - Date.now()) / 1000)) } },
+    )
+  }
+
+  const body = await request.json().catch(() => ({})) as Record<string, any>
+  const token = (body.token || '').trim()
+  const password = (body.password || '').trim()
+  const firstName = (body.first_name || '').trim()
+  const lastName = (body.last_name || '').trim()
+
+  if (!token) return NextResponse.json({ error: 'Token required' }, { status: 400 })
+  if (!password || password.length < 8) {
+    return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
+  }
+  if (!firstName || !lastName) {
+    return NextResponse.json({ error: 'First and last name required' }, { status: 400 })
+  }
+
+  const { data: invite } = await supabaseAdmin
+    .from('setter_invites')
+    .select('*')
+    .eq('token', token)
+    .maybeSingle()
+
+  if (!invite) return NextResponse.json({ error: 'Invite not found or already consumed' }, { status: 404 })
+  if (invite.consumed_at) return NextResponse.json({ error: 'This invite has already been used' }, { status: 410 })
+  if (new Date(invite.expires_at) < new Date()) {
+    return NextResponse.json({ error: 'This invite has expired - ask the admin for a new one' }, { status: 410 })
+  }
+
+  const { data: existingUser } = await supabaseAdmin
+    .from('custom_users')
+    .select('id')
+    .eq('email', invite.email)
+    .maybeSingle()
+  if (existingUser) {
+    return NextResponse.json({ error: 'An account already exists for this email' }, { status: 409 })
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10)
+  const { data: newUser, error: userErr } = await supabaseAdmin
+    .from('custom_users')
+    .insert({
+      email: invite.email,
+      password_hash: passwordHash,
+      first_name: firstName,
+      last_name: lastName,
+      name: `${firstName} ${lastName}`,
+      role: 'setter',
+      is_admin: false,
+      is_active: true,
+      status: 'active',
+    })
+    .select('id, email')
+    .single()
+
+  if (userErr || !newUser) {
+    logger.error('Failed to create setter user', { error: userErr?.message })
+    return NextResponse.json({ error: 'Failed to create account' }, { status: 500 })
+  }
+
+  await supabaseAdmin
+    .from('setter_invites')
+    .update({ consumed_at: new Date().toISOString(), consumed_by: newUser.id })
+    .eq('token', token)
+
+  const jwt = JWTManager.createUserToken(newUser.id, '', newUser.email, 'setter')
+  const res = NextResponse.json({ success: true, userId: newUser.id })
+  res.cookies.set('token', jwt, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+  })
+  return res
+}

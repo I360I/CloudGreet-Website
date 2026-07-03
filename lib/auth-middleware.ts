@@ -138,6 +138,13 @@ export async function requireAdmin(request: NextRequest): Promise<AuthResult> {
   return { success: false, error: 'Admin access required' }
 }
 
+// Roles that can use the shared rep tooling (dialer, scraper, leads
+// workspace). 'sales' reps close deals and earn commission; 'setter'
+// accounts (e.g. Ed) use the same calling/lead tools but never touch the
+// commission pipeline - routes that gate on this must NOT be the same
+// routes that expose closes/earnings/clients/payouts.
+export const REP_TOOL_ROLES = new Set(['sales', 'setter'])
+
 export async function requireEmployee(
   request: NextRequest,
   options: { allowManager?: boolean } = {}
@@ -161,7 +168,7 @@ export async function requireEmployee(
   }
 
   const effectiveRole = user.role ?? auth.role ?? 'user'
-  const allowedRoles = new Set<string>(['sales'])
+  const allowedRoles = new Set<string>(['sales', 'setter'])
   if (options.allowManager) {
     allowedRoles.add('owner')
     allowedRoles.add('admin')

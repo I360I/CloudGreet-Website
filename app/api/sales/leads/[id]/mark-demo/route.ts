@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { requireAuth } from '@/lib/auth-middleware'
+import { requireAuth, REP_TOOL_ROLES } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -22,9 +22,13 @@ export async function POST(
   { params }: { params: { id: string } },
 ) {
   const auth = await requireAuth(request)
-  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+  if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
   }
+  // Setters don't close deals or earn commission - the closes insert/update
+  // block below must never run for them, or every demo Ed books would
+  // create a phantom commission-pipeline row attributed to him.
+  const isSetter = auth.role === 'setter'
 
   const body = await request.json().catch(() => ({} as any))
   const scheduledAtRaw = String(body?.scheduled_at || '').trim()
@@ -79,55 +83,61 @@ export async function POST(
   //
   // Idempotent: if a close already exists for this rep + this
   // prospect email, update its demo time instead of stacking rows.
+  //
+  // Setters never own a `closes` row - that table is the commission
+  // pipeline for reps who personally close deals. Skip it entirely for
+  // them; the lead_assignments update above is their complete record.
   let closeId: string | null = null
-  const businessName = lead.business_name || 'Unknown'
-  const prospectEmail = lead.email ? String(lead.email).toLowerCase() : null
-  const closeMatcher = supabaseAdmin
-    .from('closes')
-    .select('id')
-    .eq('rep_id', auth.userId)
-    .eq('prospect_business_name', businessName)
-    .order('created_at', { ascending: false })
-    .limit(1)
-  const { data: existingClose } = await (prospectEmail
-    ? closeMatcher.eq('prospect_email', prospectEmail)
-    : closeMatcher).maybeSingle()
-
-  if (existingClose?.id) {
-    closeId = existingClose.id
-    await supabaseAdmin
+  if (!isSetter) {
+    const businessName = lead.business_name || 'Unknown'
+    const prospectEmail = lead.email ? String(lead.email).toLowerCase() : null
+    const closeMatcher = supabaseAdmin
       .from('closes')
-      .update({
-        demo_scheduled_at: scheduledAtIso,
-        updated_at: new Date().toISOString(),
-        ...(notes ? { notes: `Demo set: ${notes}` } : {}),
-      })
-      .eq('id', existingClose.id)
-  } else {
-    const { data: newClose, error: closeErr } = await supabaseAdmin
-      .from('closes')
-      .insert({
-        rep_id: auth.userId,
-        prospect_business_name: businessName,
-        prospect_contact_name: lead.contact_name || null,
-        prospect_email: prospectEmail,
-        prospect_phone: lead.phone || null,
-        agreed_monthly_cents: 0,
-        agreed_setup_fee_cents: 0,
-        status: 'pending',
-        demo_scheduled_at: scheduledAtIso,
-        notes: notes ? `Demo set: ${notes}` : `Demo set from lead ${lead.id}`,
-      })
       .select('id')
-      .single()
-    if (closeErr) {
-      // Non-fatal: assignment update already succeeded. Log loud so
-      // admin notices the queue won't surface this one.
-      logger.warn('mark-demo: close insert failed (assignment still updated)', {
-        leadId: lead.id, error: closeErr.message,
-      })
+      .eq('rep_id', auth.userId)
+      .eq('prospect_business_name', businessName)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    const { data: existingClose } = await (prospectEmail
+      ? closeMatcher.eq('prospect_email', prospectEmail)
+      : closeMatcher).maybeSingle()
+
+    if (existingClose?.id) {
+      closeId = existingClose.id
+      await supabaseAdmin
+        .from('closes')
+        .update({
+          demo_scheduled_at: scheduledAtIso,
+          updated_at: new Date().toISOString(),
+          ...(notes ? { notes: `Demo set: ${notes}` } : {}),
+        })
+        .eq('id', existingClose.id)
     } else {
-      closeId = newClose?.id || null
+      const { data: newClose, error: closeErr } = await supabaseAdmin
+        .from('closes')
+        .insert({
+          rep_id: auth.userId,
+          prospect_business_name: businessName,
+          prospect_contact_name: lead.contact_name || null,
+          prospect_email: prospectEmail,
+          prospect_phone: lead.phone || null,
+          agreed_monthly_cents: 0,
+          agreed_setup_fee_cents: 0,
+          status: 'pending',
+          demo_scheduled_at: scheduledAtIso,
+          notes: notes ? `Demo set: ${notes}` : `Demo set from lead ${lead.id}`,
+        })
+        .select('id')
+        .single()
+      if (closeErr) {
+        // Non-fatal: assignment update already succeeded. Log loud so
+        // admin notices the queue won't surface this one.
+        logger.warn('mark-demo: close insert failed (assignment still updated)', {
+          leadId: lead.id, error: closeErr.message,
+        })
+      } else {
+        closeId = newClose?.id || null
+      }
     }
   }
 

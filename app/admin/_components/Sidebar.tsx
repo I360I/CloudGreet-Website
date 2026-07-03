@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
  SquaresFour, Phone, CurrencyDollar, ListChecks, MagicWand, SignOut, Users,
- FileText, Robot, PhoneOutgoing, TestTube, ChatText, CalendarCheck, DotsThree, X, Article, Envelope,
+ FileText, Robot, PhoneOutgoing, TestTube, ChatText, CalendarCheck, DotsThree, X, Article, Envelope, UserPlus,
 } from '@phosphor-icons/react'
 import { useAdminTheme } from './Shell'
 
@@ -41,6 +41,7 @@ const groups: Group[] = [
   items: [
    { icon: CurrencyDollar, label: 'Billing', href: '/admin/billing', match: (p) => p.startsWith('/admin/billing') },
    { icon: Users, label: 'Sales', href: '/admin/sales', match: (p) => p.startsWith('/admin/sales') },
+   { icon: UserPlus, label: 'Setters', href: '/admin/setters', match: (p) => p.startsWith('/admin/setters') },
    { icon: ListChecks, label: 'Leads', href: '/admin/leads', match: (p) => p.startsWith('/admin/leads') },
    { icon: FileText, label: 'Applications', href: '/admin/applications', match: (p) => p.startsWith('/admin/applications') },
    { icon: PhoneOutgoing, label: 'Dialer', href: '/admin/dialer', match: (p) => p.startsWith('/admin/dialer') },
@@ -60,7 +61,7 @@ const groups: Group[] = [
 const items: Item[] = groups.flatMap((g) => g.items)
 
 export type AdminActiveLabel =
- | 'Overview' | 'Calls' | 'Texts' | 'Demos' | 'Billing' | 'Sales' | 'Dialer' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due' | 'Quality' | 'Blog' | 'Email Campaigns'
+ | 'Overview' | 'Calls' | 'Texts' | 'Demos' | 'Billing' | 'Sales' | 'Setters' | 'Dialer' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due' | 'Quality' | 'Blog' | 'Email Campaigns'
 
 export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
  adminEmail: string

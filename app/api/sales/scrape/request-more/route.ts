@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
-import { requireAuth } from '@/lib/auth-middleware'
+import { requireAuth, REP_TOOL_ROLES } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +17,7 @@ export const runtime = 'nodejs'
  */
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request)
-  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+  if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
   }
 

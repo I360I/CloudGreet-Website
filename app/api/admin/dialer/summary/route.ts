@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
   const { data: reps } = await supabaseAdmin
    .from('custom_users')
    .select('id, email, first_name, last_name, name')
-   .eq('role', 'sales')
+   .in('role', ['sales', 'setter'])
   const repMap = new Map<string, RepRow>((reps || []).map((r: any) => [r.id, r]))
 
   // Live calls - status in (ringing, active) AND started recently.

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { requireAuth } from '@/lib/auth-middleware'
+import { requireAuth, REP_TOOL_ROLES } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -27,7 +27,7 @@ const ALLOWED_STATUSES = new Set([
 
 async function authedRep(request: NextRequest) {
   const auth = await requireAuth(request)
-  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+  if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return { ok: false as const, repId: null }
   }
   return { ok: true as const, repId: auth.userId }

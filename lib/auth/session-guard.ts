@@ -32,7 +32,7 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
  * Pass `expectedRole` to also boot users whose role doesn't match the
  * shell they landed on (e.g. a 'sales' user somehow inside /dashboard).
  */
-export function useSessionGuard(opts: { expectedRole?: 'owner' | 'sales' | 'admin' } = {}) {
+export function useSessionGuard(opts: { expectedRole?: 'owner' | 'sales' | 'admin' | 'setter' } = {}) {
   const router = useRouter()
 
   useEffect(() => {

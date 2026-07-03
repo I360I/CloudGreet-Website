@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
-import { requireAuth } from '@/lib/auth-middleware'
+import { requireAuth, REP_TOOL_ROLES } from '@/lib/auth-middleware'
 import { findLeadEmail } from '@/lib/lead-enrichment/multi-source-email-finder'
 import { logger } from '@/lib/monitoring'
 
@@ -15,7 +15,7 @@ const MAX_LEADS = 100
 // Searches business website + directories (DuckDuckGo, Manta, YellowPages, Superpages) for each lead.
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request)
-  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+  if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
   }
 

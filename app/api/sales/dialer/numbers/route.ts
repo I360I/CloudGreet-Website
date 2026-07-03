@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth } from '@/lib/auth-middleware'
+import { requireAuth, REP_TOOL_ROLES } from '@/lib/auth-middleware'
 import { listRepNumbers, orderRepNumber } from '@/lib/telnyx/rep-numbers'
 
 export const dynamic = 'force-dynamic'
@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)
-  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+  if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const numbers = await listRepNumbers(auth.userId)
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request)
-  if (!auth.success || !auth.userId || auth.role !== 'sales') {
+  if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
