@@ -108,9 +108,9 @@ export async function POST(request: NextRequest) {
  // exists with this user as owner_id, link it on the fly. This was a
  // recurring foot-gun - admin-create flows that didn't complete the link
  // step left users unable to log in. Better to recover than 403.
- // Skip auto-heal for admins and sales reps - they legitimately don't
- // have a business_id.
- if (!business && !user.is_admin && user.role !== 'sales') {
+ // Skip auto-heal for admins, sales reps, and setters - they legitimately
+ // don't have a business_id.
+ if (!business && !user.is_admin && user.role !== 'sales' && user.role !== 'setter') {
  const { data: ownedBusiness } = await supabaseAdmin
   .from('businesses')
   .select('id, business_name, business_type')
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
  // Non-admin users must have a real business attached. If their business was
  // deleted (or was never set), refuse login here - issuing a token without a
  // businessId guarantees an immediate redirect loop on the dashboard.
- if (!user.is_admin && user.role !== 'sales' && !business) {
+ if (!user.is_admin && user.role !== 'sales' && user.role !== 'setter' && !business) {
  // Surface enough state for a quick diagnosis instead of a generic
  // "contact support". Most likely one of:
  //  · custom_users.business_id is stale (points at a deleted business)

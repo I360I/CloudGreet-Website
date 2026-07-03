@@ -60,10 +60,15 @@ function LoginInner() {
    if (result.data.user?.id) {
     localStorage.setItem('cg.session.uid', String(result.data.user.id))
    }
-   // Route by role: sales reps land on /sales, admins on /admin,
-   // owners on /dashboard. login-simple already resolves the role.
+   // Route by role: sales reps land on /sales, setters on /setter,
+   // admins on /admin, owners on /dashboard. login-simple already
+   // resolves the role.
    const role = result.data.user?.role
-   const dest = role === 'sales' ? '/sales' : role === 'admin' ? '/admin' : '/dashboard'
+   const dest =
+    role === 'sales' ? '/sales'
+    : role === 'setter' ? '/setter'
+    : role === 'admin' ? '/admin'
+    : '/dashboard'
    window.location.href = dest
   } catch {
    setError('Login failed. Please try again.')
