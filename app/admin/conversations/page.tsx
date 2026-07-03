@@ -62,15 +62,35 @@ function IssueBadge({ issue }: { issue: HealthIssue }) {
   )
 }
 
+type PingResult = { ok: true; reply: string; ms: number } | { ok: false; error: string; ms: number } | null
+
 function HealthPanel({ businessId, label }: { businessId?: string; label: string }) {
   const [report, setReport] = useState<SmsHealthReport | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [ping, setPing] = useState<PingResult>(null)
+  const [pinging, setPinging] = useState(false)
+
+  const runPing = async () => {
+    if (!businessId) return
+    setPinging(true)
+    setPing(null)
+    try {
+      const res = await fetchWithAuth(`/api/admin/sms-ping?businessId=${businessId}`)
+      const j = await res.json()
+      setPing(j)
+    } catch (e) {
+      setPing({ ok: false, error: e instanceof Error ? e.message : 'Failed', ms: 0 })
+    } finally {
+      setPinging(false)
+    }
+  }
 
   const run = async () => {
     setLoading(true)
     setError('')
     setReport(null)
+    const pingPromise = businessId ? runPing() : Promise.resolve()
     try {
       const params = new URLSearchParams({ windowHours: '24' })
       if (businessId) params.set('businessId', businessId)
@@ -83,10 +103,12 @@ function HealthPanel({ businessId, label }: { businessId?: string; label: string
     } finally {
       setLoading(false)
     }
+    await pingPromise
   }
 
   const criticals = report?.issues.filter((i) => i.severity === 'critical') || []
   const warnings = report?.issues.filter((i) => i.severity === 'warning') || []
+  const isRunning = loading || pinging
 
   return (
     <div className="space-y-3">
@@ -94,17 +116,34 @@ function HealthPanel({ businessId, label }: { businessId?: string; label: string
         <span className="text-xs text-gray-500 font-medium">{label}</span>
         <button
           onClick={run}
-          disabled={loading}
+          disabled={isRunning}
           className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-gray-300 hover:text-white transition-colors disabled:opacity-50"
         >
-          {loading
+          {isRunning
             ? <CircleNotch className="w-3.5 h-3.5 animate-spin" />
             : <ArrowClockwise className="w-3.5 h-3.5" />}
-          {loading ? 'Checking...' : 'Run check'}
+          {isRunning ? 'Checking...' : 'Run check'}
         </button>
       </div>
 
       {error && <p className="text-xs text-red-400">{error}</p>}
+
+      {/* Live ping result — only shown for client-specific panels */}
+      {businessId && ping && (
+        <div className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs ${ping.ok ? 'bg-sky-500/10 border border-sky-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+          {ping.ok
+            ? <CheckCircle className="w-3.5 h-3.5 text-sky-400 flex-shrink-0 mt-0.5" />
+            : <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />}
+          <div className="min-w-0">
+            <span className={`font-medium ${ping.ok ? 'text-sky-300' : 'text-red-300'}`}>
+              {ping.ok ? `Agent live (${ping.ms}ms)` : `Agent unreachable · ${ping.error}`}
+            </span>
+            {ping.ok && (
+              <p className="text-gray-500 truncate mt-0.5">&ldquo;{ping.reply}&rdquo;</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {report && (
         <div className="space-y-3">

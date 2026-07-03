@@ -1333,3 +1333,49 @@ function normalisePhone(raw: string): string {
   if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
   return digits ? `+${digits}` : ''
 }
+
+/**
+ * Live health-check ping. Sends a test message directly through Anthropic
+ * using the business's real system prompt. No DB writes, no Telnyx, no
+ * notifications to anyone. Returns whether the AI responded and how fast.
+ */
+export async function pingSmsPipeline(businessId: string): Promise<
+  { ok: true; reply: string; ms: number } | { ok: false; error: string; ms: number }
+> {
+  const start = Date.now()
+  try {
+    const { data: biz } = await supabaseAdmin
+      .from('businesses')
+      .select('business_name, timezone, dispatch_mode, agent_sms_prompt')
+      .eq('id', businessId)
+      .maybeSingle()
+    if (!biz) return { ok: false, error: 'business_not_found', ms: Date.now() - start }
+
+    const anthropicKey = process.env.ANTHROPIC_API_KEY
+    if (!anthropicKey) return { ok: false, error: 'no_anthropic_key', ms: Date.now() - start }
+
+    const systemPrompt = await buildSystemPrompt({
+      businessId,
+      businessName: (biz as any).business_name || 'the business',
+      customerPhone: '+10000000001',
+      timezone: (biz as any).timezone || 'America/New_York',
+      dispatchMode: !!(biz as any).dispatch_mode,
+      agentSmsPrompt: (biz as any).agent_sms_prompt || null,
+    })
+
+    const anthropic = new Anthropic({ apiKey: anthropicKey })
+    const response = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 80,
+      system: systemPrompt + '\n\nHEALTH CHECK: Reply with a single short greeting only.',
+      messages: [{ role: 'user', content: 'Hi, are you there?' }],
+    })
+
+    const text = response.content.find((b) => b.type === 'text')?.text?.trim() || ''
+    if (!text) return { ok: false, error: 'empty_response', ms: Date.now() - start }
+
+    return { ok: true, reply: text, ms: Date.now() - start }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'unknown', ms: Date.now() - start }
+  }
+}
