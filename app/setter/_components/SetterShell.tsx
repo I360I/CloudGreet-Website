@@ -97,13 +97,9 @@ export function SetterShell({
           className="hidden lg:flex w-40 flex-col py-8 px-3 shrink-0"
           style={{ backgroundImage: 'linear-gradient(168deg, #1d4ed8 2%, rgba(10,19,48,0.75) 110%)' }}
         >
-          <div className="flex flex-col items-center gap-2 mb-10">
-            <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0">
-              <span className="text-blue-700 text-lg font-bold leading-none">C</span>
-            </div>
-            <div className="text-[10px] font-bold tracking-wide text-center">
-              <span className="text-white">CloudGreet</span>
-            </div>
+          <div className="flex flex-col items-center mb-10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/cloudgreet-logo-white.png" alt="CloudGreet" className="w-24 h-auto object-contain" />
           </div>
           <nav className="flex-1 space-y-3">
             {NAV.map((item) => {
