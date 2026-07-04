@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { telnyxAction } from '@/lib/telnyx/call-control'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -64,24 +65,6 @@ function encodeState(s: ClientState): string {
 function decodeState(s?: string): ClientState | null {
   if (!s) return null
   try { return JSON.parse(Buffer.from(s, 'base64').toString('utf8')) as ClientState } catch { return null }
-}
-
-async function telnyxAction(callControlId: string, action: string, body: Record<string, unknown> = {}) {
-  const apiKey = process.env.TELNYX_API_KEY
-  if (!apiKey) return
-  try {
-    const res = await fetch(`${TELNYX_BASE}/calls/${callControlId}/actions/${action}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) {
-      const t = await res.text().catch(() => '')
-      logger.warn(`telnyx action ${action} failed`, { callControlId, status: res.status, body: t.slice(0, 200) })
-    }
-  } catch (e) {
-    logger.warn(`telnyx action ${action} threw`, { callControlId, error: e instanceof Error ? e.message : 'unknown' })
-  }
 }
 
 async function startVoicemail(inboundCcc: string, repName: string, repId: string, fromNumber: string, toNumber: string) {

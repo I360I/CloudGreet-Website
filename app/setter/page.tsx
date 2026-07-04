@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { PhoneCall, PhoneIncoming, Clock, Target, CaretRight, Coffee, CalendarCheck } from '@phosphor-icons/react'
+import { PhoneCall, PhoneIncoming, Target, CaretRight, Coffee, CalendarCheck } from '@phosphor-icons/react'
 import { SetterShell, SetterLoadingState } from './_components/SetterShell'
 import { SalesPageHeader } from '@/app/sales/_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { NumberTicker, AnimatedCircularProgressBar } from '@/app/_shared/magic-ui'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -62,8 +63,11 @@ export default function SetterHome() {
   const stats = [
     { label: 'Dials today', value: data.calls.today.attempts, icon: PhoneCall },
     { label: 'Connects today', value: data.calls.today.connects, icon: PhoneIncoming },
-    { label: 'Talk time today', value: fmtMinutes(data.calls.today.talk_seconds), icon: Clock },
   ]
+  const connectRate =
+    data.calls.today.attempts > 0
+      ? (data.calls.today.connects / data.calls.today.attempts) * 100
+      : 0
 
   return (
     <SetterShell activeLabel="Overview">
@@ -82,10 +86,10 @@ export default function SetterHome() {
                 Demos booked this week
               </div>
               <div className="text-3xl font-medium tabular-nums mt-1">
-                {data.leads.demos_booked_week}
+                <NumberTicker value={data.leads.demos_booked_week} />
               </div>
               <div className="text-xs text-gray-400 mt-1">
-                {data.leads.demos_booked_today} today
+                <NumberTicker value={data.leads.demos_booked_today} /> today
               </div>
             </div>
             <CalendarCheck weight="duotone" className="w-8 h-8 text-emerald-400" />
@@ -103,11 +107,29 @@ export default function SetterHome() {
             return (
               <div key={s.label} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
                 <Icon weight="duotone" className="w-4 h-4 text-gray-400 mb-2" />
-                <div className="text-xl font-medium tabular-nums text-gray-900">{s.value}</div>
+                <div className="text-xl font-medium tabular-nums text-gray-900">
+                  <NumberTicker value={s.value} />
+                </div>
                 <div className="text-[11px] text-gray-500 mt-0.5">{s.label}</div>
               </div>
             )
           })}
+          <div className="bg-white border border-gray-200 rounded-2xl p-3 shadow-sm flex flex-col items-center justify-center">
+            <AnimatedCircularProgressBar
+              value={connectRate}
+              size={56}
+              strokeWidth={6}
+              gaugePrimaryColor="#111827"
+              gaugeSecondaryColor="#f3f4f6"
+            >
+              <span className="text-xs font-medium tabular-nums text-gray-900">
+                {Math.round(connectRate)}%
+              </span>
+            </AnimatedCircularProgressBar>
+            <div className="text-[11px] text-gray-500 mt-2 text-center">
+              Connect rate · {fmtMinutes(data.calls.today.talk_seconds)} talk
+            </div>
+          </div>
         </motion.div>
 
         {/* Lead pipeline snapshot */}

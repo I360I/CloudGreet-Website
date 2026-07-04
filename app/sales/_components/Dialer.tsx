@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
-import { Phone, PhoneCall, PhoneSlash, MicrophoneSlash, Microphone, X, CircleNotch, WarningCircle, Pause, Play, SkipForward, Stop, CaretDown } from '@phosphor-icons/react'
+import { Phone, PhoneCall, PhoneSlash, MicrophoneSlash, Microphone, X, CircleNotch, WarningCircle, Pause, Play, SkipForward, Stop, CaretDown, Voicemail } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { NumberPicker } from './NumberPicker'
 
@@ -65,11 +65,16 @@ export function Dialer() {
   const [destination, setDestination] = useState('')
   const [activeLeadId, setActiveLeadId] = useState<string | null>(null)
   const [muted, setMuted] = useState(false)
+  const [droppingVm, setDroppingVm] = useState(false)
   const [secondsActive, setSecondsActive] = useState(0)
   const [micBusy, setMicBusy] = useState(false)
   const [micErrName, setMicErrName] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [, forceFromRefresh] = useState(0)
+  const [callNotes, setCallNotes] = useState<{ id: string; body: string; created_at: string }[]>([])
+  const [noteDraft, setNoteDraft] = useState('')
+  const [notesLoading, setNotesLoading] = useState(false)
+  const fetchedNotesForLeadRef = useRef<string | null>(null)
   const dragControls = useDragControls()
 
   // Power dialer queue. When non-empty, the dialer auto-advances
@@ -345,6 +350,21 @@ export function Dialer() {
     setCallState('connecting')
     startedAtRef.current = null
 
+    // Local presence: pick whichever of the rep's up-to-3 saved numbers
+    // shares the lead's area code, instead of always dialing out from
+    // the single static "active" one. Fetched fresh per call rather than
+    // cached - NumberPicker's add/delete flows don't all notify us of
+    // pool changes, so a cache would risk going stale.
+    let callerNumber = fromNumberRef.current
+    try {
+      const numRes = await fetchWithAuth('/api/sales/dialer/numbers')
+      const numJson = await numRes.json().catch(() => ({}))
+      const saved: { phone_number: string; is_active: boolean }[] = numJson?.numbers || []
+      const npa = number.slice(2, 5)
+      const match = saved.find((n) => n.phone_number.slice(2, 5) === npa)
+      if (match) callerNumber = match.phone_number
+    } catch { /* fall back to the active number */ }
+
     // Capture a fresh mic stream right before placing the call. We
     // rely on the SDK's audio:true under the hood, but in some Telnyx
     // SDK versions / browser combos the internal getUserMedia silently
@@ -371,7 +391,7 @@ export function Dialer() {
     try {
       const call = clientRef.current.newCall({
         destinationNumber: number,
-        callerNumber: fromNumberRef.current,
+        callerNumber,
         // Correct option per @telnyx/webrtc 2.26.4 ICallOptions:
         // it's `localStream`, not `mediaStream`. The previous attempt
         // sent `mediaStream` (which the SDK silently ignored, fell
@@ -466,7 +486,7 @@ export function Dialer() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               to_number: number,
-              from_number: fromNumberRef.current,
+              from_number: callerNumber,
               telnyx_call_id: call?.id || null,
               lead_id: leadId || null,
               status: 'ringing',
@@ -559,6 +579,62 @@ export function Dialer() {
       try { c.muteAudio() } catch {}
       setMuted(true)
     }
+  }
+
+  // Telnyx's Answering Machine Detection only works on calls it
+  // originates itself (POST /v2/calls) - it can't be switched on for a
+  // leg the WebRTC SDK already answered, so there's no automatic
+  // "hit voicemail" detection here. The rep judges by ear and clicks this;
+  // the server speaks a script and hangs up for them once it's done.
+  const dropVoicemail = async () => {
+    if (!callRowIdRef.current || droppingVm) return
+    setDroppingVm(true)
+    try {
+      await fetchWithAuth('/api/sales/dialer/voicemail-drop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ call_row_id: callRowIdRef.current }),
+      })
+    } catch { /* non-fatal - rep can still hang up manually */ } finally {
+      setDroppingVm(false)
+    }
+  }
+
+  // Surface the lead's existing note thread in the overlay while the rep
+  // is on the call, instead of making them tab away to the leads page.
+  // Fetch once per lead (guarded by the ref, not by callState) so notes
+  // are already loaded by the time the call connects.
+  useEffect(() => {
+    setCallNotes([])
+    setNoteDraft('')
+    fetchedNotesForLeadRef.current = null
+    if (!activeLeadId) return
+    fetchedNotesForLeadRef.current = activeLeadId
+    setNotesLoading(true)
+    void (async () => {
+      try {
+        const r = await fetchWithAuth(`/api/sales/leads/${activeLeadId}`)
+        const j = await r.json().catch(() => ({}))
+        if (j?.success) setCallNotes(j.notes || [])
+      } catch { /* non-fatal */ } finally {
+        setNotesLoading(false)
+      }
+    })()
+  }, [activeLeadId])
+
+  const addCallNote = async () => {
+    const text = noteDraft.trim()
+    if (!text || !activeLeadId) return
+    setNoteDraft('')
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${activeLeadId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: text }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (j?.success && j.note) setCallNotes((prev) => [j.note, ...prev])
+    } catch { /* non-fatal */ }
   }
 
   const onCallNow = () => {
@@ -894,6 +970,47 @@ export function Dialer() {
                     <div className="mt-2 text-center text-[11px] text-gray-500">Call ended.</div>
                   )}
 
+                  {/* Lead notes - surfaced here so the rep doesn't have
+                      to tab away to the leads page mid-call. */}
+                  {inCall && activeLeadId && (
+                    <div className="mt-2.5 border border-gray-200 rounded-lg bg-gray-50/60 max-h-32 overflow-y-auto">
+                      <div className="px-2.5 pt-2 pb-1.5 flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={noteDraft}
+                          onChange={(e) => setNoteDraft(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') addCallNote() }}
+                          placeholder="Add a note…"
+                          className="flex-1 min-w-0 bg-white border border-gray-200 rounded-md px-2 py-1 text-[11px] focus:outline-none focus:border-gray-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={addCallNote}
+                          disabled={!noteDraft.trim()}
+                          className="text-[11px] font-medium text-gray-700 hover:text-gray-900 disabled:opacity-40 disabled:cursor-not-allowed px-1.5"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      {notesLoading ? (
+                        <div className="px-2.5 pb-2 text-[11px] text-gray-400">Loading notes…</div>
+                      ) : callNotes.length > 0 ? (
+                        <ul className="px-2.5 pb-2 space-y-1">
+                          {callNotes.map((n) => (
+                            <li key={n.id} className="text-[11px] text-gray-600 leading-snug">
+                              <span className="text-gray-400 font-mono">
+                                {new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              </span>{' '}
+                              {n.body}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="px-2.5 pb-2 text-[11px] text-gray-400">No notes yet.</div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Keypad - always visible. During an active call the
                       keys send DTMF; otherwise they type into the input. */}
                   <div className="mt-2.5 grid grid-cols-3 gap-1">
@@ -946,6 +1063,17 @@ export function Dialer() {
                           {muted ? <Microphone className="w-3.5 h-3.5" /> : <MicrophoneSlash className="w-3.5 h-3.5" />}
                           {muted ? 'Unmute' : 'Mute'}
                         </button>
+                        {callState === 'active' && (
+                          <button
+                            onClick={dropVoicemail}
+                            disabled={droppingVm}
+                            title="Speak a voicemail script and hang up"
+                            className="inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-xs border bg-white border-gray-200 text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-wait"
+                          >
+                            {droppingVm ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <Voicemail className="w-3.5 h-3.5" />}
+                            {droppingVm ? 'Dropping…' : 'Drop VM'}
+                          </button>
+                        )}
                         <button
                           onClick={hangup}
                           className="flex-1 inline-flex items-center justify-center gap-1.5 bg-rose-600 text-white text-sm font-medium rounded-lg px-3 py-2 hover:bg-rose-700 active:scale-[0.98] transition-all"

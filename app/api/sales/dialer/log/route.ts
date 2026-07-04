@@ -33,6 +33,24 @@ export async function POST(request: NextRequest) {
   const to = (body.to_number || '').trim()
   if (!to) return NextResponse.json({ error: 'to_number required' }, { status: 400 })
 
+  // Server-side DNC enforcement. Do Not Call was previously only a
+  // client-side filter excluding leads from the power-dial queue -
+  // nothing stopped a call from actually being placed/logged against a
+  // DNC lead reached another way. This is the one place every dial
+  // logs through regardless of how it was triggered, so it's the real
+  // enforcement point.
+  if (body.lead_id) {
+    const { data: assignment } = await supabaseAdmin
+      .from('lead_assignments')
+      .select('status')
+      .eq('rep_id', auth.userId)
+      .eq('lead_id', body.lead_id)
+      .maybeSingle()
+    if (assignment?.status === 'do_not_call') {
+      return NextResponse.json({ error: 'Lead is marked Do Not Call' }, { status: 403 })
+    }
+  }
+
   try {
     const { data, error } = await supabaseAdmin
       .from('rep_calls')
