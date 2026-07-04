@@ -45,6 +45,7 @@ const groups: Group[] = [
    { icon: ListChecks, label: 'Leads', href: '/admin/leads', match: (p) => p.startsWith('/admin/leads') },
    { icon: FileText, label: 'Applications', href: '/admin/applications', match: (p) => p.startsWith('/admin/applications') },
    { icon: PhoneOutgoing, label: 'Dialer', href: '/admin/dialer', match: (p) => p.startsWith('/admin/dialer') },
+   { icon: FileText, label: 'Scripts', href: '/admin/scripts', match: (p) => p.startsWith('/admin/scripts') },
    { icon: Envelope, label: 'Email Campaigns', href: '/admin/email-campaigns', match: (p) => p.startsWith('/admin/email-campaigns') },
   ],
  },
@@ -61,7 +62,7 @@ const groups: Group[] = [
 const items: Item[] = groups.flatMap((g) => g.items)
 
 export type AdminActiveLabel =
- | 'Overview' | 'Calls' | 'Texts' | 'Demos' | 'Billing' | 'Sales' | 'Setters' | 'Dialer' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due' | 'Quality' | 'Blog' | 'Email Campaigns'
+ | 'Overview' | 'Calls' | 'Texts' | 'Demos' | 'Billing' | 'Sales' | 'Setters' | 'Dialer' | 'Scripts' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due' | 'Quality' | 'Blog' | 'Email Campaigns'
 
 export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
  adminEmail: string

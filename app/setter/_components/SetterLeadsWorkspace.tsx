@@ -379,6 +379,8 @@ export function SetterLeadsWorkspace() {
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => {
+                // Hand the current filtered list to the full-screen call
+                // cockpit (with the lead context it shows mid-call).
                 const callable = filtered
                   .filter((l) => !!l.phone && l.status !== 'do_not_call' && l.status !== 'closed' && l.status !== 'dead')
                   .map((l) => ({
@@ -386,22 +388,24 @@ export function SetterLeadsWorkspace() {
                     phone: l.phone!,
                     businessName: l.business_name,
                     contactName: l.contact_name,
+                    city: l.city,
+                    state: l.state,
+                    businessType: l.business_type,
+                    rating: l.google_rating,
+                    reviews: l.google_review_count,
+                    status: l.status,
                   }))
                 if (callable.length === 0) {
-                  alert('No callable leads in the current filter. Power dial only runs against leads with a phone number that aren\'t Closed/Dead/DNC.')
+                  alert('No callable leads in the current filter. Sessions only queue leads with a phone number that aren\'t Closed/Dead/DNC.')
                   return
                 }
-                if (typeof window === 'undefined' || !window.cgPowerDial) {
-                  alert('Dialer not loaded yet. Try again in a second.')
-                  return
-                }
-                if (!confirm(`Power dial through ${callable.length} lead${callable.length === 1 ? '' : 's'}? Auto-dials each one with a 5-second pause between calls. Pause/skip/stop available throughout.`)) return
-                window.cgPowerDial(callable)
+                try { sessionStorage.setItem('cg.dialer.queue', JSON.stringify(callable)) } catch {}
+                window.location.href = '/setter/dialer'
               }}
               className="inline-flex items-center gap-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg px-3.5 py-2 transition-colors shadow-sm"
-              title="Auto-dial through the filtered list"
+              title="Open the call cockpit with the filtered list queued"
             >
-              <PhoneCall weight="fill" className="w-4 h-4" /> Power dial
+              <PhoneCall weight="fill" className="w-4 h-4" /> Start call session
             </button>
             <Link
               href={scrapeHref}

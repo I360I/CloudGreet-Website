@@ -280,7 +280,7 @@ async function findRepByFromNumber(fromNumber: string): Promise<string | null> {
 }
 
 type CallUpdate = {
-  status: 'ringing' | 'in_progress' | 'completed' | 'no_answer' | 'failed'
+  status: 'ringing' | 'active' | 'completed' | 'no_answer' | 'failed'
   started_at?: string
   ended_at?: string
   duration_seconds?: number
@@ -291,7 +291,7 @@ function mapEventToUpdate(eventType: string, payload: Payload): CallUpdate | nul
     return { status: 'ringing', started_at: payload?.start_time || new Date().toISOString() }
   }
   if (eventType === 'call.answered') {
-    return { status: 'in_progress', started_at: payload?.start_time || new Date().toISOString() }
+    return { status: 'active', started_at: payload?.start_time || new Date().toISOString() }
   }
   if (eventType === 'call.hangup') {
     const cause = (payload?.hangup_cause || '').toLowerCase()
@@ -309,6 +309,6 @@ function mapEventToUpdate(eventType: string, payload: Payload): CallUpdate | nul
 
 function shouldApplyTransition(current: string | null | undefined, next: string): boolean {
   if (!current) return true
-  const order: Record<string, number> = { ringing: 1, in_progress: 2, completed: 3, no_answer: 3, failed: 3 }
+  const order: Record<string, number> = { ringing: 1, active: 2, in_progress: 2, completed: 3, no_answer: 3, failed: 3 }
   return (order[next] ?? 0) >= (order[current] ?? 0)
 }

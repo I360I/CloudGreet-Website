@@ -1,0 +1,877 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import {
+  PhoneCall, PhoneSlash, Microphone, MicrophoneSlash, Voicemail, CircleNotch,
+  Pause, Play, SkipForward, Stop, CheckCircle, WarningCircle, CaretDown,
+  DotsNine, ChatText, CalendarBlank, ArrowLeft, Star,
+} from '@phosphor-icons/react'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import {
+  useDialerEngine, useLeadNotes, fmtDuration, KEYPAD,
+  type PowerDialItem, type SessionStatus,
+} from '@/app/sales/_components/dialer-engine'
+import { firaCode } from './fonts'
+
+/*
+ * Full-screen call cockpit for 5-hour dial blocks. Industry-standard
+ * session layout (Kixie/PhoneBurner style): queue rail left, live call
+ * card + notes center, script/battle cards right, controls +
+ * dispositions in a bottom bar, session stats up top. Uses the shared
+ * dialer engine - same audio path as the floating panel.
+ *
+ * v5 setter design tokens (scratchpad/setter-design-spec.md).
+ */
+
+const NAVY = '#1E3A8A'
+
+export type CockpitLead = PowerDialItem & {
+  city?: string | null
+  state?: string | null
+  businessType?: string | null
+  rating?: number | null
+  reviews?: number | null
+  status?: string
+}
+
+type Script = { id: string; section: string; title: string; body: string; sort_order: number }
+
+const DISPOSITIONS: { key: string; label: string; hotkey: string }[] = [
+  { key: 'called',         label: 'Talked',     hotkey: '1' },
+  { key: 'voicemail',      label: 'Voicemail',  hotkey: '2' },
+  { key: 'interested',     label: 'Interested', hotkey: '3' },
+  { key: 'demo_scheduled', label: 'Demo set',   hotkey: '4' },
+  { key: 'demo_showed',    label: 'Demo held',  hotkey: '5' },
+  { key: 'dead',           label: 'Dead',       hotkey: '6' },
+  { key: 'do_not_call',    label: 'DNC',        hotkey: '7' },
+]
+
+const QUEUE_KEY = 'cg.dialer.queue'
+
+export function DialerCockpit() {
+  const [queueInput, setQueueInput] = useState<CockpitLead[] | null>(null)
+  const [phase, setPhase] = useState<'setup' | 'running' | 'done'>('setup')
+  const [gapSeconds, setGapSeconds] = useState(5)
+  const [keypadOpen, setKeypadOpen] = useState(false)
+  const [noteDraft, setNoteDraft] = useState('')
+  const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
+  const [callbackLeadId, setCallbackLeadId] = useState<string | null>(null)
+  const [scripts, setScripts] = useState<Script[]>([])
+  const [objectionFilter, setObjectionFilter] = useState('')
+  const [smsDraft, setSmsDraft] = useState('')
+  const [smsState, setSmsState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [smsError, setSmsError] = useState('')
+  const noteInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Session stats (client-side, this session only).
+  const [stats, setStats] = useState({ dials: 0, connects: 0, talkSeconds: 0, demos: 0 })
+  const [tagCounts, setTagCounts] = useState<Record<string, number>>({})
+  const sessionStartRef = useRef<number | null>(null)
+  const [elapsed, setElapsed] = useState(0)
+
+  const engine = useDialerEngine({
+    advanceSeconds: gapSeconds,
+    onCallEnded: ({ finalStatus, durationSeconds }) => {
+      setStats((s) => ({
+        ...s,
+        dials: s.dials + 1,
+        // Same "connect" rule as getRepCallStats: completed and >30s.
+        connects: s.connects + (finalStatus === 'completed' && durationSeconds > 30 ? 1 : 0),
+        talkSeconds: s.talkSeconds + durationSeconds,
+      }))
+    },
+  })
+  const {
+    status, error, micBusy, grantMicrophone,
+    callState, inCall, activeLeadId, secondsActive, muted, droppingVm,
+    dial, hangup, toggleMute, dropVoicemail, onKeypadPress,
+    queue, queueIndex, queueActive, currentItem,
+    queuePaused, countdown, postCallStatus, setPostCallStatus,
+    startQueue, togglePause, skipCurrent, stopQueue, persistDisposition,
+  } = engine
+
+  // Load the session queue handed over from the leads page.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(QUEUE_KEY)
+      if (raw) setQueueInput(JSON.parse(raw))
+    } catch { /* corrupted handoff - treated as empty */ }
+  }, [])
+
+  // Scripts for the right rail + SMS templates.
+  useEffect(() => {
+    void (async () => {
+      try {
+        const r = await fetchWithAuth('/api/sales/dialer/scripts')
+        const j = await r.json().catch(() => ({}))
+        if (j?.success) setScripts(j.scripts || [])
+      } catch { /* panel just stays empty */ }
+    })()
+  }, [])
+
+  // Elapsed ticker while running.
+  useEffect(() => {
+    if (phase !== 'running') return
+    const t = setInterval(() => {
+      if (sessionStartRef.current) setElapsed(Math.floor((Date.now() - sessionStartRef.current) / 1000))
+    }, 1000)
+    return () => clearInterval(t)
+  }, [phase])
+
+  // Session completion: queue drained while running -> wrap-up.
+  useEffect(() => {
+    if (phase === 'running' && !queueActive && callState === 'idle' && stats.dials > 0) {
+      setPhase('done')
+    }
+  }, [phase, queueActive, callState, stats.dials])
+
+  // Rich lead info for the live card - queue meta by leadId.
+  const leadMetaById = useMemo(() => {
+    const m = new Map<string, CockpitLead>()
+    for (const l of queueInput || []) m.set(l.leadId, l)
+    return m
+  }, [queueInput])
+  const liveLead = activeLeadId ? leadMetaById.get(activeLeadId) : (currentItem ? leadMetaById.get(currentItem.leadId) : null)
+  const liveLeadId = activeLeadId || currentItem?.leadId || null
+
+  const { notes, loading: notesLoading, addNote } = useLeadNotes(liveLeadId)
+
+  const recordTag = useCallback((tag: string) => {
+    setTagCounts((c) => ({ ...c, [tag]: (c[tag] || 0) + 1 }))
+  }, [])
+
+  const chooseDisposition = useCallback((key: string) => {
+    if (key === 'demo_scheduled') {
+      if (!liveLeadId) return
+      if (!queuePaused) togglePause()
+      setDemoModalLeadId(liveLeadId)
+      return
+    }
+    setPostCallStatus(key)
+    recordTag(key)
+    // Outside a queue countdown (single dial / already advanced), the
+    // engine won't persist for us - do it directly.
+    if (!queueActive || countdown === null) {
+      if (liveLeadId) void persistDisposition(liveLeadId, key)
+    }
+  }, [liveLeadId, queueActive, countdown, queuePaused, togglePause, setPostCallStatus, recordTag, persistDisposition])
+
+  const openCallback = useCallback(() => {
+    if (!liveLeadId) return
+    if (queueActive && !queuePaused) togglePause()
+    setCallbackLeadId(liveLeadId)
+  }, [liveLeadId, queueActive, queuePaused, togglePause])
+
+  // ---- Global hotkeys (cockpit only; never while typing). ----
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (demoModalLeadId || callbackLeadId) return
+      const k = e.key.toLowerCase()
+      const dispo = DISPOSITIONS.find((d) => d.hotkey === e.key)
+      if (dispo && (callState === 'ended' || callState === 'active')) {
+        e.preventDefault(); chooseDisposition(dispo.key); return
+      }
+      if (k === 'c' && (callState === 'ended' || callState === 'active')) { e.preventDefault(); openCallback(); return }
+      if (k === 'm' && inCall) { e.preventDefault(); toggleMute(); return }
+      if (k === 'k') { e.preventDefault(); setKeypadOpen((v) => !v); return }
+      if (k === 'v' && callState === 'active') { e.preventDefault(); void dropVoicemail(); return }
+      if ((k === 'h' || k === 'escape') && inCall) { e.preventDefault(); hangup(); return }
+      if (k === 'n') { e.preventDefault(); noteInputRef.current?.focus(); return }
+      if (k === ' ' && queueActive) { e.preventDefault(); togglePause(); return }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [callState, inCall, queueActive, chooseDisposition, openCallback, toggleMute, dropVoicemail, hangup, togglePause, demoModalLeadId, callbackLeadId])
+
+  const start = () => {
+    if (!queueInput?.length) return
+    sessionStartRef.current = Date.now()
+    setPhase('running')
+    startQueue(queueInput.map(({ leadId, phone, businessName, contactName }) => ({ leadId, phone, businessName, contactName })))
+  }
+
+  const fillTemplate = (body: string) => {
+    const first = (liveLead?.contactName || '').split(' ')[0] || 'there'
+    return body
+      .replaceAll('{{first_name}}', first)
+      .replaceAll('{{business_name}}', liveLead?.businessName || 'your business')
+  }
+
+  const sendSms = async () => {
+    const text = smsDraft.trim()
+    if (!text || !liveLeadId || smsState === 'sending') return
+    setSmsState('sending'); setSmsError('')
+    try {
+      const r = await fetchWithAuth('/api/sales/dialer/sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_id: liveLeadId, body: text }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) {
+        setSmsState('error'); setSmsError(j?.error || `Failed (${r.status})`)
+        return
+      }
+      setSmsState('sent'); setSmsDraft('')
+      setTimeout(() => setSmsState('idle'), 2500)
+    } catch {
+      setSmsState('error'); setSmsError('Network error')
+    }
+  }
+
+  const sectionsInOrder = ['opener', 'discovery', 'pitch', 'closing'] as const
+  const proseScripts = sectionsInOrder
+    .flatMap((sec) => scripts.filter((s) => s.section === sec))
+  const objections = scripts.filter(
+    (s) => s.section === 'objection' &&
+      (!objectionFilter.trim() ||
+        (s.title + ' ' + s.body).toLowerCase().includes(objectionFilter.toLowerCase())),
+  )
+  const smsTemplates = scripts.filter((s) => s.section === 'sms')
+
+  // ---- Empty / setup / done screens ----
+
+  if (!queueInput?.length) {
+    return (
+      <div className="max-w-xl mx-auto px-6 py-20 text-center">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 text-blue-600 mb-4">
+          <PhoneCall weight="duotone" className="w-6 h-6" />
+        </div>
+        <h1 className="text-2xl font-semibold mb-2" style={{ color: NAVY }}>No call session queued</h1>
+        <p className="text-sm text-slate-500 mb-6">
+          Build a session from your leads list: filter to who you want to call, then hit <strong>Start call session</strong>.
+        </p>
+        <Link href="/setter/leads" className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-4 py-2.5 transition-colors duration-200">
+          <ArrowLeft className="w-4 h-4" /> Back to leads
+        </Link>
+      </div>
+    )
+  }
+
+  if (phase === 'done') {
+    const talked = tagCounts['called'] || 0
+    return (
+      <div className="max-w-xl mx-auto px-6 py-16">
+        <div className="bg-white rounded-xl border border-[#E3EAF4] shadow-[0_1px_2px_rgba(16,24,40,0.04)] p-8 text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white mb-4">
+            <CheckCircle weight="fill" className="w-6 h-6" />
+          </div>
+          <h1 className="text-2xl font-semibold mb-1" style={{ color: NAVY }}>Session done</h1>
+          <p className="text-sm text-slate-500 mb-6">{fmtClock(elapsed)} on the phones.</p>
+          <div className="grid grid-cols-4 gap-3 mb-6">
+            {[
+              ['Dials', stats.dials], ['Connects', stats.connects],
+              ['Talk time', fmtClock(stats.talkSeconds)], ['Demos', stats.demos],
+            ].map(([label, value]) => (
+              <div key={String(label)} className="bg-[#F8FAFC] rounded-lg p-3">
+                <div className="text-xl font-semibold" style={{ color: NAVY }}>{value}</div>
+                <div className="text-[11px] text-slate-500">{label}</div>
+              </div>
+            ))}
+          </div>
+          {Object.keys(tagCounts).length > 0 && (
+            <div className="flex flex-wrap justify-center gap-2 mb-6">
+              {DISPOSITIONS.filter((d) => tagCounts[d.key]).map((d) => (
+                <span key={d.key} className="text-xs bg-blue-50 text-blue-800 rounded-full px-2.5 py-1">
+                  {d.label}: {tagCounts[d.key]}
+                </span>
+              ))}
+              {talked === 0 && null}
+            </div>
+          )}
+          <div className="flex items-center justify-center gap-2">
+            <Link href="/setter/leads" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 border border-[#E3EAF4] rounded-lg px-4 py-2.5 transition-colors duration-200">
+              Back to leads
+            </Link>
+            <button
+              onClick={() => { setPhase('setup'); setStats({ dials: 0, connects: 0, talkSeconds: 0, demos: 0 }); setTagCounts({}) }}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-4 py-2.5 transition-colors duration-200"
+            >
+              <PhoneCall weight="fill" className="w-4 h-4" /> New session
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'setup') {
+    return (
+      <div className="max-w-xl mx-auto px-6 py-16">
+        <div className="bg-white rounded-xl border border-[#E3EAF4] shadow-[0_1px_2px_rgba(16,24,40,0.04)] p-8">
+          <h1 className="text-2xl font-semibold mb-1" style={{ color: NAVY }}>Call session</h1>
+          <p className="text-sm text-slate-500 mb-6">{queueInput.length} leads queued from your list.</p>
+          <SessionStatusNotice status={status} error={error} micBusy={micBusy} grantMicrophone={grantMicrophone} />
+          <div className="flex items-center justify-between py-3 border-t border-[#EEF2F7]">
+            <span className="text-sm text-slate-600">Gap between calls</span>
+            <div className="flex gap-1">
+              {[3, 5, 10].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setGapSeconds(s)}
+                  className={`text-xs rounded-md px-2.5 py-1.5 border transition-colors duration-150 ${
+                    gapSeconds === s ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-[#E3EAF4] hover:border-blue-300'
+                  }`}
+                >
+                  {s}s
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="text-[11px] text-slate-400 mb-5">
+            Hotkeys: 1-7 tag the call · C callback · M mute · V drop VM · H hang up · N note · Space pause
+          </div>
+          <button
+            onClick={start}
+            disabled={status !== 'ready'}
+            className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg px-4 py-3 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <PhoneCall weight="fill" className="w-4 h-4" />
+            {status === 'ready' ? `Start dialing (${queueInput.length})` : 'Waiting for dialer…'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ---- Running: the cockpit proper ----
+  return (
+    <div className="px-4 xl:px-6 py-4 h-full flex flex-col gap-3">
+      {/* Header strip: session stats */}
+      <div className="bg-white rounded-xl border border-[#E3EAF4] px-4 py-2.5 flex items-center gap-5 flex-wrap">
+        <Link href="/setter/leads" className="text-slate-400 hover:text-slate-600" title="Exit to leads" aria-label="Exit to leads">
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
+        {[
+          ['Dials', String(stats.dials)],
+          ['Connects', String(stats.connects)],
+          ['Talk', fmtClock(stats.talkSeconds)],
+          ['Demos', String(stats.demos)],
+          ['Elapsed', fmtClock(elapsed)],
+        ].map(([label, value]) => (
+          <div key={label} className="flex items-baseline gap-1.5">
+            <span className="text-base font-semibold" style={{ color: NAVY }}>{value}</span>
+            <span className="text-[11px] text-slate-500">{label}</span>
+          </div>
+        ))}
+        <div className="flex-1" />
+        <span className="text-[11px] text-slate-400 hidden xl:block">
+          1-7 tag · C callback · M mute · V VM · H hang up · Space pause
+        </span>
+      </div>
+
+      <SessionStatusNotice status={status} error={error} micBusy={micBusy} grantMicrophone={grantMicrophone} compact />
+
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[260px_1fr_300px] gap-3">
+        {/* Left: queue */}
+        <div className="bg-white rounded-xl border border-[#E3EAF4] flex flex-col min-h-0 overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#EEF2F7]">
+            <div className="text-sm font-semibold" style={{ color: NAVY }}>Queue</div>
+            <div className="text-[11px] text-slate-500 mt-0.5">{Math.min(queueIndex + 1, queue.length)} of {queue.length}</div>
+            <div className="mt-2 h-1 rounded-full bg-[#EEF2F7] overflow-hidden">
+              <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${queue.length ? (queueIndex / queue.length) * 100 : 0}%` }} />
+            </div>
+          </div>
+          <ul className="flex-1 overflow-y-auto divide-y divide-[#F5F8FC]">
+            {queue.map((item, i) => {
+              const meta = leadMetaById.get(item.leadId)
+              const isCurrent = i === queueIndex
+              const isDone = i < queueIndex
+              return (
+                <li key={item.leadId} className={`px-4 py-2 text-xs ${isCurrent ? 'bg-blue-50' : isDone ? 'opacity-45' : ''}`}>
+                  <div className={`truncate font-medium ${isCurrent ? 'text-blue-900' : 'text-slate-700'}`}>
+                    {isDone ? '✓ ' : ''}{item.businessName || item.contactName || item.phone}
+                  </div>
+                  {meta?.city && <div className="text-[10px] text-slate-400 truncate">{meta.businessType ? `${meta.businessType} · ` : ''}{meta.city}</div>}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+
+        {/* Center: live call card + notes + SMS */}
+        <div className="flex flex-col gap-3 min-h-0">
+          <div className="bg-white rounded-xl border border-[#E3EAF4] p-5">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="min-w-0">
+                <div className="text-2xl font-semibold truncate" style={{ color: NAVY }}>
+                  {liveLead?.businessName || currentItem?.businessName || '—'}
+                </div>
+                <div className="text-sm text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                  {liveLead?.contactName && <span>{liveLead.contactName}</span>}
+                  {liveLead?.businessType && <span>· {liveLead.businessType}</span>}
+                  {liveLead?.city && <span>· {liveLead.city}{liveLead.state ? `, ${liveLead.state}` : ''}</span>}
+                  {typeof liveLead?.rating === 'number' && (
+                    <span className="inline-flex items-center gap-0.5 text-amber-600">
+                      <Star weight="fill" className="w-3 h-3" /> {liveLead.rating.toFixed(1)}
+                      {liveLead.reviews ? <span className="text-slate-400">({liveLead.reviews})</span> : null}
+                    </span>
+                  )}
+                </div>
+                <div className={`text-lg mt-2 text-slate-800 ${firaCode.className}`}>
+                  {fmtPhone(currentItem?.phone || liveLead?.phone || '')}
+                </div>
+              </div>
+              <CallStateBadge callState={callState} seconds={secondsActive} countdown={countdown} queuePaused={queuePaused} />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="bg-white rounded-xl border border-[#E3EAF4] flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div className="px-4 pt-3 pb-2 flex items-center gap-2">
+              <input
+                ref={noteInputRef}
+                type="text"
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && noteDraft.trim()) { void addNote(noteDraft); setNoteDraft('') }
+                  if (e.key === 'Escape') (e.target as HTMLInputElement).blur()
+                }}
+                placeholder="Type a note, Enter to save (N focuses here)"
+                className="flex-1 min-w-0 bg-[#F8FAFC] border border-[#E3EAF4] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 pb-3">
+              {notesLoading ? (
+                <div className="text-xs text-slate-400 py-2">Loading notes…</div>
+              ) : notes.length === 0 ? (
+                <div className="text-xs text-slate-400 py-2">No notes on this lead yet.</div>
+              ) : (
+                <ul className="space-y-1.5">
+                  {notes.map((n) => (
+                    <li key={n.id} className="text-xs text-slate-600 leading-snug">
+                      <span className={`text-slate-400 ${firaCode.className}`}>
+                        {new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>{' '}
+                      {n.body}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          {/* SMS follow-up */}
+          <div className="bg-white rounded-xl border border-[#E3EAF4] p-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <ChatText weight="duotone" className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-semibold" style={{ color: NAVY }}>Text follow-up</span>
+              {smsTemplates.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setSmsDraft(fillTemplate(t.body))}
+                  className="text-[10px] rounded-full border border-[#E3EAF4] px-2 py-0.5 text-slate-600 hover:border-blue-300 hover:text-blue-700 transition-colors duration-150"
+                >
+                  {t.title}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-end gap-2">
+              <textarea
+                value={smsDraft}
+                onChange={(e) => setSmsDraft(e.target.value)}
+                rows={2}
+                placeholder="Pick a template or type a text…"
+                className="flex-1 min-w-0 bg-[#F8FAFC] border border-[#E3EAF4] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-blue-400 focus:bg-white"
+              />
+              <button
+                onClick={sendSms}
+                disabled={!smsDraft.trim() || !liveLeadId || smsState === 'sending'}
+                className="inline-flex items-center gap-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3 py-2 transition-colors duration-200 disabled:opacity-50"
+              >
+                {smsState === 'sending' ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : null}
+                {smsState === 'sent' ? 'Sent ✓' : 'Send'}
+              </button>
+            </div>
+            {smsState === 'error' && (
+              <div className="mt-1.5 text-[11px] text-rose-700 flex items-start gap-1">
+                <WarningCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {smsError}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: script + battle cards */}
+        <div className="bg-white rounded-xl border border-[#E3EAF4] flex flex-col min-h-0 overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#EEF2F7] text-sm font-semibold" style={{ color: NAVY }}>Script</div>
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+            {proseScripts.length === 0 && objections.length === 0 && (
+              <div className="text-xs text-slate-400">No script content yet - admin can add it under /admin/scripts.</div>
+            )}
+            {proseScripts.map((s) => (
+              <div key={s.id}>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-blue-600 mb-1">{s.title}</div>
+                <div className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{fillTemplate(s.body)}</div>
+              </div>
+            ))}
+            {scripts.some((s) => s.section === 'objection') && (
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Objections</div>
+                <input
+                  value={objectionFilter}
+                  onChange={(e) => setObjectionFilter(e.target.value)}
+                  placeholder="Filter objections…"
+                  className="w-full mb-2 bg-[#F8FAFC] border border-[#E3EAF4] rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-400"
+                />
+                <div className="space-y-1.5">
+                  {objections.map((o) => (
+                    <details key={o.id} className="group border border-[#E3EAF4] rounded-lg">
+                      <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-slate-800 flex items-center justify-between gap-2 hover:bg-[#F8FAFC] rounded-lg">
+                        <span className="truncate">&ldquo;{o.title}&rdquo;</span>
+                        <CaretDown className="w-3 h-3 text-slate-400 group-open:rotate-180 transition-transform shrink-0" />
+                      </summary>
+                      <div className="px-3 pb-2.5 text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{fillTemplate(o.body)}</div>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom bar: controls + dispositions + queue transport */}
+      <div className="bg-white rounded-xl border border-[#E3EAF4] px-4 py-3 flex items-center gap-3 flex-wrap relative">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={toggleMute}
+            disabled={!inCall}
+            title="Mute (M)"
+            className={`inline-flex items-center justify-center w-11 h-11 rounded-lg border transition-colors duration-150 disabled:opacity-40 ${
+              muted ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-white border-[#E3EAF4] text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {muted ? <Microphone className="w-4 h-4" /> : <MicrophoneSlash className="w-4 h-4" />}
+          </button>
+          <button
+            onClick={() => setKeypadOpen((v) => !v)}
+            title="Keypad (K)"
+            className="inline-flex items-center justify-center w-11 h-11 rounded-lg border bg-white border-[#E3EAF4] text-slate-600 hover:bg-slate-50 transition-colors duration-150"
+          >
+            <DotsNine className="w-4 h-4" weight="bold" />
+          </button>
+          <button
+            onClick={dropVoicemail}
+            disabled={callState !== 'active' || droppingVm}
+            title="Drop voicemail and hang up (V)"
+            className="inline-flex items-center justify-center gap-1.5 h-11 rounded-lg border bg-white border-[#E3EAF4] text-slate-600 hover:bg-slate-50 px-3 text-xs font-medium transition-colors duration-150 disabled:opacity-40"
+          >
+            {droppingVm ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Voicemail className="w-4 h-4" />}
+            Drop VM
+          </button>
+          <button
+            onClick={hangup}
+            disabled={!inCall}
+            title="Hang up (H)"
+            className="inline-flex items-center justify-center gap-1.5 h-11 rounded-lg bg-rose-600 hover:bg-rose-700 text-white px-4 text-sm font-semibold transition-colors duration-150 disabled:opacity-40"
+          >
+            <PhoneSlash className="w-4 h-4" weight="fill" /> Hang up
+          </button>
+        </div>
+
+        <div className="h-8 w-px bg-[#EEF2F7]" />
+
+        {/* Dispositions */}
+        <div className="flex items-center gap-1 flex-wrap flex-1">
+          {DISPOSITIONS.map((d) => (
+            <button
+              key={d.key}
+              onClick={() => chooseDisposition(d.key)}
+              disabled={callState !== 'ended' && callState !== 'active'}
+              className={`text-xs rounded-lg px-2.5 py-2 border transition-colors duration-150 disabled:opacity-40 ${
+                postCallStatus === d.key
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-300'
+              }`}
+            >
+              <span className="text-slate-400 mr-1">{d.hotkey}</span>{d.label}
+            </button>
+          ))}
+          <button
+            onClick={openCallback}
+            disabled={callState !== 'ended' && callState !== 'active'}
+            className="text-xs rounded-lg px-2.5 py-2 border bg-white text-slate-700 border-[#E3EAF4] hover:border-amber-400 transition-colors duration-150 disabled:opacity-40 inline-flex items-center gap-1"
+          >
+            <CalendarBlank className="w-3.5 h-3.5 text-amber-500" /><span className="text-slate-400">C</span> Callback
+          </button>
+        </div>
+
+        {/* Queue transport */}
+        <div className="flex items-center gap-1.5">
+          {countdown !== null && !queuePaused && (
+            <span className={`text-sm text-blue-700 ${firaCode.className}`}>next in {countdown}s</span>
+          )}
+          <button onClick={togglePause} title="Pause/resume (Space)" className="inline-flex items-center justify-center w-11 h-11 rounded-lg border bg-white border-[#E3EAF4] text-slate-600 hover:bg-slate-50 transition-colors duration-150">
+            {queuePaused ? <Play className="w-4 h-4" weight="fill" /> : <Pause className="w-4 h-4" weight="fill" />}
+          </button>
+          <button onClick={skipCurrent} title="Skip to next" className="inline-flex items-center justify-center w-11 h-11 rounded-lg border bg-white border-[#E3EAF4] text-slate-600 hover:bg-slate-50 transition-colors duration-150">
+            <SkipForward className="w-4 h-4" weight="fill" />
+          </button>
+          <button onClick={stopQueue} title="End session" className="inline-flex items-center justify-center w-11 h-11 rounded-lg border bg-white border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors duration-150">
+            <Stop className="w-4 h-4" weight="fill" />
+          </button>
+        </div>
+
+        {/* Keypad popover */}
+        {keypadOpen && (
+          <div className="absolute bottom-full mb-2 left-4 bg-white border border-[#E3EAF4] rounded-xl shadow-lg p-2 grid grid-cols-3 gap-1 w-44 z-20">
+            {KEYPAD.map(({ digit, sub }) => (
+              <button
+                key={digit}
+                type="button"
+                onClick={() => onKeypadPress(digit)}
+                className="h-10 rounded-md bg-[#F8FAFC] hover:bg-blue-50 active:scale-[0.97] transition-all flex items-center justify-center gap-1"
+              >
+                <span className="text-sm font-medium text-slate-900 leading-none">{digit}</span>
+                {sub && <span className={`text-[8px] text-slate-400 tracking-wider ${firaCode.className}`}>{sub}</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {demoModalLeadId && (
+        <DemoSetModal
+          leadId={demoModalLeadId}
+          onClose={() => { setDemoModalLeadId(null); if (queuePaused) togglePause() }}
+          onSaved={() => {
+            setDemoModalLeadId(null)
+            setPostCallStatus('demo_scheduled')
+            recordTag('demo_scheduled')
+            setStats((s) => ({ ...s, demos: s.demos + 1 }))
+            if (queuePaused) togglePause()
+          }}
+        />
+      )}
+      {callbackLeadId && (
+        <CallbackModal
+          leadId={callbackLeadId}
+          onClose={() => { setCallbackLeadId(null); if (queuePaused) togglePause() }}
+          onSaved={() => {
+            setCallbackLeadId(null)
+            setPostCallStatus('called')
+            recordTag('called')
+            if (queuePaused) togglePause()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function SessionStatusNotice({ status, error, micBusy, grantMicrophone, compact }: {
+  status: SessionStatus; error: string | null; micBusy: boolean; grantMicrophone: () => void; compact?: boolean
+}) {
+  if (status === 'ready') return null
+  if (status === 'mic_required' || status === 'mic_denied') {
+    return (
+      <div className={`bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-900 flex items-center justify-between gap-3 ${compact ? '' : 'mb-5'}`}>
+        <span>
+          {status === 'mic_required'
+            ? 'Microphone access needed - click Allow in the browser prompt.'
+            : 'Microphone is blocked - allow it via the lock icon in the address bar, then retry.'}
+        </span>
+        <button
+          onClick={grantMicrophone}
+          disabled={micBusy}
+          className="shrink-0 inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg px-3 py-2 transition-colors duration-150 disabled:opacity-60"
+        >
+          {micBusy ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <Microphone className="w-3.5 h-3.5" weight="fill" />}
+          {status === 'mic_required' ? 'Allow microphone' : 'Try again'}
+        </button>
+      </div>
+    )
+  }
+  if (status === 'unconfigured') {
+    return (
+      <div className={`bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 ${compact ? '' : 'mb-5'}`}>
+        Browser dialing isn&apos;t configured yet (Telnyx credentials missing) - ask admin.
+      </div>
+    )
+  }
+  if (status === 'error' && error) {
+    return (
+      <div className={`bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-700 flex items-start gap-2 ${compact ? '' : 'mb-5'}`}>
+        <WarningCircle className="w-4 h-4 mt-0.5 shrink-0" /> {error}
+      </div>
+    )
+  }
+  return (
+    <div className={`bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-800 flex items-center gap-2 ${compact ? '' : 'mb-5'}`}>
+      <CircleNotch className="w-4 h-4 animate-spin" /> Connecting the dialer…
+    </div>
+  )
+}
+
+function CallStateBadge({ callState, seconds, countdown, queuePaused }: {
+  callState: string; seconds: number; countdown: number | null; queuePaused: boolean
+}) {
+  if (callState === 'active') {
+    return (
+      <span className="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg px-3 py-2 text-sm font-medium">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        {fmtDuration(seconds)}
+      </span>
+    )
+  }
+  if (callState === 'connecting' || callState === 'ringing') {
+    return (
+      <span className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2 text-sm font-medium">
+        <CircleNotch className="w-4 h-4 animate-spin" />
+        {callState === 'connecting' ? 'Dialing…' : 'Ringing…'}
+      </span>
+    )
+  }
+  if (callState === 'ended') {
+    return (
+      <span className="inline-flex items-center gap-2 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg px-3 py-2 text-sm font-medium">
+        Ended{queuePaused ? ' · paused' : countdown !== null ? ` · tag it (${countdown}s)` : ''}
+      </span>
+    )
+  }
+  return null
+}
+
+/** Same endpoint + behavior as the leads-list demo modal. */
+function DemoSetModal({ leadId, onClose, onSaved }: { leadId: string; onClose: () => void; onSaved: () => void }) {
+  const initial = (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 1)
+    d.setHours(10, 0, 0, 0)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  })()
+  const [when, setWhen] = useState(initial)
+  const [notes, setNotes] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const save = async () => {
+    if (!when) { setErr('Pick a date/time'); return }
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/mark-demo`, {
+        method: 'POST',
+        body: JSON.stringify({ scheduled_at: new Date(when).toISOString(), notes: notes.trim() || undefined }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) { setErr(j?.error || `Failed (${r.status})`); return }
+      onSaved()
+    } catch { setErr('Failed') } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4" onClick={onClose}>
+      <div className="bg-white border border-[#E3EAF4] rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-base font-semibold mb-1" style={{ color: NAVY }}>Mark demo set</h3>
+        <p className="text-xs text-slate-500 mb-4">Status flips to demo_scheduled and the team gets pinged.</p>
+        <label className="block text-xs font-medium text-slate-700 mb-1.5">When?</label>
+        <input
+          type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} autoFocus
+          className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-blue-500"
+        />
+        <label className="block text-xs font-medium text-slate-700 mt-3 mb-1.5">Notes (optional)</label>
+        <textarea
+          value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="anything for the build"
+          className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-blue-500 resize-none"
+        />
+        {err && <div className="mt-3 bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-xs text-rose-700">{err}</div>}
+        <div className="flex justify-end gap-2 mt-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Cancel</button>
+          <button
+            onClick={save} disabled={busy || !when}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-60 transition-colors duration-150"
+          >
+            {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle weight="fill" className="w-4 h-4" />}
+            Mark demo set
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Quick callback scheduling -> lead_assignments.follow_up_at. */
+function CallbackModal({ leadId, onClose, onSaved }: { leadId: string; onClose: () => void; onSaved: () => void }) {
+  const [custom, setCustom] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const save = async (when: Date) => {
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ follow_up_at: when.toISOString(), touched: true }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || j?.error) { setErr(j?.error || `Failed (${r.status})`); return }
+      onSaved()
+    } catch { setErr('Failed') } finally { setBusy(false) }
+  }
+
+  const quick: { label: string; get: () => Date }[] = [
+    { label: 'In 2 hours', get: () => new Date(Date.now() + 2 * 3600e3) },
+    { label: 'Tomorrow 9am', get: () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d } },
+    { label: 'Monday 9am', get: () => { const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); d.setHours(9, 0, 0, 0); return d } },
+  ]
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4" onClick={onClose}>
+      <div className="bg-white border border-[#E3EAF4] rounded-xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-base font-semibold mb-1" style={{ color: NAVY }}>Schedule callback</h3>
+        <p className="text-xs text-slate-500 mb-4">Sets the follow-up time - the lead resurfaces at the top of your queue.</p>
+        <div className="grid grid-cols-1 gap-2 mb-3">
+          {quick.map((q) => (
+            <button
+              key={q.label}
+              onClick={() => void save(q.get())}
+              disabled={busy}
+              className="w-full text-left text-sm border border-[#E3EAF4] hover:border-blue-400 rounded-lg px-3.5 py-2.5 text-slate-800 transition-colors duration-150 disabled:opacity-50"
+            >
+              {q.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="datetime-local" value={custom} onChange={(e) => setCustom(e.target.value)}
+            className="flex-1 px-3 py-2 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          />
+          <button
+            onClick={() => custom && void save(new Date(custom))}
+            disabled={busy || !custom}
+            className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3.5 py-2 transition-colors duration-150 disabled:opacity-50"
+          >
+            Set
+          </button>
+        </div>
+        {err && <div className="mt-3 bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-xs text-rose-700">{err}</div>}
+        <div className="flex justify-end mt-4">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900">Cancel</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const fmtPhone = (raw: string) => {
+  const d = raw.replace(/\D/g, '').replace(/^1/, '')
+  if (d.length !== 10) return raw
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
+}
+
+function fmtClock(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  if (h > 0) return `${h}h ${m}m`
+  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`
+  return `${s}s`
+}
