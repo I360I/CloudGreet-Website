@@ -38,6 +38,7 @@ export default function LandingPage() {
    <Reveal><RoiCalculator /></Reveal>
    <Reveal><Testimonial /></Reveal>
    <Reveal><WhoItsFor /></Reveal>
+   <Reveal><Faq /></Reveal>
    <Reveal><FinalCTA /></Reveal>
    <Reveal><FooterCard /></Reveal>
    <ChatWidget />
@@ -916,8 +917,23 @@ function Faq() {
    a: "We work with you. If you're not seeing bookings come through in the first couple of weeks we'll dig into the call transcripts together, tune the script, and get it right. The product is the result for you - if it isn't producing, we're going to fix it.",
   },
  ]
+ // FAQPage structured data for search + AI answer engines, built from
+ // the same items array the accordion renders so they can't drift.
+ const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: items.map((item) => ({
+   '@type': 'Question',
+   name: item.q,
+   acceptedAnswer: { '@type': 'Answer', text: item.a },
+  })),
+ }
  return (
   <section id="faq" className="px-5 sm:px-6 pb-16 sm:pb-32 md:pb-40">
+   <script
+    type="application/ld+json"
+    dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+   />
    <div className="max-w-3xl mx-auto">
     <div className="text-center mb-10">
      <p className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500 mb-3">

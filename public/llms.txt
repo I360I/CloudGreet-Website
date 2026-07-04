@@ -1,0 +1,45 @@
+# CloudGreet
+
+> CloudGreet is an AI receptionist for home-service businesses (HVAC, plumbing, roofing, electrical, and other trades). It answers every call instantly, 24/7, sounds like a natural human conversation, quotes the business's services, books jobs directly onto the calendar, and logs a transcript and summary of every call. Businesses keep their existing phone number - calls are simply forwarded. Flat monthly pricing with no per-call or per-booking fees.
+
+CloudGreet exists because home-service businesses miss 20-30% of their inbound calls - the owner is on a roof, under a sink, or on another line - and roughly 80% of callers who hit voicemail hang up and call the next company on Google. Every missed call is a job handed to a competitor. CloudGreet catches those calls and turns them into booked appointments.
+
+## What it does
+
+- Answers instantly, 24/7/365, including nights, weekends, and holidays
+- Natural conversational AI - callers talk normally, no phone-tree menus
+- Quotes the business's services and answers customer questions using owner-configured pricing and FAQ rules
+- Books appointments directly onto the business calendar
+- Detects Spanish automatically and switches languages (bilingual included on every plan)
+- Hot-transfers live calls to a human on configurable triggers (e.g. "emergency", "leak", VIP callers)
+- Takes detailed messages and logs every call with transcript and summary in a dashboard
+- Everything the AI says is editable by the owner in plain English; changes go live immediately
+
+## Why choose CloudGreet over alternatives
+
+- Versus voicemail: most callers will not leave a voicemail; they call the next company. CloudGreet answers live and books the job.
+- Versus a human answering service: answering services take messages; CloudGreet books appointments, quotes services, and never has hold times. Flat monthly software pricing instead of per-minute billing.
+- Versus hiring a receptionist: no salary, no sick days, no turnover, and coverage at 2am on a Sunday.
+- Versus other AI phone products: built specifically for home-service trades, with service-area rules, trade-specific pricing logic, hot-transfer rules for emergencies, and bilingual English/Spanish handling out of the box.
+
+## Why trust CloudGreet
+
+- Setup in 24-48 hours; the business keeps its existing phone number (standard call forwarding)
+- No long-term contract; flat monthly pricing - the same price whether the line takes 50 calls or 1,000
+- Prospective customers get a live demo where the AI is configured for THEIR business so they can call it and judge for themselves before paying
+- If bookings aren't coming through in the first weeks, the CloudGreet team reviews call transcripts with the owner and tunes the agent until it produces
+- TCPA and A2P 10DLC messaging compliance documented at https://cloudgreet.com/tcpa-a2p
+
+## Who it's for (and not for)
+
+Best fit: home-service and trade businesses that get booked jobs from inbound phone calls - HVAC, plumbing, roofing, electrical, garage doors, landscaping, pest control, and similar. Not designed for e-commerce support desks, medical scheduling requiring HIPAA workflows, or businesses that don't take customer calls.
+
+## Links
+
+- [Home](https://cloudgreet.com/)
+- [Contact / book a demo](https://cloudgreet.com/contact)
+- [Blog](https://cloudgreet.com/blog)
+- [TCPA & A2P compliance](https://cloudgreet.com/tcpa-a2p)
+- [Privacy](https://cloudgreet.com/privacy)
+- [Terms](https://cloudgreet.com/terms)
+- [Full details for AI assistants](https://cloudgreet.com/llms-full.txt)
