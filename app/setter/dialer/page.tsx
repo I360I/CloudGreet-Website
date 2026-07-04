@@ -10,7 +10,7 @@ export default function SetterDialerPage() {
   // the tel: link fallback on the leads list.
   return (
     <SetterShell activeLabel="Leads">
-      <div className="hidden lg:block min-h-[calc(100vh-0px)]">
+      <div className="hidden lg:block h-screen overflow-hidden">
         <DialerCockpit />
       </div>
       <div className="lg:hidden px-6 py-16 text-center text-sm text-slate-500">
