@@ -137,15 +137,18 @@ export function SetterLeadsWorkspace() {
     const ids = Array.from(selected)
     setLeads((prev) => prev.map((l) => ids.includes(l.id) ? { ...l, status } : l))
     try {
-      await fetchWithAuth('/api/sales/leads/bulk', {
+      const res = await fetchWithAuth('/api/sales/leads/bulk', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids, status, touched: true }),
       })
+      if (!res.ok) throw new Error('Bulk update failed')
       setFlash(`Updated ${ids.length} lead${ids.length === 1 ? '' : 's'}.`)
       setTimeout(() => setFlash(''), 1500)
       clearSelected()
     } catch {
+      setFlash('Update failed - reloading.')
+      setTimeout(() => setFlash(''), 2500)
       await load()
     } finally {
       setBulkBusy(false)
@@ -189,15 +192,18 @@ export function SetterLeadsWorkspace() {
     const ids = Array.from(selected)
     setLeads((prev) => prev.filter((l) => !ids.includes(l.id)))
     try {
-      await fetchWithAuth('/api/sales/leads/bulk', {
+      const res = await fetchWithAuth('/api/sales/leads/bulk', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
       })
+      if (!res.ok) throw new Error('Bulk delete failed')
       setFlash(`Removed ${ids.length} lead${ids.length === 1 ? '' : 's'}.`)
       setTimeout(() => setFlash(''), 1500)
       clearSelected()
     } catch {
+      setFlash('Remove failed - reloading.')
+      setTimeout(() => setFlash(''), 2500)
       await load()
     } finally {
       setBulkBusy(false)
