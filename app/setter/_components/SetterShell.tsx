@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import dynamicImport from 'next/dynamic'
-import { Poppins } from 'next/font/google'
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -19,11 +18,7 @@ import { SquaresFour, ListChecks, SignOut, CircleNotch } from '@phosphor-icons/r
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { ImpersonationBanner } from '@/app/dashboard/_components/ImpersonationBanner'
-
-// Reference template (Figma "Sales Dashboard" community file) uses
-// Poppins throughout - matching it here rather than the site's default
-// Geist, since typeface is a big part of that design's identity.
-const poppins = Poppins({ subsets: ['latin'], weight: ['400', '500', '600', '700'] })
+import { firaSans } from './fonts'
 
 type ActiveLabel = 'Overview' | 'Leads'
 
@@ -39,15 +34,112 @@ const NAV: NavItem[] = [
   { label: 'Leads',    href: '/setter/leads', icon: ListChecks,  match: (p) => p.startsWith('/setter/leads') },
 ]
 
+// Sidebar gradient - the ONLY dark-blue surface; the content canvas is
+// near-white (#F8FAFC). Tokens from the v5 design spec.
+const SIDEBAR_GRADIENT = 'linear-gradient(170deg, #1E3A8A 0%, #0B1B3F 100%)'
+
 /**
- * Shell for the setter dashboard - a trimmed copy of SalesShell rather than
- * a parameterized fork, since the two chrome sets genuinely diverge (no
- * Stripe Connect payouts banner, no settings link - setters aren't paid
- * via commission, so none of that applies).
- *
- * Sidebar styling adapted from a Figma "Sales Dashboard" community
- * template (dark gradient panel, pill active-state) - recolored to
- * CloudGreet blue (source used purple/violet).
+ * Pure presentational chrome: white canvas + dark navy sidebar + mobile
+ * bottom nav. No hooks with redirects, so the /setter/preview screenshot
+ * route can render it without a session. SetterShell wraps this with the
+ * real auth/session behavior.
+ */
+export function SetterChrome({
+  activeLabel,
+  pathname,
+  name,
+  onSignOut,
+  children,
+}: {
+  activeLabel: ActiveLabel
+  pathname: string
+  name: string | null
+  onSignOut: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <main className={`${firaSans.className} min-h-screen bg-[#F8FAFC] text-slate-800 lg:flex`}>
+      {/* Stretches with the content column (flex default), so the dark
+          panel always runs the full page height. Inner wrapper is sticky
+          so the nav stays in view on long pages. */}
+      <aside
+        className="hidden lg:block w-44 shrink-0"
+        style={{ backgroundImage: SIDEBAR_GRADIENT }}
+      >
+        <div className="sticky top-0 h-screen flex flex-col py-8 px-3">
+        <div className="flex flex-col items-center mb-10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/cloudgreet-logo-white.png" alt="CloudGreet" className="w-24 h-auto object-contain" />
+        </div>
+        <nav className="flex-1 space-y-2">
+          {NAV.map((item) => {
+            const active = item.match(pathname) || item.label === activeLabel
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
+                  active
+                    ? 'bg-white/15 text-white font-semibold'
+                    : 'text-blue-200/70 hover:bg-white/[0.08] hover:text-white'
+                }`}
+              >
+                <Icon weight={active ? 'fill' : 'regular'} className="w-5 h-5 shrink-0" />
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
+        <div className="pt-4 space-y-3 border-t border-white/10 flex flex-col items-center">
+          <div className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center text-xs font-semibold uppercase shrink-0">
+            {(name || '?').slice(0, 1)}
+          </div>
+          <button
+            onClick={onSignOut}
+            className="flex flex-col items-center gap-1 text-[11px] text-blue-200/70 hover:text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 rounded px-2 py-1"
+          >
+            <SignOut className="w-4 h-4" /> Sign out
+          </button>
+        </div>
+        </div>
+      </aside>
+
+      <div className="flex-1 min-w-0 pb-24 lg:pb-0">
+        {children}
+      </div>
+
+      {/* Mobile bottom nav */}
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around py-2 pb-3"
+        style={{ backgroundImage: SIDEBAR_GRADIENT }}
+      >
+        {NAV.map((item) => {
+          const active = item.match(pathname) || item.label === activeLabel
+          const Icon = item.icon
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-lg ${
+                active ? 'text-white' : 'text-blue-200/60'
+              }`}
+            >
+              <Icon weight={active ? 'fill' : 'regular'} className="w-5 h-5" />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
+    </main>
+  )
+}
+
+/**
+ * Shell for the setter dashboard - a trimmed copy of SalesShell rather
+ * than a parameterized fork, since the two chrome sets genuinely diverge
+ * (no Stripe Connect payouts banner, no settings link - setters aren't
+ * paid via commission, so none of that applies).
  */
 export function SetterShell({
   activeLabel,
@@ -86,84 +178,11 @@ export function SetterShell({
 
   return (
     <>
-    <ImpersonationBanner />
-    {/* Full-viewport gradient backdrop, matching the reference's outer
-        canvas (blurred purple-to-charcoal blobs, recolored to blue) -
-        the dashboard itself is a big floating rounded card on top of it,
-        exactly like the source template, not full-bleed content. */}
-    <main className={`${poppins.className} min-h-screen bg-gradient-to-br from-[#1d4ed8] via-[#15317a] to-[#0a1330] text-gray-900 p-3 sm:p-6 lg:p-10`}>
-      <div className="max-w-[1500px] mx-auto rounded-[32px] sm:rounded-[48px] bg-white/[0.06] backdrop-blur-2xl border border-white/20 shadow-[0_30px_70px_-20px_rgba(0,0,0,0.55)] overflow-hidden flex min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-5rem)]">
-        <aside
-          className="hidden lg:flex w-40 flex-col py-8 px-3 shrink-0"
-          style={{ backgroundImage: 'linear-gradient(168deg, #1d4ed8 2%, rgba(10,19,48,0.75) 110%)' }}
-        >
-          <div className="flex flex-col items-center mb-10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cloudgreet-logo-white.png" alt="CloudGreet" className="w-24 h-auto object-contain" />
-          </div>
-          <nav className="flex-1 space-y-3">
-            {NAV.map((item) => {
-              const active = item.match(pathname) || item.label === activeLabel
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs transition-all duration-200 ${
-                    active
-                      ? 'bg-[#3b5fd6] text-white font-bold shadow-sm'
-                      : 'text-blue-200/70 hover:bg-white/[0.06] hover:text-white'
-                  }`}
-                >
-                  <Icon weight={active ? 'fill' : 'regular'} className="w-5 h-5 shrink-0" />
-                  {item.label}
-                </Link>
-              )
-            })}
-          </nav>
-          <div className="pt-4 space-y-3 border-t border-white/10 flex flex-col items-center">
-            <div className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center text-xs font-semibold uppercase shrink-0">
-              {(name || '?').slice(0, 1)}
-            </div>
-            <button
-              onClick={signOut}
-              className="flex flex-col items-center gap-1 text-[10px] text-blue-200/70 hover:text-white transition-colors"
-            >
-              <SignOut className="w-4 h-4" /> Sign out
-            </button>
-          </div>
-        </aside>
-
-        <div className="flex-1 min-w-0 pb-24 lg:pb-0 overflow-y-auto">
-          {children}
-        </div>
-      </div>
-
-      {/* Mobile bottom nav */}
-      <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around py-2 pb-3"
-        style={{ backgroundImage: 'linear-gradient(90deg, #0a1330, #1d4ed8)' }}
-      >
-        {NAV.map((item) => {
-          const active = item.match(pathname) || item.label === activeLabel
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg ${
-                active ? 'text-white' : 'text-blue-200/60'
-              }`}
-            >
-              <Icon weight={active ? 'fill' : 'regular'} className="w-5 h-5" />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </Link>
-          )
-        })}
-      </nav>
-
+      <ImpersonationBanner />
+      <SetterChrome activeLabel={activeLabel} pathname={pathname} name={name} onSignOut={signOut}>
+        {children}
+      </SetterChrome>
       {pathname.startsWith('/setter/leads') && <Dialer />}
-    </main>
     </>
   )
 }
@@ -171,7 +190,7 @@ export function SetterShell({
 export function SetterLoadingState() {
   return (
     <div className="flex items-center justify-center py-16">
-      <CircleNotch className="w-5 h-5 text-white/70 animate-spin" />
+      <CircleNotch className="w-5 h-5 text-blue-600 animate-spin" />
     </div>
   )
 }

@@ -157,15 +157,15 @@ export function MiniSparkline({
 }
 
 /**
- * Bar chart matching the reference template's "Vendor Activity" card:
- * top-rounded (not full capsule) bars with a vertical gradient fade,
- * visible Y-axis gridlines/labels. One bar (defaults to the last = today)
- * highlighted in the bold color; the rest fade toward transparent.
+ * Single-series bar chart in "emphasis" form: one bar (defaults to the
+ * last = today) in the bold accent, the rest in the de-emphasis tint.
+ * Solid fills, <=24px thick, 4px rounded data-end over a square baseline,
+ * recessive solid hairline gridlines - per the dataviz mark specs.
  */
 export function MiniBarChart({
   labels,
   data,
-  color = '#bfdbfe',
+  color = '#C7D7F4',
   highlightColor = '#2563eb',
   highlightIndex,
   height = 160,
@@ -185,23 +185,10 @@ export function MiniBarChart({
     labels,
     datasets: [{
       data,
-      // Scriptable gradient (chart.js reruns this per render/resize) -
-      // solid at the top, fading to near-transparent at the base, same
-      // vertical-fade treatment the reference's bars use.
-      backgroundColor: (ctx: any) => {
-        const { chart } = ctx
-        const { chartArea } = chart
-        if (!chartArea) return color
-        const isHighlight = ctx.dataIndex === hi
-        const base = isHighlight ? highlightColor : color
-        const gradient = chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-        gradient.addColorStop(0, base)
-        gradient.addColorStop(1, `${base}0d`)
-        return gradient
-      },
-      borderRadius: { topLeft: 8, topRight: 8, bottomLeft: 0, bottomRight: 0 },
+      backgroundColor: data.map((_, i) => (i === hi ? highlightColor : color)),
+      borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 },
       borderSkipped: 'bottom' as const,
-      maxBarThickness: 26,
+      maxBarThickness: 24,
     }],
   }), [labels, data, color, highlightColor, hi])
 
@@ -227,7 +214,7 @@ export function MiniBarChart({
       },
       y: {
         ticks: { color: '#9ca3af', font: { size: 11 }, precision: 0 },
-        grid: { color: '#f1f5f9' },
+        grid: { color: '#EEF2F7' },
         border: { display: false },
         beginAtZero: true,
       },
@@ -289,55 +276,13 @@ export function DualLineChart({
     },
     scales: {
       x: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { display: false }, border: { display: false } },
-      y: { ticks: { color: '#9ca3af', font: { size: 11 }, precision: 0 }, grid: { color: '#f1f5f9' }, border: { display: false }, beginAtZero: true },
+      y: { ticks: { color: '#9ca3af', font: { size: 11 }, precision: 0 }, grid: { color: '#EEF2F7' }, border: { display: false }, beginAtZero: true },
     },
   }), [])
 
   return (
     <div className={className} style={{ height }}>
       <Line data={chartData} options={options} />
-    </div>
-  )
-}
-
-/**
- * Fixed-design-size canvas that uniformly scales its children to fit the
- * available width, via ResizeObserver + CSS transform. Lets a page port a
- * design spec's exact pixel coordinates (e.g. from a Figma dev-mode
- * export) as literal absolute-positioned children, instead of redoing the
- * composition in a hand-rolled responsive grid - the whole canvas shrinks/
- * grows together so every element's relative position/size stays exact.
- */
-export function FigmaCanvas({
-  width,
-  height,
-  className = '',
-  children,
-}: {
-  width: number
-  height: number
-  className?: string
-  children: React.ReactNode
-}) {
-  const outerRef = useRef<HTMLDivElement>(null)
-  const [scale, setScaleState] = React.useState(1)
-
-  useEffect(() => {
-    const el = outerRef.current
-    if (!el) return
-    const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width
-      if (w) setScaleState(w / width)
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [width])
-
-  return (
-    <div ref={outerRef} className={className} style={{ height: height * scale }}>
-      <div style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left', position: 'relative' }}>
-        {children}
-      </div>
     </div>
   )
 }
