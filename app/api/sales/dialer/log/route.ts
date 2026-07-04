@@ -87,6 +87,7 @@ export async function PATCH(request: NextRequest) {
     ended_at?: string
     duration_seconds?: number
     notes?: string
+    telnyx_call_id?: string
   }
   const id = (body.id || '').trim()
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
@@ -96,6 +97,12 @@ export async function PATCH(request: NextRequest) {
   if (body.ended_at) update.ended_at = body.ended_at
   if (typeof body.duration_seconds === 'number') update.duration_seconds = body.duration_seconds
   if (body.notes !== undefined) update.notes = body.notes
+  // The engine patches in the REAL call_control_id once the SDK exposes
+  // it at answer time (the dial-time value is the SDK's internal UUID,
+  // which Call Control actions like voicemail-drop's speak reject).
+  if (typeof body.telnyx_call_id === 'string' && body.telnyx_call_id.trim()) {
+    update.telnyx_call_id = body.telnyx_call_id.trim()
+  }
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: 'No fields to update' }, { status: 400 })

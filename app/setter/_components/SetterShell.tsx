@@ -14,13 +14,13 @@ const Dialer = dynamicImport(
   () => import('@/app/sales/_components/Dialer').then((m) => ({ default: m.Dialer })),
   { ssr: false },
 )
-import { SquaresFour, ListChecks, SignOut, CircleNotch } from '@phosphor-icons/react'
+import { SquaresFour, ListChecks, SignOut, CircleNotch, FileText, BookOpen, GearSix } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { ImpersonationBanner } from '@/app/dashboard/_components/ImpersonationBanner'
 import { firaSans } from './fonts'
 
-type ActiveLabel = 'Overview' | 'Leads'
+type ActiveLabel = 'Overview' | 'Leads' | 'Scripts' | 'Knowledge' | 'Settings'
 
 type NavItem = {
   label: ActiveLabel
@@ -30,8 +30,11 @@ type NavItem = {
 }
 
 const NAV: NavItem[] = [
-  { label: 'Overview', href: '/setter',       icon: SquaresFour, match: (p) => p === '/setter' },
-  { label: 'Leads',    href: '/setter/leads', icon: ListChecks,  match: (p) => p.startsWith('/setter/leads') },
+  { label: 'Overview',  href: '/setter',           icon: SquaresFour, match: (p) => p === '/setter' },
+  { label: 'Leads',     href: '/setter/leads',     icon: ListChecks,  match: (p) => p.startsWith('/setter/leads') },
+  { label: 'Scripts',   href: '/setter/scripts',   icon: FileText,    match: (p) => p.startsWith('/setter/scripts') },
+  { label: 'Knowledge', href: '/setter/knowledge', icon: BookOpen,    match: (p) => p.startsWith('/setter/knowledge') },
+  { label: 'Settings',  href: '/setter/settings',  icon: GearSix,     match: (p) => p.startsWith('/setter/settings') },
 ]
 
 // Sidebar gradient - the ONLY dark-blue surface; the content canvas is

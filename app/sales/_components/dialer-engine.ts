@@ -146,6 +146,10 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
   }, [])
 
   const activeLeadIdRef = useRef<string | null>(null)
+  // One finalize per call (Telnyx fires hangup AND destroy); reset in dial().
+  const finalizedRef = useRef(false)
+  // Which log row already got its real call_control_id patched.
+  const ccidSentForRowRef = useRef<string | null>(null)
 
   const finalizeCall = useCallback(async (finalStatus: string, duration: number) => {
     setCallState('ended')
@@ -279,6 +283,23 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
           else if (s === 'active') {
             setCallState('active')
             startedAtRef.current = Date.now()
+            // The SDK's call.id is its internal session UUID, useless
+            // against the Call Control API. Once the call is up, the SDK
+            // exposes the REAL call_control_id - patch it onto our log
+            // row so voicemail-drop's speak/hangup actions target a call
+            // Telnyx recognizes (the rep-voice webhook can't do this for
+            // outbound WebRTC legs; it ignores them as unhandled).
+            try {
+              const ccid = (c as any)?.telnyxIDs?.telnyxCallControlId
+              if (ccid && callRowIdRef.current && ccidSentForRowRef.current !== callRowIdRef.current) {
+                ccidSentForRowRef.current = callRowIdRef.current
+                void fetchWithAuth('/api/sales/dialer/log', {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: callRowIdRef.current, telnyx_call_id: ccid }),
+                })
+              }
+            } catch { /* non-fatal */ }
             // Telnyx SDK mutes the local mic on call start
             // ("Muting local audio tracks on start" log in bundle.js).
             // The moment the call flips to active, unmute so the
@@ -296,6 +317,11 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
               })
             } catch { /* non-fatal */ }
           } else if (s === 'hangup' || s === 'destroy' || s === 'purge') {
+            // Telnyx fires SEPARATE notifications for hangup and destroy
+            // on the same call - finalizing on each doubled every session
+            // stat (6 "dials" for 3 calls). Guard: one finalize per call.
+            if (finalizedRef.current) return
+            finalizedRef.current = true
             // Release the mic stream we captured at dial time. Without
             // this the browser keeps the mic active across calls and
             // the next outbound call can fail to acquire a fresh stream.
@@ -428,6 +454,7 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
     setDestination(number)
     setCallState('connecting')
     startedAtRef.current = null
+    finalizedRef.current = false
 
     // Local presence: pick whichever of the rep's up-to-3 saved numbers
     // shares the lead's area code, instead of always dialing out from
@@ -589,12 +616,18 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
     if (!callRowIdRef.current || droppingVm) return
     setDroppingVm(true)
     try {
-      await fetchWithAuth('/api/sales/dialer/voicemail-drop', {
+      const r = await fetchWithAuth('/api/sales/dialer/voicemail-drop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ call_row_id: callRowIdRef.current }),
       })
-    } catch { /* non-fatal - rep can still hang up manually */ } finally {
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}))
+        setError(j?.error || 'Voicemail drop failed - hang up manually.')
+      }
+    } catch {
+      setError('Voicemail drop failed - hang up manually.')
+    } finally {
       setDroppingVm(false)
     }
   }, [droppingVm])

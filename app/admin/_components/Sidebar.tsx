@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
  SquaresFour, Phone, CurrencyDollar, ListChecks, MagicWand, SignOut, Users,
- FileText, Robot, PhoneOutgoing, TestTube, ChatText, CalendarCheck, DotsThree, X, Article, Envelope, UserPlus,
+ FileText, Robot, PhoneOutgoing, TestTube, ChatText, CalendarCheck, DotsThree, X, Article, Envelope, UserPlus, BookOpen,
 } from '@phosphor-icons/react'
 import { useAdminTheme } from './Shell'
 
@@ -46,6 +46,7 @@ const groups: Group[] = [
    { icon: FileText, label: 'Applications', href: '/admin/applications', match: (p) => p.startsWith('/admin/applications') },
    { icon: PhoneOutgoing, label: 'Dialer', href: '/admin/dialer', match: (p) => p.startsWith('/admin/dialer') },
    { icon: FileText, label: 'Scripts', href: '/admin/scripts', match: (p) => p.startsWith('/admin/scripts') },
+   { icon: BookOpen, label: 'Knowledge', href: '/admin/sales-knowledge', match: (p) => p.startsWith('/admin/sales-knowledge') },
    { icon: Envelope, label: 'Email Campaigns', href: '/admin/email-campaigns', match: (p) => p.startsWith('/admin/email-campaigns') },
   ],
  },
@@ -62,7 +63,7 @@ const groups: Group[] = [
 const items: Item[] = groups.flatMap((g) => g.items)
 
 export type AdminActiveLabel =
- | 'Overview' | 'Calls' | 'Texts' | 'Demos' | 'Billing' | 'Sales' | 'Setters' | 'Dialer' | 'Scripts' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due' | 'Quality' | 'Blog' | 'Email Campaigns'
+ | 'Overview' | 'Calls' | 'Texts' | 'Demos' | 'Billing' | 'Sales' | 'Setters' | 'Dialer' | 'Scripts' | 'Knowledge' | 'Applications' | 'Leads' | 'Tools' | 'Agents Due' | 'Quality' | 'Blog' | 'Email Campaigns'
 
 export function AdminSidebar({ adminEmail, onSignOut, activeLabel }: {
  adminEmail: string

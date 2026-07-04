@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
  }
  const { data, error } = await supabaseAdmin
   .from('custom_users')
-  .select('id, email, first_name, last_name, name, phone')
+  .select('id, email, first_name, last_name, name, phone, vm_drop_script')
   .eq('id', auth.userId)
   .maybeSingle()
  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest) {
  }
  const body = await request.json().catch(() => ({})) as Record<string, unknown>
 
- const ALLOWED = new Set(['first_name', 'last_name', 'phone'])
+ const ALLOWED = new Set(['first_name', 'last_name', 'phone', 'vm_drop_script'])
  const update: Record<string, any> = {}
  for (const [k, v] of Object.entries(body)) {
   if (ALLOWED.has(k) && (typeof v === 'string' || v === null)) update[k] = v
