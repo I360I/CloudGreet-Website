@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   PhoneCall, PhoneSlash, Microphone, MicrophoneSlash, Voicemail, CircleNotch,
   Pause, Play, SkipForward, Stop, CheckCircle, WarningCircle, CaretDown,
-  DotsNine, ChatText, CalendarBlank, ArrowLeft, Star,
+  DotsNine, ChatText, CalendarBlank, ArrowLeft, Star, PaperPlaneTilt,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
@@ -27,6 +27,7 @@ import { firaCode } from './fonts'
 const NAVY = '#1E3A8A'
 
 export type CockpitLead = PowerDialItem & {
+  email?: string | null
   city?: string | null
   state?: string | null
   businessType?: string | null
@@ -57,6 +58,7 @@ export function DialerCockpit() {
   const [noteDraft, setNoteDraft] = useState('')
   const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
   const [callbackLeadId, setCallbackLeadId] = useState<string | null>(null)
+  const [bookingLinkLeadId, setBookingLinkLeadId] = useState<string | null>(null)
   const [scripts, setScripts] = useState<Script[]>([])
   const [objectionFilter, setObjectionFilter] = useState('')
   const [smsDraft, setSmsDraft] = useState('')
@@ -163,19 +165,26 @@ export function DialerCockpit() {
     setCallbackLeadId(liveLeadId)
   }, [liveLeadId, queueActive, queuePaused, togglePause])
 
+  const openBookingLink = useCallback(() => {
+    if (!liveLeadId) return
+    if (queueActive && !queuePaused) togglePause()
+    setBookingLinkLeadId(liveLeadId)
+  }, [liveLeadId, queueActive, queuePaused, togglePause])
+
   // ---- Global hotkeys (cockpit only; never while typing). ----
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (demoModalLeadId || callbackLeadId) return
+      if (demoModalLeadId || callbackLeadId || bookingLinkLeadId) return
       const k = e.key.toLowerCase()
       const dispo = DISPOSITIONS.find((d) => d.hotkey === e.key)
       if (dispo && (callState === 'ended' || callState === 'active')) {
         e.preventDefault(); chooseDisposition(dispo.key); return
       }
       if (k === 'c' && (callState === 'ended' || callState === 'active')) { e.preventDefault(); openCallback(); return }
+      if (k === 'b' && (callState === 'ended' || callState === 'active')) { e.preventDefault(); openBookingLink(); return }
       if (k === 'm' && inCall) { e.preventDefault(); toggleMute(); return }
       if (k === 'k') { e.preventDefault(); setKeypadOpen((v) => !v); return }
       if (k === 'v' && callState === 'active') { e.preventDefault(); void dropVoicemail(); return }
@@ -185,7 +194,7 @@ export function DialerCockpit() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [callState, inCall, queueActive, chooseDisposition, openCallback, toggleMute, dropVoicemail, hangup, togglePause, demoModalLeadId, callbackLeadId])
+  }, [callState, inCall, queueActive, chooseDisposition, openCallback, openBookingLink, toggleMute, dropVoicemail, hangup, togglePause, demoModalLeadId, callbackLeadId, bookingLinkLeadId])
 
   const start = () => {
     if (!queueInput?.length) return
@@ -323,7 +332,7 @@ export function DialerCockpit() {
             </div>
           </div>
           <div className="text-[11px] text-slate-400 mb-5">
-            Hotkeys: 1-7 tag the call · C callback · M mute · V drop VM · H hang up · N note · Space pause
+            Hotkeys: 1-7 tag the call · C callback · B book link · M mute · V drop VM · H hang up · N note · Space pause
           </div>
           <button
             onClick={start}
@@ -360,7 +369,7 @@ export function DialerCockpit() {
         ))}
         <div className="flex-1" />
         <span className="text-[11px] text-slate-400 hidden xl:block">
-          1-7 tag · C callback · M mute · V VM · H hang up · Space pause
+          1-7 tag · C callback · B book link · M mute · V VM · H hang up · Space pause
         </span>
       </div>
 
@@ -599,6 +608,14 @@ export function DialerCockpit() {
           >
             <CalendarBlank className="w-3.5 h-3.5 text-amber-500" /><span className="text-slate-400">C</span> Callback
           </button>
+          <button
+            onClick={openBookingLink}
+            disabled={callState !== 'ended' && callState !== 'active'}
+            title="Email the prospect a demo booking link (B)"
+            className="text-xs rounded-lg px-2.5 py-2 border bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-400 transition-colors duration-150 disabled:opacity-40 inline-flex items-center gap-1"
+          >
+            <PaperPlaneTilt className="w-3.5 h-3.5 text-blue-500" /><span className="text-slate-400">B</span> Book link
+          </button>
         </div>
 
         {/* Queue transport */}
@@ -656,6 +673,17 @@ export function DialerCockpit() {
             setCallbackLeadId(null)
             setPostCallStatus('called')
             recordTag('called')
+            if (queuePaused) togglePause()
+          }}
+        />
+      )}
+      {bookingLinkLeadId && (
+        <BookingLinkModal
+          leadId={bookingLinkLeadId}
+          initialEmail={leadMetaById.get(bookingLinkLeadId)?.email || ''}
+          onClose={() => { setBookingLinkLeadId(null); if (queuePaused) togglePause() }}
+          onSent={() => {
+            setBookingLinkLeadId(null)
             if (queuePaused) togglePause()
           }}
         />
@@ -791,6 +819,88 @@ function DemoSetModal({ leadId, onClose, onSaved }: { leadId: string; onClose: (
             Mark demo set
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Emails the prospect a demo booking link mid-call. Whose calendar goes
+ * out is decided server-side (setter -> assigned rep's link). Email is
+ * prefilled from the lead when we have one; the send also backfills
+ * leads.email and drops a timeline note.
+ */
+function BookingLinkModal({ leadId, initialEmail, onClose, onSent }: {
+  leadId: string; initialEmail: string; onClose: () => void; onSent: () => void
+}) {
+  const [email, setEmail] = useState(initialEmail)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [sentTo, setSentTo] = useState<{ email: string; owner: string } | null>(null)
+
+  const send = async () => {
+    const addr = email.trim()
+    if (!addr) { setErr('Enter their email'); return }
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/send-booking-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: addr }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) { setErr(j?.error || `Failed (${r.status})`); return }
+      setSentTo({ email: j.sent_to, owner: j.calendar_owner })
+    } catch { setErr('Failed to send') } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4" onClick={onClose}>
+      <div className="bg-white border border-[#E3EAF4] rounded-xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+        {!sentTo ? (
+          <>
+            <h3 className="text-base font-semibold mb-1" style={{ color: NAVY }}>Send booking link</h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Emails them a link to grab a demo time straight on the calendar.
+            </p>
+            <label className="block text-xs font-medium text-slate-700 mb-1.5">Their email</label>
+            <input
+              type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter' && !busy) void send() }}
+              placeholder="owner@business.com"
+              className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            />
+            {err && <div className="mt-3 bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-xs text-rose-700">{err}</div>}
+            <div className="flex justify-end gap-2 mt-5">
+              <button onClick={onClose} className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Cancel</button>
+              <button
+                onClick={send} disabled={busy || !email.trim()}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-60 transition-colors duration-150"
+              >
+                {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <PaperPlaneTilt weight="fill" className="w-4 h-4" />}
+                Send
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle weight="fill" className="w-5 h-5 text-emerald-600" />
+              <h3 className="text-base font-semibold" style={{ color: NAVY }}>Link sent</h3>
+            </div>
+            <p className="text-xs text-slate-500 mb-5">
+              {sentTo.email} got a link to {sentTo.owner}&apos;s calendar. It&apos;s also logged in the lead&apos;s notes.
+            </p>
+            <div className="flex justify-end">
+              <button
+                onClick={onSent}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors duration-150"
+              >
+                Done
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

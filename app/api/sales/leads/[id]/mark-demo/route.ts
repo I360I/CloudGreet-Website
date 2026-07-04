@@ -25,10 +25,23 @@ export async function POST(
   if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
   }
-  // Setters don't close deals or earn commission - the closes insert/update
-  // block below must never run for them, or every demo Ed books would
-  // create a phantom commission-pipeline row attributed to him.
+  // Setters don't close deals or earn commission, so a closes row must
+  // never carry their id as rep_id. Instead the demo flows to their
+  // assigned closing rep (custom_users.assigned_rep_id): the closes row
+  // is created under that rep with set_by_setter_id recording who booked
+  // it. No assigned rep -> no closes row (lead_assignments is the record).
   const isSetter = auth.role === 'setter'
+  let closeOwnerRepId: string | null = isSetter ? null : auth.userId
+  let setterAssignedRepMissing = false
+  if (isSetter) {
+    const { data: setterUser } = await supabaseAdmin
+      .from('custom_users')
+      .select('assigned_rep_id')
+      .eq('id', auth.userId)
+      .maybeSingle()
+    closeOwnerRepId = setterUser?.assigned_rep_id || null
+    setterAssignedRepMissing = !closeOwnerRepId
+  }
 
   const body = await request.json().catch(() => ({} as any))
   const scheduledAtRaw = String(body?.scheduled_at || '').trim()
@@ -84,17 +97,18 @@ export async function POST(
   // Idempotent: if a close already exists for this rep + this
   // prospect email, update its demo time instead of stacking rows.
   //
-  // Setters never own a `closes` row - that table is the commission
-  // pipeline for reps who personally close deals. Skip it entirely for
-  // them; the lead_assignments update above is their complete record.
+  // For setters the row is owned by their assigned closing rep
+  // (closeOwnerRepId resolved above) so the demo appears in that rep's
+  // /sales pipeline like one they set themselves; set_by_setter_id
+  // keeps the attribution.
   let closeId: string | null = null
-  if (!isSetter) {
+  if (closeOwnerRepId) {
     const businessName = lead.business_name || 'Unknown'
     const prospectEmail = lead.email ? String(lead.email).toLowerCase() : null
     const closeMatcher = supabaseAdmin
       .from('closes')
       .select('id')
-      .eq('rep_id', auth.userId)
+      .eq('rep_id', closeOwnerRepId)
       .eq('prospect_business_name', businessName)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -109,6 +123,7 @@ export async function POST(
         .update({
           demo_scheduled_at: scheduledAtIso,
           updated_at: new Date().toISOString(),
+          ...(isSetter ? { set_by_setter_id: auth.userId } : {}),
           ...(notes ? { notes: `Demo set: ${notes}` } : {}),
         })
         .eq('id', existingClose.id)
@@ -116,7 +131,8 @@ export async function POST(
       const { data: newClose, error: closeErr } = await supabaseAdmin
         .from('closes')
         .insert({
-          rep_id: auth.userId,
+          rep_id: closeOwnerRepId,
+          set_by_setter_id: isSetter ? auth.userId : null,
           prospect_business_name: businessName,
           prospect_contact_name: lead.contact_name || null,
           prospect_email: prospectEmail,
@@ -139,6 +155,10 @@ export async function POST(
         closeId = newClose?.id || null
       }
     }
+  } else if (setterAssignedRepMissing) {
+    logger.warn('mark-demo: setter has no assigned rep - demo not pushed to any pipeline', {
+      setterId: auth.userId, leadId: lead.id,
+    })
   }
 
   // Pull rep info for the notification.
@@ -152,6 +172,24 @@ export async function POST(
     || rep?.email
     || 'a rep'
 
+  // When a setter books, name the rep whose pipeline the demo landed in.
+  let pipelineLine = ''
+  if (isSetter) {
+    if (closeOwnerRepId) {
+      const { data: owner } = await supabaseAdmin
+        .from('custom_users')
+        .select('email, name, first_name, last_name')
+        .eq('id', closeOwnerRepId)
+        .maybeSingle()
+      const ownerName = owner?.name
+        || [owner?.first_name, owner?.last_name].filter(Boolean).join(' ')
+        || owner?.email || 'assigned rep'
+      pipelineLine = `\nBooked by setter - demo added to ${ownerName}'s pipeline.`
+    } else {
+      pipelineLine = '\nWARNING: setter has no assigned rep, so this demo is not in any rep pipeline. Assign one under /admin/setters.'
+    }
+  }
+
   // Pretty when-string in the founder's local TZ (best effort).
   const whenPretty = scheduledAt.toLocaleString(undefined, {
     weekday: 'long', month: 'long', day: 'numeric',
@@ -164,7 +202,7 @@ export async function POST(
       const { emailFounderAlert } = await import('@/lib/notifications/founder-alert')
       await emailFounderAlert({
         subject: `Demo set: ${lead.business_name} (${repName})`,
-        body: `${repName} just scheduled a demo with ${lead.business_name}.\n\nWhen: ${whenPretty}\n${notes ? `Notes: ${notes}\n` : ''}\nContact: ${lead.contact_name || '-'}\nPhone: ${lead.phone || '-'}\nEmail: ${lead.email || '-'}`,
+        body: `${repName} just scheduled a demo with ${lead.business_name}.${pipelineLine}\n\nWhen: ${whenPretty}\n${notes ? `Notes: ${notes}\n` : ''}\nContact: ${lead.contact_name || '-'}\nPhone: ${lead.phone || '-'}\nEmail: ${lead.email || '-'}`,
         replyTo: rep?.email || undefined,
         metadata: {
           lead_id: lead.id,

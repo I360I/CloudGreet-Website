@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const { data: users, error } = await supabaseAdmin
     .from('custom_users')
-    .select('id, email, first_name, last_name, name, last_login, last_active_at, created_at, is_active, weekly_demo_goal')
+    .select('id, email, first_name, last_name, name, last_login, last_active_at, created_at, is_active, weekly_demo_goal, assigned_rep_id')
     .eq('role', 'setter')
     .order('created_at', { ascending: false })
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   }
   const setters = users || []
 
-  const [statsResults, goalResults, { data: invites }] = await Promise.all([
+  const [statsResults, goalResults, { data: invites }, { data: repRows }] = await Promise.all([
     Promise.all(setters.map((u) => getRepCallStats(u.id))),
     Promise.all(setters.map((u) => getWeeklyDemoGoalStatus(u.id, (u as any).weekly_demo_goal ?? 2))),
     supabaseAdmin
@@ -41,7 +41,21 @@ export async function GET(request: NextRequest) {
       .select('token, email, invited_at, expires_at, consumed_at')
       .is('consumed_at', null)
       .order('invited_at', { ascending: false }),
+    // Assignable closing reps for the per-setter dropdown.
+    supabaseAdmin
+      .from('custom_users')
+      .select('id, email, first_name, last_name, name, is_active')
+      .eq('role', 'sales')
+      .order('created_at', { ascending: true }),
   ])
+
+  const reps = (repRows || [])
+    .filter((r) => r.is_active !== false)
+    .map((r) => ({
+      id: r.id,
+      name: r.name || [r.first_name, r.last_name].filter(Boolean).join(' ').trim() || r.email,
+      email: r.email,
+    }))
 
   return NextResponse.json({
     success: true,
@@ -55,7 +69,9 @@ export async function GET(request: NextRequest) {
       created_at: u.created_at,
       calls_today: statsResults[i],
       weekly_goal: goalResults[i],
+      assigned_rep_id: (u as any).assigned_rep_id || null,
     })),
+    reps,
     open_invites: (invites || []).map((i) => ({
       token: i.token,
       email: i.email,

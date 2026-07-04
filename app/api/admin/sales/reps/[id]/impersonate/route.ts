@@ -11,11 +11,12 @@ export const runtime = 'nodejs'
 /**
  * POST /api/admin/sales/reps/[id]/impersonate
  *
- * "Login as rep": issues a JWT for the sales rep and swaps the auth cookie,
- * stashing the admin's original token in `impersonator_token` so they can
- * swap back via the end-impersonation endpoint. Mirrors the admin->client
- * impersonation flow; reps land in /sales. Sales reps have no business_id
- * (createUserToken takes '' just like login does for them). Audited.
+ * "Login as rep": issues a JWT for the rep-tool user and swaps the auth
+ * cookie, stashing the admin's original token in `impersonator_token` so
+ * they can swap back via the end-impersonation endpoint. Mirrors the
+ * admin->client impersonation flow. Covers both rep-tool roles: sales
+ * reps land in /sales, setters land in /setter. Neither has a
+ * business_id (createUserToken takes '' just like login does). Audited.
  */
 export async function POST(
   request: NextRequest,
@@ -36,8 +37,8 @@ export async function POST(
   if (rErr || !rep) {
     return NextResponse.json({ error: 'Rep not found' }, { status: 404 })
   }
-  if (rep.role !== 'sales') {
-    return NextResponse.json({ error: 'This account is not a sales rep.' }, { status: 400 })
+  if (rep.role !== 'sales' && rep.role !== 'setter') {
+    return NextResponse.json({ error: 'This account is not a sales rep or setter.' }, { status: 400 })
   }
   if (rep.is_active === false) {
     return NextResponse.json({ error: 'This rep account is inactive.' }, { status: 400 })
@@ -57,12 +58,12 @@ export async function POST(
 
   const res = NextResponse.json({
     success: true,
-    redirect_url: '/sales',
+    redirect_url: rep.role === 'setter' ? '/setter' : '/sales',
     impersonating: {
       user_id: rep.id,
       email: rep.email,
       name: [rep.first_name, rep.last_name].filter(Boolean).join(' ') || null,
-      role: 'sales',
+      role: rep.role,
     },
   })
 
@@ -93,7 +94,7 @@ export async function POST(
       admin_id: auth.userId,
       target_user_id: rep.id,
       target_email: rep.email,
-      target_role: 'sales',
+      target_role: rep.role,
     },
   })
 

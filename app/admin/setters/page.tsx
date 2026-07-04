@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CircleNotch, UserPlus, Envelope, Copy, WarningCircle, CheckCircle, PhoneCall } from '@phosphor-icons/react'
+import { CircleNotch, UserPlus, Envelope, Copy, WarningCircle, CheckCircle, PhoneCall, Key } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, PrimaryButton, GhostButton, Input } from '../_components/ui'
@@ -25,7 +25,10 @@ type Setter = {
   created_at: string | null
   calls_today: { attempts: number; connects: number; talk_seconds: number }
   weekly_goal: WeeklyGoal
+  assigned_rep_id: string | null
 }
+
+type Rep = { id: string; name: string; email: string }
 
 type OpenInvite = {
   token: string
@@ -36,6 +39,7 @@ type OpenInvite = {
 
 export default function AdminSettersPage() {
   const [setters, setSetters] = useState<Setter[]>([])
+  const [reps, setReps] = useState<Rep[]>([])
   const [invites, setInvites] = useState<OpenInvite[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
@@ -48,6 +52,7 @@ export default function AdminSettersPage() {
       const j = await res.json().catch(() => ({}))
       if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
       setSetters(j.setters || [])
+      setReps(j.reps || [])
       setInvites(j.open_invites || [])
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load')
@@ -160,7 +165,15 @@ export default function AdminSettersPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-5">
+                      <div className="flex items-center gap-5 flex-wrap">
+                        <RepAssigner
+                          setterId={s.id}
+                          reps={reps}
+                          assignedRepId={s.assigned_rep_id}
+                          onSaved={(repId) => setSetters((prev) => prev.map((row) =>
+                            row.id === s.id ? { ...row, assigned_rep_id: repId } : row,
+                          ))}
+                        />
                         <GoalEditor
                           setterId={s.id}
                           target={s.weekly_goal.target}
@@ -177,6 +190,7 @@ export default function AdminSettersPage() {
                             <div className="text-sm tabular-nums text-gray-200">{s.calls_today.attempts}</div>
                           </div>
                         </div>
+                        <LoginAsSetter setterId={s.id} disabled={!s.is_active} />
                       </div>
                     </div>
                   </li>
@@ -367,6 +381,94 @@ function GoalEditor({
       </div>
       {err && <div className="text-[10px] text-rose-300 mt-0.5">{err}</div>}
     </div>
+  )
+}
+
+/**
+ * Which sales rep this setter's booked demos flow to. Saving PATCHes
+ * assigned_rep_id; mark-demo then creates the closes row under that rep
+ * so the demo shows in their /sales pipeline.
+ */
+function RepAssigner({
+  setterId, reps, assignedRepId, onSaved,
+}: {
+  setterId: string
+  reps: Rep[]
+  assignedRepId: string | null
+  onSaved: (repId: string | null) => void
+}) {
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const save = async (repId: string) => {
+    setSaving(true); setErr('')
+    try {
+      const res = await fetchWithAuth(`/api/admin/setters/${setterId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ assigned_rep_id: repId || null }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
+      onSaved(j.assigned_rep_id)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="text-right">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+        Demos go to
+      </div>
+      <select
+        value={assignedRepId || ''}
+        onChange={(e) => void save(e.target.value)}
+        disabled={saving}
+        className="bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-gray-200 focus:outline-none focus:border-sky-400/50 disabled:opacity-50"
+      >
+        <option value="">No rep (unrouted)</option>
+        {reps.map((r) => (
+          <option key={r.id} value={r.id}>{r.name}</option>
+        ))}
+      </select>
+      {err && <div className="text-[10px] text-rose-300 mt-0.5">{err}</div>}
+    </div>
+  )
+}
+
+/** Same flow as "Login as rep" on the rep detail page; setters land on /setter. */
+function LoginAsSetter({ setterId, disabled }: { setterId: string; disabled: boolean }) {
+  const [busy, setBusy] = useState(false)
+  return (
+    <GhostButton
+      disabled={disabled || busy}
+      onClick={async () => {
+        setBusy(true)
+        try {
+          const r = await fetch(`/api/admin/sales/reps/${setterId}/impersonate`, {
+            method: 'POST', credentials: 'include',
+          })
+          const j = await r.json().catch(() => ({}))
+          if (r.ok && j?.success) {
+            // Scrub the admin's own localStorage so the setter portal doesn't
+            // read stale session blobs and trip the session-guard reload.
+            const { clearClientAuthState } = await import('@/lib/auth/session-guard')
+            clearClientAuthState()
+            window.location.href = j.redirect_url || '/setter'
+          } else {
+            alert(j?.error || 'Could not log in as this setter')
+            setBusy(false)
+          }
+        } catch {
+          alert('Could not log in as this setter')
+          setBusy(false)
+        }
+      }}
+    >
+      <Key className="w-4 h-4" /> Login as
+    </GhostButton>
   )
 }
 

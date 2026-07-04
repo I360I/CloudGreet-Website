@@ -394,6 +394,7 @@ export function SetterLeadsWorkspace() {
                     phone: l.phone!,
                     businessName: l.business_name,
                     contactName: l.contact_name,
+                    email: l.email,
                     city: l.city,
                     state: l.state,
                     businessType: l.business_type,
