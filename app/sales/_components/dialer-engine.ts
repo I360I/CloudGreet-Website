@@ -94,6 +94,12 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
   // (real bug in the pre-extraction version).
   const postCallStatusRef = useRef<string | null>(null)
   useEffect(() => { postCallStatusRef.current = postCallStatus }, [postCallStatus])
+  // Mirror for finalizeCall's ended→idle tail: while a queue session is
+  // live the advance countdown owns the 'ended' state, and flipping to
+  // 'idle' out from under it cancels the countdown mid-flight, freezes
+  // the timer, and disables the disposition buttons (callee-hangup bug).
+  const queueLenRef = useRef(0)
+  useEffect(() => { queueLenRef.current = queue.length }, [queue.length])
 
   const optionsRef = useRef(options)
   useEffect(() => { optionsRef.current = options })
@@ -170,8 +176,12 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
     // activeLeadId intentionally kept through the 'ended' state so the
     // cockpit can show a disposition prompt for single dials too - the
     // next dial() overwrites it.
-    // Small "ended" tail in the UI before flipping back to idle.
+    // Small "ended" tail in the UI before flipping back to idle. Skipped
+    // during queue sessions: there the advance countdown owns 'ended'
+    // (buttons stay clickable for the whole gap) and the transition out
+    // happens via the next dial() or the queue-drain path.
     setTimeout(() => {
+      if (queueLenRef.current > 0) return
       setCallState((cs) => (cs === 'ended' ? 'idle' : cs))
     }, 1500)
   }, [])
@@ -693,6 +703,9 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
           setQueue([])
           setQueueIndex(0)
           lastQueuedLeadIdRef.current = null
+          // finalizeCall skips its idle tail during queue sessions, so
+          // the drain path settles the state itself.
+          setCallState((cs) => (cs === 'ended' ? 'idle' : cs))
           return
         }
         const next = queue[queueIndex + 1]
@@ -736,6 +749,7 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
     if (isLast) {
       setQueue([])
       setQueueIndex(0)
+      setCallState((cs) => (cs === 'ended' ? 'idle' : cs))
       return
     }
     const next = queue[queueIndex + 1]
@@ -757,7 +771,9 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
     setPostCallStatus(null)
     setQueue([])
     setQueueIndex(0)
-    if (callState !== 'idle') {
+    if (callState === 'ended') {
+      setCallState('idle')
+    } else if (callState !== 'idle') {
       try { callRef.current?.hangup?.() } catch {}
     }
   }, [callState, persistDisposition])
