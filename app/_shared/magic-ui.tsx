@@ -7,8 +7,24 @@
  * app/admin/_components/magic.tsx's ambient effects.
  */
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import { motion, useInView, useMotionValue, useSpring } from 'framer-motion'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Tooltip,
+  Filler,
+} from 'chart.js'
+import { Line, Bar } from 'react-chartjs-2'
+
+// Idempotent - chart.js no-ops re-registering the same elements, so this
+// is safe to run alongside app/components/RealCharts.tsx's own
+// ChartJS.register call if both mount on the same page.
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Filler)
 
 /** Counts up from 0 to `value` once it scrolls into view. */
 export function NumberTicker({
@@ -93,6 +109,97 @@ export function AnimatedCircularProgressBar({
       <div className="absolute inset-0 flex items-center justify-center">
         {children}
       </div>
+    </div>
+  )
+}
+
+/** Small axis-less trend line for a hero/KPI card - no grid, no legend. */
+export function MiniSparkline({
+  data,
+  color = '#4f46e5',
+  height = 44,
+  className = '',
+}: {
+  data: number[]
+  color?: string
+  height?: number
+  className?: string
+}) {
+  const chartData = useMemo(() => ({
+    labels: data.map((_, i) => String(i)),
+    datasets: [{
+      data,
+      borderColor: color,
+      backgroundColor: `${color}22`,
+      fill: true,
+      tension: 0.4,
+      borderWidth: 2,
+      pointRadius: 0,
+    }],
+  }), [data, color])
+
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    scales: {
+      x: { display: false },
+      y: { display: false },
+    },
+    elements: { line: { borderJoinStyle: 'round' as const } },
+  }), [])
+
+  return (
+    <div className={className} style={{ height }}>
+      <Line data={chartData} options={options} />
+    </div>
+  )
+}
+
+/** Light-card-themed bar chart - a single series, blue bars, for a KPI card. */
+export function MiniBarChart({
+  labels,
+  data,
+  color = '#4f46e5',
+  height = 160,
+  className = '',
+}: {
+  labels: string[]
+  data: number[]
+  color?: string
+  height?: number
+  className?: string
+}) {
+  const chartData = useMemo(() => ({
+    labels,
+    datasets: [{
+      data,
+      backgroundColor: color,
+      borderRadius: 4,
+      maxBarThickness: 28,
+    }],
+  }), [labels, data, color])
+
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: {
+        ticks: { color: '#6b7280', font: { size: 11 } },
+        grid: { display: false },
+      },
+      y: {
+        ticks: { color: '#9ca3af', font: { size: 11 }, precision: 0 },
+        grid: { color: '#f3f4f6' },
+        beginAtZero: true,
+      },
+    },
+  }), [])
+
+  return (
+    <div className={className} style={{ height }}>
+      <Bar data={chartData} options={options} />
     </div>
   )
 }

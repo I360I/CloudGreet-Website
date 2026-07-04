@@ -97,7 +97,7 @@ export function SetterShell({
                 href={item.href}
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
                   active
-                    ? 'bg-gray-900 text-white shadow-sm'
+                    ? 'bg-indigo-600 text-white shadow-sm'
                     : 'text-gray-700 hover:bg-gray-200/60 hover:text-gray-900'
                 }`}
               >
@@ -133,7 +133,7 @@ export function SetterShell({
               key={item.href}
               href={item.href}
               className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg ${
-                active ? 'text-gray-900' : 'text-gray-400'
+                active ? 'text-indigo-600' : 'text-gray-400'
               }`}
             >
               <Icon weight={active ? 'fill' : 'regular'} className="w-5 h-5" />

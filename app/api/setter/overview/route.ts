@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
-import { getRepCallStats } from '@/lib/sales/dialer-stats'
+import { getRepCallStats, getRepDailySeries } from '@/lib/sales/dialer-stats'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -28,9 +28,10 @@ export async function GET(request: NextRequest) {
     const weekStart = new Date(todayStart)
     weekStart.setUTCDate(weekStart.getUTCDate() - 6) // rolling 7-day window incl. today
 
-    const [today, week] = await Promise.all([
+    const [today, week, dailyCalls] = await Promise.all([
       getRepCallStats(auth.userId, { since: todayStart }),
       getRepCallStats(auth.userId, { since: weekStart }),
+      getRepDailySeries(auth.userId, 7),
     ])
 
     const { data: assignments } = await supabaseAdmin
@@ -49,6 +50,17 @@ export async function GET(request: NextRequest) {
       r.status === 'demo_scheduled' && r.last_touched_at && r.last_touched_at >= since.toISOString(),
     ).length
 
+    // Same "current status" quirk as demos_booked_today/week above: a
+    // demo counts on the day it was last touched while still in
+    // demo_scheduled status, not a durable historical log.
+    const demosByDay = new Map<string, number>()
+    for (const r of rows) {
+      if (r.status !== 'demo_scheduled' || !r.last_touched_at) continue
+      const key = String(r.last_touched_at).slice(0, 10)
+      demosByDay.set(key, (demosByDay.get(key) || 0) + 1)
+    }
+    const daily = dailyCalls.map((d) => ({ ...d, demos: demosByDay.get(d.date) || 0 }))
+
     return NextResponse.json({
       success: true,
       calls: { today, week },
@@ -57,6 +69,7 @@ export async function GET(request: NextRequest) {
         demos_booked_today: demosScheduledSince(todayStart),
         demos_booked_week: demosScheduledSince(weekStart),
       },
+      daily,
     })
   } catch (e) {
     logger.error('setter overview failed', { userId: auth.userId, error: e instanceof Error ? e.message : 'Unknown' })

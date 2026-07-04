@@ -7,9 +7,13 @@ import { PhoneCall, PhoneIncoming, Target, CaretRight, Coffee, CalendarCheck } f
 import { SetterShell, SetterLoadingState } from './_components/SetterShell'
 import { SalesPageHeader } from '@/app/sales/_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { NumberTicker, AnimatedCircularProgressBar } from '@/app/_shared/magic-ui'
+import { NumberTicker, AnimatedCircularProgressBar, MiniSparkline, MiniBarChart } from '@/app/_shared/magic-ui'
 
 const EASE = [0.22, 1, 0.36, 1] as const
+const BLUE = '#4f46e5'
+// v1 simplification: a fixed weekly target rather than an admin-configurable
+// goal-setting feature (out of scope for this pass).
+const WEEKLY_DEMO_GOAL = 5
 
 type Overview = {
   calls: {
@@ -24,6 +28,7 @@ type Overview = {
     demos_booked_today: number
     demos_booked_week: number
   }
+  daily: { date: string; dials: number; connects: number; demos: number }[]
 }
 
 const fmtMinutes = (seconds: number) => {
@@ -68,6 +73,9 @@ export default function SetterHome() {
     data.calls.today.attempts > 0
       ? (data.calls.today.connects / data.calls.today.attempts) * 100
       : 0
+  const weeklyGoalRate = Math.min(100, (data.leads.demos_booked_week / WEEKLY_DEMO_GOAL) * 100)
+  const dayLabel = (iso: string) =>
+    new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' })
 
   return (
     <SetterShell activeLabel="Overview">
@@ -78,29 +86,35 @@ export default function SetterHome() {
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="bg-gray-900 text-white rounded-2xl p-5 mb-5 shadow-lg shadow-gray-900/10"
+          className="bg-indigo-950 text-white rounded-2xl p-5 mb-5 shadow-lg shadow-indigo-950/20"
         >
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-300/70">
                 Demos booked this week
               </div>
               <div className="text-3xl font-medium tabular-nums mt-1">
                 <NumberTicker value={data.leads.demos_booked_week} />
               </div>
-              <div className="text-xs text-gray-400 mt-1">
+              <div className="text-xs text-indigo-300/70 mt-1">
                 <NumberTicker value={data.leads.demos_booked_today} /> today
               </div>
             </div>
-            <CalendarCheck weight="duotone" className="w-8 h-8 text-emerald-400" />
+            <CalendarCheck weight="duotone" className="w-8 h-8 text-emerald-400 shrink-0" />
           </div>
+          <MiniSparkline
+            data={data.daily.map((d) => d.demos)}
+            color="#818cf8"
+            height={36}
+            className="mt-3 -mx-1"
+          />
         </motion.div>
 
         {/* Today's dial activity */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE, delay: 0.05 }}
-          className="grid grid-cols-3 gap-3 mb-5"
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5"
         >
           {stats.map((s) => {
             const Icon = s.icon
@@ -119,7 +133,7 @@ export default function SetterHome() {
               value={connectRate}
               size={56}
               strokeWidth={6}
-              gaugePrimaryColor="#111827"
+              gaugePrimaryColor={BLUE}
               gaugeSecondaryColor="#f3f4f6"
             >
               <span className="text-xs font-medium tabular-nums text-gray-900">
@@ -128,6 +142,22 @@ export default function SetterHome() {
             </AnimatedCircularProgressBar>
             <div className="text-[11px] text-gray-500 mt-2 text-center">
               Connect rate · {fmtMinutes(data.calls.today.talk_seconds)} talk
+            </div>
+          </div>
+          <div className="bg-white border border-gray-200 rounded-2xl p-3 shadow-sm flex flex-col items-center justify-center">
+            <AnimatedCircularProgressBar
+              value={weeklyGoalRate}
+              size={56}
+              strokeWidth={6}
+              gaugePrimaryColor="#0ea5e9"
+              gaugeSecondaryColor="#f3f4f6"
+            >
+              <span className="text-xs font-medium tabular-nums text-gray-900">
+                {Math.round(weeklyGoalRate)}%
+              </span>
+            </AnimatedCircularProgressBar>
+            <div className="text-[11px] text-gray-500 mt-2 text-center">
+              Weekly goal · {data.leads.demos_booked_week}/{WEEKLY_DEMO_GOAL}
             </div>
           </div>
         </motion.div>
@@ -185,6 +215,23 @@ export default function SetterHome() {
               </li>
             </ul>
           )}
+        </motion.div>
+
+        {/* Dial activity over the last 7 days */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE, delay: 0.15 }}
+          className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mt-5"
+        >
+          <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">
+            Dials this week
+          </div>
+          <MiniBarChart
+            labels={data.daily.map((d) => dayLabel(d.date))}
+            data={data.daily.map((d) => d.dials)}
+            color={BLUE}
+            height={160}
+          />
         </motion.div>
       </section>
     </SetterShell>
