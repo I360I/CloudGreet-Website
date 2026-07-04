@@ -156,44 +156,62 @@ export function MiniSparkline({
   )
 }
 
-/** Light-card-themed bar chart - a single series, blue bars, for a KPI card. */
+/**
+ * Capsule/pill bar chart - fully-rounded bars (borderRadius 999 +
+ * borderSkipped false rounds ALL four corners, not just the top),
+ * no y-axis, one highlighted bar (defaults to the last = today).
+ */
 export function MiniBarChart({
   labels,
   data,
-  color = '#4f46e5',
+  color = '#bfdbfe',
+  highlightColor = '#2563eb',
+  highlightIndex,
   height = 160,
   className = '',
 }: {
   labels: string[]
   data: number[]
   color?: string
+  highlightColor?: string
+  highlightIndex?: number
   height?: number
   className?: string
 }) {
+  const hi = highlightIndex ?? data.length - 1
+
   const chartData = useMemo(() => ({
     labels,
     datasets: [{
       data,
-      backgroundColor: color,
-      borderRadius: 4,
-      maxBarThickness: 28,
+      backgroundColor: data.map((_, i) => (i === hi ? highlightColor : color)),
+      borderRadius: 999,
+      borderSkipped: false as const,
+      maxBarThickness: 22,
     }],
-  }), [labels, data, color])
+  }), [labels, data, color, highlightColor, hi])
 
   const options = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#111827',
+        titleColor: '#e5e7eb',
+        bodyColor: '#ffffff',
+        displayColors: false,
+        cornerRadius: 8,
+        padding: 10,
+      },
+    },
     scales: {
       x: {
         ticks: { color: '#6b7280', font: { size: 11 } },
         grid: { display: false },
+        border: { display: false },
       },
-      y: {
-        ticks: { color: '#9ca3af', font: { size: 11 }, precision: 0 },
-        grid: { color: '#f3f4f6' },
-        beginAtZero: true,
-      },
+      y: { display: false, beginAtZero: true },
     },
   }), [])
 

@@ -10,7 +10,14 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { NumberTicker, AnimatedCircularProgressBar, MiniSparkline, MiniBarChart } from '@/app/_shared/magic-ui'
 
 const EASE = [0.22, 1, 0.36, 1] as const
-const BLUE = '#4f46e5'
+// Blue-family-only palette (no purple/indigo) - #2563eb is the codebase's
+// established light-mode brand blue (see --cg-spot light in globals.css).
+const BAR_BLUE = '#bfdbfe'        // blue-200, resting bars
+const BAR_BLUE_BOLD = '#2563eb'   // blue-600, highlighted (today) bar
+const GAUGE_CYAN = '#0891b2'      // cyan-600, connect-rate gauge
+const GAUGE_CYAN_TRACK = '#cffafe' // cyan-100
+const GAUGE_TEAL = '#0d9488'      // teal-600, weekly-goal gauge
+const GAUGE_TEAL_TRACK = '#ccfbf1' // teal-100
 // v1 simplification: a fixed weekly target rather than an admin-configurable
 // goal-setting feature (out of scope for this pass).
 const WEEKLY_DEMO_GOAL = 5
@@ -65,9 +72,17 @@ export default function SetterHome() {
     )
   }
 
+  // Each KPI card gets its own subtle blue-family tint (sky / blue /
+  // cyan / teal) per the approved design - deliberately varied, none violet.
   const stats = [
-    { label: 'Dials today', value: data.calls.today.attempts, icon: PhoneCall },
-    { label: 'Connects today', value: data.calls.today.connects, icon: PhoneIncoming },
+    {
+      label: 'Dials today', value: data.calls.today.attempts, icon: PhoneCall,
+      card: 'bg-sky-50', badge: 'bg-sky-100 text-sky-600',
+    },
+    {
+      label: 'Connects today', value: data.calls.today.connects, icon: PhoneIncoming,
+      card: 'bg-blue-50', badge: 'bg-blue-100 text-blue-600',
+    },
   ]
   const connectRate =
     data.calls.today.attempts > 0
@@ -82,35 +97,40 @@ export default function SetterHome() {
       <section className="max-w-3xl mx-auto px-6 py-10">
         <SalesPageHeader eyebrow="overview" title="Your day" />
 
-        {/* Demos booked - the headline setter metric */}
+        {/* Demos booked - the headline setter metric. The ONE fully
+            saturated element on the page; everything else is a soft tint. */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="bg-indigo-950 text-white rounded-2xl p-5 mb-5 shadow-lg shadow-indigo-950/20"
+          className="bg-gradient-to-br from-blue-600 to-sky-500 text-white rounded-2xl p-5 mb-5 shadow-lg shadow-blue-600/25"
         >
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-300/70">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-blue-100/80">
                 Demos booked this week
               </div>
-              <div className="text-3xl font-medium tabular-nums mt-1">
+              <div className="text-3xl font-semibold tabular-nums mt-1">
                 <NumberTicker value={data.leads.demos_booked_week} />
               </div>
-              <div className="text-xs text-indigo-300/70 mt-1">
+              <div className="text-xs text-blue-100/80 mt-1">
                 <NumberTicker value={data.leads.demos_booked_today} /> today
               </div>
             </div>
-            <CalendarCheck weight="duotone" className="w-8 h-8 text-emerald-400 shrink-0" />
+            <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+              <CalendarCheck weight="duotone" className="w-5 h-5 text-white" />
+            </div>
           </div>
+          {/* Plain hex only - MiniSparkline derives its area fill via a
+              hex-alpha suffix (`${color}22`), so rgba() strings break it. */}
           <MiniSparkline
             data={data.daily.map((d) => d.demos)}
-            color="#818cf8"
+            color="#ffffff"
             height={36}
             className="mt-3 -mx-1"
           />
         </motion.div>
 
-        {/* Today's dial activity */}
+        {/* Today's dial activity - four tinted KPI cards */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE, delay: 0.05 }}
@@ -119,24 +139,26 @@ export default function SetterHome() {
           {stats.map((s) => {
             const Icon = s.icon
             return (
-              <div key={s.label} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
-                <Icon weight="duotone" className="w-4 h-4 text-gray-400 mb-2" />
-                <div className="text-xl font-medium tabular-nums text-gray-900">
+              <div key={s.label} className={`${s.card} rounded-2xl p-4 shadow-sm`}>
+                <div className={`w-8 h-8 rounded-full ${s.badge} flex items-center justify-center mb-2.5`}>
+                  <Icon weight="duotone" className="w-4 h-4" />
+                </div>
+                <div className="text-xl font-semibold tabular-nums text-gray-900">
                   <NumberTicker value={s.value} />
                 </div>
                 <div className="text-[11px] text-gray-500 mt-0.5">{s.label}</div>
               </div>
             )
           })}
-          <div className="bg-white border border-gray-200 rounded-2xl p-3 shadow-sm flex flex-col items-center justify-center">
+          <div className="bg-cyan-50 rounded-2xl p-3 shadow-sm flex flex-col items-center justify-center">
             <AnimatedCircularProgressBar
               value={connectRate}
               size={56}
               strokeWidth={6}
-              gaugePrimaryColor={BLUE}
-              gaugeSecondaryColor="#f3f4f6"
+              gaugePrimaryColor={GAUGE_CYAN}
+              gaugeSecondaryColor={GAUGE_CYAN_TRACK}
             >
-              <span className="text-xs font-medium tabular-nums text-gray-900">
+              <span className="text-xs font-semibold tabular-nums text-gray-900">
                 {Math.round(connectRate)}%
               </span>
             </AnimatedCircularProgressBar>
@@ -144,15 +166,15 @@ export default function SetterHome() {
               Connect rate · {fmtMinutes(data.calls.today.talk_seconds)} talk
             </div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-3 shadow-sm flex flex-col items-center justify-center">
+          <div className="bg-teal-50 rounded-2xl p-3 shadow-sm flex flex-col items-center justify-center">
             <AnimatedCircularProgressBar
               value={weeklyGoalRate}
               size={56}
               strokeWidth={6}
-              gaugePrimaryColor="#0ea5e9"
-              gaugeSecondaryColor="#f3f4f6"
+              gaugePrimaryColor={GAUGE_TEAL}
+              gaugeSecondaryColor={GAUGE_TEAL_TRACK}
             >
-              <span className="text-xs font-medium tabular-nums text-gray-900">
+              <span className="text-xs font-semibold tabular-nums text-gray-900">
                 {Math.round(weeklyGoalRate)}%
               </span>
             </AnimatedCircularProgressBar>
@@ -166,11 +188,11 @@ export default function SetterHome() {
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE, delay: 0.1 }}
-          className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+          className="bg-white rounded-2xl shadow-sm overflow-hidden"
         >
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400">
                 Your leads
               </div>
               <div className="text-sm font-medium text-gray-900">
@@ -179,7 +201,7 @@ export default function SetterHome() {
             </div>
             <Link
               href="/setter/leads"
-              className="text-xs text-gray-500 hover:text-gray-900 inline-flex items-center gap-1"
+              className="text-xs font-medium text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
             >
               Open leads <CaretRight className="w-3 h-3" />
             </Link>
@@ -194,7 +216,7 @@ export default function SetterHome() {
               <p className="text-xs text-gray-500 mt-0.5">Scrape a fresh list to start dialing.</p>
               <Link
                 href="/setter/leads/scrape"
-                className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-gray-700 hover:text-gray-900"
+                className="inline-flex items-center gap-1.5 mt-3 text-xs font-medium text-blue-600 hover:text-blue-700"
               >
                 <Target weight="fill" className="w-3 h-3" /> Scrape leads
               </Link>
@@ -217,20 +239,29 @@ export default function SetterHome() {
           )}
         </motion.div>
 
-        {/* Dial activity over the last 7 days */}
+        {/* Dial activity over the last 7 days - capsule bars, today bold */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE, delay: 0.15 }}
-          className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mt-5"
+          className="bg-white rounded-2xl shadow-sm p-5 mt-5"
         >
-          <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">
-            Dials this week
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400">
+                Dial activity
+              </div>
+              <div className="text-sm font-medium text-gray-900">Dials this week</div>
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+              <span className="w-2 h-2 rounded-full bg-blue-600" aria-hidden /> Today
+            </div>
           </div>
           <MiniBarChart
             labels={data.daily.map((d) => dayLabel(d.date))}
             data={data.daily.map((d) => d.dials)}
-            color={BLUE}
-            height={160}
+            color={BAR_BLUE}
+            highlightColor={BAR_BLUE_BOLD}
+            height={170}
           />
         </motion.div>
       </section>
