@@ -29,13 +29,24 @@ export function isSupabaseConfigured(): boolean {
   )
 }
 
+// Next.js patches the server-side global fetch and will happily put
+// PostgREST GET responses in the Vercel Data Cache, which persists
+// across requests AND deployments. Symptom (hit us 2026-07-04): the
+// leads API served a frozen morning snapshot - deleted rows kept
+// coming back, new rows never appeared - while the DB was correct the
+// whole time. Every Supabase read must bypass that cache.
+const noStoreFetch: typeof fetch = (input, init) =>
+  fetch(input, { ...init, cache: 'no-store' })
+
 // Lazy-loaded Supabase clients with error handling
 function getSupabase() {
   try {
     if (!isSupabaseConfigured()) {
       logger.warn('Supabase not configured, using placeholder client')
     }
-    return createClient(supabaseUrl, supabaseAnonKey)
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      global: { fetch: noStoreFetch },
+    })
   } catch (error) {
     logger.error('Failed to create Supabase client:', { error: error instanceof Error ? error.message : 'Unknown error' })
     throw new Error('Supabase client initialization failed')
@@ -51,7 +62,8 @@ function getSupabaseAdmin() {
       auth: {
         autoRefreshToken: false,
         persistSession: false
-      }
+      },
+      global: { fetch: noStoreFetch },
     })
   } catch (error) {
     logger.error('Failed to create Supabase admin client:', { error: error instanceof Error ? error.message : 'Unknown error' })
