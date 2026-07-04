@@ -157,9 +157,10 @@ export function MiniSparkline({
 }
 
 /**
- * Capsule/pill bar chart - fully-rounded bars (borderRadius 999 +
- * borderSkipped false rounds ALL four corners, not just the top),
- * no y-axis, one highlighted bar (defaults to the last = today).
+ * Bar chart matching the reference template's "Vendor Activity" card:
+ * top-rounded (not full capsule) bars with a vertical gradient fade,
+ * visible Y-axis gridlines/labels. One bar (defaults to the last = today)
+ * highlighted in the bold color; the rest fade toward transparent.
  */
 export function MiniBarChart({
   labels,
@@ -184,10 +185,23 @@ export function MiniBarChart({
     labels,
     datasets: [{
       data,
-      backgroundColor: data.map((_, i) => (i === hi ? highlightColor : color)),
-      borderRadius: 999,
-      borderSkipped: false as const,
-      maxBarThickness: 22,
+      // Scriptable gradient (chart.js reruns this per render/resize) -
+      // solid at the top, fading to near-transparent at the base, same
+      // vertical-fade treatment the reference's bars use.
+      backgroundColor: (ctx: any) => {
+        const { chart } = ctx
+        const { chartArea } = chart
+        if (!chartArea) return color
+        const isHighlight = ctx.dataIndex === hi
+        const base = isHighlight ? highlightColor : color
+        const gradient = chart.ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+        gradient.addColorStop(0, base)
+        gradient.addColorStop(1, `${base}0d`)
+        return gradient
+      },
+      borderRadius: { topLeft: 8, topRight: 8, bottomLeft: 0, bottomRight: 0 },
+      borderSkipped: 'bottom' as const,
+      maxBarThickness: 26,
     }],
   }), [labels, data, color, highlightColor, hi])
 
@@ -207,17 +221,81 @@ export function MiniBarChart({
     },
     scales: {
       x: {
-        ticks: { color: '#6b7280', font: { size: 11 } },
+        ticks: { color: '#9ca3af', font: { size: 11 } },
         grid: { display: false },
         border: { display: false },
       },
-      y: { display: false, beginAtZero: true },
+      y: {
+        ticks: { color: '#9ca3af', font: { size: 11 }, precision: 0 },
+        grid: { color: '#f1f5f9' },
+        border: { display: false },
+        beginAtZero: true,
+      },
     },
   }), [])
 
   return (
     <div className={className} style={{ height }}>
       <Bar data={chartData} options={options} />
+    </div>
+  )
+}
+
+/**
+ * Two-series line chart for a hero card - matches the reference's
+ * Revenue chart (two overlapping trend lines + dot legend), fed real
+ * data instead of the template's placeholder revenue numbers.
+ */
+export function DualLineChart({
+  labels,
+  seriesA,
+  seriesB,
+  colorA = '#2563eb',
+  colorB = '#06b6d4',
+  height = 140,
+  className = '',
+}: {
+  labels: string[]
+  seriesA: number[]
+  seriesB: number[]
+  colorA?: string
+  colorB?: string
+  height?: number
+  className?: string
+}) {
+  const chartData = useMemo(() => ({
+    labels,
+    datasets: [
+      {
+        data: seriesA, borderColor: colorA, backgroundColor: 'transparent',
+        tension: 0.4, borderWidth: 2.5, pointRadius: 0,
+      },
+      {
+        data: seriesB, borderColor: colorB, backgroundColor: 'transparent',
+        tension: 0.4, borderWidth: 2.5, pointRadius: 0,
+      },
+    ],
+  }), [labels, seriesA, seriesB, colorA, colorB])
+
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#111827', titleColor: '#e5e7eb', bodyColor: '#ffffff',
+        displayColors: false, cornerRadius: 8, padding: 10,
+      },
+    },
+    scales: {
+      x: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { display: false }, border: { display: false } },
+      y: { ticks: { color: '#9ca3af', font: { size: 11 }, precision: 0 }, grid: { color: '#f1f5f9' }, border: { display: false }, beginAtZero: true },
+    },
+  }), [])
+
+  return (
+    <div className={className} style={{ height }}>
+      <Line data={chartData} options={options} />
     </div>
   )
 }

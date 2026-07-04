@@ -4,22 +4,23 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
-  PhoneCall, PhoneIncoming, Target, CaretRight, ArrowUpRight, Coffee,
-  CalendarCheck, TrendUp,
+  PhoneCall, PhoneIncoming, Target, CaretRight, Coffee,
+  TrendUp, CalendarCheck,
 } from '@phosphor-icons/react'
 import { SetterShell, SetterLoadingState } from './_components/SetterShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { NumberTicker, AnimatedCircularProgressBar, MiniSparkline, MiniBarChart } from '@/app/_shared/magic-ui'
+import { NotificationsBell } from '@/components/NotificationsBell'
+import {
+  NumberTicker, AnimatedCircularProgressBar, MiniBarChart, DualLineChart,
+} from '@/app/_shared/magic-ui'
 
 const EASE = [0.22, 1, 0.36, 1] as const
-// Blue-family-only palette (no purple/indigo) - #2563eb is the codebase's
-// established light-mode brand blue (see --cg-spot light in globals.css).
-const BAR_BLUE = '#bfdbfe'         // blue-200, resting bars
-const BAR_BLUE_BOLD = '#2563eb'    // blue-600, highlighted (today) bar
-const GAUGE_CYAN = '#0891b2'       // cyan-600, connect-rate gauge
-const GAUGE_CYAN_TRACK = '#cffafe' // cyan-100
-const GAUGE_TEAL = '#0d9488'       // teal-600, weekly-goal gauge
-const GAUGE_TEAL_TRACK = '#ccfbf1' // teal-100
+// Blue-family palette, adapted from the reference template's purple
+// (no purple anywhere here - #2563eb is CloudGreet's established brand
+// blue, already used as --cg-spot's light-mode value elsewhere).
+const BLUE = '#2563eb'
+const BLUE_LIGHT = '#bfdbfe'
+const CYAN = '#0891b2'
 
 type UpNextLead = { id: string; business_name: string | null; phone: string; status: string }
 type WeeklyGoal = {
@@ -49,40 +50,40 @@ type Overview = {
   weekly_goal: WeeklyGoal
 }
 
-const fmtMinutes = (seconds: number) => {
-  const m = Math.round(seconds / 60)
-  return `${m}m`
-}
-
 const fmtPhone = (raw: string) => {
   const d = raw.replace(/\D/g, '').replace(/^1/, '')
   if (d.length !== 10) return raw
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`
 }
 
-function CornerLink({ href }: { href: string }) {
+/** Small pill matching the reference's "This week" / "Jul 2022" period tags. */
+function PeriodTag({ children }: { children: React.ReactNode }) {
   return (
-    <Link
-      href={href}
-      className="absolute top-4 right-4 w-7 h-7 rounded-full bg-white/60 hover:bg-white flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors"
-      aria-label="Open"
-    >
-      <ArrowUpRight className="w-3.5 h-3.5" />
-    </Link>
+    <span className="text-[11px] font-medium text-gray-500 border border-gray-200 rounded px-2 py-1 whitespace-nowrap">
+      {children}
+    </span>
   )
 }
 
 export default function SetterHome() {
   const [data, setData] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
+  const [firstName, setFirstName] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     const load = async () => {
       try {
-        const res = await fetchWithAuth('/api/setter/overview')
-        const j = await res.json().catch(() => ({}))
-        if (!cancelled && j?.success) setData(j)
+        const [ovRes, meRes] = await Promise.all([
+          fetchWithAuth('/api/setter/overview'),
+          fetchWithAuth('/api/me/profile'),
+        ])
+        const ov = await ovRes.json().catch(() => ({}))
+        if (!cancelled && ov?.success) setData(ov)
+        const me = await meRes.json().catch(() => ({}))
+        if (!cancelled) {
+          setFirstName(me?.profile?.first_name || me?.profile?.name?.split(' ')?.[0] || null)
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -118,152 +119,193 @@ export default function SetterHome() {
   return (
     <SetterShell activeLabel="Overview">
       <section className="max-w-7xl mx-auto px-6 md:px-8 py-8">
-        <div className="flex items-end justify-between gap-4 flex-wrap mb-6">
+        {/* Header - greeting + search-row equivalent (real actions
+            instead of a decorative search bar), matching the reference's
+            "Welcome Jess!" header treatment. */}
+        <div className="flex items-start justify-between gap-4 flex-wrap mb-7">
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 mb-1">Overview</div>
-            <h1 className="font-display text-3xl md:text-[34px] font-semibold tracking-tight text-gray-900">
-              Your day
+            <h1 className="text-3xl md:text-[40px] font-semibold tracking-tight text-white leading-tight">
+              {firstName ? `Welcome, ${firstName}!` : 'Welcome!'}
             </h1>
+            <p className="text-sm text-blue-100/80 mt-1">Here's your setter dashboard for today.</p>
           </div>
           <div className="flex items-center gap-2">
             <Link
               href="/setter/leads/scrape"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-xl px-3.5 py-2 shadow-sm"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-white/10 hover:bg-white/20 border border-white/15 rounded-xl px-3.5 py-2 transition-colors"
             >
               <Target weight="fill" className="w-3.5 h-3.5" /> Scrape leads
             </Link>
             <Link
               href="/setter/leads"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl px-3.5 py-2 shadow-sm shadow-blue-600/25"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 bg-white hover:bg-blue-50 rounded-xl px-3.5 py-2 shadow-sm transition-colors"
             >
               <PhoneCall weight="fill" className="w-3.5 h-3.5" /> Start dialing
             </Link>
+            <div className="ml-1 rounded-full bg-white/10 border border-white/15 w-9 h-9 flex items-center justify-center">
+              <NotificationsBell basePath="/api/sales/notifications" theme="dark" />
+            </div>
           </div>
         </div>
 
-        {/* Row 1 - four equal KPI tiles. The hero metric is simply the
-            first tile made bold, not a separate oversized banner - this
-            is how the real reference dashboards compose a "hero" number. */}
+        {/* Row 1 - hero (Revenue-card equivalent: demos booked, dual
+            trend lines) + two stacked icon-circle stat cards, matching
+            the reference's Revenue / Onboarding+Profits composition. */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4"
+          className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4"
         >
-          <div className="relative bg-gradient-to-br from-blue-600 to-sky-500 text-white rounded-2xl p-5 shadow-lg shadow-blue-600/25 overflow-hidden">
-            <div className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center mb-3">
-              <CalendarCheck weight="duotone" className="w-4.5 h-4.5 text-white" />
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
+            <div className="flex items-start justify-between flex-wrap gap-3">
+              <div>
+                <div className="text-[32px] leading-none font-semibold text-gray-900 tabular-nums">
+                  <NumberTicker value={data.leads.demos_booked_week} />
+                </div>
+                <div className="text-sm font-medium text-blue-600 mt-1.5">Demos booked this week</div>
+              </div>
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600" /> Dials
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" /> Demos
+                </span>
+                <PeriodTag>This week</PeriodTag>
+              </div>
             </div>
-            <div className="text-[28px] leading-none font-semibold tabular-nums">
-              <NumberTicker value={data.leads.demos_booked_week} />
-            </div>
-            <div className="text-xs text-blue-100/90 mt-2">
-              Demos booked this week · <NumberTicker value={data.leads.demos_booked_today} /> today
-            </div>
-            <MiniSparkline
-              data={data.daily.map((d) => d.demos)}
-              color="#ffffff"
-              height={28}
-              className="mt-3 -mx-1"
+            <DualLineChart
+              labels={data.daily.map((d) => dayLabel(d.date))}
+              seriesA={data.daily.map((d) => d.dials)}
+              seriesB={data.daily.map((d) => d.demos)}
+              colorA={BLUE}
+              colorB={CYAN}
+              height={180}
+              className="mt-4"
             />
           </div>
 
-          <div className="relative bg-sky-50 rounded-2xl p-5 shadow-sm">
-            <CornerLink href="/setter/leads" />
-            <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mb-3">
-              <PhoneCall weight="duotone" className="w-4 h-4" />
+          <div className="flex flex-col gap-4">
+            <div className="bg-white rounded-2xl shadow-sm p-5 flex-1 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                <PhoneCall weight="duotone" className="w-6 h-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-blue-600">Dials today</div>
+                <div className="text-2xl font-semibold tabular-nums text-gray-900">
+                  <NumberTicker value={data.calls.today.attempts} />
+                </div>
+              </div>
+              <PeriodTag>Today</PeriodTag>
             </div>
-            <div className="text-[28px] leading-none font-semibold tabular-nums text-gray-900">
-              <NumberTicker value={data.calls.today.attempts} />
-            </div>
-            <div className="text-xs text-gray-500 mt-2">Dials today</div>
-          </div>
-
-          <div className="relative bg-blue-50 rounded-2xl p-5 shadow-sm">
-            <CornerLink href="/setter/leads" />
-            <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-3">
-              <PhoneIncoming weight="duotone" className="w-4 h-4" />
-            </div>
-            <div className="text-[28px] leading-none font-semibold tabular-nums text-gray-900">
-              <NumberTicker value={data.calls.today.connects} />
-            </div>
-            <div className="text-xs text-gray-500 mt-2">Connects today</div>
-          </div>
-
-          <div className="bg-cyan-50 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-            <AnimatedCircularProgressBar
-              value={connectRate}
-              size={64}
-              strokeWidth={6}
-              gaugePrimaryColor={GAUGE_CYAN}
-              gaugeSecondaryColor={GAUGE_CYAN_TRACK}
-            >
-              <span className="text-sm font-semibold tabular-nums text-gray-900">
-                {Math.round(connectRate)}%
-              </span>
-            </AnimatedCircularProgressBar>
-            <div>
-              <div className="text-sm font-semibold text-gray-900">Connect rate</div>
-              <div className="text-xs text-gray-500 mt-0.5">{fmtMinutes(data.calls.today.talk_seconds)} talk today</div>
+            <div className="bg-white rounded-2xl shadow-sm p-5 flex-1 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center shrink-0">
+                <PhoneIncoming weight="duotone" className="w-6 h-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-blue-600">Connects today</div>
+                <div className="text-2xl font-semibold tabular-nums text-gray-900">
+                  <NumberTicker value={data.calls.today.connects} />
+                </div>
+              </div>
+              <PeriodTag>Today</PeriodTag>
             </div>
           </div>
         </motion.div>
 
-        {/* Row 2 - wide chart card + weekly-goal spotlight card */}
+        {/* Row 2 - donut (Cars Sold equivalent) + bar chart (Vendor
+            Activity equivalent) + tilted reminder card (Upcoming QBR
+            equivalent, repurposed for the weekly-goal bonus streak). */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE, delay: 0.05 }}
           className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4"
         >
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-5">
+          <div className="bg-white rounded-2xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Dial activity</div>
-                <div className="text-base font-semibold text-gray-900">Dials this week</div>
+              <div className="text-sm font-semibold text-gray-900">Connect rate</div>
+              <PeriodTag>Today</PeriodTag>
+            </div>
+            <div className="flex items-center justify-center gap-6">
+              <AnimatedCircularProgressBar
+                value={connectRate}
+                size={140}
+                strokeWidth={14}
+                gaugePrimaryColor={BLUE}
+                gaugeSecondaryColor="#e0f2fe"
+              >
+                <span className="text-2xl font-semibold tabular-nums text-gray-900">
+                  {Math.round(connectRate)}%
+                </span>
+              </AnimatedCircularProgressBar>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-blue-600 shrink-0" />
+                  <div>
+                    <div className="text-[11px] text-gray-500">Connected</div>
+                    <div className="text-sm font-semibold text-gray-900 tabular-nums">{data.calls.today.connects}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full bg-sky-200 shrink-0" />
+                  <div>
+                    <div className="text-[11px] text-gray-500">No answer</div>
+                    <div className="text-sm font-semibold text-gray-900 tabular-nums">
+                      {Math.max(0, data.calls.today.attempts - data.calls.today.connects)}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                <span className="w-2 h-2 rounded-full bg-blue-600" aria-hidden /> Today
-              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm font-semibold text-gray-900">Dials this week</div>
+              <PeriodTag>This week</PeriodTag>
             </div>
             <MiniBarChart
               labels={data.daily.map((d) => dayLabel(d.date))}
               data={data.daily.map((d) => d.dials)}
-              color={BAR_BLUE}
-              highlightColor={BAR_BLUE_BOLD}
-              height={200}
+              color={BLUE_LIGHT}
+              highlightColor={BLUE}
+              height={190}
             />
           </div>
 
-          <div className="bg-teal-50 rounded-2xl shadow-sm p-5 flex flex-col items-center justify-center text-center">
-            <div className="text-[10px] font-mono uppercase tracking-wider text-teal-700/60 mb-3 self-start">
-              Weekly goal
+          <div className="bg-white rounded-2xl shadow-sm p-5 -rotate-2 flex flex-col">
+            <div className="flex items-center gap-2 mb-1">
+              <CalendarCheck weight="duotone" className="w-5 h-5 text-blue-600" />
+              <div className="text-sm font-semibold text-gray-900">Weekly goal</div>
             </div>
-            <AnimatedCircularProgressBar
-              value={weeklyGoalRate}
-              size={112}
-              strokeWidth={10}
-              gaugePrimaryColor={GAUGE_TEAL}
-              gaugeSecondaryColor={GAUGE_TEAL_TRACK}
+            <div className="text-xs text-gray-500 mb-4">
+              {data.leads.demos_booked_week} of {data.weekly_goal.target} demos this week
+            </div>
+            <div className="flex items-center justify-center gap-2 mb-4">
+              {Array.from({ length: data.weekly_goal.streak_target }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`flex-1 h-10 rounded-lg flex items-center justify-center text-xs font-semibold ${
+                    i < data.weekly_goal.streak_weeks
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-400'
+                  }`}
+                >
+                  {i + 1}
+                </div>
+              ))}
+            </div>
+            <div className="text-center text-xs text-gray-500 mb-4">
+              {data.weekly_goal.bonus_earned
+                ? `🎉 $${data.weekly_goal.bonus_amount} bonus earned!`
+                : `${data.weekly_goal.streak_weeks}/${data.weekly_goal.streak_target} weeks straight · $${data.weekly_goal.bonus_amount} bonus at ${data.weekly_goal.streak_target}`}
+            </div>
+            <Link
+              href="/setter/leads"
+              className="mt-auto inline-flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-full px-4 py-2.5 transition-colors"
             >
-              <span className="text-2xl font-semibold tabular-nums text-gray-900">
-                {Math.round(weeklyGoalRate)}%
-              </span>
-            </AnimatedCircularProgressBar>
-            <div className="text-sm font-medium text-gray-900 mt-4">
-              {data.leads.demos_booked_week} of {data.weekly_goal.target} demos
-            </div>
-            <div className="text-xs text-gray-500 mt-1">booked this week</div>
-            <div className="mt-3 pt-3 border-t border-teal-100 w-full">
-              {data.weekly_goal.bonus_earned ? (
-                <div className="text-xs font-semibold text-teal-700">
-                  🎉 ${data.weekly_goal.bonus_amount} bonus earned!
-                </div>
-              ) : (
-                <div className="text-xs text-gray-500">
-                  {data.weekly_goal.streak_weeks}/{data.weekly_goal.streak_target} weeks straight ·
-                  ${data.weekly_goal.bonus_amount} bonus at {data.weekly_goal.streak_target}
-                </div>
-              )}
-            </div>
+              <PhoneCall weight="fill" className="w-3.5 h-3.5" /> Keep dialing
+            </Link>
           </div>
         </motion.div>
 

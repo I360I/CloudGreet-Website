@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import dynamicImport from 'next/dynamic'
+import { Poppins } from 'next/font/google'
 import { useRouter, usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -17,8 +18,12 @@ const Dialer = dynamicImport(
 import { SquaresFour, ListChecks, SignOut, CircleNotch } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
-import { NotificationsBell } from '@/components/NotificationsBell'
 import { ImpersonationBanner } from '@/app/dashboard/_components/ImpersonationBanner'
+
+// Reference template (Figma "Sales Dashboard" community file) uses
+// Poppins throughout - matching it here rather than the site's default
+// Geist, since typeface is a big part of that design's identity.
+const poppins = Poppins({ subsets: ['latin'], weight: ['400', '500', '600', '700'] })
 
 type ActiveLabel = 'Overview' | 'Leads'
 
@@ -39,6 +44,10 @@ const NAV: NavItem[] = [
  * a parameterized fork, since the two chrome sets genuinely diverge (no
  * Stripe Connect payouts banner, no settings link - setters aren't paid
  * via commission, so none of that applies).
+ *
+ * Sidebar styling adapted from a Figma "Sales Dashboard" community
+ * template (dark gradient panel, pill active-state) - recolored to
+ * CloudGreet blue (source used purple/violet).
  */
 export function SetterShell({
   activeLabel,
@@ -78,22 +87,21 @@ export function SetterShell({
   return (
     <>
     <ImpersonationBanner />
-    <main className="min-h-screen bg-[#eef2f9] text-gray-900 flex">
-      <aside className="hidden lg:flex w-60 border-r border-gray-200/70 flex-col py-6 px-4 sticky top-0 h-screen bg-white">
-        <div className="px-2 mb-8 flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-sky-500 flex items-center justify-center shadow-sm shadow-blue-600/30">
-              <span className="text-white text-sm font-semibold leading-none">C</span>
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-gray-900 leading-tight">CloudGreet</div>
-              <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400">Setter</div>
-            </div>
+    <main className={`${poppins.className} min-h-screen bg-gradient-to-br from-[#0b2f7a] via-[#123a8f] to-[#0a1a3d] text-gray-900 flex`}>
+      <aside
+        className="hidden lg:flex w-60 flex-col py-6 px-4 sticky top-0 h-screen shrink-0"
+        style={{ backgroundImage: 'linear-gradient(168deg, #1d4ed8 2%, rgba(10,26,61,0.75) 110%)' }}
+      >
+        <div className="px-2 mb-8 flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0">
+            <span className="text-blue-700 text-sm font-bold leading-none">C</span>
           </div>
-          <NotificationsBell basePath="/api/sales/notifications" align="left" />
+          <div>
+            <div className="text-sm font-semibold text-white leading-tight">CloudGreet</div>
+            <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-blue-200/70">Setter</div>
+          </div>
         </div>
-        <div className="px-3 mb-2 text-[9px] font-mono uppercase tracking-[0.24em] text-gray-400">Menu</div>
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-1.5">
           {NAV.map((item) => {
             const active = item.match(pathname) || item.label === activeLabel
             const Icon = item.icon
@@ -101,44 +109,42 @@ export function SetterShell({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all duration-200 ${
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 ${
                   active
-                    ? 'bg-blue-50 text-blue-700 font-medium'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-blue-500/90 text-white font-semibold shadow-sm'
+                    : 'text-blue-200/80 hover:bg-white/[0.06] hover:text-white'
                 }`}
               >
-                {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-blue-600" aria-hidden />
-                )}
-                <Icon weight={active ? 'fill' : 'regular'} className={`w-4 h-4 ${active ? 'text-blue-600' : ''}`} />
+                <Icon weight={active ? 'fill' : 'regular'} className="w-[18px] h-[18px]" />
                 {item.label}
               </Link>
             )
           })}
         </nav>
-        <div className="border-t border-gray-100 pt-4 px-2 space-y-3">
+        <div className="pt-4 px-1 space-y-3 border-t border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-semibold uppercase">
+            <div className="w-8 h-8 rounded-full bg-white/15 text-white flex items-center justify-center text-xs font-semibold uppercase shrink-0">
               {(name || '?').slice(0, 1)}
             </div>
             <div className="min-w-0">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Signed in as</div>
-              <div className="text-sm text-gray-800 truncate">{name || '...'}</div>
+              <div className="text-[10px] font-mono uppercase tracking-wider text-blue-200/60">Signed in as</div>
+              <div className="text-sm text-white truncate">{name || '...'}</div>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-xs">
-            <button
-              onClick={signOut}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
-            >
-              <SignOut className="w-3.5 h-3.5" /> Sign out
-            </button>
-          </div>
+          <button
+            onClick={signOut}
+            className="flex items-center gap-1.5 text-xs text-blue-200/70 hover:text-white transition-colors"
+          >
+            <SignOut className="w-3.5 h-3.5" /> Sign out
+          </button>
         </div>
       </aside>
 
       {/* Mobile bottom nav */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200/70 flex justify-around py-2 pb-3">
+      <nav
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around py-2 pb-3"
+        style={{ backgroundImage: 'linear-gradient(90deg, #0a1a3d, #1d4ed8)' }}
+      >
         {NAV.map((item) => {
           const active = item.match(pathname) || item.label === activeLabel
           const Icon = item.icon
@@ -147,7 +153,7 @@ export function SetterShell({
               key={item.href}
               href={item.href}
               className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg ${
-                active ? 'text-blue-600' : 'text-gray-400'
+                active ? 'text-white' : 'text-blue-200/60'
               }`}
             >
               <Icon weight={active ? 'fill' : 'regular'} className="w-5 h-5" />
@@ -170,7 +176,7 @@ export function SetterShell({
 export function SetterLoadingState() {
   return (
     <div className="flex items-center justify-center py-16">
-      <CircleNotch className="w-5 h-5 text-gray-400 animate-spin" />
+      <CircleNotch className="w-5 h-5 text-white/70 animate-spin" />
     </div>
   )
 }
