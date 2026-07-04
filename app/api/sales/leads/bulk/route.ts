@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const ALLOWED_STATUSES = new Set([
-  'new', 'called', 'voicemail', 'interested', 'demo_scheduled',
+  'new', 'called', 'voicemail', 'interested', 'demo_scheduled', 'demo_showed',
   'proposal_sent', 'closed', 'dead', 'do_not_call',
 ])
 
