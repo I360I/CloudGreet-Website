@@ -1,764 +1,70 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence, useDragControls } from 'framer-motion'
 import { Phone, PhoneCall, PhoneSlash, MicrophoneSlash, Microphone, X, CircleNotch, WarningCircle, Pause, Play, SkipForward, Stop, CaretDown, Voicemail } from '@phosphor-icons/react'
-import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { NumberPicker } from './NumberPicker'
+import {
+  useDialerEngine, useLeadNotes, formatFromNumber, fmtDuration, KEYPAD,
+  type SessionStatus, type PowerDialItem,
+} from './dialer-engine'
+
+export type { PowerDialItem }
 
 /**
- * Floating Telnyx WebRTC dialer.
+ * Floating Telnyx WebRTC dialer panel.
  *
- * Lives in SalesShell so it persists across page navigation. Connects
- * to Telnyx once per session (token + WebRTC handshake takes ~1s),
- * stays mounted, and exposes a `window.cgDial(number, leadId?)` API
- * other components can call to dial out from a lead row.
- *
- * Failure modes handled explicitly so reps never see a silent break:
- *   - 503 from token endpoint → "Telnyx not set up by Anthony" panel
- *   - mic permission denied → guidance + retry
- *   - WS disconnect → auto-reconnect with backoff
- *
- * The browser audio path needs HTTPS, microphone permission, and a
- * working Telnyx Telephony Credential (admin sets up once - see the
- * /api/sales/dialer/token route doc).
+ * Lives in the shells so it persists across page navigation. The actual
+ * call engine (Telnyx session, queue mechanics, audio workarounds) lives
+ * in dialer-engine.ts and is shared with the full-screen call cockpit -
+ * this file is just the compact floating UI over it.
  */
-
-type CallState =
-  | 'idle'
-  | 'connecting'        // dialing out, waiting for ringback
-  | 'ringing'           // remote ringing
-  | 'active'            // call connected
-  | 'ended'
-
-type SessionStatus =
-  | 'init'
-  | 'mic_required'      // user gesture needed to grant mic
-  | 'mic_denied'        // user explicitly blocked it
-  | 'loading_token'
-  | 'connecting'
-  | 'ready'
-  | 'reconnecting'
-  | 'error'
-  | 'unconfigured'
-
-export type PowerDialItem = {
-  leadId: string
-  phone: string
-  businessName?: string | null
-  contactName?: string | null
-}
-
-declare global {
-  interface Window {
-    cgDial?: (number: string, leadId?: string) => void
-    cgPowerDial?: (items: PowerDialItem[]) => void
-    cgPowerDialAbort?: () => void
-  }
-}
-
 export function Dialer() {
-  const [status, setStatus] = useState<SessionStatus>('init')
-  const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
-  const [callState, setCallState] = useState<CallState>('idle')
-  const [destination, setDestination] = useState('')
-  const [activeLeadId, setActiveLeadId] = useState<string | null>(null)
-  const [muted, setMuted] = useState(false)
-  const [droppingVm, setDroppingVm] = useState(false)
-  const [secondsActive, setSecondsActive] = useState(0)
-  const [micBusy, setMicBusy] = useState(false)
-  const [micErrName, setMicErrName] = useState<string | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [, forceFromRefresh] = useState(0)
-  const [callNotes, setCallNotes] = useState<{ id: string; body: string; created_at: string }[]>([])
   const [noteDraft, setNoteDraft] = useState('')
-  const [notesLoading, setNotesLoading] = useState(false)
-  const fetchedNotesForLeadRef = useRef<string | null>(null)
   const dragControls = useDragControls()
 
-  // Power dialer queue. When non-empty, the dialer auto-advances
-  // through items: dial item N → wait for call to end → 5s countdown
-  // (with optional post-call status selection) → dial item N+1.
-  const [queue, setQueue] = useState<PowerDialItem[]>([])
-  const [queueIndex, setQueueIndex] = useState(0)
-  const [queuePaused, setQueuePaused] = useState(false)
-  const [countdown, setCountdown] = useState<number | null>(null)
-  const [postCallStatus, setPostCallStatus] = useState<string | null>(null)
-  const lastQueuedLeadIdRef = useRef<string | null>(null)
-  const queueAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const engine = useDialerEngine({
+    // Auto-open the panel when something needs the user's attention
+    // (mic prompt, denied state, hard error). Reps shouldn't have to
+    // know the dialer button hides the actual problem.
+    onAttentionNeeded: () => setOpen(true),
+  })
+  const {
+    status, error, micBusy, micErrName, grantMicrophone,
+    callState, inCall, destination, setDestination, activeLeadId,
+    secondsActive, muted, droppingVm,
+    dial, hangup, toggleMute, dropVoicemail, onKeypadPress,
+    fromNumber, applyActiveNumber,
+    queue, queueIndex, queueActive, currentItem,
+    queuePaused, countdown, postCallStatus, setPostCallStatus,
+    togglePause, skipCurrent, stopQueue,
+  } = engine
 
-  // Refs to long-lived objects (Telnyx client, current Call, server-side
-  // log row id, etc.) so re-renders don't recreate them.
-  const clientRef = useRef<any>(null)
-  const callRef = useRef<any>(null)
-  const callRowIdRef = useRef<string | null>(null)
-  const fromNumberRef = useRef<string | null>(null)
-  const startedAtRef = useRef<number | null>(null)
-  // Telnyx WebRTC needs an <audio> element to pump the remote (callee)
-  // audio into. Without this you hear ringing but nothing else - the
-  // far end's voice has nowhere to go. Created as a hidden tag at the
-  // bottom of the component tree, kept stable across renders.
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null)
-  const setupRef = useRef<((opts?: { fromUserGesture?: boolean }) => Promise<void>) | null>(null)
-
-  // ---- Connect once on mount, tear down on unmount.
+  // Opening a power-dial session from the leads list should also pop
+  // the panel so the rep sees the queue header.
   useEffect(() => {
-    let cancelled = false
-    let retryTimer: ReturnType<typeof setTimeout> | null = null
+    if (queueActive) setOpen(true)
+  }, [queueActive])
 
-    const setup = async (opts?: { fromUserGesture?: boolean }) => {
-      setError(null)
+  const { notes: callNotes, loading: notesLoading, addNote } = useLeadNotes(activeLeadId)
 
-      // On mount: use Permissions API to detect a pre-existing grant. If
-      // it says 'granted', skip straight to token mint. Otherwise show
-      // the click-to-allow UI - we do NOT auto-call getUserMedia here,
-      // since that would fire a fresh OS prompt on every page reload.
-      // When called from grantMicrophone (fromUserGesture), we know the
-      // user just granted via a synchronous getUserMedia and can proceed
-      // straight to connecting.
-      if (!opts?.fromUserGesture) {
-        let granted = false
-        try {
-          const perm = await navigator.permissions
-            ?.query?.({ name: 'microphone' as PermissionName })
-            .catch(() => null)
-          if (perm?.state === 'granted') granted = true
-        } catch { /* unsupported - fall through */ }
-        if (!granted) {
-          setStatus('mic_required')
-          return
-        }
-      }
-
-      setStatus('loading_token')
-      try {
-        const r = await fetchWithAuth('/api/sales/dialer/token', { method: 'POST' })
-        if (cancelled) return
-        if (r.status === 503) {
-          setStatus('unconfigured')
-          return
-        }
-        const j = await r.json().catch(() => ({}))
-        if (!r.ok || !j?.success) {
-          setStatus('error')
-          setError(j?.error || `Token mint failed (${r.status})`)
-          retryTimer = setTimeout(setup, 15_000)
-          return
-        }
-        fromNumberRef.current = j.from_number || null
-
-        // Lazy-import the Telnyx SDK so SSR doesn't choke on `window`.
-        const mod = await import('@telnyx/webrtc')
-        if (cancelled) return
-        const TelnyxRTC = (mod as any).TelnyxRTC
-        const client = new TelnyxRTC({ login_token: j.login_token })
-
-        client.on('telnyx.ready', () => { if (!cancelled) setStatus('ready') })
-        client.on('telnyx.socket.close', () => {
-          if (cancelled) return
-          setStatus('reconnecting')
-          // SDK auto-reconnects; if it gives up after a while we'll
-          // re-mint a token on the next user action.
-        })
-        client.on('telnyx.error', (e: any) => {
-          if (cancelled) return
-          // Full payload to devtools so we can actually see the cause -
-          // Telnyx's SDK fires this with shape { code, cause, causeCode,
-          // error: { message } } depending on the failure mode.
-          // eslint-disable-next-line no-console
-          console.error('Telnyx error', e)
-          const msg =
-            e?.cause ||
-            e?.causeCode ||
-            e?.error?.message ||
-            e?.message ||
-            (typeof e === 'string' ? e : null) ||
-            (() => { try { return JSON.stringify(e).slice(0, 200) } catch { return 'WebRTC error' } })()
-          setStatus('error')
-          setError(msg)
-        })
-        client.on('telnyx.socket.error', (e: any) => {
-          if (cancelled) return
-          // eslint-disable-next-line no-console
-          console.error('Telnyx socket error', e)
-          setStatus('error')
-          setError(e?.message || 'WebSocket failed - network/firewall blocking wss://rtc.telnyx.com?')
-        })
-        client.on('telnyx.notification', (note: any) => {
-          if (cancelled) return
-          if (note?.type !== 'callUpdate') return
-          const c = note.call
-          callRef.current = c
-          const s = c?.state
-          if (s === 'requesting' || s === 'trying') setCallState('connecting')
-          else if (s === 'ringing' || s === 'early') setCallState('ringing')
-          else if (s === 'active') {
-            setCallState('active')
-            startedAtRef.current = Date.now()
-            // Telnyx SDK mutes the local mic on call start
-            // ("Muting local audio tracks on start" log in bundle.js).
-            // The moment the call flips to active, unmute so the
-            // callee can actually hear the rep.
-            try {
-              if (typeof (c as any).unmuteAudio === 'function') {
-                (c as any).unmuteAudio()
-              }
-              const senders: RTCRtpSender[] | undefined =
-                (c as any)?.peer?.peerConnection?.getSenders?.()
-              senders?.forEach((sndr) => {
-                if (sndr.track?.kind === 'audio' && !sndr.track.enabled) {
-                  sndr.track.enabled = true
-                }
-              })
-            } catch { /* non-fatal */ }
-          } else if (s === 'hangup' || s === 'destroy' || s === 'purge') {
-            // Release the mic stream we captured at dial time. Without
-            // this the browser keeps the mic active across calls and
-            // the next outbound call can fail to acquire a fresh stream.
-            try {
-              const ls = (c as any)?._cgLocalStream as MediaStream | undefined
-              ls?.getTracks().forEach((t) => t.stop())
-            } catch { /* non-fatal */ }
-            const startedAt = startedAtRef.current
-            const duration = startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0
-            // Best-effort: classify the ending. Telnyx's cause codes
-            // map roughly to status; we do a coarse mapping that's
-            // good enough for the rep's "did it pick up" purpose.
-            const cause = String(c?.cause || '').toLowerCase()
-            const finalStatus =
-              startedAt ? 'completed'
-              : /busy/.test(cause) ? 'busy'
-              : /reject|decline/.test(cause) ? 'rejected'
-              : /no_user|noanswer|no_answer|noresponse|no_response|not_found/.test(cause) ? 'no_answer'
-              : startedAt ? 'completed' : 'no_answer'
-            void finalizeCall(finalStatus, duration)
-          }
-        })
-
-        clientRef.current = client
-        setStatus('connecting')
-        client.connect()
-      } catch (e) {
-        if (cancelled) return
-        setStatus('error')
-        setError(e instanceof Error ? e.message : 'Could not initialise dialer')
-        retryTimer = setTimeout(setup, 15_000)
-      }
-    }
-
-    void setup()
-    setupRef.current = setup
-
-    return () => {
-      cancelled = true
-      if (retryTimer) clearTimeout(retryTimer)
-      try { clientRef.current?.disconnect?.() } catch {}
-      clientRef.current = null
-      setupRef.current = null
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const grantMicrophone = useCallback((e?: React.MouseEvent) => {
-    // CRITICAL: getUserMedia must be called synchronously from the click
-    // handler with no awaits before it, otherwise some browsers consider
-    // the user gesture stale and silently auto-deny without prompting.
-    // We do not mark the function async - we call gUM immediately and
-    // attach the .then/.catch chain so the promise resolves later, but
-    // the call itself is in the same tick as the click.
-    setError(null)
-    setMicErrName(null)
-    setMicBusy(true)
-    let micPromise: Promise<MediaStream>
-    try {
-      micPromise = navigator.mediaDevices.getUserMedia({ audio: true })
-    } catch (err: any) {
-      // eslint-disable-next-line no-console
-      console.error('getUserMedia threw synchronously', err)
-      setMicBusy(false)
-      setStatus('error')
-      setError(err?.message || 'Could not access microphone')
-      return
-    }
-    micPromise.then(
-      (stream) => {
-        stream.getTracks().forEach((t) => t.stop())
-        if (setupRef.current) {
-          setupRef.current({ fromUserGesture: true })
-            .finally(() => setMicBusy(false))
-        } else {
-          setMicBusy(false)
-        }
-      },
-      (err: any) => {
-        // eslint-disable-next-line no-console
-        console.error('getUserMedia rejected', err)
-        setMicBusy(false)
-        const name = err?.name || 'Error'
-        setMicErrName(`${name}${err?.message ? ` - ${err.message}` : ''}`)
-        if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
-          setStatus('mic_denied')
-        } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
-          setStatus('error')
-          setError('No microphone detected on this device.')
-        } else {
-          setStatus('error')
-          setError(err?.message || 'Could not access microphone')
-        }
-      }
-    )
-  }, [])
-
-  // ---- Auto-open the panel when something needs the user's attention
-  // (mic prompt, denied state, hard error). Reps shouldn't have to know
-  // the dialer button hides the actual problem.
-  useEffect(() => {
-    if (status === 'mic_required' || status === 'mic_denied' || status === 'error') {
-      setOpen(true)
-    }
-  }, [status])
-
-  // ---- Active-call seconds counter for the live UI badge.
-  useEffect(() => {
-    if (callState !== 'active') { setSecondsActive(0); return }
-    const t = setInterval(() => {
-      if (startedAtRef.current) setSecondsActive(Math.floor((Date.now() - startedAtRef.current) / 1000))
-    }, 1000)
-    return () => clearInterval(t)
-  }, [callState])
-
-  const dial = useCallback(async (rawNumber: string, leadId?: string) => {
-    const number = e164(rawNumber)
-    if (!number) {
-      setError(`Couldn't parse "${rawNumber}" as a US phone`)
-      return
-    }
-    if (status !== 'ready') {
-      setOpen(true)
-      setError('Dialer not ready yet - try again in a second.')
-      return
-    }
-    if (callRef.current) {
-      // Already on a call; ignore.
-      return
-    }
-    setError(null)
-    setOpen(true)
-    setActiveLeadId(leadId || null)
-    setDestination(number)
-    setCallState('connecting')
-    startedAtRef.current = null
-
-    // Local presence: pick whichever of the rep's up-to-3 saved numbers
-    // shares the lead's area code, instead of always dialing out from
-    // the single static "active" one. Fetched fresh per call rather than
-    // cached - NumberPicker's add/delete flows don't all notify us of
-    // pool changes, so a cache would risk going stale.
-    let callerNumber = fromNumberRef.current
-    try {
-      const numRes = await fetchWithAuth('/api/sales/dialer/numbers')
-      const numJson = await numRes.json().catch(() => ({}))
-      const saved: { phone_number: string; is_active: boolean }[] = numJson?.numbers || []
-      const npa = number.slice(2, 5)
-      const match = saved.find((n) => n.phone_number.slice(2, 5) === npa)
-      if (match) callerNumber = match.phone_number
-    } catch { /* fall back to the active number */ }
-
-    // Capture a fresh mic stream right before placing the call. We
-    // rely on the SDK's audio:true under the hood, but in some Telnyx
-    // SDK versions / browser combos the internal getUserMedia silently
-    // ends up muted after the permission-priming stop() pattern -
-    // result: callee hears nothing while the rep hears them fine.
-    // Pre-capturing and passing localStream sidesteps that entirely.
-    let localStream: MediaStream | null = null
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: false,
-      })
-    } catch (err) {
-      console.error('dial: getUserMedia failed', err)
-      setCallState('idle')
-      setError(err instanceof Error ? err.message : 'Microphone unavailable')
-      return
-    }
-
-    // Sanity check: track must be enabled or the callee hears silence.
-    const audioTrack = localStream.getAudioTracks()[0]
-    if (audioTrack && !audioTrack.enabled) audioTrack.enabled = true
-
-    try {
-      const call = clientRef.current.newCall({
-        destinationNumber: number,
-        callerNumber,
-        // Correct option per @telnyx/webrtc 2.26.4 ICallOptions:
-        // it's `localStream`, not `mediaStream`. The previous attempt
-        // sent `mediaStream` (which the SDK silently ignored, fell
-        // back to internal getUserMedia) and `localStream` before
-        // that (correct name, but the SDK still muted it on start -
-        // see the unmute below for the actual reason audio wasn't
-        // getting through).
-        localStream,
-        audio: true,
-        video: false,
-        // Pipe the remote (callee) audio stream into the hidden
-        // <audio> we render at the bottom of this component.
-        remoteElement: remoteAudioRef.current || undefined,
-      })
-      callRef.current = call
-
-      // *** THE ACTUAL FIX ***
-      // The Telnyx SDK explicitly mutes the local audio tracks on
-      // call start (literal log line in bundle.js: "Muting local
-      // audio tracks on start"). That's why every attempt to make
-      // the callee hear us was failing - SDK was muting the mic
-      // the moment the call went active. We have to unmute via
-      // the call object's unmuteAudio() method once the call is
-      // established. Multiple attempts since we don't know exactly
-      // when "active" fires for this SDK version.
-      const tryUnmute = () => {
-        try {
-          if (typeof (call as any).unmuteAudio === 'function') {
-            (call as any).unmuteAudio()
-          }
-          // Belt and suspenders: also force the captured track on.
-          localStream?.getAudioTracks().forEach((t) => { t.enabled = true })
-          // And the underlying RTCRtpSender if it's accessible.
-          const senders: RTCRtpSender[] | undefined =
-            (call as any)?.peer?.peerConnection?.getSenders?.()
-          const audioSender = senders?.find((s) => s.track?.kind === 'audio')
-          if (audioSender?.track && !audioSender.track.enabled) {
-            audioSender.track.enabled = true
-          }
-          // eslint-disable-next-line no-console
-          console.info('dialer: unmute attempt', {
-            hasMethod: typeof (call as any).unmuteAudio === 'function',
-            trackEnabled: localStream?.getAudioTracks()[0]?.enabled,
-            senderEnabled: audioSender?.track?.enabled,
-            isAudioMuted: (call as any)?.isAudioMuted,
-          })
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.warn('dialer unmute attempt threw', e)
-        }
-      }
-      // Fire multiple times to catch whichever state transition
-      // un-mutes us. Cheap operation, no harm in repeating.
-      setTimeout(tryUnmute, 500)
-      setTimeout(tryUnmute, 1500)
-      setTimeout(tryUnmute, 3000)
-
-      // Stop the local stream when the call ends to free the mic.
-      ;(call as any)._cgLocalStream = localStream
-
-      // Safety net for SDK versions that ignore remoteElement: attach
-      // the stream manually as soon as the call exposes one. Telnyx
-      // emits the stream on the call object's peer or via the
-      // 'mediaStream' notification on the client. We poll briefly
-      // since the exact event name has varied across SDK versions.
-      const attachStream = () => {
-        const el = remoteAudioRef.current
-        if (!el) return false
-        const stream =
-          (call as any)?.remoteStream ||
-          (call as any)?.peer?.remoteStream ||
-          (call as any)?.options?.remoteStream
-        if (stream && el.srcObject !== stream) {
-          el.srcObject = stream
-          el.play().catch(() => { /* autoplay can be blocked - ignore */ })
-          return true
-        }
-        return false
-      }
-      // Try immediately, then poll for up to 5s. Once attached, stop.
-      if (!attachStream()) {
-        const iv = setInterval(() => {
-          if (attachStream() || !callRef.current) clearInterval(iv)
-        }, 200)
-        setTimeout(() => clearInterval(iv), 5000)
-      }
-      // Open the server-side log row so we can update it on end.
-      void (async () => {
-        try {
-          const r = await fetchWithAuth('/api/sales/dialer/log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to_number: number,
-              from_number: callerNumber,
-              telnyx_call_id: call?.id || null,
-              lead_id: leadId || null,
-              status: 'ringing',
-            }),
-          })
-          const j = await r.json().catch(() => ({}))
-          if (j?.success) callRowIdRef.current = j.id
-        } catch { /* non-fatal */ }
-      })()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not start call')
-      setCallState('idle')
-    }
-  }, [status])
-
-  // Expose `window.cgDial` so any component can call it without a
-  // React context plumbing exercise.
-  useEffect(() => {
-    window.cgDial = (number: string, leadId?: string) => dial(number, leadId)
-    window.cgPowerDial = (items: PowerDialItem[]) => {
-      const cleaned = items.filter((it) => it.phone && it.leadId)
-      if (cleaned.length === 0) return
-      setQueue(cleaned)
-      setQueueIndex(0)
-      setQueuePaused(false)
-      setPostCallStatus(null)
-      setCountdown(null)
-      setOpen(true)
-      // Defer the first dial a tick so React applies the queue state
-      // before we kick off the call (the call-end watcher reads `queue`).
-      setTimeout(() => {
-        const first = cleaned[0]
-        lastQueuedLeadIdRef.current = first.leadId
-        dial(first.phone, first.leadId)
-      }, 50)
-    }
-    window.cgPowerDialAbort = () => {
-      if (queueAdvanceTimerRef.current) {
-        clearTimeout(queueAdvanceTimerRef.current)
-        queueAdvanceTimerRef.current = null
-      }
-      setQueue([])
-      setQueueIndex(0)
-      setQueuePaused(false)
-      setCountdown(null)
-      setPostCallStatus(null)
-    }
-    return () => {
-      if (window.cgDial) delete window.cgDial
-      if (window.cgPowerDial) delete window.cgPowerDial
-      if (window.cgPowerDialAbort) delete window.cgPowerDialAbort
-    }
-  }, [dial])
-
-  const hangup = useCallback(() => {
-    try { callRef.current?.hangup?.() } catch {}
-  }, [])
-
-  const finalizeCall = async (finalStatus: string, duration: number) => {
-    setCallState('ended')
-    setMuted(false)
-    callRef.current = null
-    if (callRowIdRef.current) {
-      try {
-        await fetchWithAuth('/api/sales/dialer/log', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: callRowIdRef.current,
-            status: finalStatus,
-            ended_at: new Date().toISOString(),
-            duration_seconds: duration,
-          }),
-        })
-      } catch { /* non-fatal */ }
-    }
-    callRowIdRef.current = null
-    setActiveLeadId(null)
-    // Small "ended" tail in the UI before flipping back to idle.
-    setTimeout(() => setCallState('idle'), 1500)
-  }
-
-  const toggleMute = () => {
-    const c = callRef.current
-    if (!c) return
-    if (muted) {
-      try { c.unmuteAudio() } catch {}
-      setMuted(false)
-    } else {
-      try { c.muteAudio() } catch {}
-      setMuted(true)
-    }
-  }
-
-  // Telnyx's Answering Machine Detection only works on calls it
-  // originates itself (POST /v2/calls) - it can't be switched on for a
-  // leg the WebRTC SDK already answered, so there's no automatic
-  // "hit voicemail" detection here. The rep judges by ear and clicks this;
-  // the server speaks a script and hangs up for them once it's done.
-  const dropVoicemail = async () => {
-    if (!callRowIdRef.current || droppingVm) return
-    setDroppingVm(true)
-    try {
-      await fetchWithAuth('/api/sales/dialer/voicemail-drop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ call_row_id: callRowIdRef.current }),
-      })
-    } catch { /* non-fatal - rep can still hang up manually */ } finally {
-      setDroppingVm(false)
-    }
-  }
-
-  // Surface the lead's existing note thread in the overlay while the rep
-  // is on the call, instead of making them tab away to the leads page.
-  // Fetch once per lead (guarded by the ref, not by callState) so notes
-  // are already loaded by the time the call connects.
-  useEffect(() => {
-    setCallNotes([])
-    setNoteDraft('')
-    fetchedNotesForLeadRef.current = null
-    if (!activeLeadId) return
-    fetchedNotesForLeadRef.current = activeLeadId
-    setNotesLoading(true)
-    void (async () => {
-      try {
-        const r = await fetchWithAuth(`/api/sales/leads/${activeLeadId}`)
-        const j = await r.json().catch(() => ({}))
-        if (j?.success) setCallNotes(j.notes || [])
-      } catch { /* non-fatal */ } finally {
-        setNotesLoading(false)
-      }
-    })()
-  }, [activeLeadId])
-
-  const addCallNote = async () => {
+  const addCallNote = () => {
     const text = noteDraft.trim()
-    if (!text || !activeLeadId) return
+    if (!text) return
     setNoteDraft('')
-    try {
-      const r = await fetchWithAuth(`/api/sales/leads/${activeLeadId}/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: text }),
-      })
-      const j = await r.json().catch(() => ({}))
-      if (j?.success && j.note) setCallNotes((prev) => [j.note, ...prev])
-    } catch { /* non-fatal */ }
+    void addNote(text)
   }
 
   const onCallNow = () => {
     if (!destination.trim()) return
-    dial(destination)
-  }
-
-  // Keypad press: append to destination when idle, send DTMF when on a
-  // live call (so reps can navigate IVRs). Telnyx exposes dtmf() on the
-  // call object - signature is just the single digit string.
-  const onKeypadPress = (digit: string) => {
-    if (callState === 'active' && callRef.current) {
-      try { callRef.current.dtmf(digit) } catch { /* non-fatal */ }
-      return
-    }
-    setDestination((d) => d + digit)
-  }
-
-  const inCall = callState === 'connecting' || callState === 'ringing' || callState === 'active'
-  const queueActive = queue.length > 0
-  const currentItem = queueActive ? queue[queueIndex] : null
-  const isLast = queueActive && queueIndex >= queue.length - 1
-
-  // Auto-advance: when call ends inside a queue session, run a 5-second
-  // countdown with a post-call status picker, then dial the next item.
-  // Pause stops the countdown without losing position; skip jumps to
-  // next without completing the picker; stop nukes the queue.
-  useEffect(() => {
-    if (!queueActive) return
-    if (callState !== 'ended') return
-    if (queuePaused) return
-    if (isLast && !currentItem) return
-
-    setCountdown(5)
-    const tick = (n: number) => {
-      if (n <= 0) {
-        if (queueAdvanceTimerRef.current) {
-          clearTimeout(queueAdvanceTimerRef.current)
-          queueAdvanceTimerRef.current = null
-        }
-        setCountdown(null)
-        // Persist post-call status if the rep picked one (or default to 'called').
-        if (lastQueuedLeadIdRef.current) {
-          const status = postCallStatus || 'called'
-          void fetchWithAuth(`/api/sales/leads/${lastQueuedLeadIdRef.current}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status, touched: true }),
-          }).catch(() => { /* non-fatal */ })
-        }
-        setPostCallStatus(null)
-        // Advance.
-        if (isLast) {
-          // Done.
-          setQueue([])
-          setQueueIndex(0)
-          lastQueuedLeadIdRef.current = null
-          return
-        }
-        const next = queue[queueIndex + 1]
-        if (next) {
-          setQueueIndex((i) => i + 1)
-          lastQueuedLeadIdRef.current = next.leadId
-          dial(next.phone, next.leadId)
-        }
-        return
-      }
-      setCountdown(n)
-      queueAdvanceTimerRef.current = setTimeout(() => tick(n - 1), 1000)
-    }
-    queueAdvanceTimerRef.current = setTimeout(() => tick(4), 1000)
-
-    return () => {
-      if (queueAdvanceTimerRef.current) {
-        clearTimeout(queueAdvanceTimerRef.current)
-        queueAdvanceTimerRef.current = null
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [callState, queueActive, queuePaused, queueIndex])
-
-  // Pause/resume keeps the same queue position. When un-paused inside
-  // an 'ended' state, the effect above re-runs naturally.
-  const togglePause = () => setQueuePaused((p) => !p)
-  const skipCurrent = () => {
-    if (queueAdvanceTimerRef.current) clearTimeout(queueAdvanceTimerRef.current)
-    setCountdown(null)
-    setPostCallStatus(null)
-    if (callState !== 'idle' && callState !== 'ended') {
-      try { callRef.current?.hangup?.() } catch {}
-    }
-    if (isLast) {
-      setQueue([])
-      setQueueIndex(0)
-      return
-    }
-    const next = queue[queueIndex + 1]
-    if (next) {
-      setQueueIndex((i) => i + 1)
-      lastQueuedLeadIdRef.current = next.leadId
-      // Brief delay so the current call finishes hanging up before we redial.
-      setTimeout(() => dial(next.phone, next.leadId), 250)
-    }
-  }
-  const stopQueue = () => {
-    if (queueAdvanceTimerRef.current) clearTimeout(queueAdvanceTimerRef.current)
-    setCountdown(null)
-    setPostCallStatus(null)
-    setQueue([])
-    setQueueIndex(0)
-    if (callState !== 'idle') {
-      try { callRef.current?.hangup?.() } catch {}
-    }
+    setOpen(true)
+    void dial(destination)
   }
 
   return (
     <>
-      {/* Hidden audio sink for the remote (callee) WebRTC stream.
-          Must stay mounted whenever the dialer is mounted, even when
-          the panel is closed - the ref needs to exist before newCall
-          is invoked. autoPlay is on so playback starts the moment a
-          stream is attached; playsInline avoids mobile Safari going
-          fullscreen on video stream containers. */}
-      <audio ref={remoteAudioRef} autoPlay playsInline style={{ display: 'none' }} />
       <AnimatePresence>
         {open && (
           <motion.div
@@ -795,16 +101,16 @@ export function Dialer() {
             </div>
 
             {queueActive && (
-              <div className="px-3 py-2.5 bg-violet-50 border-b border-violet-100 text-xs">
+              <div className="px-3 py-2.5 bg-blue-50 border-b border-blue-100 text-xs">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <div className="font-medium text-violet-900 inline-flex items-center gap-1.5">
+                  <div className="font-medium text-blue-900 inline-flex items-center gap-1.5">
                     <PhoneCall className="w-3.5 h-3.5" weight="fill" />
                     Power dial · {queueIndex + 1} of {queue.length}
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={togglePause}
-                      className="p-1 text-violet-700 hover:text-violet-900"
+                      className="p-1 text-blue-700 hover:text-blue-900"
                       title={queuePaused ? 'Resume' : 'Pause'}
                     >
                       {queuePaused
@@ -813,7 +119,7 @@ export function Dialer() {
                     </button>
                     <button
                       onClick={skipCurrent}
-                      className="p-1 text-violet-700 hover:text-violet-900"
+                      className="p-1 text-blue-700 hover:text-blue-900"
                       title="Skip"
                     >
                       <SkipForward className="w-3.5 h-3.5" weight="fill" />
@@ -828,21 +134,21 @@ export function Dialer() {
                   </div>
                 </div>
                 {currentItem && (
-                  <div className="text-violet-800 truncate">
+                  <div className="text-blue-800 truncate">
                     {currentItem.businessName || currentItem.contactName || currentItem.phone}
                   </div>
                 )}
                 {callState === 'ended' && countdown !== null && !queuePaused && (
-                  <div className="mt-2 pt-2 border-t border-violet-100">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-violet-700 mb-1.5">
+                  <div className="mt-2 pt-2 border-t border-blue-100">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-blue-700 mb-1.5">
                       Tag this call · next in {countdown}s
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {[
-                        { v: 'called',     l: 'Talked' },
-                        { v: 'voicemail',  l: 'VM' },
-                        { v: 'interested', l: 'Interested' },
-                        { v: 'dead',       l: 'Dead' },
+                        { v: 'called',      l: 'Talked' },
+                        { v: 'voicemail',   l: 'VM' },
+                        { v: 'interested',  l: 'Interested' },
+                        { v: 'dead',        l: 'Dead' },
                         { v: 'do_not_call', l: 'DNC' },
                       ].map((opt) => (
                         <button
@@ -850,8 +156,8 @@ export function Dialer() {
                           onClick={() => setPostCallStatus(opt.v)}
                           className={`text-[11px] rounded-md px-2 py-1 border transition-colors ${
                             postCallStatus === opt.v
-                              ? 'bg-violet-700 text-white border-violet-700'
-                              : 'bg-white text-violet-800 border-violet-200 hover:border-violet-400'
+                              ? 'bg-blue-700 text-white border-blue-700'
+                              : 'bg-white text-blue-800 border-blue-200 hover:border-blue-400'
                           }`}
                         >
                           {opt.l}
@@ -861,7 +167,7 @@ export function Dialer() {
                   </div>
                 )}
                 {queuePaused && (
-                  <div className="mt-1 text-[11px] italic text-violet-700">Paused.</div>
+                  <div className="mt-1 text-[11px] italic text-blue-700">Paused.</div>
                 )}
               </div>
             )}
@@ -935,8 +241,7 @@ export function Dialer() {
                 <>
                   {/* When idle, show input. When in a call, that input
                       becomes the live status line - no duplicate number,
-                      no separate ring animation panel. Keeps the dialer
-                      a tight box. */}
+                      no separate ring animation panel. */}
                   {!inCall ? (
                     <input
                       type="tel"
@@ -1033,7 +338,7 @@ export function Dialer() {
                       <>
                         {destination && (
                           <button
-                            onClick={() => setDestination((d) => d.slice(0, -1))}
+                            onClick={() => setDestination(destination.slice(0, -1))}
                             className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
                             aria-label="Backspace"
                             type="button"
@@ -1092,7 +397,7 @@ export function Dialer() {
                     </div>
                   )}
 
-                  {fromNumberRef.current && status === 'ready' && !inCall && (
+                  {fromNumber && status === 'ready' && !inCall && (
                     <button
                       type="button"
                       onClick={() => setPickerOpen(true)}
@@ -1100,7 +405,7 @@ export function Dialer() {
                       title="Switch which number you call from"
                     >
                       <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500">from</span>
-                      <span className="text-sm font-medium text-gray-900 tabular-nums">{formatFromNumber(fromNumberRef.current)}</span>
+                      <span className="text-sm font-medium text-gray-900 tabular-nums">{formatFromNumber(fromNumber)}</span>
                       <CaretDown weight="bold" className="w-3 h-3 text-gray-500" />
                     </button>
                   )}
@@ -1134,14 +439,7 @@ export function Dialer() {
       <NumberPicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onActiveChanged={(num) => {
-          // Update the displayed from-number immediately. The dialer
-          // session itself doesn't need to reconnect for outbound
-          // caller-ID switches - Telnyx looks up the from on each
-          // call placement against the connection's allowed numbers.
-          fromNumberRef.current = num
-          forceFromRefresh((n) => n + 1)
-        }}
+        onActiveChanged={applyActiveNumber}
       />
     </>
   )
@@ -1168,50 +466,6 @@ function SessionPill({ status }: { status: SessionStatus }) {
   )
 }
 
-// US-shaped E.164 normalization. Mirrors lib/scrapers/normalize.ts so
-// the dialer accepts whatever's stored on the lead row without UX
-// friction. Returns null for inputs we can't reasonably interpret.
-/**
- * Format an E.164 number to "(214) 555-1234" so the rep can read at a
- * glance which line they're dialing from. Falls back to raw input for
- * anything that doesn't parse as US.
- */
-function formatFromNumber(raw: string): string {
-  const digits = String(raw).replace(/[^0-9]/g, '')
-  if (digits.length === 11 && digits.startsWith('1')) {
-    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
-  }
-  if (digits.length === 10) {
-    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
-  }
-  return raw
-}
-
-function e164(raw: string): string | null {
-  if (!raw) return null
-  const digits = String(raw).replace(/[^0-9]/g, '')
-  if (!digits) return null
-  if (digits.length === 10) return `+1${digits}`
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
-  if (digits.length >= 11) return `+1${digits.slice(-10)}`
-  return null
-}
-
-const KEYPAD: { digit: string; sub?: string }[] = [
-  { digit: '1' },
-  { digit: '2', sub: 'ABC' },
-  { digit: '3', sub: 'DEF' },
-  { digit: '4', sub: 'GHI' },
-  { digit: '5', sub: 'JKL' },
-  { digit: '6', sub: 'MNO' },
-  { digit: '7', sub: 'PQRS' },
-  { digit: '8', sub: 'TUV' },
-  { digit: '9', sub: 'WXYZ' },
-  { digit: '*' },
-  { digit: '0', sub: '+' },
-  { digit: '#' },
-]
-
 function RingingDots() {
   return (
     <span className="inline-flex ml-0.5">
@@ -1226,23 +480,4 @@ function RingingDots() {
       `}</style>
     </span>
   )
-}
-
-function RingingPulse() {
-  // Concentric expanding rings under a phone icon - classic "ringing"
-  // visual without being a full lottie animation.
-  return (
-    <div className="relative w-16 h-16 flex items-center justify-center">
-      <span className="absolute inset-0 rounded-full bg-emerald-400/25 animate-ping" />
-      <span className="absolute inset-2 rounded-full bg-emerald-400/40 animate-ping [animation-delay:200ms]" />
-      <span className="relative inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/40">
-        <PhoneCall className="w-5 h-5" weight="fill" />
-      </span>
-    </div>
-  )
-}
-
-function fmtDuration(s: number): string {
-  if (s < 60) return `0:${String(s).padStart(2, '0')}`
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
