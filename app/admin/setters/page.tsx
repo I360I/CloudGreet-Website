@@ -6,6 +6,15 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, PrimaryButton, GhostButton, Input } from '../_components/ui'
 
+type WeeklyGoal = {
+  target: number
+  met_this_week: boolean
+  streak_weeks: number
+  bonus_earned: boolean
+  bonus_amount: number
+  streak_target: number
+}
+
 type Setter = {
   id: string
   email: string
@@ -15,6 +24,7 @@ type Setter = {
   last_active: string | null
   created_at: string | null
   calls_today: { attempts: number; connects: number; talk_seconds: number }
+  weekly_goal: WeeklyGoal
 }
 
 type OpenInvite = {
@@ -130,7 +140,14 @@ export default function AdminSettersPage() {
                   <li key={s.id} className="px-5 sm:px-6 py-4">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-white">{s.name}</div>
+                        <div className="text-sm font-medium text-white flex items-center gap-2 flex-wrap">
+                          {s.name}
+                          {s.weekly_goal.bonus_earned && (
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-400/20 rounded-full px-2 py-0.5">
+                              ${s.weekly_goal.bonus_amount} bonus earned
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[11px] text-gray-500 mt-0.5 inline-flex items-center gap-2 flex-wrap">
                           <span>{s.email}</span>
                           <span>·</span>
@@ -143,11 +160,22 @@ export default function AdminSettersPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-right">
-                        <PhoneCall className="w-4 h-4 text-gray-500" />
-                        <div>
-                          <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Dials today</div>
-                          <div className="text-sm tabular-nums text-gray-200">{s.calls_today.attempts}</div>
+                      <div className="flex items-center gap-5">
+                        <GoalEditor
+                          setterId={s.id}
+                          target={s.weekly_goal.target}
+                          streakWeeks={s.weekly_goal.streak_weeks}
+                          streakTarget={s.weekly_goal.streak_target}
+                          onSaved={(newTarget) => setSetters((prev) => prev.map((row) =>
+                            row.id === s.id ? { ...row, weekly_goal: { ...row.weekly_goal, target: newTarget } } : row,
+                          ))}
+                        />
+                        <div className="flex items-center gap-2 text-right">
+                          <PhoneCall className="w-4 h-4 text-gray-500" />
+                          <div>
+                            <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Dials today</div>
+                            <div className="text-sm tabular-nums text-gray-200">{s.calls_today.attempts}</div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -279,6 +307,66 @@ function CopyInviteLink({ token }: { token: string }) {
     >
       <Copy className="w-3 h-3" /> {copied ? 'copied' : 'copy link'}
     </button>
+  )
+}
+
+/**
+ * Inline weekly-goal editor + streak indicator. Hitting `target` demos
+ * for `streakTarget` (4) consecutive weeks unlocks the $50 bonus - shown
+ * elsewhere as a badge on the row once earned (see weekly_goal.bonus_earned).
+ */
+function GoalEditor({
+  setterId, target, streakWeeks, streakTarget, onSaved,
+}: {
+  setterId: string
+  target: number
+  streakWeeks: number
+  streakTarget: number
+  onSaved: (newTarget: number) => void
+}) {
+  const [value, setValue] = useState(String(target))
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const save = async () => {
+    const n = Number(value)
+    if (!Number.isFinite(n) || n < 1 || n > 50 || n === target) return
+    setSaving(true); setErr('')
+    try {
+      const res = await fetchWithAuth(`/api/admin/setters/${setterId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ weekly_demo_goal: n }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
+      onSaved(j.weekly_demo_goal)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed')
+      setValue(String(target))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="text-right">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+        Weekly goal · {streakWeeks}/{streakTarget} wks
+      </div>
+      <div className="flex items-center gap-1.5 justify-end">
+        <input
+          type="number" min={1} max={50}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+          disabled={saving}
+          className="w-14 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none focus:border-sky-400/50"
+        />
+        <span className="text-xs text-gray-500">demos/wk</span>
+      </div>
+      {err && <div className="text-[10px] text-rose-300 mt-0.5">{err}</div>}
+    </div>
   )
 }
 

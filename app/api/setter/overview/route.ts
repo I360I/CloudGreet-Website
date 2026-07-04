@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
-import { getRepCallStats, getRepDailySeries } from '@/lib/sales/dialer-stats'
+import { getRepCallStats, getRepDailySeries, getWeeklyDemoGoalStatus } from '@/lib/sales/dialer-stats'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -28,11 +28,17 @@ export async function GET(request: NextRequest) {
     const weekStart = new Date(todayStart)
     weekStart.setUTCDate(weekStart.getUTCDate() - 6) // rolling 7-day window incl. today
 
-    const [today, week, dailyCalls] = await Promise.all([
+    const [today, week, dailyCalls, goalRow] = await Promise.all([
       getRepCallStats(auth.userId, { since: todayStart }),
       getRepCallStats(auth.userId, { since: weekStart }),
       getRepDailySeries(auth.userId, 7),
+      // Defensive: sql/setter-weekly-goal.sql may not be applied yet on
+      // every environment. Fall back to the default goal (2) rather than
+      // 500ing the whole page if the column doesn't exist.
+      supabaseAdmin.from('custom_users').select('weekly_demo_goal').eq('id', auth.userId).maybeSingle()
+        .then((r) => r, () => ({ data: null, error: null })),
     ])
+    const weeklyGoalTarget = (goalRow as any)?.data?.weekly_demo_goal ?? 2
 
     const { data: assignments } = await supabaseAdmin
       .from('lead_assignments')
@@ -85,6 +91,7 @@ export async function GET(request: NextRequest) {
       demosByDay.set(key, (demosByDay.get(key) || 0) + 1)
     }
     const daily = dailyCalls.map((d) => ({ ...d, demos: demosByDay.get(d.date) || 0 }))
+    const weeklyGoal = await getWeeklyDemoGoalStatus(auth.userId, weeklyGoalTarget)
 
     return NextResponse.json({
       success: true,
@@ -96,6 +103,7 @@ export async function GET(request: NextRequest) {
       },
       daily,
       up_next: upNext,
+      weekly_goal: weeklyGoal,
     })
   } catch (e) {
     logger.error('setter overview failed', { userId: auth.userId, error: e instanceof Error ? e.message : 'Unknown' })

@@ -88,3 +88,64 @@ export async function getRepDailySeries(repId: string, days = 7): Promise<DailyC
 
   return Array.from(buckets.values())
 }
+
+export type WeeklyGoalStatus = {
+  target: number
+  met_this_week: boolean
+  streak_weeks: number
+  bonus_earned: boolean
+  bonus_amount: number
+  streak_target: number
+}
+
+const BONUS_STREAK_WEEKS = 4
+const BONUS_AMOUNT_USD = 50
+
+/**
+ * Weekly demo-booking goal status for one setter: whether this rolling
+ * week hits `target`, and the current consecutive-week streak (today
+ * backward) - 4 straight weeks at target is the $50 bonus tier. Shared
+ * by /api/setter/overview (the setter's own view) and the admin setters
+ * roster (so admin knows who's actually earned a bonus to pay out).
+ *
+ * "Demo booked" here means a lead_assignments row currently sitting in
+ * demo_scheduled status with last_touched_at in that week - same
+ * current-status-not-durable-log quirk the rest of the setter stats use.
+ */
+export async function getWeeklyDemoGoalStatus(repId: string, target: number): Promise<WeeklyGoalStatus> {
+  const now = new Date()
+  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  const rangeStart = new Date(todayStart)
+  rangeStart.setUTCDate(rangeStart.getUTCDate() - (7 * BONUS_STREAK_WEEKS - 1))
+
+  const { data: assignments } = await supabaseAdmin
+    .from('lead_assignments')
+    .select('status, last_touched_at')
+    .eq('rep_id', repId)
+    .eq('status', 'demo_scheduled')
+    .gte('last_touched_at', rangeStart.toISOString())
+
+  const rows = (assignments || []) as { status: string; last_touched_at: string | null }[]
+
+  let streakWeeks = 0
+  for (let w = 0; w < BONUS_STREAK_WEEKS; w++) {
+    const weekEndExclusive = new Date(todayStart)
+    weekEndExclusive.setUTCDate(weekEndExclusive.getUTCDate() - 7 * w + 1)
+    const weekStartIso = new Date(todayStart)
+    weekStartIso.setUTCDate(weekStartIso.getUTCDate() - 7 * (w + 1) + 1)
+    const demosThatWeek = rows.filter((r) =>
+      r.last_touched_at && r.last_touched_at >= weekStartIso.toISOString() && r.last_touched_at < weekEndExclusive.toISOString(),
+    ).length
+    if (demosThatWeek >= target) streakWeeks += 1
+    else break
+  }
+
+  return {
+    target,
+    met_this_week: streakWeeks >= 1,
+    streak_weeks: streakWeeks,
+    bonus_earned: streakWeeks >= BONUS_STREAK_WEEKS,
+    bonus_amount: BONUS_AMOUNT_USD,
+    streak_target: BONUS_STREAK_WEEKS,
+  }
+}

@@ -4,7 +4,7 @@ import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
-import { getRepCallStats } from '@/lib/sales/dialer-stats'
+import { getRepCallStats, getWeeklyDemoGoalStatus } from '@/lib/sales/dialer-stats'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const { data: users, error } = await supabaseAdmin
     .from('custom_users')
-    .select('id, email, first_name, last_name, name, last_login, last_active_at, created_at, is_active')
+    .select('id, email, first_name, last_name, name, last_login, last_active_at, created_at, is_active, weekly_demo_goal')
     .eq('role', 'setter')
     .order('created_at', { ascending: false })
 
@@ -33,8 +33,9 @@ export async function GET(request: NextRequest) {
   }
   const setters = users || []
 
-  const [statsResults, { data: invites }] = await Promise.all([
+  const [statsResults, goalResults, { data: invites }] = await Promise.all([
     Promise.all(setters.map((u) => getRepCallStats(u.id))),
+    Promise.all(setters.map((u) => getWeeklyDemoGoalStatus(u.id, (u as any).weekly_demo_goal ?? 2))),
     supabaseAdmin
       .from('setter_invites')
       .select('token, email, invited_at, expires_at, consumed_at')
@@ -53,6 +54,7 @@ export async function GET(request: NextRequest) {
       last_active: [u.last_active_at, u.last_login].filter(Boolean).sort().pop() || null,
       created_at: u.created_at,
       calls_today: statsResults[i],
+      weekly_goal: goalResults[i],
     })),
     open_invites: (invites || []).map((i) => ({
       token: i.token,

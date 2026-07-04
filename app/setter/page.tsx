@@ -20,11 +20,16 @@ const GAUGE_CYAN = '#0891b2'       // cyan-600, connect-rate gauge
 const GAUGE_CYAN_TRACK = '#cffafe' // cyan-100
 const GAUGE_TEAL = '#0d9488'       // teal-600, weekly-goal gauge
 const GAUGE_TEAL_TRACK = '#ccfbf1' // teal-100
-// v1 simplification: a fixed weekly target rather than an admin-configurable
-// goal-setting feature (out of scope for this pass).
-const WEEKLY_DEMO_GOAL = 5
 
 type UpNextLead = { id: string; business_name: string | null; phone: string; status: string }
+type WeeklyGoal = {
+  target: number
+  met_this_week: boolean
+  streak_weeks: number
+  bonus_earned: boolean
+  bonus_amount: number
+  streak_target: number
+}
 
 type Overview = {
   calls: {
@@ -41,6 +46,7 @@ type Overview = {
   }
   daily: { date: string; dials: number; connects: number; demos: number }[]
   up_next: UpNextLead[]
+  weekly_goal: WeeklyGoal
 }
 
 const fmtMinutes = (seconds: number) => {
@@ -99,7 +105,7 @@ export default function SetterHome() {
     data.calls.today.attempts > 0
       ? (data.calls.today.connects / data.calls.today.attempts) * 100
       : 0
-  const weeklyGoalRate = Math.min(100, (data.leads.demos_booked_week / WEEKLY_DEMO_GOAL) * 100)
+  const weeklyGoalRate = Math.min(100, (data.leads.demos_booked_week / data.weekly_goal.target) * 100)
   const dayLabel = (iso: string) =>
     new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' })
 
@@ -243,9 +249,21 @@ export default function SetterHome() {
               </span>
             </AnimatedCircularProgressBar>
             <div className="text-sm font-medium text-gray-900 mt-4">
-              {data.leads.demos_booked_week} of {WEEKLY_DEMO_GOAL} demos
+              {data.leads.demos_booked_week} of {data.weekly_goal.target} demos
             </div>
             <div className="text-xs text-gray-500 mt-1">booked this week</div>
+            <div className="mt-3 pt-3 border-t border-teal-100 w-full">
+              {data.weekly_goal.bonus_earned ? (
+                <div className="text-xs font-semibold text-teal-700">
+                  🎉 ${data.weekly_goal.bonus_amount} bonus earned!
+                </div>
+              ) : (
+                <div className="text-xs text-gray-500">
+                  {data.weekly_goal.streak_weeks}/{data.weekly_goal.streak_target} weeks straight ·
+                  ${data.weekly_goal.bonus_amount} bonus at {data.weekly_goal.streak_target}
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 
