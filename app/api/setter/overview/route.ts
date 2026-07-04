@@ -36,10 +36,35 @@ export async function GET(request: NextRequest) {
 
     const { data: assignments } = await supabaseAdmin
       .from('lead_assignments')
-      .select('status, last_touched_at')
+      .select('lead_id, status, last_touched_at')
       .eq('rep_id', auth.userId)
 
     const rows = (assignments || []) as any[]
+
+    // "Up next" - a short call-priority list for the Overview page.
+    // Manual join (lead_assignments.lead_id has no declared FK to
+    // leads(id) - same pattern as app/api/sales/leads/route.ts), picking
+    // the least-recently-touched new/interested leads first.
+    const upNextCandidates = rows
+      .filter((r) => r.status === 'new' || r.status === 'interested')
+      .sort((a, b) => (a.last_touched_at || '').localeCompare(b.last_touched_at || ''))
+      .slice(0, 5)
+    const upNextIds = upNextCandidates.map((r) => r.lead_id).filter(Boolean)
+    let upNext: { id: string; business_name: string | null; phone: string | null; status: string }[] = []
+    if (upNextIds.length > 0) {
+      const { data: leadRows } = await supabaseAdmin
+        .from('leads')
+        .select('id, business_name, phone')
+        .in('id', upNextIds)
+      const byId = new Map((leadRows || []).map((l: any) => [l.id, l]))
+      upNext = upNextCandidates
+        .map((r) => {
+          const lead = byId.get(r.lead_id)
+          if (!lead?.phone) return null
+          return { id: lead.id, business_name: lead.business_name || null, phone: lead.phone, status: r.status }
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null)
+    }
     const counts = {
       total: rows.length,
       new: rows.filter((r) => r.status === 'new').length,
@@ -70,6 +95,7 @@ export async function GET(request: NextRequest) {
         demos_booked_week: demosScheduledSince(weekStart),
       },
       daily,
+      up_next: upNext,
     })
   } catch (e) {
     logger.error('setter overview failed', { userId: auth.userId, error: e instanceof Error ? e.message : 'Unknown' })
