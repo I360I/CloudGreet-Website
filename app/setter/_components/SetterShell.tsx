@@ -87,63 +87,66 @@ export function SetterShell({
   return (
     <>
     <ImpersonationBanner />
-    <main className={`${poppins.className} min-h-screen bg-gradient-to-br from-[#0b2f7a] via-[#123a8f] to-[#0a1a3d] text-gray-900 flex`}>
-      <aside
-        className="hidden lg:flex w-60 flex-col py-6 px-4 sticky top-0 h-screen shrink-0"
-        style={{ backgroundImage: 'linear-gradient(168deg, #1d4ed8 2%, rgba(10,26,61,0.75) 110%)' }}
-      >
-        <div className="px-2 mb-8 flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0">
-            <span className="text-blue-700 text-sm font-bold leading-none">C</span>
+    {/* Full-viewport gradient backdrop, matching the reference's outer
+        canvas (blurred purple-to-charcoal blobs, recolored to blue) -
+        the dashboard itself is a big floating rounded card on top of it,
+        exactly like the source template, not full-bleed content. */}
+    <main className={`${poppins.className} min-h-screen bg-gradient-to-br from-[#1d4ed8] via-[#15317a] to-[#0a1330] text-gray-900 p-3 sm:p-6 lg:p-10`}>
+      <div className="max-w-[1500px] mx-auto rounded-[32px] sm:rounded-[48px] bg-white/[0.06] backdrop-blur-2xl border border-white/20 shadow-[0_30px_70px_-20px_rgba(0,0,0,0.55)] overflow-hidden flex min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-5rem)]">
+        <aside
+          className="hidden lg:flex w-40 flex-col py-8 px-3 shrink-0"
+          style={{ backgroundImage: 'linear-gradient(168deg, #1d4ed8 2%, rgba(10,19,48,0.75) 110%)' }}
+        >
+          <div className="flex flex-col items-center gap-2 mb-10">
+            <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0">
+              <span className="text-blue-700 text-lg font-bold leading-none">C</span>
+            </div>
+            <div className="text-[10px] font-bold tracking-wide text-center">
+              <span className="text-white">CloudGreet</span>
+            </div>
           </div>
-          <div>
-            <div className="text-sm font-semibold text-white leading-tight">CloudGreet</div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-blue-200/70">Setter</div>
-          </div>
-        </div>
-        <nav className="flex-1 space-y-1.5">
-          {NAV.map((item) => {
-            const active = item.match(pathname) || item.label === activeLabel
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-200 ${
-                  active
-                    ? 'bg-blue-500/90 text-white font-semibold shadow-sm'
-                    : 'text-blue-200/80 hover:bg-white/[0.06] hover:text-white'
-                }`}
-              >
-                <Icon weight={active ? 'fill' : 'regular'} className="w-[18px] h-[18px]" />
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
-        <div className="pt-4 px-1 space-y-3 border-t border-white/10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-white/15 text-white flex items-center justify-center text-xs font-semibold uppercase shrink-0">
+          <nav className="flex-1 space-y-3">
+            {NAV.map((item) => {
+              const active = item.match(pathname) || item.label === activeLabel
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs transition-all duration-200 ${
+                    active
+                      ? 'bg-[#3b5fd6] text-white font-bold shadow-sm'
+                      : 'text-blue-200/70 hover:bg-white/[0.06] hover:text-white'
+                  }`}
+                >
+                  <Icon weight={active ? 'fill' : 'regular'} className="w-5 h-5 shrink-0" />
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
+          <div className="pt-4 space-y-3 border-t border-white/10 flex flex-col items-center">
+            <div className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center text-xs font-semibold uppercase shrink-0">
               {(name || '?').slice(0, 1)}
             </div>
-            <div className="min-w-0">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-blue-200/60">Signed in as</div>
-              <div className="text-sm text-white truncate">{name || '...'}</div>
-            </div>
+            <button
+              onClick={signOut}
+              className="flex flex-col items-center gap-1 text-[10px] text-blue-200/70 hover:text-white transition-colors"
+            >
+              <SignOut className="w-4 h-4" /> Sign out
+            </button>
           </div>
-          <button
-            onClick={signOut}
-            className="flex items-center gap-1.5 text-xs text-blue-200/70 hover:text-white transition-colors"
-          >
-            <SignOut className="w-3.5 h-3.5" /> Sign out
-          </button>
+        </aside>
+
+        <div className="flex-1 min-w-0 pb-24 lg:pb-0 overflow-y-auto">
+          {children}
         </div>
-      </aside>
+      </div>
 
       {/* Mobile bottom nav */}
       <nav
         className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex justify-around py-2 pb-3"
-        style={{ backgroundImage: 'linear-gradient(90deg, #0a1a3d, #1d4ed8)' }}
+        style={{ backgroundImage: 'linear-gradient(90deg, #0a1330, #1d4ed8)' }}
       >
         {NAV.map((item) => {
           const active = item.match(pathname) || item.label === activeLabel
@@ -162,10 +165,6 @@ export function SetterShell({
           )
         })}
       </nav>
-
-      <div className="flex-1 min-w-0 pb-24 lg:pb-0">
-        {children}
-      </div>
 
       {pathname.startsWith('/setter/leads') && <Dialer />}
     </main>

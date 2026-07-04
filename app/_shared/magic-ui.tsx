@@ -299,3 +299,45 @@ export function DualLineChart({
     </div>
   )
 }
+
+/**
+ * Fixed-design-size canvas that uniformly scales its children to fit the
+ * available width, via ResizeObserver + CSS transform. Lets a page port a
+ * design spec's exact pixel coordinates (e.g. from a Figma dev-mode
+ * export) as literal absolute-positioned children, instead of redoing the
+ * composition in a hand-rolled responsive grid - the whole canvas shrinks/
+ * grows together so every element's relative position/size stays exact.
+ */
+export function FigmaCanvas({
+  width,
+  height,
+  className = '',
+  children,
+}: {
+  width: number
+  height: number
+  className?: string
+  children: React.ReactNode
+}) {
+  const outerRef = useRef<HTMLDivElement>(null)
+  const [scale, setScaleState] = React.useState(1)
+
+  useEffect(() => {
+    const el = outerRef.current
+    if (!el) return
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width
+      if (w) setScaleState(w / width)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [width])
+
+  return (
+    <div ref={outerRef} className={className} style={{ height: height * scale }}>
+      <div style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left', position: 'relative' }}>
+        {children}
+      </div>
+    </div>
+  )
+}

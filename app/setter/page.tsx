@@ -11,7 +11,7 @@ import { SetterShell, SetterLoadingState } from './_components/SetterShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { NotificationsBell } from '@/components/NotificationsBell'
 import {
-  NumberTicker, AnimatedCircularProgressBar, MiniBarChart, DualLineChart,
+  NumberTicker, AnimatedCircularProgressBar, MiniBarChart, DualLineChart, FigmaCanvas,
 } from '@/app/_shared/magic-ui'
 
 const EASE = [0.22, 1, 0.36, 1] as const
@@ -148,15 +148,15 @@ export default function SetterHome() {
           </div>
         </div>
 
-        {/* Row 1 - hero (Revenue-card equivalent: demos booked, dual
-            trend lines) + two stacked icon-circle stat cards, matching
-            the reference's Revenue / Onboarding+Profits composition. */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4"
-        >
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
+        {/* Cards below are placed at the EXACT pixel coordinates pulled
+            from the Figma reference (fileKey Q36QDVpbg0cK0WhfSb2lp2,
+            node 79:9), rebased relative to the content area (sidebar +
+            header removed from the reference's coordinate space) and
+            scaled uniformly via FigmaCanvas - not a hand-built grid. */}
+        <FigmaCanvas width={1094} height={700} className="mb-4">
+          {/* Revenue -> Demos booked hero. Reference: left 350 top 334
+              w750 h336, rebased (-350,-334). */}
+          <div className="absolute left-0 top-0 w-[750px] h-[336px] bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-start justify-between flex-wrap gap-3">
               <div>
                 <div className="text-[32px] leading-none font-semibold text-gray-900 tabular-nums">
@@ -185,43 +185,37 @@ export default function SetterHome() {
             />
           </div>
 
-          <div className="flex flex-col gap-4">
-            <div className="bg-white rounded-2xl shadow-sm p-5 flex-1 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                <PhoneCall weight="duotone" className="w-6 h-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-blue-600">Dials today</div>
-                <div className="text-2xl font-semibold tabular-nums text-gray-900">
-                  <NumberTicker value={data.calls.today.attempts} />
-                </div>
-              </div>
-              <PeriodTag>Today</PeriodTag>
+          {/* Onboarding -> Dials today. Reference: left 1120 top 334
+              w296 h158, rebased (-350,-334). */}
+          <div className="absolute left-[770px] top-0 w-[296px] h-[158px] bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+              <PhoneCall weight="duotone" className="w-6 h-6" />
             </div>
-            <div className="bg-white rounded-2xl shadow-sm p-5 flex-1 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center shrink-0">
-                <PhoneIncoming weight="duotone" className="w-6 h-6" />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-blue-600">Dials today</div>
+              <div className="text-2xl font-semibold tabular-nums text-gray-900">
+                <NumberTicker value={data.calls.today.attempts} />
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-blue-600">Connects today</div>
-                <div className="text-2xl font-semibold tabular-nums text-gray-900">
-                  <NumberTicker value={data.calls.today.connects} />
-                </div>
-              </div>
-              <PeriodTag>Today</PeriodTag>
             </div>
           </div>
-        </motion.div>
 
-        {/* Row 2 - donut (Cars Sold equivalent) + bar chart (Vendor
-            Activity equivalent) + tilted reminder card (Upcoming QBR
-            equivalent, repurposed for the weekly-goal bonus streak). */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE, delay: 0.05 }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4"
-        >
-          <div className="bg-white rounded-2xl shadow-sm p-5">
+          {/* Profits -> Connects today. Reference: left 1120 top 510
+              w296 h158, rebased. */}
+          <div className="absolute left-[770px] top-[176px] w-[296px] h-[158px] bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center shrink-0">
+              <PhoneIncoming weight="duotone" className="w-6 h-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-blue-600">Connects today</div>
+              <div className="text-2xl font-semibold tabular-nums text-gray-900">
+                <NumberTicker value={data.calls.today.connects} />
+              </div>
+            </div>
+          </div>
+
+          {/* Pie chart (Cars Sold) -> Connect rate. Reference: left 350
+              top 690 w367 h307, rebased. */}
+          <div className="absolute left-0 top-[356px] w-[367px] h-[307px] bg-white rounded-xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm font-semibold text-gray-900">Connect rate</div>
               <PeriodTag>Today</PeriodTag>
@@ -229,12 +223,12 @@ export default function SetterHome() {
             <div className="flex items-center justify-center gap-6">
               <AnimatedCircularProgressBar
                 value={connectRate}
-                size={140}
-                strokeWidth={14}
+                size={120}
+                strokeWidth={12}
                 gaugePrimaryColor={BLUE}
                 gaugeSecondaryColor="#e0f2fe"
               >
-                <span className="text-2xl font-semibold tabular-nums text-gray-900">
+                <span className="text-xl font-semibold tabular-nums text-gray-900">
                   {Math.round(connectRate)}%
                 </span>
               </AnimatedCircularProgressBar>
@@ -259,7 +253,9 @@ export default function SetterHome() {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm p-5">
+          {/* Vendor activity -> Dials this week. Reference: left 737
+              top 690 w365 h307, rebased. */}
+          <div className="absolute left-[387px] top-[356px] w-[365px] h-[307px] bg-white rounded-xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm font-semibold text-gray-900">Dials this week</div>
               <PeriodTag>This week</PeriodTag>
@@ -273,7 +269,9 @@ export default function SetterHome() {
             />
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm p-5 -rotate-2 flex flex-col">
+          {/* Calendar/Upcoming QBR -> Weekly goal + bonus streak.
+              Reference: left ~1103 top ~676 w340 h349, rebased. */}
+          <div className="absolute left-[753px] top-[342px] w-[340px] h-[349px] bg-white rounded-xl shadow-sm p-5 -rotate-2 flex flex-col">
             <div className="flex items-center gap-2 mb-1">
               <CalendarCheck weight="duotone" className="w-5 h-5 text-blue-600" />
               <div className="text-sm font-semibold text-gray-900">Weekly goal</div>
@@ -307,7 +305,7 @@ export default function SetterHome() {
               <PhoneCall weight="fill" className="w-3.5 h-3.5" /> Keep dialing
             </Link>
           </div>
-        </motion.div>
+        </FigmaCanvas>
 
         {/* Row 3 - up-next call list + pipeline breakdown */}
         <motion.div
@@ -315,7 +313,7 @@ export default function SetterHome() {
           transition={{ duration: 0.4, ease: EASE, delay: 0.1 }}
           className="grid grid-cols-1 lg:grid-cols-3 gap-4"
         >
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
               <div>
                 <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Call priority</div>
@@ -325,7 +323,7 @@ export default function SetterHome() {
             </div>
             {data.up_next.length === 0 ? (
               <div className="px-5 py-10 text-center">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-gray-100 text-gray-400 mb-3">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gray-100 text-gray-400 mb-3">
                   <Coffee weight="duotone" className="w-5 h-5" />
                 </div>
                 <p className="text-sm text-gray-700 font-medium">Nothing queued up</p>
@@ -365,7 +363,7 @@ export default function SetterHome() {
             )}
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
               <div>
                 <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400">Your leads</div>
