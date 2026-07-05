@@ -8,9 +8,10 @@ import { DEFAULT_VM_SCRIPT } from '@/lib/telnyx/vm-script'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 // Vercel freezes/terminates the function the instant a response is sent,
-// so the speak->wait->hangup sequence has to be awaited inline rather
-// than scheduled with a bare setTimeout (which would never fire).
-export const maxDuration = 30
+// so the play/speak->wait->hangup sequence has to be awaited inline
+// rather than scheduled with a bare setTimeout (which would never fire).
+// 60s: recordings cap at 45s (vm-recording MAX_SECONDS) + margin.
+export const maxDuration = 60
 
 // Rough speaking-rate estimate (~150 wpm) so the auto-hangup fires only
 // after the script has actually finished playing, not mid-sentence.
@@ -63,29 +64,44 @@ export async function POST(request: NextRequest) {
     }, { status: 409 })
   }
 
-  // Personal script if the rep saved one in Settings, else the default.
+  // Preference order: the rep's own RECORDING (their real voice, set up
+  // in Settings), then their custom TTS script, then the default script.
   const { data: user } = await supabaseAdmin
     .from('custom_users')
-    .select('vm_drop_script')
+    .select('vm_drop_script, vm_drop_audio_url, vm_drop_audio_seconds')
     .eq('id', auth.userId)
     .maybeSingle()
-  const script = (user?.vm_drop_script || '').trim() || DEFAULT_VM_SCRIPT
 
-  const spoke = await telnyxAction(row.telnyx_call_id, 'speak', {
-    payload: script,
-    voice: 'Polly.Joanna',
-    language: 'en-US',
-  })
-  if (!spoke) {
-    return NextResponse.json({
-      error: 'Telnyx rejected the voicemail drop - hang up manually.',
-    }, { status: 502 })
+  let waitMs: number
+  if (user?.vm_drop_audio_url) {
+    const played = await telnyxAction(row.telnyx_call_id, 'playback_start', {
+      audio_url: user.vm_drop_audio_url,
+    })
+    if (!played) {
+      return NextResponse.json({
+        error: 'Telnyx rejected the voicemail recording - hang up manually.',
+      }, { status: 502 })
+    }
+    waitMs = ((user.vm_drop_audio_seconds || 45) + 2) * 1000
+  } else {
+    const script = (user?.vm_drop_script || '').trim() || DEFAULT_VM_SCRIPT
+    const spoke = await telnyxAction(row.telnyx_call_id, 'speak', {
+      payload: script,
+      voice: 'Polly.Joanna',
+      language: 'en-US',
+    })
+    if (!spoke) {
+      return NextResponse.json({
+        error: 'Telnyx rejected the voicemail drop - hang up manually.',
+      }, { status: 502 })
+    }
+    waitMs = speakMs(script)
   }
 
   // Must await here, not setTimeout-and-return: Vercel freezes the
   // function the moment a response is sent, so a fire-and-forget timer
   // would simply never run.
-  await new Promise((resolve) => setTimeout(resolve, speakMs(script)))
+  await new Promise((resolve) => setTimeout(resolve, waitMs))
   await telnyxAction(row.telnyx_call_id, 'hangup', {})
 
   logger.info('voicemail drop triggered', { repId: auth.userId, callRowId, leadId: row.lead_id })

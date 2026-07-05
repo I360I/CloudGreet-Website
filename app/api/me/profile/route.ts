@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
  }
  const { data, error } = await supabaseAdmin
   .from('custom_users')
-  .select('id, email, first_name, last_name, name, phone, vm_drop_script')
+  .select('id, email, first_name, last_name, name, phone, vm_drop_script, vm_drop_audio_url, vm_drop_audio_seconds')
   .eq('id', auth.userId)
   .maybeSingle()
  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
