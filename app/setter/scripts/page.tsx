@@ -68,7 +68,7 @@ function ScriptsBody() {
   if (loading) return <SetterLoadingState />
 
   return (
-    <div className="max-w-3xl px-6 py-10 space-y-6">
+    <div className="max-w-6xl mx-auto px-6 py-10 space-y-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: NAVY }}>Call scripts</h1>
@@ -78,13 +78,13 @@ function ScriptsBody() {
             automatically during calls.
           </p>
         </div>
-        <div className="relative">
-          <MagnifyingGlass className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="flex items-center gap-2 bg-white border border-[#E3EAF4] rounded-lg px-3 py-2 w-64 focus-within:border-blue-500">
+          <MagnifyingGlass className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search scripts..."
-            className="pl-9 pr-3 py-2 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-blue-500 w-64"
+            className="flex-1 min-w-0 bg-transparent text-sm focus:outline-none"
           />
         </div>
       </div>
@@ -101,41 +101,45 @@ function ScriptsBody() {
         </div>
       )}
 
-      {SECTION_ORDER.map((section) => {
-        const items = filtered
-          .filter((s) => s.section === section)
-          .sort((a, b) => a.sort_order - b.sort_order)
-        if (items.length === 0) return null
-        return (
-          <div key={section} className="bg-white rounded-xl border border-[#E3EAF4] shadow-[0_1px_2px_rgba(16,24,40,0.04)] overflow-hidden">
-            <div className="px-5 py-3 border-b border-[#EEF2F7] text-sm font-semibold" style={{ color: NAVY }}>
-              {SECTION_LABELS[section]}
+      {/* Two-column flow on wide screens - section cards fill the canvas
+          instead of stacking down the left with a blank right third. */}
+      <div className="columns-1 lg:columns-2 gap-4 [column-fill:_balance]">
+        {SECTION_ORDER.map((section) => {
+          const items = filtered
+            .filter((s) => s.section === section)
+            .sort((a, b) => a.sort_order - b.sort_order)
+          if (items.length === 0) return null
+          return (
+            <div key={section} className="break-inside-avoid mb-4 bg-white rounded-xl border border-[#E3EAF4] shadow-[0_1px_2px_rgba(16,24,40,0.04)] overflow-hidden">
+              <div className="px-5 py-3 border-b border-[#EEF2F7] text-sm font-semibold" style={{ color: NAVY }}>
+                {SECTION_LABELS[section]}
+              </div>
+              {section === 'objection' ? (
+                <div className="p-4 space-y-2">
+                  {items.map((s) => (
+                    <details key={s.id} className="group border border-[#E3EAF4] rounded-lg">
+                      <summary className="cursor-pointer list-none px-4 py-2.5 text-sm font-medium text-slate-800 flex items-center justify-between gap-2 hover:bg-[#F8FAFC] rounded-lg">
+                        <span className="truncate">&ldquo;{s.title}&rdquo;</span>
+                        <CaretDown className="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition-transform shrink-0" />
+                      </summary>
+                      <div className="px-4 pb-3 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{s.body}</div>
+                    </details>
+                  ))}
+                </div>
+              ) : (
+                <div className="divide-y divide-[#F5F8FC]">
+                  {items.map((s) => (
+                    <div key={s.id} className="px-5 py-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 mb-1.5">{s.title}</div>
+                      <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{s.body}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {section === 'objection' ? (
-              <div className="p-4 space-y-2">
-                {items.map((s) => (
-                  <details key={s.id} className="group border border-[#E3EAF4] rounded-lg">
-                    <summary className="cursor-pointer list-none px-4 py-2.5 text-sm font-medium text-slate-800 flex items-center justify-between gap-2 hover:bg-[#F8FAFC] rounded-lg">
-                      <span className="truncate">&ldquo;{s.title}&rdquo;</span>
-                      <CaretDown className="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition-transform shrink-0" />
-                    </summary>
-                    <div className="px-4 pb-3 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{s.body}</div>
-                  </details>
-                ))}
-              </div>
-            ) : (
-              <div className="divide-y divide-[#F5F8FC]">
-                {items.map((s) => (
-                  <div key={s.id} className="px-5 py-4">
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 mb-1.5">{s.title}</div>
-                    <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{s.body}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }

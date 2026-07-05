@@ -76,7 +76,7 @@ function KnowledgeBody() {
   if (loading) return <SetterLoadingState />
 
   return (
-    <div className="max-w-3xl px-6 py-10 space-y-6">
+    <div className="max-w-6xl mx-auto px-6 py-10 space-y-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: NAVY }}>Knowledge base</h1>
@@ -84,13 +84,13 @@ function KnowledgeBody() {
             Everything you need to answer prospect questions without guessing.
           </p>
         </div>
-        <div className="relative">
-          <MagnifyingGlass className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="flex items-center gap-2 bg-white border border-[#E3EAF4] rounded-lg px-3 py-2 w-64 focus-within:border-blue-500">
+          <MagnifyingGlass className="w-4 h-4 text-slate-400 shrink-0" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search articles..."
-            className="pl-9 pr-3 py-2 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-blue-500 w-64"
+            className="flex-1 min-w-0 bg-transparent text-sm focus:outline-none"
           />
         </div>
       </div>
@@ -130,9 +130,11 @@ function KnowledgeBody() {
         </div>
       )}
 
-      <div className="space-y-4">
+      {/* Masonry-style two-column flow on wide screens so the page fills
+          the canvas instead of leaving the right third empty. */}
+      <div className="columns-1 lg:columns-2 gap-4 [column-fill:_balance]">
         {filtered.map((a) => (
-          <article key={a.id} className="bg-white rounded-xl border border-[#E3EAF4] shadow-[0_1px_2px_rgba(16,24,40,0.04)] p-6">
+          <article key={a.id} className="break-inside-avoid mb-4 bg-white rounded-xl border border-[#E3EAF4] shadow-[0_1px_2px_rgba(16,24,40,0.04)] p-6">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-600 bg-blue-50 rounded-full px-2 py-0.5">
                 {CATEGORY_LABELS[a.category] || a.category}

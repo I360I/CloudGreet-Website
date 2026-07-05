@@ -52,7 +52,7 @@ function SettingsBody() {
   if (loading) return <SetterLoadingState />
 
   return (
-    <div className="max-w-2xl px-6 py-10 space-y-6">
+    <div className="max-w-5xl mx-auto px-6 py-10 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold" style={{ color: NAVY }}>Settings</h1>
         <p className="text-sm text-slate-500 mt-1">Your account, password, and dialer voicemail.</p>
@@ -64,6 +64,7 @@ function SettingsBody() {
         </div>
       )}
 
+      <div className="grid lg:grid-cols-2 gap-6 items-start">
       <Card icon={<UserCircle weight="duotone" className="w-5 h-5 text-blue-600" />} title="Account">
         <div className="grid sm:grid-cols-2 gap-3">
           <Field label="First name" value={firstName} onChange={setFirstName} />
@@ -118,6 +119,7 @@ function SettingsBody() {
       </Card>
 
       <PasswordCard />
+      </div>
     </div>
   )
 }
