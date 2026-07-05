@@ -361,19 +361,9 @@ export function OverviewDashboard({ data, firstName }: { data: Overview; firstNa
                         <div className={`text-xs text-slate-500 whitespace-nowrap ${firaCode.className}`}>{fmtPhone(lead.phone)}</div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`hidden sm:inline-flex text-[10px] font-medium px-2 py-0.5 rounded-full ${statusPill[lead.status] || 'bg-slate-100 text-slate-600'}`}>
-                        {statusLabel[lead.status] || lead.status}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => (window as any).cgDial?.(lead.phone, lead.id)}
-                        className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-                        aria-label={`Call ${lead.business_name || lead.phone}`}
-                      >
-                        <PhoneCall weight="fill" className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <span className={`hidden sm:inline-flex shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${statusPill[lead.status] || 'bg-slate-100 text-slate-600'}`}>
+                      {statusLabel[lead.status] || lead.status}
+                    </span>
                   </li>
                 ))}
               </ul>
