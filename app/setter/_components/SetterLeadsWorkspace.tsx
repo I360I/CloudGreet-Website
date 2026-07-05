@@ -385,9 +385,13 @@ export function SetterLeadsWorkspace() {
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => {
-                // Hand the current filtered list to the full-screen call
-                // cockpit (with the lead context it shows mid-call).
-                const callable = filtered
+                // Hand the queue to the full-screen call cockpit. With
+                // checkboxes ticked, session = just those leads;
+                // otherwise the whole filtered list.
+                const source = selected.size > 0
+                  ? filtered.filter((l) => selected.has(l.id))
+                  : filtered
+                const callable = source
                   .filter((l) => !!l.phone && l.status !== 'do_not_call' && l.status !== 'closed' && l.status !== 'dead')
                   .map((l) => ({
                     leadId: l.id,
@@ -403,16 +407,21 @@ export function SetterLeadsWorkspace() {
                     status: l.status,
                   }))
                 if (callable.length === 0) {
-                  alert('No callable leads in the current filter. Sessions only queue leads with a phone number that aren\'t Closed/Dead/DNC.')
+                  alert(selected.size > 0
+                    ? 'None of the selected leads are callable (needs a phone number, not Closed/Dead/DNC).'
+                    : 'No callable leads in the current filter. Sessions only queue leads with a phone number that aren\'t Closed/Dead/DNC.')
                   return
                 }
                 try { sessionStorage.setItem('cg.dialer.queue', JSON.stringify(callable)) } catch {}
                 window.location.href = '/setter/dialer'
               }}
               className="inline-flex items-center gap-1.5 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg px-3.5 py-2 transition-colors shadow-sm"
-              title="Open the call cockpit with the filtered list queued"
+              title={selected.size > 0
+                ? `Open the call cockpit with the ${selected.size} selected lead${selected.size === 1 ? '' : 's'} queued`
+                : 'Open the call cockpit with the filtered list queued'}
             >
-              <PhoneCall weight="fill" className="w-4 h-4" /> Start call session
+              <PhoneCall weight="fill" className="w-4 h-4" />
+              {selected.size > 0 ? `Start call session (${selected.size})` : 'Start call session'}
             </button>
             <Link
               href={scrapeHref}
