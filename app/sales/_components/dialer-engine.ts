@@ -148,6 +148,9 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
   const activeLeadIdRef = useRef<string | null>(null)
   // One finalize per call (Telnyx fires hangup AND destroy); reset in dial().
   const finalizedRef = useRef(false)
+  // SDK id of the call we're currently running; notifications for any
+  // other (stale) call id are ignored entirely.
+  const currentCallIdRef = useRef<string | null>(null)
   // Which log row already got its real call_control_id patched.
   const ccidSentForRowRef = useRef<string | null>(null)
 
@@ -276,6 +279,11 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
           if (cancelled) return
           if (note?.type !== 'callUpdate') return
           const c = note.call
+          // Ignore notifications for anything but the CURRENT call. The
+          // SDK emits late destroy/purge events for previous calls
+          // (notably right after a new call starts) - processing those
+          // finalized the new call instantly and double-counted dials.
+          if (c?.id && currentCallIdRef.current && c.id !== currentCallIdRef.current) return
           callRef.current = c
           const s = c?.state
           if (s === 'requesting' || s === 'trying') setCallState('connecting')
@@ -509,6 +517,11 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
         remoteElement: remoteAudioRef.current || undefined,
       })
       callRef.current = call
+      // Remember which call is CURRENT: the SDK emits late purge/destroy
+      // notifications for previous calls (especially right after a new
+      // one starts), and treating those as this call ending produced
+      // phantom "dials" and instant ended->tag screens mid-ring.
+      currentCallIdRef.current = (call as any)?.id || null
 
       // *** THE ACTUAL FIX ***
       // The Telnyx SDK explicitly mutes the local audio tracks on
