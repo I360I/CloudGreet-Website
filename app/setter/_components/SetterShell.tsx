@@ -66,7 +66,7 @@ export function SetterChrome({
           panel always runs the full page height. Inner wrapper is sticky
           so the nav stays in view on long pages. */}
       <aside
-        className="hidden lg:block w-44 shrink-0"
+        className="hidden lg:block w-52 shrink-0"
         style={{ backgroundImage: SIDEBAR_GRADIENT }}
       >
         <div className="sticky top-0 h-screen flex flex-col py-8 px-3">
@@ -94,15 +94,15 @@ export function SetterChrome({
             )
           })}
         </nav>
-        <div className="pt-4 space-y-3 border-t border-white/10 flex flex-col items-center">
-          <div className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center text-xs font-semibold uppercase shrink-0">
-            {(name || '?').slice(0, 1)}
-          </div>
+        <div className="pt-4 border-t border-white/10">
+          {name && (
+            <div className="px-3 pb-2 text-[11px] text-blue-200/60 truncate">{name}</div>
+          )}
           <button
             onClick={onSignOut}
-            className="flex flex-col items-center gap-1 text-[11px] text-blue-200/70 hover:text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 rounded px-2 py-1"
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] text-blue-200/70 hover:bg-white/[0.08] hover:text-white transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           >
-            <SignOut className="w-4 h-4" /> Sign out
+            <SignOut className="w-5 h-5 shrink-0" /> Sign out
           </button>
         </div>
         </div>
@@ -124,7 +124,7 @@ export function SetterChrome({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-lg ${
+              className={`flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg ${
                 active ? 'text-white' : 'text-blue-200/60'
               }`}
             >
