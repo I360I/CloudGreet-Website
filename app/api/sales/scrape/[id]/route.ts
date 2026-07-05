@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth, REP_TOOL_ROLES } from '@/lib/auth-middleware'
+import { normalizePhone } from '@/lib/scrapers/normalize'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -94,11 +95,3 @@ export async function DELETE(
   return NextResponse.json({ success: true })
 }
 
-function normalizePhone(p: string | null | undefined): string | null {
-  if (!p) return null
-  const digits = p.replace(/[^0-9]/g, '')
-  if (!digits) return null
-  if (digits.length === 10) return `+1${digits}`
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
-  return p.trim()
-}

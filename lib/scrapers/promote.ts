@@ -78,8 +78,19 @@ export async function promoteScrapeResults(opts: {
       const reviewCount = intOrNull(raw.google_review_count)
       const placeId = strOrNull(raw.google_place_id)
       const businessStatus = strOrNull(raw.google_business_status)
+
+      // Closed businesses never reach the dialer. discoverPlaces already
+      // drops CLOSED* for Google-sourced results; this closes the same
+      // gate for the license-DB path (TDLR/TSBPE/TDA), whose enrichment
+      // records business_status without filtering on it. The row stays
+      // unpromoted (re-skipping it on a future run is a free check).
+      if (businessStatus && /CLOSED/i.test(businessStatus)) {
+        failed++
+        continue
+      }
+
       const lastReviewAt = parseLastReviewTimestamp(raw)
-      const quality = computeQualityScore(rating, reviewCount)
+      const quality = computeQualityScore(raw, rating, reviewCount, r.website || null)
 
       const { data: lead, error: insertErr } = await supabaseAdmin
         .from('leads')
@@ -87,7 +98,10 @@ export async function promoteScrapeResults(opts: {
           name: r.business_name || 'Unknown',
           business_name: r.business_name || 'Unknown',
           contact_name: r.owner_name || null,
-          phone: r.phone || null,
+          // The NORMALIZED phone - storing the raw formatted value here
+          // was the root cause of 25% of leads carrying '+1 210-870-...'
+          // shapes that broke phone-equality dedupe.
+          phone,
           email: r.email || null,
           website: r.website || null,
           address: r.address || null,
@@ -183,16 +197,21 @@ function strOrNull(v: any): string | null {
 }
 
 /**
- * Quality score: log(reviews + 1) * rating, with a small recency bonus
- * (we don't have per-review timestamps from Places yet, so this stays
- * review-volume + rating for now). Returns null when both inputs are
- * missing - lets the UI sort known-quality leads above unknowns.
+ * Quality score. Prefers the richer score the quality-mode source
+ * already computed (rating x log10(max(10, reviews)) x website bonus,
+ * stored in raw.quality_score) - previously computed then thrown away
+ * here. Falls back to the same formula locally for other sources.
+ *
+ * Unrated businesses score 0 (NOT a phantom 3.5-star default like
+ * before): no Google presence should sink to the bottom of the
+ * "Best leads first" sort, not rank mid-pack.
  */
-function computeQualityScore(rating: number | null, reviewCount: number | null): number | null {
+function computeQualityScore(raw: any, rating: number | null, reviewCount: number | null, website: string | null): number | null {
+  const precomputed = numOrNull(raw?.quality_score)
+  if (precomputed !== null) return Math.round(precomputed * 100) / 100
   if (rating === null && reviewCount === null) return null
-  const r = rating ?? 3.5
-  const c = reviewCount ?? 0
-  const score = Math.log(c + 1) * r
+  if (rating === null) return 0
+  const score = rating * Math.log10(Math.max(10, reviewCount ?? 0)) * (website ? 1.2 : 1.0)
   return Math.round(score * 100) / 100
 }
 

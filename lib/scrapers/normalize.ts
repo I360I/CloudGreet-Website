@@ -31,13 +31,28 @@ export function normalizePhone(p: string | null | undefined): string | null {
   if (!p) return null
   const digits = String(p).replace(/[^0-9]/g, '')
   if (!digits) return null
-  if (digits.length === 10) return `+1${digits}`
-  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
-  if (digits.length >= 11) {
-    const last10 = digits.slice(-10)
-    if (last10.length === 10) return `+1${last10}`
-  }
-  return null
+  let ten: string | null = null
+  if (digits.length === 10) ten = digits
+  else if (digits.length === 11 && digits.startsWith('1')) ten = digits.slice(1)
+  else if (digits.length >= 11) ten = digits.slice(-10)
+  if (!ten) return null
+  return isJunkUsNumber(ten) ? null : `+1${ten}`
+}
+
+/**
+ * Junk-number gate on the bare 10 digits. Rejects shapes that are
+ * never real dialable US business numbers, so they can't enter the
+ * pipeline and waste a dial:
+ *   - NANP violations: area code or exchange starting with 0/1
+ *   - all ten digits identical (000..., 555-555-5555, etc.)
+ *   - the reserved fictional range 555-01XX
+ */
+function isJunkUsNumber(ten: string): boolean {
+  if (/^([0-9])\1{9}$/.test(ten)) return true
+  if (ten[0] === '0' || ten[0] === '1') return true
+  if (ten[3] === '0' || ten[3] === '1') return true
+  if (ten.slice(3, 8) === '55501') return true
+  return false
 }
 
 /**
