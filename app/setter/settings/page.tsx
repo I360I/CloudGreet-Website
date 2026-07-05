@@ -27,7 +27,6 @@ function SettingsBody() {
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [phone, setPhone] = useState('')
   const [vmScript, setVmScript] = useState('')
   const [vmAudio, setVmAudio] = useState<{ url: string; seconds: number } | null>(null)
 
@@ -40,7 +39,6 @@ function SettingsBody() {
         setEmail(j.profile.email || '')
         setFirstName(j.profile.first_name || '')
         setLastName(j.profile.last_name || '')
-        setPhone(j.profile.phone || '')
         setVmScript(j.profile.vm_drop_script || '')
         if (j.profile.vm_drop_audio_url) {
           setVmAudio({ url: j.profile.vm_drop_audio_url, seconds: j.profile.vm_drop_audio_seconds || 0 })
@@ -74,7 +72,6 @@ function SettingsBody() {
           <Field label="First name" value={firstName} onChange={setFirstName} />
           <Field label="Last name" value={lastName} onChange={setLastName} />
         </div>
-        <Field label="Phone" value={phone} onChange={setPhone} placeholder="+1 555 555 5555" />
         <div>
           <FieldLabel>Email</FieldLabel>
           <input
@@ -88,7 +85,7 @@ function SettingsBody() {
             const r = await fetchWithAuth('/api/me/profile', {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ first_name: firstName.trim(), last_name: lastName.trim(), phone: phone.trim() || null }),
+              body: JSON.stringify({ first_name: firstName.trim(), last_name: lastName.trim() }),
             })
             const j = await r.json().catch(() => ({}))
             if (!r.ok || !j?.success) throw new Error(j?.error || 'Save failed')
