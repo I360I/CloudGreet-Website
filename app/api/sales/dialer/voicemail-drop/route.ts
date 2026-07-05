@@ -76,6 +76,12 @@ export async function POST(request: NextRequest) {
   if (user?.vm_drop_audio_url) {
     const played = await telnyxAction(row.telnyx_call_id, 'playback_start', {
       audio_url: user.vm_drop_audio_url,
+      // The call_control_id we hold is the rep's WebRTC leg. Default
+      // playback target is 'self' - which played the recording into the
+      // REP's headphones while the callee's voicemail recorded silence.
+      // 'both' pushes it down the bridged callee leg (the actual
+      // voicemail) and lets the rep hear it as confirmation.
+      target_legs: 'both',
     })
     if (!played) {
       return NextResponse.json({
@@ -89,6 +95,10 @@ export async function POST(request: NextRequest) {
       payload: script,
       voice: 'Polly.Joanna',
       language: 'en-US',
+      // target_legs is documented for playback_start; sent here too in
+      // case speak honors it (extra fields are tolerated). The primary
+      // path is the recording above - record one in Settings.
+      target_legs: 'both',
     })
     if (!spoke) {
       return NextResponse.json({
