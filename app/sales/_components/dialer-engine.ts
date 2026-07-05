@@ -320,7 +320,14 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
             // Telnyx fires SEPARATE notifications for hangup and destroy
             // on the same call - finalizing on each doubled every session
             // stat (6 "dials" for 3 calls). Guard: one finalize per call.
-            if (finalizedRef.current) return
+            // CRITICAL: still clear callRef before returning - the handler
+            // top just re-stored this dead call, and a stale callRef makes
+            // every subsequent dial() no-op ("already on a call"), which
+            // froze queues into instant ended->tag loops after call #1.
+            if (finalizedRef.current) {
+              callRef.current = null
+              return
+            }
             finalizedRef.current = true
             // Release the mic stream we captured at dial time. Without
             // this the browser keeps the mic active across calls and
