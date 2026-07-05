@@ -241,10 +241,8 @@ function VmRecorder({ vmAudio, onChanged }: {
     <div className="space-y-3">
       {vmAudio && phase === 'idle' && !preview && (
         <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
-          <CheckCircle weight="fill" className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span className="text-xs text-emerald-900">Recording saved ({vmAudio.seconds}s)</span>
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-          <audio controls src={vmAudio.url} className="h-8 flex-1 min-w-0" preload="none" />
+          <PlayButton src={vmAudio.url} seconds={vmAudio.seconds} tone="emerald" />
+          <span className="text-xs text-emerald-900 flex-1">Recording saved ({vmAudio.seconds}s)</span>
           <button onClick={removeSaved} className="p-1.5 text-slate-400 hover:text-rose-600" title="Remove recording" aria-label="Remove recording">
             <TrashSimple className="w-4 h-4" />
           </button>
@@ -254,10 +252,8 @@ function VmRecorder({ vmAudio, onChanged }: {
       {phase === 'preview' && preview ? (
         <div className="space-y-2">
           <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2.5">
-            <Play weight="fill" className="w-4 h-4 text-blue-600 shrink-0" />
-            <span className="text-xs text-blue-900">New take ({preview.seconds}s) - listen before saving</span>
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-            <audio controls src={preview.url} className="h-8 flex-1 min-w-0" />
+            <PlayButton src={preview.url} seconds={preview.seconds} tone="blue" />
+            <span className="text-xs text-blue-900 flex-1">New take ({preview.seconds}s) - listen before saving</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -300,6 +296,76 @@ function VmRecorder({ vmAudio, onChanged }: {
 
       {err && <div className="text-xs text-rose-600">{err}</div>}
     </div>
+  )
+}
+
+/**
+ * One-button audio player with a countdown while playing. Replaces the
+ * native <audio controls>, which collapsed to an unusable sliver inside
+ * the flex row and confused everyone with a decorative icon next to it.
+ */
+function PlayButton({ src, seconds, tone }: { src: string; seconds: number; tone: 'blue' | 'emerald' }) {
+  const [playing, setPlaying] = useState(false)
+  const [remaining, setRemaining] = useState(seconds)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [err, setErr] = useState(false)
+
+  useEffect(() => () => {
+    if (tickRef.current) clearInterval(tickRef.current)
+    try { audioRef.current?.pause() } catch {}
+    audioRef.current = null
+  }, [])
+
+  const stopTicking = () => {
+    if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null }
+  }
+
+  const toggle = async () => {
+    setErr(false)
+    if (playing) {
+      try { audioRef.current?.pause() } catch {}
+      audioRef.current = null
+      stopTicking()
+      setPlaying(false)
+      setRemaining(seconds)
+      return
+    }
+    const a = new Audio(src)
+    audioRef.current = a
+    a.onended = () => { stopTicking(); setPlaying(false); setRemaining(seconds) }
+    a.onerror = () => { stopTicking(); setPlaying(false); setErr(true) }
+    try {
+      await a.play()
+    } catch {
+      setErr(true)
+      return
+    }
+    setPlaying(true)
+    setRemaining(seconds)
+    tickRef.current = setInterval(() => {
+      if (audioRef.current) setRemaining(Math.max(0, Math.ceil(seconds - audioRef.current.currentTime)))
+    }, 250)
+  }
+
+  const colors = tone === 'blue'
+    ? 'bg-blue-600 hover:bg-blue-700'
+    : 'bg-emerald-600 hover:bg-emerald-700'
+
+  return (
+    <span className="inline-flex items-center gap-2 shrink-0">
+      <button
+        type="button"
+        onClick={() => void toggle()}
+        className={`inline-flex items-center justify-center w-9 h-9 rounded-full text-white transition-colors duration-150 ${colors}`}
+        aria-label={playing ? 'Stop playback' : 'Play recording'}
+        title={playing ? 'Stop' : 'Listen'}
+      >
+        {playing ? <Stop weight="fill" className="w-4 h-4" /> : <Play weight="fill" className="w-4 h-4" />}
+      </button>
+      {playing && <span className="text-[11px] tabular-nums text-slate-500">{remaining}s</span>}
+      {err && <span className="text-[11px] text-rose-600">Playback failed - hard-refresh (Cmd+Shift+R)</span>}
+    </span>
   )
 }
 
