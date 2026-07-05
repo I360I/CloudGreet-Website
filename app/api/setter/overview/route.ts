@@ -8,19 +8,26 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * GET /api/setter/overview
+ * GET /api/setter/overview?range=today|week|all
  *
  * Setter-only (not shared with 'sales' via REP_TOOL_ROLES - this is the
  * one surface that's genuinely specific to the setter role). Feeds
  * /setter's Overview page: today's + this week's call activity, plus
  * lead-pipeline counts so a setter can see their queue and their
  * headline output metric (demos booked).
+ *
+ * `range` shapes the hero chart's `series`: today = hourly over the
+ * last 24h, week (default) = daily over 7 days, all = weekly buckets
+ * back to the setter's first call (capped at 26 weeks).
  */
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)
   if (!auth.success || !auth.userId || auth.role !== 'setter') {
     return NextResponse.json({ error: 'Setter role required' }, { status: 401 })
   }
+  const rangeParam = new URL(request.url).searchParams.get('range')
+  const range: 'today' | 'week' | 'all' =
+    rangeParam === 'today' || rangeParam === 'all' ? rangeParam : 'week'
 
   try {
     const now = new Date()
@@ -93,6 +100,82 @@ export async function GET(request: NextRequest) {
     const daily = dailyCalls.map((d) => ({ ...d, demos: demosByDay.get(d.date) || 0 }))
     const weeklyGoal = await getWeeklyDemoGoalStatus(auth.userId, weeklyGoalTarget)
 
+    // Hero-chart series for the requested range. Points carry an ISO
+    // `key` the client formats in the viewer's timezone.
+    let series: { range: string; points: { key: string; dials: number; connects: number; demos: number }[]; demos_total: number }
+    const demoRows = rows.filter((r) => r.status === 'demo_scheduled' && r.last_touched_at)
+    if (range === 'today') {
+      // Rolling last 24 hours, hourly buckets (avoids UTC-midnight
+      // weirdness for reps in other timezones).
+      const startHour = new Date(now)
+      startHour.setUTCMinutes(0, 0, 0)
+      startHour.setUTCHours(startHour.getUTCHours() - 23)
+      const points = Array.from({ length: 24 }, (_, i) => {
+        const d = new Date(startHour.getTime() + i * 3600e3)
+        return { key: d.toISOString(), dials: 0, connects: 0, demos: 0 }
+      })
+      const idx = (iso: string) => Math.floor((new Date(iso).getTime() - startHour.getTime()) / 3600e3)
+      const { data: calls } = await supabaseAdmin
+        .from('rep_calls')
+        .select('status, started_at, duration_seconds')
+        .eq('rep_id', auth.userId)
+        .gte('started_at', startHour.toISOString())
+      for (const c of (calls || []) as any[]) {
+        const i = idx(c.started_at)
+        if (i < 0 || i > 23) continue
+        points[i].dials += 1
+        if (c.status === 'completed' && (c.duration_seconds || 0) > 30) points[i].connects += 1
+      }
+      for (const r of demoRows) {
+        const i = idx(r.last_touched_at)
+        if (i >= 0 && i <= 23) points[i].demos += 1
+      }
+      series = { range, points, demos_total: points.reduce((s, p) => s + p.demos, 0) }
+    } else if (range === 'all') {
+      // Weekly buckets back to the first call (min 4, max 26 weeks).
+      const { data: firstCall } = await supabaseAdmin
+        .from('rep_calls')
+        .select('started_at')
+        .eq('rep_id', auth.userId)
+        .order('started_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      const firstAt = firstCall?.started_at ? new Date(firstCall.started_at) : todayStart
+      const weeksSince = Math.ceil((todayStart.getTime() - firstAt.getTime()) / (7 * 86400e3)) + 1
+      const weeks = Math.min(26, Math.max(4, weeksSince))
+      const rangeStart = new Date(todayStart)
+      rangeStart.setUTCDate(rangeStart.getUTCDate() - (7 * weeks - 1))
+      const points = Array.from({ length: weeks }, (_, i) => {
+        const d = new Date(rangeStart.getTime() + i * 7 * 86400e3)
+        return { key: d.toISOString().slice(0, 10), dials: 0, connects: 0, demos: 0 }
+      })
+      const idx = (iso: string) => Math.floor((new Date(String(iso).slice(0, 10) + 'T00:00:00Z').getTime() - rangeStart.getTime()) / (7 * 86400e3))
+      const { data: calls } = await supabaseAdmin
+        .from('rep_calls')
+        .select('status, started_at, duration_seconds')
+        .eq('rep_id', auth.userId)
+        .gte('started_at', rangeStart.toISOString())
+      for (const c of (calls || []) as any[]) {
+        const i = idx(c.started_at)
+        if (i < 0 || i >= weeks) continue
+        points[i].dials += 1
+        if (c.status === 'completed' && (c.duration_seconds || 0) > 30) points[i].connects += 1
+      }
+      for (const r of demoRows) {
+        const i = idx(r.last_touched_at)
+        if (i >= 0 && i < weeks) points[i].demos += 1
+      }
+      // All-time headline counts every currently-scheduled demo, not
+      // just ones inside the (capped) chart window.
+      series = { range, points, demos_total: demoRows.length }
+    } else {
+      series = {
+        range,
+        points: daily.map((d) => ({ key: d.date, dials: d.dials, connects: d.connects, demos: d.demos })),
+        demos_total: demosScheduledSince(weekStart),
+      }
+    }
+
     return NextResponse.json({
       success: true,
       calls: { today, week },
@@ -102,6 +185,7 @@ export async function GET(request: NextRequest) {
         demos_booked_week: demosScheduledSince(weekStart),
       },
       daily,
+      series,
       up_next: upNext,
       weekly_goal: weeklyGoal,
     })

@@ -1,7 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
   PhoneCall, PhoneIncoming, Target, CaretRight, Coffee, CalendarCheck,
 } from '@phosphor-icons/react'
@@ -52,8 +54,16 @@ export type Overview = {
     demos_booked_week: number
   }
   daily: { date: string; dials: number; connects: number; demos: number }[]
+  series?: RangeSeries
   up_next: UpNextLead[]
   weekly_goal: WeeklyGoal
+}
+
+export type ChartRange = 'today' | 'week' | 'all'
+export type RangeSeries = {
+  range: string
+  points: { key: string; dials: number; connects: number; demos: number }[]
+  demos_total: number
 }
 
 const fmtPhone = (raw: string) => {
@@ -98,6 +108,40 @@ function Card({ className = '', children }: { className?: string; children: Reac
  */
 export function OverviewDashboard({ data, firstName }: { data: Overview; firstName: string | null }) {
   const reduceMotion = useReducedMotion()
+
+  // Hero-chart range: 'week' renders from the data prop; the other two
+  // fetch their series on demand (keyed per range, cached in state).
+  const [range, setRange] = useState<ChartRange>('week')
+  const [seriesByRange, setSeriesByRange] = useState<Partial<Record<ChartRange, RangeSeries>>>({})
+  useEffect(() => {
+    if (range === 'week' || seriesByRange[range]) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const r = await fetchWithAuth(`/api/setter/overview?range=${range}`)
+        const j = await r.json().catch(() => ({}))
+        if (!cancelled && j?.series) setSeriesByRange((prev) => ({ ...prev, [range]: j.series }))
+      } catch { /* keep whatever's shown */ }
+    })()
+    return () => { cancelled = true }
+  }, [range, seriesByRange])
+
+  const weekSeries: RangeSeries = data.series && data.series.range === 'week'
+    ? data.series
+    : {
+        range: 'week',
+        points: data.daily.map((d) => ({ key: d.date, dials: d.dials, connects: d.connects, demos: d.demos })),
+        demos_total: data.leads.demos_booked_week,
+      }
+  const activeSeries = range === 'week' ? weekSeries : (seriesByRange[range] || weekSeries)
+  const seriesLoading = range !== 'week' && !seriesByRange[range]
+  const pointLabel = (key: string) =>
+    range === 'today'
+      ? new Date(key).toLocaleTimeString(undefined, { hour: 'numeric' })
+      : range === 'all'
+        ? new Date(`${key}T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })
+        : dayLabel(key)
+  const demosCaption = range === 'today' ? 'Demos booked today' : range === 'all' ? 'Demos booked all-time' : 'Demos booked this week'
 
   const connectRate =
     data.calls.today.attempts > 0
@@ -159,9 +203,9 @@ export function OverviewDashboard({ data, firstName }: { data: Overview; firstNa
             <div className="flex items-start justify-between flex-wrap gap-3">
               <div>
                 <div className="text-5xl leading-none font-semibold" style={{ color: NAVY }}>
-                  <NumberTicker value={data.leads.demos_booked_week} />
+                  <NumberTicker value={activeSeries.demos_total} />
                 </div>
-                <div className="text-sm font-medium text-blue-600 mt-2">Demos booked this week</div>
+                <div className="text-sm font-medium text-blue-600 mt-2">{demosCaption}</div>
               </div>
               <div className="flex items-center gap-4 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
@@ -170,18 +214,33 @@ export function OverviewDashboard({ data, firstName }: { data: Overview; firstNa
                 <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CYAN }} /> Connects
                 </span>
-                <PeriodTag>This week</PeriodTag>
+                <div className="inline-flex rounded-lg border border-[#E3EAF4] bg-white p-0.5">
+                  {([['today', 'Today'], ['week', 'This week'], ['all', 'All-time']] as [ChartRange, string][]).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setRange(value)}
+                      className={`text-[11px] font-medium rounded-md px-2.5 py-1 transition-colors duration-150 ${
+                        range === value ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <DualLineChart
-              labels={data.daily.map((d) => dayLabel(d.date))}
-              seriesA={data.daily.map((d) => d.dials)}
-              seriesB={data.daily.map((d) => d.connects)}
-              colorA={BLUE}
-              colorB={CYAN}
-              height={190}
-              className="mt-5"
-            />
+            <div className={seriesLoading ? 'opacity-50 transition-opacity' : 'transition-opacity'}>
+              <DualLineChart
+                labels={activeSeries.points.map((p) => pointLabel(p.key))}
+                seriesA={activeSeries.points.map((p) => p.dials)}
+                seriesB={activeSeries.points.map((p) => p.connects)}
+                colorA={BLUE}
+                colorB={CYAN}
+                height={190}
+                className="mt-5"
+              />
+            </div>
           </Card>
         </motion.div>
 
