@@ -95,9 +95,21 @@
 - Sends REQUIRE the rep's own active DID (409 otherwise) — the old env
   fallback (+15129425428) is gone because replies to a shared number can't
   route back to a rep; that number is unrouted for inbound. The setter
-  (Anthony Edwards) owns +17379370133 ('Setter line', reassigned from
-  Aiden's idle pool 2026-07-06, sql/assign-setter-did.sql). Unmatched
-  inbound texts log a warn in sms-webhook instead of dropping silently.
+  line +17379370133 (reassigned from Aiden's idle pool 2026-07-06,
+  sql/assign-setter-did.sql) is now owned by **Ed Nievera**
+  (0fb9833c-5963-4350-b9cf-77fd854c34c7, ednievera22@gmail.com) — the
+  real, active setter hire (created 2026-07-06, the one texting on
+  WhatsApp about leads). CORRECTION: earlier same-session notes said
+  "Anthony Edwards" (2346a0b3-903a-4650-be94-532a60e40512,
+  chenmomoney@gmail.com) owned this number — that account still exists
+  (1 assigned lead, 21 old rep_calls rows, likely a test/placeholder
+  from earlier setup) but the phone row's rep_id was repointed to Ed
+  Nievera at some point after his account was created; all this
+  session's SMS/10DLC diagnostic work applies to the same physical
+  number regardless, so nothing was wasted. Ed Nievera also has a
+  second number, +18885030906 ("SMS line (toll-free)", inactive,
+  unexplored — flagged, not yet investigated). Unmatched inbound texts
+  log a warn in sms-webhook instead of dropping silently.
 - Delivery receipts: message.finalized DLRs stamp rep_messages.status
   (delivered/delivery_failed) + error_detail; SmsThread shows "delivered"
   or a red "Not delivered - {reason}" on outbound bubbles.
