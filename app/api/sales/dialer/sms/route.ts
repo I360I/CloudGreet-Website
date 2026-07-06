@@ -208,15 +208,20 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
   if (!lead?.phone) return NextResponse.json({ error: 'Lead has no phone number' }, { status: 400 })
 
-  // From-number: rep's active DID first, env fallbacks after.
-  let fromNumber = process.env.TELNYX_REP_SMS_FROM_NUMBER || process.env.TELNYX_OUTBOUND_FROM_NUMBER || ''
+  // From-number: the rep's active DID, and ONLY that. There used to be
+  // an env-number fallback here, but replies to a shared fallback number
+  // can't be routed back to any rep - the owner's live test proved texts
+  // to it just vanish. Better to refuse the send than lose the reply.
+  let fromNumber = ''
   try {
     const nums = await listRepNumbers(auth.userId)
     const active = (nums as any[])?.find((n) => n.is_active)
     if (active?.phone_number) fromNumber = active.phone_number
-  } catch { /* env fallback */ }
+  } catch { /* handled below */ }
   if (!fromNumber) {
-    return NextResponse.json({ error: 'No from-number configured for SMS' }, { status: 503 })
+    return NextResponse.json({
+      error: 'No dialer number assigned to your account - texts need one so replies come back to you. Ask admin.',
+    }, { status: 409 })
   }
 
   try {

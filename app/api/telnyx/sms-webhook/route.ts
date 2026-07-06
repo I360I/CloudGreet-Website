@@ -212,6 +212,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Nothing claimed this number. Don't fail (Telnyx would retry-storm),
+    // but leave a findable trace - a silent drop here is how the setter
+    // SMS test failure went unnoticed.
+    logger.warn('inbound SMS matched no rep DID or business number - dropped', {
+      to: toNumber, from: fromNumber,
+    })
     return NextResponse.json({ received: true })
   } catch (e) {
     logger.error('telnyx sms webhook threw', {

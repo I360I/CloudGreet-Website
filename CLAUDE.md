@@ -58,11 +58,17 @@
   notifyRep, lead note, STOP reply → lead flips do_not_call, non-negotiable).
   /api/telnyx/rep-sms-webhook still exists as a thin spare over the same
   handler — don't let the two drift.
-- Reading: GET /api/sales/dialer/sms (?lead_id thread + mark_read, ?inbox=1
-  per-lead threads + unread, ?unread_count=1 badge). UI: shared
-  SmsThread.tsx renders in the cockpit's Text follow-up card AND the
-  /setter/messages inbox page (Messages nav item with amber unread badge,
-  30s poll in SetterShell).
+- Reading: GET /api/sales/dialer/sms (?lead_id thread + mark_read, ?phone=
+  thread for numbers that matched no lead, ?inbox=1 per-thread list +
+  unread, ?unread_count=1 badge). UI: shared SmsThread.tsx renders in the
+  cockpit's Text follow-up card AND the /setter/messages inbox page
+  (Messages nav item with amber unread badge, 30s poll in SetterShell).
+- Sends REQUIRE the rep's own active DID (409 otherwise) — the old env
+  fallback (+15129425428) is gone because replies to a shared number can't
+  route back to a rep; that number is unrouted for inbound. The setter
+  (Anthony Edwards) owns +17379370133 ('Setter line', reassigned from
+  Aiden's idle pool 2026-07-06, sql/assign-setter-did.sql). Unmatched
+  inbound texts log a warn in sms-webhook instead of dropping silently.
 
 ## Callbacks & inbound return calls
 - Scheduled callbacks resurface: /api/setter/overview pins
