@@ -98,7 +98,17 @@ export async function listRepNumbers(repId: string): Promise<RepPhoneNumber[]> {
  */
 export async function orderRepNumber(
   repId: string,
-  opts?: { areaCode?: string; label?: string },
+  opts?: {
+    areaCode?: string
+    label?: string
+    /** Fail instead of falling back to a random area code when Telnyx
+     *  has no inventory in the requested one - a random-area number is
+     *  useless for local presence and just burns a slot. */
+    exactAreaCodeOnly?: boolean
+    /** Numbers the eviction pass must not touch (e.g. area codes the
+     *  current call session still needs). */
+    protectNumbers?: string[]
+  },
 ): Promise<OrderResult> {
   const tx = telnyxAuth()
   if (!tx) return { ok: false, error: 'Missing TELNYX_API_KEY or TELNYX_SIP_CONNECTION_ID' }
@@ -120,8 +130,15 @@ export async function orderRepNumber(
   }
 
   let phoneNumber = await search(opts?.areaCode)
-  if (!phoneNumber && opts?.areaCode) phoneNumber = await search()
-  if (!phoneNumber) return { ok: false, error: 'No available US local DIDs returned by Telnyx' }
+  if (!phoneNumber && opts?.areaCode && !opts?.exactAreaCodeOnly) phoneNumber = await search()
+  if (!phoneNumber) {
+    return {
+      ok: false,
+      error: opts?.exactAreaCodeOnly
+        ? `No Telnyx inventory in area code ${opts?.areaCode}`
+        : 'No available US local DIDs returned by Telnyx',
+    }
+  }
 
   // 2. Order it.
   const orderRes = await fetch(`${TELNYX_API}/number_orders`, {
@@ -170,8 +187,9 @@ export async function orderRepNumber(
   // never be evicted - losing one silently kills the rep's texting.
   const existing = (await listRepNumbers(repId)).filter((n) => !n.is_sms_line)
   if (existing.length >= MAX_NUMBERS_PER_REP) {
+    const protectedSet = new Set(opts?.protectNumbers || [])
     const oldestNonActive = [...existing]
-      .filter((n) => !n.is_active)
+      .filter((n) => !n.is_active && !protectedSet.has(n.phone_number))
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0]
     if (oldestNonActive) {
       const released = await releaseTelnyxNumber(oldestNonActive.phone_number)

@@ -90,7 +90,9 @@ export function DialerCockpit() {
     queue, queueIndex, queueActive, currentItem,
     queuePaused, countdown, postCallStatus, setPostCallStatus,
     startQueue, togglePause, skipCurrent, stopQueue, persistDisposition,
+    refreshNumbers,
   } = engine
+  const [prepping, setPrepping] = useState(false)
 
   // Load the session queue handed over from the leads page.
   useEffect(() => {
@@ -195,8 +197,40 @@ export function DialerCockpit() {
     return () => window.removeEventListener('keydown', onKey)
   }, [callState, inCall, queueActive, chooseDisposition, openCallback, openBookingLink, toggleMute, dropVoicemail, hangup, togglePause, demoModalLeadId, callbackLeadId, bookingLinkLeadId])
 
-  const start = () => {
-    if (!queueInput?.length) return
+  const start = async () => {
+    if (!queueInput?.length || prepping) return
+
+    // Auto local presence: make sure the number pool covers this
+    // session's top area codes, so the engine's per-call matcher can
+    // ring Dallas leads from a 214, Austin from a 512, etc. Bounded
+    // server-side (3-number cap, max 2 orders, exact-NPA only) so it
+    // can't run up the Telnyx bill. Best-effort with a hard timeout -
+    // the session starts either way.
+    setPrepping(true)
+    try {
+      const counts = new Map<string, number>()
+      for (const l of queueInput) {
+        const npa = (l.phone || '').replace(/\D/g, '').replace(/^1/, '').slice(0, 3)
+        if (npa.length === 3) counts.set(npa, (counts.get(npa) || 0) + 1)
+      }
+      const areaCodes = Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([code, count]) => ({ code, count }))
+      if (areaCodes.length > 0) {
+        await Promise.race([
+          fetchWithAuth('/api/sales/dialer/local-presence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ area_codes: areaCodes }),
+          }).then(() => refreshNumbers()),
+          new Promise((resolve) => setTimeout(resolve, 20_000)),
+        ])
+      }
+    } catch { /* local presence is a bonus, never a blocker */ } finally {
+      setPrepping(false)
+    }
+
     sessionStartRef.current = Date.now()
     setPhase('running')
     startQueue(queueInput.map(({ leadId, phone, businessName, contactName }) => ({ leadId, phone, businessName, contactName })))
@@ -312,13 +346,16 @@ export function DialerCockpit() {
             Hotkeys: 1-7 tag the call · C callback · B book link · M mute · V drop VM · H hang up · N note · Space pause
           </div>
           <button
-            onClick={start}
-            disabled={status !== 'ready'}
+            onClick={() => void start()}
+            disabled={status !== 'ready' || prepping}
             className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg px-4 py-3 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <PhoneCall weight="fill" className="w-4 h-4" />
-            {status === 'ready' ? `Start dialing (${queueInput.length})` : 'Waiting for dialer…'}
+            {prepping ? <CircleNotch className="w-4 h-4 animate-spin" /> : <PhoneCall weight="fill" className="w-4 h-4" />}
+            {prepping ? 'Getting local numbers…' : status === 'ready' ? `Start dialing (${queueInput.length})` : 'Waiting for dialer…'}
           </button>
+          <div className="mt-2 text-[11px] text-slate-400 text-center">
+            Caller ID auto-matches each lead&apos;s area code when a local number is available.
+          </div>
         </div>
       </div>
     )
