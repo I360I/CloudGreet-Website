@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { CircleNotch, UserPlus, Envelope, Copy, WarningCircle, CheckCircle, PhoneCall, Key } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
@@ -143,11 +144,13 @@ export default function AdminSettersPage() {
             ) : (
               <ul className="divide-y divide-white/[0.04]">
                 {setters.map((s) => (
-                  <li key={s.id} className="px-5 sm:px-6 py-4">
+                  <li key={s.id} className="px-5 sm:px-6 py-4 hover:bg-white/[0.02] transition-colors">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <div className="min-w-0">
                         <div className="text-sm font-medium text-white flex items-center gap-2 flex-wrap">
-                          {s.name}
+                          <Link href={`/admin/setters/${s.id}`} className="hover:text-sky-300 transition-colors">
+                            {s.name}
+                          </Link>
                           {s.weekly_goal.bonus_earned && (
                             <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-400/20 rounded-full px-2 py-0.5">
                               ${s.weekly_goal.bonus_amount} bonus earned

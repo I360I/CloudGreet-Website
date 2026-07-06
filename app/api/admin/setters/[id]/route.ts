@@ -2,9 +2,149 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { normalizePhone } from '@/lib/scrapers/normalize'
+import { getRepCallStats, getRepDailySeries, getWeeklyDemoGoalStatus } from '@/lib/sales/dialer-stats'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+
+/**
+ * GET /api/admin/setters/[id]
+ *
+ * Everything the owner needs about one setter in a single payload:
+ * identity + account state, call stats (today / week / all-time),
+ * 14-day activity series, lead pipeline counts, demos set (closes
+ * attribution), recent calls, messaging health, and phone numbers.
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const auth = await requireAdmin(request)
+  if (!auth.success) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: user } = await supabaseAdmin
+    .from('custom_users')
+    .select('id, email, first_name, last_name, name, is_active, created_at, last_login, last_active_at, assigned_rep_id, weekly_demo_goal, personal_cell, vm_drop_audio_url, vm_drop_script')
+    .eq('id', params.id)
+    .eq('role', 'setter')
+    .maybeSingle()
+  if (!user) return NextResponse.json({ error: 'Setter not found' }, { status: 404 })
+
+  const epoch = new Date(0)
+  const now = new Date()
+  const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  weekStart.setUTCDate(weekStart.getUTCDate() - 6)
+
+  const [today, week, allTime, daily, goal, { data: assignments }, { data: numbers }, { data: closes }] = await Promise.all([
+    getRepCallStats(params.id),
+    getRepCallStats(params.id, { since: weekStart }),
+    getRepCallStats(params.id, { since: epoch }),
+    getRepDailySeries(params.id, 14),
+    getWeeklyDemoGoalStatus(params.id, (user as any).weekly_demo_goal ?? 2),
+    supabaseAdmin.from('lead_assignments').select('status, last_touched_at').eq('rep_id', params.id),
+    supabaseAdmin.from('sales_rep_phone_numbers').select('phone_number, label, is_active, is_sms_line').eq('rep_id', params.id),
+    supabaseAdmin
+      .from('closes')
+      .select('id, prospect_business_name, status, demo_scheduled_at, created_at')
+      .eq('set_by_setter_id', params.id)
+      .order('created_at', { ascending: false })
+      .limit(15),
+  ])
+
+  const rows = (assignments || []) as { status: string; last_touched_at: string | null }[]
+  const countBy = (s: string) => rows.filter((r) => r.status === s).length
+  const pipeline = {
+    total: rows.length,
+    new: countBy('new'),
+    called: countBy('called'),
+    voicemail: countBy('voicemail'),
+    interested: countBy('interested'),
+    demo_scheduled: countBy('demo_scheduled'),
+    demo_showed: countBy('demo_showed'),
+    dead: countBy('dead'),
+    do_not_call: countBy('do_not_call'),
+    untouched: rows.filter((r) => !r.last_touched_at).length,
+  }
+
+  // Recent calls with lead names (manual join, same pattern as elsewhere).
+  const { data: recentCalls } = await supabaseAdmin
+    .from('rep_calls')
+    .select('started_at, status, duration_seconds, to_number, lead_id')
+    .eq('rep_id', params.id)
+    .order('started_at', { ascending: false })
+    .limit(15)
+  const callLeadIds = Array.from(new Set((recentCalls || []).map((c: any) => c.lead_id).filter(Boolean)))
+  const leadNames = new Map<string, string>()
+  if (callLeadIds.length > 0) {
+    const { data: leadRows } = await supabaseAdmin
+      .from('leads').select('id, business_name').in('id', callLeadIds)
+    for (const l of (leadRows || []) as any[]) leadNames.set(l.id, l.business_name)
+  }
+
+  // Messaging health.
+  const msgCount = async (apply: (q: any) => any) => {
+    const q = apply(
+      supabaseAdmin.from('rep_messages').select('id', { count: 'exact', head: true }).eq('rep_id', params.id),
+    )
+    const { count } = await q
+    return count || 0
+  }
+  const [msgSent, msgReceived, msgFailed] = await Promise.all([
+    msgCount((q) => q.eq('direction', 'outbound')),
+    msgCount((q) => q.eq('direction', 'inbound')),
+    msgCount((q) => q.eq('direction', 'outbound').eq('status', 'delivery_failed')),
+  ])
+
+  // Rep options for the assignment dropdown.
+  const { data: repRows } = await supabaseAdmin
+    .from('custom_users')
+    .select('id, email, first_name, last_name, name, is_active')
+    .eq('role', 'sales')
+  const reps = (repRows || [])
+    .filter((r: any) => r.is_active !== false)
+    .map((r: any) => ({
+      id: r.id,
+      name: r.name || [r.first_name, r.last_name].filter(Boolean).join(' ').trim() || r.email,
+    }))
+
+  return NextResponse.json({
+    success: true,
+    setter: {
+      id: user.id,
+      email: user.email,
+      name: (user as any).name || [(user as any).first_name, (user as any).last_name].filter(Boolean).join(' ').trim() || user.email,
+      is_active: !!(user as any).is_active,
+      created_at: (user as any).created_at,
+      last_active: [(user as any).last_active_at, (user as any).last_login].filter(Boolean).sort().pop() || null,
+      assigned_rep_id: (user as any).assigned_rep_id || null,
+      weekly_demo_goal: (user as any).weekly_demo_goal ?? 2,
+      personal_cell: (user as any).personal_cell || null,
+      has_vm_recording: !!(user as any).vm_drop_audio_url,
+      has_vm_script: !!(user as any).vm_drop_script,
+    },
+    calls: { today, week, all_time: allTime },
+    daily,
+    weekly_goal: goal,
+    pipeline,
+    demos_set: (closes || []).map((c: any) => ({
+      id: c.id,
+      business: c.prospect_business_name,
+      status: c.status,
+      demo_at: c.demo_scheduled_at,
+      created_at: c.created_at,
+    })),
+    recent_calls: (recentCalls || []).map((c: any) => ({
+      at: c.started_at,
+      status: c.status,
+      seconds: c.duration_seconds || 0,
+      to: c.to_number,
+      lead: c.lead_id ? (leadNames.get(c.lead_id) || null) : null,
+    })),
+    messages: { sent: msgSent, received: msgReceived, failed: msgFailed },
+    numbers: numbers || [],
+    reps,
+  })
+}
 
 /**
  * PATCH /api/admin/setters/[id]
