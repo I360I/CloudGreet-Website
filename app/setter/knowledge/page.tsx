@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CircleNotch, MagnifyingGlass, WarningCircle, BookOpen } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { SetterShell, SetterLoadingState } from '../_components/SetterShell'
+import { SetterLoadingState } from '../_components/SetterShell'
 
 const NAVY = '#1E3A8A'
 
@@ -30,11 +30,7 @@ const CATEGORY_LABELS: Record<string, string> = {
  * call. Content is admin-managed (admin panel > Knowledge).
  */
 export default function SetterKnowledgePage() {
-  return (
-    <SetterShell activeLabel="Knowledge">
-      <KnowledgeBody />
-    </SetterShell>
-  )
+  return <KnowledgeBody />
 }
 
 function KnowledgeBody() {

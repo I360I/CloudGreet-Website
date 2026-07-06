@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CircleNotch, CheckCircle, WarningCircle, Voicemail, LockKey, UserCircle, Microphone, Stop, TrashSimple, Play } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { SetterShell, SetterLoadingState } from '../_components/SetterShell'
+import { SetterLoadingState } from '../_components/SetterShell'
 import { DEFAULT_VM_SCRIPT } from '@/lib/telnyx/vm-script'
 
 const NAVY = '#1E3A8A'
@@ -14,11 +14,7 @@ const NAVY = '#1E3A8A'
  * vm_drop_script; blank = the CloudGreet default).
  */
 export default function SetterSettingsPage() {
-  return (
-    <SetterShell activeLabel="Settings">
-      <SettingsBody />
-    </SetterShell>
-  )
+  return <SettingsBody />
 }
 
 function SettingsBody() {

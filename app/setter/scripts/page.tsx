@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CircleNotch, MagnifyingGlass, CaretDown, WarningCircle } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { SetterShell, SetterLoadingState } from '../_components/SetterShell'
+import { SetterLoadingState } from '../_components/SetterShell'
 
 const NAVY = '#1E3A8A'
 
@@ -31,11 +31,7 @@ const SECTION_ORDER: Script['section'][] = ['opener', 'discovery', 'pitch', 'obj
  * Content is managed by admin (/admin/scripts).
  */
 export default function SetterScriptsPage() {
-  return (
-    <SetterShell activeLabel="Scripts">
-      <ScriptsBody />
-    </SetterShell>
-  )
+  return <ScriptsBody />
 }
 
 function ScriptsBody() {

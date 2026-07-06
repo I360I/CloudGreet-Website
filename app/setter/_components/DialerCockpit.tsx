@@ -9,9 +9,10 @@ import {
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
-  useDialerEngine, useLeadNotes, fmtDuration, KEYPAD,
-  type PowerDialItem, type SessionStatus,
+  useLeadNotes, fmtDuration, KEYPAD,
+  type SessionStatus,
 } from '@/app/sales/_components/dialer-engine'
+import { useDialerSession, type CockpitLead } from './DialerSessionProvider'
 import { firaCode } from './fonts'
 import { SmsThread } from './SmsThread'
 
@@ -27,16 +28,9 @@ import { SmsThread } from './SmsThread'
 
 const NAVY = '#1E3A8A'
 
-export type CockpitLead = PowerDialItem & {
-  email?: string | null
-  city?: string | null
-  state?: string | null
-  businessType?: string | null
-  rating?: number | null
-  reviews?: number | null
-  status?: string
-  followUpAt?: string | null
-}
+// Session/engine state lives in DialerSessionProvider (setter layout)
+// so it survives navigation; the cockpit is a view over it.
+export type { CockpitLead } from './DialerSessionProvider'
 
 type Script = { id: string; section: string; title: string; body: string; sort_order: number }
 
@@ -50,12 +44,7 @@ const DISPOSITIONS: { key: string; label: string; hotkey: string }[] = [
   { key: 'do_not_call',    label: 'DNC',        hotkey: '7' },
 ]
 
-const QUEUE_KEY = 'cg.dialer.queue'
-
 export function DialerCockpit() {
-  const [queueInput, setQueueInput] = useState<CockpitLead[] | null>(null)
-  const [phase, setPhase] = useState<'setup' | 'running' | 'done'>('setup')
-  const [gapSeconds, setGapSeconds] = useState(5)
   const [keypadOpen, setKeypadOpen] = useState(false)
   const [noteDraft, setNoteDraft] = useState('')
   const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
@@ -65,24 +54,14 @@ export function DialerCockpit() {
   const [objectionFilter, setObjectionFilter] = useState('')
   const noteInputRef = useRef<HTMLInputElement | null>(null)
 
-  // Session stats (client-side, this session only).
-  const [stats, setStats] = useState({ dials: 0, connects: 0, talkSeconds: 0, demos: 0 })
-  const [tagCounts, setTagCounts] = useState<Record<string, number>>({})
-  const sessionStartRef = useRef<number | null>(null)
-  const [elapsed, setElapsed] = useState(0)
-
-  const engine = useDialerEngine({
-    advanceSeconds: gapSeconds,
-    onCallEnded: ({ finalStatus, durationSeconds }) => {
-      setStats((s) => ({
-        ...s,
-        dials: s.dials + 1,
-        // Same "connect" rule as getRepCallStats: completed and >30s.
-        connects: s.connects + (finalStatus === 'completed' && durationSeconds > 30 ? 1 : 0),
-        talkSeconds: s.talkSeconds + durationSeconds,
-      }))
-    },
-  })
+  // Engine + session state live in the layout-level provider so they
+  // survive navigating to other tabs mid-session.
+  const {
+    engine, phase, setPhase, gapSeconds, setGapSeconds,
+    stats, bumpDemos, tagCounts, recordTag,
+    elapsed, markSessionStart, resetSession,
+    queueInput, reloadQueueInput,
+  } = useDialerSession()
   const {
     status, error, micBusy, grantMicrophone,
     callState, inCall, activeLeadId, secondsActive, muted, droppingVm,
@@ -94,12 +73,11 @@ export function DialerCockpit() {
   } = engine
   const [prepping, setPrepping] = useState(false)
 
-  // Load the session queue handed over from the leads page.
+  // Pick up a fresh queue handoff from the leads page - but never
+  // clobber a session that's mid-flight.
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(QUEUE_KEY)
-      if (raw) setQueueInput(JSON.parse(raw))
-    } catch { /* corrupted handoff - treated as empty */ }
+    if (phase !== 'running') reloadQueueInput()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Scripts for the right rail + SMS templates.
@@ -113,22 +91,6 @@ export function DialerCockpit() {
     })()
   }, [])
 
-  // Elapsed ticker while running.
-  useEffect(() => {
-    if (phase !== 'running') return
-    const t = setInterval(() => {
-      if (sessionStartRef.current) setElapsed(Math.floor((Date.now() - sessionStartRef.current) / 1000))
-    }, 1000)
-    return () => clearInterval(t)
-  }, [phase])
-
-  // Session completion: queue drained while running -> wrap-up.
-  useEffect(() => {
-    if (phase === 'running' && !queueActive && callState === 'idle' && stats.dials > 0) {
-      setPhase('done')
-    }
-  }, [phase, queueActive, callState, stats.dials])
-
   // Rich lead info for the live card - queue meta by leadId.
   const leadMetaById = useMemo(() => {
     const m = new Map<string, CockpitLead>()
@@ -139,10 +101,6 @@ export function DialerCockpit() {
   const liveLeadId = activeLeadId || currentItem?.leadId || null
 
   const { notes, loading: notesLoading, addNote } = useLeadNotes(liveLeadId)
-
-  const recordTag = useCallback((tag: string) => {
-    setTagCounts((c) => ({ ...c, [tag]: (c[tag] || 0) + 1 }))
-  }, [])
 
   const chooseDisposition = useCallback((key: string) => {
     if (key === 'demo_scheduled') {
@@ -231,7 +189,7 @@ export function DialerCockpit() {
       setPrepping(false)
     }
 
-    sessionStartRef.current = Date.now()
+    markSessionStart()
     setPhase('running')
     startQueue(queueInput.map(({ leadId, phone, businessName, contactName }) => ({ leadId, phone, businessName, contactName })))
   }
@@ -308,7 +266,7 @@ export function DialerCockpit() {
               Back to leads
             </Link>
             <button
-              onClick={() => { setPhase('setup'); setStats({ dials: 0, connects: 0, talkSeconds: 0, demos: 0 }); setTagCounts({}) }}
+              onClick={resetSession}
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-4 py-2.5 transition-colors duration-200"
             >
               <PhoneCall weight="fill" className="w-4 h-4" /> New session
@@ -673,7 +631,7 @@ export function DialerCockpit() {
             setDemoModalLeadId(null)
             setPostCallStatus('demo_scheduled')
             recordTag('demo_scheduled')
-            setStats((s) => ({ ...s, demos: s.demos + 1 }))
+            bumpDemos()
             if (queuePaused) togglePause()
           }}
         />

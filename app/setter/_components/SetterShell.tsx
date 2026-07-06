@@ -18,6 +18,7 @@ import { SquaresFour, ListChecks, SignOut, CircleNotch, FileText, BookOpen, Gear
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { ImpersonationBanner } from '@/app/dashboard/_components/ImpersonationBanner'
+import { useDialerSessionMaybe } from './DialerSessionProvider'
 import { firaSans } from './fonts'
 
 type ActiveLabel = 'Overview' | 'Leads' | 'Messages' | 'Scripts' | 'Knowledge' | 'Settings'
@@ -162,13 +163,16 @@ export function SetterShell({
   activeLabel,
   children,
 }: {
-  activeLabel: ActiveLabel
+  /** Optional - nav highlighting falls back to pathname matching. */
+  activeLabel?: ActiveLabel
   children: React.ReactNode
 }) {
   const router = useRouter()
   const pathname = usePathname() || '/setter'
   const [name, setName] = useState<string | null>(null)
   const [messagesUnread, setMessagesUnread] = useState(0)
+  const session = useDialerSessionMaybe()
+  const sessionRunning = session?.phase === 'running'
 
   // Defense against shared-browser session swaps + cross-tab identity
   // contamination - reloads / kicks to login on mismatch.
@@ -217,7 +221,25 @@ export function SetterShell({
       <SetterChrome activeLabel={activeLabel} pathname={pathname} name={name} onSignOut={signOut} messagesUnread={messagesUnread}>
         {children}
       </SetterChrome>
-      {pathname.startsWith('/setter/leads') && <Dialer />}
+      {/* Floating panel spins up its OWN engine - keep it off while a
+          cockpit session runs on the shared provider engine, or the two
+          fight over window.cgDial and Telnyx sessions. */}
+      {pathname.startsWith('/setter/leads') && !sessionRunning && <Dialer />}
+
+      {/* Live session pill: the provider keeps dialing while the setter
+          browses other tabs; this is the way back to the cockpit. */}
+      {sessionRunning && !pathname.startsWith('/setter/dialer') && session && (
+        <Link
+          href="/setter/dialer"
+          className="fixed bottom-20 lg:bottom-5 right-5 z-[90] inline-flex items-center gap-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold pl-3.5 pr-4 py-2.5 shadow-lg shadow-blue-600/30 transition-colors"
+        >
+          <span className="relative flex w-2.5 h-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-60" />
+            <span className="relative inline-flex rounded-full w-2.5 h-2.5 bg-white" />
+          </span>
+          Live session · {Math.min(session.engine.queueIndex + 1, session.engine.queue.length)} of {session.engine.queue.length}
+        </Link>
+      )}
     </>
   )
 }

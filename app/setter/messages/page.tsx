@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ChatText, ArrowLeft, WarningCircle } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { SetterShell, SetterLoadingState } from '../_components/SetterShell'
+import { SetterLoadingState } from '../_components/SetterShell'
 import { SmsThread } from '../_components/SmsThread'
 import { firaCode } from '../_components/fonts'
 
@@ -32,11 +32,7 @@ const POLL_MS = 20000
  * Replies land here via the Telnyx rep-sms-webhook.
  */
 export default function SetterMessagesPage() {
-  return (
-    <SetterShell activeLabel="Messages">
-      <MessagesBody />
-    </SetterShell>
-  )
+  return <MessagesBody />
 }
 
 function MessagesBody() {
