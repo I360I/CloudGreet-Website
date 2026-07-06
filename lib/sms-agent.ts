@@ -894,18 +894,22 @@ $50 MINIMUM (CRITICAL, applies to ALL distance-based rides):
 - Floor is $50 plus tax. compute_quote enforces this server-side; you read the total it returns. Never quote below $50 + tax. Never offer or hint at exceptions ("might do it for less"). If asked "but it's only 3 miles" reply: "Yeah, that's just Steve's flat minimum - covers his time and the trip out."
 - Minimum does NOT apply to Hourly/Event (own minimum $100) or Independent Living (own $35).
 
-EVENT TRANSPORTATION FEE:
+EVENT TRANSPORTATION FEE (conditional - Steve makes the final call; NEVER add it to the quote yourself):
 - For rides to/from ticketed venues or named event spaces, call check_venue_fee(destination) BEFORE compute_quote.
-- If found: quote the ride total (from compute_quote) PLUS the flat event transportation fee as separate items.
-  Example: "$65.00 ride + $30.00 event transportation fee = $95.00 total"
+- Quote ONLY the base ride price from compute_quote. Do NOT add the venue fee.
+- If a fee was found, disclose it right after the quote as a conditional maximum:
+  "Note: an additional event transportation fee of up to $30 may apply, depending on the size, scope, and nature of your event."
+- Then offer: "Want me to send your event details over to Steve? He'll review and confirm whether the fee applies before finalizing your quote."
+- If yes: collect venue, event date/time, party size, occasion, then send_dispatch_request with notes prefixed "EVENT FEE REVIEW:" including the base quote + potential fee. Tell them Steve will follow up with the final number.
+- If they decline: base quote + the disclosure is enough - don't push.
 - ALWAYS say "event transportation fee" — never "surcharge."
 - Applies both ways: going TO the venue and leaving FROM it after the event.
-- If check_venue_fee returns not found: standard mileage quote only, no additional fee.
+- If check_venue_fee returns not found: standard mileage quote only, no fee mention.
 
 QUOTING RULES:
 - NEVER do the math yourself. Always call compute_quote.
 - For distance rides: call lookup_drive_time FIRST to get miles + origin county.
-- For event/venue rides (stadium, arena, theater, concert venue, zoo, convention center, park, golf club, arts center): call check_venue_fee FIRST. If a fee is found, add it on top of the compute_quote total.
+- For event/venue rides (stadium, arena, theater, concert venue, zoo, convention center, park, golf club, arts center): call check_venue_fee FIRST. If a fee is found, do NOT add it - quote the base price and disclose the conditional fee per EVENT TRANSPORTATION FEE above.
 - For hourly: ask how many hours, then call compute_quote.
 - Sales tax: compute_quote handles county tax. Quote the total it returns.
 - Out-of-state: skip compute_quote, route to dispatch.
@@ -1291,7 +1295,7 @@ async function checkVenueFee(businessId: string, destination: string): Promise<a
       venue_name: (direct as any).venue_name,
       category: (direct as any).category,
       fee_dollars: fee,
-      note: `Add $${fee.toFixed(2)} event transportation fee on top of the ride quote. Call it "event transportation fee" not "surcharge".`,
+      note: `Do NOT add this to the quote. Quote the base ride price only, then disclose: an additional event transportation fee of up to $${fee.toFixed(2)} may apply depending on the size, scope, and nature of the event. Offer to send the event details to Steve (send_dispatch_request, notes prefixed "EVENT FEE REVIEW:") so he can confirm whether the fee applies before the final quote. Say "event transportation fee", never "surcharge".`,
     }
   }
 
@@ -1315,7 +1319,7 @@ async function checkVenueFee(businessId: string, destination: string): Promise<a
         venue_name: (kwMatch as any).venue_name,
         category: (kwMatch as any).category,
         fee_dollars: fee,
-        note: `Add $${fee.toFixed(2)} event transportation fee on top of the ride quote. Call it "event transportation fee" not "surcharge".`,
+        note: `Do NOT add this to the quote. Quote the base ride price only, then disclose: an additional event transportation fee of up to $${fee.toFixed(2)} may apply depending on the size, scope, and nature of the event. Offer to send the event details to Steve (send_dispatch_request, notes prefixed "EVENT FEE REVIEW:") so he can confirm whether the fee applies before the final quote. Say "event transportation fee", never "surcharge".`,
       }
     }
   }

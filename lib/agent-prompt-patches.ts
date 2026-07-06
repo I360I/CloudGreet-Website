@@ -192,15 +192,19 @@ function renderVenueFeesBlock(venues: Array<{ venue_name: string; category: stri
   const standards = venues.filter(v => v.category === 'standard')
 
   const lines: string[] = [
-    'EVENT TRANSPORTATION FEE (separate from the mileage quote):',
+    'EVENT TRANSPORTATION FEE (conditional - Steve makes the final call; NEVER add it to the quote yourself):',
     '- Before quoting any ride to/from a stadium, arena, theater, concert venue, zoo, convention center, park, golf club, or named event space: call check_venue_fee(destination).',
-    '- If a fee is returned: add it on top of the mileage quote total and tell the caller both amounts.',
-    '  Example: "The ride is sixty-five dollars, plus a thirty-dollar event transportation fee, bringing the total to ninety-five dollars."',
+    '- Quote ONLY the base transportation price from compute_quote. Do NOT add the venue fee to the total.',
+    '- If check_venue_fee returned a fee, disclose it right after the quote as a conditional maximum:',
+    '  "Please note an additional event transportation fee of up to [fee] dollars may apply, depending on the size, scope, and nature of your event."',
+    '- Then offer: "Would you like me to send your event details over to Steve? He\'ll review them and confirm whether the event fee applies before finalizing your quote."',
+    '- If they say yes: collect the venue, event date and time, party size, and occasion, then call send_dispatch_request with the notes prefixed "EVENT FEE REVIEW:" including the base quote and the potential fee. Tell them Steve will follow up with the final number.',
+    '- If they decline: leave it at the base quote plus the disclosure - do not push.',
     '- ALWAYS say "event transportation fee" — never "surcharge."',
     '- Applies both directions: drop-off TO the venue AND pickup FROM the venue after the event.',
-    '- If check_venue_fee returns not_found: quote the standard mileage rate only.',
+    '- If check_venue_fee returns not_found: quote the standard mileage rate only, no fee mention.',
     '',
-    'Known venue tiers (for reference — always call check_venue_fee to confirm):',
+    'Known venue tiers (the "up to" cap per venue — always call check_venue_fee to confirm):',
   ]
   if (premiums.length) lines.push(`  Premium ($50): ${premiums.slice(0, 6).map(v => v.venue_name).join(', ')}${premiums.length > 6 ? `, and ${premiums.length - 6} more` : ''}.`)
   if (majors.length) lines.push(`  Major ($25-$35): ${majors.slice(0, 6).map(v => v.venue_name).join(', ')}${majors.length > 6 ? `, and ${majors.length - 6} more` : ''}.`)

@@ -1831,7 +1831,7 @@ export async function POST(request: NextRequest) {
     venue_name: (vfDirect as any).venue_name,
     category: (vfDirect as any).category,
     fee_dollars: fee,
-    note: `Add $${fee.toFixed(2)} event transportation fee on top of the ride quote. Call it "event transportation fee" not "surcharge".`,
+    note: `Do NOT add this to the quote. Quote the base ride price only, then disclose: an additional event transportation fee of up to $${fee.toFixed(2)} may apply depending on the size, scope, and nature of the event. Offer to send the event details to the owner (send_dispatch_request, notes prefixed "EVENT FEE REVIEW:") so he can confirm whether the fee applies before the final quote. Say "event transportation fee", never "surcharge".`,
    })
   }
 
@@ -1854,7 +1854,7 @@ export async function POST(request: NextRequest) {
      venue_name: (vfKw as any).venue_name,
      category: (vfKw as any).category,
      fee_dollars: fee,
-     note: `Add $${fee.toFixed(2)} event transportation fee on top of the ride quote. Call it "event transportation fee" not "surcharge".`,
+     note: `Do NOT add this to the quote. Quote the base ride price only, then disclose: an additional event transportation fee of up to $${fee.toFixed(2)} may apply depending on the size, scope, and nature of the event. Offer to send the event details to the owner (send_dispatch_request, notes prefixed "EVENT FEE REVIEW:") so he can confirm whether the fee applies before the final quote. Say "event transportation fee", never "surcharge".`,
     })
    }
   }
