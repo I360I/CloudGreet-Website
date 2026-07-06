@@ -27,6 +27,9 @@ export type RepPhoneNumber = {
   phone_id: string
   label: string | null
   is_active: boolean
+  /** Texting-only line (toll-free verified). Never a voice caller-ID,
+   *  never counted against / evicted by the DID cap. */
+  is_sms_line?: boolean
   created_at: string
 }
 
@@ -163,7 +166,9 @@ export async function orderRepNumber(
   // 3. Eviction: if at cap, drop the oldest non-active row + release
   //    from Telnyx so we stop being billed.
   let evicted: RepPhoneNumber | null = null
-  const existing = await listRepNumbers(repId)
+  // SMS lines (toll-free) don't count against the DID cap and must
+  // never be evicted - losing one silently kills the rep's texting.
+  const existing = (await listRepNumbers(repId)).filter((n) => !n.is_sms_line)
   if (existing.length >= MAX_NUMBERS_PER_REP) {
     const oldestNonActive = [...existing]
       .filter((n) => !n.is_active)

@@ -208,15 +208,20 @@ export async function POST(request: NextRequest) {
     .maybeSingle()
   if (!lead?.phone) return NextResponse.json({ error: 'Lead has no phone number' }, { status: 400 })
 
-  // From-number: the rep's active DID, and ONLY that. There used to be
-  // an env-number fallback here, but replies to a shared fallback number
-  // can't be routed back to any rep - the owner's live test proved texts
-  // to it just vanish. Better to refuse the send than lose the reply.
+  // From-number preference:
+  //   1. The rep's dedicated SMS line (is_sms_line, toll-free VERIFIED -
+  //      deliverable today; local DIDs are carrier-filtered until a
+  //      10DLC campaign exists, see CLAUDE.md "SMS").
+  //   2. Their active dialer DID (works once 10DLC is registered).
+  // Both are rep-owned rows in sales_rep_phone_numbers, so inbound
+  // replies route back to this rep's threads either way. No shared
+  // fallback number - better to refuse the send than lose the reply.
   let fromNumber = ''
   try {
     const nums = await listRepNumbers(auth.userId)
-    const active = (nums as any[])?.find((n) => n.is_active)
-    if (active?.phone_number) fromNumber = active.phone_number
+    const smsLine = (nums as any[])?.find((n) => n.is_sms_line)
+    const active = (nums as any[])?.find((n) => n.is_active && !n.is_sms_line)
+    fromNumber = smsLine?.phone_number || active?.phone_number || ''
   } catch { /* handled below */ }
   if (!fromNumber) {
     return NextResponse.json({

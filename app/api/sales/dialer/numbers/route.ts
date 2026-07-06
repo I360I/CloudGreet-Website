@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
   if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const numbers = await listRepNumbers(auth.userId)
+  // Voice-picker consumer: SMS lines (toll-free, texting-only) are
+  // excluded - they must never become a caller-ID or local-presence
+  // candidate. The SMS send route reads listRepNumbers directly.
+  const numbers = (await listRepNumbers(auth.userId)).filter((n) => !n.is_sms_line)
   return NextResponse.json({ success: true, numbers, max: 3 })
 }
 
