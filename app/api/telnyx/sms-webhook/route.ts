@@ -3,6 +3,7 @@ import { logger } from '@/lib/monitoring'
 import { markPhoneOptedOut } from '@/lib/review-requests'
 import { supabaseAdmin } from '@/lib/supabase'
 import { handleInboundSms } from '@/lib/sms-agent'
+import { handleRepInboundSms } from '@/lib/telnyx/rep-inbound-sms'
 import { verifyTelynyxSignature } from '@/lib/webhook-verification'
 
 export const dynamic = 'force-dynamic'
@@ -133,6 +134,20 @@ export async function POST(request: NextRequest) {
 
     if (!fromNumber || !text) {
       return NextResponse.json({ received: true })
+    }
+
+    // Texts to a rep's dialer DID (replies to setter/sales follow-ups)
+    // route to the rep thread flow - BEFORE the generic STOP block,
+    // because a STOP to a rep DID must flip the LEAD to do_not_call
+    // (handled inside), not just the review-request opt-out list.
+    if (toNumber) {
+      const repHandled = await handleRepInboundSms({
+        fromNumber, toNumber, text,
+        telnyxMessageId: telnyxMessageId || null,
+      })
+      if (repHandled) {
+        return NextResponse.json({ received: true, routed: 'rep_sms' })
+      }
     }
 
     // STOP / opt-out keyword - always processed first, regardless of

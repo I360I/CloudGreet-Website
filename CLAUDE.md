@@ -47,11 +47,38 @@
   demo_showed ONLY (lib/sales/dialer-stats.ts getWeeklyDemoGoalStatus).
   Per-setter goal target: custom_users.weekly_demo_goal (default 2).
 
-## SMS (rep follow-up texts)
-- rep_messages table + POST /api/sales/dialer/sms (from rep's active DID) +
-  inbound app/api/telnyx/rep-sms-webhook (STOP reply → lead flips do_not_call,
-  non-negotiable). CAVEAT: rep DIDs need a Telnyx Messaging Profile + A2P 10DLC
-  registration or carriers drop the texts — not yet configured; sends fail loudly.
+## SMS (rep follow-up texts) — two-way, live
+- 10DLC/A2P: DONE — the owner confirmed the account is 10DLC compliant
+  (Jul 2026). No delivery caveat anymore.
+- Outbound: POST /api/sales/dialer/sms (from rep's active DID) → rep_messages.
+- Inbound: the Telnyx Messaging Profile's inbound webhook points at the
+  EXISTING /api/telnyx/sms-webhook (signature-verified + deduped). That route
+  checks sales_rep_phone_numbers FIRST and hands rep-DID texts to the shared
+  handler lib/telnyx/rep-inbound-sms.ts (rep_messages insert, bell notify via
+  notifyRep, lead note, STOP reply → lead flips do_not_call, non-negotiable).
+  /api/telnyx/rep-sms-webhook still exists as a thin spare over the same
+  handler — don't let the two drift.
+- Reading: GET /api/sales/dialer/sms (?lead_id thread + mark_read, ?inbox=1
+  per-lead threads + unread, ?unread_count=1 badge). UI: shared
+  SmsThread.tsx renders in the cockpit's Text follow-up card AND the
+  /setter/messages inbox page (Messages nav item with amber unread badge,
+  30s poll in SetterShell).
+
+## Callbacks & inbound return calls
+- Scheduled callbacks resurface: /api/setter/overview pins
+  follow_up_at <= now() leads first in up_next (due:true, callbacks_due
+  count); Overview shows an amber "N callbacks due" chip; leads workspace
+  has a "Callbacks due" filter pill; cockpit live card shows the promised
+  time (amber when past due).
+- Inbound return calls (rep-voice-webhook): rep lookup no longer requires a
+  sales_reps row (setters have none by design) — personal_cell comes from
+  sales_reps OR custom_users.personal_cell (admin-edited per setter on
+  /admin/setters, "Inbound cell"). No cell = answer + voicemail, never dead
+  air. Outcomes log to rep_calls with direction='inbound' (dial stats filter
+  to outbound); a missed inbound auto-pins the matching lead
+  (follow_up_at=now() + note) so the return call becomes the next dial.
+- Prod-verified 2026-07-06 via temp setter + seeded thread (all endpoints
+  returned expected values; test rows deleted).
 
 ## Apollo.io (in evaluation)
 - APOLLO_API_KEY is in Vercel env. api.apollo.io is BLOCKED from the dev
@@ -76,9 +103,11 @@
 - Vercel auto-deploys main. Playwright chromium at /opt/pw-browsers.
 
 ## Open items
-- Live end-to-end call test of the extracted engine (floating panel + cockpit).
+- Live end-to-end call test of the extracted engine (floating panel + cockpit),
+  plus one real inbound test: call Ed's DID once → cell ring/voicemail + queue pin.
+- One real inbound SMS test (text a rep DID) to confirm the sms-webhook →
+  rep-inbound routing on the live Messaging Profile.
 - Load the owner's real script file into dialer_scripts.
-- Telnyx Messaging Profile + 10DLC for rep SMS.
 - Apollo coverage rerun on Pro trial → build/skip decision (trial ends ~Jul 18,
   2026; decide by day 13).
 - Rotate the Apollo API key (it was pasted in chat) once integration settles.
