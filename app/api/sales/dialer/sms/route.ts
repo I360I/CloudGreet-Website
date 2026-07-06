@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
   if (!url.searchParams.get('lead_id') && phone) {
     const { data: messages, error } = await supabaseAdmin
       .from('rep_messages')
-      .select('id, direction, from_number, to_number, body, status, created_at, read_at')
+      .select('id, direction, from_number, to_number, body, status, error_detail, created_at, read_at')
       .eq('rep_id', auth.userId)
       .is('lead_id', null)
       .or(`from_number.eq.${phone},to_number.eq.${phone}`)
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
 
   const { data: messages, error } = await supabaseAdmin
     .from('rep_messages')
-    .select('id, direction, from_number, to_number, body, status, created_at, read_at')
+    .select('id, direction, from_number, to_number, body, status, error_detail, created_at, read_at')
     .eq('rep_id', auth.userId)
     .eq('lead_id', leadId)
     .order('created_at', { ascending: true })

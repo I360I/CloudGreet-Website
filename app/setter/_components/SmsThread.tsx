@@ -21,6 +21,9 @@ export type SmsMessage = {
   direction: 'inbound' | 'outbound'
   body: string
   created_at: string
+  /** Telnyx lifecycle: sent -> delivered / delivery_failed (stamped by DLR webhook). */
+  status?: string
+  error_detail?: string | null
 }
 
 const POLL_MS = 15000
@@ -121,7 +124,13 @@ export function SmsThread({
                   m.direction === 'outbound' ? 'text-blue-200' : 'text-slate-400'
                 }`}>
                   {new Date(m.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  {m.direction === 'outbound' && m.status === 'delivered' && ' · delivered'}
                 </div>
+                {m.direction === 'outbound' && (m.status === 'delivery_failed' || m.status === 'sending_failed') && (
+                  <div className="mt-0.5 text-[10px] font-medium text-rose-100 bg-rose-600/90 rounded px-1.5 py-0.5">
+                    Not delivered{m.error_detail ? ` - ${m.error_detail}` : ''}
+                  </div>
+                )}
               </div>
             </div>
           ))}

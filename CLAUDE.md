@@ -69,6 +69,12 @@
   (Anthony Edwards) owns +17379370133 ('Setter line', reassigned from
   Aiden's idle pool 2026-07-06, sql/assign-setter-did.sql). Unmatched
   inbound texts log a warn in sms-webhook instead of dropping silently.
+- Delivery receipts: message.finalized DLRs stamp rep_messages.status
+  (delivered/delivery_failed) + error_detail; SmsThread shows "delivered"
+  or a red "Not delivered - {reason}" on outbound bubbles. 10DLC campaign
+  registration is PER NUMBER — a dialer DID not on the campaign gets
+  carrier-filtered outbound while inbound still works (this bit the
+  setter line on day one; owner assigns numbers to the campaign in Telnyx).
 
 ## Callbacks & inbound return calls
 - Scheduled callbacks resurface: /api/setter/overview pins

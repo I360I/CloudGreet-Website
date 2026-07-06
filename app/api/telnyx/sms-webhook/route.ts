@@ -87,6 +87,22 @@ export async function POST(request: NextRequest) {
         } catch (e) {
           logger.warn('dispatch DLR handling failed', { error: e instanceof Error ? e.message : 'unknown' })
         }
+        // Rep follow-up texts: stamp the final delivery outcome on the
+        // thread row. Without this, a carrier drop (10DLC filtering on
+        // an unregistered number) looks identical to a delivered text.
+        try {
+          const { error } = await supabaseAdmin
+            .from('rep_messages')
+            .update({
+              status: String(toStatus),
+              error_detail: errDetail ? String(errDetail).slice(0, 300) : null,
+            })
+            .eq('telnyx_message_id', String(msgId))
+          if (error) logger.warn('rep SMS DLR update failed', { msgId, error: error.message })
+          if (String(toStatus) !== 'delivered') {
+            logger.warn('rep SMS not delivered', { msgId, status: toStatus, detail: errDetail || null })
+          }
+        } catch { /* best-effort */ }
       }
       return NextResponse.json({ received: true })
     }
