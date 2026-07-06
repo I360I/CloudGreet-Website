@@ -48,8 +48,26 @@
   Per-setter goal target: custom_users.weekly_demo_goal (default 2).
 
 ## SMS (rep follow-up texts) — two-way, live
-- 10DLC/A2P: DONE — the owner confirmed the account is 10DLC compliant
-  (Jul 2026). No delivery caveat anymore.
+- 10DLC/A2P: **NOT actually done — CORRECTED 2026-07-06.** Earlier note
+  ("owner confirmed compliant") was wrong, likely confused with the
+  toll-free number's Toll-Free Verification (a different, unrelated
+  process). Verified live via GET /api/admin/telnyx/10dlc-status: the
+  account has exactly ONE messaging profile ("CloudGreet") with no
+  campaign linkage, and EVERY number checked — all 7 rep DIDs plus a
+  working toll-free reference number — has zero
+  /v2/10dlc/phoneNumberCampaign records. There is no 10DLC campaign on
+  this account at all. Local-number rep SMS (setter + sales dialer
+  DIDs) cannot deliver reliably to US cells until one exists — Telnyx
+  DLR confirmed this exact reason live: "The sending number is not
+  10DLC-registered but is required to be by the carrier." The toll-free
+  number keeps working fine regardless (TFV, not 10DLC, unaffected).
+  FIX REQUIRES THE OWNER: Telnyx portal → Messaging → 10DLC → register
+  a Brand + Campaign (needs real business EIN/address/sample message
+  content/use-case — nothing to safely fill in on his behalf) and
+  attach the "CloudGreet" messaging profile to it. Review time ranges
+  hours to a few business days depending on campaign type. Nothing
+  further to fix in code until that's done — messaging-profile
+  attachment (below) is necessary but not sufficient by itself.
 - Outbound: POST /api/sales/dialer/sms (from rep's active DID) → rep_messages.
 - Inbound: the Telnyx Messaging Profile's inbound webhook points at the
   EXISTING /api/telnyx/sms-webhook (signature-verified + deduped). That route
@@ -140,11 +158,25 @@
 - Vercel auto-deploys main. Playwright chromium at /opt/pw-browsers.
 
 ## Open items
+- **BLOCKING rep SMS delivery: register a real 10DLC Brand + Campaign in
+  the Telnyx portal** (see SMS section above — owner-only, needs business
+  details). Nothing further to fix in code until this exists; verify after
+  with GET /api/admin/telnyx/10dlc-status (numbers[].campaign_id non-null).
+- Rotate the Telnyx messaging profile's v1_secret (briefly exposed
+  unredacted in a diagnostic response pasted into chat 2026-07-06, now
+  fixed) — Telnyx dashboard → Messaging → CloudGreet profile → regenerate
+  signing secret; low severity (forges inbound webhooks only, not account
+  access) but cheap to rotate.
 - Live end-to-end call test of the extracted engine (floating panel + cockpit),
-  plus one real inbound test: call Ed's DID once → cell ring/voicemail + queue pin.
-- One real inbound SMS test (text a rep DID) to confirm the sms-webhook →
-  rep-inbound routing on the live Messaging Profile.
+  plus one real inbound test: call Ed's DID once → cell ring/voicemail → queue pin.
+  (Inbound SMS to a rep DID is already prod-verified this session — texting
+  the setter's line correctly created a thread; only outbound delivery is
+  blocked on 10DLC above.)
 - Load the owner's real script file into dialer_scripts.
 - Apollo coverage rerun on Pro trial → build/skip decision (trial ends ~Jul 18,
   2026; decide by day 13).
 - Rotate the Apollo API key (it was pasted in chat) once integration settles.
+- Reconcile Telnyx's actual number inventory against our DB — the
+  releaseTelnyxNumber bug (fixed 2026-07-06, see SMS section) means past
+  evictions/deletes may have left numbers live and billing at Telnyx despite
+  being removed from our records; worth a one-time manual check in the portal.
