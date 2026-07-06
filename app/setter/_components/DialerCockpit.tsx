@@ -553,38 +553,39 @@ export function DialerCockpit() {
 
         <div className="h-8 w-px bg-[#EEF2F7] shrink-0" />
 
-        {/* Dispositions - the ONE part of this bar that scrolls
-            horizontally on narrow screens (Mute/Hangup/Pause/Skip/Stop
-            stay fixed and always visible either side of it). */}
-        <div className="flex items-center gap-1 flex-nowrap flex-1 min-w-0 overflow-x-auto">
+        {/* Dispositions: fixed two-row grid of slim tags (7 outcomes +
+            Callback + Book link = 2 rows x 5 columns), so everything is
+            always on screen - no horizontal scroll, no wrap growing the
+            bar off the viewport. */}
+        <div className="flex-1 min-w-0 grid grid-rows-2 grid-flow-col auto-cols-max gap-1 content-center">
           {DISPOSITIONS.map((d) => (
             <button
               key={d.key}
               onClick={() => chooseDisposition(d.key)}
               disabled={callState !== 'ended' && callState !== 'active'}
-              className={`shrink-0 text-xs rounded-lg px-2.5 py-2 border transition-colors duration-150 disabled:opacity-40 ${
+              className={`inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border transition-colors duration-150 disabled:opacity-40 ${
                 postCallStatus === d.key
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-300'
               }`}
             >
-              <span className="text-slate-400 mr-1">{d.hotkey}</span>{d.label}
+              <span className={postCallStatus === d.key ? 'text-blue-200' : 'text-slate-400'}>{d.hotkey}</span>{d.label}
             </button>
           ))}
           <button
             onClick={openCallback}
             disabled={callState !== 'ended' && callState !== 'active'}
-            className="shrink-0 text-xs rounded-lg px-2.5 py-2 border bg-white text-slate-700 border-[#E3EAF4] hover:border-amber-400 transition-colors duration-150 disabled:opacity-40 inline-flex items-center gap-1"
+            className="inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border bg-white text-slate-700 border-[#E3EAF4] hover:border-amber-400 transition-colors duration-150 disabled:opacity-40"
           >
-            <CalendarBlank className="w-3.5 h-3.5 text-amber-500" /><span className="text-slate-400">C</span> Callback
+            <CalendarBlank className="w-3 h-3 text-amber-500" /><span className="text-slate-400">C</span> Callback
           </button>
           <button
             onClick={openBookingLink}
             disabled={callState !== 'ended' && callState !== 'active'}
             title="Email the prospect a demo booking link (B)"
-            className="shrink-0 text-xs rounded-lg px-2.5 py-2 border bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-400 transition-colors duration-150 disabled:opacity-40 inline-flex items-center gap-1"
+            className="inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-400 transition-colors duration-150 disabled:opacity-40"
           >
-            <PaperPlaneTilt className="w-3.5 h-3.5 text-blue-500" /><span className="text-slate-400">B</span> Book link
+            <PaperPlaneTilt className="w-3 h-3 text-blue-500" /><span className="text-slate-400">B</span> Book link
           </button>
         </div>
 
