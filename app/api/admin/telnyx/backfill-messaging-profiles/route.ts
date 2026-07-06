@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
-import { attachToMessagingProfile, resolvePhoneNumberId } from '@/lib/telnyx/messaging-profile'
+import { attachToMessagingProfile, resolvePhoneNumberId, debugLookupPhoneNumber } from '@/lib/telnyx/messaging-profile'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -60,32 +60,40 @@ export async function GET(request: NextRequest) {
 
   const results: any[] = []
   for (const n of numbers || []) {
-    const resolved = await resolvePhoneNumberId(n.phone_number)
-    if (resolved.ok !== true) {
-      results.push({
-        phone_number: n.phone_number, stored_phone_id: n.phone_id, label: n.label, is_active: n.is_active,
-        resolved: false, lookup_error: resolved.error,
-      })
+    // Raw diagnostic first - shows exactly what the filter query
+    // returned (match count, the actual numbers in the response) so a
+    // filter-syntax problem or an unfiltered-list fallback is visible
+    // instead of guessed at.
+    const diag = await debugLookupPhoneNumber(n.phone_number)
+    const base = {
+      phone_number: n.phone_number, stored_phone_id: n.phone_id, label: n.label, is_active: n.is_active,
+      lookup: diag,
+    }
+    if (!diag.ok || !diag.matched_id) {
+      results.push({ ...base, resolved: false })
       await sleep(STAGGER_MS)
       continue
     }
-    const r = await fetch(`${TELNYX_API}/phone_numbers/${encodeURIComponent(resolved.id)}`, {
+    const r = await fetch(`${TELNYX_API}/phone_numbers/${encodeURIComponent(diag.matched_id)}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     })
     const j = r.ok ? await r.json().catch(() => null) as any : null
     const currentProfile: string | null = j?.data?.messaging_profile_id || null
     results.push({
-      phone_number: n.phone_number, stored_phone_id: n.phone_id, real_phone_id: resolved.id,
-      stored_id_was_wrong: n.phone_id !== resolved.id,
-      label: n.label, is_active: n.is_active,
+      ...base,
+      resolved: true,
+      real_phone_id: diag.matched_id,
+      stored_id_was_wrong: n.phone_id !== diag.matched_id,
       current_messaging_profile_id: currentProfile,
       registered: currentProfile === profileId,
+      get_by_id_status: r.status,
     })
     await sleep(STAGGER_MS)
   }
 
   return NextResponse.json({
     success: true,
+    diagnostic_version: 2,
     target_messaging_profile_id: profileId,
     total: results.length,
     registered: results.filter((r) => r.registered).length,
@@ -141,6 +149,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     success: true,
+    diagnostic_version: 2,
     target_messaging_profile_id: profileId,
     total: results.length,
     attached: results.length - failed.length,

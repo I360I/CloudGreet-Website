@@ -12,6 +12,54 @@ import { logger } from '@/lib/monitoring'
  * way to get the real per-number resource ID is to look it up by the
  * E.164 number itself.
  */
+export type PhoneNumberLookupDiagnostic = {
+  ok: boolean
+  http_status: number | null
+  match_count: number
+  matched_id: string | null
+  /** Every phone_number the filtered response actually returned - if this
+   *  ever contains numbers OTHER than the one searched for, the filter
+   *  param isn't matching and Telnyx is returning an unfiltered/wrong list. */
+  returned_numbers: string[]
+  raw_error: string | null
+}
+
+/**
+ * Raw, no-fallback lookup used for diagnosing filter behavior. Never
+ * guesses - if the filtered response contains any number other than
+ * the one requested, or zero results, that's surfaced explicitly
+ * instead of silently taking the first item.
+ */
+export async function debugLookupPhoneNumber(phoneNumber: string): Promise<PhoneNumberLookupDiagnostic> {
+  const apiKey = process.env.TELNYX_API_KEY
+  if (!apiKey) return { ok: false, http_status: null, match_count: 0, matched_id: null, returned_numbers: [], raw_error: 'Missing TELNYX_API_KEY' }
+  try {
+    const params = new URLSearchParams()
+    params.set('filter[phone_number]', phoneNumber)
+    const r = await fetch(`https://api.telnyx.com/v2/phone_numbers?${params}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+    const text = await r.text().catch(() => '')
+    let j: any = null
+    try { j = JSON.parse(text) } catch { /* leave null */ }
+    if (!r.ok) {
+      return { ok: false, http_status: r.status, match_count: 0, matched_id: null, returned_numbers: [], raw_error: text.slice(0, 300) }
+    }
+    const items = Array.isArray(j?.data) ? j.data : []
+    const exact = items.find((d: any) => d.phone_number === phoneNumber)
+    return {
+      ok: true,
+      http_status: r.status,
+      match_count: items.length,
+      matched_id: exact?.id || null,
+      returned_numbers: items.map((d: any) => d.phone_number).filter(Boolean),
+      raw_error: null,
+    }
+  } catch (e) {
+    return { ok: false, http_status: null, match_count: 0, matched_id: null, returned_numbers: [], raw_error: e instanceof Error ? e.message : 'Network error' }
+  }
+}
+
 export async function resolvePhoneNumberId(
   phoneNumber: string,
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
@@ -28,9 +76,18 @@ export async function resolvePhoneNumberId(
       return { ok: false, error: `Telnyx phone number lookup failed (${r.status}): ${body.slice(0, 300)}` }
     }
     const j = await r.json().catch(() => null) as any
-    const id = j?.data?.[0]?.id
-    if (!id) return { ok: false, error: `No Telnyx phone_numbers resource found for ${phoneNumber}` }
-    return { ok: true, id }
+    const items = Array.isArray(j?.data) ? j.data : []
+    // Exact-match only - never trust data[0] blindly. If the filter
+    // param doesn't do what we think, Telnyx could return an
+    // unfiltered list and data[0] would be an arbitrary WRONG number.
+    const exact = items.find((d: any) => d.phone_number === phoneNumber)
+    if (!exact?.id) {
+      return {
+        ok: false,
+        error: `No exact Telnyx phone_numbers match for ${phoneNumber} (filter returned ${items.length} result(s): ${items.map((d: any) => d.phone_number).join(', ') || 'none'})`,
+      }
+    }
+    return { ok: true, id: exact.id }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Network error' }
   }
