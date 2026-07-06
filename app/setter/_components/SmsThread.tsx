@@ -27,11 +27,14 @@ const POLL_MS = 15000
 
 export function SmsThread({
   leadId,
+  phone,
   templates,
   placeholder,
   onSent,
 }: {
   leadId: string | null
+  /** Thread key for messages whose sender never matched a lead - read-only (no lead to send to). */
+  phone?: string | null
   /** Optional quick-fill chips (cockpit passes its script templates, already variable-filled). */
   templates?: { id: string; title: string; body: string }[]
   placeholder?: string
@@ -46,25 +49,29 @@ export function SmsThread({
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const lastCountRef = useRef(0)
 
-  const fetchThread = useCallback(async (id: string, opts?: { markRead?: boolean }) => {
+  const threadQuery = leadId
+    ? `lead_id=${encodeURIComponent(leadId)}`
+    : phone ? `phone=${encodeURIComponent(phone)}` : null
+
+  const fetchThread = useCallback(async (query: string, opts?: { markRead?: boolean }) => {
     try {
-      const r = await fetchWithAuth(`/api/sales/dialer/sms?lead_id=${encodeURIComponent(id)}${opts?.markRead ? '&mark_read=1' : ''}`)
+      const r = await fetchWithAuth(`/api/sales/dialer/sms?${query}${opts?.markRead ? '&mark_read=1' : ''}`)
       const j = await r.json().catch(() => ({}))
       if (j?.success) setMessages(j.messages || [])
     } catch { /* poll again next tick */ }
   }, [])
 
-  // Load + mark read when the lead changes; poll while mounted.
+  // Load + mark read when the thread key changes; poll while mounted.
   useEffect(() => {
     setMessages([])
     setDraft('')
     setSendState('idle')
-    if (!leadId) return
+    if (!threadQuery) return
     setLoading(true)
-    void fetchThread(leadId, { markRead: true }).finally(() => setLoading(false))
-    const t = setInterval(() => { void fetchThread(leadId, { markRead: true }) }, POLL_MS)
+    void fetchThread(threadQuery, { markRead: true }).finally(() => setLoading(false))
+    const t = setInterval(() => { void fetchThread(threadQuery, { markRead: true }) }, POLL_MS)
     return () => clearInterval(t)
-  }, [leadId, fetchThread])
+  }, [threadQuery, fetchThread])
 
   // Pin the scroll to the newest message when the thread grows.
   useEffect(() => {
@@ -92,7 +99,7 @@ export function SmsThread({
       }
       setSendState('idle'); setDraft('')
       onSent?.()
-      void fetchThread(leadId)
+      if (threadQuery) void fetchThread(threadQuery)
     } catch {
       setSendState('error'); setSendError('Network error')
     }
@@ -138,6 +145,11 @@ export function SmsThread({
         </div>
       )}
 
+      {!leadId && phone && (
+        <div className="text-[11px] text-slate-400 px-1 pb-1">
+          This number doesn&apos;t match a lead, so replies are read-only here.
+        </div>
+      )}
       <div className="flex items-end gap-2">
         <textarea
           value={draft}

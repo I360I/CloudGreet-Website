@@ -51,35 +51,42 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, unread: count || 0 })
   }
 
-  // Inbox: one row per lead - latest message + unread count per thread.
-  // Grouped in memory over the rep's recent messages rather than a SQL
-  // window function; 500 rows covers weeks of texting for one rep.
+  // Inbox: one row per thread - latest message + unread count. Threads
+  // are keyed by lead when the sender matched one, otherwise by the
+  // counterpart phone number (a prospect texting from a number we don't
+  // have on a lead must still be visible, not just counted). Grouped in
+  // memory over the rep's recent messages rather than a SQL window
+  // function; 500 rows covers weeks of texting for one rep.
   if (url.searchParams.get('inbox') === '1') {
     const { data: msgs, error } = await supabaseAdmin
       .from('rep_messages')
-      .select('lead_id, direction, body, created_at, read_at')
+      .select('lead_id, direction, from_number, to_number, body, created_at, read_at')
       .eq('rep_id', auth.userId)
-      .not('lead_id', 'is', null)
       .order('created_at', { ascending: false })
       .limit(500)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     type Thread = {
-      lead_id: string; last_body: string; last_direction: string
-      last_at: string; unread: number
+      lead_id: string | null; phone: string | null; last_body: string
+      last_direction: string; last_at: string; unread: number
     }
     const threads = new Map<string, Thread>()
     let totalUnread = 0
     for (const m of (msgs || []) as any[]) {
-      let t = threads.get(m.lead_id)
+      const counterpart = m.direction === 'inbound' ? m.from_number : m.to_number
+      const key = m.lead_id || `phone:${counterpart}`
+      let t = threads.get(key)
       if (!t) {
-        t = { lead_id: m.lead_id, last_body: m.body || '', last_direction: m.direction, last_at: m.created_at, unread: 0 }
-        threads.set(m.lead_id, t)
+        t = {
+          lead_id: m.lead_id || null, phone: m.lead_id ? null : counterpart,
+          last_body: m.body || '', last_direction: m.direction, last_at: m.created_at, unread: 0,
+        }
+        threads.set(key, t)
       }
       if (m.direction === 'inbound' && !m.read_at) { t.unread += 1; totalUnread += 1 }
     }
 
-    const ids = Array.from(threads.keys())
+    const ids = Array.from(threads.values()).map((t) => t.lead_id).filter(Boolean) as string[]
     const leadById = new Map<string, any>()
     if (ids.length > 0) {
       const { data: leads } = await supabaseAdmin
@@ -94,18 +101,47 @@ export async function GET(request: NextRequest) {
       total_unread: totalUnread,
       threads: Array.from(threads.values()).map((t) => ({
         ...t,
-        business_name: leadById.get(t.lead_id)?.business_name || null,
-        contact_name: leadById.get(t.lead_id)?.contact_name || null,
-        phone: leadById.get(t.lead_id)?.phone || null,
+        business_name: t.lead_id ? (leadById.get(t.lead_id)?.business_name || null) : null,
+        contact_name: t.lead_id ? (leadById.get(t.lead_id)?.contact_name || null) : null,
+        phone: t.lead_id ? (leadById.get(t.lead_id)?.phone || null) : t.phone,
       })),
     })
+  }
+
+  // Thread by phone number: messages with a counterpart that never
+  // matched a lead. Rep-scoped by definition; read-only apart from the
+  // mark-read stamp (the composer needs a lead to send).
+  const phone = url.searchParams.get('phone')
+  if (!url.searchParams.get('lead_id') && phone) {
+    const { data: messages, error } = await supabaseAdmin
+      .from('rep_messages')
+      .select('id, direction, from_number, to_number, body, status, created_at, read_at')
+      .eq('rep_id', auth.userId)
+      .is('lead_id', null)
+      .or(`from_number.eq.${phone},to_number.eq.${phone}`)
+      .order('created_at', { ascending: true })
+      .limit(200)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    if (url.searchParams.get('mark_read') === '1') {
+      await supabaseAdmin
+        .from('rep_messages')
+        .update({ read_at: new Date().toISOString() })
+        .eq('rep_id', auth.userId)
+        .is('lead_id', null)
+        .eq('from_number', phone)
+        .eq('direction', 'inbound')
+        .is('read_at', null)
+    }
+
+    return NextResponse.json({ success: true, messages: messages || [] })
   }
 
   // Thread with one lead. Same ownership check as POST - the messages
   // are already rep-scoped, but a non-assigned lead_id should 404, not
   // return an empty thread.
   const leadId = url.searchParams.get('lead_id')
-  if (!leadId) return NextResponse.json({ error: 'lead_id, inbox=1, or unread_count=1 required' }, { status: 400 })
+  if (!leadId) return NextResponse.json({ error: 'lead_id, phone, inbox=1, or unread_count=1 required' }, { status: 400 })
 
   const { data: assignment } = await supabaseAdmin
     .from('lead_assignments')

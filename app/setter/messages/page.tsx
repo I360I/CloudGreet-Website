@@ -10,7 +10,7 @@ import { firaCode } from '../_components/fonts'
 const NAVY = '#1E3A8A'
 
 type Thread = {
-  lead_id: string
+  lead_id: string | null
   business_name: string | null
   contact_name: string | null
   phone: string | null
@@ -19,6 +19,10 @@ type Thread = {
   last_at: string
   unread: number
 }
+
+// Threads are keyed by lead when the sender matched one, otherwise by
+// the counterpart phone number (unknown numbers still show up).
+const threadKey = (t: Thread) => t.lead_id || `phone:${t.phone}`
 
 const POLL_MS = 20000
 
@@ -64,7 +68,7 @@ function MessagesBody() {
   const open = (t: Thread) => {
     setSelected(t)
     if (t.unread > 0) {
-      setThreads((prev) => prev.map((x) => (x.lead_id === t.lead_id ? { ...x, unread: 0 } : x)))
+      setThreads((prev) => prev.map((x) => (threadKey(x) === threadKey(t) ? { ...x, unread: 0 } : x)))
     }
   }
 
@@ -101,11 +105,11 @@ function MessagesBody() {
           <div className={`bg-white rounded-xl border border-[#E3EAF4] overflow-hidden ${selected ? 'hidden lg:block' : ''}`}>
             <ul className="divide-y divide-[#F5F8FC] max-h-[70vh] overflow-y-auto">
               {threads.map((t) => (
-                <li key={t.lead_id}>
+                <li key={threadKey(t)}>
                   <button
                     onClick={() => open(t)}
                     className={`w-full text-left px-4 py-3 hover:bg-[#F8FAFC] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
-                      selected?.lead_id === t.lead_id ? 'bg-blue-50' : ''
+                      selected && threadKey(selected) === threadKey(t) ? 'bg-blue-50' : ''
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -153,7 +157,7 @@ function MessagesBody() {
                     )}
                   </div>
                 </div>
-                <SmsThread leadId={selected.lead_id} onSent={() => void fetchInbox()} />
+                <SmsThread leadId={selected.lead_id} phone={selected.phone} onSent={() => void fetchInbox()} />
               </>
             ) : (
               <div className="py-16 text-center text-sm text-slate-400">
