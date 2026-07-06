@@ -108,33 +108,36 @@ export async function POST(
     return NextResponse.json({ error: 'Email sending is not configured (RESEND_API_KEY missing).' }, { status: 503 })
   }
 
-  // Sender info for the reply-to so answers reach a human.
+  // Sender info: reply-to reaches the human, and the from-name +
+  // signature carry their first name so it reads like a person's
+  // follow-up, not a mail merge.
   const { data: sender } = await supabaseAdmin
     .from('custom_users')
-    .select('email')
+    .select('email, first_name, name')
     .eq('id', auth.userId)
     .maybeSingle()
+  const senderFirst = (sender?.first_name || sender?.name || '').split(' ')[0] || null
 
   try {
     const resend = new Resend(resendKey)
     const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
     await resend.emails.send({
-      from: `CloudGreet <${fromEmail}>`,
+      from: `${senderFirst ? `${senderFirst} at CloudGreet` : 'CloudGreet'} <${fromEmail}>`,
       to: email,
       replyTo: sender?.email || process.env.RESEND_REPLY_TO || 'anthony@cloudgreet.com',
-      subject: `Book your CloudGreet demo${lead.business_name ? ` - ${lead.business_name}` : ''}`,
+      subject: 'That demo we talked about',
       text:
 `${firstName ? `Hi ${firstName},` : 'Hi,'}
 
-Great talking with you${lead.business_name ? ` about ${lead.business_name}` : ''}. Here's the link to grab a demo time with ${ownerName} - pick whatever works for you:
+Good talking with you just now. Here's that link - pick whatever time works and it'll go straight on the calendar:
 
 ${bookingUrl}
 
-It's a quick call: we'll show you how the AI receptionist answers your phones, books jobs, and texts back missed calls.
+It's 15 minutes. You'll hear the AI pick up a call for a business like yours, live, and you can grill us on anything after.
 
-Questions before then? Just reply to this email.
+If none of those times fit, just reply here and we'll make one work.
 
-- CloudGreet`,
+${senderFirst ? `Talk soon,\n${senderFirst}\nCloudGreet` : 'Talk soon,\nCloudGreet'}`,
     })
   } catch (e) {
     logger.error('send-booking-link: email send failed', {
