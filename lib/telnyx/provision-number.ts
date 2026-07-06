@@ -118,23 +118,27 @@ export async function provisionRepNumber(
     return { ok: false, error }
   }
 
-  // The order may report a per-number id under
-  // data.phone_numbers[0].id - use that for cleanup later. If absent
-  // we fall back to the order id which is still uniquely linkable.
-  const phoneId =
+  // The order response's data.phone_numbers[0].id / data.id is an
+  // ORDER resource, not the /v2/phone_numbers/{id} the number itself
+  // uses - kept only as a last-resort fallback if the real lookup
+  // below fails.
+  const orderPhoneId =
     order?.data?.phone_numbers?.[0]?.id ||
     order?.data?.id ||
     phoneNumber
 
   // Attach to the account's Messaging Profile so the number inherits
   // 10DLC campaign registration - without this, SMS from it gets
-  // silently carrier-filtered while calls work fine. Best-effort: a
-  // failure here shouldn't block handing the rep a working number for
-  // calls; it just needs a retry (admin backfill endpoint covers that).
-  const attach = await attachToMessagingProfile(phoneId)
+  // silently carrier-filtered while calls work fine. This also
+  // resolves the number's REAL Telnyx resource id, which is what gets
+  // persisted below. Best-effort: a failure here shouldn't block
+  // handing the rep a working number for calls; it just needs a retry
+  // (admin backfill endpoint covers that).
+  const attach = await attachToMessagingProfile(phoneNumber)
   if (attach.ok !== true) {
-    logger.warn('provisionRepNumber: messaging profile attach failed', { repId, phoneId, error: attach.error })
+    logger.warn('provisionRepNumber: messaging profile attach failed', { repId, phoneNumber, error: attach.error })
   }
+  const phoneId = attach.ok ? attach.resolved_id : orderPhoneId
 
   const { error: dbErr } = await supabaseAdmin
     .from('sales_reps')

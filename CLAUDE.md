@@ -72,20 +72,34 @@
 - Delivery receipts: message.finalized DLRs stamp rep_messages.status
   (delivered/delivery_failed) + error_detail; SmsThread shows "delivered"
   or a red "Not delivered - {reason}" on outbound bubbles.
-- ROOT CAUSE FOUND + FIXED 2026-07-06: 10DLC campaign registration in
-  Telnyx is assigned to a MESSAGING PROFILE, not per-number — a number
-  inherits the campaign only once it's attached to that profile. Every
-  rep DID was ordered via /v2/number_orders WITHOUT a messaging_profile_id
-  (provisionRepNumber + orderRepNumber never set one), so EVERY rep
-  number was sending unregistered — carriers silently filtered outbound
-  SMS while calls and inbound texts worked fine (confirmed live: Telnyx
-  accepted + "sent", then a delivery_failed DLR citing exactly this).
-  Fixed automatically going forward: both provisioning paths now call
-  lib/telnyx/messaging-profile.ts attachToMessagingProfile(phoneId)
-  right after ordering. Existing numbers need the one-time backfill:
-  POST /api/admin/telnyx/backfill-messaging-profiles (GET = check status
-  without changing anything) — run this once after deploy for every
-  already-provisioned rep DID including the setter line.
+- ROOT CAUSE FOUND + FIXED 2026-07-06 (two stacked bugs):
+  1. 10DLC campaign registration in Telnyx is assigned to a MESSAGING
+     PROFILE, not per-number — a number inherits the campaign only once
+     attached to that profile. provisionRepNumber/orderRepNumber never
+     set one, so every rep DID sent unregistered SMS — carriers
+     silently filtered it while calls + inbound texts worked fine.
+  2. The "phone_id" stored for every number (from the /v2/number_orders
+     response) is actually an ORDER resource id, NOT the
+     /v2/phone_numbers/{id} that PATCH/DELETE need — so the very first
+     fix attempt 404'd on all 7 numbers. This also means
+     releaseTelnyxNumber (evict-oldest-number-at-3-cap, manual delete)
+     had been silently no-op-ing forever: numbers removed from our DB
+     were very likely NEVER released at Telnyx and may still be billing.
+  Fixed: lib/telnyx/messaging-profile.ts resolvePhoneNumberId() looks up
+  the real id by E.164 number (GET filter[phone_number]=...) before any
+  PATCH/DELETE; attachToMessagingProfile + releaseTelnyxNumber both
+  take the phone NUMBER now, never a stored id. Automatic going forward
+  for every new number. Existing numbers: POST
+  /api/admin/telnyx/backfill-messaging-profiles (GET = check without
+  changing anything) attaches + self-heals each row's stored phone_id
+  to the real one; sequential with a stagger (concurrent hit Telnyx's
+  rate limit on the first attempt). NOT YET RUN SUCCESSFULLY as of last
+  session end — rerun after this fix deploys, then verify the setter's
+  test reply shows "delivered" in /setter/messages.
+  Open question flagged, not yet investigated: are there orphaned
+  numbers still live (and billed) at Telnyx from past evictions/deletes
+  that predate this fix? Worth a Telnyx portal number-inventory vs. DB
+  reconciliation pass at some point.
 
 ## Callbacks & inbound return calls
 - Scheduled callbacks resurface: /api/setter/overview pins

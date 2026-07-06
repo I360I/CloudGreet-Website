@@ -16,7 +16,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
-import { attachToMessagingProfile } from '@/lib/telnyx/messaging-profile'
+import { attachToMessagingProfile, resolvePhoneNumberId } from '@/lib/telnyx/messaging-profile'
 
 const MAX_NUMBERS_PER_REP = 3
 
@@ -139,19 +139,26 @@ export async function orderRepNumber(
     return { ok: false, error: `Telnyx order failed (${orderRes.status}): ${detail}` }
   }
 
-  const phoneId =
+  // The id inside a number order's response is an ORDER resource, not
+  // the /v2/phone_numbers/{id} the number itself uses - stored only as
+  // a last-resort fallback if the real lookup below fails.
+  const orderPhoneId =
     order?.data?.phone_numbers?.[0]?.id ||
     order?.data?.id ||
     phoneNumber
 
   // Attach to the account's Messaging Profile so this DID inherits the
   // 10DLC campaign - without it, SMS from this number gets silently
-  // carrier-filtered while calls still work. Best-effort; a failure
-  // shouldn't block handing the rep a working number for calls.
-  const attach = await attachToMessagingProfile(phoneId)
+  // carrier-filtered while calls still work. This also resolves the
+  // number's REAL Telnyx resource id (see resolvePhoneNumberId), which
+  // is what gets persisted below so release/eviction later actually
+  // works instead of 404ing against the wrong id. Best-effort; a
+  // failure shouldn't block handing the rep a working number for calls.
+  const attach = await attachToMessagingProfile(phoneNumber)
   if (attach.ok !== true) {
-    logger.warn('orderRepNumber: messaging profile attach failed', { repId, phoneId, error: attach.error })
+    logger.warn('orderRepNumber: messaging profile attach failed', { repId, phoneNumber, error: attach.error })
   }
+  const phoneId = attach.ok ? attach.resolved_id : orderPhoneId
 
   // 3. Eviction: if at cap, drop the oldest non-active row + release
   //    from Telnyx so we stop being billed.
@@ -162,7 +169,7 @@ export async function orderRepNumber(
       .filter((n) => !n.is_active)
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0]
     if (oldestNonActive) {
-      const released = await releaseTelnyxNumber(oldestNonActive.phone_id)
+      const released = await releaseTelnyxNumber(oldestNonActive.phone_number)
       if (released.ok !== true) {
         logger.warn('eviction release failed - keeping row to retry', {
           repId, evict_id: oldestNonActive.id, error: released.error,
@@ -181,7 +188,7 @@ export async function orderRepNumber(
     if (!evicted && existing.length >= MAX_NUMBERS_PER_REP) {
       // Rollback: release the just-ordered number so we don't pay for
       // a phantom one.
-      await releaseTelnyxNumber(phoneId)
+      await releaseTelnyxNumber(phoneNumber)
       return {
         ok: false,
         error: 'Cap of 3 numbers reached and the only candidates for eviction are the active one. Switch active first, then add new.',
@@ -204,7 +211,7 @@ export async function orderRepNumber(
     .single()
   if (dbErr || !inserted) {
     // Best-effort release so we don't pay for a number we can't track.
-    await releaseTelnyxNumber(phoneId)
+    await releaseTelnyxNumber(phoneNumber)
     return { ok: false, error: `DB insert failed: ${dbErr?.message || 'unknown'}` }
   }
 
@@ -262,7 +269,7 @@ export async function deleteRepNumber(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data: row } = await supabaseAdmin
     .from('sales_rep_phone_numbers')
-    .select('id, rep_id, phone_id, is_active')
+    .select('id, rep_id, phone_number, is_active')
     .eq('id', numberId)
     .maybeSingle()
   if (!row || row.rep_id !== repId) return { ok: false, error: 'Number not found' }
@@ -270,7 +277,7 @@ export async function deleteRepNumber(
     return { ok: false, error: 'Switch active to a different number before deleting this one.' }
   }
 
-  const released = await releaseTelnyxNumber(row.phone_id)
+  const released = await releaseTelnyxNumber(row.phone_number)
   if (released.ok !== true) return { ok: false, error: released.error }
 
   const { error } = await supabaseAdmin
@@ -286,13 +293,28 @@ export async function deleteRepNumber(
  * DELETE /v2/phone_numbers/{id} releases the number on Telnyx and
  * stops the recurring monthly charge.
  *
- * 200 / 204 → ok; 404 → already gone (treat as ok).
+ * Takes the E.164 phone NUMBER and resolves the real resource id
+ * itself - the id stored on older rows was the number-order's id, a
+ * different resource that always 404s against /v2/phone_numbers/{id}.
+ * With that bug, this function's old "404 = already gone, treat as
+ * ok" fallback was silently swallowing every failed release: evicted/
+ * deleted numbers were removed from our DB but likely NEVER actually
+ * released at Telnyx, and may still be billing monthly. Resolving the
+ * real id first means a 404 here now genuinely means gone.
+ *
+ * 200 / 204 → ok; 404 (after a successful resolve) → already gone.
  */
-async function releaseTelnyxNumber(phoneId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+async function releaseTelnyxNumber(phoneNumber: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const tx = telnyxAuth()
   if (!tx) return { ok: false, error: 'Missing TELNYX_API_KEY' }
+  const resolved = await resolvePhoneNumberId(phoneNumber)
+  if (resolved.ok !== true) {
+    // No matching Telnyx resource at all - already released.
+    if (resolved.error.includes('No Telnyx phone_numbers resource found')) return { ok: true }
+    return { ok: false, error: resolved.error }
+  }
   try {
-    const r = await fetch(`${TELNYX_API}/phone_numbers/${encodeURIComponent(phoneId)}`, {
+    const r = await fetch(`${TELNYX_API}/phone_numbers/${encodeURIComponent(resolved.id)}`, {
       method: 'DELETE',
       headers: tx.headers,
     })
