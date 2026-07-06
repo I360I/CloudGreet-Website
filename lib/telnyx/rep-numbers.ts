@@ -16,6 +16,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { attachToMessagingProfile } from '@/lib/telnyx/messaging-profile'
 
 const MAX_NUMBERS_PER_REP = 3
 
@@ -142,6 +143,15 @@ export async function orderRepNumber(
     order?.data?.phone_numbers?.[0]?.id ||
     order?.data?.id ||
     phoneNumber
+
+  // Attach to the account's Messaging Profile so this DID inherits the
+  // 10DLC campaign - without it, SMS from this number gets silently
+  // carrier-filtered while calls still work. Best-effort; a failure
+  // shouldn't block handing the rep a working number for calls.
+  const attach = await attachToMessagingProfile(phoneId)
+  if (attach.ok !== true) {
+    logger.warn('orderRepNumber: messaging profile attach failed', { repId, phoneId, error: attach.error })
+  }
 
   // 3. Eviction: if at cap, drop the oldest non-active row + release
   //    from Telnyx so we stop being billed.

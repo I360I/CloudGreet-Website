@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { attachToMessagingProfile } from '@/lib/telnyx/messaging-profile'
 
 /**
  * Provision a Telnyx local DID for a sales rep, attach it to the
@@ -124,6 +125,16 @@ export async function provisionRepNumber(
     order?.data?.phone_numbers?.[0]?.id ||
     order?.data?.id ||
     phoneNumber
+
+  // Attach to the account's Messaging Profile so the number inherits
+  // 10DLC campaign registration - without this, SMS from it gets
+  // silently carrier-filtered while calls work fine. Best-effort: a
+  // failure here shouldn't block handing the rep a working number for
+  // calls; it just needs a retry (admin backfill endpoint covers that).
+  const attach = await attachToMessagingProfile(phoneId)
+  if (attach.ok !== true) {
+    logger.warn('provisionRepNumber: messaging profile attach failed', { repId, phoneId, error: attach.error })
+  }
 
   const { error: dbErr } = await supabaseAdmin
     .from('sales_reps')

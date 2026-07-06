@@ -71,10 +71,21 @@
   inbound texts log a warn in sms-webhook instead of dropping silently.
 - Delivery receipts: message.finalized DLRs stamp rep_messages.status
   (delivered/delivery_failed) + error_detail; SmsThread shows "delivered"
-  or a red "Not delivered - {reason}" on outbound bubbles. 10DLC campaign
-  registration is PER NUMBER — a dialer DID not on the campaign gets
-  carrier-filtered outbound while inbound still works (this bit the
-  setter line on day one; owner assigns numbers to the campaign in Telnyx).
+  or a red "Not delivered - {reason}" on outbound bubbles.
+- ROOT CAUSE FOUND + FIXED 2026-07-06: 10DLC campaign registration in
+  Telnyx is assigned to a MESSAGING PROFILE, not per-number — a number
+  inherits the campaign only once it's attached to that profile. Every
+  rep DID was ordered via /v2/number_orders WITHOUT a messaging_profile_id
+  (provisionRepNumber + orderRepNumber never set one), so EVERY rep
+  number was sending unregistered — carriers silently filtered outbound
+  SMS while calls and inbound texts worked fine (confirmed live: Telnyx
+  accepted + "sent", then a delivery_failed DLR citing exactly this).
+  Fixed automatically going forward: both provisioning paths now call
+  lib/telnyx/messaging-profile.ts attachToMessagingProfile(phoneId)
+  right after ordering. Existing numbers need the one-time backfill:
+  POST /api/admin/telnyx/backfill-messaging-profiles (GET = check status
+  without changing anything) — run this once after deploy for every
+  already-provisioned rep DID including the setter line.
 
 ## Callbacks & inbound return calls
 - Scheduled callbacks resurface: /api/setter/overview pins
