@@ -13,6 +13,7 @@ import {
   type PowerDialItem, type SessionStatus,
 } from '@/app/sales/_components/dialer-engine'
 import { firaCode } from './fonts'
+import { SmsThread } from './SmsThread'
 
 /*
  * Full-screen call cockpit for 5-hour dial blocks. Industry-standard
@@ -34,6 +35,7 @@ export type CockpitLead = PowerDialItem & {
   rating?: number | null
   reviews?: number | null
   status?: string
+  followUpAt?: string | null
 }
 
 type Script = { id: string; section: string; title: string; body: string; sort_order: number }
@@ -61,9 +63,6 @@ export function DialerCockpit() {
   const [bookingLinkLeadId, setBookingLinkLeadId] = useState<string | null>(null)
   const [scripts, setScripts] = useState<Script[]>([])
   const [objectionFilter, setObjectionFilter] = useState('')
-  const [smsDraft, setSmsDraft] = useState('')
-  const [smsState, setSmsState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
-  const [smsError, setSmsError] = useState('')
   const noteInputRef = useRef<HTMLInputElement | null>(null)
 
   // Session stats (client-side, this session only).
@@ -208,28 +207,6 @@ export function DialerCockpit() {
     return body
       .replaceAll('{{first_name}}', first)
       .replaceAll('{{business_name}}', liveLead?.businessName || 'your business')
-  }
-
-  const sendSms = async () => {
-    const text = smsDraft.trim()
-    if (!text || !liveLeadId || smsState === 'sending') return
-    setSmsState('sending'); setSmsError('')
-    try {
-      const r = await fetchWithAuth('/api/sales/dialer/sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lead_id: liveLeadId, body: text }),
-      })
-      const j = await r.json().catch(() => ({}))
-      if (!r.ok || !j?.success) {
-        setSmsState('error'); setSmsError(j?.error || `Failed (${r.status})`)
-        return
-      }
-      setSmsState('sent'); setSmsDraft('')
-      setTimeout(() => setSmsState('idle'), 2500)
-    } catch {
-      setSmsState('error'); setSmsError('Network error')
-    }
   }
 
   const sectionsInOrder = ['opener', 'discovery', 'pitch', 'closing'] as const
@@ -424,6 +401,17 @@ export function DialerCockpit() {
                 <div className={`text-lg mt-2 text-slate-800 ${firaCode.className}`}>
                   {fmtPhone(currentItem?.phone || liveLead?.phone || '')}
                 </div>
+                {liveLead?.followUpAt && (
+                  <div className={`mt-1.5 inline-flex items-center gap-1.5 text-xs rounded-full px-2 py-0.5 border ${
+                    new Date(liveLead.followUpAt).getTime() <= Date.now()
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : 'bg-slate-50 text-slate-600 border-slate-200'
+                  }`}>
+                    <CalendarBlank weight="fill" className="w-3 h-3" />
+                    {new Date(liveLead.followUpAt).getTime() <= Date.now() ? 'Callback due - promised ' : 'Callback set for '}
+                    {new Date(liveLead.followUpAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  </div>
+                )}
               </div>
               <CallStateBadge callState={callState} seconds={secondsActive} countdown={countdown} queuePaused={queuePaused} />
             </div>
@@ -465,43 +453,17 @@ export function DialerCockpit() {
             </div>
           </div>
 
-          {/* SMS follow-up */}
+          {/* SMS follow-up: thread + composer, shared with /setter/messages */}
           <div className="bg-white rounded-xl border border-[#E3EAF4] p-3">
             <div className="flex items-center gap-1.5 mb-2">
               <ChatText weight="duotone" className="w-4 h-4 text-blue-600" />
               <span className="text-xs font-semibold" style={{ color: NAVY }}>Text follow-up</span>
-              {smsTemplates.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setSmsDraft(fillTemplate(t.body))}
-                  className="text-[10px] rounded-full border border-[#E3EAF4] px-2 py-0.5 text-slate-600 hover:border-blue-300 hover:text-blue-700 transition-colors duration-150"
-                >
-                  {t.title}
-                </button>
-              ))}
             </div>
-            <div className="flex items-end gap-2">
-              <textarea
-                value={smsDraft}
-                onChange={(e) => setSmsDraft(e.target.value)}
-                rows={2}
-                placeholder="Pick a template or type a text…"
-                className="flex-1 min-w-0 bg-[#F8FAFC] border border-[#E3EAF4] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-blue-400 focus:bg-white"
-              />
-              <button
-                onClick={sendSms}
-                disabled={!smsDraft.trim() || !liveLeadId || smsState === 'sending'}
-                className="inline-flex items-center gap-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3 py-2 transition-colors duration-200 disabled:opacity-50"
-              >
-                {smsState === 'sending' ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : null}
-                {smsState === 'sent' ? 'Sent ✓' : 'Send'}
-              </button>
-            </div>
-            {smsState === 'error' && (
-              <div className="mt-1.5 text-[11px] text-rose-700 flex items-start gap-1">
-                <WarningCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {smsError}
-              </div>
-            )}
+            <SmsThread
+              leadId={liveLeadId}
+              templates={smsTemplates.map((t) => ({ id: t.id, title: t.title, body: fillTemplate(t.body) }))}
+              placeholder="Pick a template or type a text…"
+            />
           </div>
         </div>
 

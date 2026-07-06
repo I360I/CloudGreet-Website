@@ -14,13 +14,13 @@ const Dialer = dynamicImport(
   () => import('@/app/sales/_components/Dialer').then((m) => ({ default: m.Dialer })),
   { ssr: false },
 )
-import { SquaresFour, ListChecks, SignOut, CircleNotch, FileText, BookOpen, GearSix } from '@phosphor-icons/react'
+import { SquaresFour, ListChecks, SignOut, CircleNotch, FileText, BookOpen, GearSix, ChatText } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { ImpersonationBanner } from '@/app/dashboard/_components/ImpersonationBanner'
 import { firaSans } from './fonts'
 
-type ActiveLabel = 'Overview' | 'Leads' | 'Scripts' | 'Knowledge' | 'Settings'
+type ActiveLabel = 'Overview' | 'Leads' | 'Messages' | 'Scripts' | 'Knowledge' | 'Settings'
 
 type NavItem = {
   label: ActiveLabel
@@ -32,6 +32,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { label: 'Overview',  href: '/setter',           icon: SquaresFour, match: (p) => p === '/setter' },
   { label: 'Leads',     href: '/setter/leads',     icon: ListChecks,  match: (p) => p.startsWith('/setter/leads') },
+  { label: 'Messages',  href: '/setter/messages',  icon: ChatText,    match: (p) => p.startsWith('/setter/messages') },
   { label: 'Scripts',   href: '/setter/scripts',   icon: FileText,    match: (p) => p.startsWith('/setter/scripts') },
   { label: 'Knowledge', href: '/setter/knowledge', icon: BookOpen,    match: (p) => p.startsWith('/setter/knowledge') },
   { label: 'Settings',  href: '/setter/settings',  icon: GearSix,     match: (p) => p.startsWith('/setter/settings') },
@@ -52,12 +53,15 @@ export function SetterChrome({
   pathname,
   name,
   onSignOut,
+  messagesUnread = 0,
   children,
 }: {
   activeLabel: ActiveLabel
   pathname: string
   name: string | null
   onSignOut: () => void
+  /** Unread inbound SMS count - renders a badge on the Messages nav item. */
+  messagesUnread?: number
   children: React.ReactNode
 }) {
   return (
@@ -89,7 +93,12 @@ export function SetterChrome({
                 }`}
               >
                 <Icon weight={active ? 'fill' : 'regular'} className="w-5 h-5 shrink-0" />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.label === 'Messages' && messagesUnread > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-amber-500 text-white text-[10px] font-semibold px-1">
+                    {messagesUnread > 99 ? '99+' : messagesUnread}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -124,11 +133,16 @@ export function SetterChrome({
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg ${
+              className={`flex flex-col items-center gap-1 px-1 py-1.5 rounded-lg min-w-0 ${
                 active ? 'text-white' : 'text-blue-200/60'
               }`}
             >
-              <Icon weight={active ? 'fill' : 'regular'} className="w-5 h-5" />
+              <span className="relative">
+                <Icon weight={active ? 'fill' : 'regular'} className="w-5 h-5" />
+                {item.label === 'Messages' && messagesUnread > 0 && (
+                  <span className="absolute -top-1 -right-1.5 w-2 h-2 rounded-full bg-amber-500" />
+                )}
+              </span>
               <span className="text-[10px] font-medium">{item.label}</span>
             </Link>
           )
@@ -154,6 +168,7 @@ export function SetterShell({
   const router = useRouter()
   const pathname = usePathname() || '/setter'
   const [name, setName] = useState<string | null>(null)
+  const [messagesUnread, setMessagesUnread] = useState(0)
 
   // Defense against shared-browser session swaps + cross-tab identity
   // contamination - reloads / kicks to login on mismatch.
@@ -173,6 +188,23 @@ export function SetterShell({
     return () => { cancelled = true }
   }, [router])
 
+  // Unread-texts badge: cheap count poll (partial-index-backed). Re-runs
+  // on navigation too, so reading a thread on /setter/messages drains
+  // the badge as soon as you move elsewhere.
+  useEffect(() => {
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const r = await fetchWithAuth('/api/sales/dialer/sms?unread_count=1')
+        const j = await r.json().catch(() => ({}))
+        if (!cancelled && j?.success) setMessagesUnread(j.unread || 0)
+      } catch { /* keep the last value */ }
+    }
+    void poll()
+    const t = setInterval(poll, 30000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [pathname])
+
   const signOut = async () => {
     try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
     clearClientAuthState()
@@ -182,7 +214,7 @@ export function SetterShell({
   return (
     <>
       <ImpersonationBanner />
-      <SetterChrome activeLabel={activeLabel} pathname={pathname} name={name} onSignOut={signOut}>
+      <SetterChrome activeLabel={activeLabel} pathname={pathname} name={name} onSignOut={signOut} messagesUnread={messagesUnread}>
         {children}
       </SetterChrome>
       {pathname.startsWith('/setter/leads') && <Dialer />}

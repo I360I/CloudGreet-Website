@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { notifyRep } from '@/lib/notifications/notify'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -62,6 +63,23 @@ export async function POST(request: NextRequest) {
       telnyx_message_id: telnyxId,
       status: 'received',
     })
+
+    if (repId) {
+      // Bell notification for the owning rep. Link only for setters -
+      // /setter/messages is the only thread UI; sales has none yet.
+      const { data: repUser } = await supabaseAdmin
+        .from('custom_users')
+        .select('role')
+        .eq('id', repId)
+        .maybeSingle()
+      await notifyRep(repId, {
+        type: 'sms_reply',
+        title: `New text from ${lead?.business_name || fromNumber}`,
+        body: text.slice(0, 140),
+        link: repUser?.role === 'setter' ? '/setter/messages' : undefined,
+        severity: 'info',
+      })
+    }
 
     if (lead?.id) {
       await supabaseAdmin.from('lead_notes').insert({
