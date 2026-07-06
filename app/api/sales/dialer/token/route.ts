@@ -39,15 +39,29 @@ export async function POST(request: NextRequest) {
   const credentialId = process.env.TELNYX_TELEPHONY_CREDENTIAL_ID
   const envFromNumber = process.env.TELNYX_OUTBOUND_FROM_NUMBER
 
-  // Prefer the rep's own Telnyx DID (provisioned at invite-accept).
-  // Fall back to the shared env default so the dialer keeps working
-  // for legacy reps whose provisioning failed or hasn't run yet.
-  const { data: rep } = await supabaseAdmin
-    .from('sales_reps')
-    .select('telnyx_outbound_number')
-    .eq('id', auth.userId)
-    .maybeSingle()
-  const fromNumber = rep?.telnyx_outbound_number || envFromNumber
+  // Prefer the rep's own Telnyx DID. Sources, in order:
+  //   1. legacy sales_reps.telnyx_outbound_number (sales reps)
+  //   2. active sales_rep_phone_numbers row (setters have no sales_reps
+  //      row by design, but do own DIDs - without this they dialed out
+  //      from the shared env number)
+  //   3. shared env default (last resort so the dialer keeps working
+  //      for reps whose provisioning failed or hasn't run yet)
+  const [{ data: rep }, { data: activeNum }] = await Promise.all([
+    supabaseAdmin
+      .from('sales_reps')
+      .select('telnyx_outbound_number')
+      .eq('id', auth.userId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from('sales_rep_phone_numbers')
+      .select('phone_number')
+      .eq('rep_id', auth.userId)
+      .eq('is_active', true)
+      .eq('is_sms_line', false)
+      .limit(1)
+      .maybeSingle(),
+  ])
+  const fromNumber = rep?.telnyx_outbound_number || activeNum?.phone_number || envFromNumber
 
   if (!apiKey || !credentialId || !fromNumber) {
     return NextResponse.json({
