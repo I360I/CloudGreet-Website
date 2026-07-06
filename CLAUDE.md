@@ -48,6 +48,17 @@
   Per-setter goal target: custom_users.weekly_demo_goal (default 2).
 
 ## SMS (rep follow-up texts) — two-way, live
+- **WORKING INTERIM (2026-07-06, commit 54ed877): rep SMS sends from a
+  toll-free VERIFIED line, not the local DID.** New
+  sales_rep_phone_numbers.is_sms_line flag (sql/rep-sms-line.sql, applied);
+  the send route prefers the rep's SMS line, falls back to the active DID.
+  Setter owns +18885030906 (same messaging profile as the AI numbers);
+  live-verified: Telnyx DLR "delivered" to the owner's cell, where the
+  local DID got a 40010 10DLC rejection. SMS lines are excluded from the
+  voice picker/local-presence pool and from the DID cap/eviction (losing
+  one silently kills texting). Spare verified toll-free +18333956731 is
+  free for the next rep. Trade-off: texts come from a different number
+  than calls — 10DLC registration below remains the proper long-term fix.
 - 10DLC/A2P: **NOT actually done — CORRECTED 2026-07-06.** Earlier note
   ("owner confirmed compliant") was wrong, likely confused with the
   toll-free number's Toll-Free Verification (a different, unrelated
