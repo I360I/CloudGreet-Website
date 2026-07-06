@@ -364,9 +364,12 @@ export function DialerCockpit() {
   // ---- Running: the cockpit proper ----
   return (
     <div className="px-4 xl:px-6 py-4 h-full flex flex-col gap-3">
-      {/* Header strip: session stats */}
-      <div className="bg-white rounded-xl border border-[#E3EAF4] px-4 py-2.5 flex items-center gap-5 flex-wrap">
-        <Link href="/setter/leads" className="text-slate-400 hover:text-slate-600" title="Exit to leads" aria-label="Exit to leads">
+      {/* Header strip: session stats. flex-nowrap + shrink-0 stat tiles
+          so this bar's height never grows on a narrow window - the
+          hotkey legend just hides below xl (same as before) rather
+          than wrapping or forcing a scrollbar. */}
+      <div className="bg-white rounded-xl border border-[#E3EAF4] px-4 py-2.5 flex items-center gap-5 flex-nowrap">
+        <Link href="/setter/leads" className="text-slate-400 hover:text-slate-600 shrink-0" title="Exit to leads" aria-label="Exit to leads">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         {[
@@ -376,13 +379,13 @@ export function DialerCockpit() {
           ['Demos', String(stats.demos)],
           ['Elapsed', fmtClock(elapsed)],
         ].map(([label, value]) => (
-          <div key={label} className="flex items-baseline gap-1.5">
+          <div key={label} className="flex items-baseline gap-1.5 shrink-0">
             <span className="text-base font-semibold" style={{ color: NAVY }}>{value}</span>
             <span className="text-[11px] text-slate-500">{label}</span>
           </div>
         ))}
-        <div className="flex-1" />
-        <span className="text-[11px] text-slate-400 hidden xl:block">
+        <div className="flex-1 min-w-4" />
+        <span className="text-[11px] text-slate-400 hidden xl:block shrink-0 whitespace-nowrap">
           1-7 tag · C callback · B book link · M mute · V VM · H hang up · Space pause
         </span>
       </div>
@@ -543,9 +546,17 @@ export function DialerCockpit() {
         </div>
       </div>
 
-      {/* Bottom bar: controls + dispositions + queue transport */}
-      <div className="bg-white rounded-xl border border-[#E3EAF4] px-4 py-3 flex items-center gap-3 flex-wrap relative">
-        <div className="flex items-center gap-1.5">
+      {/* Bottom bar: controls + dispositions + queue transport.
+          flex-nowrap (not flex-wrap) so this bar's height never grows
+          on a narrow laptop width - wrapping onto a second line stole
+          enough height from the center column that the notes/
+          text-follow-up panel above it could collapse out of view
+          entirely at ~1280px. Only the dispositions cluster itself
+          scrolls horizontally (below) when it doesn't fit - Mute/
+          Keypad/VM/Hangup and Pause/Skip/Stop are essential controls
+          that must never scroll out of reach. */}
+      <div className="bg-white rounded-xl border border-[#E3EAF4] px-4 py-3 flex items-center gap-3 flex-nowrap relative">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={toggleMute}
             disabled={!inCall}
@@ -582,16 +593,18 @@ export function DialerCockpit() {
           </button>
         </div>
 
-        <div className="h-8 w-px bg-[#EEF2F7]" />
+        <div className="h-8 w-px bg-[#EEF2F7] shrink-0" />
 
-        {/* Dispositions */}
-        <div className="flex items-center gap-1 flex-wrap flex-1">
+        {/* Dispositions - the ONE part of this bar that scrolls
+            horizontally on narrow screens (Mute/Hangup/Pause/Skip/Stop
+            stay fixed and always visible either side of it). */}
+        <div className="flex items-center gap-1 flex-nowrap flex-1 min-w-0 overflow-x-auto">
           {DISPOSITIONS.map((d) => (
             <button
               key={d.key}
               onClick={() => chooseDisposition(d.key)}
               disabled={callState !== 'ended' && callState !== 'active'}
-              className={`text-xs rounded-lg px-2.5 py-2 border transition-colors duration-150 disabled:opacity-40 ${
+              className={`shrink-0 text-xs rounded-lg px-2.5 py-2 border transition-colors duration-150 disabled:opacity-40 ${
                 postCallStatus === d.key
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-300'
@@ -603,7 +616,7 @@ export function DialerCockpit() {
           <button
             onClick={openCallback}
             disabled={callState !== 'ended' && callState !== 'active'}
-            className="text-xs rounded-lg px-2.5 py-2 border bg-white text-slate-700 border-[#E3EAF4] hover:border-amber-400 transition-colors duration-150 disabled:opacity-40 inline-flex items-center gap-1"
+            className="shrink-0 text-xs rounded-lg px-2.5 py-2 border bg-white text-slate-700 border-[#E3EAF4] hover:border-amber-400 transition-colors duration-150 disabled:opacity-40 inline-flex items-center gap-1"
           >
             <CalendarBlank className="w-3.5 h-3.5 text-amber-500" /><span className="text-slate-400">C</span> Callback
           </button>
@@ -611,14 +624,15 @@ export function DialerCockpit() {
             onClick={openBookingLink}
             disabled={callState !== 'ended' && callState !== 'active'}
             title="Email the prospect a demo booking link (B)"
-            className="text-xs rounded-lg px-2.5 py-2 border bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-400 transition-colors duration-150 disabled:opacity-40 inline-flex items-center gap-1"
+            className="shrink-0 text-xs rounded-lg px-2.5 py-2 border bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-400 transition-colors duration-150 disabled:opacity-40 inline-flex items-center gap-1"
           >
             <PaperPlaneTilt className="w-3.5 h-3.5 text-blue-500" /><span className="text-slate-400">B</span> Book link
           </button>
         </div>
 
-        {/* Queue transport */}
-        <div className="flex items-center gap-1.5">
+        {/* Queue transport - shrink-0: always visible, never scrolled
+            out of reach regardless of how many disposition tags exist. */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {countdown !== null && !queuePaused && (
             <span className={`text-sm text-blue-700 ${firaCode.className}`}>next in {countdown}s</span>
           )}
