@@ -49,21 +49,31 @@ export async function GET(request: NextRequest) {
 
     const { data: assignments } = await supabaseAdmin
       .from('lead_assignments')
-      .select('lead_id, status, last_touched_at')
+      .select('lead_id, status, last_touched_at, follow_up_at')
       .eq('rep_id', auth.userId)
 
     const rows = (assignments || []) as any[]
 
     // "Up next" - a short call-priority list for the Overview page.
-    // Manual join (lead_assignments.lead_id has no declared FK to
-    // leads(id) - same pattern as app/api/sales/leads/route.ts), picking
-    // the least-recently-touched new/interested leads first.
-    const upNextCandidates = rows
-      .filter((r) => r.status === 'new' || r.status === 'interested')
+    // DUE CALLBACKS FIRST (follow_up_at in the past, incl. auto-pins
+    // from missed inbound return calls - the hottest leads there are),
+    // ordered soonest-promised first, then the least-recently-touched
+    // new/interested fill. Manual join (lead_assignments.lead_id has no
+    // declared FK to leads(id) - same pattern as
+    // app/api/sales/leads/route.ts).
+    const nowIso = new Date().toISOString()
+    const isDialable = (r: any) => r.status !== 'dead' && r.status !== 'do_not_call'
+    const dueCallbacks = rows
+      .filter((r) => isDialable(r) && r.follow_up_at && r.follow_up_at <= nowIso)
+      .sort((a, b) => (a.follow_up_at || '').localeCompare(b.follow_up_at || ''))
+    const callbacksDue = dueCallbacks.length
+    const dueIds = new Set(dueCallbacks.map((r) => r.lead_id))
+    const fill = rows
+      .filter((r) => (r.status === 'new' || r.status === 'interested') && !dueIds.has(r.lead_id))
       .sort((a, b) => (a.last_touched_at || '').localeCompare(b.last_touched_at || ''))
-      .slice(0, 5)
+    const upNextCandidates = [...dueCallbacks.slice(0, 8), ...fill].slice(0, Math.max(5, Math.min(8, callbacksDue)))
     const upNextIds = upNextCandidates.map((r) => r.lead_id).filter(Boolean)
-    let upNext: { id: string; business_name: string | null; phone: string | null; status: string }[] = []
+    let upNext: { id: string; business_name: string | null; phone: string | null; status: string; due?: boolean }[] = []
     if (upNextIds.length > 0) {
       const { data: leadRows } = await supabaseAdmin
         .from('leads')
@@ -74,7 +84,10 @@ export async function GET(request: NextRequest) {
         .map((r) => {
           const lead = byId.get(r.lead_id)
           if (!lead?.phone) return null
-          return { id: lead.id, business_name: lead.business_name || null, phone: lead.phone, status: r.status }
+          return {
+            id: lead.id, business_name: lead.business_name || null, phone: lead.phone, status: r.status,
+            due: !!(r.follow_up_at && r.follow_up_at <= nowIso),
+          }
         })
         .filter((x): x is NonNullable<typeof x> => x !== null)
     }
@@ -187,6 +200,7 @@ export async function GET(request: NextRequest) {
       daily,
       series,
       up_next: upNext,
+      callbacks_due: callbacksDue,
       weekly_goal: weeklyGoal,
     })
   } catch (e) {

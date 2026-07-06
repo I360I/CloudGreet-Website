@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const { data: users, error } = await supabaseAdmin
     .from('custom_users')
-    .select('id, email, first_name, last_name, name, last_login, last_active_at, created_at, is_active, weekly_demo_goal, assigned_rep_id')
+    .select('id, email, first_name, last_name, name, last_login, last_active_at, created_at, is_active, weekly_demo_goal, assigned_rep_id, personal_cell')
     .eq('role', 'setter')
     .order('created_at', { ascending: false })
 
@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
       last_login: u.last_login,
       last_active: [u.last_active_at, u.last_login].filter(Boolean).sort().pop() || null,
       created_at: u.created_at,
+      personal_cell: (u as any).personal_cell ?? null,
       calls_today: statsResults[i],
       weekly_goal: goalResults[i],
       assigned_rep_id: (u as any).assigned_rep_id || null,

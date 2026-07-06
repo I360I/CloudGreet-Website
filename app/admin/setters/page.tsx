@@ -25,6 +25,7 @@ type Setter = {
   created_at: string | null
   calls_today: { attempts: number; connects: number; talk_seconds: number }
   weekly_goal: WeeklyGoal
+  personal_cell?: string | null
   assigned_rep_id: string | null
 }
 
@@ -174,6 +175,13 @@ export default function AdminSettersPage() {
                             row.id === s.id ? { ...row, assigned_rep_id: repId } : row,
                           ))}
                         />
+                        <CellEditor
+                          setterId={s.id}
+                          cell={s.personal_cell ?? null}
+                          onSaved={(cell) => setSetters((prev) => prev.map((row) =>
+                            row.id === s.id ? { ...row, personal_cell: cell } : row,
+                          ))}
+                        />
                         <GoalEditor
                           setterId={s.id}
                           target={s.weekly_goal.target}
@@ -321,6 +329,61 @@ function CopyInviteLink({ token }: { token: string }) {
     >
       <Copy className="w-3 h-3" /> {copied ? 'copied' : 'copy link'}
     </button>
+  )
+}
+
+/**
+ * Inline editor for the setter's forwarding cell - where inbound return
+ * calls to their dialer number ring (rep-voice-webhook). Empty = calls
+ * go straight to voicemail.
+ */
+function CellEditor({ setterId, cell, onSaved }: {
+  setterId: string
+  cell: string | null
+  onSaved: (cell: string | null) => void
+}) {
+  const [value, setValue] = useState(cell || '')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const save = async () => {
+    const trimmed = value.trim()
+    if (trimmed === (cell || '')) return
+    setSaving(true); setErr('')
+    try {
+      const res = await fetchWithAuth(`/api/admin/setters/${setterId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ personal_cell: trimmed || null }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
+      onSaved(j.personal_cell ?? null)
+      setValue(j.personal_cell || '')
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed')
+      setValue(cell || '')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="text-right">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
+        Inbound cell
+      </div>
+      <input
+        type="tel"
+        placeholder="voicemail only"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+        disabled={saving}
+        className="w-36 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none focus:border-sky-400/50"
+      />
+      {err && <div className="text-[10px] text-rose-400 mt-0.5">{err}</div>}
+    </div>
   )
 }
 

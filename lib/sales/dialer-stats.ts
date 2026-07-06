@@ -36,6 +36,11 @@ export async function getRepCallStats(repId: string, opts?: { since?: Date }): P
     .from('rep_calls')
     .select('status, started_at, duration_seconds')
     .eq('rep_id', repId)
+    // Dial stats count OUTBOUND work only - inbound return calls are
+    // logged in rep_calls too (direction='inbound') and must not
+    // inflate attempts. .or covers legacy rows created before the
+    // direction column existed (null there = outbound).
+    .or('direction.eq.outbound,direction.is.null')
     .gte('started_at', since.toISOString())
 
   const stats = emptyStats()
@@ -76,6 +81,11 @@ export async function getRepDailySeries(repId: string, days = 7): Promise<DailyC
     .from('rep_calls')
     .select('status, started_at, duration_seconds')
     .eq('rep_id', repId)
+    // Dial stats count OUTBOUND work only - inbound return calls are
+    // logged in rep_calls too (direction='inbound') and must not
+    // inflate attempts. .or covers legacy rows created before the
+    // direction column existed (null there = outbound).
+    .or('direction.eq.outbound,direction.is.null')
     .gte('started_at', rangeStart.toISOString())
 
   for (const c of (calls || []) as any[]) {

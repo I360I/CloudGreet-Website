@@ -29,7 +29,7 @@ const TRACK = '#DBEAFE'     // meter track (lighter step, same ramp)
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
-export type UpNextLead = { id: string; business_name: string | null; phone: string; status: string }
+export type UpNextLead = { id: string; business_name: string | null; phone: string; status: string; due?: boolean }
 export type WeeklyGoal = {
   target: number
   /** Demos HELD (client showed) this week - the goal counts show-ups, not bookings. */
@@ -56,6 +56,7 @@ export type Overview = {
   daily: { date: string; dials: number; connects: number; demos: number }[]
   series?: RangeSeries
   up_next: UpNextLead[]
+  callbacks_due?: number
   weekly_goal: WeeklyGoal
 }
 
@@ -394,8 +395,13 @@ export function OverviewDashboard({ data, firstName }: { data: Overview; firstNa
             <div className="px-5 py-4 border-b border-[#EEF2F7] flex items-center justify-between gap-3">
               <div>
                 <div className="text-base font-semibold" style={{ color: NAVY }}>Up next</div>
-                <div className="text-xs text-slate-500 mt-0.5">Leads that need a call, oldest touch first</div>
+                <div className="text-xs text-slate-500 mt-0.5">Callbacks due first, then oldest untouched</div>
               </div>
+              {(data.callbacks_due ?? 0) > 0 && (
+                <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
+                  {data.callbacks_due} callback{data.callbacks_due === 1 ? '' : 's'} due
+                </span>
+              )}
             </div>
             {data.up_next.length === 0 ? (
               <div className="px-5 py-10 text-center">
@@ -420,8 +426,10 @@ export function OverviewDashboard({ data, firstName }: { data: Overview; firstNa
                         <div className={`text-xs text-slate-500 whitespace-nowrap ${firaCode.className}`}>{fmtPhone(lead.phone)}</div>
                       </div>
                     </div>
-                    <span className={`hidden sm:inline-flex shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${statusPill[lead.status] || 'bg-slate-100 text-slate-600'}`}>
-                      {statusLabel[lead.status] || lead.status}
+                    <span className={`hidden sm:inline-flex shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                      lead.due ? 'bg-amber-100 text-amber-800' : statusPill[lead.status] || 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {lead.due ? 'Callback due' : statusLabel[lead.status] || lead.status}
                     </span>
                   </li>
                 ))}

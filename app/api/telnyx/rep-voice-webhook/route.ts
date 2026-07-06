@@ -114,6 +114,10 @@ export async function POST(request: NextRequest) {
       // No cell on file — answer and go straight to voicemail
       await telnyxAction(callId, 'answer', {})
       await startVoicemail(callId, rep.name, rep.id, fromNumber || '', toNumber || '')
+      await recordInboundOutcome({
+        repId: rep.id, fromNumber: fromNumber || '', toNumber: toNumber || '',
+        status: 'missed', leftVoicemail: true,
+      })
       return NextResponse.json({ ok: true, action: 'voicemail_no_cell' })
     }
 
@@ -137,6 +141,10 @@ export async function POST(request: NextRequest) {
         logger.warn('telnyx outbound dial failed, going to voicemail', { status: dialRes?.status, body: errBody.slice(0, 200) })
         await telnyxAction(callId, 'answer', {})
         await startVoicemail(callId, rep.name, rep.id, fromNumber || '', toNumber || '')
+        await recordInboundOutcome({
+          repId: rep.id, fromNumber: fromNumber || '', toNumber: toNumber || '',
+          status: 'missed', leftVoicemail: true,
+        })
         return NextResponse.json({ ok: true, action: 'voicemail_dial_failed' })
       }
 
@@ -166,9 +174,21 @@ export async function POST(request: NextRequest) {
         logger.info('telnyx rep inbound: no answer, voicemail', { rep: clientState.rep_name, talkSecs, cause: payload.hangup_cause })
         await telnyxAction(clientState.inbound_ccc, 'answer', {})
         await startVoicemail(clientState.inbound_ccc, clientState.rep_name || 'the rep', clientState.rep_id || '', clientState.from_number || '', clientState.to_number || '')
+        if (clientState.rep_id) {
+          await recordInboundOutcome({
+            repId: clientState.rep_id, fromNumber: clientState.from_number || '', toNumber: clientState.to_number || '',
+            status: 'missed', leftVoicemail: true,
+          })
+        }
         return NextResponse.json({ ok: true, action: 'voicemail' })
       }
 
+      if (clientState.rep_id) {
+        await recordInboundOutcome({
+          repId: clientState.rep_id, fromNumber: clientState.from_number || '', toNumber: clientState.to_number || '',
+          status: 'completed', durationSeconds: talkSecs,
+        })
+      }
       return NextResponse.json({ ok: true, action: 'call_completed', talkSecs })
     }
 
@@ -252,21 +272,87 @@ async function findRepByToNumber(toNumber: string): Promise<{ id: string; name: 
   const repId = (data as any)?.rep_id
   if (!repId) return null
 
+  // The sales_reps row is OPTIONAL: setters deliberately don't have one
+  // (it's the commission/Stripe profile table). Requiring it here made
+  // a prospect's return call to a setter's DID get IGNORED entirely -
+  // dead air, no voicemail. Fall back to custom_users.personal_cell,
+  // and to the voicemail path when no cell is on file anywhere.
   const { data: rep } = await supabaseAdmin
     .from('sales_reps')
     .select('id, personal_cell')
     .eq('id', repId)
     .maybeSingle()
-  if (!rep) return null
 
   const { data: user } = await supabaseAdmin
     .from('custom_users')
-    .select('first_name, last_name')
+    .select('first_name, last_name, personal_cell')
     .eq('id', repId)
     .maybeSingle()
 
   const name = user ? [user.first_name, user.last_name].filter(Boolean).join(' ') : 'your rep'
-  return { id: repId, name, personal_cell: (rep as any).personal_cell || null }
+  const personalCell = (rep as any)?.personal_cell || (user as any)?.personal_cell || null
+  return { id: repId, name, personal_cell: personalCell }
+}
+
+/**
+ * A missed inbound (no answer / went to voicemail) is the hottest
+ * signal a cold lead sends: they called back. Log it as an inbound
+ * rep_calls row, and when the caller matches one of this rep's leads,
+ * pin the lead by setting follow_up_at = now() + drop a note - the
+ * overview/leads "callbacks due" surfacing puts them at the top of the
+ * rep's queue automatically.
+ */
+async function recordInboundOutcome(opts: {
+  repId: string
+  fromNumber: string
+  toNumber: string
+  status: 'completed' | 'missed'
+  durationSeconds?: number
+  leftVoicemail?: boolean
+}) {
+  try {
+    await supabaseAdmin.from('rep_calls').insert({
+      rep_id: opts.repId,
+      to_number: opts.toNumber,
+      from_number: opts.fromNumber,
+      direction: 'inbound',
+      status: opts.status,
+      started_at: new Date().toISOString(),
+      ended_at: new Date().toISOString(),
+      duration_seconds: opts.durationSeconds ?? 0,
+    })
+  } catch { /* non-fatal */ }
+
+  if (opts.status !== 'missed' || !opts.fromNumber) return
+  try {
+    const { data: lead } = await supabaseAdmin
+      .from('leads')
+      .select('id, business_name')
+      .eq('phone', opts.fromNumber)
+      .maybeSingle()
+    if (!lead) return
+    const { data: assignment } = await supabaseAdmin
+      .from('lead_assignments')
+      .select('lead_id')
+      .eq('rep_id', opts.repId)
+      .eq('lead_id', lead.id)
+      .maybeSingle()
+    if (!assignment) return
+    await supabaseAdmin
+      .from('lead_assignments')
+      .update({ follow_up_at: new Date().toISOString(), last_touched_at: new Date().toISOString() })
+      .eq('rep_id', opts.repId)
+      .eq('lead_id', lead.id)
+    const when = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago' })
+    await supabaseAdmin.from('lead_notes').insert({
+      lead_id: lead.id,
+      rep_id: opts.repId,
+      body: `Called you back at ${when} CT and missed you${opts.leftVoicemail ? ' - left a voicemail' : ''}. Pinned to your queue.`,
+    })
+    logger.info('inbound return call pinned lead', { leadId: lead.id, repId: opts.repId })
+  } catch (e) {
+    logger.warn('inbound return-call pin failed', { error: e instanceof Error ? e.message : 'unknown' })
+  }
 }
 
 async function findRepByFromNumber(fromNumber: string): Promise<string | null> {

@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
+import { normalizePhone } from '@/lib/scrapers/normalize'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
  * PATCH /api/admin/setters/[id]
- *   { weekly_demo_goal?: number, assigned_rep_id?: string | null }
+ *   { weekly_demo_goal?: number, assigned_rep_id?: string | null,
+ *     personal_cell?: string | null }
  *
  * Admin-only setter controls:
  * - weekly_demo_goal: the adjustable per-setter weekly demo target
  *   (defaults to 2 - see sql/setter-weekly-goal.sql). Hitting the goal 4
  *   weeks straight is the $50 bonus tier computed in /api/setter/overview -
  *   this route only changes the target, not the bonus math itself.
+ * - personal_cell: where inbound return calls to the setter's dialer
+ *   number get forwarded (rep-voice-webhook). Null clears it - callers
+ *   then go straight to voicemail.
  * - assigned_rep_id: which sales rep this setter's booked demos flow to
  *   (closes rows land in that rep's pipeline - see mark-demo). Pass null
  *   to unassign. Must reference an active custom_users row with role
@@ -29,6 +34,7 @@ export async function PATCH(
   const body = await request.json().catch(() => ({})) as {
     weekly_demo_goal?: number
     assigned_rep_id?: string | null
+    personal_cell?: string | null
   }
 
   const update: Record<string, unknown> = {}
@@ -39,6 +45,18 @@ export async function PATCH(
       return NextResponse.json({ error: 'weekly_demo_goal must be a number between 1 and 50' }, { status: 400 })
     }
     update.weekly_demo_goal = Math.round(goal)
+  }
+
+  if (body.personal_cell !== undefined) {
+    if (body.personal_cell === null || body.personal_cell === '') {
+      update.personal_cell = null
+    } else {
+      const cell = normalizePhone(body.personal_cell)
+      if (!cell) {
+        return NextResponse.json({ error: 'personal_cell is not a valid US phone number' }, { status: 400 })
+      }
+      update.personal_cell = cell
+    }
   }
 
   if (body.assigned_rep_id !== undefined) {
@@ -69,7 +87,7 @@ export async function PATCH(
     .update(update)
     .eq('id', params.id)
     .eq('role', 'setter')
-    .select('id, weekly_demo_goal, assigned_rep_id')
+    .select('id, weekly_demo_goal, assigned_rep_id, personal_cell')
     .maybeSingle()
 
   if (error) {
@@ -83,5 +101,6 @@ export async function PATCH(
     success: true,
     weekly_demo_goal: data.weekly_demo_goal,
     assigned_rep_id: data.assigned_rep_id ?? null,
+    personal_cell: (data as any).personal_cell ?? null,
   })
 }

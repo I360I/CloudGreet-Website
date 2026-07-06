@@ -319,7 +319,12 @@ export function SetterLeadsWorkspace() {
 
   const filtered = useMemo(() => {
     let out = [...leads]
-    if (filter !== 'all') out = out.filter((l) => l.status === filter)
+    if (filter === 'callbacks_due') {
+      const now = Date.now()
+      out = out.filter((l) =>
+        l.follow_up_at && new Date(l.follow_up_at).getTime() <= now &&
+        l.status !== 'dead' && l.status !== 'do_not_call')
+    } else if (filter !== 'all') out = out.filter((l) => l.status === filter)
     if (search.trim()) {
       const q = search.toLowerCase()
       out = out.filter((l) =>
@@ -356,7 +361,14 @@ export function SetterLeadsWorkspace() {
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: leads.length }
-    for (const l of leads) c[l.status] = (c[l.status] || 0) + 1
+    const now = Date.now()
+    for (const l of leads) {
+      c[l.status] = (c[l.status] || 0) + 1
+      if (l.follow_up_at && new Date(l.follow_up_at).getTime() <= now &&
+          l.status !== 'dead' && l.status !== 'do_not_call') {
+        c.callbacks_due = (c.callbacks_due || 0) + 1
+      }
+    }
     return c
   }, [leads])
 
@@ -405,6 +417,7 @@ export function SetterLeadsWorkspace() {
                     rating: l.google_rating,
                     reviews: l.google_review_count,
                     status: l.status,
+                    followUpAt: l.follow_up_at,
                   }))
                 if (callable.length === 0) {
                   alert(selected.size > 0
@@ -533,6 +546,21 @@ export function SetterLeadsWorkspace() {
         >
           <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+              {(counts.callbacks_due ?? 0) > 0 && (
+                <button
+                  onClick={() => setFilter(filter === 'callbacks_due' ? 'all' : 'callbacks_due')}
+                  className={`text-xs font-semibold rounded-full px-2.5 py-1 border transition-all ${
+                    filter === 'callbacks_due'
+                      ? 'bg-amber-500 text-white border-amber-500'
+                      : 'bg-amber-50 text-amber-800 border-amber-200 hover:border-amber-400'
+                  }`}
+                >
+                  Callbacks due
+                  <span className={`ml-1 tabular-nums ${filter === 'callbacks_due' ? 'text-amber-100' : 'text-amber-600'}`}>
+                    {counts.callbacks_due}
+                  </span>
+                </button>
+              )}
               {STATUS_FILTERS.map((f) => {
                 const c = counts[f.key] ?? 0
                 if (f.key !== 'all' && c === 0) return null
