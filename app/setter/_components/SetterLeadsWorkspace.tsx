@@ -102,6 +102,7 @@ export function SetterLeadsWorkspace() {
   // each row having to own its own state.
   const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
   const [noteModalLeadId, setNoteModalLeadId] = useState<string | null>(null)
+  const [emailModalLeadId, setEmailModalLeadId] = useState<string | null>(null)
   const [findingEmails, setFindingEmails] = useState(false)
   const [outreachModal, setOutreachModal] = useState<{
     leads: Pick<Lead, 'id' | 'business_name'>[]
@@ -823,6 +824,15 @@ export function SetterLeadsWorkspace() {
                         )}
                         <button
                           type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEmailModalLeadId(l.id) }}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          aria-label="Send email"
+                          title="Email this prospect"
+                        >
+                          <EnvelopeSimple weight="bold" className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNoteModalLeadId(l.id) }}
                           className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                           aria-label="Add note"
@@ -918,6 +928,25 @@ export function SetterLeadsWorkspace() {
           }}
         />
       )}
+      {emailModalLeadId && (() => {
+        const lead = leads.find((l) => l.id === emailModalLeadId)
+        return (
+          <LeadsEmailModal
+            leadId={emailModalLeadId}
+            businessName={lead?.business_name || 'this business'}
+            contactName={lead?.contact_name || null}
+            initialEmail={lead?.email || ''}
+            onClose={() => setEmailModalLeadId(null)}
+            onSent={(toEmail) => {
+              const lid = emailModalLeadId
+              setEmailModalLeadId(null)
+              setLeads((prev) => prev.map((l) => l.id === lid && !l.email ? { ...l, email: toEmail } : l))
+              setFlash('Email sent.')
+              setTimeout(() => setFlash(''), 2500)
+            }}
+          />
+        )
+      })()}
       {outreachModal && (
         <OutreachModal
           leads={outreachModal.leads}
@@ -1080,6 +1109,99 @@ function LeadsNoteModal({ leadId, businessName, onClose, onSaved }: {
           >
             {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle weight="fill" className="w-4 h-4" />}
             Save note
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 1:1 prospect email compose. Sends from {rep}@getcloudgreet.com with a
+ * personal, pre-filled draft the setter can edit. Not a campaign.
+ */
+function LeadsEmailModal({ leadId, businessName, contactName, initialEmail, onClose, onSent }: {
+  leadId: string
+  businessName: string
+  contactName: string | null
+  initialEmail: string
+  onClose: () => void
+  onSent: (toEmail: string) => void
+}) {
+  const first = (contactName || '').trim().split(/\s+/)[0] || 'there'
+  const [to, setTo] = useState(initialEmail)
+  const [subject, setSubject] = useState('Following up from our call')
+  const [body, setBody] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Prefill a solid personal draft (rep can edit or rewrite).
+    void (async () => {
+      let bookingUrl = ''
+      try {
+        const r = await fetchWithAuth('/api/setter/assigned-rep')
+        const j = await r.json().catch(() => ({}))
+        bookingUrl = j?.rep?.booking_url || ''
+      } catch { /* optional */ }
+      setBody(
+        `Hi ${first},\n\n` +
+        `Thanks for taking my call. I know how busy it gets at ${businessName}, so quick recap: CloudGreet is an AI receptionist that answers every call 24/7, books jobs straight onto your calendar, and texts back missed callers in under a minute. It's like adding a front-desk person who never misses a call.\n\n` +
+        `If you're open to it, the fastest way to see it is a quick 15-minute demo` +
+        (bookingUrl ? ` — you can grab a time here: ${bookingUrl}` : `, just reply and I'll set one up`) + `.\n\n` +
+        `Talk soon,\n`,
+      )
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const send = async () => {
+    if (busy) return
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/send-email`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: to.trim(), subject: subject.trim(), body: body.trim() }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) { setErr(j?.error || `Failed (${r.status})`); return }
+      onSent(to.trim())
+    } catch { setErr('Failed to send') } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4" onClick={onClose}>
+      <div className="bg-white border border-[#E3EAF4] rounded-xl shadow-xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-1">
+          <EnvelopeSimple weight="fill" className="w-4 h-4 text-blue-600" />
+          <h3 className="text-base font-medium text-gray-900">Email {businessName}</h3>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">Sends a personal email from your CloudGreet address. Replies come back to you.</p>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">To</label>
+        <input
+          type="email" value={to} onChange={(e) => setTo(e.target.value)} autoFocus={!initialEmail}
+          placeholder="name@company.com"
+          className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm mb-3 focus:outline-none focus:border-blue-500"
+        />
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">Subject</label>
+        <input
+          value={subject} onChange={(e) => setSubject(e.target.value)}
+          className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm mb-3 focus:outline-none focus:border-blue-500"
+        />
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">Message</label>
+        <textarea
+          value={body} onChange={(e) => setBody(e.target.value)} rows={9}
+          className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm leading-relaxed focus:outline-none focus:border-blue-500 resize-y"
+        />
+        {err && <div className="mt-3 bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-xs text-rose-700">{err}</div>}
+        <div className="flex justify-end gap-2 mt-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
+          <button
+            onClick={send} disabled={busy || !to.trim() || !subject.trim() || !body.trim()}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-60"
+          >
+            {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <PaperPlaneTilt weight="fill" className="w-4 h-4" />}
+            Send email
           </button>
         </div>
       </div>
