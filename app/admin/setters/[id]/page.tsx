@@ -218,8 +218,9 @@ export default function AdminSetterDetailPage() {
                 {([
                   ['New', pipeline.new], ['Called', pipeline.called], ['Voicemail', pipeline.voicemail],
                   ['Interested', pipeline.interested], ['Demo set', pipeline.demo_scheduled],
-                  ['Demo held', pipeline.demo_showed], ['Dead', pipeline.dead], ['DNC', pipeline.do_not_call],
-                  ['Untouched', pipeline.untouched],
+                  ['Demo held', pipeline.demo_showed], ['Not avail', pipeline.not_available],
+                  ['Not interested', pipeline.not_interested], ['Dead', pipeline.dead],
+                  ['DNC', pipeline.do_not_call], ['Untouched', pipeline.untouched],
                 ] as [string, number][]).map(([label, n]) => (
                   <div key={label}>
                     <div className="text-lg text-white tabular-nums">{n}</div>
