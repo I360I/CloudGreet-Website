@@ -1,11 +1,52 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { CircleNotch, MagnifyingGlass, CaretDown, WarningCircle, PencilSimple, TrashSimple, Plus, CheckCircle } from '@phosphor-icons/react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { CircleNotch, MagnifyingGlass, CaretDown, WarningCircle, PencilSimple, TrashSimple, Plus, CheckCircle, UploadSimple, ArrowLeft, FileText } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { SetterLoadingState } from '../_components/SetterShell'
 
 const NAVY = '#1E3A8A'
+
+/**
+ * Two views:
+ *  - Quick reference: the section snippets (opener/objections/...) the
+ *    cockpit right-rail shows in-call. Inline-editable.
+ *  - Full scripts: a library of complete call flows - add, upload
+ *    (.txt/.md), read, edit, delete. Backed by call_scripts.
+ */
+export default function SetterScriptsPage() {
+  const [tab, setTab] = useState<'sections' | 'library'>('sections')
+  return (
+    <div className="max-w-6xl mx-auto px-6 py-10 space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold" style={{ color: NAVY }}>Call scripts</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Quick reference is what the cockpit shows in-call - placeholders like{' '}
+          <code className="text-xs bg-slate-100 rounded px-1">{'{{first_name}}'}</code> fill in
+          automatically. Full scripts is your library of complete call flows.
+        </p>
+      </div>
+
+      <div className="inline-flex rounded-lg border border-[#E3EAF4] bg-white p-0.5">
+        {([['sections', 'Quick reference'], ['library', 'Full scripts']] as const).map(([value, label]) => (
+          <button
+            key={value}
+            onClick={() => setTab(value)}
+            className={`text-sm font-medium rounded-md px-3.5 py-1.5 transition-colors duration-150 ${
+              tab === value ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'sections' ? <SectionsBody /> : <LibraryBody />}
+    </div>
+  )
+}
+
+/* ================= Quick reference (section snippets) ================= */
 
 type Script = {
   id: string
@@ -25,17 +66,7 @@ const SECTION_LABELS: Record<Script['section'], string> = {
 }
 const SECTION_ORDER: Script['section'][] = ['opener', 'discovery', 'pitch', 'objection', 'closing', 'sms']
 
-/**
- * Scripts: readable reference AND editable - the setter owns the
- * wording that's landing (or not) on real calls. Same dialer_scripts
- * table the cockpit right rail and /admin/scripts use, so edits show
- * up everywhere on the next load.
- */
-export default function SetterScriptsPage() {
-  return <ScriptsBody />
-}
-
-function ScriptsBody() {
+function SectionsBody() {
   const [scripts, setScripts] = useState<Script[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
@@ -97,25 +128,15 @@ function ScriptsBody() {
   if (loading) return <SetterLoadingState />
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10 space-y-6">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold" style={{ color: NAVY }}>Call scripts</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            What the cockpit shows in-call - and yours to sharpen. Placeholders like{' '}
-            <code className="text-xs bg-slate-100 rounded px-1">{'{{first_name}}'}</code> fill in
-            automatically during calls.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 bg-white border border-[#E3EAF4] rounded-lg px-3 py-2 w-64 focus-within:border-blue-500">
-          <MagnifyingGlass className="w-4 h-4 text-slate-400 shrink-0" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search scripts..."
-            className="flex-1 min-w-0 bg-transparent text-sm focus:outline-none"
-          />
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 bg-white border border-[#E3EAF4] rounded-lg px-3 py-2 w-64 focus-within:border-blue-500">
+        <MagnifyingGlass className="w-4 h-4 text-slate-400 shrink-0" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search quick reference..."
+          className="flex-1 min-w-0 bg-transparent text-sm focus:outline-none"
+        />
       </div>
 
       {err && (
@@ -275,6 +296,291 @@ function EntryForm({ initialTitle, initialBody, saveLabel, onSave, onCancel, onD
             <TrashSimple className="w-3.5 h-3.5" /> Delete
           </button>
         )}
+      </div>
+    </div>
+  )
+}
+
+/* ================= Full scripts library ================= */
+
+type FullScript = {
+  id: string
+  title: string
+  body: string
+  created_at: string
+  updated_at: string
+}
+
+function LibraryBody() {
+  const [scripts, setScripts] = useState<FullScript[]>([])
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState('')
+  const [search, setSearch] = useState('')
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [mode, setMode] = useState<'list' | 'read' | 'edit' | 'new'>('list')
+  const fileRef = useRef<HTMLInputElement | null>(null)
+  const [uploadDraft, setUploadDraft] = useState<{ title: string; body: string } | null>(null)
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const r = await fetchWithAuth('/api/sales/scripts-library')
+        const j = await r.json().catch(() => ({}))
+        if (!r.ok || !j?.success) setErr(j?.error || 'Failed to load the library')
+        else setScripts(j.scripts || [])
+      } catch {
+        setErr('Failed to load the library')
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [])
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return scripts
+    return scripts.filter((s) => (s.title + ' ' + s.body).toLowerCase().includes(q))
+  }, [scripts, search])
+
+  const open = scripts.find((s) => s.id === openId) || null
+
+  const create = async (patch: { title: string; body: string }) => {
+    const r = await fetchWithAuth('/api/sales/scripts-library', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    const j = await r.json().catch(() => ({}))
+    if (!r.ok || !j?.success) throw new Error(j?.error || 'Add failed')
+    setScripts((prev) => [j.script, ...prev])
+    setUploadDraft(null)
+    setOpenId(j.script.id)
+    setMode('read')
+  }
+
+  const save = async (id: string, patch: { title: string; body: string }) => {
+    const r = await fetchWithAuth(`/api/sales/scripts-library/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    const j = await r.json().catch(() => ({}))
+    if (!r.ok || !j?.success) throw new Error(j?.error || 'Save failed')
+    setScripts((prev) => prev.map((s) => (s.id === id ? j.script : s)).sort((a, b) => b.updated_at.localeCompare(a.updated_at)))
+    setMode('read')
+  }
+
+  const remove = async (id: string) => {
+    if (!confirm('Delete this script from the library?')) return
+    setScripts((prev) => prev.filter((s) => s.id !== id))
+    setOpenId(null); setMode('list')
+    await fetchWithAuth(`/api/sales/scripts-library/${id}`, { method: 'DELETE' }).catch(() => null)
+  }
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    const text = await f.text()
+    if (!text.trim()) { setErr('That file is empty'); return }
+    setUploadDraft({ title: f.name.replace(/\.(txt|md|markdown)$/i, ''), body: text })
+    setMode('new')
+  }
+
+  if (loading) return <SetterLoadingState />
+
+  // Reader / editor take over the panel.
+  if ((mode === 'read' || mode === 'edit') && open) {
+    return (
+      <div className="max-w-3xl space-y-4">
+        <button
+          onClick={() => { setMode('list'); setOpenId(null) }}
+          className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> All scripts
+        </button>
+        {mode === 'read' ? (
+          <div className="bg-white rounded-xl border border-[#E3EAF4] shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="px-6 py-4 border-b border-[#EEF2F7] flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold" style={{ color: NAVY }}>{open.title}</h2>
+                <div className="text-[11px] text-slate-400 mt-0.5">updated {new Date(open.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => setMode('edit')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-[#E3EAF4] hover:border-blue-300 rounded-lg transition-colors"
+                >
+                  <PencilSimple className="w-3.5 h-3.5" /> Edit
+                </button>
+                <button
+                  onClick={() => void remove(open.id)}
+                  title="Delete"
+                  className="p-2 text-slate-400 hover:text-rose-600 transition-colors"
+                >
+                  <TrashSimple className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="px-6 py-5 text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap">{open.body}</div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-[#E3EAF4] p-5">
+            <LibraryForm
+              initialTitle={open.title}
+              initialBody={open.body}
+              saveLabel="Save changes"
+              onSave={(patch) => save(open.id, patch)}
+              onCancel={() => setMode('read')}
+            />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (mode === 'new') {
+    return (
+      <div className="max-w-3xl space-y-4">
+        <button
+          onClick={() => { setMode('list'); setUploadDraft(null) }}
+          className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> All scripts
+        </button>
+        <div className="bg-white rounded-xl border border-[#E3EAF4] p-5">
+          <LibraryForm
+            initialTitle={uploadDraft?.title || ''}
+            initialBody={uploadDraft?.body || ''}
+            saveLabel="Add to library"
+            onSave={create}
+            onCancel={() => { setMode('list'); setUploadDraft(null) }}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 bg-white border border-[#E3EAF4] rounded-lg px-3 py-2 w-64 focus-within:border-blue-500">
+          <MagnifyingGlass className="w-4 h-4 text-slate-400 shrink-0" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search full scripts..."
+            className="flex-1 min-w-0 bg-transparent text-sm focus:outline-none"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <input ref={fileRef} type="file" accept=".txt,.md,.markdown,text/plain,text/markdown" className="hidden" onChange={(e) => void onFile(e)} />
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 bg-white border border-[#E3EAF4] hover:border-blue-300 rounded-lg px-3.5 py-2 transition-colors"
+          >
+            <UploadSimple className="w-4 h-4 text-blue-600" /> Upload (.txt / .md)
+          </button>
+          <button
+            onClick={() => { setUploadDraft(null); setMode('new') }}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3.5 py-2 transition-colors"
+          >
+            <Plus className="w-4 h-4" /> New script
+          </button>
+        </div>
+      </div>
+
+      {err && (
+        <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-700 flex items-start gap-2">
+          <WarningCircle className="w-4 h-4 mt-0.5 shrink-0" /> {err}
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-xl border border-[#E3EAF4] p-10 text-center">
+          <FileText weight="duotone" className="w-8 h-8 text-blue-300 mx-auto mb-2" />
+          <div className="text-sm text-slate-500">
+            {scripts.length === 0
+              ? 'No full scripts yet - write one or upload a .txt/.md file.'
+              : 'No scripts match that search.'}
+          </div>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-3">
+          {filtered.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => { setOpenId(s.id); setMode('read') }}
+              className="text-left bg-white rounded-xl border border-[#E3EAF4] shadow-[0_1px_2px_rgba(16,24,40,0.04)] p-5 hover:border-blue-300 transition-colors"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold truncate" style={{ color: NAVY }}>{s.title}</h3>
+                <span className="text-[11px] text-slate-400 shrink-0">
+                  {new Date(s.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed line-clamp-3 whitespace-pre-wrap">
+                {s.body.slice(0, 220)}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LibraryForm({ initialTitle, initialBody, saveLabel, onSave, onCancel }: {
+  initialTitle: string
+  initialBody: string
+  saveLabel: string
+  onSave: (patch: { title: string; body: string }) => Promise<void>
+  onCancel: () => void
+}) {
+  const [title, setTitle] = useState(initialTitle)
+  const [body, setBody] = useState(initialBody)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  const submit = async () => {
+    if (!title.trim() || !body.trim()) { setErr('Title and script text are both required'); return }
+    setBusy(true); setErr('')
+    try {
+      await onSave({ title: title.trim(), body: body.trim() })
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Script title (e.g. Lost Revenue Hook - full flow)"
+        autoFocus
+        className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm font-medium focus:outline-none focus:border-blue-500"
+      />
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        rows={Math.min(28, Math.max(14, body.split('\n').length + 2))}
+        placeholder="The whole script - paste or type it here..."
+        className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm leading-relaxed focus:outline-none focus:border-blue-500 resize-y"
+      />
+      {err && <div className="text-xs text-rose-600">{err}</div>}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => void submit()}
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-60 transition-colors"
+        >
+          {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle weight="fill" className="w-4 h-4" />}
+          {saveLabel}
+        </button>
+        <button onClick={onCancel} className="px-3 py-2 text-sm text-slate-500 hover:text-slate-800">Cancel</button>
       </div>
     </div>
   )
