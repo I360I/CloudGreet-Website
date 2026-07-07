@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 export type RepCallStats = {
   attempts: number
   connects: number
+  conversations: number
   no_answers: number
   voicemails: number
   talk_seconds: number
@@ -16,7 +17,7 @@ export type RepCallStats = {
 }
 
 function emptyStats(): RepCallStats {
-  return { attempts: 0, connects: 0, no_answers: 0, voicemails: 0, talk_seconds: 0, last_call_at: null }
+  return { attempts: 0, connects: 0, conversations: 0, no_answers: 0, voicemails: 0, talk_seconds: 0, last_call_at: null }
 }
 
 /**
@@ -47,6 +48,11 @@ export async function getRepCallStats(repId: string, opts?: { since?: Date }): P
   for (const c of (calls || []) as any[]) {
     stats.attempts += 1
     if (c.status === 'completed' && (c.duration_seconds || 0) > 30) stats.connects += 1
+    // "Conversation" = any answered call with >=15s of talk. Looser than
+    // a strict connect - captures quick real exchanges ("not interested,
+    // thanks") that the 30s bar drops, so the contact rate isn't
+    // undercounted. The best week-1 leading indicator for a new setter.
+    if ((c.duration_seconds || 0) >= 15) stats.conversations += 1
     if (c.status === 'no_answer') stats.no_answers += 1
     if (c.status === 'voicemail') stats.voicemails += 1
     stats.talk_seconds += c.duration_seconds || 0

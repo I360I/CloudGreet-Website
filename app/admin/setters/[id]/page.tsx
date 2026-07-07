@@ -18,6 +18,7 @@ type Detail = {
     personal_cell: string | null; has_vm_recording: boolean; has_vm_script: boolean
   }
   calls: { today: CallStats; week: CallStats; all_time: CallStats }
+  signals: { week_dials: number; week_conversations: number; conversation_rate: number; interested: number; callbacks_pending: number; demos: number }
   daily: { date: string; dials: number; connects: number }[]
   weekly_goal: { target: number; this_week: number; streak_weeks: number; streak_target: number; bonus_earned: boolean; bonus_amount: number }
   pipeline: Record<string, number>
@@ -210,6 +211,34 @@ export default function AdminSetterDetailPage() {
             </Panel>
           </div>
 
+          {/* Leading indicators - what to watch in week 1, before demos land */}
+          <Panel>
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm font-semibold text-white">Leading indicators · this week</div>
+              <RampRead signals={data.signals} vmRecorded={setter.has_vm_recording} />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+              {([
+                ['Dials', data.signals.week_dials, 'dialing volume'],
+                ['Conversations', data.signals.week_conversations, `${data.signals.conversation_rate}% of dials`],
+                ['Interested', data.signals.interested, 'pipeline building'],
+                ['Callbacks', data.signals.callbacks_pending, 'scheduled'],
+                ['Demos', data.signals.demos, 'the payoff'],
+              ] as [string, number, string][]).map(([label, n, sub]) => (
+                <div key={label}>
+                  <div className="text-2xl text-white tabular-nums">{n}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{label}</div>
+                  <div className="text-[10px] text-gray-600">{sub}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-500 mt-4 leading-relaxed">
+              Week 1 is about the pipeline building (conversations + interested + callbacks), not demos yet.
+              Worry only if dials fall well below ~100/day, conversation rate stays very low (opener problem),
+              or ~2 weeks pass with strong volume but no demos.
+            </p>
+          </Panel>
+
           {/* Pipeline + messages */}
           <div className="grid lg:grid-cols-3 gap-4">
             <Panel className="lg:col-span-2">
@@ -330,6 +359,25 @@ function RecordingButton({ callId }: { callId: string }) {
       {loading ? <CircleNotch className="w-3 h-3 animate-spin" /> : playing ? <Pause weight="fill" className="w-3 h-3" /> : <Play weight="fill" className="w-3 h-3" />}
     </button>
   )
+}
+
+/** A one-glance ramp read from the leading indicators. Heuristic, not a
+ *  verdict - just steers where to look first. */
+function RampRead({ signals, vmRecorded }: { signals: Detail['signals']; vmRecorded: boolean }) {
+  const { week_dials, conversation_rate, interested, callbacks_pending, demos } = signals
+  let tone = 'emerald', label = 'On track'
+  if (demos > 0) { tone = 'emerald'; label = 'Booking' }
+  else if (interested + callbacks_pending > 0 || conversation_rate >= 20) { tone = 'sky'; label = 'Building' }
+  else if (week_dials < 40) { tone = 'amber'; label = 'Low volume' }
+  else if (conversation_rate < 8 && week_dials >= 40) { tone = 'amber'; label = 'Watch opener' }
+  else { tone = 'gray'; label = 'Early' }
+  const cls: Record<string, string> = {
+    emerald: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
+    sky: 'bg-sky-500/10 text-sky-300 border-sky-500/30',
+    amber: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
+    gray: 'bg-white/[0.04] text-gray-400 border-white/10',
+  }
+  return <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full border ${cls[tone]}`}>{label}</span>
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

@@ -41,7 +41,7 @@ export async function GET(
     getRepCallStats(params.id, { since: epoch }),
     getRepDailySeries(params.id, 14),
     getWeeklyDemoGoalStatus(params.id, (user as any).weekly_demo_goal ?? 2),
-    supabaseAdmin.from('lead_assignments').select('status, last_touched_at').eq('rep_id', params.id),
+    supabaseAdmin.from('lead_assignments').select('status, last_touched_at, follow_up_at').eq('rep_id', params.id),
     supabaseAdmin.from('sales_rep_phone_numbers').select('phone_number, label, is_active, is_sms_line').eq('rep_id', params.id),
     supabaseAdmin
       .from('closes')
@@ -51,8 +51,10 @@ export async function GET(
       .limit(15),
   ])
 
-  const rows = (assignments || []) as { status: string; last_touched_at: string | null }[]
+  const rows = (assignments || []) as { status: string; last_touched_at: string | null; follow_up_at: string | null }[]
   const countBy = (s: string) => rows.filter((r) => r.status === s).length
+  // Pipeline-building leading indicator: interested + scheduled callbacks.
+  const callbacksPending = rows.filter((r) => r.follow_up_at).length
   const pipeline = {
     total: rows.length,
     new: countBy('new'),
@@ -126,6 +128,14 @@ export async function GET(
       has_vm_script: !!(user as any).vm_drop_script,
     },
     calls: { today, week, all_time: allTime },
+    signals: {
+      week_dials: week.attempts,
+      week_conversations: week.conversations,
+      conversation_rate: week.attempts ? Math.round((week.conversations / week.attempts) * 100) : 0,
+      interested: countBy('interested'),
+      callbacks_pending: callbacksPending,
+      demos: countBy('demo_scheduled') + countBy('demo_showed'),
+    },
     daily,
     weekly_goal: goal,
     pipeline,
