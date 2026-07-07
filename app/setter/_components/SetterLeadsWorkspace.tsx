@@ -727,9 +727,13 @@ export function SetterLeadsWorkspace() {
                       {l.contact_name && (
                         <span className="inline-flex items-center gap-1">
                           <span>{l.contact_name}</span>
-                          {l.owner_confidence === 'high' ? (
-                            <CheckCircle weight="fill" className="w-3 h-3 text-emerald-500" aria-label="Owner name verified" />
-                          ) : l.owner_verified_at ? (
+                          {(l.owner_confidence === 'high' || l.owner_confidence === 'medium') ? (
+                            <CheckCircle
+                              weight="fill"
+                              className={`w-3 h-3 ${l.owner_confidence === 'high' ? 'text-emerald-500' : 'text-emerald-400/70'}`}
+                              aria-label={l.owner_confidence === 'high' ? 'Owner confirmed on website' : 'Owner from state license record'}
+                            />
+                          ) : l.owner_confidence === 'low' ? (
                             <span title="Owner name not confirmed - ask for the owner on the call" className="text-[9px] uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-px">unverified</span>
                           ) : null}
                         </span>
