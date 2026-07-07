@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   PhoneCall, PhoneSlash, Microphone, MicrophoneSlash, Voicemail, CircleNotch,
   Pause, Play, SkipForward, Stop, CheckCircle, WarningCircle, CaretDown,
-  DotsNine, ChatText, CalendarBlank, CalendarCheck, ArrowLeft, Star, PaperPlaneTilt, PencilSimple, CopySimple, ArrowSquareOut,
+  DotsNine, ChatText, CalendarBlank, ArrowLeft, Star, PaperPlaneTilt, PencilSimple, CopySimple, ArrowSquareOut,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
@@ -35,18 +35,19 @@ export type { CockpitLead } from './DialerSessionProvider'
 type Script = { id: string; section: string; title: string; body: string; sort_order: number }
 
 const DISPOSITIONS: { key: string; label: string; hotkey: string }[] = [
-  { key: 'called',         label: 'Talked',     hotkey: '1' },
-  { key: 'voicemail',      label: 'Voicemail',  hotkey: '2' },
-  { key: 'interested',     label: 'Interested', hotkey: '3' },
-  { key: 'demo_scheduled', label: 'Demo set',   hotkey: '4' },
-  { key: 'demo_showed',    label: 'Demo held',  hotkey: '5' },
-  { key: 'not_available',  label: 'Not avail',  hotkey: '6' },
-  { key: 'dead',           label: 'Dead',       hotkey: '7' },
-  { key: 'do_not_call',    label: 'DNC',        hotkey: '8' },
+  { key: 'called',         label: 'Talked',      hotkey: '1' },
+  { key: 'voicemail',      label: 'Voicemail',   hotkey: '2' },
+  { key: 'interested',     label: 'Interested',  hotkey: '3' },
+  { key: 'demo_scheduled', label: 'Demo set',    hotkey: '4' },
+  { key: 'demo_booked',    label: 'Demo booked', hotkey: '5' },
+  { key: 'demo_showed',    label: 'Demo held',   hotkey: '6' },
+  { key: 'not_available',  label: 'Not avail',   hotkey: '7' },
+  { key: 'dead',           label: 'Dead',        hotkey: '8' },
+  { key: 'do_not_call',    label: 'DNC',         hotkey: '9' },
 ]
-// Demo set gets its own prominent button; the rest fill the grid.
-const GRID_DISPOSITIONS = DISPOSITIONS.filter((d) => d.key !== 'demo_scheduled')
-const DEMO_DISPOSITION = DISPOSITIONS.find((d) => d.key === 'demo_scheduled')!
+// "Demo set" (agreed on the call) and "Demo booked" (prospect self-booked
+// after we sent the link) both land the demo in the rep's pipeline.
+const DEMO_KEYS = new Set(['demo_scheduled', 'demo_booked'])
 
 export function DialerCockpit() {
   const [keypadOpen, setKeypadOpen] = useState(false)
@@ -116,7 +117,7 @@ export function DialerCockpit() {
   const { notes, loading: notesLoading, addNote } = useLeadNotes(liveLeadId)
 
   const chooseDisposition = useCallback((key: string) => {
-    if (key === 'demo_scheduled') {
+    if (DEMO_KEYS.has(key)) {
       if (!liveLeadId) return
       if (!queuePaused) togglePause()
       setDemoModalLeadId(liveLeadId)
@@ -315,7 +316,7 @@ export function DialerCockpit() {
             </div>
           </div>
           <div className="text-[11px] text-slate-400 mb-5">
-            Hotkeys: 1-7 tag the call · C callback · B book link · M mute · V drop VM · H hang up · N note · Space pause
+            Hotkeys: 1-9 tag the call · B send link · C callback · M mute · V drop VM · H hang up · N note · Space pause
           </div>
           <button
             onClick={() => void start()}
@@ -361,7 +362,7 @@ export function DialerCockpit() {
           <CalendarPill name={assignedRep.name} url={assignedRep.booking_url} />
         )}
         <span className="text-[11px] text-slate-400 hidden 2xl:block shrink-0 whitespace-nowrap">
-          1-7 tag · C callback · B book link · M mute · V VM · H hang up · Space pause
+          1-9 tag · B send link · C callback · M mute · V VM · H hang up · Space pause
         </span>
       </div>
 
@@ -590,26 +591,23 @@ export function DialerCockpit() {
         </div>
        </div>
 
-        {/* Row 2: dispositions on their own full-width line - Demo set is
-            a prominent full-height button, the rest a 2-row grid. Own row
-            so nothing overlaps the controls/transport above. */}
+        {/* Row 2: Send link is the prominent action (the whole flow is
+            send-link -> they book); dispositions fill a 2-row grid.
+            Own full-width row so nothing overlaps the controls above. */}
         <div className="flex items-stretch gap-2 mt-2.5 flex-wrap">
           <button
-            onClick={() => chooseDisposition(DEMO_DISPOSITION.key)}
+            onClick={openBookingLink}
             disabled={callState !== 'ended' && callState !== 'active'}
-            className={`shrink-0 inline-flex flex-col items-center justify-center gap-0.5 rounded-lg px-4 border-2 transition-colors duration-150 disabled:opacity-40 ${
-              postCallStatus === DEMO_DISPOSITION.key
-                ? 'bg-emerald-600 text-white border-emerald-600'
-                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:border-emerald-500'
-            }`}
+            title="Email the prospect the demo booking link (B)"
+            className="shrink-0 inline-flex flex-col items-center justify-center gap-0.5 rounded-lg px-4 border-2 bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700 transition-colors duration-150 disabled:opacity-40"
           >
-            <CalendarCheck weight="fill" className="w-5 h-5" />
-            <span className="text-xs font-semibold leading-none">Demo set</span>
-            <span className={`text-[10px] leading-none ${postCallStatus === DEMO_DISPOSITION.key ? 'text-emerald-200' : 'text-emerald-500'}`}>{DEMO_DISPOSITION.hotkey}</span>
+            <PaperPlaneTilt weight="fill" className="w-5 h-5" />
+            <span className="text-xs font-semibold leading-none">Send link</span>
+            <span className="text-[10px] leading-none text-blue-200">B</span>
           </button>
 
           <div className="min-w-0 grid grid-rows-2 grid-flow-col auto-cols-max gap-1 content-center">
-            {GRID_DISPOSITIONS.map((d) => (
+            {DISPOSITIONS.map((d) => (
               <button
                 key={d.key}
                 onClick={() => chooseDisposition(d.key)}
@@ -617,10 +615,12 @@ export function DialerCockpit() {
                 className={`inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border transition-colors duration-150 disabled:opacity-40 ${
                   postCallStatus === d.key
                     ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-300'
+                    : DEMO_KEYS.has(d.key)
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:border-emerald-500'
+                      : 'bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-300'
                 }`}
               >
-                <span className={postCallStatus === d.key ? 'text-blue-200' : 'text-slate-400'}>{d.hotkey}</span>{d.label}
+                <span className={postCallStatus === d.key ? 'text-blue-200' : DEMO_KEYS.has(d.key) ? 'text-emerald-500' : 'text-slate-400'}>{d.hotkey}</span>{d.label}
               </button>
             ))}
             <button
@@ -629,14 +629,6 @@ export function DialerCockpit() {
               className="inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border bg-white text-slate-700 border-[#E3EAF4] hover:border-amber-400 transition-colors duration-150 disabled:opacity-40"
             >
               <CalendarBlank className="w-3 h-3 text-amber-500" /><span className="text-slate-400">C</span> Callback
-            </button>
-            <button
-              onClick={openBookingLink}
-              disabled={callState !== 'ended' && callState !== 'active'}
-              title="Email the prospect a demo booking link (B)"
-              className="inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-400 transition-colors duration-150 disabled:opacity-40"
-            >
-              <PaperPlaneTilt className="w-3 h-3 text-blue-500" /><span className="text-slate-400">B</span> Book link
             </button>
           </div>
         </div>
