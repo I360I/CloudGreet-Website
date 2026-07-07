@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   PhoneCall, PhoneSlash, Microphone, MicrophoneSlash, Voicemail, CircleNotch,
   Pause, Play, SkipForward, Stop, CheckCircle, WarningCircle, CaretDown,
-  DotsNine, ChatText, CalendarBlank, CalendarCheck, ArrowLeft, Star, PaperPlaneTilt, PencilSimple,
+  DotsNine, ChatText, CalendarBlank, CalendarCheck, ArrowLeft, Star, PaperPlaneTilt, PencilSimple, CopySimple, ArrowSquareOut,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
@@ -64,7 +64,7 @@ export function DialerCockpit() {
     engine, phase, setPhase, gapSeconds, setGapSeconds,
     stats, bumpDemos, tagCounts, recordTag,
     elapsed, markSessionStart, resetSession,
-    queueInput, reloadQueueInput, repFirstName,
+    queueInput, reloadQueueInput, repFirstName, assignedRep,
   } = useDialerSession()
   const {
     status, error, micBusy, grantMicrophone,
@@ -357,7 +357,10 @@ export function DialerCockpit() {
           </div>
         ))}
         <div className="flex-1 min-w-4" />
-        <span className="text-[11px] text-slate-400 hidden xl:block shrink-0 whitespace-nowrap">
+        {assignedRep?.booking_url && (
+          <CalendarPill name={assignedRep.name} url={assignedRep.booking_url} />
+        )}
+        <span className="text-[11px] text-slate-400 hidden 2xl:block shrink-0 whitespace-nowrap">
           1-7 tag · C callback · B book link · M mute · V VM · H hang up · Space pause
         </span>
       </div>
@@ -701,6 +704,49 @@ export function DialerCockpit() {
         />
       )}
     </div>
+  )
+}
+
+/** Assigned rep's booking link, always in reach at the top of the
+ *  cockpit: one click copies it, another opens it in a new tab. */
+function CalendarPill({ name, url }: { name: string; url: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch { /* clipboard blocked - the open link still works */ }
+  }
+  return (
+    <span className="inline-flex items-center gap-1 shrink-0 rounded-full border border-[#E3EAF4] bg-white pl-2.5 pr-1 py-1">
+      <CalendarBlank weight="fill" className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+      <button
+        onClick={() => void copy()}
+        title={`Copy ${name}'s booking link`}
+        className="text-[11px] font-medium text-slate-600 hover:text-slate-900 max-w-[120px] truncate"
+      >
+        {copied ? 'Copied!' : `${name.split(' ')[0]}'s calendar`}
+      </button>
+      <button
+        onClick={() => void copy()}
+        title="Copy link"
+        aria-label="Copy booking link"
+        className="p-1 text-slate-400 hover:text-blue-600"
+      >
+        {copied ? <CheckCircle weight="fill" className="w-3.5 h-3.5 text-emerald-500" /> : <CopySimple className="w-3.5 h-3.5" />}
+      </button>
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Open calendar"
+        aria-label="Open booking calendar"
+        className="p-1 text-slate-400 hover:text-blue-600"
+      >
+        <ArrowSquareOut className="w-3.5 h-3.5" />
+      </a>
+    </span>
   )
 }
 

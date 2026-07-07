@@ -51,6 +51,9 @@ type DialerSession = {
   /** Signed-in rep's first name - fills the {{rep_name}} placeholder in
    *  scripts so "Ed:" becomes whoever is actually reading it. */
   repFirstName: string | null
+  /** The assigned closing rep's name + booking link (for the cockpit
+   *  header pill). null until loaded / if no rep assigned. */
+  assignedRep: { name: string; booking_url: string | null } | null
 }
 
 const Ctx = createContext<DialerSession | null>(null)
@@ -74,6 +77,7 @@ export function DialerSessionProvider({ children }: { children: React.ReactNode 
   const [elapsed, setElapsed] = useState(0)
   const [queueInput, setQueueInput] = useState<CockpitLead[] | null>(null)
   const [repFirstName, setRepFirstName] = useState<string | null>(null)
+  const [assignedRep, setAssignedRep] = useState<{ name: string; booking_url: string | null } | null>(null)
   const sessionStartRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -87,6 +91,11 @@ export function DialerSessionProvider({ children }: { children: React.ReactNode 
           setRepFirstName(first)
         }
       } catch { /* placeholder just stays literal */ }
+      try {
+        const r = await fetchWithAuth('/api/setter/assigned-rep')
+        const j = await r.json().catch(() => ({}))
+        if (!cancelled && j?.rep) setAssignedRep(j.rep)
+      } catch { /* header pill just doesn't show */ }
     })()
     return () => { cancelled = true }
   }, [])
@@ -154,7 +163,7 @@ export function DialerSessionProvider({ children }: { children: React.ReactNode 
       stats, bumpDemos, tagCounts, recordTag,
       elapsed, markSessionStart, resetSession,
       queueInput, reloadQueueInput,
-      repFirstName,
+      repFirstName, assignedRep,
     }}>
       {children}
     </Ctx.Provider>
