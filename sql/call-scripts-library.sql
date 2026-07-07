@@ -14,3 +14,11 @@ create table if not exists public.call_scripts (
 
 create index if not exists idx_call_scripts_updated
   on public.call_scripts(updated_at desc);
+
+-- 2026-07-06 (migration: call_scripts_primary): one script can be
+-- marked primary - it's what the cockpit's in-call Script rail renders.
+alter table public.call_scripts
+  add column if not exists is_primary boolean not null default false;
+
+create unique index if not exists idx_call_scripts_one_primary
+  on public.call_scripts(is_primary) where is_primary;

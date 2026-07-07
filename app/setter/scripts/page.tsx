@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { CircleNotch, MagnifyingGlass, CaretDown, WarningCircle, PencilSimple, TrashSimple, Plus, CheckCircle, UploadSimple, ArrowLeft, FileText } from '@phosphor-icons/react'
+import { CircleNotch, MagnifyingGlass, CaretDown, WarningCircle, PencilSimple, TrashSimple, Plus, CheckCircle, UploadSimple, ArrowLeft, FileText, Star } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { SetterLoadingState } from '../_components/SetterShell'
 import { useDialerSession } from '../_components/DialerSessionProvider'
@@ -310,6 +310,7 @@ type FullScript = {
   id: string
   title: string
   body: string
+  is_primary?: boolean
   created_at: string
   updated_at: string
 }
@@ -363,6 +364,18 @@ function LibraryBody() {
     setMode('read')
   }
 
+  const setPrimary = async (id: string) => {
+    const r = await fetchWithAuth(`/api/sales/scripts-library/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_primary: true }),
+    })
+    const j = await r.json().catch(() => ({}))
+    if (r.ok && j?.success) {
+      setScripts((prev) => prev.map((s) => ({ ...s, is_primary: s.id === id })))
+    }
+  }
+
   const save = async (id: string, patch: { title: string; body: string }) => {
     const r = await fetchWithAuth(`/api/sales/scripts-library/${id}`, {
       method: 'PATCH',
@@ -412,6 +425,19 @@ function LibraryBody() {
                 <div className="text-[11px] text-slate-400 mt-0.5">updated {new Date(open.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
+                {open.is_primary ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
+                    <Star weight="fill" className="w-3 h-3" /> Primary
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => void setPrimary(open.id)}
+                    title="Make this the script the cockpit shows in-call"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-[#E3EAF4] hover:border-amber-400 rounded-lg transition-colors"
+                  >
+                    <Star className="w-3.5 h-3.5 text-amber-500" /> Set as primary
+                  </button>
+                )}
                 <button
                   onClick={() => setMode('edit')}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-[#E3EAF4] hover:border-blue-300 rounded-lg transition-colors"
@@ -519,7 +545,10 @@ function LibraryBody() {
               className="text-left bg-white rounded-xl border border-[#E3EAF4] shadow-[0_1px_2px_rgba(16,24,40,0.04)] p-5 hover:border-blue-300 transition-colors"
             >
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold truncate" style={{ color: NAVY }}>{s.title}</h3>
+                <h3 className="text-sm font-semibold truncate flex items-center gap-1.5" style={{ color: NAVY }}>
+                  {s.is_primary && <Star weight="fill" className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                  <span className="truncate">{s.title}</span>
+                </h3>
                 <span className="text-[11px] text-slate-400 shrink-0">
                   {new Date(s.updated_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </span>

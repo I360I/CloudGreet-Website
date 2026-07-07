@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('call_scripts')
-    .select('id, title, body, created_at, updated_at')
+    .select('id, title, body, is_primary, created_at, updated_at')
     .order('updated_at', { ascending: false })
 
   if (error) {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   const { data, error } = await supabaseAdmin
     .from('call_scripts')
     .insert({ title, body: text, created_by: auth.userId })
-    .select('id, title, body, created_at, updated_at')
+    .select('id, title, body, is_primary, created_at, updated_at')
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

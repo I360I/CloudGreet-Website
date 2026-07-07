@@ -80,7 +80,10 @@ export function DialerCockpit() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Scripts for the right rail + SMS templates.
+  // Scripts for the right rail + SMS templates, plus the PRIMARY full
+  // script from the library - when one is set, it replaces the stitched
+  // section snippets as the rail's main script.
+  const [primaryScript, setPrimaryScript] = useState<{ title: string; body: string } | null>(null)
   useEffect(() => {
     void (async () => {
       try {
@@ -88,6 +91,12 @@ export function DialerCockpit() {
         const j = await r.json().catch(() => ({}))
         if (j?.success) setScripts(j.scripts || [])
       } catch { /* panel just stays empty */ }
+      try {
+        const r = await fetchWithAuth('/api/sales/scripts-library')
+        const j = await r.json().catch(() => ({}))
+        const primary = (j?.scripts || []).find((x: any) => x.is_primary)
+        if (primary) setPrimaryScript({ title: primary.title, body: primary.body })
+      } catch { /* fall back to section snippets */ }
     })()
   }, [])
 
@@ -470,10 +479,15 @@ export function DialerCockpit() {
         <div className="bg-white rounded-xl border border-[#E3EAF4] flex flex-col min-h-0 overflow-hidden">
           <div className="px-4 py-3 border-b border-[#EEF2F7] text-sm font-semibold" style={{ color: NAVY }}>Script</div>
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-            {proseScripts.length === 0 && objections.length === 0 && (
-              <div className="text-xs text-slate-400">No script content yet - admin can add it under /admin/scripts.</div>
+            {!primaryScript && proseScripts.length === 0 && objections.length === 0 && (
+              <div className="text-xs text-slate-400">No script content yet - set a primary under Scripts, or add sections.</div>
             )}
-            {proseScripts.map((s) => (
+            {primaryScript ? (
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-blue-600 mb-1">{primaryScript.title}</div>
+                <div className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{fillTemplate(primaryScript.body)}</div>
+              </div>
+            ) : proseScripts.map((s) => (
               <div key={s.id}>
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-blue-600 mb-1">{s.title}</div>
                 <div className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{fillTemplate(s.body)}</div>
