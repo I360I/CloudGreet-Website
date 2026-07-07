@@ -505,14 +505,15 @@ export function DialerCockpit() {
       </div>
 
       {/* Bottom bar: controls + dispositions + queue transport.
-          flex-nowrap (not flex-wrap) so this bar's height never grows
-          on a narrow laptop width - wrapping onto a second line stole
-          enough height from the center column that the notes/
-          text-follow-up panel above it could collapse out of view
-          entirely at ~1280px. Only the dispositions cluster itself
-          scrolls horizontally (below) when it doesn't fit - Mute/
-          Keypad/VM/Hangup and Pause/Skip/Stop are essential controls
-          that must never scroll out of reach. */}
+          flex-nowrap (not flex-wrap) on the outer bar so its height
+          never grows on a narrow laptop width - wrapping onto a
+          second line used to steal enough height from the center
+          column that the notes/text-follow-up panel above it could
+          collapse out of view entirely at ~1280px. The dispositions
+          cluster itself is a fixed 2-row grid (below) so every button
+          stays visible with no scrolling; Mute/Keypad/VM/Hangup and
+          Pause/Skip/Stop sit shrink-0 on either side and are always
+          reachable regardless of window width. */}
       <div className="bg-white rounded-xl border border-[#E3EAF4] px-4 py-3 flex items-center gap-3 flex-nowrap relative">
         <div className="flex items-center gap-1.5 shrink-0">
           <button
