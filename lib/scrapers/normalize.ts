@@ -27,6 +27,30 @@
  *     digits is negligible for cold-call lead lists).
  *   - Anything else → null.
  */
+/**
+ * International-aware phone normalizer for fields that may hold a
+ * non-US number (e.g. a setter's WhatsApp/inbound cell). If the input
+ * has an explicit "+" country code, trust it and return E.164 as typed;
+ * otherwise fall back to the US-only normalizePhone (bare 10 digits ->
+ * +1). Returns null when it can't form a plausible E.164.
+ */
+export function normalizeE164Loose(p: string | null | undefined): string | null {
+  if (!p) return null
+  const raw = String(p).trim()
+  if (raw.startsWith('+') || raw.startsWith('00')) {
+    const digits = raw.replace(/^00/, '').replace(/[^0-9]/g, '')
+    if (digits.length < 8 || digits.length > 15) return null
+    return `+${digits}`
+  }
+  // Bare digits with a non-US length (11+ and not a US "1" prefix) are
+  // very likely international typed without the plus - keep as E.164.
+  const digits = raw.replace(/[^0-9]/g, '')
+  if (digits.length >= 11 && !(digits.length === 11 && digits.startsWith('1'))) {
+    if (digits.length <= 15) return `+${digits}`
+  }
+  return normalizePhone(raw)
+}
+
 export function normalizePhone(p: string | null | undefined): string | null {
   if (!p) return null
   const digits = String(p).replace(/[^0-9]/g, '')

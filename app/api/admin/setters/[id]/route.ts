@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
-import { normalizePhone } from '@/lib/scrapers/normalize'
+import { normalizeE164Loose } from '@/lib/scrapers/normalize'
 import { getRepCallStats, getRepDailySeries, getWeeklyDemoGoalStatus } from '@/lib/sales/dialer-stats'
 
 export const dynamic = 'force-dynamic'
@@ -193,9 +193,9 @@ export async function PATCH(
     if (body.personal_cell === null || body.personal_cell === '') {
       update.personal_cell = null
     } else {
-      const cell = normalizePhone(body.personal_cell)
+      const cell = normalizeE164Loose(body.personal_cell)
       if (!cell) {
-        return NextResponse.json({ error: 'personal_cell is not a valid US phone number' }, { status: 400 })
+        return NextResponse.json({ error: 'personal_cell is not a valid phone number (include country code, e.g. +63...)' }, { status: 400 })
       }
       update.personal_cell = cell
     }
