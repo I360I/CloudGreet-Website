@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   PhoneCall, PhoneSlash, Microphone, MicrophoneSlash, Voicemail, CircleNotch,
   Pause, Play, SkipForward, Stop, CheckCircle, WarningCircle, CaretDown,
-  DotsNine, ChatText, CalendarBlank, ArrowLeft, Star, PaperPlaneTilt,
+  DotsNine, ChatText, CalendarBlank, CalendarCheck, ArrowLeft, Star, PaperPlaneTilt,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
@@ -40,9 +40,13 @@ const DISPOSITIONS: { key: string; label: string; hotkey: string }[] = [
   { key: 'interested',     label: 'Interested', hotkey: '3' },
   { key: 'demo_scheduled', label: 'Demo set',   hotkey: '4' },
   { key: 'demo_showed',    label: 'Demo held',  hotkey: '5' },
-  { key: 'dead',           label: 'Dead',       hotkey: '6' },
-  { key: 'do_not_call',    label: 'DNC',        hotkey: '7' },
+  { key: 'not_available',  label: 'Not avail',  hotkey: '6' },
+  { key: 'dead',           label: 'Dead',       hotkey: '7' },
+  { key: 'do_not_call',    label: 'DNC',        hotkey: '8' },
 ]
+// Demo set gets its own prominent button; the rest fill the grid.
+const GRID_DISPOSITIONS = DISPOSITIONS.filter((d) => d.key !== 'demo_scheduled')
+const DEMO_DISPOSITION = DISPOSITIONS.find((d) => d.key === 'demo_scheduled')!
 
 export function DialerCockpit() {
   const [keypadOpen, setKeypadOpen] = useState(false)
@@ -569,40 +573,55 @@ export function DialerCockpit() {
 
         <div className="h-8 w-px bg-[#EEF2F7] shrink-0" />
 
-        {/* Dispositions: fixed two-row grid of slim tags (7 outcomes +
-            Callback + Book link = 2 rows x 5 columns), so everything is
-            always on screen - no horizontal scroll, no wrap growing the
-            bar off the viewport. */}
-        <div className="flex-1 min-w-0 grid grid-rows-2 grid-flow-col auto-cols-max gap-1 content-center">
-          {DISPOSITIONS.map((d) => (
+        {/* Dispositions: Demo set is a prominent full-height button (the
+            outcome that matters), the rest are slim tags in a fixed
+            2-row grid - nothing overlaps, everything stays on screen. */}
+        <div className="flex-1 min-w-0 flex items-stretch gap-2">
+          <button
+            onClick={() => chooseDisposition(DEMO_DISPOSITION.key)}
+            disabled={callState !== 'ended' && callState !== 'active'}
+            className={`shrink-0 inline-flex flex-col items-center justify-center gap-0.5 rounded-lg px-4 border-2 transition-colors duration-150 disabled:opacity-40 ${
+              postCallStatus === DEMO_DISPOSITION.key
+                ? 'bg-emerald-600 text-white border-emerald-600'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:border-emerald-500'
+            }`}
+          >
+            <CalendarCheck weight="fill" className="w-5 h-5" />
+            <span className="text-xs font-semibold leading-none">Demo set</span>
+            <span className={`text-[10px] leading-none ${postCallStatus === DEMO_DISPOSITION.key ? 'text-emerald-200' : 'text-emerald-500'}`}>{DEMO_DISPOSITION.hotkey}</span>
+          </button>
+
+          <div className="min-w-0 grid grid-rows-2 grid-flow-col auto-cols-max gap-1 content-center">
+            {GRID_DISPOSITIONS.map((d) => (
+              <button
+                key={d.key}
+                onClick={() => chooseDisposition(d.key)}
+                disabled={callState !== 'ended' && callState !== 'active'}
+                className={`inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border transition-colors duration-150 disabled:opacity-40 ${
+                  postCallStatus === d.key
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-300'
+                }`}
+              >
+                <span className={postCallStatus === d.key ? 'text-blue-200' : 'text-slate-400'}>{d.hotkey}</span>{d.label}
+              </button>
+            ))}
             <button
-              key={d.key}
-              onClick={() => chooseDisposition(d.key)}
+              onClick={openCallback}
               disabled={callState !== 'ended' && callState !== 'active'}
-              className={`inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border transition-colors duration-150 disabled:opacity-40 ${
-                postCallStatus === d.key
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-300'
-              }`}
+              className="inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border bg-white text-slate-700 border-[#E3EAF4] hover:border-amber-400 transition-colors duration-150 disabled:opacity-40"
             >
-              <span className={postCallStatus === d.key ? 'text-blue-200' : 'text-slate-400'}>{d.hotkey}</span>{d.label}
+              <CalendarBlank className="w-3 h-3 text-amber-500" /><span className="text-slate-400">C</span> Callback
             </button>
-          ))}
-          <button
-            onClick={openCallback}
-            disabled={callState !== 'ended' && callState !== 'active'}
-            className="inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border bg-white text-slate-700 border-[#E3EAF4] hover:border-amber-400 transition-colors duration-150 disabled:opacity-40"
-          >
-            <CalendarBlank className="w-3 h-3 text-amber-500" /><span className="text-slate-400">C</span> Callback
-          </button>
-          <button
-            onClick={openBookingLink}
-            disabled={callState !== 'ended' && callState !== 'active'}
-            title="Email the prospect a demo booking link (B)"
-            className="inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-400 transition-colors duration-150 disabled:opacity-40"
-          >
-            <PaperPlaneTilt className="w-3 h-3 text-blue-500" /><span className="text-slate-400">B</span> Book link
-          </button>
+            <button
+              onClick={openBookingLink}
+              disabled={callState !== 'ended' && callState !== 'active'}
+              title="Email the prospect a demo booking link (B)"
+              className="inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-400 transition-colors duration-150 disabled:opacity-40"
+            >
+              <PaperPlaneTilt className="w-3 h-3 text-blue-500" /><span className="text-slate-400">B</span> Book link
+            </button>
+          </div>
         </div>
 
         {/* Queue transport - shrink-0: always visible, never scrolled

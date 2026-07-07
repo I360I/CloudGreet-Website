@@ -111,7 +111,7 @@ export function SmsThread({
   return (
     <div className="flex flex-col min-h-0">
       {messages.length > 0 && (
-        <div ref={scrollRef} className="max-h-56 overflow-y-auto px-1 pb-2 space-y-1.5">
+        <div ref={scrollRef} className="max-h-28 overflow-y-auto px-1 pb-2 space-y-1.5">
           {messages.map((m) => (
             <div key={m.id} className={`flex ${m.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[80%] rounded-xl px-3 py-1.5 text-xs leading-snug ${
