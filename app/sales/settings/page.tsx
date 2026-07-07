@@ -240,6 +240,8 @@ export default function SalesSettingsPage() {
             <PasswordSection />
           </motion.div>
         )}
+
+        {!loading && <SettersSection />}
       </section>
     </SalesShell>
   )
@@ -251,6 +253,76 @@ export default function SalesSettingsPage() {
  * own demos over video; the in-person option is hidden under "show
  * other formats" for the rare case they want it.
  */
+/** Setters assigned to this rep, with one-click "login as" to jump into
+ *  their dashboard (queue, demos). Scoped server-side to own setters. */
+function SettersSection() {
+  const [setters, setSetters] = useState<{ id: string; name: string; email: string; is_active: boolean; last_active: string | null }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await fetchWithAuth('/api/sales/setters')
+        const j = await r.json().catch(() => ({}))
+        if (!cancelled && j?.success) setSetters(j.setters || [])
+      } catch { /* no-op */ } finally { if (!cancelled) setLoading(false) }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  if (loading || setters.length === 0) return null
+
+  const loginAs = async (id: string) => {
+    setBusyId(id)
+    try {
+      const r = await fetch(`/api/sales/setters/${id}/impersonate`, { method: 'POST', credentials: 'include' })
+      const j = await r.json().catch(() => ({}))
+      if (r.ok && j?.success) {
+        const { clearClientAuthState } = await import('@/lib/auth/session-guard')
+        clearClientAuthState()
+        window.location.href = j.redirect_url || '/setter'
+      } else {
+        alert(j?.error || 'Could not log in as this setter')
+        setBusyId(null)
+      }
+    } catch {
+      alert('Could not log in as this setter')
+      setBusyId(null)
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: EASE, delay: 0.1 }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mt-4"
+    >
+      <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">Your setters</div>
+      <p className="text-xs text-gray-500 mb-4">Setters who book demos onto your calendar. Log in as one to see their queue and pipeline.</p>
+      <ul className="divide-y divide-gray-100">
+        {setters.map((s) => (
+          <li key={s.id} className="py-3 flex items-center justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-gray-900">{s.name}{!s.is_active && <span className="ml-2 text-xs text-rose-500">disabled</span>}</div>
+              <div className="text-xs text-gray-500">{s.email}</div>
+            </div>
+            <button
+              onClick={() => void loginAs(s.id)}
+              disabled={!s.is_active || busyId === s.id}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 hover:border-gray-300 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+            >
+              {busyId === s.id ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : <Key className="w-3.5 h-3.5" />}
+              Log in as
+            </button>
+          </li>
+        ))}
+      </ul>
+    </motion.div>
+  )
+}
+
 function RepEventTypeSection() {
   type EventType = { id: number; title: string; slug: string; lengthInMinutes: number }
   const [eventTypes, setEventTypes] = useState<EventType[] | null>(null)

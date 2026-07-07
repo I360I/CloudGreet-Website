@@ -27,13 +27,17 @@ export async function POST(request: NextRequest) {
 
   const verified = JWTManager.verifyToken(stashed)
   const payload = verified.success ? verified.payload : null
-  if (!payload || payload.role !== 'admin') {
+  // Both admins and sales reps can impersonate (admin -> anyone; a rep
+  // -> only their own assigned setters, enforced at start). Either can
+  // return here.
+  if (!payload || (payload.role !== 'admin' && payload.role !== 'sales')) {
     return NextResponse.json({
       error: 'Stashed token is invalid or expired - sign in again.',
     }, { status: 401 })
   }
 
-  let returnTo = '/admin'
+  // Land back where the impersonator belongs.
+  let returnTo = payload.role === 'sales' ? '/sales' : '/admin'
   try {
     const body = await request.json()
     if (body && typeof body.return_to === 'string' && body.return_to.startsWith('/')) {

@@ -20,12 +20,18 @@ export const runtime = 'nodejs'
 export async function GET(request: NextRequest) {
   const stashed = request.cookies.get('impersonator_token')?.value
   let impersonating = false
+  let role: string | null = null
   if (stashed) {
     const v = JWTManager.verifyToken(stashed)
-    impersonating = !!(v.success && v.payload?.role === 'admin')
+    // Admins impersonate anyone; sales reps impersonate their own
+    // assigned setters. Either is a valid impersonation session.
+    if (v.success && (v.payload?.role === 'admin' || v.payload?.role === 'sales')) {
+      impersonating = true
+      role = v.payload.role
+    }
   }
 
-  const res = NextResponse.json({ impersonating })
+  const res = NextResponse.json({ impersonating, impersonator_role: role })
 
   // Self-heal: a present-but-invalid stash is noise (or a security risk via
   // the return-to-admin button). Drop it so the next read is clean.
