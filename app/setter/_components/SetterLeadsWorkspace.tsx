@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch, Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass, CalendarBlank, PaperPlaneTilt, CopySimple } from '@phosphor-icons/react'
+import { Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch, Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass, CalendarBlank, PaperPlaneTilt, CopySimple, PencilSimple } from '@phosphor-icons/react'
+import { leadTimeZone, wallClockToUtc, tzAbbrev } from '@/lib/time/lead-timezone'
 import { SetterLoadingState } from './SetterShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { firaCode } from './fonts'
@@ -48,6 +49,7 @@ const STATUS_META: Record<string, { label: string; pill: string; dot: string; ro
   dead:            { label: 'Dead',        pill: 'bg-gray-200 text-gray-500',          dot: 'bg-gray-300',     row: 'bg-gray-100/80 opacity-50 hover:opacity-75' },
   not_available:   { label: 'Not avail',   pill: 'bg-orange-100 text-orange-700',      dot: 'bg-orange-500',   row: 'bg-orange-50 hover:bg-orange-100/70' },
   not_interested:  { label: 'Not interested', pill: 'bg-slate-200 text-slate-600',      dot: 'bg-slate-400',    row: 'bg-slate-100/70 hover:bg-slate-100' },
+  wrong_dm:        { label: 'Wrong DM',    pill: 'bg-cyan-100 text-cyan-700',          dot: 'bg-cyan-500',     row: 'bg-cyan-50 hover:bg-cyan-100/70' },
   do_not_call:     { label: 'DNC',         pill: 'bg-red-100 text-red-700',            dot: 'bg-red-500',      row: 'bg-red-100/70 hover:bg-red-100' },
 }
 
@@ -63,6 +65,7 @@ const STATUS_FILTERS: Array<{ key: string; label: string }> = [
   { key: 'dead',          label: 'Dead' },
   { key: 'not_available', label: 'Not avail' },
   { key: 'not_interested', label: 'Not interested' },
+  { key: 'wrong_dm', label: 'Wrong DM' },
   { key: 'do_not_call',   label: 'DNC' },
 ]
 
@@ -95,6 +98,7 @@ export function SetterLeadsWorkspace() {
   // Page-scoped modal so any row can pop the demo-set picker without
   // each row having to own its own state.
   const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
+  const [noteModalLeadId, setNoteModalLeadId] = useState<string | null>(null)
   const [findingEmails, setFindingEmails] = useState(false)
   const [outreachModal, setOutreachModal] = useState<{
     leads: Pick<Lead, 'id' | 'business_name'>[]
@@ -803,12 +807,21 @@ export function SetterLeadsWorkspace() {
                         )}
                         <button
                           type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNoteModalLeadId(l.id) }}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          aria-label="Add note"
+                          title="Add a note (does not book anything)"
+                        >
+                          <PencilSimple weight="bold" className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDemoModalLeadId(l.id) }}
                           className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
-                          aria-label="Mark demo set"
-                          title="Mark demo set - pings the team + Slack"
+                          aria-label="Mark demo booked"
+                          title="Book a demo - pings the team + Slack"
                         >
-                          <CheckCircle weight="fill" className="w-4 h-4" />
+                          <CalendarBlank weight="fill" className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -859,6 +872,8 @@ export function SetterLeadsWorkspace() {
       {demoModalLeadId && (
         <LeadsDemoSetModal
           leadId={demoModalLeadId}
+          leadState={leads.find((l) => l.id === demoModalLeadId)?.state || null}
+          leadPhone={leads.find((l) => l.id === demoModalLeadId)?.phone || null}
           onClose={() => setDemoModalLeadId(null)}
           onSaved={() => {
             const lid = demoModalLeadId
@@ -868,6 +883,22 @@ export function SetterLeadsWorkspace() {
             setLeads((prev) => prev.map((l) => l.id === lid ? { ...l, status: 'demo_scheduled' } : l))
             setFlash('Demo set - the team has been pinged.')
             setTimeout(() => setFlash(''), 3500)
+          }}
+        />
+      )}
+      {noteModalLeadId && (
+        <LeadsNoteModal
+          leadId={noteModalLeadId}
+          businessName={leads.find((l) => l.id === noteModalLeadId)?.business_name || 'this lead'}
+          onClose={() => setNoteModalLeadId(null)}
+          onSaved={(body) => {
+            const lid = noteModalLeadId
+            setNoteModalLeadId(null)
+            setLeads((prev) => prev.map((l) => l.id === lid
+              ? { ...l, latest_note: { body, created_at: new Date().toISOString() } }
+              : l))
+            setFlash('Note saved.')
+            setTimeout(() => setFlash(''), 2500)
           }}
         />
       )}
@@ -888,11 +919,14 @@ export function SetterLeadsWorkspace() {
  * Same endpoint as the lead detail "Demo set" button - keeps both
  * surfaces consistent (status flip + founder email + Slack ping).
  */
-function LeadsDemoSetModal({ leadId, onClose, onSaved }: {
+function LeadsDemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: {
   leadId: string
+  leadState?: string | null
+  leadPhone?: string | null
   onClose: () => void
   onSaved: () => void
 }) {
+  const tz = leadTimeZone(leadState, leadPhone)
   const initial = (() => {
     const d = new Date()
     d.setDate(d.getDate() + 1)
@@ -912,7 +946,7 @@ function LeadsDemoSetModal({ leadId, onClose, onSaved }: {
       const r = await fetchWithAuth(`/api/sales/leads/${leadId}/mark-demo`, {
         method: 'POST',
         body: JSON.stringify({
-          scheduled_at: new Date(when).toISOString(),
+          scheduled_at: tz ? wallClockToUtc(when, tz) : new Date(when).toISOString(),
           notes: notes.trim() || undefined,
         }),
       })
@@ -934,12 +968,14 @@ function LeadsDemoSetModal({ leadId, onClose, onSaved }: {
       >
         <div className="flex items-center gap-2 mb-1">
           <CalendarBlank weight="fill" className="w-4 h-4 text-amber-500" />
-          <h3 className="text-base font-medium text-gray-900">Mark demo set</h3>
+          <h3 className="text-base font-medium text-gray-900">Book a demo</h3>
         </div>
         <p className="text-xs text-gray-500 mb-4">
-          Status flips to demo_scheduled. The team + Slack get pinged so the agent gets built in time.
+          This books the demo and pings the team - only use it when a demo is actually set. Just leaving a note? Use the pencil button instead.
         </p>
-        <label className="block text-xs font-medium text-gray-700 mb-1.5">When?</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+          When? <span className="font-normal text-gray-400">{tz ? `(prospect's time · ${tzAbbrev(tz, new Date(when || Date.now()))})` : '(your local time)'}</span>
+        </label>
         <input
           type="datetime-local"
           value={when}
@@ -967,6 +1003,67 @@ function LeadsDemoSetModal({ leadId, onClose, onSaved }: {
           >
             {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle weight="fill" className="w-4 h-4" />}
             Mark demo set
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Standalone note for a lead - a real notes home on the leads list so
+ * setters stop typing call notes into the demo modal (which was booking
+ * a demo). Pure POST /notes, never changes status.
+ */
+function LeadsNoteModal({ leadId, businessName, onClose, onSaved }: {
+  leadId: string
+  businessName: string
+  onClose: () => void
+  onSaved: (body: string) => void
+}) {
+  const [body, setBody] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const save = async () => {
+    const text = body.trim()
+    if (!text) { setErr('Write a note first'); return }
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: text }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) { setErr(j?.error || `Failed (${r.status})`); return }
+      onSaved(text)
+    } catch { setErr('Failed') } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4" onClick={onClose}>
+      <div className="bg-white border border-[#E3EAF4] rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-1">
+          <PencilSimple weight="bold" className="w-4 h-4 text-blue-600" />
+          <h3 className="text-base font-medium text-gray-900">Note on {businessName}</h3>
+        </div>
+        <p className="text-xs text-gray-500 mb-4">Just a note - this does not book anything or change the lead&apos;s status.</p>
+        <textarea
+          value={body} onChange={(e) => setBody(e.target.value)} rows={5} autoFocus
+          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void save() } }}
+          placeholder="What happened on the call, who you spoke to, next steps…"
+          className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm leading-relaxed focus:outline-none focus:border-blue-500 resize-y"
+        />
+        {err && <div className="mt-3 bg-rose-50 border border-rose-200 rounded-lg p-2.5 text-xs text-rose-700">{err}</div>}
+        <div className="flex justify-end gap-2 mt-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
+          <button
+            onClick={save} disabled={busy || !body.trim()}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 disabled:opacity-60"
+          >
+            {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle weight="fill" className="w-4 h-4" />}
+            Save note
           </button>
         </div>
       </div>

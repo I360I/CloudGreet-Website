@@ -63,6 +63,7 @@ export async function GET(
     demo_showed: countBy('demo_showed'),
     not_available: countBy('not_available'),
     not_interested: countBy('not_interested'),
+    wrong_dm: countBy('wrong_dm'),
     dead: countBy('dead'),
     do_not_call: countBy('do_not_call'),
     untouched: rows.filter((r) => !r.last_touched_at).length,

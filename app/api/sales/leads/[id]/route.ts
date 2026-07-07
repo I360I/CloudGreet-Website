@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 
 const ALLOWED_STATUSES = new Set([
   'new', 'called', 'voicemail', 'interested', 'demo_scheduled', 'demo_showed',
-  'proposal_sent', 'closed', 'dead', 'do_not_call', 'not_available', 'not_interested',
+  'proposal_sent', 'closed', 'dead', 'do_not_call', 'not_available', 'not_interested', 'wrong_dm',
 ])
 
 /**

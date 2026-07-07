@@ -15,6 +15,7 @@ import {
 import { useDialerSession, type CockpitLead } from './DialerSessionProvider'
 import { firaCode } from './fonts'
 import { SmsThread } from './SmsThread'
+import { leadTimeZone, wallClockToUtc, wallClockAhead, tzToday, tzAbbrev } from '@/lib/time/lead-timezone'
 
 /*
  * Full-screen call cockpit for 5-hour dial blocks. Industry-standard
@@ -43,8 +44,9 @@ const DISPOSITIONS: { key: string; label: string; hotkey: string }[] = [
   { key: 'demo_showed',    label: 'Demo held',     hotkey: '6' },
   { key: 'not_available',  label: 'Not avail',     hotkey: '7' },
   { key: 'not_interested', label: 'Not interested', hotkey: '8' },
-  { key: 'dead',           label: 'Dead',          hotkey: '9' },
-  { key: 'do_not_call',    label: 'DNC',           hotkey: '0' },
+  { key: 'wrong_dm',       label: 'Wrong DM',      hotkey: '9' },
+  { key: 'dead',           label: 'Dead',          hotkey: '0' },
+  { key: 'do_not_call',    label: 'DNC',           hotkey: '' },
 ]
 // "Demo set" (agreed on the call) and "Demo booked" (prospect self-booked
 // after we sent the link) both land the demo in the rep's pipeline.
@@ -669,6 +671,8 @@ export function DialerCockpit() {
       {demoModalLeadId && (
         <DemoSetModal
           leadId={demoModalLeadId}
+          leadState={leadMetaById.get(demoModalLeadId)?.state || null}
+          leadPhone={leadMetaById.get(demoModalLeadId)?.phone || null}
           onClose={() => { setDemoModalLeadId(null); if (queuePaused) togglePause() }}
           onSaved={() => {
             setDemoModalLeadId(null)
@@ -682,6 +686,8 @@ export function DialerCockpit() {
       {callbackLeadId && (
         <CallbackModal
           leadId={callbackLeadId}
+          leadState={leadMetaById.get(callbackLeadId)?.state || null}
+          leadPhone={leadMetaById.get(callbackLeadId)?.phone || null}
           onClose={() => { setCallbackLeadId(null); if (queuePaused) togglePause() }}
           onSaved={() => {
             setCallbackLeadId(null)
@@ -896,7 +902,8 @@ function CallStateBadge({ callState, seconds, countdown, queuePaused }: {
 }
 
 /** Same endpoint + behavior as the leads-list demo modal. */
-function DemoSetModal({ leadId, onClose, onSaved }: { leadId: string; onClose: () => void; onSaved: () => void }) {
+function DemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: { leadId: string; leadState?: string | null; leadPhone?: string | null; onClose: () => void; onSaved: () => void }) {
+  const tz = leadTimeZone(leadState, leadPhone)
   const initial = (() => {
     const d = new Date()
     d.setDate(d.getDate() + 1)
@@ -913,9 +920,12 @@ function DemoSetModal({ leadId, onClose, onSaved }: { leadId: string; onClose: (
     if (!when) { setErr('Pick a date/time'); return }
     setBusy(true); setErr(null)
     try {
+      // Interpret the picked wall-clock time in the PROSPECT's timezone
+      // (not the setter's browser tz - Ed dials from the Philippines).
+      const scheduledIso = tz ? wallClockToUtc(when, tz) : new Date(when).toISOString()
       const r = await fetchWithAuth(`/api/sales/leads/${leadId}/mark-demo`, {
         method: 'POST',
-        body: JSON.stringify({ scheduled_at: new Date(when).toISOString(), notes: notes.trim() || undefined }),
+        body: JSON.stringify({ scheduled_at: scheduledIso, notes: notes.trim() || undefined }),
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok || !j?.success) { setErr(j?.error || `Failed (${r.status})`); return }
@@ -928,7 +938,9 @@ function DemoSetModal({ leadId, onClose, onSaved }: { leadId: string; onClose: (
       <div className="bg-white border border-[#E3EAF4] rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-base font-semibold mb-1" style={{ color: NAVY }}>Mark demo set</h3>
         <p className="text-xs text-slate-500 mb-4">Status flips to demo_scheduled and the team gets pinged.</p>
-        <label className="block text-xs font-medium text-slate-700 mb-1.5">When?</label>
+        <label className="block text-xs font-medium text-slate-700 mb-1.5">
+          When? <span className="font-normal text-slate-400">{tz ? `(prospect's time · ${tzAbbrev(tz, new Date(when || Date.now()))})` : '(your local time)'}</span>
+        </label>
         <input
           type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} autoFocus
           className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-blue-500"
@@ -1037,18 +1049,19 @@ function BookingLinkModal({ leadId, initialEmail, onClose, onSent }: {
 }
 
 /** Quick callback scheduling -> lead_assignments.follow_up_at. */
-function CallbackModal({ leadId, onClose, onSaved }: { leadId: string; onClose: () => void; onSaved: () => void }) {
+function CallbackModal({ leadId, leadState, leadPhone, onClose, onSaved }: { leadId: string; leadState?: string | null; leadPhone?: string | null; onClose: () => void; onSaved: () => void }) {
+  const tz = leadTimeZone(leadState, leadPhone)
   const [custom, setCustom] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  const save = async (when: Date) => {
+  const save = async (iso: string) => {
     setBusy(true); setErr(null)
     try {
       const r = await fetchWithAuth(`/api/sales/leads/${leadId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ follow_up_at: when.toISOString(), touched: true }),
+        body: JSON.stringify({ follow_up_at: iso, touched: true }),
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok || j?.error) { setErr(j?.error || `Failed (${r.status})`); return }
@@ -1056,10 +1069,13 @@ function CallbackModal({ leadId, onClose, onSaved }: { leadId: string; onClose: 
     } catch { setErr('Failed') } finally { setBusy(false) }
   }
 
-  const quick: { label: string; get: () => Date }[] = [
-    { label: 'In 2 hours', get: () => new Date(Date.now() + 2 * 3600e3) },
-    { label: 'Tomorrow 9am', get: () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d } },
-    { label: 'Monday 9am', get: () => { const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7)); d.setHours(9, 0, 0, 0); return d } },
+  // "9am" presets are in the PROSPECT's timezone when known (Ed dials
+  // from a different tz); "In 2 hours" is absolute either way.
+  const daysUntilMon = ((8 - tzToday(tz || 'America/Chicago').dow) % 7) || 7
+  const quick: { label: string; get: () => string }[] = [
+    { label: 'In 2 hours', get: () => new Date(Date.now() + 2 * 3600e3).toISOString() },
+    { label: 'Tomorrow 9am', get: () => tz ? wallClockAhead(tz, 1, 9) : (() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d.toISOString() })() },
+    { label: 'Monday 9am', get: () => tz ? wallClockAhead(tz, daysUntilMon, 9) : (() => { const d = new Date(); d.setDate(d.getDate() + daysUntilMon); d.setHours(9, 0, 0, 0); return d.toISOString() })() },
   ]
 
   return (
@@ -1085,7 +1101,7 @@ function CallbackModal({ leadId, onClose, onSaved }: { leadId: string; onClose: 
             className="flex-1 px-3 py-2 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-blue-500"
           />
           <button
-            onClick={() => custom && void save(new Date(custom))}
+            onClick={() => custom && void save(tz ? wallClockToUtc(custom, tz) : new Date(custom).toISOString())}
             disabled={busy || !custom}
             className="text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3.5 py-2 transition-colors duration-150 disabled:opacity-50"
           >

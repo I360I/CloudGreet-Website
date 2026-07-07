@@ -145,11 +145,14 @@ export function Dialer() {
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {[
-                        { v: 'called',      l: 'Talked' },
-                        { v: 'voicemail',   l: 'VM' },
-                        { v: 'interested',  l: 'Interested' },
-                        { v: 'dead',        l: 'Dead' },
-                        { v: 'do_not_call', l: 'DNC' },
+                        { v: 'called',        l: 'Talked' },
+                        { v: 'voicemail',     l: 'VM' },
+                        { v: 'interested',    l: 'Interested' },
+                        { v: 'not_available', l: 'Not avail' },
+                        { v: 'not_interested',l: 'Not interested' },
+                        { v: 'wrong_dm',      l: 'Wrong DM' },
+                        { v: 'dead',          l: 'Dead' },
+                        { v: 'do_not_call',   l: 'DNC' },
                       ].map((opt) => (
                         <button
                           key={opt.v}
