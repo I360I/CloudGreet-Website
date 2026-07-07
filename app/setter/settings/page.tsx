@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { CircleNotch, CheckCircle, WarningCircle, Voicemail, LockKey, UserCircle, Microphone, Stop, TrashSimple, Play } from '@phosphor-icons/react'
+import { CircleNotch, CheckCircle, WarningCircle, Voicemail, LockKey, UserCircle, Microphone, Stop, TrashSimple, Play, CalendarBlank, CopySimple, ArrowSquareOut } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { SetterLoadingState } from '../_components/SetterShell'
 import { DEFAULT_VM_SCRIPT } from '@/lib/telnyx/vm-script'
@@ -61,6 +61,8 @@ function SettingsBody() {
           <WarningCircle className="w-4 h-4 mt-0.5 shrink-0" /> {err}
         </div>
       )}
+
+      <RepCalendarCard />
 
       <div className="grid lg:grid-cols-2 gap-6 items-start">
       <Card icon={<UserCircle weight="duotone" className="w-5 h-5 text-blue-600" />} title="Account">
@@ -127,6 +129,57 @@ function SettingsBody() {
       <PasswordCard />
       </div>
     </div>
+  )
+}
+
+/** The assigned rep's booking calendar - copyable + openable, so the
+ *  setter always has the link handy outside a live call too. */
+function RepCalendarCard() {
+  const [rep, setRep] = useState<{ name: string; booking_url: string | null } | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const r = await fetchWithAuth('/api/setter/assigned-rep')
+        const j = await r.json().catch(() => ({}))
+        if (!cancelled && j?.rep) setRep(j.rep)
+      } catch { /* card just doesn't render */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  if (!rep?.booking_url) return null
+  const url = rep.booking_url
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1500) } catch { /* open still works */ }
+  }
+
+  return (
+    <Card icon={<CalendarBlank weight="duotone" className="w-5 h-5 text-blue-600" />} title="Booking calendar">
+      <p className="text-xs text-slate-500 -mt-1">
+        Demos you book go on <strong>{rep.name}</strong>&apos;s calendar. This is the link the
+        Send-link button emails - grab it here any time.
+      </p>
+      <div className="flex items-center gap-2 bg-[#F8FAFC] border border-[#E3EAF4] rounded-lg px-3 py-2">
+        <span className="flex-1 min-w-0 truncate text-sm text-slate-700">{url}</span>
+        <button
+          onClick={() => void copy()}
+          className="inline-flex items-center gap-1.5 shrink-0 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3 py-1.5 transition-colors"
+        >
+          {copied ? <CheckCircle weight="fill" className="w-3.5 h-3.5" /> : <CopySimple className="w-3.5 h-3.5" />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+        <a
+          href={url} target="_blank" rel="noopener noreferrer"
+          title="Open calendar"
+          className="inline-flex items-center justify-center shrink-0 w-8 h-8 rounded-lg border border-[#E3EAF4] bg-white text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-colors"
+        >
+          <ArrowSquareOut className="w-4 h-4" />
+        </a>
+      </div>
+    </Card>
   )
 }
 
