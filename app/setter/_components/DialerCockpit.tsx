@@ -531,7 +531,9 @@ export function DialerCockpit() {
           stays visible with no scrolling; Mute/Keypad/VM/Hangup and
           Pause/Skip/Stop sit shrink-0 on either side and are always
           reachable regardless of window width. */}
-      <div className="bg-white rounded-xl border border-[#E3EAF4] px-4 py-3 flex items-center gap-3 flex-nowrap relative">
+      <div className="bg-white rounded-xl border border-[#E3EAF4] px-4 py-3 relative">
+       {/* Row 1: call controls (left) + queue transport (right). */}
+       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={toggleMute}
@@ -569,12 +571,29 @@ export function DialerCockpit() {
           </button>
         </div>
 
-        <div className="h-8 w-px bg-[#EEF2F7] shrink-0" />
+        <div className="flex-1" />
 
-        {/* Dispositions: Demo set is a prominent full-height button (the
-            outcome that matters), the rest are slim tags in a fixed
-            2-row grid - nothing overlaps, everything stays on screen. */}
-        <div className="flex-1 min-w-0 flex items-stretch gap-2">
+        {/* Queue transport - stays on the top row, right-aligned. */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {countdown !== null && !queuePaused && (
+            <span className={`text-sm text-blue-700 ${firaCode.className}`}>next in {countdown}s</span>
+          )}
+          <button onClick={togglePause} title="Pause/resume (Space)" className="inline-flex items-center justify-center w-11 h-11 rounded-lg border bg-white border-[#E3EAF4] text-slate-600 hover:bg-slate-50 transition-colors duration-150">
+            {queuePaused ? <Play className="w-4 h-4" weight="fill" /> : <Pause className="w-4 h-4" weight="fill" />}
+          </button>
+          <button onClick={skipCurrent} title="Skip to next" className="inline-flex items-center justify-center w-11 h-11 rounded-lg border bg-white border-[#E3EAF4] text-slate-600 hover:bg-slate-50 transition-colors duration-150">
+            <SkipForward className="w-4 h-4" weight="fill" />
+          </button>
+          <button onClick={stopQueue} title="End session" className="inline-flex items-center justify-center w-11 h-11 rounded-lg border bg-white border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors duration-150">
+            <Stop className="w-4 h-4" weight="fill" />
+          </button>
+        </div>
+       </div>
+
+        {/* Row 2: dispositions on their own full-width line - Demo set is
+            a prominent full-height button, the rest a 2-row grid. Own row
+            so nothing overlaps the controls/transport above. */}
+        <div className="flex items-stretch gap-2 mt-2.5 flex-wrap">
           <button
             onClick={() => chooseDisposition(DEMO_DISPOSITION.key)}
             disabled={callState !== 'ended' && callState !== 'active'}
@@ -620,23 +639,6 @@ export function DialerCockpit() {
               <PaperPlaneTilt className="w-3 h-3 text-blue-500" /><span className="text-slate-400">B</span> Book link
             </button>
           </div>
-        </div>
-
-        {/* Queue transport - shrink-0: always visible, never scrolled
-            out of reach regardless of how many disposition tags exist. */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {countdown !== null && !queuePaused && (
-            <span className={`text-sm text-blue-700 ${firaCode.className}`}>next in {countdown}s</span>
-          )}
-          <button onClick={togglePause} title="Pause/resume (Space)" className="inline-flex items-center justify-center w-11 h-11 rounded-lg border bg-white border-[#E3EAF4] text-slate-600 hover:bg-slate-50 transition-colors duration-150">
-            {queuePaused ? <Play className="w-4 h-4" weight="fill" /> : <Pause className="w-4 h-4" weight="fill" />}
-          </button>
-          <button onClick={skipCurrent} title="Skip to next" className="inline-flex items-center justify-center w-11 h-11 rounded-lg border bg-white border-[#E3EAF4] text-slate-600 hover:bg-slate-50 transition-colors duration-150">
-            <SkipForward className="w-4 h-4" weight="fill" />
-          </button>
-          <button onClick={stopQueue} title="End session" className="inline-flex items-center justify-center w-11 h-11 rounded-lg border bg-white border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors duration-150">
-            <Stop className="w-4 h-4" weight="fill" />
-          </button>
         </div>
 
         {/* Keypad popover */}
