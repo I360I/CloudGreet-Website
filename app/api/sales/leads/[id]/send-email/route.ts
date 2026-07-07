@@ -47,10 +47,12 @@ export async function POST(
   const { data: sender } = await supabaseAdmin
     .from('custom_users').select('email, first_name, name').eq('id', auth.userId).maybeSingle()
   const senderFirst = (sender?.first_name || sender?.name || '').split(' ')[0] || 'CloudGreet'
-  // From address on the cold-safe domain; reply-to reaches the rep's real
-  // inbox so they can actually converse.
+  // From + reply-to are BOTH the rep's own getcloudgreet.com mailbox (the
+  // cold-safe domain, not cloudgreet.com), so prospect replies land in the
+  // inbox the rep actually logs into. A per-rep mailbox is created at
+  // onboarding (e.g. ed@getcloudgreet.com).
   const fromEmail = `${senderFirst.toLowerCase().replace(/[^a-z]/g, '') || 'team'}@getcloudgreet.com`
-  const replyTo = sender?.email || process.env.RESEND_REPLY_TO || 'team@getcloudgreet.com'
+  const replyTo = fromEmail
 
   try {
     const res = await fetch('https://api.brevo.com/v3/smtp/email', {
