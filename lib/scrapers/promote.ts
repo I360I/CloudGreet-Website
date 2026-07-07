@@ -97,7 +97,7 @@ export async function promoteScrapeResults(opts: {
         .insert({
           name: r.business_name || 'Unknown',
           business_name: r.business_name || 'Unknown',
-          contact_name: r.owner_name || null,
+          contact_name: normalizeContactName(r.owner_name),
           // The NORMALIZED phone - storing the raw formatted value here
           // was the root cause of 25% of leads carrying '+1 210-870-...'
           // shapes that broke phone-equality dedupe.
@@ -175,7 +175,7 @@ export async function promoteScrapeResults(opts: {
 
 // Use the shared, more tolerant normalizer so leads.phone matches what
 // the runner's seenPhones set will see on subsequent scrapes.
-import { normalizePhone as sharedNormalizePhone } from './normalize'
+import { normalizePhone as sharedNormalizePhone, normalizeContactName } from './normalize'
 function normalizePhone(p: string | null | undefined): string | null {
   return sharedNormalizePhone(p)
 }

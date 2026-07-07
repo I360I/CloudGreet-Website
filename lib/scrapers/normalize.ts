@@ -76,6 +76,76 @@ export function normalizeWebsite(w: string | null | undefined): string | null {
   return s
 }
 
+const NAME_SUFFIXES = new Set(['JR', 'SR', 'II', 'III', 'IV', 'V'])
+
+/**
+ * Owner/contact name → "First Middle Last Suffix", Title Case.
+ *
+ * Texas license databases (TDLR HVAC/Electrical) publish names as
+ * "LASTNAME, FIRST MIDDLE [SUFFIX]" - straight from a government
+ * records list, all caps, last name first. Correct data, unreadable
+ * shape: a rep glancing at "VAUGHN, WALTER C JR" sees a comma and 3+
+ * tokens and (reasonably) wonders if that's multiple people. This
+ * reorders to "Walter C Vaughn Jr" and title-cases everything,
+ * including sources (TSBPE, TDA, cold-call entries) that are already
+ * in first-name-first order - those just get re-cased, not reordered.
+ */
+export function normalizeContactName(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const t = String(raw).trim().replace(/\s+/g, ' ')
+  if (!t) return null
+
+  let nameWords: string[]
+  let suffix: string | null = null
+  if (t.includes(',')) {
+    const [lastPart, restPart = ''] = t.split(',').map((s) => s.trim())
+    const restWords = restPart.split(' ').filter(Boolean)
+    if (restWords.length) {
+      const last = restWords[restWords.length - 1].toUpperCase().replace(/\.$/, '')
+      if (NAME_SUFFIXES.has(last)) suffix = last
+      if (suffix) restWords.pop()
+    }
+    nameWords = [...restWords, lastPart]
+  } else {
+    nameWords = t.split(' ').filter(Boolean)
+    if (nameWords.length > 1) {
+      const last = nameWords[nameWords.length - 1].toUpperCase().replace(/\.$/, '')
+      if (NAME_SUFFIXES.has(last)) { suffix = last; nameWords.pop() }
+    }
+  }
+
+  const formatted = nameWords.map(titleCaseWord).join(' ').trim()
+  if (!formatted) return null
+  // Jr/Sr read as Title Case; roman numeral suffixes stay uppercase
+  // (titleCaseWord would otherwise mangle "III" into "Iii").
+  const suffixOut = suffix === null ? '' : (suffix === 'JR' || suffix === 'SR')
+    ? ` ${suffix[0]}${suffix.slice(1).toLowerCase()}`
+    : ` ${suffix}`
+  return `${formatted}${suffixOut}`
+}
+
+/**
+ * "MCCANN" -> "McCann", "O'BRIEN" -> "O'Brien", "SMITH-JONES" -> "Smith-Jones",
+ * "NIKKI'S" -> "Nikki's" (possessive 's stays lowercase - only a
+ * single-letter prefix before the apostrophe, like O'/D'/L', gets the
+ * next letter capitalized; anything longer is presumed possessive).
+ */
+function titleCaseWord(w: string): string {
+  let s = w.toLowerCase()
+  if (!s) return s
+  s = s.charAt(0).toUpperCase() + s.slice(1)
+  s = s.replace(/-([a-z])/g, (_, ch) => '-' + ch.toUpperCase())
+  if (s.length > 2 && s[1] === "'") {
+    s = s[0] + "'" + s[2].toUpperCase() + s.slice(3)
+  }
+  // "Mc" is unambiguous enough as an Irish/Scottish surname prefix to
+  // safely re-capitalize the next letter ("Mccann" -> "McCann").
+  // "Mac" is NOT handled - too many ordinary names/words start with it
+  // (Macy, Mack, Macon) to guess correctly without a name dictionary.
+  s = s.replace(/^(Mc)([a-z])/, (_, p, ch) => p + ch.toUpperCase())
+  return s
+}
+
 /**
  * Business-name + city composite key, used as a last-resort dedupe when
  * neither phone nor website matched. Lower-case, alphanumeric only.
