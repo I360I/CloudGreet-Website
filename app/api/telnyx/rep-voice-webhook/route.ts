@@ -50,7 +50,7 @@ type Payload = {
 }
 
 type ClientState = {
-  type: 'inbound' | 'outbound' | 'voicemail'
+  type: 'inbound' | 'outbound' | 'voicemail' | 'dialer_recording'
   rep_id?: string
   rep_name?: string
   from_number?: string
@@ -211,6 +211,35 @@ export async function POST(request: NextRequest) {
       logger.info('rep voicemail saved', { repId: clientState.rep_id, dur })
     }
     return NextResponse.json({ ok: true, action: 'voicemail_saved' })
+  }
+
+  // ── RECORDING SAVED: store a dialer call recording (owner-only) ───────────
+  // Auto call recording started by /api/sales/dialer/record in one-party
+  // consent states. Download the mp3 into the private call-recordings bucket
+  // (durable, vs Telnyx's short retention) and stamp the rep_calls row.
+  if (eventType === 'recording.saved' && clientState?.type === 'dialer_recording') {
+    const srcUrl = payload.recording_urls?.mp3 || payload.recording_urls?.wav || null
+    if (!callId || !srcUrl) return NextResponse.json({ ok: true, ignored: 'no call id / url' })
+    const { data: row } = await supabaseAdmin
+      .from('rep_calls').select('id, rep_id').eq('telnyx_call_id', callId).maybeSingle()
+    if (!row) return NextResponse.json({ ok: true, ignored: 'no matching rep_call' })
+    try {
+      const audio = await fetch(srcUrl)
+      const buf = Buffer.from(await audio.arrayBuffer())
+      const path = `${(row as any).rep_id}/${(row as any).id}.mp3`
+      const { error: upErr } = await supabaseAdmin.storage
+        .from('call-recordings').upload(path, buf, { contentType: 'audio/mpeg', upsert: true })
+      if (upErr) throw new Error(upErr.message)
+      await supabaseAdmin.from('rep_calls')
+        .update({ recording_url: path, recording_status: 'saved' }).eq('id', (row as any).id)
+      logger.info('dialer recording saved', { callId, path })
+    } catch (e) {
+      // Fall back to the Telnyx URL so it's at least retrievable short-term.
+      await supabaseAdmin.from('rep_calls')
+        .update({ recording_url: srcUrl, recording_status: 'saved:telnyx-url' }).eq('id', (row as any).id)
+      logger.warn('dialer recording store failed, kept telnyx url', { callId, error: e instanceof Error ? e.message : 'unknown' })
+    }
+    return NextResponse.json({ ok: true, action: 'dialer_recording_saved' })
   }
 
   // ── OUTBOUND (rep dialing a prospect from browser/SIP) ───────────────────

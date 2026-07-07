@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { CircleNotch, Key, ArrowLeft, PhoneCall, ChatText, Voicemail, WarningCircle, CheckCircle } from '@phosphor-icons/react'
+import { CircleNotch, Key, ArrowLeft, PhoneCall, ChatText, Voicemail, WarningCircle, CheckCircle, Play, Pause } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../../_components/Shell'
 import { Panel, PanelHeader, GhostButton } from '../../_components/ui'
@@ -22,7 +22,7 @@ type Detail = {
   weekly_goal: { target: number; this_week: number; streak_weeks: number; streak_target: number; bonus_earned: boolean; bonus_amount: number }
   pipeline: Record<string, number>
   demos_set: { id: string; business: string | null; status: string; demo_at: string | null; created_at: string }[]
-  recent_calls: { at: string; status: string; seconds: number; to: string; lead: string | null }[]
+  recent_calls: { id: string; at: string; status: string; seconds: number; to: string; lead: string | null; has_recording?: boolean }[]
   messages: { sent: number; received: number; failed: number }
   numbers: { phone_number: string; label: string | null; is_active: boolean; is_sms_line: boolean }[]
   reps: { id: string; name: string }[]
@@ -272,10 +272,11 @@ export default function AdminSetterDetailPage() {
               ) : (
                 <ul className="divide-y divide-white/[0.04]">
                   {recent_calls.map((c, i) => (
-                    <li key={i} className="px-5 py-2.5 flex items-center justify-between gap-3 text-xs">
-                      <div className="min-w-0">
-                        <span className="text-gray-200">{c.lead || fmtPhone(c.to)}</span>
-                        <span className="text-gray-500 ml-2">{fmtWhen(c.at)}</span>
+                    <li key={c.id || i} className="px-5 py-2.5 flex items-center justify-between gap-3 text-xs">
+                      <div className="min-w-0 flex items-center gap-2">
+                        {c.has_recording && <RecordingButton callId={c.id} />}
+                        <span className="text-gray-200 truncate">{c.lead || fmtPhone(c.to)}</span>
+                        <span className="text-gray-500">{fmtWhen(c.at)}</span>
                       </div>
                       <span className="shrink-0 tabular-nums text-gray-400">
                         {c.status}{c.seconds > 0 ? ` · ${c.seconds}s` : ''}
@@ -289,6 +290,45 @@ export default function AdminSetterDetailPage() {
         </div>
       </section>
     </AdminShell>
+  )
+}
+
+/** Play a call recording: fetches a signed URL on first play, then
+ *  toggles an inline audio element. Admin-only surface. */
+function RecordingButton({ callId }: { callId: string }) {
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [playing, setPlaying] = useState(false)
+
+  const toggle = async () => {
+    if (audio) {
+      if (playing) { audio.pause(); setPlaying(false) }
+      else { void audio.play(); setPlaying(true) }
+      return
+    }
+    setLoading(true)
+    try {
+      const r = await fetchWithAuth(`/api/admin/rep-calls/${callId}/recording`)
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.url) { alert(j?.error || 'Recording unavailable'); return }
+      const a = new Audio(j.url)
+      a.onended = () => setPlaying(false)
+      a.onpause = () => setPlaying(false)
+      a.onplay = () => setPlaying(true)
+      setAudio(a)
+      void a.play()
+    } catch { alert('Could not load recording') }
+    finally { setLoading(false) }
+  }
+
+  return (
+    <button
+      onClick={() => void toggle()}
+      title="Play recording"
+      className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+    >
+      {loading ? <CircleNotch className="w-3 h-3 animate-spin" /> : playing ? <Pause weight="fill" className="w-3 h-3" /> : <Play weight="fill" className="w-3 h-3" />}
+    </button>
   )
 }
 

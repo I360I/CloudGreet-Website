@@ -71,7 +71,7 @@ export async function GET(
   // Recent calls with lead names (manual join, same pattern as elsewhere).
   const { data: recentCalls } = await supabaseAdmin
     .from('rep_calls')
-    .select('started_at, status, duration_seconds, to_number, lead_id')
+    .select('id, started_at, status, duration_seconds, to_number, lead_id, recording_status')
     .eq('rep_id', params.id)
     .order('started_at', { ascending: false })
     .limit(15)
@@ -136,11 +136,13 @@ export async function GET(
       created_at: c.created_at,
     })),
     recent_calls: (recentCalls || []).map((c: any) => ({
+      id: c.id,
       at: c.started_at,
       status: c.status,
       seconds: c.duration_seconds || 0,
       to: c.to_number,
       lead: c.lead_id ? (leadNames.get(c.lead_id) || null) : null,
+      has_recording: (c.recording_status || '').startsWith('saved'),
     })),
     messages: { sent: msgSent, received: msgReceived, failed: msgFailed },
     numbers: numbers || [],

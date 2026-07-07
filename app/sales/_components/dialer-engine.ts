@@ -305,7 +305,17 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ id: callRowIdRef.current, telnyx_call_id: ccid }),
-                })
+                }).then(() => {
+                  // Auto-record (owner-only, server decides by the callee's
+                  // consent-law state). Fire-and-forget AFTER the ccid is on
+                  // the row so the backend can find/gate it; never blocks or
+                  // affects the live call.
+                  void fetchWithAuth('/api/sales/dialer/record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ call_control_id: ccid, lead_id: activeLeadIdRef.current }),
+                  }).catch(() => {})
+                }).catch(() => {})
               }
             } catch { /* non-fatal */ }
             // Telnyx SDK mutes the local mic on call start
