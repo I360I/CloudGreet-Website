@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   PhoneCall, PhoneSlash, Microphone, MicrophoneSlash, Voicemail, CircleNotch,
   Pause, Play, SkipForward, Stop, CheckCircle, WarningCircle, CaretDown,
-  DotsNine, ChatText, CalendarBlank, CalendarCheck, ArrowLeft, Star, PaperPlaneTilt,
+  DotsNine, ChatText, CalendarBlank, CalendarCheck, ArrowLeft, Star, PaperPlaneTilt, PencilSimple,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
@@ -54,9 +54,9 @@ export function DialerCockpit() {
   const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
   const [callbackLeadId, setCallbackLeadId] = useState<string | null>(null)
   const [bookingLinkLeadId, setBookingLinkLeadId] = useState<string | null>(null)
+  const [notesModalOpen, setNotesModalOpen] = useState(false)
   const [scripts, setScripts] = useState<Script[]>([])
   const [objectionFilter, setObjectionFilter] = useState('')
-  const noteInputRef = useRef<HTMLInputElement | null>(null)
 
   // Engine + session state live in the layout-level provider so they
   // survive navigating to other tabs mid-session.
@@ -149,7 +149,7 @@ export function DialerCockpit() {
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (demoModalLeadId || callbackLeadId || bookingLinkLeadId) return
+      if (demoModalLeadId || callbackLeadId || bookingLinkLeadId || notesModalOpen) return
       const k = e.key.toLowerCase()
       const dispo = DISPOSITIONS.find((d) => d.hotkey === e.key)
       if (dispo && (callState === 'ended' || callState === 'active')) {
@@ -161,7 +161,7 @@ export function DialerCockpit() {
       if (k === 'k') { e.preventDefault(); setKeypadOpen((v) => !v); return }
       if (k === 'v' && callState === 'active') { e.preventDefault(); void dropVoicemail(); return }
       if ((k === 'h' || k === 'escape') && inCall) { e.preventDefault(); hangup(); return }
-      if (k === 'n') { e.preventDefault(); noteInputRef.current?.focus(); return }
+      if (k === 'n') { e.preventDefault(); setNotesModalOpen(true); return }
       if (k === ' ' && queueActive) { e.preventDefault(); togglePause(); return }
     }
     window.addEventListener('keydown', onKey)
@@ -431,19 +431,14 @@ export function DialerCockpit() {
 
           {/* Notes */}
           <div className="bg-white rounded-xl border border-[#E3EAF4] flex-1 min-h-0 flex flex-col overflow-hidden">
-            <div className="px-4 pt-3 pb-2 flex items-center gap-2">
-              <input
-                ref={noteInputRef}
-                type="text"
-                value={noteDraft}
-                onChange={(e) => setNoteDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && noteDraft.trim()) { void addNote(noteDraft); setNoteDraft('') }
-                  if (e.key === 'Escape') (e.target as HTMLInputElement).blur()
-                }}
-                placeholder="Type a note, Enter to save (N focuses here)"
-                className="flex-1 min-w-0 bg-[#F8FAFC] border border-[#E3EAF4] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:bg-white"
-              />
+            <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold" style={{ color: NAVY }}>Notes</span>
+              <button
+                onClick={() => setNotesModalOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3 py-1.5 transition-colors duration-150"
+              >
+                <PencilSimple className="w-3.5 h-3.5" /> Add note <span className="text-blue-200 text-[10px]">N</span>
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto px-4 pb-3">
               {notesLoading ? (
@@ -695,6 +690,79 @@ export function DialerCockpit() {
           }}
         />
       )}
+      {notesModalOpen && (
+        <NotesModal
+          draft={noteDraft}
+          setDraft={setNoteDraft}
+          notes={notes}
+          onSave={async (text) => { await addNote(text); setNoteDraft('') }}
+          onClose={() => setNotesModalOpen(false)}
+          leadName={liveLead?.businessName || currentItem?.businessName || 'this lead'}
+        />
+      )}
+    </div>
+  )
+}
+
+/** Roomy note editor - opens on the "Add note" button or the N hotkey. */
+function NotesModal({ draft, setDraft, notes, onSave, onClose, leadName }: {
+  draft: string
+  setDraft: (v: string) => void
+  notes: { id: string; body: string; created_at: string }[]
+  onSave: (text: string) => Promise<void>
+  onClose: () => void
+  leadName: string
+}) {
+  const [busy, setBusy] = useState(false)
+  const save = async () => {
+    if (!draft.trim() || busy) return
+    setBusy(true)
+    try { await onSave(draft.trim()) } finally { setBusy(false); onClose() }
+  }
+  return (
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4" onClick={onClose}>
+      <div className="bg-white border border-[#E3EAF4] rounded-xl shadow-xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-base font-semibold mb-1" style={{ color: NAVY }}>Note on {leadName}</h3>
+        <p className="text-xs text-slate-500 mb-3">Cmd/Ctrl+Enter to save, Esc to close.</p>
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') { e.preventDefault(); onClose() }
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void save() }
+          }}
+          rows={7}
+          autoFocus
+          placeholder="What happened on the call, next steps, anything worth remembering…"
+          className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm leading-relaxed focus:outline-none focus:border-blue-500 resize-y"
+        />
+        <div className="flex items-center gap-2 mt-4">
+          <button
+            onClick={() => void save()}
+            disabled={busy || !draft.trim()}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-60 transition-colors duration-150"
+          >
+            {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle weight="fill" className="w-4 h-4" />}
+            Save note
+          </button>
+          <button onClick={onClose} className="px-3 py-2 text-sm text-slate-500 hover:text-slate-900">Cancel</button>
+        </div>
+        {notes.length > 0 && (
+          <div className="mt-5 pt-4 border-t border-[#EEF2F7] max-h-40 overflow-y-auto">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">Earlier notes</div>
+            <ul className="space-y-2">
+              {notes.map((n) => (
+                <li key={n.id} className="text-xs text-slate-600 leading-snug">
+                  <span className={`text-slate-400 ${firaCode.className}`}>
+                    {new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>{' '}
+                  {n.body}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
