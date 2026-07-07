@@ -196,6 +196,17 @@ export async function POST(
     hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
   })
 
+  // 0. Owner text alert (best-effort, fire-and-forget).
+  void (async () => {
+    const { textOwnerSetterActivity } = await import('@/lib/notifications/setter-alerts')
+    await textOwnerSetterActivity([
+      `Demo booked by ${repName}`,
+      `${lead.business_name || 'a lead'}`,
+      `When: ${whenPretty}`,
+      lead.phone ? `Phone: ${lead.phone}` : '',
+    ])
+  })()
+
   // 1. Founder email (best-effort, fire-and-forget).
   void (async () => {
     try {

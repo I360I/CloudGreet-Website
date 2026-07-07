@@ -158,6 +158,16 @@ ${senderFirst ? `Talk soon,\n${senderFirst}\nCloudGreet` : 'Talk soon,\nCloudGre
     if (error) logger.warn('send-booking-link: note insert failed', { leadId: lead.id, error: error.message })
   })
 
+  // Owner text alert (best-effort, fire-and-forget).
+  void (async () => {
+    const { textOwnerSetterActivity } = await import('@/lib/notifications/setter-alerts')
+    await textOwnerSetterActivity([
+      `${senderFirst || 'A setter'} sent a booking link`,
+      `${lead.business_name || 'a lead'} -> ${email}`,
+      `Calendar: ${ownerName}`,
+    ])
+  })()
+
   logger.info('Booking link sent', {
     senderId: auth.userId, leadId: lead.id, calendarOwnerId, role: auth.role,
   })
