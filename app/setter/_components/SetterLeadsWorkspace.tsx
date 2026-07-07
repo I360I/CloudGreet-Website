@@ -47,6 +47,7 @@ const STATUS_META: Record<string, { label: string; pill: string; dot: string; ro
   closed:          { label: 'Closed',      pill: 'bg-emerald-200 text-emerald-900',    dot: 'bg-emerald-600',  row: 'bg-emerald-100 hover:bg-emerald-200/70' },
   dead:            { label: 'Dead',        pill: 'bg-gray-200 text-gray-500',          dot: 'bg-gray-300',     row: 'bg-gray-100/80 opacity-50 hover:opacity-75' },
   not_available:   { label: 'Not avail',   pill: 'bg-orange-100 text-orange-700',      dot: 'bg-orange-500',   row: 'bg-orange-50 hover:bg-orange-100/70' },
+  not_interested:  { label: 'Not interested', pill: 'bg-slate-200 text-slate-600',      dot: 'bg-slate-400',    row: 'bg-slate-100/70 hover:bg-slate-100' },
   do_not_call:     { label: 'DNC',         pill: 'bg-red-100 text-red-700',            dot: 'bg-red-500',      row: 'bg-red-100/70 hover:bg-red-100' },
 }
 
@@ -61,6 +62,7 @@ const STATUS_FILTERS: Array<{ key: string; label: string }> = [
   { key: 'proposal_sent', label: 'Proposal' },
   { key: 'dead',          label: 'Dead' },
   { key: 'not_available', label: 'Not avail' },
+  { key: 'not_interested', label: 'Not interested' },
   { key: 'do_not_call',   label: 'DNC' },
 ]
 

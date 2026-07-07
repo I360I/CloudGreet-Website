@@ -35,15 +35,16 @@ export type { CockpitLead } from './DialerSessionProvider'
 type Script = { id: string; section: string; title: string; body: string; sort_order: number }
 
 const DISPOSITIONS: { key: string; label: string; hotkey: string }[] = [
-  { key: 'called',         label: 'Talked',      hotkey: '1' },
-  { key: 'voicemail',      label: 'Voicemail',   hotkey: '2' },
-  { key: 'interested',     label: 'Interested',  hotkey: '3' },
-  { key: 'demo_scheduled', label: 'Demo set',    hotkey: '4' },
-  { key: 'demo_booked',    label: 'Demo booked', hotkey: '5' },
-  { key: 'demo_showed',    label: 'Demo held',   hotkey: '6' },
-  { key: 'not_available',  label: 'Not avail',   hotkey: '7' },
-  { key: 'dead',           label: 'Dead',        hotkey: '8' },
-  { key: 'do_not_call',    label: 'DNC',         hotkey: '9' },
+  { key: 'called',         label: 'Talked',        hotkey: '1' },
+  { key: 'voicemail',      label: 'Voicemail',     hotkey: '2' },
+  { key: 'interested',     label: 'Interested',    hotkey: '3' },
+  { key: 'demo_scheduled', label: 'Demo set',      hotkey: '4' },
+  { key: 'demo_booked',    label: 'Demo booked',   hotkey: '5' },
+  { key: 'demo_showed',    label: 'Demo held',     hotkey: '6' },
+  { key: 'not_available',  label: 'Not avail',     hotkey: '7' },
+  { key: 'not_interested', label: 'Not interested', hotkey: '8' },
+  { key: 'dead',           label: 'Dead',          hotkey: '9' },
+  { key: 'do_not_call',    label: 'DNC',           hotkey: '0' },
 ]
 // "Demo set" (agreed on the call) and "Demo booked" (prospect self-booked
 // after we sent the link) both land the demo in the rep's pipeline.
@@ -316,7 +317,7 @@ export function DialerCockpit() {
             </div>
           </div>
           <div className="text-[11px] text-slate-400 mb-5">
-            Hotkeys: 1-9 tag the call · B send link · C callback · M mute · V drop VM · H hang up · N note · Space pause
+            Hotkeys: 1-0 tag the call · B send link · C callback · M mute · V drop VM · H hang up · N note · Space pause
           </div>
           <button
             onClick={() => void start()}
@@ -362,7 +363,7 @@ export function DialerCockpit() {
           <CalendarPill name={assignedRep.name} url={assignedRep.booking_url} />
         )}
         <span className="text-[11px] text-slate-400 hidden 2xl:block shrink-0 whitespace-nowrap">
-          1-9 tag · B send link · C callback · M mute · V VM · H hang up · Space pause
+          1-0 tag · B send link · C callback · M mute · V VM · H hang up · Space pause
         </span>
       </div>
 
