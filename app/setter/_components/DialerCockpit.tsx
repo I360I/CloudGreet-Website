@@ -145,6 +145,13 @@ export function DialerCockpit() {
     setBookingLinkLeadId(liveLeadId)
   }, [liveLeadId, queueActive, queuePaused, togglePause])
 
+  const openNotes = useCallback(() => {
+    // Pause so the auto-advance countdown doesn't dial the next lead
+    // while a note's being typed.
+    if (queueActive && !queuePaused) togglePause()
+    setNotesModalOpen(true)
+  }, [queueActive, queuePaused, togglePause])
+
   // ---- Global hotkeys (cockpit only; never while typing). ----
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -163,12 +170,12 @@ export function DialerCockpit() {
       if (k === 'k') { e.preventDefault(); setKeypadOpen((v) => !v); return }
       if (k === 'v' && callState === 'active') { e.preventDefault(); void dropVoicemail(); return }
       if ((k === 'h' || k === 'escape') && inCall) { e.preventDefault(); hangup(); return }
-      if (k === 'n') { e.preventDefault(); setNotesModalOpen(true); return }
+      if (k === 'n') { e.preventDefault(); openNotes(); return }
       if (k === ' ' && queueActive) { e.preventDefault(); togglePause(); return }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [callState, inCall, queueActive, chooseDisposition, openCallback, openBookingLink, toggleMute, dropVoicemail, hangup, togglePause, demoModalLeadId, callbackLeadId, bookingLinkLeadId])
+  }, [callState, inCall, queueActive, chooseDisposition, openCallback, openBookingLink, openNotes, toggleMute, dropVoicemail, hangup, togglePause, demoModalLeadId, callbackLeadId, bookingLinkLeadId])
 
   const start = async () => {
     if (!queueInput?.length || prepping) return
@@ -439,7 +446,7 @@ export function DialerCockpit() {
             <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-2">
               <span className="text-xs font-semibold" style={{ color: NAVY }}>Notes</span>
               <button
-                onClick={() => setNotesModalOpen(true)}
+                onClick={openNotes}
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-3 py-1.5 transition-colors duration-150"
               >
                 <PencilSimple className="w-3.5 h-3.5" /> Add note <span className="text-blue-200 text-[10px]">N</span>
@@ -631,6 +638,13 @@ export function DialerCockpit() {
             >
               <CalendarBlank className="w-3 h-3 text-amber-500" /><span className="text-slate-400">C</span> Callback
             </button>
+            <button
+              onClick={openNotes}
+              title="Add a note (N)"
+              className="inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border bg-white text-slate-700 border-[#E3EAF4] hover:border-blue-300 transition-colors duration-150"
+            >
+              <PencilSimple className="w-3 h-3 text-blue-500" /><span className="text-slate-400">N</span> Note
+            </button>
           </div>
         </div>
 
@@ -694,7 +708,7 @@ export function DialerCockpit() {
           setDraft={setNoteDraft}
           notes={notes}
           onSave={async (text) => { await addNote(text); setNoteDraft('') }}
-          onClose={() => setNotesModalOpen(false)}
+          onClose={() => { setNotesModalOpen(false); if (queuePaused) togglePause() }}
           leadName={liveLead?.businessName || currentItem?.businessName || 'this lead'}
         />
       )}
