@@ -8,3 +8,9 @@ alter table public.rep_calls
 insert into storage.buckets (id, name, public)
 values ('call-recordings', 'call-recordings', false)
 on conflict (id) do nothing;
+
+-- (2026-07-07) AI owner-name verification confidence/provenance.
+alter table public.leads
+  add column if not exists owner_confidence text,
+  add column if not exists owner_source text,
+  add column if not exists owner_verified_at timestamptz;

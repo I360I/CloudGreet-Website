@@ -11,6 +11,7 @@ export interface ScrapedContact {
   facebookUrls: string[]
   confidence: number
   source: string
+  rawText?: string
 }
 
 /**
@@ -99,7 +100,10 @@ export async function scrapeWebsite(websiteUrl: string): Promise<ScrapedContact>
         linkedinUrls: allData.linkedinUrls,
         facebookUrls: allData.facebookUrls,
         confidence: calculateConfidence(allData, ownerInfo, failures.length),
-        source: failures.length > 0 ? 'website_scrape_partial' : 'website_scrape'
+        source: failures.length > 0 ? 'website_scrape_partial' : 'website_scrape',
+        // Raw combined page text, exposed so AI verification can re-read
+        // the site in context (capped to keep token cost bounded).
+        rawText: (allData.rawText || '').replace(/\s+/g, ' ').trim().slice(0, 6000),
       }
       
       // Add degradation info if some pages failed

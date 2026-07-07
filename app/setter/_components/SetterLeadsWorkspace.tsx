@@ -15,6 +15,9 @@ type Lead = {
   id: string
   business_name: string
   contact_name?: string | null
+  owner_confidence?: string | null
+  owner_source?: string | null
+  owner_verified_at?: string | null
   phone?: string | null
   email?: string | null
   source?: string | null
@@ -721,7 +724,16 @@ export function SetterLeadsWorkspace() {
                       <QualityChip lead={l} />
                     </div>
                     <div className="text-[11px] text-gray-500 truncate flex items-center gap-1.5 flex-wrap leading-tight">
-                      {l.contact_name && <span>{l.contact_name}</span>}
+                      {l.contact_name && (
+                        <span className="inline-flex items-center gap-1">
+                          <span>{l.contact_name}</span>
+                          {l.owner_confidence === 'high' ? (
+                            <CheckCircle weight="fill" className="w-3 h-3 text-emerald-500" aria-label="Owner name verified" />
+                          ) : l.owner_verified_at ? (
+                            <span title="Owner name not confirmed - ask for the owner on the call" className="text-[9px] uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-px">unverified</span>
+                          ) : null}
+                        </span>
+                      )}
                       {l.contact_name && (l.city || l.business_type) && <span className="text-gray-300">·</span>}
                       {l.business_type && <span className="text-gray-600">{l.business_type}</span>}
                       {l.business_type && l.city && <span className="text-gray-300">·</span>}

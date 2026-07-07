@@ -67,6 +67,14 @@
     {
       "path": "/api/cron/enrich-owner-names",
       "schedule": "0 23 * * *"
+    },
+    {
+      "path": "/api/cron/verify-owner-names",
+      "schedule": "30 12 * * *"
+    },
+    {
+      "path": "/api/cron/verify-owner-names",
+      "schedule": "30 21 * * *"
     }
   ]
 }
