@@ -830,10 +830,10 @@ export function SetterLeadsWorkspace() {
                           type="button"
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDemoModalLeadId(l.id) }}
                           className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
-                          aria-label="Mark demo booked"
-                          title="Book a demo - pings the team + Slack"
+                          aria-label="Mark demo set"
+                          title="Mark demo set - books the demo + pings the team"
                         >
-                          <CalendarBlank weight="fill" className="w-4 h-4" />
+                          <CheckCircle weight="fill" className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
