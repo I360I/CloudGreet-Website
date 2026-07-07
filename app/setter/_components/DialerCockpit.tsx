@@ -60,7 +60,7 @@ export function DialerCockpit() {
     engine, phase, setPhase, gapSeconds, setGapSeconds,
     stats, bumpDemos, tagCounts, recordTag,
     elapsed, markSessionStart, resetSession,
-    queueInput, reloadQueueInput,
+    queueInput, reloadQueueInput, repFirstName,
   } = useDialerSession()
   const {
     status, error, micBusy, grantMicrophone,
@@ -199,6 +199,7 @@ export function DialerCockpit() {
     return body
       .replaceAll('{{first_name}}', first)
       .replaceAll('{{business_name}}', liveLead?.businessName || 'your business')
+      .replaceAll('{{rep_name}}', repFirstName || 'I')
   }
 
   const sectionsInOrder = ['opener', 'discovery', 'pitch', 'closing'] as const

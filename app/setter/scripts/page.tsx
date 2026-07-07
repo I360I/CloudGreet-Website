@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { CircleNotch, MagnifyingGlass, CaretDown, WarningCircle, PencilSimple, TrashSimple, Plus, CheckCircle, UploadSimple, ArrowLeft, FileText } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { SetterLoadingState } from '../_components/SetterShell'
+import { useDialerSession } from '../_components/DialerSessionProvider'
 
 const NAVY = '#1E3A8A'
 
@@ -67,6 +68,8 @@ const SECTION_LABELS: Record<Script['section'], string> = {
 const SECTION_ORDER: Script['section'][] = ['opener', 'discovery', 'pitch', 'objection', 'closing', 'sms']
 
 function SectionsBody() {
+  const { repFirstName } = useDialerSession()
+  const subst = (text: string) => text.replaceAll('{{rep_name}}', repFirstName || '{{rep_name}}')
   const [scripts, setScripts] = useState<Script[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
@@ -197,7 +200,7 @@ function SectionsBody() {
                           <CaretDown className="w-3.5 h-3.5 text-slate-400 group-open:rotate-180 transition-transform" />
                         </span>
                       </summary>
-                      <div className="px-5 pb-3 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{s.body}</div>
+                      <div className="px-5 pb-3 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{subst(s.body)}</div>
                     </details>
                   ) : (
                     <div key={s.id} className="px-5 py-4 group">
@@ -205,7 +208,7 @@ function SectionsBody() {
                         <div className="text-[11px] font-semibold uppercase tracking-wider text-blue-600">{s.title}</div>
                         <EditButton onClick={() => { setEditingId(s.id); setAddingSection(null) }} />
                       </div>
-                      <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{s.body}</div>
+                      <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{subst(s.body)}</div>
                     </div>
                   )
                 ))}
@@ -312,6 +315,8 @@ type FullScript = {
 }
 
 function LibraryBody() {
+  const { repFirstName } = useDialerSession()
+  const subst = (text: string) => text.replaceAll('{{rep_name}}', repFirstName || '{{rep_name}}')
   const [scripts, setScripts] = useState<FullScript[]>([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
@@ -422,7 +427,7 @@ function LibraryBody() {
                 </button>
               </div>
             </div>
-            <div className="px-6 py-5 text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap">{open.body}</div>
+            <div className="px-6 py-5 text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap">{subst(open.body)}</div>
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-[#E3EAF4] p-5">
@@ -520,7 +525,7 @@ function LibraryBody() {
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-2 leading-relaxed line-clamp-3 whitespace-pre-wrap">
-                {s.body.slice(0, 220)}
+                {subst(s.body).slice(0, 220)}
               </p>
             </button>
           ))}

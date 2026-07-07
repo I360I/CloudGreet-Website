@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { useDialerEngine, type PowerDialItem } from '@/app/sales/_components/dialer-engine'
+import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 
 /*
  * Session-level home for the dialer engine + call-session state.
@@ -47,6 +48,9 @@ type DialerSession = {
   resetSession: () => void
   queueInput: CockpitLead[] | null
   reloadQueueInput: () => void
+  /** Signed-in rep's first name - fills the {{rep_name}} placeholder in
+   *  scripts so "Ed:" becomes whoever is actually reading it. */
+  repFirstName: string | null
 }
 
 const Ctx = createContext<DialerSession | null>(null)
@@ -69,7 +73,23 @@ export function DialerSessionProvider({ children }: { children: React.ReactNode 
   const [tagCounts, setTagCounts] = useState<Record<string, number>>({})
   const [elapsed, setElapsed] = useState(0)
   const [queueInput, setQueueInput] = useState<CockpitLead[] | null>(null)
+  const [repFirstName, setRepFirstName] = useState<string | null>(null)
   const sessionStartRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const r = await fetchWithAuth('/api/me/profile')
+        const j = await r.json().catch(() => ({}))
+        if (!cancelled) {
+          const first = j?.profile?.first_name || (j?.profile?.name || '').split(' ')[0] || null
+          setRepFirstName(first)
+        }
+      } catch { /* placeholder just stays literal */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const engine = useDialerEngine({
     advanceSeconds: gapSeconds,
@@ -134,6 +154,7 @@ export function DialerSessionProvider({ children }: { children: React.ReactNode 
       stats, bumpDemos, tagCounts, recordTag,
       elapsed, markSessionStart, resetSession,
       queueInput, reloadQueueInput,
+      repFirstName,
     }}>
       {children}
     </Ctx.Provider>
