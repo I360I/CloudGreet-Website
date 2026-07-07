@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   PhoneCall, PhoneSlash, Microphone, MicrophoneSlash, Voicemail, CircleNotch,
   Pause, Play, SkipForward, Stop, CheckCircle, WarningCircle, CaretDown,
-  DotsNine, ChatText, CalendarBlank, ArrowLeft, Star, PaperPlaneTilt, PencilSimple, CopySimple, ArrowSquareOut,
+  DotsNine, ChatText, CalendarBlank, ClockCounterClockwise, ArrowLeft, Star, PaperPlaneTilt, PencilSimple, CopySimple, ArrowSquareOut,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
@@ -636,7 +636,7 @@ export function DialerCockpit() {
               disabled={callState !== 'ended' && callState !== 'active'}
               className="inline-flex items-center gap-1 text-[11px] leading-none rounded-md px-2 py-1.5 border bg-white text-slate-700 border-[#E3EAF4] hover:border-amber-400 transition-colors duration-150 disabled:opacity-40"
             >
-              <CalendarBlank className="w-3 h-3 text-amber-500" /><span className="text-slate-400">C</span> Callback
+              <ClockCounterClockwise className="w-3 h-3 text-amber-500" /><span className="text-slate-400">C</span> Callback
             </button>
             <button
               onClick={openNotes}
