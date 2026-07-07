@@ -59,6 +59,14 @@
     {
       "path": "/api/cron/harvest-leads",
       "schedule": "30 19 * * 1-5"
+    },
+    {
+      "path": "/api/cron/enrich-owner-names",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/enrich-owner-names",
+      "schedule": "0 23 * * *"
     }
   ]
 }
