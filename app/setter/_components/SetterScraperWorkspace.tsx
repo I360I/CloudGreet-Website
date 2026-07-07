@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, CircleNotch, WarningCircle, CheckCircle, X, Trash, ArrowLeft, CaretRight, MapPin, Phone, Globe, PaperPlaneTilt, Plus, Info } from '@phosphor-icons/react'
+import { Play, CircleNotch, WarningCircle, CheckCircle, X, Trash, ArrowLeft, CaretRight, MapPin, Phone, Globe, PaperPlaneTilt, Plus, Info, MagnifyingGlass } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { SetterLoadingState } from './SetterShell'
 
@@ -66,6 +66,9 @@ export function SetterScraperWorkspace() {
   const [running, setRunning] = useState(false)
   const [sourceId, setSourceId] = useState('')
   const [location, setLocation] = useState('Austin')
+  const [aiQuery, setAiQuery] = useState('')
+  const [aiRunning, setAiRunning] = useState(false)
+  const [aiStatus, setAiStatus] = useState('')
   const [limit, setLimit] = useState('50')
   const [quality, setQuality] = useState<'loose' | 'standard' | 'strict'>('standard')
   const [showQualityInfo, setShowQualityInfo] = useState(false)
@@ -120,6 +123,42 @@ export function SetterScraperWorkspace() {
       setErr(e instanceof Error ? e.message : 'Scrape failed')
     } finally {
       setRunning(false)
+    }
+  }
+
+  const runAiSearch = async () => {
+    const q = aiQuery.trim()
+    if (!q || aiRunning) return
+    setAiRunning(true); setErr(''); setAiStatus('Understanding your request…')
+    try {
+      // 1. Parse the plain-English request into scrape params.
+      const pr = await fetchWithAuth('/api/sales/scrape/ai-search', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q }),
+      })
+      const pj = await pr.json().catch(() => ({}))
+      if (!pr.ok || !pj.success) throw new Error(pj?.error || `Failed (${pr.status})`)
+      const { interpreted, scrape } = pj
+      setAiStatus(`Finding ${interpreted.count} ${interpreted.what} in ${interpreted.where}${interpreted.owner_names ? ' (with owner names)' : ''}…`)
+
+      // 2. Run the normal scrape with the resolved params.
+      const requested = Math.max(1, Math.min(dailyRemaining, scrape.limit || 100))
+      const res = await fetchWithAuth('/api/sales/scrape', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...scrape, limit: requested }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.success) throw new Error(j?.error || `Failed (${res.status})`)
+      await load()
+      if (j.job) setOpenJob(j.job)
+      const found = j.job?.results_count ?? 0
+      setAiStatus(`Added ${found} lead${found === 1 ? '' : 's'} to your list.`)
+      setAiQuery('')
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'AI search failed')
+      setAiStatus('')
+    } finally {
+      setAiRunning(false)
     }
   }
 
@@ -212,6 +251,39 @@ export function SetterScraperWorkspace() {
           </div>
         )}
 
+        {/* AI search: type it in plain English. */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: EASE }}
+          className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl p-5 mb-4 text-white"
+        >
+          <div className="text-[10px] font-mono uppercase tracking-wider text-blue-200 mb-2">
+            AI search
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              value={aiQuery}
+              onChange={(e) => setAiQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void runAiSearch() }}
+              disabled={aiRunning || dailyRemaining <= 0}
+              placeholder="e.g. 100 HVAC contractors in Dallas"
+              className="flex-1 bg-white/95 text-gray-900 placeholder:text-gray-400 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-white/60 disabled:opacity-60"
+            />
+            <button
+              onClick={() => void runAiSearch()}
+              disabled={aiRunning || !aiQuery.trim() || dailyRemaining <= 0}
+              className="inline-flex items-center justify-center gap-2 bg-white text-blue-700 font-semibold text-sm rounded-lg px-5 py-2.5 hover:bg-blue-50 transition-colors disabled:opacity-60 shrink-0"
+            >
+              {aiRunning ? <CircleNotch className="w-4 h-4 animate-spin" /> : <MagnifyingGlass weight="bold" className="w-4 h-4" />}
+              Find leads
+            </button>
+          </div>
+          <div className="text-xs text-blue-100 mt-2 min-h-[1rem]">
+            {aiStatus || 'Type what you want in plain English - Texas trades come with owner names, and every lead gets its name AI-checked after.'}
+          </div>
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -219,7 +291,7 @@ export function SetterScraperWorkspace() {
           className="bg-white border border-[#E3EAF4] rounded-xl p-5 mb-4"
         >
           <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">
-            01 · Configure
+            Or configure manually
           </div>
           <div className="grid sm:grid-cols-4 gap-3 items-end">
             <div className="sm:col-span-2">

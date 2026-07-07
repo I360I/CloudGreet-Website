@@ -20,6 +20,7 @@ import { qualityModeSource } from './quality-mode'
 import { ohioModeSource } from './ohio-mode'
 import { arizonaModeSource } from './arizona-mode'
 import { placesLaw } from './places-law'
+import { aiPlaces } from './ai-places'
 
 /**
  * Single registry of every scraper source. Add new sources here once and
@@ -45,6 +46,9 @@ export const SCRAPER_SOURCES: SourceDefinition[] = [
  // Solo & small law firms - non-contractor vertical, kept near top
  // because legal is a strong fit for the AI receptionist pitch.
  placesLaw,
+ // Generic natural-language search source (not shown in the manual
+ // dropdown; targeted by /api/sales/scrape/ai-search).
+ aiPlaces,
  // Preferred - Texas licensing databases (free, with owner name)
  tdlrHvac,
  tdlrElectrical,

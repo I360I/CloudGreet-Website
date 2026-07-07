@@ -69,6 +69,6 @@ export type SourceDefinition = {
  id: string
  label: string
  description: string
- trade: 'HVAC' | 'Electrical' | 'Plumbing' | 'Pest Control' | 'Roofing' | 'Painting' | 'Handyman' | 'Landscaping' | 'Law'
+ trade: 'HVAC' | 'Electrical' | 'Plumbing' | 'Pest Control' | 'Roofing' | 'Painting' | 'Handyman' | 'Landscaping' | 'Law' | 'Other'
  run: (params: ScrapeParams, opts: SourceRunOpts) => AsyncGenerator<ScrapeRecord, void, void>
 }

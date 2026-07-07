@@ -79,12 +79,14 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: true,
     jobs: jobs ?? [],
-    sources: SCRAPER_SOURCES.map((s) => ({
-      id: s.id,
-      label: s.label,
-      description: s.description,
-      trade: s.trade,
-    })),
+    sources: SCRAPER_SOURCES
+      .filter((s) => s.id !== 'ai_places') // AI-search-only source, not a manual pick
+      .map((s) => ({
+        id: s.id,
+        label: s.label,
+        description: s.description,
+        trade: s.trade,
+      })),
     enrichment: { google_places: isGooglePlacesConfigured() },
     daily_limit: dailyLimit,
     daily_used: dailyUsed,
