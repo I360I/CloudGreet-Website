@@ -27,6 +27,7 @@ type AdminCall = {
  call_summary?: string | null
  outcome?: string | null
  created_at: string
+ kind?: 'client' | 'demo'
 }
 
 export default function AdminCallsPage() {
@@ -36,6 +37,7 @@ export default function AdminCallsPage() {
  const [error, setError] = useState('')
  const [search, setSearch] = useState('')
  const [page, setPage] = useState(0)
+ const [scope, setScope] = useState<'client' | 'demo'>('client')
  const [openCall, setOpenCall] = useState<AdminCall | null>(null)
 
  const load = async (signal?: AbortSignal) => {
@@ -46,6 +48,7 @@ export default function AdminCallsPage() {
     offset: String(page * PAGE_SIZE),
    })
    if (search.trim()) params.set('q', search.trim())
+   if (scope === 'demo') params.set('scope', 'demo')
    // Cache-bust + no-store so Safari/Vercel don't hand back a stale
    // cross-tenant call list after a new call lands.
    params.set('_', String(Date.now()))
@@ -76,7 +79,7 @@ export default function AdminCallsPage() {
    if (poll) clearInterval(poll)
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
- }, [page])
+ }, [page, scope])
 
  // Debounced reload on search.
  useEffect(() => {
@@ -108,7 +111,20 @@ export default function AdminCallsPage() {
 
      <Panel padding="none">
       <div className="px-4 sm:px-6 pt-5 pb-4 border-b border-white/[0.06] flex items-center justify-between gap-3 flex-wrap">
-       <h2 className="text-sm font-medium text-white">Recent</h2>
+       <div className="flex items-center gap-3">
+        <h2 className="text-sm font-medium text-white">Recent</h2>
+        <div className="inline-flex rounded-lg border border-white/[0.08] p-0.5">
+         {(['client', 'demo'] as const).map((s) => (
+          <button
+           key={s}
+           onClick={() => { if (s !== scope) { setPage(0); setScope(s) } }}
+           className={`text-xs px-3 py-1 rounded-md transition-colors ${scope === s ? 'bg-white/[0.08] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+          >
+           {s === 'client' ? 'Clients' : 'Demos'}
+          </button>
+         ))}
+        </div>
+       </div>
        <div className="relative w-full sm:w-72">
         <MagnifyingGlass className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
         <Input
@@ -159,13 +175,17 @@ export default function AdminCallsPage() {
              <div className="text-xs text-gray-500 font-mono truncate mt-0.5">{c.from_number}</div>
             </div>
             <div className="lg:col-span-3 min-w-0 mt-1.5 lg:mt-0">
-             <Link
-              href={`/admin/clients/${c.business_id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="text-xs text-sky-400 hover:text-sky-300 truncate inline-flex items-center gap-1"
-             >
-              {c.business_name} <ArrowSquareOut className="w-3 h-3 flex-shrink-0" />
-             </Link>
+             {c.kind === 'demo' || !c.business_id ? (
+              <span className="text-xs text-amber-300/80 truncate inline-flex items-center gap-1">{c.business_name}</span>
+             ) : (
+              <Link
+               href={`/admin/clients/${c.business_id}`}
+               onClick={(e) => e.stopPropagation()}
+               className="text-xs text-sky-400 hover:text-sky-300 truncate inline-flex items-center gap-1"
+              >
+               {c.business_name} <ArrowSquareOut className="w-3 h-3 flex-shrink-0" />
+              </Link>
+             )}
             </div>
             <div className="hidden lg:block lg:col-span-2"><StatusPill status={c.status} /></div>
             <div className="hidden lg:block lg:col-span-2 text-xs text-gray-500 truncate">
@@ -252,12 +272,16 @@ function CallDrawer({ call, onClose }: { call: AdminCall; onClose: () => void })
     <div className="px-6 py-5 space-y-5">
      <div className="flex items-center gap-2 flex-wrap">
       <StatusPill status={call.status} />
-      <Link
-       href={`/admin/clients/${call.business_id}`}
-       className="text-xs text-sky-400 hover:text-sky-300 inline-flex items-center gap-1"
-      >
-       {call.business_name} <ArrowSquareOut className="w-3 h-3" />
-      </Link>
+      {call.kind === 'demo' || !call.business_id ? (
+       <span className="text-xs text-amber-300/80 inline-flex items-center gap-1">{call.business_name}</span>
+      ) : (
+       <Link
+        href={`/admin/clients/${call.business_id}`}
+        className="text-xs text-sky-400 hover:text-sky-300 inline-flex items-center gap-1"
+       >
+        {call.business_name} <ArrowSquareOut className="w-3 h-3" />
+       </Link>
+      )}
      </div>
 
      {call.recording_url && (
