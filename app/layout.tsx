@@ -118,6 +118,16 @@ export default function RootLayout({
  return (
  <html lang="en" className="overscroll-none">
  <head>
+ {/* Google Tag Manager - as high in <head> as possible */}
+ <script
+ dangerouslySetInnerHTML={{
+ __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+ new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+ 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+ })(window,document,'script','dataLayer','GTM-T2WBNGPX');`,
+ }}
+ />
  <link rel="manifest" href="/manifest.json" />
  <script
  type="application/ld+json"
@@ -152,6 +162,16 @@ export default function RootLayout({
  />
  </head>
  <body className={`${mono.variable} ${GeistSans.variable} font-sans overscroll-none bg-[#f6f5f1] text-gray-900 antialiased`}>
+ {/* Google Tag Manager (noscript) - immediately after <body> */}
+ <noscript>
+ <iframe
+ src="https://www.googletagmanager.com/ns.html?id=GTM-T2WBNGPX"
+ height="0"
+ width="0"
+ style={{ display: 'none', visibility: 'hidden' }}
+ title="Google Tag Manager"
+ />
+ </noscript>
  {process.env.NEXT_PUBLIC_META_PIXEL_ID && (
  <Script id="meta-pixel" strategy="afterInteractive">{`
  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
