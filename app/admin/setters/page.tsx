@@ -188,10 +188,14 @@ export default function AdminSettersPage() {
                         <GoalEditor
                           setterId={s.id}
                           target={s.weekly_goal.target}
+                          bonus={s.weekly_goal.bonus_amount}
                           streakWeeks={s.weekly_goal.streak_weeks}
                           streakTarget={s.weekly_goal.streak_target}
-                          onSaved={(newTarget) => setSetters((prev) => prev.map((row) =>
-                            row.id === s.id ? { ...row, weekly_goal: { ...row.weekly_goal, target: newTarget } } : row,
+                          onSaved={(patch) => setSetters((prev) => prev.map((row) =>
+                            row.id === s.id ? { ...row, weekly_goal: { ...row.weekly_goal,
+                              ...(patch.target !== undefined ? { target: patch.target } : {}),
+                              ...(patch.bonus !== undefined ? { bonus_amount: patch.bonus } : {}),
+                            } } : row,
                           ))}
                         />
                         <div className="flex items-center gap-2 text-right">
@@ -392,40 +396,57 @@ function CellEditor({ setterId, cell, onSaved }: {
 
 /**
  * Inline weekly-goal editor + streak indicator. Hitting `target` demos
- * for `streakTarget` (4) consecutive weeks unlocks the $50 bonus - shown
- * elsewhere as a badge on the row once earned (see weekly_goal.bonus_earned).
+ * for `streakTarget` (4) consecutive weeks unlocks the reward `bonus` -
+ * both the target and the reward are per-setter and editable here. The
+ * bonus is shown elsewhere as a badge on the row once earned (see
+ * weekly_goal.bonus_earned / bonus_amount).
  */
 function GoalEditor({
-  setterId, target, streakWeeks, streakTarget, onSaved,
+  setterId, target, bonus, streakWeeks, streakTarget, onSaved,
 }: {
   setterId: string
   target: number
+  bonus: number
   streakWeeks: number
   streakTarget: number
-  onSaved: (newTarget: number) => void
+  onSaved: (patch: { target?: number; bonus?: number }) => void
 }) {
-  const [value, setValue] = useState(String(target))
+  const [goalVal, setGoalVal] = useState(String(target))
+  const [bonusVal, setBonusVal] = useState(String(bonus))
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
-  const save = async () => {
-    const n = Number(value)
-    if (!Number.isFinite(n) || n < 1 || n > 50 || n === target) return
+  const patch = async (
+    payload: Record<string, number>,
+    revert: () => void,
+    apply: (j: any) => void,
+  ) => {
     setSaving(true); setErr('')
     try {
       const res = await fetchWithAuth(`/api/admin/setters/${setterId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ weekly_demo_goal: n }),
+        body: JSON.stringify(payload),
       })
       const j = await res.json().catch(() => ({}))
       if (!res.ok || !j.success) throw new Error(j?.error || 'Failed')
-      onSaved(j.weekly_demo_goal)
+      apply(j)
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed')
-      setValue(String(target))
+      revert()
     } finally {
       setSaving(false)
     }
+  }
+
+  const saveGoal = () => {
+    const n = Number(goalVal)
+    if (!Number.isFinite(n) || n < 1 || n > 50 || n === target) return
+    void patch({ weekly_demo_goal: n }, () => setGoalVal(String(target)), (j) => onSaved({ target: j.weekly_demo_goal }))
+  }
+  const saveBonus = () => {
+    const n = Number(bonusVal)
+    if (!Number.isFinite(n) || n < 0 || n > 10000 || n === bonus) return
+    void patch({ weekly_demo_bonus: n }, () => setBonusVal(String(bonus)), (j) => onSaved({ bonus: j.weekly_demo_bonus }))
   }
 
   return (
@@ -436,14 +457,27 @@ function GoalEditor({
       <div className="flex items-center gap-1.5 justify-end">
         <input
           type="number" min={1} max={50}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={save}
+          value={goalVal}
+          onChange={(e) => setGoalVal(e.target.value)}
+          onBlur={saveGoal}
           onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
           disabled={saving}
           className="w-14 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none focus:border-sky-400/50"
         />
         <span className="text-xs text-gray-500">demos/wk</span>
+      </div>
+      <div className="flex items-center gap-1.5 justify-end mt-1.5">
+        <span className="text-xs text-gray-500">$</span>
+        <input
+          type="number" min={0} max={10000} step={5}
+          value={bonusVal}
+          onChange={(e) => setBonusVal(e.target.value)}
+          onBlur={saveBonus}
+          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+          disabled={saving}
+          className="w-16 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none focus:border-sky-400/50"
+        />
+        <span className="text-xs text-gray-500">reward / {streakTarget}-wk streak</span>
       </div>
       {err && <div className="text-[10px] text-rose-300 mt-0.5">{err}</div>}
     </div>

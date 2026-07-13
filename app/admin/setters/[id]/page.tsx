@@ -14,7 +14,7 @@ type Detail = {
   setter: {
     id: string; email: string; name: string; is_active: boolean
     created_at: string | null; last_active: string | null
-    assigned_rep_id: string | null; weekly_demo_goal: number
+    assigned_rep_id: string | null; weekly_demo_goal: number; weekly_demo_bonus: number
     personal_cell: string | null; has_vm_recording: boolean; has_vm_script: boolean
   }
   calls: { today: CallStats; week: CallStats; all_time: CallStats }
@@ -182,6 +182,16 @@ export default function AdminSetterDetailPage() {
                     onBlur={(e) => { const n = Number(e.target.value); if (n >= 1 && n <= 50 && n !== setter.weekly_demo_goal) void patch({ weekly_demo_goal: n }) }}
                     className="w-16 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none"
                   />
+                </Row>
+                <Row label={`Goal reward (${goal.streak_target}-wk streak)`}>
+                  <div className="inline-flex items-center gap-1.5 justify-end">
+                    <span className="text-xs text-gray-500">$</span>
+                    <input
+                      type="number" min={0} max={10000} step={5} defaultValue={setter.weekly_demo_bonus}
+                      onBlur={(e) => { const n = Number(e.target.value); if (n >= 0 && n <= 10000 && n !== setter.weekly_demo_bonus) void patch({ weekly_demo_bonus: n }) }}
+                      className="w-20 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none"
+                    />
+                  </div>
                 </Row>
                 <Row label="This week">
                   <span className="text-gray-200 tabular-nums">{goal.this_week}/{goal.target} demos held · streak {goal.streak_weeks}/{goal.streak_target} wks</span>

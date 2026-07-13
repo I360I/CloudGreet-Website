@@ -42,10 +42,11 @@ export async function GET(request: NextRequest) {
       // Defensive: sql/setter-weekly-goal.sql may not be applied yet on
       // every environment. Fall back to the default goal (2) rather than
       // 500ing the whole page if the column doesn't exist.
-      supabaseAdmin.from('custom_users').select('weekly_demo_goal').eq('id', auth.userId).maybeSingle()
+      supabaseAdmin.from('custom_users').select('weekly_demo_goal, weekly_demo_bonus').eq('id', auth.userId).maybeSingle()
         .then((r) => r, () => ({ data: null, error: null })),
     ])
     const weeklyGoalTarget = (goalRow as any)?.data?.weekly_demo_goal ?? 2
+    const weeklyGoalBonus = (goalRow as any)?.data?.weekly_demo_bonus ?? 50
 
     const { data: assignments } = await supabaseAdmin
       .from('lead_assignments')
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
       demosByDay.set(key, (demosByDay.get(key) || 0) + 1)
     }
     const daily = dailyCalls.map((d) => ({ ...d, demos: demosByDay.get(d.date) || 0 }))
-    const weeklyGoal = await getWeeklyDemoGoalStatus(auth.userId, weeklyGoalTarget)
+    const weeklyGoal = await getWeeklyDemoGoalStatus(auth.userId, weeklyGoalTarget, weeklyGoalBonus)
 
     // Hero-chart series for the requested range. Points carry an ISO
     // `key` the client formats in the viewer's timezone.

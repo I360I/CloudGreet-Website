@@ -131,7 +131,11 @@ const BONUS_AMOUNT_USD = 50
  * last_touched_at in that week - same current-status-not-durable-log
  * quirk the rest of the setter stats use.
  */
-export async function getWeeklyDemoGoalStatus(repId: string, target: number): Promise<WeeklyGoalStatus> {
+export async function getWeeklyDemoGoalStatus(
+  repId: string,
+  target: number,
+  bonusAmount: number = BONUS_AMOUNT_USD,
+): Promise<WeeklyGoalStatus> {
   const now = new Date()
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
   const rangeStart = new Date(todayStart)
@@ -169,7 +173,7 @@ export async function getWeeklyDemoGoalStatus(repId: string, target: number): Pr
     met_this_week: streakWeeks >= 1,
     streak_weeks: streakWeeks,
     bonus_earned: streakWeeks >= BONUS_STREAK_WEEKS,
-    bonus_amount: BONUS_AMOUNT_USD,
+    bonus_amount: Number.isFinite(bonusAmount) ? bonusAmount : BONUS_AMOUNT_USD,
     streak_target: BONUS_STREAK_WEEKS,
   }
 }
