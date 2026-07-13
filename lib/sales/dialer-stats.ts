@@ -107,73 +107,57 @@ export async function getRepDailySeries(repId: string, days = 7): Promise<DailyC
 
 export type WeeklyGoalStatus = {
   target: number
-  /** Demos HELD (client showed) in the current rolling week. */
+  /** Demos HELD (client showed) in the current rolling 7-day week. */
   this_week: number
   met_this_week: boolean
-  streak_weeks: number
-  bonus_earned: boolean
-  bonus_amount: number
-  streak_target: number
+  base_hourly_rate: number
+  bonus_hourly_rate: number
+  /** The hourly rate that applies this week: bonus if the goal is met, else base. */
+  current_rate: number
 }
 
-const BONUS_STREAK_WEEKS = 4
-const BONUS_AMOUNT_USD = 50
-
 /**
- * Weekly demo goal status for one setter: whether this rolling week hits
- * `target`, and the current consecutive-week streak (today backward) -
- * 4 straight weeks at target is the $50 bonus tier. Shared by
- * /api/setter/overview (the setter's own view) and the admin setters
- * roster (so admin knows who's actually earned a bonus to pay out).
+ * Weekly demo goal status for one setter: how many demos they've HELD in the
+ * current rolling 7-day week and whether that hits `target`. Setters are paid
+ * hourly; hitting the weekly demo goal bumps their pay to bonus_hourly_rate
+ * for that week (no streak - each week stands on its own). Shared by
+ * /api/setter/overview (the setter's own view) and the admin setters roster
+ * (so admin knows which hourly rate to pay each setter this week).
  *
- * The goal counts demos HELD, not booked: a lead_assignments row must be
- * in demo_showed status (set after the client actually shows up) with
- * last_touched_at in that week - same current-status-not-durable-log
+ * The goal counts demos HELD, not booked: a lead_assignments row must be in
+ * demo_showed status (set after the client actually shows up) with
+ * last_touched_at in the last 7 days - same current-status-not-durable-log
  * quirk the rest of the setter stats use.
  */
 export async function getWeeklyDemoGoalStatus(
   repId: string,
   target: number,
-  bonusAmount: number = BONUS_AMOUNT_USD,
+  baseRate: number = 0,
+  bonusRate: number = 0,
 ): Promise<WeeklyGoalStatus> {
   const now = new Date()
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  const rangeStart = new Date(todayStart)
-  rangeStart.setUTCDate(rangeStart.getUTCDate() - (7 * BONUS_STREAK_WEEKS - 1))
+  const weekStart = new Date(todayStart)
+  weekStart.setUTCDate(weekStart.getUTCDate() - 6)
 
   const { data: assignments } = await supabaseAdmin
     .from('lead_assignments')
     .select('status, last_touched_at')
     .eq('rep_id', repId)
     .eq('status', 'demo_showed')
-    .gte('last_touched_at', rangeStart.toISOString())
+    .gte('last_touched_at', weekStart.toISOString())
 
-  const rows = (assignments || []) as { status: string; last_touched_at: string | null }[]
-
-  const weekCounts: number[] = []
-  for (let w = 0; w < BONUS_STREAK_WEEKS; w++) {
-    const weekEndExclusive = new Date(todayStart)
-    weekEndExclusive.setUTCDate(weekEndExclusive.getUTCDate() - 7 * w + 1)
-    const weekStartIso = new Date(todayStart)
-    weekStartIso.setUTCDate(weekStartIso.getUTCDate() - 7 * (w + 1) + 1)
-    weekCounts.push(rows.filter((r) =>
-      r.last_touched_at && r.last_touched_at >= weekStartIso.toISOString() && r.last_touched_at < weekEndExclusive.toISOString(),
-    ).length)
-  }
-
-  let streakWeeks = 0
-  for (const count of weekCounts) {
-    if (count >= target) streakWeeks += 1
-    else break
-  }
+  const thisWeek = (assignments || []).length
+  const met = thisWeek >= target
+  const base = Number.isFinite(baseRate) ? baseRate : 0
+  const bonus = Number.isFinite(bonusRate) ? bonusRate : 0
 
   return {
     target,
-    this_week: weekCounts[0] ?? 0,
-    met_this_week: streakWeeks >= 1,
-    streak_weeks: streakWeeks,
-    bonus_earned: streakWeeks >= BONUS_STREAK_WEEKS,
-    bonus_amount: Number.isFinite(bonusAmount) ? bonusAmount : BONUS_AMOUNT_USD,
-    streak_target: BONUS_STREAK_WEEKS,
+    this_week: thisWeek,
+    met_this_week: met,
+    base_hourly_rate: base,
+    bonus_hourly_rate: bonus,
+    current_rate: met ? bonus : base,
   }
 }

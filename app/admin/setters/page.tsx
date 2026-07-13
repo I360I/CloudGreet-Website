@@ -9,11 +9,11 @@ import { Panel, PanelHeader, PrimaryButton, GhostButton, Input } from '../_compo
 
 type WeeklyGoal = {
   target: number
+  this_week: number
   met_this_week: boolean
-  streak_weeks: number
-  bonus_earned: boolean
-  bonus_amount: number
-  streak_target: number
+  base_hourly_rate: number
+  bonus_hourly_rate: number
+  current_rate: number
 }
 
 type Setter = {
@@ -151,9 +151,9 @@ export default function AdminSettersPage() {
                           <Link href={`/admin/setters/${s.id}`} className="hover:text-sky-300 transition-colors">
                             {s.name}
                           </Link>
-                          {s.weekly_goal.bonus_earned && (
+                          {s.weekly_goal.bonus_hourly_rate > s.weekly_goal.base_hourly_rate && s.weekly_goal.met_this_week && (
                             <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-400/20 rounded-full px-2 py-0.5">
-                              ${s.weekly_goal.bonus_amount} bonus earned
+                              on ${s.weekly_goal.bonus_hourly_rate}/hr this week
                             </span>
                           )}
                         </div>
@@ -188,13 +188,13 @@ export default function AdminSettersPage() {
                         <GoalEditor
                           setterId={s.id}
                           target={s.weekly_goal.target}
-                          bonus={s.weekly_goal.bonus_amount}
-                          streakWeeks={s.weekly_goal.streak_weeks}
-                          streakTarget={s.weekly_goal.streak_target}
+                          baseRate={s.weekly_goal.base_hourly_rate}
+                          bonusRate={s.weekly_goal.bonus_hourly_rate}
                           onSaved={(patch) => setSetters((prev) => prev.map((row) =>
                             row.id === s.id ? { ...row, weekly_goal: { ...row.weekly_goal,
                               ...(patch.target !== undefined ? { target: patch.target } : {}),
-                              ...(patch.bonus !== undefined ? { bonus_amount: patch.bonus } : {}),
+                              ...(patch.base !== undefined ? { base_hourly_rate: patch.base } : {}),
+                              ...(patch.bonus !== undefined ? { bonus_hourly_rate: patch.bonus } : {}),
                             } } : row,
                           ))}
                         />
@@ -395,24 +395,23 @@ function CellEditor({ setterId, cell, onSaved }: {
 }
 
 /**
- * Inline weekly-goal editor + streak indicator. Hitting `target` demos
- * for `streakTarget` (4) consecutive weeks unlocks the reward `bonus` -
- * both the target and the reward are per-setter and editable here. The
- * bonus is shown elsewhere as a badge on the row once earned (see
- * weekly_goal.bonus_earned / bonus_amount).
+ * Inline editor for a setter's weekly demo goal and hourly pay. Setters are
+ * paid `baseRate`/hr normally, bumped to `bonusRate`/hr for any week they
+ * hold >= `target` demos (no streak - each week stands alone). All three are
+ * per-setter and saved on blur.
  */
 function GoalEditor({
-  setterId, target, bonus, streakWeeks, streakTarget, onSaved,
+  setterId, target, baseRate, bonusRate, onSaved,
 }: {
   setterId: string
   target: number
-  bonus: number
-  streakWeeks: number
-  streakTarget: number
-  onSaved: (patch: { target?: number; bonus?: number }) => void
+  baseRate: number
+  bonusRate: number
+  onSaved: (patch: { target?: number; base?: number; bonus?: number }) => void
 }) {
   const [goalVal, setGoalVal] = useState(String(target))
-  const [bonusVal, setBonusVal] = useState(String(bonus))
+  const [baseVal, setBaseVal] = useState(String(baseRate))
+  const [bonusVal, setBonusVal] = useState(String(bonusRate))
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
@@ -443,16 +442,33 @@ function GoalEditor({
     if (!Number.isFinite(n) || n < 1 || n > 50 || n === target) return
     void patch({ weekly_demo_goal: n }, () => setGoalVal(String(target)), (j) => onSaved({ target: j.weekly_demo_goal }))
   }
+  const saveBase = () => {
+    const n = Number(baseVal)
+    if (!Number.isFinite(n) || n < 0 || n > 1000 || n === baseRate) return
+    void patch({ base_hourly_rate: n }, () => setBaseVal(String(baseRate)), (j) => onSaved({ base: j.base_hourly_rate }))
+  }
   const saveBonus = () => {
     const n = Number(bonusVal)
-    if (!Number.isFinite(n) || n < 0 || n > 10000 || n === bonus) return
-    void patch({ weekly_demo_bonus: n }, () => setBonusVal(String(bonus)), (j) => onSaved({ bonus: j.weekly_demo_bonus }))
+    if (!Number.isFinite(n) || n < 0 || n > 1000 || n === bonusRate) return
+    void patch({ bonus_hourly_rate: n }, () => setBonusVal(String(bonusRate)), (j) => onSaved({ bonus: j.bonus_hourly_rate }))
   }
+
+  const rateInput = (value: string, setValue: (v: string) => void, save: () => void) => (
+    <input
+      type="number" min={0} max={1000} step={0.5}
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
+      disabled={saving}
+      className="w-16 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none focus:border-sky-400/50"
+    />
+  )
 
   return (
     <div className="text-right">
       <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-1">
-        Weekly goal · {streakWeeks}/{streakTarget} wks
+        Weekly goal &amp; pay
       </div>
       <div className="flex items-center gap-1.5 justify-end">
         <input
@@ -468,16 +484,10 @@ function GoalEditor({
       </div>
       <div className="flex items-center gap-1.5 justify-end mt-1.5">
         <span className="text-xs text-gray-500">$</span>
-        <input
-          type="number" min={0} max={10000} step={5}
-          value={bonusVal}
-          onChange={(e) => setBonusVal(e.target.value)}
-          onBlur={saveBonus}
-          onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}
-          disabled={saving}
-          className="w-16 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none focus:border-sky-400/50"
-        />
-        <span className="text-xs text-gray-500">reward / {streakTarget}-wk streak</span>
+        {rateInput(baseVal, setBaseVal, saveBase)}
+        <span className="text-xs text-gray-500">/hr &rarr; $</span>
+        {rateInput(bonusVal, setBonusVal, saveBonus)}
+        <span className="text-xs text-gray-500">/hr if hit</span>
       </div>
       {err && <div className="text-[10px] text-rose-300 mt-0.5">{err}</div>}
     </div>

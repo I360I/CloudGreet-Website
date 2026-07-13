@@ -35,10 +35,10 @@ export type WeeklyGoal = {
   /** Demos HELD (client showed) this week - the goal counts show-ups, not bookings. */
   this_week: number
   met_this_week: boolean
-  streak_weeks: number
-  bonus_earned: boolean
-  bonus_amount: number
-  streak_target: number
+  base_hourly_rate: number
+  bonus_hourly_rate: number
+  /** The hourly rate this week: bonus if the goal is met, else base. */
+  current_rate: number
 }
 export type Overview = {
   calls: {
@@ -351,30 +351,40 @@ export function OverviewDashboard({ data, firstName }: { data: Overview; firstNa
             <div className="text-xs text-blue-200/80 mb-5">
               {data.weekly_goal.this_week} of {data.weekly_goal.target} demos held this week
             </div>
-            <div className="flex items-center gap-2 mb-4">
-              {Array.from({ length: data.weekly_goal.streak_target }).map((_, i) => (
+            <div className="mb-4">
+              <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
                 <div
-                  key={i}
-                  className={`flex-1 h-11 rounded-lg flex items-center justify-center text-xs font-semibold ${
-                    i < data.weekly_goal.streak_weeks ? 'text-white' : 'bg-white/10 text-blue-200/60'
-                  }`}
-                  style={i < data.weekly_goal.streak_weeks ? { backgroundColor: AMBER } : undefined}
-                >
-                  Wk {i + 1}
-                </div>
-              ))}
+                  className="h-full rounded-full transition-[width] duration-500"
+                  style={{
+                    width: `${data.weekly_goal.target > 0 ? Math.min(100, Math.round((data.weekly_goal.this_week / data.weekly_goal.target) * 100)) : 0}%`,
+                    backgroundColor: AMBER,
+                  }}
+                />
+              </div>
             </div>
             <div className="text-center text-xs text-blue-200/80 mb-5">
-              {data.weekly_goal.bonus_earned ? (
-                <span className="font-semibold" style={{ color: '#FBBF24' }}>
-                  ${data.weekly_goal.bonus_amount} bonus earned
-                </span>
+              {data.weekly_goal.bonus_hourly_rate > data.weekly_goal.base_hourly_rate ? (
+                data.weekly_goal.met_this_week ? (
+                  <span className="font-semibold" style={{ color: '#FBBF24' }}>
+                    Goal hit &mdash; you&apos;re at ${data.weekly_goal.bonus_hourly_rate}/hr this week
+                  </span>
+                ) : (
+                  <>
+                    {Math.max(0, data.weekly_goal.target - data.weekly_goal.this_week)}{' '}
+                    {data.weekly_goal.target - data.weekly_goal.this_week === 1 ? 'more demo' : 'more demos'} this week takes you from{' '}
+                    ${data.weekly_goal.base_hourly_rate}/hr to{' '}
+                    <span className="font-semibold" style={{ color: '#FBBF24' }}>${data.weekly_goal.bonus_hourly_rate}/hr</span>
+                  </>
+                )
               ) : (
-                <>
-                  {data.weekly_goal.streak_weeks} of {data.weekly_goal.streak_target} weeks straight,{' '}
-                  <span className="font-semibold" style={{ color: '#FBBF24' }}>${data.weekly_goal.bonus_amount} bonus</span>{' '}
-                  at {data.weekly_goal.streak_target}
-                </>
+                data.weekly_goal.met_this_week ? (
+                  <span className="font-semibold" style={{ color: '#FBBF24' }}>Weekly goal hit</span>
+                ) : (
+                  <>
+                    {Math.max(0, data.weekly_goal.target - data.weekly_goal.this_week)}{' '}
+                    {data.weekly_goal.target - data.weekly_goal.this_week === 1 ? 'more demo' : 'more demos'} to hit your weekly goal
+                  </>
+                )
               )}
             </div>
             <Link

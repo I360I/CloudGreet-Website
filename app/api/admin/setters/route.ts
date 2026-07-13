@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const { data: users, error } = await supabaseAdmin
     .from('custom_users')
-    .select('id, email, first_name, last_name, name, last_login, last_active_at, created_at, is_active, weekly_demo_goal, weekly_demo_bonus, assigned_rep_id, personal_cell')
+    .select('id, email, first_name, last_name, name, last_login, last_active_at, created_at, is_active, weekly_demo_goal, base_hourly_rate, bonus_hourly_rate, assigned_rep_id, personal_cell')
     .eq('role', 'setter')
     .order('created_at', { ascending: false })
 
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   const [statsResults, goalResults, { data: invites }, { data: repRows }] = await Promise.all([
     Promise.all(setters.map((u) => getRepCallStats(u.id))),
-    Promise.all(setters.map((u) => getWeeklyDemoGoalStatus(u.id, (u as any).weekly_demo_goal ?? 2, (u as any).weekly_demo_bonus ?? 50))),
+    Promise.all(setters.map((u) => getWeeklyDemoGoalStatus(u.id, (u as any).weekly_demo_goal ?? 2, Number((u as any).base_hourly_rate ?? 0), Number((u as any).bonus_hourly_rate ?? 0)))),
     supabaseAdmin
       .from('setter_invites')
       .select('token, email, invited_at, expires_at, consumed_at')

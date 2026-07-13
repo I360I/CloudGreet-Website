@@ -14,13 +14,13 @@ type Detail = {
   setter: {
     id: string; email: string; name: string; is_active: boolean
     created_at: string | null; last_active: string | null
-    assigned_rep_id: string | null; weekly_demo_goal: number; weekly_demo_bonus: number
+    assigned_rep_id: string | null; weekly_demo_goal: number; base_hourly_rate: number; bonus_hourly_rate: number
     personal_cell: string | null; has_vm_recording: boolean; has_vm_script: boolean
   }
   calls: { today: CallStats; week: CallStats; all_time: CallStats }
   signals: { week_dials: number; week_conversations: number; conversation_rate: number; interested: number; callbacks_pending: number; demos: number }
   daily: { date: string; dials: number; connects: number }[]
-  weekly_goal: { target: number; this_week: number; streak_weeks: number; streak_target: number; bonus_earned: boolean; bonus_amount: number }
+  weekly_goal: { target: number; this_week: number; met_this_week: boolean; base_hourly_rate: number; bonus_hourly_rate: number; current_rate: number }
   pipeline: Record<string, number>
   demos_set: { id: string; business: string | null; status: string; demo_at: string | null; created_at: string }[]
   recent_calls: { id: string; at: string; status: string; seconds: number; to: string; lead: string | null; has_recording?: boolean }[]
@@ -101,9 +101,9 @@ export default function AdminSetterDetailPage() {
               <h1 className="font-display text-3xl font-medium tracking-tight text-white flex items-center gap-3">
                 {setter.name}
                 {!setter.is_active && <span className="text-xs text-rose-300/90 font-sans">disabled</span>}
-                {goal.bonus_earned && (
+                {goal.bonus_hourly_rate > goal.base_hourly_rate && goal.met_this_week && (
                   <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border border-emerald-400/20 rounded-full px-2 py-0.5">
-                    ${goal.bonus_amount} bonus earned
+                    on ${goal.bonus_hourly_rate}/hr this week
                   </span>
                 )}
               </h1>
@@ -183,18 +183,35 @@ export default function AdminSetterDetailPage() {
                     className="w-16 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none"
                   />
                 </Row>
-                <Row label={`Goal reward (${goal.streak_target}-wk streak)`}>
+                <Row label="Base pay">
                   <div className="inline-flex items-center gap-1.5 justify-end">
                     <span className="text-xs text-gray-500">$</span>
                     <input
-                      type="number" min={0} max={10000} step={5} defaultValue={setter.weekly_demo_bonus}
-                      onBlur={(e) => { const n = Number(e.target.value); if (n >= 0 && n <= 10000 && n !== setter.weekly_demo_bonus) void patch({ weekly_demo_bonus: n }) }}
+                      type="number" min={0} max={1000} step={0.5} defaultValue={setter.base_hourly_rate}
+                      onBlur={(e) => { const n = Number(e.target.value); if (n >= 0 && n <= 1000 && n !== setter.base_hourly_rate) void patch({ base_hourly_rate: n }) }}
                       className="w-20 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none"
                     />
+                    <span className="text-xs text-gray-500">/hr</span>
+                  </div>
+                </Row>
+                <Row label="Pay if goal hit">
+                  <div className="inline-flex items-center gap-1.5 justify-end">
+                    <span className="text-xs text-gray-500">$</span>
+                    <input
+                      type="number" min={0} max={1000} step={0.5} defaultValue={setter.bonus_hourly_rate}
+                      onBlur={(e) => { const n = Number(e.target.value); if (n >= 0 && n <= 1000 && n !== setter.bonus_hourly_rate) void patch({ bonus_hourly_rate: n }) }}
+                      className="w-20 bg-white/[0.03] border border-white/[0.08] rounded-lg px-2 py-1 text-sm text-right text-gray-200 tabular-nums focus:outline-none"
+                    />
+                    <span className="text-xs text-gray-500">/hr</span>
                   </div>
                 </Row>
                 <Row label="This week">
-                  <span className="text-gray-200 tabular-nums">{goal.this_week}/{goal.target} demos held · streak {goal.streak_weeks}/{goal.streak_target} wks</span>
+                  <span className="text-gray-200 tabular-nums">
+                    {goal.this_week}/{goal.target} demos held · pay this week ${goal.current_rate}/hr
+                    {goal.bonus_hourly_rate > goal.base_hourly_rate && (goal.met_this_week
+                      ? <span className="text-emerald-300"> (goal hit)</span>
+                      : <span className="text-gray-500"> (base)</span>)}
+                  </span>
                 </Row>
                 <Row label="Voicemail drop">
                   {setter.has_vm_recording

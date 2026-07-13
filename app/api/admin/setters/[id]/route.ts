@@ -24,7 +24,7 @@ export async function GET(
 
   const { data: user } = await supabaseAdmin
     .from('custom_users')
-    .select('id, email, first_name, last_name, name, is_active, created_at, last_login, last_active_at, assigned_rep_id, weekly_demo_goal, weekly_demo_bonus, personal_cell, vm_drop_audio_url, vm_drop_script')
+    .select('id, email, first_name, last_name, name, is_active, created_at, last_login, last_active_at, assigned_rep_id, weekly_demo_goal, base_hourly_rate, bonus_hourly_rate, personal_cell, vm_drop_audio_url, vm_drop_script')
     .eq('id', params.id)
     .eq('role', 'setter')
     .maybeSingle()
@@ -40,7 +40,7 @@ export async function GET(
     getRepCallStats(params.id, { since: weekStart }),
     getRepCallStats(params.id, { since: epoch }),
     getRepDailySeries(params.id, 14),
-    getWeeklyDemoGoalStatus(params.id, (user as any).weekly_demo_goal ?? 2, (user as any).weekly_demo_bonus ?? 50),
+    getWeeklyDemoGoalStatus(params.id, (user as any).weekly_demo_goal ?? 2, Number((user as any).base_hourly_rate ?? 0), Number((user as any).bonus_hourly_rate ?? 0)),
     supabaseAdmin.from('lead_assignments').select('status, last_touched_at, follow_up_at').eq('rep_id', params.id),
     supabaseAdmin.from('sales_rep_phone_numbers').select('phone_number, label, is_active, is_sms_line').eq('rep_id', params.id),
     supabaseAdmin
@@ -123,7 +123,8 @@ export async function GET(
       last_active: [(user as any).last_active_at, (user as any).last_login].filter(Boolean).sort().pop() || null,
       assigned_rep_id: (user as any).assigned_rep_id || null,
       weekly_demo_goal: (user as any).weekly_demo_goal ?? 2,
-      weekly_demo_bonus: (user as any).weekly_demo_bonus ?? 50,
+      base_hourly_rate: Number((user as any).base_hourly_rate ?? 0),
+      bonus_hourly_rate: Number((user as any).bonus_hourly_rate ?? 0),
       personal_cell: (user as any).personal_cell || null,
       has_vm_recording: !!(user as any).vm_drop_audio_url,
       has_vm_script: !!(user as any).vm_drop_script,
@@ -164,15 +165,17 @@ export async function GET(
 
 /**
  * PATCH /api/admin/setters/[id]
- *   { weekly_demo_goal?: number, weekly_demo_bonus?: number,
- *     assigned_rep_id?: string | null, personal_cell?: string | null }
+ *   { weekly_demo_goal?: number, base_hourly_rate?: number,
+ *     bonus_hourly_rate?: number, assigned_rep_id?: string | null,
+ *     personal_cell?: string | null }
  *
  * Admin-only setter controls:
  * - weekly_demo_goal: the adjustable per-setter weekly demo target
  *   (defaults to 2 - see sql/setter-weekly-goal.sql).
- * - weekly_demo_bonus: the per-setter dollar reward for hitting the goal 4
- *   weeks straight (defaults to 50 - see sql/setter-demo-bonus.sql). Feeds
- *   getWeeklyDemoGoalStatus so the streak payout matches this value.
+ * - base_hourly_rate / bonus_hourly_rate: the setter is paid base_hourly_rate
+ *   normally, bumped to bonus_hourly_rate for any week they hit the weekly
+ *   demo goal (no streak - see sql/setter-hourly-rates.sql). Feeds
+ *   getWeeklyDemoGoalStatus so the current-week rate reflects these.
  * - personal_cell: where inbound return calls to the setter's dialer
  *   number get forwarded (rep-voice-webhook). Null clears it - callers
  *   then go straight to voicemail.
@@ -190,7 +193,8 @@ export async function PATCH(
 
   const body = await request.json().catch(() => ({})) as {
     weekly_demo_goal?: number
-    weekly_demo_bonus?: number
+    base_hourly_rate?: number
+    bonus_hourly_rate?: number
     assigned_rep_id?: string | null
     personal_cell?: string | null
   }
@@ -205,12 +209,22 @@ export async function PATCH(
     update.weekly_demo_goal = Math.round(goal)
   }
 
-  if (body.weekly_demo_bonus !== undefined) {
-    const bonus = Number(body.weekly_demo_bonus)
-    if (!Number.isFinite(bonus) || bonus < 0 || bonus > 10000) {
-      return NextResponse.json({ error: 'weekly_demo_bonus must be a dollar amount between 0 and 10000' }, { status: 400 })
+  const rateField = (label: string, val: number | undefined): number | null | 'skip' => {
+    if (val === undefined) return 'skip'
+    const n = Number(val)
+    if (!Number.isFinite(n) || n < 0 || n > 1000) return null
+    return Math.round(n * 100) / 100
+  }
+  for (const [key, val] of [
+    ['base_hourly_rate', body.base_hourly_rate] as const,
+    ['bonus_hourly_rate', body.bonus_hourly_rate] as const,
+  ]) {
+    const r = rateField(key, val)
+    if (r === 'skip') continue
+    if (r === null) {
+      return NextResponse.json({ error: `${key} must be an hourly rate between 0 and 1000` }, { status: 400 })
     }
-    update.weekly_demo_bonus = Math.round(bonus)
+    update[key] = r
   }
 
   if (body.personal_cell !== undefined) {
@@ -253,12 +267,12 @@ export async function PATCH(
     .update(update)
     .eq('id', params.id)
     .eq('role', 'setter')
-    .select('id, weekly_demo_goal, weekly_demo_bonus, assigned_rep_id, personal_cell')
+    .select('id, weekly_demo_goal, base_hourly_rate, bonus_hourly_rate, assigned_rep_id, personal_cell')
     .maybeSingle()
 
   if (error) {
     return NextResponse.json({
-      error: `Couldn't update setter - if columns are missing run sql/setter-weekly-goal.sql, sql/setter-demo-bonus.sql and sql/setter-rep-assignment.sql. (${error.message})`,
+      error: `Couldn't update setter - if columns are missing run sql/setter-weekly-goal.sql, sql/setter-hourly-rates.sql and sql/setter-rep-assignment.sql. (${error.message})`,
     }, { status: 500 })
   }
   if (!data) return NextResponse.json({ error: 'Setter not found' }, { status: 404 })
@@ -266,7 +280,8 @@ export async function PATCH(
   return NextResponse.json({
     success: true,
     weekly_demo_goal: data.weekly_demo_goal,
-    weekly_demo_bonus: (data as any).weekly_demo_bonus,
+    base_hourly_rate: Number((data as any).base_hourly_rate ?? 0),
+    bonus_hourly_rate: Number((data as any).bonus_hourly_rate ?? 0),
     assigned_rep_id: data.assigned_rep_id ?? null,
     personal_cell: (data as any).personal_cell ?? null,
   })
