@@ -233,12 +233,17 @@ export function computeQuote(args: QuoteArgs): QuoteResult {
     const ratePerMile = isOver50 ? 1.75 : 2.75
     const distanceCents = Math.round(miles * ratePerMile * 100)
     note(`${miles} mi @ $${ratePerMile.toFixed(2)}/mi`, distanceCents)
-    if (svc === 'airportdropoff' || svc === 'airportpickup') {
-      if (isCmh) note('CMH airport fee', 450)
-    }
+    // The $50 minimum floors the TRANSPORTATION fare (distance), and it
+    // must be applied BEFORE the airport fee so the $4.50 CMH fee is an
+    // additive pass-through on top of the floor, not absorbed into it.
+    // (Owner rule, Steve 2026-07-12: 15mi Worthington->CMH = $50 min +
+    // $4.50 airport + tax = $58.86, NOT max($41.25+$4.50,$50)+tax = $54.)
     if (baseCents < MIN_FARE_CENTS) {
       const adj = MIN_FARE_CENTS - baseCents
       note('Minimum fare adjustment ($50 floor)', adj)
+    }
+    if (svc === 'airportdropoff' || svc === 'airportpickup') {
+      if (isCmh) note('CMH airport fee', 450)
     }
   } else if (svc === 'hourlyevent' || svc === 'event' || svc === 'hourlyservice') {
     if (!Number.isFinite(hours) || hours < 2) {

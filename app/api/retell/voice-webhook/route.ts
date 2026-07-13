@@ -1210,6 +1210,14 @@ export async function POST(request: NextRequest) {
  const ratePerMile = isOver50 ? 1.75 : 2.75
  const distanceCents = Math.round(miles * ratePerMile * 100)
  note(`${miles} mi @ $${ratePerMile.toFixed(2)}/mi`, distanceCents)
+ // $50 minimum floors the transportation fare (distance) BEFORE the
+ // airport fee, so the $4.50 CMH fee always adds on top of the floor
+ // (owner rule, Steve 2026-07-12). Voice previously had NO floor at all,
+ // so short airport/p2p trips under-quoted vs the SMS engine - now matched.
+ const MIN_FARE_CENTS = 5000
+ if (baseCents < MIN_FARE_CENTS) {
+ note('Minimum fare adjustment ($50 floor)', MIN_FARE_CENTS - baseCents)
+ }
  if (svc === 'airportdropoff' || svc === 'airportpickup') {
  if (isCmh || airportFee) {
  note('CMH airport fee', 450)
