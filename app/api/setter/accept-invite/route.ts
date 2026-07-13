@@ -76,6 +76,12 @@ export async function POST(request: NextRequest) {
       is_admin: false,
       is_active: true,
       status: 'active',
+      // Pay/goal the admin pre-set on the invite carry over to the new
+      // account; null falls through to the custom_users column defaults
+      // (weekly_demo_goal 2, hourly rates 0). See sql/setter-invite-pay.sql.
+      ...(invite.weekly_demo_goal != null ? { weekly_demo_goal: invite.weekly_demo_goal } : {}),
+      ...(invite.base_hourly_rate != null ? { base_hourly_rate: invite.base_hourly_rate } : {}),
+      ...(invite.bonus_hourly_rate != null ? { bonus_hourly_rate: invite.bonus_hourly_rate } : {}),
     })
     .select('id, email')
     .single()
