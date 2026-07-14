@@ -96,6 +96,34 @@ export async function POST(request: NextRequest) {
     .update({ consumed_at: new Date().toISOString(), consumed_by: newUser.id })
     .eq('token', token)
 
+  // Assign any leads an admin pre-staged for this setter's email before the
+  // account existed (scraped + tagged source='preload:<email>'), so their
+  // queue is populated the moment they first log in. Best-effort - never
+  // fail account creation over this.
+  try {
+    const { data: preLeads } = await supabaseAdmin
+      .from('leads')
+      .select('id')
+      .eq('source', `preload:${invite.email}`)
+    if (preLeads && preLeads.length > 0) {
+      const now = new Date().toISOString()
+      const rows = preLeads.map((l) => ({
+        lead_id: l.id,
+        rep_id: newUser.id,
+        status: 'new',
+        claimed: false,
+        assigned_at: now,
+        touch_count: 0,
+      }))
+      for (let i = 0; i < rows.length; i += 500) {
+        await supabaseAdmin.from('lead_assignments').insert(rows.slice(i, i + 500))
+      }
+      logger.info('Setter invite: assigned preloaded leads', { setter: newUser.id, count: rows.length })
+    }
+  } catch (e) {
+    logger.warn('Setter invite: preloaded lead assignment failed', { error: e instanceof Error ? e.message : 'unknown' })
+  }
+
   const jwt = JWTManager.createUserToken(newUser.id, '', newUser.email, 'setter')
   const res = NextResponse.json({ success: true, userId: newUser.id })
   res.cookies.set('token', jwt, {
