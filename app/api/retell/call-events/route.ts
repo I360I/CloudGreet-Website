@@ -115,6 +115,12 @@ export async function POST(request: NextRequest) {
      duration_sec: demoDuration,
      status: 'completed',
      summary: demoSummary,
+     // Same transcript/recording Retell hands us for client calls - the
+     // admin Demos tab surfaces these too. Only write when present so a
+     // call_ended (pre-transcript) upsert doesn't clobber a later
+     // call_analyzed that carries them.
+     ...(transcript ? { transcript } : {}),
+     ...(recordingUrl ? { recording_url: recordingUrl } : {}),
     }, { onConflict: 'retell_call_id' })
     return NextResponse.json({ ok: true, logged: 'demo_agent_call', vertical })
    }

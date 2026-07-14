@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
   if (scope === 'demo') {
    let dq = supabaseAdmin
     .from('demo_agent_calls')
-    .select('id, retell_call_id, from_number, duration_sec, status, summary, vertical, created_at', { count: 'exact' })
+    .select('id, retell_call_id, from_number, duration_sec, status, summary, vertical, created_at, transcript, recording_url', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
    if (q) dq = dq.or(`from_number.ilike.%${q}%,summary.ilike.%${q}%,vertical.ilike.%${q}%`)
@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
     caller_name: null,
     status: d.status || 'completed',
     duration: d.duration_sec ?? null,
-    recording_url: null,
-    transcript: null,
+    recording_url: d.recording_url ?? null,
+    transcript: d.transcript ?? null,
     sentiment: null,
     call_summary: d.summary || null,
     outcome: null,
