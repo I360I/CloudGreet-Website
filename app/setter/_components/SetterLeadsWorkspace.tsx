@@ -275,14 +275,25 @@ export function SetterLeadsWorkspace() {
     // Optimistic update
     setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, status } : l))
     try {
-      await fetchWithAuth(`/api/sales/leads/${leadId}`, {
+      const res = await fetchWithAuth(`/api/sales/leads/${leadId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        // keepalive: reps pick an outcome then immediately switch pages,
+        // which was aborting the in-flight PATCH so the status silently
+        // reverted to 'new' on the next load. keepalive lets the write
+        // finish even as the page unmounts.
+        keepalive: true,
         body: JSON.stringify({ status, touched: true }),
       })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        setFlash(`Couldn't save that outcome${j?.error ? ` - ${j.error}` : ''}.`)
+        setTimeout(() => setFlash(''), 3500)
+        await load()
+      }
     } catch {
-      // Rollback on failure - refetch to be safe
-      load()
+      // Network/abort - refetch to reflect the true server state.
+      await load()
     } finally {
       setUpdatingStatusId(null)
     }
@@ -900,15 +911,22 @@ export function SetterLeadsWorkspace() {
           leadId={demoModalLeadId}
           leadState={leads.find((l) => l.id === demoModalLeadId)?.state || null}
           leadPhone={leads.find((l) => l.id === demoModalLeadId)?.phone || null}
+          initialEmail={leads.find((l) => l.id === demoModalLeadId)?.email || ''}
           onClose={() => setDemoModalLeadId(null)}
-          onSaved={() => {
+          onSaved={(result) => {
             const lid = demoModalLeadId
             setDemoModalLeadId(null)
             // Bump the row's status in-place so the user sees the change
             // immediately. Background refetch keeps the rest in sync.
-            setLeads((prev) => prev.map((l) => l.id === lid ? { ...l, status: 'demo_scheduled' } : l))
-            setFlash('Demo set - the team has been pinged.')
-            setTimeout(() => setFlash(''), 3500)
+            setLeads((prev) => prev.map((l) => l.id === lid
+              ? { ...l, status: 'demo_scheduled', ...(result?.sentTo && !l.email ? { email: result.sentTo } : {}) }
+              : l))
+            setFlash(
+              result?.sentTo ? `Demo set and booking link sent to ${result.sentTo}.`
+              : result?.warn ? 'Demo set, but the booking link did not send - resend it from the email button.'
+              : 'Demo set - the team has been pinged.',
+            )
+            setTimeout(() => setFlash(''), 4000)
           }}
         />
       )}
@@ -964,12 +982,13 @@ export function SetterLeadsWorkspace() {
  * Same endpoint as the lead detail "Demo set" button - keeps both
  * surfaces consistent (status flip + founder email + Slack ping).
  */
-function LeadsDemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: {
+function LeadsDemoSetModal({ leadId, leadState, leadPhone, initialEmail, onClose, onSaved }: {
   leadId: string
   leadState?: string | null
   leadPhone?: string | null
+  initialEmail?: string | null
   onClose: () => void
-  onSaved: () => void
+  onSaved: (result?: { sentTo?: string; warn?: string }) => void
 }) {
   const tz = leadTimeZone(leadState, leadPhone)
   const initial = (() => {
@@ -980,12 +999,17 @@ function LeadsDemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   })()
   const [when, setWhen] = useState(initial)
+  const [email, setEmail] = useState((initialEmail || '').trim())
   const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
+  const emailTrimmed = email.trim()
+  const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailTrimmed)
+
   const save = async () => {
     if (!when) { setErr('Pick a date/time'); return }
+    if (emailTrimmed && !emailValid) { setErr("That email doesn't look right"); return }
     setBusy(true); setErr(null)
     try {
       const r = await fetchWithAuth(`/api/sales/leads/${leadId}/mark-demo`, {
@@ -997,7 +1021,25 @@ function LeadsDemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: {
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok || !j?.success) { setErr(j?.error || `Failed (${r.status})`); return }
-      onSaved()
+
+      // Also email the prospect the booking link so the demo lands on the
+      // rep's calendar with an invite + reminders - a verbal time alone
+      // no-shows. Non-fatal: the demo is already booked either way.
+      let result: { sentTo?: string; warn?: string } = {}
+      if (emailValid) {
+        try {
+          const lr = await fetchWithAuth(`/api/sales/leads/${leadId}/send-booking-link`, {
+            method: 'POST',
+            body: JSON.stringify({ email: emailTrimmed }),
+          })
+          const lj = await lr.json().catch(() => ({}))
+          if (lr.ok && lj?.success) result = { sentTo: emailTrimmed }
+          else result = { warn: lj?.error || 'link failed' }
+        } catch {
+          result = { warn: 'link failed' }
+        }
+      }
+      onSaved(result)
     } catch {
       setErr('Failed')
     } finally {
@@ -1016,7 +1058,7 @@ function LeadsDemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: {
           <h3 className="text-base font-medium text-gray-900">Book a demo</h3>
         </div>
         <p className="text-xs text-gray-500 mb-4">
-          This books the demo and pings the team - only use it when a demo is actually set. Just leaving a note? Use the pencil button instead.
+          Books the demo, pings the team, and emails the prospect the booking link so it lands on the rep&apos;s calendar. Only use it when a demo is actually set.
         </p>
         <label className="block text-xs font-medium text-gray-700 mb-1.5">
           When? <span className="font-normal text-gray-400">{tz ? `(prospect's time · ${tzAbbrev(tz, new Date(when || Date.now()))})` : '(your local time)'}</span>
@@ -1028,6 +1070,17 @@ function LeadsDemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: {
           autoFocus
           className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-gray-900"
         />
+        <label className="block text-xs font-medium text-gray-700 mt-3 mb-1.5">
+          Prospect&apos;s email <span className="font-normal text-gray-400">(we&apos;ll send them the booking link)</span>
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="name@company.com"
+          className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-gray-900"
+        />
+        <p className="text-[11px] text-gray-400 mt-1">Leave blank to book without sending a link (they may no-show without an invite).</p>
         <label className="block text-xs font-medium text-gray-700 mt-3 mb-1.5">Notes (optional)</label>
         <textarea
           value={notes}
@@ -1047,7 +1100,7 @@ function LeadsDemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: {
             className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-xl hover:bg-amber-600 disabled:opacity-60"
           >
             {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle weight="fill" className="w-4 h-4" />}
-            Mark demo set
+            {emailValid ? 'Book demo & send link' : 'Mark demo set'}
           </button>
         </div>
       </div>

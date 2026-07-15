@@ -678,16 +678,27 @@ export function useDialerEngine(options: DialerEngineOptions = {}) {
   /** Persist a lead disposition (status) + optional outcome note. */
   const persistDisposition = useCallback(async (leadId: string, statusValue: string, dispositionNote?: string) => {
     try {
-      await fetchWithAuth(`/api/sales/leads/${leadId}`, {
+      const res = await fetchWithAuth(`/api/sales/leads/${leadId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        // keepalive: a disposition is usually the last action before the
+        // queue advances or the rep navigates, which was cancelling the
+        // request and losing the outcome (it reverted to 'new' on reload).
+        keepalive: true,
         body: JSON.stringify({
           status: statusValue,
           touched: true,
           ...(dispositionNote ? { disposition: dispositionNote } : {}),
         }),
       })
-    } catch { /* non-fatal */ }
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        console.warn('persistDisposition failed to save', { leadId, status: statusValue, error: j?.error })
+      }
+    } catch (e) {
+      // no longer swallowed silently
+      console.warn('persistDisposition network error', e)
+    }
   }, [])
 
   // ---- Power-dial queue ----
