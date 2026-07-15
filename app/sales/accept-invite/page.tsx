@@ -14,47 +14,59 @@ INDEPENDENT CONTRACTOR AGREEMENT (summary)
 1. You're a 1099 contractor, not an employee. You set your own hours,
    tools, and approach.
 
-2. Compensation - trailing commission structure:
-   · 50% of every paid invoice (monthly + setup) on every client
-     you've signed, FOR AS LONG AS YOU STAY ACTIVE. "Active" means
-     you've closed a new paid client within the last 3 months.
-   · If 3 months go by with no new close, your commission rate on
-     every existing client drops to 25% on the next billing cycle.
-   · If 6 months go by with no new close, your commission rate on
-     every existing client drops to 0% and those clients transfer
-     fully to CloudGreet.
-   · The clock resets the moment you close another client. Any new
-     close moves you back to 50% on every client you've ever signed
-     (no permanent decay - one new close fully restores you).
+2. Compensation - two base rates, both net of payment-processing fees:
+   · SELF-SOURCED clients (leads you found and closed on your own):
+     50% of every paid invoice (monthly + setup).
+   · SETTER-FED clients (leads handed to you by a CloudGreet setter or
+     company source): 25% of every paid invoice. Setter-fed leads are
+     provided at CloudGreet's discretion, and only to reps who have
+     shown they can self-source and close.
+   · Both are your "active" rates. "Active" means you've closed a new
+     paid client (either type) within the last 3 months.
 
-3. The structure is designed so reps who keep selling get
-   long-tail recurring income; reps who stop selling stop carrying
-   the book they're not actively servicing.
+3. Trailing decay if you go inactive:
+   · After 3 months with no new close, your rate on every existing
+     client is cut in half on the next billing cycle (50% -> 25% on
+     self-sourced, 25% -> 12.5% on setter-fed).
+   · After 6 months with no new close, every rate drops to 0% and those
+     clients transfer fully to CloudGreet.
+   · Any new close resets the clock and restores your full active rates
+     on every client you've ever signed (no permanent decay - one new
+     close fully restores you).
 
-4. Setup fees follow the same trailing rate as monthly commission
-   at the time the invoice is paid.
+4. The structure is designed so reps who keep selling get long-tail
+   recurring income; reps who stop selling stop carrying the book
+   they're not actively servicing.
 
-5. Payouts every Friday via Stripe Connect direct deposit. Amounts
+5. Setup fees pay at your current rate for that client at the time the
+   invoice is paid.
+
+6. Payouts every Friday via Stripe Connect direct deposit. Amounts
    below $1 roll over to the following Friday.
 
-6. If a client cancels, commission stops at their last paid invoice -
-   no clawbacks on past payments.
+7. Commission is earned only on money CloudGreet keeps. If a payment is
+   refunded or charged back, the commission on that invoice is reversed
+   against future payouts. Payments that stick are never clawed back.
 
-7. CloudGreet owns all client relationships. If you leave, are
+8. CloudGreet owns all client relationships. If you leave, are
    removed, or hit the 6-month inactive mark, you keep every dollar
    you've already earned but stop accruing on those clients going
    forward.
 
-8. CloudGreet handles product, onboarding, support, prompt tuning,
+9. CloudGreet handles product, onboarding, support, prompt tuning,
    and infrastructure. You handle prospecting, calling, demoing,
    and closing.
 
-9. CloudGreet auto-files your 1099-NEC at year-end via Stripe for
-   any rep paid $600+ in the calendar year.
+10. CloudGreet may adjust commission rates for clients you sign AFTER a
+    change, with 30 days' written notice. Clients already signed keep
+    the terms they were signed under.
 
-10. You agree not to misrepresent the product to prospects, share
-    client data outside CloudGreet, or solicit clients on behalf of
-    competitors during your engagement.
+11. CloudGreet auto-files your 1099-NEC at year-end via Stripe for
+    any rep paid $600+ in the calendar year.
+
+12. You agree not to misrepresent the product to prospects, share
+    client data outside CloudGreet, or solicit CloudGreet's clients on
+    behalf of competitors during your engagement.
 `.trim()
 
 export default function AcceptInvitePage() {

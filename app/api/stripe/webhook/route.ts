@@ -643,12 +643,14 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  }
 }
 
-const COMMISSION_PCT = 0.5
+const COMMISSION_PCT = 0.5      // self-sourced base rate
+const SETTER_FED_PCT = 0.25     // rate when a setter booked the demo (closes.set_by_setter_id set)
 
 /**
- * Splits the invoice into MRR vs setup_fee buckets, credits 50% of
- * each to the business's rep, and writes one ledger row per bucket.
- * Idempotent via the (source_invoice_id, source_type) unique index.
+ * Splits the invoice into MRR vs setup_fee buckets, credits the rep's
+ * base rate (50% self-sourced, 25% setter-fed) on each, and writes one
+ * ledger row per bucket. Idempotent via the (source_invoice_id,
+ * source_type) unique index.
  *
  * Classification rule:
  *   line.type === 'subscription' OR line has a recurring price → MRR
@@ -759,6 +761,21 @@ async function creditRepCommission(
  const mrrCents = Math.round(mrrGross * scale)
  const setupCents = Math.round(setupGross * scale)
 
+ // Which base rate applies? A close booked by a setter (set_by_setter_id
+ // present) is "setter-fed" and pays 25%; a self-sourced close pays 50%.
+ // The classification is frozen on the close at booking time, so it never
+ // shifts under the rep after the fact. Also reused below as the close_id
+ // attached to the ledger rows.
+ const { data: closeRow } = await supabaseAdmin
+  .from('closes')
+  .select('id, set_by_setter_id')
+  .eq('business_id', business.id)
+  .order('created_at', { ascending: false })
+  .limit(1)
+  .maybeSingle()
+ const isSetterFed = !!closeRow?.set_by_setter_id
+ const commissionRate = isSetterFed ? SETTER_FED_PCT : COMMISSION_PCT
+
  const earnedAt = invoice.status_transitions?.paid_at
   ? new Date(invoice.status_transitions.paid_at * 1000).toISOString()
   : new Date().toISOString()
@@ -771,6 +788,9 @@ async function creditRepCommission(
   gross_paid_cents: number
   commission_cents: number
   earned_at: string
+  close_id?: string
+  is_setter_fed: boolean
+  commission_rate: number
  }> = []
 
  if (mrrCents > 0) {
@@ -780,8 +800,11 @@ async function creditRepCommission(
    source_type: 'mrr',
    source_invoice_id: invoice.id,
    gross_paid_cents: mrrCents,
-   commission_cents: Math.round(mrrCents * COMMISSION_PCT),
+   commission_cents: Math.round(mrrCents * commissionRate),
    earned_at: earnedAt,
+   ...(closeRow?.id ? { close_id: closeRow.id } : {}),
+   is_setter_fed: isSetterFed,
+   commission_rate: commissionRate,
   })
  }
  if (setupCents > 0) {
@@ -791,29 +814,21 @@ async function creditRepCommission(
    source_type: 'setup_fee',
    source_invoice_id: invoice.id,
    gross_paid_cents: setupCents,
-   commission_cents: Math.round(setupCents * COMMISSION_PCT),
+   commission_cents: Math.round(setupCents * commissionRate),
    earned_at: earnedAt,
+   ...(closeRow?.id ? { close_id: closeRow.id } : {}),
+   is_setter_fed: isSetterFed,
+   commission_rate: commissionRate,
   })
  }
 
  if (rows.length === 0) return
 
- // Try to attach the close_id when we can find one for this business.
- // Best-effort; the ledger row is the source of truth so this is
- // metadata only.
- const { data: openClose } = await supabaseAdmin
-  .from('closes')
-  .select('id')
-  .eq('business_id', business.id)
-  .order('created_at', { ascending: false })
-  .limit(1)
-  .maybeSingle()
-
- const enriched = rows.map((r) => openClose?.id ? { ...r, close_id: openClose.id } : r)
-
+ // close_id, is_setter_fed, and commission_rate are already stamped on
+ // each row above from the single close lookup near the rate decision.
  const { error } = await supabaseAdmin
   .from('commission_ledger')
-  .upsert(enriched, {
+  .upsert(rows, {
    onConflict: 'source_invoice_id,source_type',
    ignoreDuplicates: true,
   })
