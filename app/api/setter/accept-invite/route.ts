@@ -82,6 +82,9 @@ export async function POST(request: NextRequest) {
       ...(invite.weekly_demo_goal != null ? { weekly_demo_goal: invite.weekly_demo_goal } : {}),
       ...(invite.base_hourly_rate != null ? { base_hourly_rate: invite.base_hourly_rate } : {}),
       ...(invite.bonus_hourly_rate != null ? { bonus_hourly_rate: invite.bonus_hourly_rate } : {}),
+      // Closer the admin pre-linked on the invite carries over so this
+      // setter's booked demos route into that rep's pipeline from day one.
+      ...(invite.assigned_rep_id != null ? { assigned_rep_id: invite.assigned_rep_id } : {}),
     })
     .select('id, email')
     .single()
