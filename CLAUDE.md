@@ -47,6 +47,24 @@
   demo_showed ONLY (lib/sales/dialer-stats.ts getWeeklyDemoGoalStatus).
   Per-setter goal target: custom_users.weekly_demo_goal (default 2).
 
+## Commission (rep payouts)
+- `app/api/stripe/webhook/route.ts` `creditRepCommission` credits the rep on
+  every paid invoice: a % of net MRR (ongoing) + the same % of net setup, on
+  the NET after Stripe fees. Idempotent via (source_invoice_id, source_type).
+- **Base rate is automated by lead origin (commit 5526034):**
+  `COMMISSION_PCT=0.5` self-sourced, `SETTER_FED_PCT=0.25` setter-fed. A close
+  is setter-fed iff `closes.set_by_setter_id` is set (a setter booked the demo
+  in mark-demo). `is_setter_fed` + `commission_rate` are stamped on each
+  `commission_ledger` row. Classification is frozen on the close at booking.
+- **Trailing decay is DISPLAY-ONLY.** `lib/sales/decay.ts` (50→25→0 self /
+  25→12.5→0 setter-fed at 90/180 days since last paid close) drives only the
+  rep dashboard banner + /api/sales/decay-status. It is NOT applied to
+  commission_ledger — deliberately deferred. To flip it on: make TIER_MULTIPLIER
+  a fraction-of-base (full=1.0/reduced=0.5/transferred=0) and multiply the base
+  rate in creditRepCommission. Affects ALL reps, so it's an owner decision.
+- Contractor terms shown at signup live in `app/sales/accept-invite/page.tsx`
+  AGREEMENT_TEXT (plain-language summary + checkbox; not a full signed contract).
+
 ## SMS (rep follow-up texts) — two-way, live
 - **WORKING INTERIM (2026-07-06, commit 54ed877): rep SMS sends from a
   toll-free VERIFIED line, not the local DID.** New
