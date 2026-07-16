@@ -1081,7 +1081,7 @@ function LeadsDemoSetModal({ leadId, leadState, leadPhone, initialEmail, onClose
           placeholder="name@company.com"
           className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-gray-900"
         />
-        <p className="text-[11px] text-gray-400 mt-1">Leave blank to book without sending a link (they may no-show without an invite).</p>
+        <p className="text-[11px] text-gray-400 mt-1">Optional. Leave blank if you&apos;ll send the invite yourself, we&apos;ll just book it and ping the team.</p>
         <label className="block text-xs font-medium text-gray-700 mt-3 mb-1.5">Notes (optional)</label>
         <textarea
           value={notes}
