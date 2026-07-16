@@ -87,11 +87,16 @@ export async function GET(request: NextRequest) {
   if (repFilter) liveQuery = liveQuery.eq('rep_id', repFilter)
   const { data: liveCalls } = await liveQuery
 
-  // Today's calls (for per-rep aggregation).
+  // Today's calls (for per-rep aggregation). OUTBOUND only - inbound
+  // rows (return calls, and spam/robocalls hitting a rep's DID) must not
+  // inflate dial attempts or talk time. Matches lib/sales/dialer-stats.ts
+  // getRepCallStats; the .or covers legacy rows before the direction
+  // column existed (null = outbound).
   let todayQuery = supabaseAdmin
    .from('rep_calls')
    .select('id, rep_id, status, started_at, duration_seconds')
    .gte('started_at', todayStart)
+   .or('direction.eq.outbound,direction.is.null')
   if (repFilter) todayQuery = todayQuery.eq('rep_id', repFilter)
   const { data: todayCalls } = await todayQuery
 
