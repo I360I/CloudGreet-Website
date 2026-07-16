@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X, Robot, Lightning, ChatCircle, Phone, CalendarBlank, Trash, Play, SpeakerHigh, SignIn, CurrencyDollar } from '@phosphor-icons/react'
+import { ArrowLeft, CircleNotch, WarningCircle, CheckCircle, Plus, X, Robot, Lightning, ChatCircle, Phone, CalendarBlank, Trash, Play, SpeakerHigh, SignIn, CurrencyDollar, Copy } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { clearClientAuthState } from '@/lib/auth/session-guard'
@@ -302,6 +302,8 @@ export default function SalesClientDetailPage() {
               <Field label="Greeting" value={business.greeting_message} truncate />
             )}
           </div>
+
+          <CopyLoginSection businessId={id} />
         </motion.div>
 
         {/* Voice + greeting */}
@@ -635,6 +637,62 @@ function LoginAsClientSection({ businessId, businessName }: {
         <SignIn className="w-4 h-4" weight="fill" />
         {busy ? 'Starting…' : 'Login as client'}
       </button>
+      {err && <div className="text-xs text-rose-700 mt-1.5">{err}</div>}
+    </div>
+  )
+}
+
+function CopyLoginSection({ businessId }: { businessId: string }) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const [copied, setCopied] = useState<{ email: string; password: string; login_url: string } | null>(null)
+
+  const go = async () => {
+    setBusy(true); setErr('')
+    try {
+      const r = await fetch(`/api/sales/clients/${businessId}/reset-login`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) throw new Error(j?.error || `Failed (${r.status})`)
+      const block = `Login: ${j.login_url}\nUsername: ${j.email}\nPassword: ${j.password}`
+      try { await navigator.clipboard.writeText(block) } catch { /* clipboard may be blocked; values still shown below */ }
+      setCopied({ email: j.email, password: j.password, login_url: j.login_url })
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to get login info')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-100">
+      <button
+        onClick={go}
+        disabled={busy}
+        className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 transition-colors"
+      >
+        <Copy className="w-4 h-4" weight="bold" />
+        {busy ? 'Generating…' : copied ? 'Copy login info again' : 'Copy login info'}
+      </button>
+
+      {copied && (
+        <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+          <div className="flex items-center gap-1.5 text-emerald-800 font-medium text-sm mb-1.5">
+            <CheckCircle weight="fill" className="w-4 h-4" /> Copied - paste it straight to the client
+          </div>
+          <div className="font-mono text-xs text-gray-700 space-y-0.5">
+            <div><span className="text-gray-400">Login&nbsp;&nbsp;&nbsp;</span> {copied.login_url}</div>
+            <div><span className="text-gray-400">Username</span> {copied.email}</div>
+            <div><span className="text-gray-400">Password</span> {copied.password}</div>
+          </div>
+          <div className="text-[11px] text-amber-700 mt-2">
+            Heads up: this reset the account password, so only this new one works now. Make sure the client gets it.
+          </div>
+        </div>
+      )}
+
       {err && <div className="text-xs text-rose-700 mt-1.5">{err}</div>}
     </div>
   )
