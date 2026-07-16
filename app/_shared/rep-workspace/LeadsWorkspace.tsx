@@ -216,7 +216,7 @@ export function LeadsWorkspace({
   const load = async () => {
     setLoading(true); setError('')
     try {
-      const res = await fetchWithAuth('/api/sales/leads')
+      const res = await fetchWithAuth('/api/sales/leads', { cache: 'no-store' })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) setError(j?.error || 'Failed to load leads')
       else {

@@ -135,5 +135,11 @@ export async function GET(request: NextRequest) {
     success: true,
     leads,
     ...(migrationNeeded ? { migration_needed: migrationNeeded } : {}),
+  }, {
+    // The browser was caching this list, so after a rep changed a
+    // disposition and navigated away + back, the reload served a stale
+    // copy with the old 'new' statuses even though the DB was updated.
+    // no-store forces a fresh read every time.
+    headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
   })
 }
