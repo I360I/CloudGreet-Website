@@ -27,6 +27,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // DISABLED 2026-07-15 to stop Places API spend. This ran Places searches
+  // twice every weekday on autopilot. Re-enable by removing this block (and
+  // set a Places daily quota cap first). Leaving the cron entry in vercel.json
+  // is harmless while this early-returns.
+  if (process.env.ENABLE_LEAD_HARVEST !== 'true') {
+    return NextResponse.json({ disabled: true, reason: 'lead harvest paused to control API spend' })
+  }
+
   const harvest = await processHarvestTargets(6)
   const feed = await feedCampaigns()
 
