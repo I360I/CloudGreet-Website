@@ -39,6 +39,10 @@ export async function POST(
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ error: 'Valid email required' }, { status: 400 })
   }
+  // When sent from the "mark demo set" flow the time is already chosen, so
+  // the email should state it rather than ask the prospect to pick one.
+  const scheduledAt = typeof body?.scheduled_at === 'string' ? body.scheduled_at : null
+  const prospectTz = typeof body?.tz === 'string' ? body.tz : null
 
   // Only leads assigned to the caller.
   const { data: assignment } = await supabaseAdmin
@@ -118,16 +122,37 @@ export async function POST(
     .maybeSingle()
   const senderFirst = (sender?.first_name || sender?.name || '').split(' ')[0] || null
 
-  try {
-    const resend = new Resend(resendKey)
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
-    await resend.emails.send({
-      from: `${senderFirst ? `${senderFirst} at CloudGreet` : 'CloudGreet'} <${fromEmail}>`,
-      to: email,
-      replyTo: sender?.email || process.env.RESEND_REPLY_TO || 'anthony@cloudgreet.com',
-      subject: 'That demo we talked about',
-      text:
-`${firstName ? `Hi ${firstName},` : 'Hi,'}
+  // If a specific time was booked, format it in the prospect's timezone
+  // (e.g. "Thursday, July 16 at 10:00 AM CDT") for the email.
+  let whenLine: string | null = null
+  if (scheduledAt) {
+    const d = new Date(scheduledAt)
+    if (!isNaN(d.getTime())) {
+      try {
+        whenLine = new Intl.DateTimeFormat('en-US', {
+          weekday: 'long', month: 'long', day: 'numeric',
+          hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+          ...(prospectTz ? { timeZone: prospectTz } : {}),
+        }).format(d)
+      } catch { /* bad tz - fall back to the no-time copy */ }
+    }
+  }
+
+  const greeting = firstName ? `Hi ${firstName},` : 'Hi,'
+  const signoff = senderFirst ? `Talk soon,\n${senderFirst}\nCloudGreet` : 'Talk soon,\nCloudGreet'
+  const bodyText = whenLine
+    ? `${greeting}
+
+Good talking with you just now. You're all set for your demo on ${whenLine}. Here's the link to join when it's time:
+
+${bookingUrl}
+
+It's 15 minutes. You'll hear the AI pick up a call for a business like yours, live, and you can grill us on anything after.
+
+Need to move it? Just reply here.
+
+${signoff}`
+    : `${greeting}
 
 Good talking with you just now. Here's that link - pick whatever time works and it'll go straight on the calendar:
 
@@ -137,7 +162,17 @@ It's 15 minutes. You'll hear the AI pick up a call for a business like yours, li
 
 If none of those times fit, just reply here and we'll make one work.
 
-${senderFirst ? `Talk soon,\n${senderFirst}\nCloudGreet` : 'Talk soon,\nCloudGreet'}`,
+${signoff}`
+
+  try {
+    const resend = new Resend(resendKey)
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@cloudgreet.com'
+    await resend.emails.send({
+      from: `${senderFirst ? `${senderFirst} at CloudGreet` : 'CloudGreet'} <${fromEmail}>`,
+      to: email,
+      replyTo: sender?.email || process.env.RESEND_REPLY_TO || 'anthony@cloudgreet.com',
+      subject: 'That demo we talked about',
+      text: bodyText,
     })
   } catch (e) {
     logger.error('send-booking-link: email send failed', {

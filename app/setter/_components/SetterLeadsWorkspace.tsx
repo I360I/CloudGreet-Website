@@ -1011,11 +1011,12 @@ function LeadsDemoSetModal({ leadId, leadState, leadPhone, initialEmail, onClose
     if (!when) { setErr('Pick a date/time'); return }
     if (emailTrimmed && !emailValid) { setErr("That email doesn't look right"); return }
     setBusy(true); setErr(null)
+    const scheduledAt = tz ? wallClockToUtc(when, tz) : new Date(when).toISOString()
     try {
       const r = await fetchWithAuth(`/api/sales/leads/${leadId}/mark-demo`, {
         method: 'POST',
         body: JSON.stringify({
-          scheduled_at: tz ? wallClockToUtc(when, tz) : new Date(when).toISOString(),
+          scheduled_at: scheduledAt,
           notes: notes.trim() || undefined,
         }),
       })
@@ -1030,7 +1031,7 @@ function LeadsDemoSetModal({ leadId, leadState, leadPhone, initialEmail, onClose
         try {
           const lr = await fetchWithAuth(`/api/sales/leads/${leadId}/send-booking-link`, {
             method: 'POST',
-            body: JSON.stringify({ email: emailTrimmed }),
+            body: JSON.stringify({ email: emailTrimmed, scheduled_at: scheduledAt, tz: tz || undefined }),
           })
           const lj = await lr.json().catch(() => ({}))
           if (lr.ok && lj?.success) result = { sentTo: emailTrimmed }
