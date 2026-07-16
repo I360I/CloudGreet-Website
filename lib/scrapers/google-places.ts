@@ -254,6 +254,14 @@ const DISCOVERY_FIELD_MASK = [
  'nextPageToken',
 ].join(',')
 
+// Hard per-process spend guard. Every Places search call costs ~3-4 cents,
+// so a runaway/looping scrape can rack up a real bill. Once a process makes
+// this many calls, discoverPlaces stops making more (returns what it has).
+// Overridable per script via PLACES_MAX_CALLS_PER_PROCESS; the Google-side
+// daily quota cap is the real ceiling, this is belt-and-suspenders.
+const PLACES_CALL_CAP = Number(process.env.PLACES_MAX_CALLS_PER_PROCESS || '1200')
+let placesCallsThisProcess = 0
+
 export async function* discoverPlaces(
  query: string,
  opts?: {
@@ -301,6 +309,13 @@ export async function* discoverPlaces(
  const seenIds = new Set<string>()
 
  while (yielded < max) {
+  if (placesCallsThisProcess >= PLACES_CALL_CAP) {
+   logger.warn('Places call cap hit - stopping to avoid runaway spend', {
+    cap: PLACES_CALL_CAP, query: query.slice(0, 60),
+   })
+   return
+  }
+  placesCallsThisProcess++
   const body: Record<string, any> = {
    textQuery: query,
    maxResultCount: 20,
