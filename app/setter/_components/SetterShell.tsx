@@ -171,6 +171,7 @@ export function SetterShell({
   const pathname = usePathname() || '/setter'
   const [name, setName] = useState<string | null>(null)
   const [messagesUnread, setMessagesUnread] = useState(0)
+  const [needsAgreement, setNeedsAgreement] = useState(false)
   const session = useDialerSessionMaybe()
   const sessionRunning = session?.phase === 'running'
 
@@ -187,6 +188,8 @@ export function SetterShell({
         if (meRes.status === 401) { router.replace('/login'); return }
         const me = await meRes.json().catch(() => ({}))
         setName(me?.profile?.name || me?.profile?.first_name || me?.profile?.email || 'Setter')
+        // One-time agreement confirm: flashes until they accept.
+        if (me?.profile) setNeedsAgreement(me.profile.role === 'setter' && !me.profile.agreement_accepted_at)
       } catch { /* non-fatal */ }
     })()
     return () => { cancelled = true }
@@ -240,7 +243,75 @@ export function SetterShell({
           Live session · {Math.min(session.engine.queueIndex + 1, session.engine.queue.length)} of {session.engine.queue.length}
         </Link>
       )}
+
+      {needsAgreement && <SetterAgreementGate onDone={() => setNeedsAgreement(false)} />}
     </>
+  )
+}
+
+/**
+ * One-time agreement confirm. Blocks the app until the setter checks the
+ * box + confirms; stamps custom_users.agreement_accepted_at so it never
+ * shows again. Only appears for setters whose agreement_accepted_at is null.
+ */
+const SETTER_AGREEMENT = `You're joining CloudGreet as an independent contractor (1099), not an employee. You set your own hours - there are no required hours and no quotas.
+
+How you're paid (commission only - no hourly, no base):
+- $20 for every demo you set that the prospect actually shows up to.
+- 40% of that client's first month if your demo turns into a paying client.
+
+A demo only counts if it's real: a genuine decision-maker who actually attends. Fake, duplicate, or padded demos don't pay. If a client refunds their payment, the commission tied to it is reversed.
+
+CloudGreet's leads, scripts, and client info are confidential - use them only for this work, and don't share them or take clients to a competitor. Either side can end this anytime; you keep everything you've already earned.`
+
+function SetterAgreementGate({ onDone }: { onDone: () => void }) {
+  const [checked, setChecked] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const confirm = async () => {
+    if (!checked || busy) return
+    setBusy(true); setErr(null)
+    try {
+      const r = await fetchWithAuth('/api/setter/accept-agreement', { method: 'POST' })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) { setErr(j?.error || 'Could not save. Try again.'); return }
+      onDone()
+    } catch { setErr('Could not save. Try again.') } finally { setBusy(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center px-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-6 pt-6 pb-4 border-b border-[#E3EAF4]">
+          <h2 className="text-lg font-semibold text-[#1E3A8A]">Before you start</h2>
+          <p className="text-sm text-gray-500 mt-1">Quick contractor agreement. Read it, check the box, and you&apos;re in.</p>
+        </div>
+        <div className="px-6 py-4 overflow-y-auto text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+          {SETTER_AGREEMENT}
+        </div>
+        <div className="px-6 py-4 border-t border-[#E3EAF4] bg-[#F8FAFC]">
+          <label className="flex items-start gap-2.5 cursor-pointer text-sm text-gray-800">
+            <input
+              type="checkbox"
+              checked={checked}
+              onChange={(e) => setChecked(e.target.checked)}
+              className="mt-0.5 w-4 h-4 accent-[#2563eb]"
+            />
+            <span>I have read and agree to these terms.</span>
+          </label>
+          {err && <div className="mt-2 text-xs text-rose-600">{err}</div>}
+          <button
+            onClick={confirm}
+            disabled={!checked || busy}
+            className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-[#2563eb] hover:bg-blue-700 text-white text-sm font-semibold rounded-xl py-2.5 disabled:opacity-50 transition-colors"
+          >
+            {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : null}
+            Agree &amp; continue
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 

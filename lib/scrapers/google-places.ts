@@ -266,6 +266,10 @@ export async function* discoverPlaces(
   includedType?: string
   /** Drop results below this user-rating count (acts as a "ghost listing" filter). */
   minReviewCount?: number
+  /** Drop results ABOVE this user-rating count. Big review counts mean big,
+   *  staffed shops where the owner never answers a cold call - cap this to
+   *  target small owner-operated businesses. */
+  maxReviewCount?: number
   /** Drop results below this average star rating. */
   minRating?: number
   /** Drop results that are CLOSED_PERMANENTLY / CLOSED_TEMPORARILY (default true). */
@@ -286,6 +290,7 @@ export async function* discoverPlaces(
 
  const max = opts?.maxResults ?? 200
  const minReviews = opts?.minReviewCount ?? 0
+ const maxReviews = opts?.maxReviewCount ?? Infinity
  const minRating = opts?.minRating ?? 0
  const excludeClosed = opts?.excludeClosed !== false
  // Default behavior preserved: TX-only. Existing TX-discovery sources
@@ -340,6 +345,9 @@ export async function* discoverPlaces(
      'X-Goog-FieldMask': DISCOVERY_FIELD_MASK,
     },
     body: JSON.stringify(body),
+    // Without a timeout a single dead connection hangs the whole scrape
+    // forever (Node fetch has no default). Abort after 15s and move on.
+    signal: AbortSignal.timeout(15_000),
    })
   } catch (e) {
    logger.warn('Places discovery threw', {
@@ -373,6 +381,7 @@ export async function* discoverPlaces(
 
    if (excludeClosed && /CLOSED/i.test(status)) continue
    if (reviewCount < minReviews) continue
+   if (reviewCount > maxReviews) continue
    if (rating > 0 && rating < minRating) continue
 
    yield {
