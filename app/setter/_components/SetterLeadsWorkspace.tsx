@@ -91,6 +91,7 @@ export function SetterLeadsWorkspace() {
   const [error, setError] = useState('')
   const [migrationNeeded, setMigrationNeeded] = useState<string | null>(null)
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
+  const [findingOwnerId, setFindingOwnerId] = useState<string | null>(null)
   const [flash, setFlash] = useState('')
   const [importing, setImporting] = useState(false)
   const [search, setSearch] = useState('')
@@ -269,6 +270,39 @@ export function SetterLeadsWorkspace() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // On-demand owner lookup ("Find owner"). Grounded web search; result is
+  // cached on the lead so a repeat click is free. Populates contact_name +
+  // owner_confidence so the existing name badge renders.
+  const findOwner = async (leadId: string) => {
+    setFindingOwnerId(leadId)
+    try {
+      const res = await fetch(`/api/sales/leads/${leadId}/find-owner`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({}),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setLeads((prev) => prev.map((l) => l.id === leadId ? {
+          ...l,
+          contact_name: j.name || '',
+          owner_confidence: j.confidence || l.owner_confidence,
+          owner_source: j.source || l.owner_source,
+          owner_verified_at: new Date().toISOString(),
+        } : l))
+      } else {
+        setFlash(`Couldn't look up the owner${j?.error ? ` - ${j.error}` : ''}.`)
+        setTimeout(() => setFlash(''), 3000)
+      }
+    } catch {
+      setFlash('Owner lookup failed - try again.')
+      setTimeout(() => setFlash(''), 3000)
+    } finally {
+      setFindingOwnerId(null)
+    }
+  }
 
   const updateStatus = async (leadId: string, status: string) => {
     setUpdatingStatusId(leadId)
@@ -749,6 +783,22 @@ export function SetterLeadsWorkspace() {
                             <span title="Owner name not confirmed - ask for the owner on the call" className="text-[9px] uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 py-px">unverified</span>
                           ) : null}
                         </span>
+                      )}
+                      {!l.contact_name && !l.owner_verified_at && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); findOwner(l.id) }}
+                          disabled={findingOwnerId === l.id}
+                          className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-600 hover:text-blue-700 hover:underline disabled:opacity-60"
+                          title="Look up the owner's name so you can ask for them by name"
+                        >
+                          {findingOwnerId === l.id
+                            ? <><CircleNotch weight="bold" className="w-3 h-3 animate-spin" /> Finding owner…</>
+                            : <><MagnifyingGlass weight="bold" className="w-3 h-3" /> Find owner</>}
+                        </button>
+                      )}
+                      {!l.contact_name && l.owner_verified_at && (
+                        <span className="text-gray-400 italic" title="No owner name found - ask for the owner on the call">no owner name found</span>
                       )}
                       {l.contact_name && (l.city || l.business_type) && <span className="text-gray-300">·</span>}
                       {l.business_type && <span className="text-gray-600">{l.business_type}</span>}
