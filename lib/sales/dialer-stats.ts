@@ -5,6 +5,23 @@
  * Overview stats, instead of drifting into two implementations.
  */
 import { supabaseAdmin } from '@/lib/supabase'
+import { tzToday, wallClockToUtc } from '@/lib/time/lead-timezone'
+
+// "Today" is the business day in Central time, not UTC. Vercel runs in UTC,
+// so anchoring to UTC midnight made "dials today" reset to 0 every night at
+// ~7pm Central (when UTC rolls over) mid-workday.
+export const BUSINESS_TZ = 'America/Chicago'
+export function startOfBusinessDay(): Date {
+  const t = tzToday(BUSINESS_TZ)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return new Date(wallClockToUtc(`${t.y}-${p(t.mo)}-${p(t.d)}T00:00`, BUSINESS_TZ))
+}
+/** YYYY-MM-DD of a UTC instant in the business (Central) day, for day bucketing. */
+function centralDateKey(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date(iso))
+}
 
 export type RepCallStats = {
   attempts: number
@@ -28,10 +45,7 @@ function emptyStats(): RepCallStats {
  * conversation).
  */
 export async function getRepCallStats(repId: string, opts?: { since?: Date }): Promise<RepCallStats> {
-  const since = opts?.since ?? (() => {
-    const now = new Date()
-    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  })()
+  const since = opts?.since ?? startOfBusinessDay()
 
   const { data: calls } = await supabaseAdmin
     .from('rep_calls')
@@ -70,8 +84,7 @@ export type DailyCallCount = { date: string; dials: number; connects: number }
  * per day.
  */
 export async function getRepDailySeries(repId: string, days = 7): Promise<DailyCallCount[]> {
-  const now = new Date()
-  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  const todayStart = startOfBusinessDay()
   const rangeStart = new Date(todayStart)
   rangeStart.setUTCDate(rangeStart.getUTCDate() - (days - 1))
 
@@ -95,7 +108,7 @@ export async function getRepDailySeries(repId: string, days = 7): Promise<DailyC
     .gte('started_at', rangeStart.toISOString())
 
   for (const c of (calls || []) as any[]) {
-    const key = String(c.started_at).slice(0, 10)
+    const key = centralDateKey(String(c.started_at))
     const bucket = buckets.get(key)
     if (!bucket) continue // outside the window (clock skew edge case) - drop rather than crash
     bucket.dials += 1
@@ -135,8 +148,7 @@ export async function getWeeklyDemoGoalStatus(
   baseRate: number = 0,
   bonusRate: number = 0,
 ): Promise<WeeklyGoalStatus> {
-  const now = new Date()
-  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  const todayStart = startOfBusinessDay()
   const weekStart = new Date(todayStart)
   weekStart.setUTCDate(weekStart.getUTCDate() - 6)
 

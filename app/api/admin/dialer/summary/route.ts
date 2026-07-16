@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { startOfBusinessDay } from '@/lib/sales/dialer-stats'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
 
   const now = new Date()
   const liveSince = new Date(now.getTime() - LIVE_WINDOW_MIN * 60_000).toISOString()
-  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString()
+  const todayStart = startOfBusinessDay().toISOString() // business (Central) day, not UTC
 
   // All sales reps - we need names regardless of whether they made calls today.
   const { data: reps } = await supabaseAdmin
