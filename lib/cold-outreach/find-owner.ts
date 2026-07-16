@@ -9,17 +9,21 @@ import { logger } from '@/lib/monitoring'
  * so they can ask for them BY NAME and walk past the gatekeeper, instead
  * of asking a receptionist for "the owner".
  *
- * GROUNDED, not guessed: it uses Gemini WITH Google Search grounding, so
- * the model searches the web (the business's own site, its Google
+ * GROUNDED, not guessed: it uses Claude with the web_search tool, so the
+ * model actually searches the web (the business's own site, its Google
  * listing, state license records, LinkedIn) and answers from what it
  * finds - it does NOT hallucinate a name. When nothing real turns up it
  * returns name=null so the rep knows to just ask, rather than confidently
  * asking for a made-up "Mike". Falls back to scraping the business
- * website if grounding is unavailable.
+ * website if the search is unavailable.
  *
- * Cheap: one on-demand LLM text call per click, cached on the lead
- * (leads.owner_verified_at) so a repeat click is free. Nothing like the
- * Places API - this can't run away.
+ * (Originally built on Gemini + Google Search grounding, but that API key
+ * had zero free-tier quota and would have required Google Cloud billing.
+ * Claude web search runs on the ANTHROPIC_API_KEY the app already uses.)
+ *
+ * Cheap: one on-demand call per click (~a couple cents, Haiku + one web
+ * search), cached on the lead (leads.owner_verified_at) so a repeat click
+ * is free. Nothing like the Places API - this can't run away.
  */
 
 export type FoundOwner = {
@@ -29,16 +33,16 @@ export type FoundOwner = {
   source: string // human-readable, e.g. 'business website', 'state license record', 'not_found'
 }
 
-const GEMINI_MODEL = process.env.GEMINI_OWNER_MODEL || 'gemini-2.0-flash'
+const OWNER_MODEL = process.env.OWNER_LOOKUP_MODEL || 'claude-haiku-4-5-20251001'
 
-async function geminiGroundedOwner(input: {
+async function claudeGroundedOwner(input: {
   businessName: string; city?: string | null; state?: string | null; website?: string | null
 }): Promise<FoundOwner | null> {
-  const key = process.env.GEMINI_API_KEY
+  const key = process.env.ANTHROPIC_API_KEY
   if (!key) return null
 
   const loc = [input.city, input.state].filter(Boolean).join(', ')
-  const prompt = `You help a sales rep find the OWNER (or primary decision-maker) of a small local business, so they can ask for that person by name and get past a receptionist.
+  const prompt = `Find the OWNER (or primary decision-maker) of a small local business, so a sales rep can ask for that person by name and get past a receptionist.
 
 Business: ${input.businessName}${loc ? `\nLocation: ${loc}` : ''}${input.website ? `\nWebsite: ${input.website}` : ''}
 
@@ -49,26 +53,32 @@ Respond with ONLY a JSON object, no other text:
 Use confidence "high" only when an authoritative source clearly names them as owner, "medium" when reasonably inferred, "low" when uncertain. If no name is found: name=null, confidence="low".`
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          tools: [{ google_search: {} }],
-          generationConfig: { temperature: 0 },
-        }),
-        signal: AbortSignal.timeout(20_000),
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
       },
-    )
+      body: JSON.stringify({
+        model: OWNER_MODEL,
+        max_tokens: 500,
+        temperature: 0,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      signal: AbortSignal.timeout(30_000),
+    })
     if (!res.ok) {
-      logger.warn('find-owner: gemini http error', { status: res.status })
+      logger.warn('find-owner: claude http error', { status: res.status })
       return null
     }
     const j = await res.json()
-    const text: string = (j?.candidates?.[0]?.content?.parts || [])
-      .map((p: any) => p?.text).filter(Boolean).join('') || ''
+    // Concatenate the assistant's text blocks (web-search results live in
+    // separate tool blocks; the final answer JSON is in the text blocks).
+    const text: string = (Array.isArray(j?.content) ? j.content : [])
+      .filter((b: any) => b?.type === 'text')
+      .map((b: any) => b?.text).filter(Boolean).join('\n')
     const match = text.match(/\{[\s\S]*\}/)
     if (!match) return null
 
@@ -86,7 +96,7 @@ Use confidence "high" only when an authoritative source clearly names them as ow
       source,
     }
   } catch (e) {
-    logger.warn('find-owner: gemini failed', { error: e instanceof Error ? e.message : 'unknown' })
+    logger.warn('find-owner: claude failed', { error: e instanceof Error ? e.message : 'unknown' })
     return null
   }
 }
@@ -95,10 +105,10 @@ export async function findOwner(input: {
   businessName: string; city?: string | null; state?: string | null; website?: string | null
 }): Promise<FoundOwner> {
   // 1. Grounded web lookup - works even with no website (most small shops).
-  const web = await geminiGroundedOwner(input)
+  const web = await claudeGroundedOwner(input)
   if (web?.name) return web
 
-  // 2. Website-scrape fallback when grounding found nothing but a site exists.
+  // 2. Website-scrape fallback when the search found nothing but a site exists.
   if (input.website) {
     try {
       const scraped = await scrapeWebsite(input.website)
