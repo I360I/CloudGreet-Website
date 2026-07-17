@@ -13,6 +13,7 @@ import { resolveCallBusinessId } from '@/lib/calls/resolve-business'
 import { recordUsageCost } from '@/lib/billing/usage-costs'
 import { readSlotCache, writeSlotCache, invalidateSlotCache } from '@/lib/slot-cache'
 import { resolveBusinessTimezone } from '@/lib/timezones'
+import { normaliseE164 } from '@/lib/retell-tools'
 import { CONFIG } from '@/lib/config'
 import Stripe from 'stripe'
 
@@ -229,7 +230,11 @@ export async function POST(request: NextRequest) {
  }
  switch (tool.name) {
  case 'book_appointment': {
- const { name: rawName, phone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw, is_emergency: isEmergencyRaw, email: rawEmail, flight_number: rawFlightNumber, airline: rawAirline, pickup: rawPickup, dropoff: rawDropoff } = tool.arguments || {}
+ const { name: rawName, phone: rawPhone, service: rawService, datetime, business_id: toolBusinessId, review_consent: reviewConsentRaw, is_emergency: isEmergencyRaw, email: rawEmail, flight_number: rawFlightNumber, airline: rawAirline, pickup: rawPickup, dropoff: rawDropoff } = tool.arguments || {}
+ // Force the phone to strict E.164 (+1XXXXXXXXXX). Spoken digits often
+ // arrive without the country code, which then fails the confirmation
+ // SMS and shows a bare 10-digit number on the owner's booking alert.
+ const phone = normaliseE164(String(rawPhone || '')) || String(rawPhone || '')
  // Retell's LLM often passes the verbalized form of any digits the
  // agent spoke aloud - "AC leaking at one one one one Main Street"
  // instead of "1111". Compress runs of digit words back to numerals
@@ -947,7 +952,12 @@ export async function POST(request: NextRequest) {
  const body = `${businessName}: you're booked for ${service ? service + ' ' : ''}${whenText}. We'll see you then! Reply STOP to opt out.`
 
  try {
- await telnyxClient.sendSMS(phone, body, fromNum)
+ // Coerce to strict E.164 first. Numbers captured from spoken digits
+ // often arrive without the +1 country code (e.g. "7372960092"), which
+ // Telnyx rejects - that failure is what fired the "booking did not
+ // complete" safety-net alert even though the booking itself saved.
+ const toNumber = normaliseE164(String(phone)) || String(phone)
+ await telnyxClient.sendSMS(toNumber, body, fromNum)
  return NextResponse.json({ success: true })
  } catch (smsError) {
  const msg = smsError instanceof Error ? smsError.message : 'Unknown error'

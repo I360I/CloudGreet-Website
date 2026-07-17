@@ -495,7 +495,7 @@ export function getRetellGeneralTools(
  * confidently parse returns null so transfer_call gets skipped instead
  * of poisoning the entire LLM patch.
  */
-function normaliseE164(raw: string): string | null {
+export function normaliseE164(raw: string): string | null {
   const digits = raw.replace(/\D/g, '')
   if (digits.length === 10) return `+1${digits}`
   if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`
