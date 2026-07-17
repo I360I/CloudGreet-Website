@@ -70,8 +70,11 @@ export function ConflictCalendars() {
  const isNoise = (name: string) => /holiday|birthday/i.test(name || '')
  const allCals = (groups || []).flatMap((g) => g.calendars)
  const realCals = allCals.filter((c) => !isNoise(c.name))
- const noiseCals = allCals.filter((c) => isNoise(c.name))
- const allOn = realCals.length > 0 && realCals.every((c) => c.isSelected) && noiseCals.every((c) => !c.isSelected)
+ // Master toggle reflects only the REAL calendars. Holiday/birthday feeds are
+ // read-only and can get stuck "selected" from a past attempt (Cal.com rejects
+ // any write to them), so including them here made the toggle snap back off
+ // and never stay on. They're irrelevant to "check all MY calendars".
+ const allOn = realCals.length > 0 && realCals.every((c) => c.isSelected)
 
  const apply = async (selections: Selection[]) => {
   setSaving(true); setError('')
