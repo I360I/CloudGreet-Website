@@ -673,6 +673,7 @@ export function DialerCockpit() {
           leadId={demoModalLeadId}
           leadState={leadMetaById.get(demoModalLeadId)?.state || null}
           leadPhone={leadMetaById.get(demoModalLeadId)?.phone || null}
+          initialEmail={leadMetaById.get(demoModalLeadId)?.email || ''}
           onClose={() => { setDemoModalLeadId(null); if (queuePaused) togglePause() }}
           onSaved={() => {
             setDemoModalLeadId(null)
@@ -901,8 +902,9 @@ function CallStateBadge({ callState, seconds, countdown, queuePaused }: {
   return null
 }
 
-/** Same endpoint + behavior as the leads-list demo modal. */
-function DemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: { leadId: string; leadState?: string | null; leadPhone?: string | null; onClose: () => void; onSaved: () => void }) {
+/** Same endpoint + behavior as the leads-list demo modal, including the
+ *  optional prospect-email that sends the booking-link invite. */
+function DemoSetModal({ leadId, leadState, leadPhone, initialEmail, onClose, onSaved }: { leadId: string; leadState?: string | null; leadPhone?: string | null; initialEmail?: string | null; onClose: () => void; onSaved: () => void }) {
   const tz = leadTimeZone(leadState, leadPhone)
   const initial = (() => {
     const d = new Date()
@@ -912,12 +914,17 @@ function DemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: { lead
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   })()
   const [when, setWhen] = useState(initial)
+  const [email, setEmail] = useState((initialEmail || '').trim())
   const [notes, setNotes] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
+  const emailTrimmed = email.trim()
+  const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailTrimmed)
+
   const save = async () => {
     if (!when) { setErr('Pick a date/time'); return }
+    if (emailTrimmed && !emailValid) { setErr("That email doesn't look right"); return }
     setBusy(true); setErr(null)
     try {
       // Interpret the picked wall-clock time in the PROSPECT's timezone
@@ -929,6 +936,18 @@ function DemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: { lead
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok || !j?.success) { setErr(j?.error || `Failed (${r.status})`); return }
+
+      // If they gave an email, also send the booking-link invite so the demo
+      // lands on the rep's calendar with reminders (a verbal time alone
+      // no-shows). Non-fatal: the demo is already booked either way.
+      if (emailValid) {
+        try {
+          await fetchWithAuth(`/api/sales/leads/${leadId}/send-booking-link`, {
+            method: 'POST',
+            body: JSON.stringify({ email: emailTrimmed, scheduled_at: scheduledIso, tz: tz || undefined }),
+          })
+        } catch { /* invite is best-effort; the booking stuck */ }
+      }
       onSaved()
     } catch { setErr('Failed') } finally { setBusy(false) }
   }
@@ -937,7 +956,7 @@ function DemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: { lead
     <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center px-4" onClick={onClose}>
       <div className="bg-white border border-[#E3EAF4] rounded-xl shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-base font-semibold mb-1" style={{ color: NAVY }}>Mark demo set</h3>
-        <p className="text-xs text-slate-500 mb-4">Status flips to demo_scheduled and the team gets pinged.</p>
+        <p className="text-xs text-slate-500 mb-4">Books the demo, pings the team, and (if you add an email) sends the prospect the booking link so it lands on the rep&apos;s calendar.</p>
         <label className="block text-xs font-medium text-slate-700 mb-1.5">
           When? <span className="font-normal text-slate-400">{tz ? `(prospect's time · ${tzAbbrev(tz, new Date(when || Date.now()))})` : '(your local time)'}</span>
         </label>
@@ -945,6 +964,14 @@ function DemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: { lead
           type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} autoFocus
           className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-blue-500"
         />
+        <label className="block text-xs font-medium text-slate-700 mt-3 mb-1.5">
+          Prospect&apos;s email <span className="font-normal text-slate-400">(we&apos;ll send them the booking link)</span>
+        </label>
+        <input
+          type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com"
+          className="w-full px-3.5 py-2.5 bg-white border border-[#E3EAF4] rounded-lg text-sm focus:outline-none focus:border-blue-500"
+        />
+        <p className="text-[11px] text-slate-400 mt-1">Optional. Leave blank if you&apos;ll send the invite yourself, we&apos;ll just book it and ping the team.</p>
         <label className="block text-xs font-medium text-slate-700 mt-3 mb-1.5">Notes (optional)</label>
         <textarea
           value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="anything for the build"
@@ -958,7 +985,7 @@ function DemoSetModal({ leadId, leadState, leadPhone, onClose, onSaved }: { lead
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-60 transition-colors duration-150"
           >
             {busy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <CheckCircle weight="fill" className="w-4 h-4" />}
-            Mark demo set
+            {emailValid ? 'Book demo & send link' : 'Mark demo set'}
           </button>
         </div>
       </div>
