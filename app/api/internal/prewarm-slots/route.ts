@@ -61,10 +61,14 @@ export async function POST(request: NextRequest) {
     // Prewarm a 14-day window. Callers routinely ask for "next Friday"
     // or "two weeks from now" - a 7-day horizon meant anything past
     // that fell out of cache and got falsely reported as fully booked.
-    const start = new Date()
-    start.setUTCHours(0, 0, 0, 0)
-    const end = new Date(start)
-    end.setUTCDate(end.getUTCDate() + 14)
+    // Anchor to midnight in the BUSINESS timezone, not UTC. setUTCHours(0)
+    // is UTC midnight - which is 7pm the previous evening in Central (6pm
+    // Mountain, 8pm Eastern) - so an evening caller got a window that
+    // started at "7pm today" and slots bled into the next day. Local
+    // midnight keeps availability correct around the clock.
+    const startYmd = localYmd(new Date(), tz)
+    const start = zonedMidnightUtc(startYmd, tz)
+    const end = new Date(start.getTime() + 14 * 24 * 60 * 60 * 1000)
 
     const rawSlots = await listAvailableSlots(apiKey, {
       eventTypeId,
@@ -79,7 +83,10 @@ export async function POST(request: NextRequest) {
 
     await writeSlotCache(businessId, 'week', {
       slots, slots_display, timezone: tz, source: 'calcom', scope: 'week',
-      coverage_start_iso: start.toISOString(),
+      // Store the coverage start as UTC-midnight of today's LOCAL date so the
+      // lookup's date-in-coverage check (which compares `${date}T00:00Z`)
+      // still includes today.
+      coverage_start_iso: `${startYmd}T00:00:00.000Z`,
       coverage_end_iso: end.toISOString(),
     })
 
@@ -132,4 +139,29 @@ function formatHuman(iso: string, tz: string): string {
   } catch {
     return iso
   }
+}
+
+// Today's calendar date (YYYY-MM-DD) in the given timezone.
+function localYmd(date: Date, tz: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(date)
+}
+
+// The UTC instant corresponding to local midnight of a YYYY-MM-DD in `tz`.
+// e.g. zonedMidnightUtc('2026-07-16', 'America/Chicago') -> 2026-07-16T05:00:00Z.
+function zonedMidnightUtc(ymd: string, tz: string): Date {
+  const [y, m, d] = ymd.split('-').map(Number)
+  const guess = new Date(Date.UTC(y, (m || 1) - 1, d || 1, 0, 0, 0))
+  const p = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(guess).reduce<Record<string, string>>((a, part) => {
+    a[part.type] = part.value
+    return a
+  }, {})
+  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second)
+  const offsetMs = asUtc - guess.getTime()
+  return new Date(guess.getTime() - offsetMs)
 }
