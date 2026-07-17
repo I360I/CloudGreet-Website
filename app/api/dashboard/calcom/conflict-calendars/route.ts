@@ -8,6 +8,25 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
+ * Google's read-only system feeds - "United States holidays", "Birthdays"
+ * (Contacts) - can't be used as conflict calendars; Cal.com returns a Bad
+ * Request. Skip them silently instead of surfacing a scary "some calendars
+ * didn't update" error. You'd never want to block bookings on holidays or
+ * birthdays anyway, which is why the "check all" path already excludes them.
+ */
+function isReadOnlySystemCalendar(externalId?: string, name?: string): boolean {
+  const id = (externalId || '').toLowerCase()
+  const nm = (name || '').toLowerCase()
+  return (
+    id.includes('#holiday@') ||
+    id.includes('#contacts@') ||
+    id.includes('addressbook#contacts') ||
+    id.endsWith('holiday@group.v.calendar.google.com') ||
+    /\bholidays?\b|\bbirthdays?\b/.test(nm)
+  )
+}
+
+/**
  * The "Check for conflicts" calendars from Cal.com, surfaced in our UI.
  *
  * GET  -> list the contractor's connected calendars + which are conflict-checked
@@ -60,6 +79,10 @@ export async function POST(request: NextRequest) {
   const failures: string[] = []
   for (const s of selections) {
     if (!s || typeof s.externalId !== 'string' || typeof s.integration !== 'string') continue
+    // Read-only holiday/birthday feeds can't be conflict calendars - skip
+    // silently so they never produce a "didn't update" error on the client's
+    // setup page.
+    if (isReadOnlySystemCalendar(s.externalId, s.name)) continue
     try {
       await setCalendarConflictCheck(
         r.apiKey,
