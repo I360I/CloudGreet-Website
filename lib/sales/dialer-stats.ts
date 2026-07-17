@@ -118,6 +118,78 @@ export async function getRepDailySeries(repId: string, days = 7): Promise<DailyC
   return Array.from(buckets.values())
 }
 
+export type DailyReportRow = {
+  date: string          // YYYY-MM-DD, Central business day
+  dials: number
+  connects: number      // completed AND > 30s (a real conversation)
+  conversations: number // >= 15s (talked to someone, even briefly)
+  voicemails: number
+  no_answers: number
+  talk_seconds: number
+  last_call_at: string | null
+  demos: number         // leads currently demo_scheduled/demo_showed, bucketed by last touch
+}
+
+/**
+ * Per-day outcome breakdown for the last `days` days (newest first, Central
+ * business days). Backs the setter "Daily reports" page so a setter can read
+ * their own numbers and write an accurate EoD without hand-counting. Call
+ * outcomes come from rep_calls (an exact per-call log); `demos` is bucketed
+ * from lead_assignments by last_touched_at (approximate, same current-status
+ * quirk as the rest of the setter stats).
+ */
+export async function getRepDailyReport(repId: string, days = 14): Promise<DailyReportRow[]> {
+  const todayStart = startOfBusinessDay()
+  const rangeStart = new Date(todayStart)
+  rangeStart.setUTCDate(rangeStart.getUTCDate() - (days - 1))
+
+  const buckets = new Map<string, DailyReportRow>()
+  for (let i = 0; i < days; i++) {
+    const d = new Date(rangeStart)
+    d.setUTCDate(d.getUTCDate() + i)
+    const key = d.toISOString().slice(0, 10)
+    buckets.set(key, {
+      date: key, dials: 0, connects: 0, conversations: 0, voicemails: 0,
+      no_answers: 0, talk_seconds: 0, last_call_at: null, demos: 0,
+    })
+  }
+
+  const { data: calls } = await supabaseAdmin
+    .from('rep_calls')
+    .select('status, started_at, duration_seconds')
+    .eq('rep_id', repId)
+    .or('direction.eq.outbound,direction.is.null') // outbound work only
+    .gte('started_at', rangeStart.toISOString())
+
+  for (const c of (calls || []) as any[]) {
+    const b = buckets.get(centralDateKey(String(c.started_at)))
+    if (!b) continue
+    const dur = c.duration_seconds || 0
+    b.dials += 1
+    if (c.status === 'completed' && dur > 30) b.connects += 1
+    if (dur >= 15) b.conversations += 1
+    if (c.status === 'voicemail') b.voicemails += 1
+    if (c.status === 'no_answer') b.no_answers += 1
+    b.talk_seconds += dur
+    if (!b.last_call_at || String(c.started_at) > b.last_call_at) b.last_call_at = String(c.started_at)
+  }
+
+  const { data: demos } = await supabaseAdmin
+    .from('lead_assignments')
+    .select('status, last_touched_at')
+    .eq('rep_id', repId)
+    .in('status', ['demo_scheduled', 'demo_showed'])
+    .gte('last_touched_at', rangeStart.toISOString())
+
+  for (const d of (demos || []) as any[]) {
+    if (!d.last_touched_at) continue
+    const b = buckets.get(centralDateKey(String(d.last_touched_at)))
+    if (b) b.demos += 1
+  }
+
+  return Array.from(buckets.values()).sort((a, b) => b.date.localeCompare(a.date))
+}
+
 export type WeeklyGoalStatus = {
   target: number
   /** Demos HELD (client showed) in the current rolling 7-day week. */
