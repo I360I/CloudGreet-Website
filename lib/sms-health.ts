@@ -147,7 +147,7 @@ export async function runSmsHealthCheck(opts?: {
           } else if (tc?.result?.ok === false || tc?.result?.success === false) {
             const errCode = tc?.result?.error
             // These are guards working as designed, not real failures -- skip them
-            if (errCode === 'already_dispatched_in_conversation' || errCode === 'dispatch_cap_exceeded') {
+            if (errCode === 'already_dispatched_in_conversation' || errCode === 'dispatch_cap_exceeded' || errCode === 'already_booked_in_conversation') {
               continue
             }
             issues.push({
