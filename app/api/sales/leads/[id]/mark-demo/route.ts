@@ -88,6 +88,30 @@ export async function POST(
     return NextResponse.json({ error: updErr.message }, { status: 500 })
   }
 
+  // Setter handoff: give the closing rep their OWN copy of this lead so the
+  // setter-booked demo shows up in the closer's Leads list (dialable +
+  // dispositionable), not only as a closes row they can't work from there.
+  // PK is (lead_id, rep_id), so this is a separate row from the setter's;
+  // upsert keeps it idempotent. Non-fatal - the demo is already recorded.
+  if (closeOwnerRepId && closeOwnerRepId !== auth.userId) {
+    const nowIso = new Date().toISOString()
+    const { error: closerAssignErr } = await supabaseAdmin
+      .from('lead_assignments')
+      .upsert({
+        lead_id: params.id,
+        rep_id: closeOwnerRepId,
+        status: 'demo_scheduled',
+        follow_up_at: scheduledAtIso,
+        assigned_at: nowIso,
+        last_touched_at: nowIso,
+      }, { onConflict: 'lead_id,rep_id' })
+    if (closerAssignErr) {
+      logger.warn('mark-demo: closer lead-assignment upsert failed', {
+        leadId: params.id, closeOwnerRepId, error: closerAssignErr.message,
+      })
+    }
+  }
+
   // Push into admin's agents-due queue by creating (or updating) a
   // close row with demo_scheduled_at set. The queue surfaces both
   // paid clients (business_id NOT NULL) and rep-flagged upcoming
