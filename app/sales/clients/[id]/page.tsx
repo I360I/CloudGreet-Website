@@ -306,6 +306,9 @@ export default function SalesClientDetailPage() {
           <CopyLoginSection businessId={id} />
         </motion.div>
 
+        {/* Disposition (deal stage) - syncs with the rep's Leads list */}
+        <DispositionCard businessId={id} />
+
         {/* Voice + greeting */}
         <VoicePanel businessId={id} business={business} onSaved={load} />
 
@@ -639,6 +642,86 @@ function LoginAsClientSection({ businessId, businessName }: {
       </button>
       {err && <div className="text-xs text-rose-700 mt-1.5">{err}</div>}
     </div>
+  )
+}
+
+const DISPO_OPTIONS: { key: string; label: string }[] = [
+  { key: 'interested', label: 'Interested' },
+  { key: 'demo_scheduled', label: 'Demo scheduled' },
+  { key: 'demo_showed', label: 'Demo held' },
+  { key: 'proposal_sent', label: 'Proposal sent' },
+  { key: 'closed', label: 'Closed / won' },
+  { key: 'not_interested', label: 'Not interested' },
+  { key: 'dead', label: 'Dead' },
+]
+
+/**
+ * Disposition (deal stage) on the client page. Reads/writes THIS rep's
+ * lead_assignment for the lead behind this client (matched by phone), so it
+ * stays in sync with the Leads list. Renders nothing if there's no matching
+ * lead to disposition.
+ */
+function DispositionCard({ businessId }: { businessId: string }) {
+  const [status, setStatus] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [noLead, setNoLead] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await fetchWithAuth(`/api/sales/clients/${businessId}/disposition`)
+        const j = await r.json().catch(() => ({}))
+        if (!cancelled && j?.success) { setStatus(j.status || ''); setNoLead(!j.lead_id) }
+      } catch { /* non-fatal */ } finally { if (!cancelled) setLoading(false) }
+    })()
+    return () => { cancelled = true }
+  }, [businessId])
+
+  const change = async (next: string) => {
+    setStatus(next); setSaving(true); setSaved(false); setErr('')
+    try {
+      const r = await fetchWithAuth(`/api/sales/clients/${businessId}/disposition`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: next }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) { setErr(j?.error || 'Could not save'); return }
+      setSaved(true); setTimeout(() => setSaved(false), 2000)
+    } catch { setErr('Could not save') } finally { setSaving(false) }
+  }
+
+  if (loading || noLead) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: EASE }}
+      className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 mb-5"
+    >
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-sm font-medium text-gray-900">Disposition</div>
+          <div className="text-xs text-gray-500 mt-0.5">Where this deal stands. Syncs with your Leads list.</div>
+        </div>
+        <div className="flex items-center gap-2">
+          {saved && <span className="text-xs text-emerald-600 inline-flex items-center gap-1"><CheckCircle weight="fill" className="w-3.5 h-3.5" /> Saved</span>}
+          <select
+            value={status}
+            onChange={(e) => change(e.target.value)}
+            disabled={saving}
+            className="text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 cursor-pointer focus:outline-none focus:border-gray-900 disabled:opacity-60"
+          >
+            <option value="">Set disposition…</option>
+            {DISPO_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+          </select>
+        </div>
+      </div>
+      {err && <div className="text-xs text-rose-700 mt-2">{err}</div>}
+    </motion.div>
   )
 }
 
