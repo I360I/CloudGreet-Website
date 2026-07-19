@@ -1,0 +1,33 @@
+name: Patch Quick-Availability Voice Prompt
+
+# One-off / re-runnable: pushes the quick_availability block (see
+# lib/agent-prompt-patches.ts) into Steve's live Retell voice agent
+# prompt. Manual trigger only - run from the Actions tab whenever the
+# block needs to be (re)synced.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run patch script
+        env:
+          RETELL_API_KEY: ${{ secrets.RETELL_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/patch-quick-availability-voice.ts

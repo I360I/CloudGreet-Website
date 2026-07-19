@@ -4,7 +4,7 @@
  * full pickup/name/phone/passengers/email intake before the agent ever checked the
  * calendar, and pickup/date details got confirmed twice in a row. See Steve's 7/19
  * 3:19pm test call.
- * Run with: npx ts-node --project tsconfig.scripts.json scripts/patch-quick-availability-voice.ts
+ * Run with: npx tsx scripts/patch-quick-availability-voice.ts
  */
 
 import 'dotenv/config'
