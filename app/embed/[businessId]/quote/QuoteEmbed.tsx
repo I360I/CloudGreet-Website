@@ -38,6 +38,16 @@ function postToParent(type: string) {
   try { window.parent?.postMessage({ type }, '*') } catch { /* ignore */ }
 }
 
+// SmartRide is Central Ohio: restrict address autocomplete to a circle around
+// Columbus (kills India/Pakistan/NJ results for "CMH") and offer one-tap fills
+// for the two local airports. When we add non-Ohio transport clients, make
+// this per-business.
+const CENTRAL_OHIO = { lat: 39.9612, lng: -82.9988, radius: 250000 } // Columbus, ~250km
+const OHIO_AIRPORTS = [
+  { label: 'CMH', value: 'John Glenn Columbus International Airport (CMH), Columbus, OH 43219' },
+  { label: 'Rickenbacker', value: 'Rickenbacker International Airport (LCK), Columbus, OH 43217' },
+]
+
 function AddressInput({
   label,
   value,
@@ -46,6 +56,9 @@ function AddressInput({
   onSubmit,
   onFocused,
   radius = '12px',
+  biasLat,
+  biasLng,
+  biasRadius,
 }: {
   label: string
   value: string
@@ -54,6 +67,10 @@ function AddressInput({
   onSubmit?: () => void
   onFocused?: () => void
   radius?: string
+  // Restrict address suggestions to a circle (e.g. Central Ohio).
+  biasLat?: number
+  biasLng?: number
+  biasRadius?: number
 }) {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [open, setOpen] = useState(false)
@@ -64,16 +81,18 @@ function AddressInput({
   const fetchSuggestions = useCallback((q: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     if (q.length < 3) { setSuggestions([]); setOpen(false); return }
+    const bias = (biasLat != null && biasLng != null && biasRadius != null)
+      ? `&lat=${biasLat}&lng=${biasLng}&radius=${biasRadius}` : ''
     debounceRef.current = setTimeout(async () => {
       try {
-        const r = await fetch(`/api/embed/places?input=${encodeURIComponent(q)}`)
+        const r = await fetch(`/api/embed/places?input=${encodeURIComponent(q)}${bias}`)
         const j = await r.json().catch(() => ({ predictions: [] }))
         setSuggestions(j.predictions || [])
         setOpen((j.predictions || []).length > 0)
         setActive(-1)
       } catch { /* ignore */ }
     }, 280)
-  }, [])
+  }, [biasLat, biasLng, biasRadius])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -296,7 +315,21 @@ export default function QuoteEmbed({
           <RideTypeSelect value={rideType} onChange={setRideType} onFocused={expand} radius={r} />
           <div className={isHourly ? '' : 'grid grid-cols-1 min-[380px]:grid-cols-2 gap-2'}>
             <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Pickup</p>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Pickup</p>
+                <div className="flex gap-1">
+                  {OHIO_AIRPORTS.map((a) => (
+                    <button
+                      key={a.label}
+                      type="button"
+                      onClick={() => setPickup(a.value)}
+                      className="text-[10px] font-medium leading-none px-2 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <AddressInput
                 label=""
                 value={pickup}
@@ -305,11 +338,28 @@ export default function QuoteEmbed({
                 onSubmit={submitQuote}
                 onFocused={expand}
                 radius={r}
+                biasLat={CENTRAL_OHIO.lat}
+                biasLng={CENTRAL_OHIO.lng}
+                biasRadius={CENTRAL_OHIO.radius}
               />
             </div>
             {!isHourly && (
               <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Destination</p>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Destination</p>
+                  <div className="flex gap-1">
+                    {OHIO_AIRPORTS.map((a) => (
+                      <button
+                        key={a.label}
+                        type="button"
+                        onClick={() => setDropoff(a.value)}
+                        className="text-[10px] font-medium leading-none px-2 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      >
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <AddressInput
                   label=""
                   value={dropoff}
@@ -318,6 +368,9 @@ export default function QuoteEmbed({
                   onSubmit={submitQuote}
                   onFocused={expand}
                   radius={r}
+                  biasLat={CENTRAL_OHIO.lat}
+                  biasLng={CENTRAL_OHIO.lng}
+                  biasRadius={CENTRAL_OHIO.radius}
                 />
               </div>
             )}
