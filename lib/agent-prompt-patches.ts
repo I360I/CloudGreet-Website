@@ -22,7 +22,7 @@ import { supabaseAdmin } from './supabase'
 
 const RETELL_BASE = 'https://api.retellai.com'
 
-type BlockId = 'service_hours' | 'venue_fees'
+type BlockId = 'service_hours' | 'venue_fees' | 'quick_availability'
 
 const MARKERS: Record<BlockId, { start: string; end: string }> = {
   service_hours: {
@@ -32,6 +32,10 @@ const MARKERS: Record<BlockId, { start: string; end: string }> = {
   venue_fees: {
     start: '<!-- cg:venue_fees:start -->',
     end: '<!-- cg:venue_fees:end -->',
+  },
+  quick_availability: {
+    start: '<!-- cg:quick_availability:start -->',
+    end: '<!-- cg:quick_availability:end -->',
   },
 }
 
@@ -170,6 +174,70 @@ export async function syncVenueFeesToPrompt(args: {
   return { ok: true, updated: true }
 }
 
+/**
+ * Sync the quick-availability-check rule into the live Retell agent
+ * prompt. Static content (no per-business data), same on every
+ * business - lets a caller ask "are you free Thursday at 4:30?" and
+ * get a direct answer instead of being forced through the full
+ * pickup/name/phone/email intake before the agent ever calls
+ * lookup_availability. Mirrors the SMS agent's existing rule that
+ * lookup_availability is read-only and can fire freely (lib/sms-agent.ts).
+ * Also collapses the redundant back-to-back detail confirmation seen
+ * in Steve's 7/19 3:19pm test call (asked twice in a row).
+ */
+export async function syncQuickAvailabilityToPrompt(args: {
+  businessId: string
+}): Promise<{ ok: boolean; updated?: boolean; reason?: string }> {
+  const apiKey = process.env.RETELL_API_KEY
+  if (!apiKey) return { ok: false, reason: 'no_retell_api_key' }
+
+  const { data: biz } = await supabaseAdmin
+    .from('businesses')
+    .select('retell_agent_id, business_name')
+    .eq('id', args.businessId)
+    .maybeSingle()
+  const agentId = (biz as any)?.retell_agent_id
+  if (!agentId) return { ok: true, updated: false, reason: 'no_agent' }
+
+  const aRes = await fetch(`${RETELL_BASE}/get-agent/${agentId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  if (!aRes.ok) return { ok: false, reason: `get-agent ${aRes.status}` }
+  const agent = await aRes.json() as any
+  const engine = agent?.response_engine
+  if (engine?.type !== 'retell-llm' || !engine?.llm_id) {
+    return { ok: false, reason: `engine ${engine?.type || 'unknown'}` }
+  }
+  const llmId = engine.llm_id
+
+  const lRes = await fetch(`${RETELL_BASE}/get-retell-llm/${llmId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  })
+  if (!lRes.ok) return { ok: false, reason: `get-llm ${lRes.status}` }
+  const llm = await lRes.json() as any
+  const current: string = llm?.general_prompt || ''
+  if (!current) return { ok: false, reason: 'empty_prompt' }
+
+  const next = upsertBlock(current, 'quick_availability', renderQuickAvailabilityBlock())
+  if (next === current) return { ok: true, updated: false, reason: 'no_change' }
+
+  const pRes = await fetch(`${RETELL_BASE}/update-retell-llm/${llmId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ general_prompt: next }),
+  })
+  if (!pRes.ok) {
+    const txt = await pRes.text().catch(() => pRes.statusText)
+    logger.warn('syncQuickAvailabilityToPrompt: update-retell-llm failed', {
+      businessId: args.businessId, llmId, status: pRes.status, body: txt.slice(0, 200),
+    })
+    return { ok: false, reason: `update-llm ${pRes.status}` }
+  }
+
+  logger.info('quick_availability synced to live prompt', { businessId: args.businessId, llmId })
+  return { ok: true, updated: true }
+}
+
 /* ---------- helpers ---------- */
 
 function renderServiceHoursBlock(hours: string | null): string {
@@ -211,6 +279,21 @@ function renderVenueFeesBlock(venues: Array<{ venue_name: string; category: stri
   if (standards.length) lines.push(`  Standard ($15): ${standards.slice(0, 6).map(v => v.venue_name).join(', ')}${standards.length > 6 ? `, and ${standards.length - 6} more` : ''}.`)
 
   return lines.join('\n')
+}
+
+function renderQuickAvailabilityBlock(): string {
+  return [
+    'QUICK AVAILABILITY CHECK (do this FIRST, before collecting any trip details):',
+    '- If the caller asks whether a day or time is open - "are you available Thursday at 4:30?", "do you have anything open Friday?" - and has NOT yet given a pickup address, call lookup_availability immediately with just that date. Do NOT ask for pickup address, name, phone, passengers, email, or any other booking detail first.',
+    '- Answer directly: "Yes, that time\'s open" or, if not, offer 2-3 nearby open times from the slots returned.',
+    '- Only move into collecting pickup, destination, and the rest of the trip details after the caller says they want to book that time.',
+    '- Never make a caller sit through a full intake just to find out if a time is free.',
+    '',
+    'CONFIRM DETAILS ONCE, NOT TWICE:',
+    '- Read back pickup, destination, and date/time ONE time in a single sentence ("So that\'s [pickup] to [destination] on [day] at [time] - sound right?").',
+    '- Never confirm the same detail again in a separate turn right after the caller already said yes to it.',
+    '- If you need a full recap before booking, do it once at the very end, right before calling book_appointment - not once per field as you collect it.',
+  ].join('\n')
 }
 
 /**
