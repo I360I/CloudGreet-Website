@@ -1320,7 +1320,7 @@ export async function POST(request: NextRequest) {
 
  const { data: bizRow } = await supabaseAdmin
  .from('businesses')
- .select('business_name, notifications_phone, notification_phone, escalation_phone, dispatch_sms_template')
+ .select('business_name, business_type, notifications_phone, notification_phone, escalation_phone, dispatch_sms_template')
  .eq('id', resolvedBusinessId)
  .maybeSingle()
 
@@ -1336,6 +1336,22 @@ export async function POST(request: NextRequest) {
  }
 
  const businessName = (bizRow as any)?.business_name || 'CloudGreet'
+ const bizType = String((bizRow as any)?.business_type || '').toLowerCase()
+ let body: string
+ if (bizType === 'restaurant') {
+ // Restaurant clients: format as an order / catering request for the host,
+ // not a ride dispatch. `pickup` carries the request type (catering, to-go,
+ // large party, message); dropoff/flight/airline are transport-only.
+ const rlines = [`${businessName} - new request:`]
+ if (pickup) rlines.push(`Type: ${pickup}`)
+ rlines.push(`${customerName} (${customerPhone})`)
+ if (dispatchEmail) rlines.push(`Email: ${dispatchEmail}`)
+ if (typeof partySize === 'number' && partySize > 0) rlines.push(`Party of ${partySize}`)
+ rlines.push(`When: ${requestedTime}`)
+ if (notes) rlines.push(`Notes: ${notes}`)
+ rlines.push('Call or text them back to confirm.')
+ body = rlines.join('\n')
+ } else {
  const lines = [
  `${businessName} dispatch request:`,
  `${customerName} (${customerPhone})`,
@@ -1348,7 +1364,8 @@ export async function POST(request: NextRequest) {
  lines.push(`When: ${requestedTime}`)
  if (notes) lines.push(`Notes: ${notes}`)
  lines.push('Call or text them back to accept.')
- const body = lines.join('\n')
+ body = lines.join('\n')
+ }
 
  try {
  const sent = await telnyxClient.sendSMS(ownerPhone, body, fromNum)
