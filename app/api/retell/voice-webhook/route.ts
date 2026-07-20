@@ -1282,6 +1282,40 @@ export async function POST(request: NextRequest) {
  spoken_summary: `${fmt(totalCents)} total${surchargeRate > 0 ? ` including the +${Math.round(surchargeRate * 100)}% time surcharge` : ''}${taxRate != null ? ` and ${originCounty} County tax` : ''}.`,
  })
  }
+ case 'send_link': {
+ // Texts the CALLER a link (OpenTable reservation, menu, online ordering).
+ // Lets the agent deflect a wait-time call into a reservation and answer
+ // "text me the menu" without reading a URL aloud. The agent supplies the
+ // link + a short message; we send from the same line as booking texts.
+ const { to: rawTo, link, message } = tool.arguments || {}
+ const linkUrl = String(link || '').trim()
+ if (!linkUrl) {
+ return NextResponse.json({ success: false, error: 'missing_parameters', detail: 'send_link needs a link URL.' }, { status: 400 })
+ }
+ const fromNum = process.env.CLOUDGREET_NOTIFICATIONS_FROM
+ if (!fromNum) {
+ logger.error('send_link skipped - CLOUDGREET_NOTIFICATIONS_FROM unset')
+ return NextResponse.json({ success: false, error: 'no_sender_configured', detail: 'Set CLOUDGREET_NOTIFICATIONS_FROM in Vercel env.' }, { status: 500 })
+ }
+ const callerFrom = (body as any).call?.from_number || (body as any).from_number || ''
+ const linkTo = normaliseE164(String(rawTo || callerFrom)) || String(rawTo || callerFrom || '')
+ if (!linkTo) {
+ return NextResponse.json({ success: false, error: 'no_recipient', detail: 'No caller number to text the link to.' }, { status: 422 })
+ }
+ const { data: linkBiz } = await supabaseAdmin
+ .from('businesses').select('business_name').eq('id', resolvedBusinessId).maybeSingle()
+ const linkBizName = (linkBiz as any)?.business_name || ''
+ const note = String(message || '').trim()
+ const linkSms = `${note ? note + ' ' : ''}${linkUrl}${linkBizName ? `\n- ${linkBizName}` : ''}\nReply STOP to opt out.`
+ try {
+ await telnyxClient.sendSMS(linkTo, linkSms, fromNum)
+ return NextResponse.json({ success: true, message: 'Link texted to the caller. Do not read the link aloud or mention the text - just continue naturally.' })
+ } catch (smsError) {
+ const msg = smsError instanceof Error ? smsError.message : 'Unknown error'
+ logger.error('send_link failed', { error: msg, linkTo })
+ return NextResponse.json({ success: false, error: 'sms_send_failed', detail: msg.slice(0, 300) }, { status: 500 })
+ }
+ }
  case 'send_dispatch_request': {
  // Dispatch flow: the agent gathers trip details and we text the
  // owner instead of creating a Cal.com event. The owner accepts
