@@ -4,6 +4,7 @@ import { tsbpePlumbing } from './tsbpe'
 import { tdaPestControl } from './tda'
 import {
  googleRoofing, googlePainting, googleHandyman, googleLandscaping,
+ googleLocksmith, googleRestaurant,
 } from './google-trades'
 import { placesSources } from './google-places-discovery'
 
@@ -59,6 +60,10 @@ export const SCRAPER_SOURCES: SourceDefinition[] = [
  googlePainting,
  googleHandyman,
  googleLandscaping,
+ // Non-contractor verticals - strong AI-receptionist fit (missed calls,
+ // high job value / catering + reservations). Nationwide-capable.
+ googleLocksmith,
+ googleRestaurant,
  // placesSources are TX-only forks of google-trades. The non-trade-
  // duplicate entries (HVAC/plumb/elec/pest) are hidden because the
  // license-database sources above already enrich them. The trade

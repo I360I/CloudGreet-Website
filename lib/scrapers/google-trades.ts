@@ -12,13 +12,17 @@ import type { ScrapeParams, ScrapeRecord, SeenSets, SourceDefinition, SourceRunO
  * anything in opts.seen so we don't re-yield already-imported leads.
  */
 
-type TradeId = 'roofing' | 'painting' | 'handyman' | 'landscaping'
+type TradeId = 'roofing' | 'painting' | 'handyman' | 'landscaping' | 'locksmith' | 'restaurant'
 
 const TRADES: Record<TradeId, {
  trade: SourceDefinition['trade']
  label: string
  description: string
  query: string
+ /** Optional Google Place type to hard-filter results (e.g. 'locksmith',
+  *  'restaurant'). Sharpens categories that a free-text query alone
+  *  returns adjacent businesses for. */
+ includedType?: string
 }> = {
  roofing: {
   trade: 'Roofing',
@@ -44,6 +48,20 @@ const TRADES: Record<TradeId, {
   label: 'Google · Landscaping',
   description: 'Landscaping / lawn care via Google Places. Any US city or nationwide.',
   query: 'landscaping companies',
+ },
+ locksmith: {
+  trade: 'Locksmith',
+  label: 'Google · Locksmith',
+  description: 'Locksmiths via Google Places. Any US city or leave blank to fan out nationwide. The review filter weeds out lead-gen spam pins.',
+  query: 'locksmith',
+  includedType: 'locksmith',
+ },
+ restaurant: {
+  trade: 'Restaurant',
+  label: 'Google · Restaurant',
+  description: 'Restaurants via Google Places. Any US city or leave blank to fan out nationwide.',
+  query: 'restaurant',
+  includedType: 'restaurant',
  },
 }
 
@@ -138,6 +156,7 @@ function buildSource(id: TradeId): SourceDefinition {
      maxResults: askPerCity,
      minReviewCount,
      minRating,
+     includedType: meta.includedType,
      stateAllowList: [target.state],
      locationRestriction: { lat: target.lat, lng: target.lng, radiusMeters },
      onDiag: (m) => diag?.push(m),
@@ -207,3 +226,5 @@ export const googleRoofing = buildSource('roofing')
 export const googlePainting = buildSource('painting')
 export const googleHandyman = buildSource('handyman')
 export const googleLandscaping = buildSource('landscaping')
+export const googleLocksmith = buildSource('locksmith')
+export const googleRestaurant = buildSource('restaurant')
