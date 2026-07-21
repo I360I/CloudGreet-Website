@@ -48,6 +48,10 @@ type DialerSession = {
   resetSession: () => void
   queueInput: CockpitLead[] | null
   reloadQueueInput: () => void
+  /** Patch one queued lead in place (e.g. after a mid-call owner lookup
+   *  fills in contactName). Updates live state AND the sessionStorage
+   *  handoff so the name survives navigating away and back. */
+  patchQueueLead: (leadId: string, patch: Partial<CockpitLead>) => void
   /** Signed-in rep's first name - fills the {{rep_name}} placeholder in
    *  scripts so "Ed:" becomes whoever is actually reading it. */
   repFirstName: string | null
@@ -136,6 +140,16 @@ export function DialerSessionProvider({ children }: { children: React.ReactNode 
     } catch { /* corrupted handoff - treated as empty */ }
   }, [])
 
+  const patchQueueLead = useCallback((leadId: string, patch: Partial<CockpitLead>) => {
+    setQueueInput((prev) => {
+      if (!prev) return prev
+      const next = prev.map((l) => l.leadId === leadId ? { ...l, ...patch } : l)
+      // Mirror into the handoff so leaving/returning to the cockpit keeps it.
+      try { sessionStorage.setItem(QUEUE_KEY, JSON.stringify(next)) } catch { /* non-fatal */ }
+      return next
+    })
+  }, [])
+
   const recordTag = useCallback((tag: string) => {
     setTagCounts((c) => ({ ...c, [tag]: (c[tag] || 0) + 1 }))
   }, [])
@@ -162,7 +176,7 @@ export function DialerSessionProvider({ children }: { children: React.ReactNode 
       engine, phase, setPhase, gapSeconds, setGapSeconds,
       stats, bumpDemos, tagCounts, recordTag,
       elapsed, markSessionStart, resetSession,
-      queueInput, reloadQueueInput,
+      queueInput, reloadQueueInput, patchQueueLead,
       repFirstName, assignedRep,
     }}>
       {children}

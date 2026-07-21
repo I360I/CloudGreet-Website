@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   PhoneCall, PhoneSlash, Microphone, MicrophoneSlash, Voicemail, CircleNotch,
   Pause, Play, SkipForward, Stop, CheckCircle, WarningCircle, CaretDown,
-  DotsNine, ChatText, CalendarBlank, ClockCounterClockwise, ArrowLeft, Star, PaperPlaneTilt, PencilSimple, CopySimple, ArrowSquareOut,
+  DotsNine, ChatText, CalendarBlank, ClockCounterClockwise, ArrowLeft, Star, PaperPlaneTilt, PencilSimple, CopySimple, ArrowSquareOut, MagnifyingGlass,
 } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import {
@@ -68,7 +68,7 @@ export function DialerCockpit() {
     engine, phase, setPhase, gapSeconds, setGapSeconds,
     stats, bumpDemos, tagCounts, recordTag,
     elapsed, markSessionStart, resetSession,
-    queueInput, reloadQueueInput, repFirstName, assignedRep,
+    queueInput, reloadQueueInput, patchQueueLead, repFirstName, assignedRep,
   } = useDialerSession()
   const {
     status, error, micBusy, grantMicrophone,
@@ -118,6 +118,41 @@ export function DialerCockpit() {
   const liveLeadId = activeLeadId || currentItem?.leadId || null
 
   const { notes, loading: notesLoading, addNote } = useLeadNotes(liveLeadId)
+
+  // On-demand owner lookup mid-call. Grounded web search; the result is
+  // cached on the lead so a repeat click is free, and patched into the live
+  // queue so the name shows on the card right away (and survives navigation).
+  // Same endpoint the leads workspace uses.
+  const [findingOwner, setFindingOwner] = useState(false)
+  const [ownerError, setOwnerError] = useState<string | null>(null)
+  const findOwner = useCallback(async () => {
+    if (!liveLeadId || findingOwner) return
+    setFindingOwner(true)
+    setOwnerError(null)
+    try {
+      const res = await fetch(`/api/sales/leads/${liveLeadId}/find-owner`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({}),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (res.ok && j?.name) {
+        patchQueueLead(liveLeadId, { contactName: j.name })
+      } else if (res.ok) {
+        setOwnerError('No owner name found - ask for the owner on the call.')
+      } else {
+        setOwnerError(`Lookup failed${j?.error ? ` - ${j.error}` : ''}.`)
+      }
+    } catch {
+      setOwnerError('Owner lookup failed - try again.')
+    } finally {
+      setFindingOwner(false)
+    }
+  }, [liveLeadId, findingOwner, patchQueueLead])
+
+  // Drop a stale "no owner found" message when the queue advances.
+  useEffect(() => { setOwnerError(null) }, [liveLeadId])
 
   const chooseDisposition = useCallback((key: string) => {
     if (DEMO_KEYS.has(key)) {
@@ -414,7 +449,20 @@ export function DialerCockpit() {
                   {liveLead?.businessName || currentItem?.businessName || '—'}
                 </div>
                 <div className="text-sm text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
-                  {liveLead?.contactName && <span>{liveLead.contactName}</span>}
+                  {liveLead?.contactName
+                    ? <span className="font-medium text-slate-700">{liveLead.contactName}</span>
+                    : liveLeadId && (
+                      <button
+                        onClick={() => void findOwner()}
+                        disabled={findingOwner}
+                        title="Look up the owner's name so you can ask for them by name"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md px-2 py-1 transition-colors duration-150 disabled:opacity-60"
+                      >
+                        {findingOwner
+                          ? <><CircleNotch weight="bold" className="w-3 h-3 animate-spin" /> Finding owner…</>
+                          : <><MagnifyingGlass weight="bold" className="w-3 h-3" /> Find owner</>}
+                      </button>
+                    )}
                   {liveLead?.businessType && <span>· {liveLead.businessType}</span>}
                   {liveLead?.city && <span>· {liveLead.city}{liveLead.state ? `, ${liveLead.state}` : ''}</span>}
                   {typeof liveLead?.rating === 'number' && (
@@ -424,6 +472,9 @@ export function DialerCockpit() {
                     </span>
                   )}
                 </div>
+                {ownerError && (
+                  <div className="mt-1 text-[11px] text-amber-600">{ownerError}</div>
+                )}
                 <div className={`text-lg mt-2 text-slate-800 ${firaCode.className}`}>
                   {fmtPhone(currentItem?.phone || liveLead?.phone || '')}
                 </div>
