@@ -19,6 +19,7 @@ const SUPPORT_PHONE_DIAL = SUPPORT_PHONE.replace(/[^0-9+]/g, '')
 type State = {
  id: string
  business_name: string
+ business_type: string | null
  phone_number: string | null
  services: string[] | null
  onboarding_step: string
@@ -33,6 +34,13 @@ type State = {
 }
 
 type Step = 'calcom' | 'forwarding' | 'verify' | 'done'
+
+// Verticals that don't book on Cal.com (restaurants use OpenTable / their own
+// POS and just transfer or capture leads). They skip the calendar-connect step.
+const NO_CALENDAR_TYPES = new Set(['restaurant'])
+function isNoCalendarType(businessType: string | null | undefined): boolean {
+ return NO_CALENDAR_TYPES.has((businessType || '').trim().toLowerCase())
+}
 
 export default function OnboardingPage() {
  const router = useRouter()
@@ -54,10 +62,19 @@ export default function OnboardingPage() {
    setState(b)
    const phoneJson = await phoneRes.json().catch(() => ({}))
    setRetellPhone(typeof phoneJson?.phone === 'string' && phoneJson.phone ? phoneJson.phone : null)
-   if (b.onboarding_completed) setStep('done')
-   else if (b.forwarding_verified_at) setStep('done')
-   else if (b.calcom_connected) setStep('forwarding')
-   else setStep('calcom')
+   // Restaurants (and any non-calendar vertical) don't connect Cal.com -
+   // they book on their own system / OpenTable / transfer. Don't gate their
+   // onboarding on calcom_connected (they'd be stuck on step 1 forever).
+   // They still get a trimmed first step for the transfer + notification
+   // numbers, then continue to forwarding. Use a functional update so a
+   // reload triggered by a later step never bounces them backward.
+   const noCal = isNoCalendarType(b.business_type)
+   setStep((prev) => {
+    if (b.onboarding_completed || b.forwarding_verified_at) return 'done'
+    if (noCal) return (prev === 'forwarding' || prev === 'verify') ? prev : 'calcom'
+    if (b.calcom_connected) return 'forwarding'
+    return 'calcom'
+   })
   } catch (e) {
    setError(e instanceof Error ? e.message : 'Failed to load')
   } finally {
@@ -111,16 +128,22 @@ export default function OnboardingPage() {
   )
  }
 
+ const noCalendar = isNoCalendarType(state.business_type)
+
  return (
   <DashShell activeLabel="Setup">
    <section className="px-4 lg:px-8 py-6 lg:py-10">
     <div className="max-w-3xl">
-     <Header step={step} />
+     <Header step={step} noCalendar={noCalendar} />
 
      <AnimatePresence mode="wait">
       {step === 'calcom' && (
        <Panel key="calcom">
-        <CalcomStep onConnected={reload} />
+        <CalcomStep
+         onConnected={reload}
+         noCalendar={noCalendar}
+         onContinue={() => setStep('forwarding')}
+        />
        </Panel>
       )}
       {step === 'forwarding' && (
@@ -162,9 +185,9 @@ export default function OnboardingPage() {
 
 /* --------------------------------- shell --------------------------------- */
 
-function Header({ step }: { step: Step }) {
+function Header({ step, noCalendar }: { step: Step; noCalendar?: boolean }) {
  const steps: { id: Step; label: string }[] = [
-  { id: 'calcom', label: 'Calendar' },
+  { id: 'calcom', label: noCalendar ? 'Details' : 'Calendar' },
   { id: 'forwarding', label: 'Forwarding' },
   { id: 'verify', label: 'Verify' },
  ]
@@ -229,7 +252,7 @@ function StuckBanner({ step }: { step: Step }) {
 
 /* ------------------------------ Cal.com step ----------------------------- */
 
-function CalcomStep({ onConnected }: { onConnected: () => void }) {
+function CalcomStep({ onConnected, noCalendar, onContinue }: { onConnected: () => void; noCalendar?: boolean; onContinue?: () => void }) {
  type EventTypeOption = { id: number; title: string; slug: string; lengthInMinutes: number }
  const [apiKey, setApiKey] = useState('')
  const [eventTypeId, setEventTypeId] = useState<number | null>(null)
@@ -468,6 +491,110 @@ function CalcomStep({ onConnected }: { onConnected: () => void }) {
   } finally {
    setSubmitting(false)
   }
+ }
+
+ // Restaurants (and other non-calendar verticals) skip Cal.com entirely -
+ // they don't book onto a calendar, they transfer live orders / person
+ // requests and capture catering as a lead. Show only the two numbers that
+ // matter (transfer + alert) plus optional hours, then continue.
+ if (noCalendar) {
+  return (
+   <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+    <div className="px-6 pt-6 pb-2">
+     <h2 className="text-xl font-medium text-gray-900">A few details</h2>
+     <p className="text-sm text-gray-500 mt-1">
+      No calendar to connect - your AI host transfers live orders and requests, and texts you catering leads. Just tell us where those should go.
+     </p>
+    </div>
+
+    <div className="px-6 py-5 space-y-4">
+     <div className="border border-gray-200 rounded-lg p-4">
+      <div className="text-sm font-medium text-gray-900 mb-1">Transfer calls to</div>
+      <div className="text-xs text-gray-600 mb-3">
+       When a caller wants a person - a live order, a complaint, someone asking for staff - the AI transfers the call to this number. Use the line you actually want ringing.
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+       <input
+        type="tel"
+        value={transferPhone}
+        onChange={(e) => { setTransferPhone(e.target.value); setTransferSaved(false); setTransferErr('') }}
+        placeholder="+1 555 123 4567"
+        className="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-gray-900"
+       />
+       <button
+        type="button"
+        onClick={saveTransferPhone}
+        disabled={transferSaving || !transferPhone.trim()}
+        className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+       >
+        {transferSaving ? 'Saving…' : transferSaved ? 'Saved ✓' : 'Save'}
+       </button>
+      </div>
+      {transferErr && <div className="mt-2 text-xs text-rose-700">{transferErr}</div>}
+     </div>
+
+     <div className="border border-gray-200 rounded-lg p-4">
+      <div className="text-sm font-medium text-gray-900 mb-1">Where should we text catering &amp; lead alerts?</div>
+      <div className="text-xs text-gray-600 mb-3">
+       When the AI captures a catering or large-party request, we text a summary to this number so your team can call them back. Set it now so the alert from the test call lands on the right phone.
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+       <input
+        type="tel"
+        value={notifyPhone}
+        onChange={(e) => { setNotifyPhone(e.target.value); setNotifySaved(false); setNotifyErr('') }}
+        placeholder="+1 555 123 4567"
+        className="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-gray-900"
+       />
+       <button
+        type="button"
+        onClick={saveNotifyPhone}
+        disabled={notifySaving || !notifyPhone.trim()}
+        className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+       >
+        {notifySaving ? 'Saving…' : notifySaved ? 'Saved ✓' : 'Save'}
+       </button>
+      </div>
+      {notifyErr && <div className="mt-2 text-xs text-rose-700">{notifyErr}</div>}
+     </div>
+
+     <div className="border border-gray-200 rounded-lg p-4">
+      <div className="text-sm font-medium text-gray-900 mb-1">Hours <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 ml-1">optional</span></div>
+      <div className="text-xs text-gray-600 mb-3">
+       In your own words, e.g. &ldquo;Mon-Thu 11am-9pm, Fri-Sat till 10, weekend brunch from 9&rdquo;. The AI uses this to answer &ldquo;are you open?&rdquo;
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+       <input
+        type="text"
+        value={serviceHours}
+        onChange={(e) => { setServiceHours(e.target.value); setServiceHoursSaved(false); setServiceHoursErr('') }}
+        placeholder="Mon-Thu 11am-9pm, Fri-Sat 11am-10pm…"
+        className="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-900"
+       />
+       <button
+        type="button"
+        onClick={saveServiceHours}
+        disabled={serviceHoursSaving}
+        className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+       >
+        {serviceHoursSaving ? 'Saving…' : serviceHoursSaved ? 'Saved ✓' : 'Save'}
+       </button>
+      </div>
+      {serviceHoursErr && <div className="mt-2 text-xs text-rose-700">{serviceHoursErr}</div>}
+     </div>
+
+     <div className="flex justify-end pt-1">
+      <button
+       type="button"
+       onClick={() => onContinue?.()}
+       className="inline-flex items-center gap-1.5 bg-sky-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-sky-700 transition-colors"
+      >
+       Continue to call forwarding →
+      </button>
+     </div>
+    </div>
+   </div>
+  )
  }
 
  return (
