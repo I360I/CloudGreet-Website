@@ -109,8 +109,20 @@ export async function GET(request: NextRequest) {
    })
    if (phonesRes.ok) {
     const phones = ((await phonesRes.json().catch(() => ({}))).items ?? []) as any[]
+    // Retell deprecated the single-agent scalar fields (inbound_agent_id /
+    // outbound_agent_id / agent_id) in March 2026 in favor of the
+    // inbound_agents / outbound_agents arrays ([{ weight, agent_id }]).
+    // Match both shapes so the "routes to it" check doesn't false-negative
+    // on every properly-bound number (which showed the amber "no phone
+    // number routes to it yet" banner even when a number was linked).
+    const routesToAgent = (p: any): boolean => {
+     if (p?.inbound_agent_id === agentId || p?.outbound_agent_id === agentId || p?.agent_id === agentId) return true
+     const arrays = [p?.inbound_agents, p?.outbound_agents]
+     return arrays.some((arr) =>
+      Array.isArray(arr) && arr.some((a: any) => (a?.agent_id ?? a) === agentId))
+    }
     boundNumbers = (Array.isArray(phones) ? phones : [])
-     .filter((p) => p?.inbound_agent_id === agentId || p?.outbound_agent_id === agentId || p?.agent_id === agentId)
+     .filter(routesToAgent)
      .map((p) => p?.phone_number || p?.phone_number_pretty || '?')
    }
   } catch { /* non-fatal */ }
