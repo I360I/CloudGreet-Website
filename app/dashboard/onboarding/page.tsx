@@ -558,31 +558,6 @@ function CalcomStep({ onConnected, noCalendar, onContinue }: { onConnected: () =
       {notifyErr && <div className="mt-2 text-xs text-rose-700">{notifyErr}</div>}
      </div>
 
-     <div className="border border-gray-200 rounded-lg p-4">
-      <div className="text-sm font-medium text-gray-900 mb-1">Hours <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 ml-1">optional</span></div>
-      <div className="text-xs text-gray-600 mb-3">
-       In your own words, e.g. &ldquo;Mon-Thu 11am-9pm, Fri-Sat till 10, weekend brunch from 9&rdquo;. The AI uses this to answer &ldquo;are you open?&rdquo;
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-       <input
-        type="text"
-        value={serviceHours}
-        onChange={(e) => { setServiceHours(e.target.value); setServiceHoursSaved(false); setServiceHoursErr('') }}
-        placeholder="Mon-Thu 11am-9pm, Fri-Sat 11am-10pm…"
-        className="flex-1 min-w-[200px] bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-gray-900"
-       />
-       <button
-        type="button"
-        onClick={saveServiceHours}
-        disabled={serviceHoursSaving}
-        className="inline-flex items-center gap-1.5 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
-       >
-        {serviceHoursSaving ? 'Saving…' : serviceHoursSaved ? 'Saved ✓' : 'Save'}
-       </button>
-      </div>
-      {serviceHoursErr && <div className="mt-2 text-xs text-rose-700">{serviceHoursErr}</div>}
-     </div>
-
      <div className="flex justify-end pt-1">
       <button
        type="button"
