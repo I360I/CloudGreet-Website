@@ -77,8 +77,26 @@ export async function PATCH(
     return NextResponse.json({ error: updErr.message }, { status: 500 })
   }
 
+  // Mirror onto businesses.email. The login email (custom_users) and the
+  // business contact email (businesses.email) are separate fields, and most
+  // client-facing surfaces (sales/client detail, contractor-facing views)
+  // read the business one. Updating only custom_users left the business row
+  // showing a stale email. Keep them in lockstep so an admin email swap is
+  // reflected everywhere. Best-effort: don't fail the request if it errors,
+  // the login email (the thing that actually breaks sign-in) is already saved.
+  const { error: bizEmailErr } = await supabaseAdmin
+    .from('businesses')
+    .update({ email, updated_at: new Date().toISOString() })
+    .eq('id', params.id)
+  if (bizEmailErr) {
+    logger.error('admin owner-email: businesses.email mirror failed', {
+      businessId: params.id, error: bizEmailErr.message,
+    })
+  }
+
   logger.info('admin updated owner email', {
     businessId: params.id, ownerId, from: prevEmail, to: email,
+    businessEmailSynced: !bizEmailErr,
   })
 
   // Best-effort audit row so we can trace email swaps later.
