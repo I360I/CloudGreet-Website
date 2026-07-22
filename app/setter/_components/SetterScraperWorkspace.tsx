@@ -70,7 +70,11 @@ export function SetterScraperWorkspace() {
   const [aiRunning, setAiRunning] = useState(false)
   const [aiStatus, setAiStatus] = useState('')
   const [limit, setLimit] = useState('50')
-  const [quality, setQuality] = useState<'loose' | 'standard' | 'strict'>('standard')
+  // Rating + review-count bands. Full range = no filter (base is always
+  // loose). Reviews max (1000) means "no cap". Lets a rep target below-par
+  // businesses that actually struggle on call intake.
+  const [ratingRange, setRatingRange] = useState<[number, number]>([1, 5])
+  const [reviewRange, setReviewRange] = useState<[number, number]>([0, 1000])
   const [showQualityInfo, setShowQualityInfo] = useState(false)
 
   const dailyRemaining = Math.max(0, dailyLimit - dailyUsed)
@@ -112,7 +116,13 @@ export function SetterScraperWorkspace() {
           source: sourceId,
           location: location.trim() || undefined,
           limit: requested,
-          extra: { quality },
+          extra: {
+            quality: 'loose',
+            minRating: ratingRange[0] > 1 ? ratingRange[0] : undefined,
+            maxRating: ratingRange[1] < 5 ? ratingRange[1] : undefined,
+            minReviewCount: reviewRange[0] > 0 ? reviewRange[0] : undefined,
+            maxReviewCount: reviewRange[1] < 1000 ? reviewRange[1] : undefined,
+          },
         }),
       })
       const j = await res.json().catch(() => ({}))
@@ -335,10 +345,10 @@ export function SetterScraperWorkspace() {
             </div>
           </div>
 
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
+          <div className="mt-5">
+            <div className="flex items-center justify-between mb-3">
               <label className="text-xs font-medium text-gray-600 inline-flex items-center gap-1.5">
-                Quality strictness
+                Targeting filters
                 <button
                   type="button"
                   onClick={() => setShowQualityInfo((v) => !v)}
@@ -348,29 +358,42 @@ export function SetterScraperWorkspace() {
                   <Info className="w-3.5 h-3.5" />
                 </button>
               </label>
-              <span className="text-[11px] font-mono text-gray-500 capitalize">{quality}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              {(['loose', 'standard', 'strict'] as const).map((q) => (
+              {(ratingRange[0] > 1 || ratingRange[1] < 5 || reviewRange[0] > 0 || reviewRange[1] < 1000) && (
                 <button
-                  key={q}
                   type="button"
-                  onClick={() => setQuality(q)}
-                  className={`flex-1 text-xs py-1.5 rounded-md border transition-colors ${
-                    quality === q
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-600 border-[#E3EAF4] hover:border-gray-400'
-                  }`}
+                  onClick={() => { setRatingRange([1, 5]); setReviewRange([0, 1000]) }}
+                  className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors"
                 >
-                  {q[0].toUpperCase() + q.slice(1)}
+                  Reset
                 </button>
-              ))}
+              )}
             </div>
+
+            <RangeSlider
+              label="Star rating"
+              min={1} max={5} step={0.5}
+              value={ratingRange}
+              onChange={setRatingRange}
+              format={(v) => v.toFixed(1) + '★'}
+              formatMaxAsPlus={false}
+            />
+
+            <div className="mt-4">
+              <RangeSlider
+                label="Review count"
+                min={0} max={1000} step={25}
+                value={reviewRange}
+                onChange={setReviewRange}
+                format={(v) => String(v)}
+                formatMaxAsPlus
+              />
+            </div>
+
             {showQualityInfo && (
-              <div className="mt-2 text-[11px] bg-gray-50 border border-[#E3EAF4] rounded-md p-2.5 text-gray-700 leading-snug space-y-1">
-                <p><strong>Loose</strong> - returns more leads. No star-rating floor, accepts new businesses with few reviews, skips trade-match double-check. Use when you want max volume and don't mind sorting through.</p>
-                <p><strong>Standard</strong> - balanced. Drops sub-3-star shops when Google has them rated, keeps unrated new businesses, applies trade-match check on enriched records.</p>
-                <p><strong>Strict</strong> - smaller, cleaner batch. Requires 4-star+ rating with at least 20 reviews and a website. Best when you only want obviously-worth-calling leads.</p>
+              <div className="mt-3 text-[11px] bg-gray-50 border border-[#E3EAF4] rounded-md p-2.5 text-gray-700 leading-snug space-y-1">
+                <p><strong>Star rating</strong> - drag to target a band. Lower the top end (say 3.0 to 4.3) to focus on the below-par shops that struggle on call intake and actually need us. Full range means no rating filter.</p>
+                <p><strong>Review count</strong> - set a floor to skip ghost/spam listings, and a ceiling to skip big staffed places that never miss a call. Top of the slider (1000+) means no upper cap.</p>
+                <p className="text-gray-500">Filters don&apos;t cost extra per scrape; a narrower band just pages a little further to fill your count.</p>
               </div>
             )}
           </div>
@@ -847,4 +870,89 @@ function relTime(iso: string): string {
   if (h < 24) return `${h}h ago`
   const d = Math.floor(h / 24)
   return `${d}d ago`
+}
+
+/**
+ * Dual-thumb range slider (min + max), setter v5 styling (brand blue).
+ * Two overlaid native range inputs with pointer-events on the thumbs only,
+ * plus a filled track between them. Used for the scraper targeting bands.
+ */
+function RangeSlider({
+  label, min, max, step, value, onChange, format, formatMaxAsPlus,
+}: {
+  label: string
+  min: number
+  max: number
+  step: number
+  value: [number, number]
+  onChange: (v: [number, number]) => void
+  format: (v: number) => string
+  formatMaxAsPlus?: boolean
+}) {
+  const [lo, hi] = value
+  const pct = (v: number) => ((v - min) / (max - min)) * 100
+  const fmt = (v: number) => (formatMaxAsPlus && v >= max ? format(v) + '+' : format(v))
+  const isDefault = lo <= min && hi >= max
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[11px] text-gray-500">{label}</span>
+        <span className="text-[11px] font-mono text-[#1E3A8A]">
+          {isDefault ? 'Any' : `${fmt(lo)} – ${fmt(hi)}`}
+        </span>
+      </div>
+      <div className="dualrange relative h-4 flex items-center">
+        <div className="absolute h-1 w-full rounded-full bg-[#E3EAF4]" />
+        <div
+          className="absolute h-1 rounded-full bg-blue-600"
+          style={{ left: `${pct(lo)}%`, right: `${100 - pct(hi)}%` }}
+        />
+        <input
+          type="range" min={min} max={max} step={step} value={lo}
+          onChange={(e) => onChange([Math.min(Number(e.target.value), hi), hi])}
+          aria-label={`${label} minimum`}
+        />
+        <input
+          type="range" min={min} max={max} step={step} value={hi}
+          onChange={(e) => onChange([lo, Math.max(Number(e.target.value), lo)])}
+          aria-label={`${label} maximum`}
+        />
+      </div>
+      <style jsx>{`
+        .dualrange input[type='range'] {
+          position: absolute;
+          width: 100%;
+          margin: 0;
+          background: transparent;
+          pointer-events: none;
+          -webkit-appearance: none;
+          appearance: none;
+        }
+        .dualrange input[type='range']::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 16px;
+          width: 16px;
+          border-radius: 9999px;
+          background: #2563eb;
+          border: 2px solid #fff;
+          box-shadow: 0 1px 2px rgba(16, 24, 40, 0.25);
+          cursor: pointer;
+          pointer-events: auto;
+        }
+        .dualrange input[type='range']::-moz-range-thumb {
+          height: 16px;
+          width: 16px;
+          border-radius: 9999px;
+          background: #2563eb;
+          border: 2px solid #fff;
+          box-shadow: 0 1px 2px rgba(16, 24, 40, 0.25);
+          cursor: pointer;
+          pointer-events: auto;
+        }
+        .dualrange input[type='range']::-webkit-slider-runnable-track { background: transparent; }
+        .dualrange input[type='range']::-moz-range-track { background: transparent; }
+      `}</style>
+    </div>
+  )
 }
