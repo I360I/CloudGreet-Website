@@ -38,15 +38,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, leads: [] })
     }
 
-    // Fetch all lead records (email-less leads shown in modal with "Find emails" option)
-    const { data: leadRows, error: lErr } = await supabaseAdmin
-      .from('leads')
-      .select('id, business_name, contact_name, phone, email, city, website')
-      .in('id', ids)
-
-    if (lErr) {
-      logger.error('my-leads body query failed', { userId: auth.userId, error: lErr.message })
-      return NextResponse.json({ error: 'Failed to load leads' }, { status: 500 })
+    // Fetch all lead records (email-less leads shown in modal with "Find emails" option).
+    // Chunk the id list: a single .in('id', [hundreds]) builds a URL PostgREST
+    // rejects with 400 once a rep has ~500+ assignments.
+    const ID_CHUNK = 150
+    const leadRows: any[] = []
+    for (let i = 0; i < ids.length; i += ID_CHUNK) {
+      const { data, error: lErr } = await supabaseAdmin
+        .from('leads')
+        .select('id, business_name, contact_name, phone, email, city, website')
+        .in('id', ids.slice(i, i + ID_CHUNK))
+      if (lErr) {
+        logger.error('my-leads body query failed', { userId: auth.userId, error: lErr.message })
+        return NextResponse.json({ error: 'Failed to load leads' }, { status: 500 })
+      }
+      if (data) leadRows.push(...data)
     }
 
     // Build a status map from assignments (workflow status)

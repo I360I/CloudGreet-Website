@@ -106,13 +106,20 @@ export async function GET(request: NextRequest) {
   // Stage 3b - optional latest note per lead
   let latestNoteByLead = new Map<string, { body: string; created_at: string }>()
   try {
-    const { data: notes, error: nErr } = await supabaseAdmin
-      .from('lead_notes')
-      .select('lead_id, body, created_at')
-      .in('lead_id', ids)
-      .eq('rep_id', auth.userId)
-      .order('created_at', { ascending: false })
-    if (!nErr && notes) {
+    // Same chunking as stage 2 - a big .in('lead_id', ids) would 400.
+    // Each lead's notes live in exactly one chunk, so latest-per-lead holds.
+    const notes: { lead_id: string; body: string; created_at: string }[] = []
+    for (let i = 0; i < ids.length; i += ID_CHUNK) {
+      const { data, error: nErr } = await supabaseAdmin
+        .from('lead_notes')
+        .select('lead_id, body, created_at')
+        .in('lead_id', ids.slice(i, i + ID_CHUNK))
+        .eq('rep_id', auth.userId)
+        .order('created_at', { ascending: false })
+      if (nErr) break
+      if (data) notes.push(...data)
+    }
+    {
       for (const n of notes) {
         if (!latestNoteByLead.has(n.lead_id)) {
           latestNoteByLead.set(n.lead_id, { body: n.body, created_at: n.created_at })
