@@ -47,23 +47,33 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, leads: [] })
   }
 
-  // Stage 2 - leads
-  const { data: leadRows, error: lErr } = await supabaseAdmin
-    .from('leads')
-    .select('*')
-    .in('id', ids)
-    // Hide phone-less leads from the rep portal. The scraper now
-    // refuses to create them, but old assignments may still point at
-    // legacy rows with no phone.
-    .not('phone', 'is', null)
-    .neq('phone', '')
-  if (lErr) {
-    logger.error('Sales leads body query failed', {
-      userId: auth.userId, error: lErr.message,
-    })
-    return NextResponse.json({
-      error: `Couldn't load leads: ${lErr.message}`,
-    }, { status: 500 })
+  // Stage 2 - leads.
+  // Chunk the id list: a single .in('id', [...]) with hundreds of UUIDs
+  // builds a huge `id=in.(...)` URL that PostgREST rejects with a 400
+  // ("Bad Request") once a rep accumulates enough assignments (~500+).
+  // Batch it so it works no matter how many leads a rep has.
+  const ID_CHUNK = 150
+  const leadRows: any[] = []
+  for (let i = 0; i < ids.length; i += ID_CHUNK) {
+    const chunk = ids.slice(i, i + ID_CHUNK)
+    const { data, error: lErr } = await supabaseAdmin
+      .from('leads')
+      .select('*')
+      .in('id', chunk)
+      // Hide phone-less leads from the rep portal. The scraper now
+      // refuses to create them, but old assignments may still point at
+      // legacy rows with no phone.
+      .not('phone', 'is', null)
+      .neq('phone', '')
+    if (lErr) {
+      logger.error('Sales leads body query failed', {
+        userId: auth.userId, error: lErr.message, chunk: i / ID_CHUNK,
+      })
+      return NextResponse.json({
+        error: `Couldn't load leads: ${lErr.message}`,
+      }, { status: 500 })
+    }
+    if (data) leadRows.push(...data)
   }
 
   const leadById = new Map<string, any>()
