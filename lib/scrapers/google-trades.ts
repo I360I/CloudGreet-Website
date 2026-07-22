@@ -108,6 +108,13 @@ function buildSource(id: TradeId): SourceDefinition {
     typeof params.extra?.minRating === 'number'
      ? params.extra.minRating as number
      : qualityLevel === 'strict' ? 4.0 : qualityLevel === 'loose' ? 0 : 3.5
+   // Upper bounds (from the rep's rating/reviews range sliders). Undefined =
+   // no ceiling. maxRating lets a rep target "below par" businesses that
+   // struggle on call intake; maxReviewCount skips big staffed shops.
+   const maxRating =
+    typeof params.extra?.maxRating === 'number' ? params.extra.maxRating as number : undefined
+   const maxReviewCount =
+    typeof params.extra?.maxReviewCount === 'number' ? params.extra.maxReviewCount as number : undefined
    const requireWebsite = qualityLevel === 'strict'
    // Restaurant-only: filter to leads whose website uses a given reservation
    // platform (e.g. 'sevenrooms', which exposes a booking API). Requires a
@@ -118,7 +125,7 @@ function buildSource(id: TradeId): SourceDefinition {
        ? (params.extra.reservationPlatform as string).toLowerCase()
        : undefined)
     : undefined
-   diag?.push(`google-trades start: city=${cityRaw || '(fanout)'} strictness=${qualityLevel} minRating=${minRating} minReviews=${minReviewCount}${wantPlatform ? ` reservationPlatform=${wantPlatform}` : ''}`)
+   diag?.push(`google-trades start: city=${cityRaw || '(fanout)'} rating=${minRating}-${maxRating ?? '5'} reviews=${minReviewCount}-${maxReviewCount ?? 'inf'}${wantPlatform ? ` reservationPlatform=${wantPlatform}` : ''}`)
 
    // Four-tier resolution:
    //   1. specific TX city -> just that city (existing behavior)
@@ -212,7 +219,9 @@ function buildSource(id: TradeId): SourceDefinition {
     for await (const place of discoverPlaces(`${meta.query} near ${city} ${target.state}`, {
      maxResults: askPerCity,
      minReviewCount,
+     maxReviewCount,
      minRating,
+     maxRating,
      includedType: meta.includedType,
      stateAllowList: [target.state],
      locationRestriction: { lat: target.lat, lng: target.lng, radiusMeters },

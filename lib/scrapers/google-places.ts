@@ -290,6 +290,10 @@ export async function* discoverPlaces(
   maxReviewCount?: number
   /** Drop results below this average star rating. */
   minRating?: number
+  /** Drop results ABOVE this average star rating. Lets a rep target
+   *  "below par" businesses (the ones struggling on call intake / callback,
+   *  who actually need us) instead of 5-star shops that already answer. */
+  maxRating?: number
   /** Drop results that are CLOSED_PERMANENTLY / CLOSED_TEMPORARILY (default true). */
   excludeClosed?: boolean
   /** Optional list of two-letter state abbreviations to accept. If
@@ -310,6 +314,7 @@ export async function* discoverPlaces(
  const minReviews = opts?.minReviewCount ?? 0
  const maxReviews = opts?.maxReviewCount ?? Infinity
  const minRating = opts?.minRating ?? 0
+ const maxRating = opts?.maxRating ?? Infinity
  const excludeClosed = opts?.excludeClosed !== false
  // Default behavior preserved: TX-only. Existing TX-discovery sources
  // pass nothing and keep getting the TX filter. Quality mode passes [].
@@ -408,6 +413,7 @@ export async function* discoverPlaces(
    if (reviewCount < minReviews) continue
    if (reviewCount > maxReviews) continue
    if (rating > 0 && rating < minRating) continue
+   if (rating > 0 && rating > maxRating) continue
 
    yield {
     business_name: p.displayName?.text || 'Unknown',
