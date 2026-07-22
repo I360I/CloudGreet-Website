@@ -210,8 +210,15 @@ export async function orderRepNumber(
     // active first.
     if (!evicted && existing.length >= MAX_NUMBERS_PER_REP) {
       // Rollback: release the just-ordered number so we don't pay for
-      // a phantom one.
-      await releaseTelnyxNumber(phoneNumber)
+      // a phantom one. If THIS release also fails, the number is
+      // stranded at Telnyx (untracked) - log loudly so the orphan
+      // reconciler / an admin can catch it instead of it billing forever.
+      const rb = await releaseTelnyxNumber(phoneNumber)
+      if (rb.ok !== true) {
+        logger.error('ORPHAN LEAK: rollback release failed, number stranded at Telnyx', {
+          repId, phoneNumber, error: rb.error,
+        })
+      }
       return {
         ok: false,
         error: 'Cap of 3 numbers reached and the only candidates for eviction are the active one. Switch active first, then add new.',
@@ -234,7 +241,15 @@ export async function orderRepNumber(
     .single()
   if (dbErr || !inserted) {
     // Best-effort release so we don't pay for a number we can't track.
-    await releaseTelnyxNumber(phoneNumber)
+    // If the release ALSO fails, the number is stranded at Telnyx with no
+    // DB row (an orphan) - log loudly so the reconciler / an admin catches
+    // it rather than it billing silently forever.
+    const rel = await releaseTelnyxNumber(phoneNumber)
+    if (rel.ok !== true) {
+      logger.error('ORPHAN LEAK: insert failed AND release failed, number stranded at Telnyx', {
+        repId, phoneNumber, insertError: dbErr?.message, releaseError: rel.error,
+      })
+    }
     return { ok: false, error: `DB insert failed: ${dbErr?.message || 'unknown'}` }
   }
 
@@ -327,7 +342,7 @@ export async function deleteRepNumber(
  *
  * 200 / 204 → ok; 404 (after a successful resolve) → already gone.
  */
-async function releaseTelnyxNumber(phoneNumber: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function releaseTelnyxNumber(phoneNumber: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const tx = telnyxAuth()
   if (!tx) return { ok: false, error: 'Missing TELNYX_API_KEY' }
   const resolved = await resolvePhoneNumberId(phoneNumber)
