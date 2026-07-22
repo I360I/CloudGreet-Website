@@ -4,7 +4,7 @@ import { tsbpePlumbing } from './tsbpe'
 import { tdaPestControl } from './tda'
 import {
  googleRoofing, googlePainting, googleHandyman, googleLandscaping,
- googleLocksmith, googleRestaurant,
+ googleLocksmith, googleRestaurant, googleRestaurantSevenRooms,
 } from './google-trades'
 import { placesSources } from './google-places-discovery'
 
@@ -64,6 +64,9 @@ export const SCRAPER_SOURCES: SourceDefinition[] = [
  // high job value / catering + reservations). Nationwide-capable.
  googleLocksmith,
  googleRestaurant,
+ // Restaurants on SevenRooms specifically - the AI can book tables via the
+ // SevenRooms API, so these are stronger leads than OpenTable/Resy spots.
+ googleRestaurantSevenRooms,
  // placesSources are TX-only forks of google-trades. The non-trade-
  // duplicate entries (HVAC/plumb/elec/pest) are hidden because the
  // license-database sources above already enrich them. The trade

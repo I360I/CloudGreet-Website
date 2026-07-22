@@ -1,6 +1,7 @@
 import { discoverPlaces, txCityCoords, TX_CITY_COORDS } from './google-places'
 import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
 import { resolveUsMetro, resolveUsState, NATIONAL_FANOUT } from './us-metros'
+import { detectReservationPlatform } from './reservation-platform'
 import { logger } from '../monitoring'
 import type { ScrapeParams, ScrapeRecord, SeenSets, SourceDefinition, SourceRunOpts } from './types'
 
@@ -108,7 +109,16 @@ function buildSource(id: TradeId): SourceDefinition {
      ? params.extra.minRating as number
      : qualityLevel === 'strict' ? 4.0 : qualityLevel === 'loose' ? 0 : 3.5
    const requireWebsite = qualityLevel === 'strict'
-   diag?.push(`google-trades start: city=${cityRaw || '(fanout)'} strictness=${qualityLevel} minRating=${minRating} minReviews=${minReviewCount}`)
+   // Restaurant-only: filter to leads whose website uses a given reservation
+   // platform (e.g. 'sevenrooms', which exposes a booking API). Requires a
+   // website and a per-lead site fetch, so it's slower and we scan more
+   // restaurants to net the same count. Ignored for non-restaurant trades.
+   const wantPlatform = id === 'restaurant'
+    ? (typeof params.extra?.reservationPlatform === 'string'
+       ? (params.extra.reservationPlatform as string).toLowerCase()
+       : undefined)
+    : undefined
+   diag?.push(`google-trades start: city=${cityRaw || '(fanout)'} strictness=${qualityLevel} minRating=${minRating} minReviews=${minReviewCount}${wantPlatform ? ` reservationPlatform=${wantPlatform}` : ''}`)
 
    // Four-tier resolution:
    //   1. specific TX city -> just that city (existing behavior)
@@ -184,6 +194,16 @@ function buildSource(id: TradeId): SourceDefinition {
      localPhones.add(phone)
      if (placeId) localPlaceIds.add(placeId)
 
+     // Reservation-platform gate (only when requested, restaurant source).
+     // Runs after dedupe so we never spend a site fetch on a lead we'd drop
+     // anyway. No website means we can't verify the platform, so drop it.
+     let detectedPlatform: string | null = null
+     if (wantPlatform) {
+      if (!website) { cityDropped++; totalDropped++; continue }
+      detectedPlatform = await detectReservationPlatform(place.website || website, { signal: opts.signal })
+      if (detectedPlatform !== wantPlatform) { cityDropped++; totalDropped++; continue }
+     }
+
      const record: ScrapeRecord = {
       source: `google_${id}`,
       business_name: place.business_name,
@@ -203,6 +223,7 @@ function buildSource(id: TradeId): SourceDefinition {
        google_business_status: place.business_status,
        fanout_city: city,
        query: meta.query,
+       ...(detectedPlatform ? { reservation_platform: detectedPlatform } : {}),
       },
      }
      yield record
@@ -228,3 +249,25 @@ export const googleHandyman = buildSource('handyman')
 export const googleLandscaping = buildSource('landscaping')
 export const googleLocksmith = buildSource('locksmith')
 export const googleRestaurant = buildSource('restaurant')
+
+/**
+ * Restaurants that use SevenRooms for reservations. Same discovery as the
+ * plain restaurant source, but every candidate's website is checked for a
+ * SevenRooms footprint and only matches are kept. These are the leads where
+ * the AI can book tables directly (SevenRooms has a real booking API), so
+ * they're worth targeting over OpenTable/Resy/Tock restaurants where we can
+ * only deflect to a link. Slower than the plain source (a site fetch per
+ * candidate) and it scans more restaurants to net the same count.
+ */
+export const googleRestaurantSevenRooms: SourceDefinition = {
+ id: 'google_restaurant_sevenrooms',
+ label: 'Google · Restaurant (SevenRooms)',
+ description:
+  'Restaurants using SevenRooms for reservations (the AI can book tables directly via their API). Any US city or leave blank to fan out nationwide. Slower - we check each restaurant\'s website for the SevenRooms widget and keep only matches.',
+ trade: 'Restaurant',
+ run: (params: ScrapeParams, opts: SourceRunOpts) =>
+  googleRestaurant.run(
+   { ...params, extra: { ...(params.extra || {}), reservationPlatform: 'sevenrooms' } },
+   opts,
+  ),
+}
