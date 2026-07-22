@@ -152,16 +152,62 @@ function buildSource(id: TradeId): SourceDefinition {
 
    let totalYielded = 0
    let totalDropped = 0
+   let detectChecks = 0
    const placesCallsAtStart = getPlacesCallCount()
+
+   // Reservation-platform detection (SevenRooms filter) is a website fetch
+   // per candidate. Done one-at-a-time across a nationwide fan-out it times
+   // the request out, so we check sites in PARALLEL batches and stop after a
+   // hard budget of total checks (returning what we found). Tunable via env.
+   const DETECT_CONCURRENCY = 10
+   const DETECT_BUDGET = Number(process.env.SCRAPER_DETECT_BUDGET || '160')
+   const DETECT_TIMEOUT_MS = 4000
+
+   type Candidate = { place: any; phone: string; website: string }
+   const buildRecord = (place: any, phone: string, targetState: string, fanoutCity: string, platform: string | null): ScrapeRecord => ({
+    source: `google_${id}`,
+    business_name: place.business_name,
+    owner_name: null,
+    phone,
+    website: place.website,
+    business_type: meta.trade,
+    address: place.address,
+    city: place.city,
+    state: place.state || targetState,
+    zip: place.zip,
+    raw: {
+     google_place_id: place.place_id,
+     google_types: place.google_types,
+     google_rating: place.rating,
+     google_review_count: place.review_count,
+     google_business_status: place.business_status,
+     fanout_city: fanoutCity,
+     query: meta.query,
+     ...(platform ? { reservation_platform: platform } : {}),
+    },
+   })
+   // Check a batch of candidate websites concurrently; returns the matched
+   // platform (or null) per candidate, respecting the detection budget.
+   const detectBatch = (batch: Candidate[]): Promise<(string | null)[]> =>
+    Promise.all(batch.map(async (b) => {
+     if (detectChecks >= DETECT_BUDGET) return null
+     detectChecks++
+     const p = await detectReservationPlatform(b.website, { timeoutMs: DETECT_TIMEOUT_MS, signal: opts.signal })
+     return p === wantPlatform ? p : null
+    }))
 
    for (const target of targets) {
     if (totalYielded >= limit) break
+    if (wantPlatform && detectChecks >= DETECT_BUDGET) break
     const remaining = limit - totalYielded
     const askPerCity = Math.min(60, Math.max(20, remaining * 3))
     const city = target.name
 
     let cityYielded = 0
     let cityDropped = 0
+    // Filtered mode buffers deduped candidates here, then verifies their
+    // websites in parallel batches instead of blocking on each one.
+    let pending: Candidate[] = []
 
     for await (const place of discoverPlaces(`${meta.query} near ${city} ${target.state}`, {
      maxResults: askPerCity,
@@ -174,6 +220,7 @@ function buildSource(id: TradeId): SourceDefinition {
     })) {
      if (totalYielded >= limit) break
      if (cityYielded >= remaining) break
+     if (wantPlatform && detectChecks >= DETECT_BUDGET) break
 
      const phone = normalizePhone(place.phone)
      if (!phone) { cityDropped++; totalDropped++; continue }
@@ -195,41 +242,36 @@ function buildSource(id: TradeId): SourceDefinition {
      localPhones.add(phone)
      if (placeId) localPlaceIds.add(placeId)
 
-     // Reservation-platform gate (only when requested, restaurant source).
-     // Runs after dedupe so we never spend a site fetch on a lead we'd drop
-     // anyway. No website means we can't verify the platform, so drop it.
-     let detectedPlatform: string | null = null
-     if (wantPlatform) {
-      if (!website) { cityDropped++; totalDropped++; continue }
-      detectedPlatform = await detectReservationPlatform(place.website || website, { signal: opts.signal })
-      if (detectedPlatform !== wantPlatform) { cityDropped++; totalDropped++; continue }
+     // Unfiltered: yield straight through (no site fetch).
+     if (!wantPlatform) {
+      yield buildRecord(place, phone, target.state, city, null)
+      cityYielded++; totalYielded++
+      continue
      }
 
-     const record: ScrapeRecord = {
-      source: `google_${id}`,
-      business_name: place.business_name,
-      owner_name: null,
-      phone,
-      website: place.website,
-      business_type: meta.trade,
-      address: place.address,
-      city: place.city,
-      state: place.state || target.state,
-      zip: place.zip,
-      raw: {
-       google_place_id: place.place_id,
-       google_types: place.google_types,
-       google_rating: place.rating,
-       google_review_count: place.review_count,
-       google_business_status: place.business_status,
-       fanout_city: city,
-       query: meta.query,
-       ...(detectedPlatform ? { reservation_platform: detectedPlatform } : {}),
-      },
+     // Filtered: need a website to verify the platform; buffer for the batch.
+     if (!website) { cityDropped++; totalDropped++; continue }
+     pending.push({ place, phone, website: place.website || website })
+     if (pending.length >= DETECT_CONCURRENCY) {
+      const batch = pending; pending = []
+      const verdicts = await detectBatch(batch)
+      for (let k = 0; k < batch.length; k++) {
+       if (totalYielded >= limit) break
+       if (verdicts[k]) { yield buildRecord(batch[k].place, batch[k].phone, target.state, city, verdicts[k]); cityYielded++; totalYielded++ }
+       else { cityDropped++; totalDropped++ }
+      }
      }
-     yield record
-     cityYielded++
-     totalYielded++
+    }
+
+    // Flush the last partial batch for this city.
+    if (wantPlatform && pending.length > 0 && totalYielded < limit) {
+     const batch = pending; pending = []
+     const verdicts = await detectBatch(batch)
+     for (let k = 0; k < batch.length; k++) {
+      if (totalYielded >= limit) break
+      if (verdicts[k]) { yield buildRecord(batch[k].place, batch[k].phone, target.state, city, verdicts[k]); cityYielded++; totalYielded++ }
+      else { cityDropped++; totalDropped++ }
+     }
     }
 
     if (cityYielded > 0 || cityDropped > 0) {
@@ -239,6 +281,10 @@ function buildSource(id: TradeId): SourceDefinition {
     }
     diag?.push(`${city}/${id}: kept=${cityYielded} dropped=${cityDropped}`)
     if (targets.length === 1) break
+   }
+
+   if (wantPlatform && detectChecks >= DETECT_BUDGET && totalYielded < limit) {
+    diag?.push(`Checked ${detectChecks} restaurant sites for ${wantPlatform} (scan cap). Run again to keep going - already-seen spots are skipped.`)
    }
 
    // Per-run Places spend so a scrape never surprises us on the bill. The
