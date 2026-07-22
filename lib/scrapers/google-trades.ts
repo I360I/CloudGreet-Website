@@ -1,4 +1,4 @@
-import { discoverPlaces, txCityCoords, TX_CITY_COORDS } from './google-places'
+import { discoverPlaces, txCityCoords, TX_CITY_COORDS, getPlacesCallCount, PLACES_COST_PER_CALL } from './google-places'
 import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
 import { resolveUsMetro, resolveUsState, NATIONAL_FANOUT } from './us-metros'
 import { detectReservationPlatform } from './reservation-platform'
@@ -152,6 +152,7 @@ function buildSource(id: TradeId): SourceDefinition {
 
    let totalYielded = 0
    let totalDropped = 0
+   const placesCallsAtStart = getPlacesCallCount()
 
    for (const target of targets) {
     if (totalYielded >= limit) break
@@ -239,6 +240,18 @@ function buildSource(id: TradeId): SourceDefinition {
     diag?.push(`${city}/${id}: kept=${cityYielded} dropped=${cityDropped}`)
     if (targets.length === 1) break
    }
+
+   // Per-run Places spend so a scrape never surprises us on the bill. The
+   // reservation-platform site checks (SevenRooms filter) are free web
+   // requests and cost nothing here - only these Places calls do.
+   const placesCalls = getPlacesCallCount() - placesCallsAtStart
+   const estCost = placesCalls * PLACES_COST_PER_CALL
+   const costLine = `${meta.label}: kept=${totalYielded} dropped=${totalDropped} · Places calls=${placesCalls} · est. spend=$${estCost.toFixed(2)}`
+   diag?.push(costLine)
+   logger.info('google-trades run cost', {
+    source: `google_${id}`, kept: totalYielded, dropped: totalDropped,
+    placesCalls, estCostUsd: Number(estCost.toFixed(2)), wantPlatform: wantPlatform || null,
+   })
   },
  }
 }

@@ -262,6 +262,16 @@ const DISCOVERY_FIELD_MASK = [
 const PLACES_CALL_CAP = Number(process.env.PLACES_MAX_CALLS_PER_PROCESS || '1200')
 let placesCallsThisProcess = 0
 
+/** Approx USD per Places searchText call (rich field mask). */
+export const PLACES_COST_PER_CALL = 0.035
+
+/** Running count of Places calls this process. Snapshot before/after a run to
+ *  compute (and report) that run's Places spend, so a scrape never surprises
+ *  us on the bill. */
+export function getPlacesCallCount(): number {
+ return placesCallsThisProcess
+}
+
 export async function* discoverPlaces(
  query: string,
  opts?: {
