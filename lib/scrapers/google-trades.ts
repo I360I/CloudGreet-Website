@@ -244,10 +244,11 @@ function buildSource(id: TradeId): SourceDefinition {
    // Per-run Places spend so a scrape never surprises us on the bill. The
    // reservation-platform site checks (SevenRooms filter) are free web
    // requests and cost nothing here - only these Places calls do.
+   // ADMIN-ONLY: log it (server logs / admin), do NOT push to `diag` - diag
+   // gets dumped into scrape_jobs.error and shown to reps on empty runs, and
+   // reps shouldn't see API cost.
    const placesCalls = getPlacesCallCount() - placesCallsAtStart
    const estCost = placesCalls * PLACES_COST_PER_CALL
-   const costLine = `${meta.label}: kept=${totalYielded} dropped=${totalDropped} · Places calls=${placesCalls} · est. spend=$${estCost.toFixed(2)}`
-   diag?.push(costLine)
    logger.info('google-trades run cost', {
     source: `google_${id}`, kept: totalYielded, dropped: totalDropped,
     placesCalls, estCostUsd: Number(estCost.toFixed(2)), wantPlatform: wantPlatform || null,
