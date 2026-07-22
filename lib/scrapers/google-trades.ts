@@ -162,6 +162,13 @@ function buildSource(id: TradeId): SourceDefinition {
    let detectChecks = 0
    const placesCallsAtStart = getPlacesCallCount()
 
+   // Wall-clock budget. A narrow filter (e.g. below-par contractors, which
+   // are almost all 4.5*+) matches very little, so the fan-out would page
+   // through every metro trying to hit `limit`, blow past the 300s function
+   // timeout, get killed mid-run, and leave the job stuck "running" forever
+   // (UI spins). Stop early and return partial so the job COMPLETES instead.
+   const deadline = Date.now() + Number(process.env.SCRAPER_RUN_BUDGET_MS || '190000')
+
    // Reservation-platform detection (SevenRooms filter) is a website fetch
    // per candidate. Done one-at-a-time across a nationwide fan-out it times
    // the request out, so we check sites in PARALLEL batches and stop after a
@@ -206,6 +213,7 @@ function buildSource(id: TradeId): SourceDefinition {
    for (const target of targets) {
     if (totalYielded >= limit) break
     if (wantPlatform && detectChecks >= DETECT_BUDGET) break
+    if (Date.now() > deadline) { diag?.push(`time budget reached after ${totalYielded} kept - returning partial`); break }
     const remaining = limit - totalYielded
     const askPerCity = Math.min(60, Math.max(20, remaining * 3))
     const city = target.name
@@ -230,6 +238,7 @@ function buildSource(id: TradeId): SourceDefinition {
      if (totalYielded >= limit) break
      if (cityYielded >= remaining) break
      if (wantPlatform && detectChecks >= DETECT_BUDGET) break
+     if (Date.now() > deadline) break
 
      const phone = normalizePhone(place.phone)
      if (!phone) { cityDropped++; totalDropped++; continue }
