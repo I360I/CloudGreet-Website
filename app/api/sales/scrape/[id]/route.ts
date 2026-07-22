@@ -64,9 +64,14 @@ export async function GET(
     return !p || !dupePhones.has(p)
   })
 
+  // Strip the admin-only cost metadata (params._cost) before returning to a
+  // rep - API spend is not shown to reps, only in the admin scraper.
+  const { _cost: _repHiddenCost, ...repParams } = (job.params || {}) as Record<string, unknown>
+  const repJob = { ...job, params: repParams }
+
   return NextResponse.json({
     success: true,
-    job,
+    job: repJob,
     results: filtered,
     // Retain the field for any UI still reading it - empty by design now.
     existing_phones_in_leads: [],

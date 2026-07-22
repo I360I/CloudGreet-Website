@@ -22,7 +22,7 @@ type Source = {
 type Job = {
  id: string
  source: string
- params: { location?: string; limit?: number }
+ params: { location?: string; limit?: number; _cost?: { places_calls: number; est_cost_usd: number } }
  status: 'queued' | 'running' | 'completed' | 'failed'
  results_count: number
  promoted_count: number
@@ -280,6 +280,14 @@ export default function ScraperPage() {
               <>
                <span className="text-gray-600">·</span>
                <span className="font-mono text-emerald-400">{j.promoted_count} promoted</span>
+              </>
+             )}
+             {j.params._cost && (
+              <>
+               <span className="text-gray-600">·</span>
+               <span className="font-mono text-gray-400" title={`${j.params._cost.places_calls} Google Places calls`}>
+                ~${j.params._cost.est_cost_usd.toFixed(2)} spend
+               </span>
               </>
              )}
              {j.error && <span className="text-rose-400 truncate">· {j.error}</span>}

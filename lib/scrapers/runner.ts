@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../supabase'
 import { logger } from '../monitoring'
 import { getSource } from './registry'
+import { getPlacesCallCount, PLACES_COST_PER_CALL } from './google-places'
 import { normalizePhone, normalizeWebsite, businessNameKey } from './normalize'
 import type { ScrapeParams, ScrapeRecord, SeenSets } from './types'
 
@@ -93,6 +94,11 @@ export async function runScrapeJob(jobId: string): Promise<void> {
    .eq('id', jobId)
  }
 
+ // Snapshot Places call count so we can record this job's API spend. Stored
+ // under params._cost (admin-only: the rep scrape routes strip it before
+ // returning; only the admin scraper surfaces it).
+ const placesCallsAtStart = getPlacesCallCount()
+
  try {
   for await (const record of source.run(params, { seen, diag })) {
    const phone = normalizePhone(record.phone)
@@ -132,6 +138,12 @@ export async function runScrapeJob(jobId: string): Promise<void> {
     ? buildEmptyJobReason(diag, droppedDup)
     : null
 
+   const placesCalls = getPlacesCallCount() - placesCallsAtStart
+   const costMeta = {
+    places_calls: placesCalls,
+    est_cost_usd: Number((placesCalls * PLACES_COST_PER_CALL).toFixed(2)),
+   }
+
    await supabaseAdmin
     .from('scrape_jobs')
     .update({
@@ -139,6 +151,7 @@ export async function runScrapeJob(jobId: string): Promise<void> {
      results_count: count,
      finished_at: new Date().toISOString(),
      updated_at: new Date().toISOString(),
+     params: { ...(job.params || {}), _cost: costMeta },
      ...(completionError ? { error: completionError } : {}),
     })
     .eq('id', jobId)
