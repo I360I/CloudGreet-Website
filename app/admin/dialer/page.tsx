@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { CircleNotch, ArrowsClockwise, PhoneOutgoing, Clock, Play, Pause } from '@phosphor-icons/react'
+import { CircleNotch, ArrowsClockwise, PhoneOutgoing, Clock, Play, Pause, MagnifyingGlass } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, Stat } from '../_components/ui'
@@ -94,6 +94,7 @@ export default function AdminDialerPage() {
  const [error, setError] = useState<string | null>(null)
  const [repFilter, setRepFilter] = useState<string>('')
  const [refreshing, setRefreshing] = useState(false)
+ const [search, setSearch] = useState('')
 
  const load = async (silent = false) => {
   if (!silent) setRefreshing(true)
@@ -128,6 +129,19 @@ export default function AdminDialerPage() {
   }
   return t
  }, [summary])
+
+ const filteredRecent = useMemo(() => {
+  const recent = summary?.recent || []
+  const q = search.trim().toLowerCase()
+  if (!q) return recent
+  const qDigits = q.replace(/\D/g, '')
+  return recent.filter((c) =>
+   (c.rep_name || '').toLowerCase().includes(q) ||
+   (c.lead_name || '').toLowerCase().includes(q) ||
+   (c.status || '').toLowerCase().includes(q) ||
+   (qDigits.length >= 3 && (c.to_number || '').replace(/\D/g, '').includes(qDigits)),
+  )
+ }, [summary, search])
 
  return (
   <AdminShell activeLabel="Dialer">
@@ -266,14 +280,23 @@ export default function AdminDialerPage() {
       </Panel>
 
       <Panel padding="none">
-       <div className="px-5 sm:px-6 pt-5 sm:pt-6">
-        <PanelHeader eyebrow="FEED" title={`Recent calls (${summary.recent.length})`} />
+       <div className="px-5 sm:px-6 pt-5 sm:pt-6 flex items-center justify-between gap-4 flex-wrap">
+        <PanelHeader eyebrow="FEED" title={`Recent calls (${search ? `${filteredRecent.length} of ${summary.recent.length}` : summary.recent.length})`} />
+        <div className="relative">
+         <MagnifyingGlass className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+         <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search rep, business, number…"
+          className="bg-[#101015] border border-white/[0.08] text-sm text-white rounded-xl pl-8 pr-3 py-1.5 w-64 focus:outline-none focus:border-white/[0.16]"
+         />
+        </div>
        </div>
-       {summary.recent.length === 0 ? (
-        <div className="px-5 sm:px-6 pb-6 text-sm text-gray-500">No recent calls.</div>
+       {filteredRecent.length === 0 ? (
+        <div className="px-5 sm:px-6 pb-6 pt-3 text-sm text-gray-500">{search ? 'No calls match your search.' : 'No recent calls.'}</div>
        ) : (
-        <div className="divide-y divide-white/[0.04]">
-         {summary.recent.map((c) => (
+        <div className="mt-3 max-h-[65vh] overflow-y-auto divide-y divide-white/[0.04]">
+         {filteredRecent.map((c) => (
           <div key={c.id} className="px-5 sm:px-6 py-2.5 flex items-center justify-between gap-4">
            <div className="min-w-0">
             <div className="text-sm text-white truncate">

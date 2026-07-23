@@ -25,6 +25,9 @@ export const runtime = 'nodejs'
 
 const LIVE_WINDOW_MIN = 10
 const TODAY_RECENT_LIMIT = 50
+// The recent-calls feed is scrollable + searchable in the UI, so serve a
+// deeper window than the today aggregation.
+const RECENT_FEED_LIMIT = 300
 
 type RepRow = { id: string; email: string; first_name: string | null; last_name: string | null; name: string | null }
 type CallRow = {
@@ -123,7 +126,7 @@ export async function GET(request: NextRequest) {
    .select('id, rep_id, lead_id, to_number, status, started_at, ended_at, duration_seconds, recording_status')
    .in('status', ['completed', 'no_answer', 'voicemail', 'busy', 'failed', 'rejected'])
    .order('started_at', { ascending: false })
-   .limit(TODAY_RECENT_LIMIT)
+   .limit(RECENT_FEED_LIMIT)
   if (repFilter) recentQuery = recentQuery.eq('rep_id', repFilter)
   const { data: recentCalls } = await recentQuery
 
@@ -150,11 +153,16 @@ export async function GET(request: NextRequest) {
   for (const c of (recentCalls || []) as any[]) if (c.lead_id) leadIds.add(c.lead_id)
   let leadMap = new Map<string, string>()
   if (leadIds.size > 0) {
-   const { data: leads } = await supabaseAdmin
-    .from('leads')
-    .select('id, business_name')
-    .in('id', Array.from(leadIds))
-   leadMap = new Map((leads || []).map((l: any) => [l.id, l.business_name as string]))
+   // Chunk the .in() - a few hundred UUIDs in one query builds a URL
+   // PostgREST rejects with 400.
+   const idList = Array.from(leadIds)
+   for (let i = 0; i < idList.length; i += 150) {
+    const { data: leads } = await supabaseAdmin
+     .from('leads')
+     .select('id, business_name')
+     .in('id', idList.slice(i, i + 150))
+    for (const l of (leads || []) as any[]) leadMap.set(l.id, l.business_name as string)
+   }
   }
 
   const live = (liveCalls || []).map((c: any) => ({
