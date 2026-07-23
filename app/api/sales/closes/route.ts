@@ -3,6 +3,7 @@ import { notifyAdmin } from '@/lib/notifications/notify'
 import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
+import { ensureLeadForRep } from '@/lib/sales/ensure-lead'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -138,6 +139,20 @@ export async function POST(request: NextRequest) {
         .update({ status: 'won', updated_at: new Date().toISOString() })
         .eq('id', leadId)
     } catch { /* non-fatal */ }
+  } else {
+    // Standalone close (no source lead) - ensure the prospect still
+    // lands in the rep's Leads workspace so they can write notes on it.
+    // Every row on the Prospects tab should exist in Leads too.
+    void ensureLeadForRep({
+      repId: auth.userId,
+      businessName: name,
+      contactName: contact,
+      email,
+      phone,
+      notes: notes ? `From close: ${notes}` : 'Auto-added from a submitted close.',
+      source: 'close',
+      status: 'won',
+    })
   }
 
   // Best-effort founder notification.

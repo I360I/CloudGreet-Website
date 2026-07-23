@@ -3,6 +3,7 @@ import { notifyAdmin } from '@/lib/notifications/notify'
 import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
+import { ensureLeadForRep } from '@/lib/sales/ensure-lead'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -115,6 +116,25 @@ export async function POST(request: NextRequest) {
         .update({ status: 'won', updated_at: new Date().toISOString() })
         .eq('id', leadId)
     } catch { /* non-fatal */ }
+  } else {
+    // Standalone demo client (no source lead) - mirror it into the
+    // rep's Leads workspace so the prospect is notable there too. A
+    // demo is booked, so file it as demo_scheduled.
+    void ensureLeadForRep({
+      repId: auth.userId,
+      businessName: name,
+      contactName: contact,
+      email,
+      phone,
+      website,
+      address,
+      city,
+      state,
+      businessType,
+      notes: notes ? `From demo client: ${notes}` : 'Auto-added from a submitted demo client.',
+      source: 'demo',
+      status: 'demo_scheduled',
+    })
   }
 
   // Founder email - distinct subject so it's clearly a demo-only
