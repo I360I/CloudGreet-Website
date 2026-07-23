@@ -14,12 +14,7 @@ dist/
 build/
 *.log
 
-
-
-
-
-
-
-
-
-
+# Never upload env/secret files or local dev artifacts
+.env.*
+.agents/
+WEB-CHAT-PLAN.md
