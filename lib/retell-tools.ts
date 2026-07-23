@@ -79,12 +79,86 @@ export type GetToolsOptions = {
    *  scheduling via Cal.com. The agent uses it for "right now"
    *  requests; the owner texts/calls back to accept. */
   dispatchMode?: boolean
+  /** When true (business_type === 'restaurant'), the agent is a restaurant
+   *  HOST, not a booker: it deflects reservations to an OpenTable/menu link
+   *  (send_link), captures catering/large-party requests as leads
+   *  (send_dispatch_request), and transfers live orders. It gets NONE of the
+   *  Cal.com booking tools. Without this, re-saving a restaurant agent through
+   *  the builder clobbers it back to the home-service tool set (book/lookup/
+   *  send_booking_sms), which breaks the menu-texting flow. */
+  restaurantMode?: boolean
+}
+
+/** Restaurant HOST tool set (no Cal.com). Returned when restaurantMode is on
+ *  so re-saving a restaurant agent can't clobber it to the booking tools. */
+function getRestaurantTools(webhookUrl: string, escalationPhone?: string | null): RetellGeneralTool[] {
+  const tools: RetellGeneralTool[] = [
+    {
+      type: 'custom',
+      name: 'send_dispatch_request',
+      description:
+        "Texts the team a summary of a catering request, a large-party/private-event request, or a message for staff (complaint, lost item, order status) when no one could take the call. Use this to CAPTURE A LEAD or MESSAGE, not to place a food order. The team calls the caller back. Never tell the caller it's confirmed.",
+      url: webhookUrl,
+      speak_during_execution: false,
+      speak_after_execution: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          customer_name: { type: 'string', description: "Caller's name." },
+          customer_phone: { type: 'string', description: 'Best callback number in E.164 (+1 then 10 digits). Confirm it first; default to the inbound caller ID.' },
+          pickup: { type: 'string', description: "The occasion or type, e.g. 'Catering, office lunch', 'Large party, dine-in', or 'Message, lost item'." },
+          requested_time: { type: 'string', description: "Date and time of the event/party in the caller's words. Plain text. For a message use 'ASAP'." },
+          party_size: { type: 'number', description: 'Optional. Number of people for a catering or large-party request.' },
+          notes: { type: 'string', description: 'Optional. Menu preferences, budget, pickup vs delivery, or what the message is about.' },
+        },
+        required: ['customer_name', 'customer_phone', 'pickup', 'requested_time'],
+      },
+    },
+    {
+      type: 'custom',
+      name: 'send_link',
+      description:
+        "Texts the CALLER a link: an OpenTable reservation link (to deflect a wait-time or 'can I get a table' call), the menu (for a dish/price/allergy question you can't answer), or the online-ordering link (for a to-go caller). Fire silently. Do NOT read the URL out loud or announce that you're texting a link.",
+      url: webhookUrl,
+      speak_during_execution: false,
+      speak_after_execution: true,
+      parameters: {
+        type: 'object',
+        properties: {
+          to: { type: 'string', description: "Caller's number in E.164. Optional - defaults to the inbound caller ID." },
+          link: { type: 'string', description: 'The URL to text (reservation, menu, or ordering link from your knowledge base).' },
+          message: { type: 'string', description: "Short friendly lead-in texted before the link, e.g. \"Here's the link to grab a reservation:\"." },
+        },
+        required: ['link'],
+      },
+    },
+  ]
+  if (escalationPhone) {
+    tools.push({
+      type: 'transfer_call',
+      name: 'transfer_call',
+      description:
+        'Transfers the caller to the restaurant so a real person can take a to-go order, handle a complaint, a lost item, an order-status question, or anyone who asks for staff. On voicemail/no-answer the call comes back to you and you take a message with send_dispatch_request. Don\'t transfer just because a caller is unsure.',
+      transfer_destination: { type: 'predefined', number: escalationPhone },
+      transfer_option: { type: 'cold_transfer' },
+      speak_after_execution: false,
+    } as RetellGeneralTool)
+  }
+  tools.push({
+    type: 'end_call',
+    name: 'end_call',
+    description: 'Ends the call once the caller is clearly done, or on a solicitor / wrong number.',
+  } as RetellGeneralTool)
+  return tools
 }
 
 export function getRetellGeneralTools(
   webhookUrl: string,
   opts: GetToolsOptions = {},
 ): RetellGeneralTool[] {
+  // Restaurant agents are hosts, not bookers - a totally different tool set.
+  if (opts.restaurantMode) return getRestaurantTools(webhookUrl, opts.escalationPhone)
+
   const tools: RetellGeneralTool[] = [
     {
       type: 'custom',

@@ -82,6 +82,7 @@ class RetellAgentManager {
       // the agent would offer to transfer to a number that isn't there.
       let escalationPhone: string | null = null
       let dispatchMode = false
+      const restaurantMode = String(mergedConfig.businessType || '').toLowerCase() === 'restaurant'
       try {
         const { data: biz } = await supabaseAdmin
           .from('businesses')
@@ -125,7 +126,7 @@ class RetellAgentManager {
           // resolves the calling business from the signed agent_id, so
           // the same URL works for every client; the transfer
           // destination is pulled from the business's escalation_phone.
-          general_tools: getRetellGeneralTools(webhookUrl, { escalationPhone, dispatchMode }),
+          general_tools: getRetellGeneralTools(webhookUrl, { escalationPhone, dispatchMode, restaurantMode }),
         }),
       })
       if (!createLlmRes.ok) {
@@ -1138,10 +1139,11 @@ class RetellAgentManager {
     const webhookUrl = `${appUrl}/api/retell/voice-webhook`
     let escalationPhone: string | null = null
     let dispatchMode = false
+    let restaurantMode = false
     try {
       const { data: biz } = await supabaseAdmin
         .from('businesses')
-        .select('escalation_phone, notifications_phone, owner_id, dispatch_mode')
+        .select('escalation_phone, notifications_phone, owner_id, dispatch_mode, business_type')
         .eq('id', businessId)
         .maybeSingle()
       escalationPhone =
@@ -1149,6 +1151,7 @@ class RetellAgentManager {
         (biz as any)?.notifications_phone ||
         null
       dispatchMode = Boolean((biz as any)?.dispatch_mode)
+      restaurantMode = String((biz as any)?.business_type || '').toLowerCase() === 'restaurant'
       if (!escalationPhone && (biz as any)?.owner_id) {
         const { data: owner } = await supabaseAdmin
           .from('custom_users')
@@ -1158,9 +1161,10 @@ class RetellAgentManager {
         escalationPhone = (owner as any)?.phone || null
       }
     } catch { /* optional column, ignore */ }
-    const tools = getRetellGeneralTools(webhookUrl, { escalationPhone, dispatchMode })
+    const tools = getRetellGeneralTools(webhookUrl, { escalationPhone, dispatchMode, restaurantMode })
     t(`transfer destination: ${escalationPhone || '∅ (skipping transfer_call)'}`)
     t(`dispatch mode: ${dispatchMode ? 'on (send_dispatch_request attached)' : 'off'}`)
+    t(`restaurant mode: ${restaurantMode ? 'on (host tools: send_link + send_dispatch_request, no Cal.com)' : 'off'}`)
 
     const patchRes = await fetch(`https://api.retellai.com/update-retell-llm/${llmId}`, {
       method: 'PATCH',
