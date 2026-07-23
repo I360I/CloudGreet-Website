@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { CircleNotch, ArrowsClockwise, PhoneOutgoing, Clock } from '@phosphor-icons/react'
+import { CircleNotch, ArrowsClockwise, PhoneOutgoing, Clock, Play, Pause } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { AdminShell } from '../_components/Shell'
 import { Panel, PanelHeader, Stat } from '../_components/ui'
@@ -41,6 +41,7 @@ type RecentCall = {
  started_at: string
  ended_at: string | null
  duration_seconds: number | null
+ has_recording?: boolean
 }
 
 type Summary = {
@@ -286,7 +287,9 @@ export default function AdminDialerPage() {
              {fmtClock(c.started_at)} - {c.status.replace('_', ' ')} - {fmtDuration(c.duration_seconds || 0)}
             </div>
            </div>
-           <PhoneOutgoing className="w-4 h-4 text-gray-600 shrink-0" />
+           {c.has_recording
+            ? <RecordingButton callId={c.id} />
+            : <PhoneOutgoing className="w-4 h-4 text-gray-600 shrink-0" />}
           </div>
          ))}
         </div>
@@ -296,5 +299,44 @@ export default function AdminDialerPage() {
     )}
    </div>
   </AdminShell>
+ )
+}
+
+/** Play a call recording: fetches a signed URL on first play, then toggles
+ *  an inline audio element. Admin-only. Mirrors the setter-detail button. */
+function RecordingButton({ callId }: { callId: string }) {
+ const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
+ const [loading, setLoading] = useState(false)
+ const [playing, setPlaying] = useState(false)
+
+ const toggle = async () => {
+  if (audio) {
+   if (playing) { audio.pause(); setPlaying(false) }
+   else { void audio.play(); setPlaying(true) }
+   return
+  }
+  setLoading(true)
+  try {
+   const r = await fetchWithAuth(`/api/admin/rep-calls/${callId}/recording`)
+   const j = await r.json().catch(() => ({}))
+   if (!r.ok || !j?.url) { alert(j?.error || 'Recording unavailable'); return }
+   const a = new Audio(j.url)
+   a.onended = () => setPlaying(false)
+   a.onpause = () => setPlaying(false)
+   a.onplay = () => setPlaying(true)
+   setAudio(a)
+   void a.play()
+  } catch { alert('Could not load recording') }
+  finally { setLoading(false) }
+ }
+
+ return (
+  <button
+   onClick={() => void toggle()}
+   title="Play recording"
+   className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+  >
+   {loading ? <CircleNotch className="w-3 h-3 animate-spin" /> : playing ? <Pause weight="fill" className="w-3 h-3" /> : <Play weight="fill" className="w-3 h-3" />}
+  </button>
  )
 }

@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
   // Recent feed.
   let recentQuery = supabaseAdmin
    .from('rep_calls')
-   .select('id, rep_id, lead_id, to_number, status, started_at, ended_at, duration_seconds')
+   .select('id, rep_id, lead_id, to_number, status, started_at, ended_at, duration_seconds, recording_status')
    .in('status', ['completed', 'no_answer', 'voicemail', 'busy', 'failed', 'rejected'])
    .order('started_at', { ascending: false })
    .limit(TODAY_RECENT_LIMIT)
@@ -180,6 +180,7 @@ export async function GET(request: NextRequest) {
    started_at: c.started_at,
    ended_at: c.ended_at,
    duration_seconds: c.duration_seconds,
+   has_recording: (c.recording_status || '').startsWith('saved'),
   }))
 
   return NextResponse.json({
