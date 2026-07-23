@@ -1,4 +1,5 @@
 import { logger } from '../monitoring'
+import { isChainBusiness } from './chains'
 
 /**
  * Google Places API (New) text-search enrichment.
@@ -296,6 +297,11 @@ export async function* discoverPlaces(
   maxRating?: number
   /** Drop results that are CLOSED_PERMANENTLY / CLOSED_TEMPORARILY (default true). */
   excludeClosed?: boolean
+  /** Drop national/regional chains + franchises by name (default true). We
+   *  only sell to independent local businesses; a chain location never
+   *  controls its own phone line. Rating filters miss them (chains often sit
+   *  at 3.x stars), so this is a name-based denylist. */
+  excludeChains?: boolean
   /** Optional list of two-letter state abbreviations to accept. If
    *  omitted, defaults to TX-only (preserves existing source behavior).
    *  Pass an empty array to accept any US state. */
@@ -316,6 +322,7 @@ export async function* discoverPlaces(
  const minRating = opts?.minRating ?? 0
  const maxRating = opts?.maxRating ?? Infinity
  const excludeClosed = opts?.excludeClosed !== false
+ const excludeChains = opts?.excludeChains !== false
  // Default behavior preserved: TX-only. Existing TX-discovery sources
  // pass nothing and keep getting the TX filter. Quality mode passes [].
  const stateFilter = opts?.stateAllowList ?? ['TX']
@@ -410,6 +417,7 @@ export async function* discoverPlaces(
    const status: string = p.businessStatus || ''
 
    if (excludeClosed && /CLOSED/i.test(status)) continue
+   if (excludeChains && isChainBusiness(p.displayName?.text)) continue
    if (reviewCount < minReviews) continue
    if (reviewCount > maxReviews) continue
    if (rating > 0 && rating < minRating) continue

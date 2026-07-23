@@ -122,10 +122,21 @@ async function* runQualityMode(
   // 'standard' when missing. Loose returns more leads; strict drops
   // anything not obviously worth a call.
   const qualityLevel = (params.extra?.quality as 'loose' | 'standard' | 'strict' | undefined) || 'standard'
-  const minRating = qualityLevel === 'strict' ? 4.0 : qualityLevel === 'loose' ? 0 : HARD_MIN_RATING
-  const minReviews = qualityLevel === 'strict' ? 20 : qualityLevel === 'loose' ? 0 : HARD_MIN_REVIEWS
+  // The rep's rating/review range sliders (params.extra.min/maxRating,
+  // min/maxReviewCount) OVERRIDE the strictness-level defaults. Without
+  // this wiring the sliders were silently ignored here - a "max 3.5 stars"
+  // request still returned 5-star shops because quality mode only ever
+  // looked at the coarse strictness level.
+  const extraNum = (v: unknown): number | undefined =>
+    typeof v === 'number' && Number.isFinite(v) ? v : undefined
+  const minRating = extraNum(params.extra?.minRating)
+    ?? (qualityLevel === 'strict' ? 4.0 : qualityLevel === 'loose' ? 0 : HARD_MIN_RATING)
+  const maxRating = extraNum(params.extra?.maxRating) // undefined = no ceiling
+  const minReviews = extraNum(params.extra?.minReviewCount)
+    ?? (qualityLevel === 'strict' ? 20 : qualityLevel === 'loose' ? 0 : HARD_MIN_REVIEWS)
+  const maxReviews = extraNum(params.extra?.maxReviewCount) // undefined = per-trade cap only
   const requireWebsite = qualityLevel === 'strict'
-  diag?.push(`strictness=${qualityLevel} minRating=${minRating} minReviews=${minReviews} requireWebsite=${requireWebsite}`)
+  diag?.push(`strictness=${qualityLevel} rating=${minRating}-${maxRating ?? '5'} reviews=${minReviews}-${maxReviews ?? 'inf'} requireWebsite=${requireWebsite}`)
 
   // Location filter. The historical behavior was "ignore location -
   // always nationwide" which made reps think the source was broken
@@ -206,7 +217,9 @@ async function* runQualityMode(
           maxResults: 20, // first page only - that's where the best-rated land
           includedType: cfg.includedType,
           minReviewCount: minReviews,
+          maxReviewCount: maxReviews,
           minRating: minRating,
+          maxRating: maxRating,
           excludeClosed: true,
           stateAllowList: [], // [] = any US state
           locationRestriction: {
@@ -217,8 +230,10 @@ async function* runQualityMode(
           if (totalYielded >= limit) break
           if (kept >= cellCap) break
           // Trade-specific size cap: drops mega-firms whose review
-          // counts dwarf solo / small competitors.
-          if (cfg.maxReviewCount && (place.review_count ?? 0) > cfg.maxReviewCount) {
+          // counts dwarf solo / small competitors. Skipped when the rep
+          // set an explicit review ceiling (that slider already applied
+          // in discoverPlaces and should win over the trade default).
+          if (maxReviews === undefined && cfg.maxReviewCount && (place.review_count ?? 0) > cfg.maxReviewCount) {
             dropped++; continue
           }
           // Trade-specific name blocklist: catches branded chains that
