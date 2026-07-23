@@ -213,11 +213,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, action: 'voicemail_saved' })
   }
 
-  // ── RECORDING SAVED: store a dialer call recording (owner-only) ───────────
+  // ── RECORDING SAVED: store a dialer call recording ───────────────────────
   // Auto call recording started by /api/sales/dialer/record in one-party
   // consent states. Download the mp3 into the private call-recordings bucket
   // (durable, vs Telnyx's short retention) and stamp the rep_calls row.
-  if (eventType === 'recording.saved' && clientState?.type === 'dialer_recording') {
+  // NOTE: we do NOT gate on clientState.type here. Telnyx does not reliably
+  // echo the record_start client_state on recording.saved for our
+  // WebRTC-originated dialer calls (that dropped 795 recordings), so match by
+  // call id instead. The voicemail case already returned above, so anything
+  // reaching here is a dialer recording (or an unknown call -> no row -> skip).
+  if (eventType === 'recording.saved') {
     const srcUrl = payload.recording_urls?.mp3 || payload.recording_urls?.wav || null
     if (!callId || !srcUrl) return NextResponse.json({ ok: true, ignored: 'no call id / url' })
     const { data: row } = await supabaseAdmin
