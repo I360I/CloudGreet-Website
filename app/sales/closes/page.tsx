@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { Plus, WarningCircle, Trophy, Link as LinkIcon, Copy, CheckCircle, CircleNotch, CaretRight } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { CloseDetailPanel, type CloseRow } from './_detail'
+import { type CloseRow } from './_detail'
 
 type Close = CloseRow & {
   demo_scheduled_at?: string | null
@@ -122,7 +123,7 @@ export default function SalesClosesPage() {
   const [linkBusy, setLinkBusy] = useState<string | null>(null)
   const [linkUrls, setLinkUrls] = useState<Record<string, string>>({})
   const [copied, setCopied] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const router = useRouter()
 
   const load = async () => {
     try {
@@ -320,7 +321,7 @@ export default function SalesClosesPage() {
                 >
                   <button
                     type="button"
-                    onClick={() => setSelectedId(c.id)}
+                    onClick={() => router.push(`/sales/closes/${c.id}`)}
                     className="w-full text-left px-5 py-4 hover:bg-gray-50/60 transition-colors group"
                   >
                     <div className="flex items-start justify-between gap-4">
@@ -429,23 +430,6 @@ export default function SalesClosesPage() {
           </motion.div>
         )}
       </section>
-      <AnimatePresence>
-        {selectedId && (() => {
-          const sel = closes.find((c) => c.id === selectedId)
-          if (!sel) return null
-          return (
-            <CloseDetailPanel
-              close={sel}
-              paymentUrl={linkUrls[sel.id] || null}
-              onClose={() => setSelectedId(null)}
-              onPaymentLink={(overrides) => generateLink(sel.id, overrides)}
-              onPaymentLinkBusy={linkBusy === sel.id}
-              paymentError={error}
-              onCopy={() => copyLink(sel.id)}
-            />
-          )
-        })()}
-      </AnimatePresence>
     </SalesShell>
   )
 }

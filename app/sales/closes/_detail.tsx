@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { X, Phone, EnvelopeSimple, ChatText, Link as LinkIcon, Copy, CheckCircle, CircleNotch, Trophy, ArrowSquareOut, Sparkle, ListChecks, GearSix, SignIn, Trash } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -62,7 +62,6 @@ export function CloseDetailPanel({
   onCopy: () => void
   paymentError?: string
 }) {
-  const [copied, setCopied] = useState(false)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -73,17 +72,6 @@ export function CloseDetailPanel({
       document.body.style.overflow = prev
     }
   }, [onClose])
-
-  const copy = async (text: string) => {
-    try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) } catch {}
-  }
-
-  const stage = pickStage(close)
-
-  const monthly = (close.agreed_monthly_cents / 100).toFixed(2)
-  const setup = close.agreed_setup_fee_cents
-    ? (close.agreed_setup_fee_cents / 100).toFixed(2)
-    : null
 
   return (
     <motion.div
@@ -102,96 +90,140 @@ export function CloseDetailPanel({
         transition={{ duration: 0.25, ease: EASE }}
         className="fixed right-0 top-0 bottom-0 w-full max-w-xl bg-white border-l border-gray-200 shadow-2xl flex flex-col"
       >
-        {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-200 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1">
-              Close
-            </div>
-            <h2 className="text-xl font-medium tracking-tight text-gray-900 truncate">
-              {close.prospect_business_name}
-            </h2>
-            <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-              {close.prospect_contact_name && <span>{close.prospect_contact_name}</span>}
-              {close.prospect_email && (
-                <span className="inline-flex items-center gap-1">
-                  <EnvelopeSimple className="w-3 h-3" /> {close.prospect_email}
-                </span>
-              )}
-              {close.prospect_phone && (
-                <span className="inline-flex items-center gap-1">
-                  <Phone className="w-3 h-3" /> {close.prospect_phone}
-                </span>
-              )}
-            </div>
-            <div className="text-xs text-gray-700 mt-2 tabular-nums">
-              <span className="font-medium">${monthly}/mo</span>
-              {setup && <span className="text-gray-500"> + ${setup} setup</span>}
-              <span className="text-gray-300 mx-2">·</span>
-              <span className="text-gray-500">{new Date(close.created_at).toLocaleDateString()}</span>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="text-gray-400 hover:text-gray-700 p-1 -m-1"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
-          <StageStrip stage={stage} />
-
-          {/* Stage-aware action sections */}
-          {(stage === 'pending' || stage === 'invoice_sent') && (
-            <>
-              <PaymentSection
-                close={close}
-                paymentUrl={paymentUrl}
-                onGenerate={onPaymentLink}
-                busy={onPaymentLinkBusy}
-                onCopy={onCopy}
-                error={paymentError}
-              />
-              {!close.business_id && (
-                <AccountLinkCard closeId={close.id} prospectEmail={close.prospect_email} />
-              )}
-              <DemoCard close={close} />
-            </>
-          )}
-
-          {stage === 'paid' && (
-            <>
-              <DemoCard close={close} />
-              <CustomizationSection close={close} />
-              <DemoAgentSection close={close} />
-              {close.customization_status === 'live' && close.business_phone_number && (
-                <AgentNumberCard close={close} />
-              )}
-              {close.business_id && <QuickEditsCard close={close} />}
-            </>
-          )}
-
-          {(stage === 'cancelled' || stage === 'rejected') && (
-            <Card title="Closed out">
-              <p className="text-sm text-gray-600">
-                This close is marked <span className="font-mono">{close.status}</span>.
-                {close.notes && <> Notes: {close.notes}</>}
-              </p>
-            </Card>
-          )}
-
-          {/* Notes - always visible if present */}
-          {close.notes && stage !== 'cancelled' && stage !== 'rejected' && (
-            <Card title="Notes" subtle>
-              <p className="text-sm text-gray-700 whitespace-pre-line">{close.notes}</p>
-            </Card>
-          )}
-        </div>
+        <CloseDetailContent
+          close={close}
+          paymentUrl={paymentUrl}
+          onPaymentLink={onPaymentLink}
+          onPaymentLinkBusy={onPaymentLinkBusy}
+          onCopy={onCopy}
+          paymentError={paymentError}
+          variant="panel"
+          headerAction={
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="text-gray-400 hover:text-gray-700 p-1 -m-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          }
+        />
       </motion.aside>
     </motion.div>
+  )
+}
+
+/**
+ * Close detail content (header + lifecycle-aware body), shared by the
+ * slide-in panel and the full-page /sales/closes/[id] view. `variant`
+ * only changes the body's scroll container: it fills the drawer height
+ * ('panel') or flows naturally down a page ('page').
+ */
+export function CloseDetailContent({
+  close, paymentUrl, onPaymentLink, onPaymentLinkBusy, onCopy, paymentError,
+  variant = 'panel', headerAction,
+}: {
+  close: CloseRow
+  paymentUrl: string | null
+  onPaymentLink: (overrides?: PaymentLinkOverrides) => void
+  onPaymentLinkBusy: boolean
+  onCopy: () => void
+  paymentError?: string
+  variant?: 'panel' | 'page'
+  headerAction?: ReactNode
+}) {
+  const stage = pickStage(close)
+
+  const monthly = (close.agreed_monthly_cents / 100).toFixed(2)
+  const setup = close.agreed_setup_fee_cents
+    ? (close.agreed_setup_fee_cents / 100).toFixed(2)
+    : null
+
+  return (
+    <div className={variant === 'panel' ? 'flex flex-col h-full min-h-0' : ''}>
+      {/* Header */}
+      <div className="px-6 py-5 border-b border-gray-200 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-500 mb-1">
+            Close
+          </div>
+          <h2 className="text-xl font-medium tracking-tight text-gray-900 truncate">
+            {close.prospect_business_name}
+          </h2>
+          <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            {close.prospect_contact_name && <span>{close.prospect_contact_name}</span>}
+            {close.prospect_email && (
+              <span className="inline-flex items-center gap-1">
+                <EnvelopeSimple className="w-3 h-3" /> {close.prospect_email}
+              </span>
+            )}
+            {close.prospect_phone && (
+              <span className="inline-flex items-center gap-1">
+                <Phone className="w-3 h-3" /> {close.prospect_phone}
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-gray-700 mt-2 tabular-nums">
+            <span className="font-medium">${monthly}/mo</span>
+            {setup && <span className="text-gray-500"> + ${setup} setup</span>}
+            <span className="text-gray-300 mx-2">·</span>
+            <span className="text-gray-500">{new Date(close.created_at).toLocaleDateString()}</span>
+          </div>
+        </div>
+        {headerAction}
+      </div>
+
+      {/* Body */}
+      <div className={variant === 'panel' ? 'flex-1 overflow-y-auto p-6 space-y-5' : 'p-6 space-y-5'}>
+        <StageStrip stage={stage} />
+
+        {/* Stage-aware action sections */}
+        {(stage === 'pending' || stage === 'invoice_sent') && (
+          <>
+            <PaymentSection
+              close={close}
+              paymentUrl={paymentUrl}
+              onGenerate={onPaymentLink}
+              busy={onPaymentLinkBusy}
+              onCopy={onCopy}
+              error={paymentError}
+            />
+            {!close.business_id && (
+              <AccountLinkCard closeId={close.id} prospectEmail={close.prospect_email} />
+            )}
+            <DemoCard close={close} />
+          </>
+        )}
+
+        {stage === 'paid' && (
+          <>
+            <DemoCard close={close} />
+            <CustomizationSection close={close} />
+            <DemoAgentSection close={close} />
+            {close.customization_status === 'live' && close.business_phone_number && (
+              <AgentNumberCard close={close} />
+            )}
+            {close.business_id && <QuickEditsCard close={close} />}
+          </>
+        )}
+
+        {(stage === 'cancelled' || stage === 'rejected') && (
+          <Card title="Closed out">
+            <p className="text-sm text-gray-600">
+              This close is marked <span className="font-mono">{close.status}</span>.
+              {close.notes && <> Notes: {close.notes}</>}
+            </p>
+          </Card>
+        )}
+
+        {/* Notes - always visible if present */}
+        {close.notes && stage !== 'cancelled' && stage !== 'rejected' && (
+          <Card title="Notes" subtle>
+            <p className="text-sm text-gray-700 whitespace-pre-line">{close.notes}</p>
+          </Card>
+        )}
+      </div>
+    </div>
   )
 }
 
