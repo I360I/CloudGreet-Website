@@ -6,6 +6,7 @@ import {
  listEventTypes,
  updateEventType,
  locationFromPreset,
+ getMe,
  type EventTypeLocationPreset,
  type CalcomLocation,
 } from '@/lib/calcom'
@@ -96,7 +97,25 @@ export async function PATCH(request: NextRequest) {
 
  try {
   const updated = await updateEventType(apiKey, eventTypeId, patch)
-  return NextResponse.json({ success: true, eventType: updated })
+  // Remember which event type is the rep's demo type AND derive the public
+  // booking URL for it (cal.com/<username>/<slug>). This keeps everything
+  // pointed at the same event type: mark-demo books into cal_event_type_id,
+  // and the send-booking-link email sends this exact booking_url. Without
+  // this the emailed link was whatever (often wrong/blank) URL was pasted.
+  const repUpdate: Record<string, unknown> = { cal_event_type_id: eventTypeId, updated_at: new Date().toISOString() }
+  try {
+   const me = await getMe(apiKey)
+   const slug = (updated as any)?.slug || patch.slug
+   if (me?.username && slug) repUpdate.booking_url = `https://cal.com/${me.username}/${slug}`
+  } catch (e) {
+   logger.warn('derive booking_url from event type failed', { error: e instanceof Error ? e.message : 'unknown' })
+  }
+  await supabaseAdmin
+   .from('sales_reps')
+   .update(repUpdate)
+   .eq('id', auth.userId)
+   .then(() => {}, (e: any) => logger.warn('persist cal_event_type_id/booking_url failed', { error: e?.message }))
+  return NextResponse.json({ success: true, eventType: updated, booking_url: repUpdate.booking_url || null })
  } catch (e) {
   const msg = e instanceof Error ? e.message : 'Unknown'
   logger.warn('rep updateEventType failed', { userId: auth.userId, error: msg })

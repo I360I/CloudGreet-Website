@@ -185,6 +185,12 @@ export async function POST(
     })
   }
 
+  // Note: the actual Cal.com booking is created when the prospect clicks
+  // the link in the send-booking-link email (which targets the rep's
+  // CloudGreet Demo event type via sales_reps.booking_url). We deliberately
+  // don't double-book here - the UI already fires send-booking-link right
+  // after this, so auto-booking would duplicate it + send a second email.
+
   // Pull rep info for the notification.
   const { data: rep } = await supabaseAdmin
     .from('custom_users')
