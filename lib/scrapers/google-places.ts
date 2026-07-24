@@ -1,4 +1,5 @@
 import { logger } from '../monitoring'
+import { supabaseAdmin } from '../supabase'
 import { isChainBusiness } from './chains'
 
 /**
@@ -263,6 +264,26 @@ const DISCOVERY_FIELD_MASK = [
 const PLACES_CALL_CAP = Number(process.env.PLACES_MAX_CALLS_PER_PROCESS || '1200')
 let placesCallsThisProcess = 0
 
+// Cross-invocation DAILY spend ceiling. On Vercel every request is a fresh
+// process, so placesCallsThisProcess resets constantly and can't bound a day's
+// spend across all rep scrapes + crons. This DB-backed counter can. Default
+// 300 calls/day (~$10.50 at $0.035/call); raise with PLACES_DAILY_CAP.
+const PLACES_DAILY_CAP = Number(process.env.PLACES_DAILY_CAP || '300')
+
+/** Atomically add one to today's Places-call tally and return the new total.
+ *  Fails OPEN (returns 0) so a counter hiccup never blocks scraping - the
+ *  Google-side quota cap remains the ultimate ceiling. */
+async function bumpDailyPlacesUsage(): Promise<number> {
+ try {
+  const { data, error } = await supabaseAdmin.rpc('increment_places_usage', { n: 1 })
+  if (error) { logger.warn('places daily usage rpc failed (failing open)', { error: error.message }); return 0 }
+  return typeof data === 'number' ? data : 0
+ } catch (e) {
+  logger.warn('places daily usage threw (failing open)', { error: e instanceof Error ? e.message : 'unknown' })
+  return 0
+ }
+}
+
 /** Approx USD per Places searchText call (rich field mask). */
 export const PLACES_COST_PER_CALL = 0.035
 
@@ -337,12 +358,29 @@ export async function* discoverPlaces(
    })
    return
   }
+  // Hard daily ceiling across ALL scrapes/crons (belt to the per-process
+  // suspenders). Stop before spending past the cap for the day.
+  const dailyUsed = await bumpDailyPlacesUsage()
+  if (dailyUsed > PLACES_DAILY_CAP) {
+   logger.warn('Places DAILY cap hit - stopping to protect the bill', {
+    cap: PLACES_DAILY_CAP, used: dailyUsed, query: query.slice(0, 60),
+   })
+   opts?.onDiag?.(`Daily Places budget reached (${PLACES_DAILY_CAP} calls ≈ $${(PLACES_DAILY_CAP * PLACES_COST_PER_CALL).toFixed(0)}). Resets at UTC midnight, or raise PLACES_DAILY_CAP.`)
+   return
+  }
   placesCallsThisProcess++
   const body: Record<string, any> = {
    textQuery: query,
    maxResultCount: 20,
    regionCode: 'US',
    languageCode: 'en',
+  }
+  // Server-side rating pre-filter: let Google drop below-threshold results so
+  // we page through far fewer junk results to hit the target (fewer billed
+  // calls). Rounded DOWN to Google's 0.5 step so it never excludes a lead the
+  // exact client-side minRating below would keep.
+  if (typeof opts?.minRating === 'number' && opts.minRating >= 1) {
+   body.minRating = Math.floor(opts.minRating * 2) / 2
   }
   if (opts?.includedType) body.includedType = opts.includedType
   if (opts?.locationRestriction) {
