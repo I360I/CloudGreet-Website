@@ -46,6 +46,10 @@ const CHAIN_TOKENS: string[] = [
   'p f chang', 'pf chang', 'panda express', 'golden corral', 'hooters', 'cheddar',
   'carrabba', 'bonefish grill', 'perkins', 'bob evans', 'village inn', 'friendly s',
   'marie callender', 'chuck e cheese', 'dave buster', 'twin peaks', 'logan s roadhouse',
+  'maggiano', 'fuddrucker', 'sizzler', 'black angus', 'saltgrass',
+  // Ghost-kitchen / virtual brands (nationwide, low-rated, gatekept by a host kitchen)
+  'it s just wings', 'just wings', 'church s texas', 'church s chicken', 'pardon my cheesesteak',
+  'swensons', 'burger theory', 'the burger den', 'thrilled cheese', 'wow bao',
   // Convenience / gas that surface as restaurants
   'wawa', 'sheetz', 'quiktrip', 'quik trip', 'casey s general', '7 eleven',
   'seven eleven', 'circle k', 'buc ee', 'royal farms', 'kwik trip', 'kwik star',
