@@ -28,6 +28,24 @@ type SpendRange = {
   }>
 }
 
+type FullBreakdown = {
+  range: string
+  list_cost_usd: number
+  credit_usd: number
+  net_cost_usd: number
+  rows: Array<{
+    service: string
+    sku_id: string
+    sku_description: string
+    list_cost_usd: number
+    credit_usd: number
+    net_cost_usd: number
+    usage_amount: number
+    usage_unit: string | null
+  }>
+  by_day: Array<{ day: string; net_cost_usd: number }>
+}
+
 type Dashboard = {
   success: boolean
   configured: boolean
@@ -36,6 +54,8 @@ type Dashboard = {
   mtd?: SpendRange
   last_30d?: SpendRange
   last_90d?: SpendRange
+  full_mtd?: FullBreakdown
+  full_30d?: FullBreakdown
   freshness_iso?: string | null
 }
 
@@ -228,6 +248,71 @@ export default function PlacesBillingPage() {
                   </ul>
                 )}
               </Panel>
+
+              {/* FULL breakdown - every Google service, so you can see Places
+                  vs Routes vs Geocoding vs Autocomplete vs anything else. */}
+              <Panel padding="none">
+                <div className="px-5 sm:px-6 pt-5 pb-3 border-b border-white/[0.06] flex items-end justify-between gap-3 flex-wrap">
+                  <PanelHeader title="All Google Cloud spend by SKU" eyebrow="this billing month · every service" />
+                  {data?.full_mtd && (
+                    <div className="text-right">
+                      <div className="text-lg font-medium text-white tabular-nums">{dollars(data.full_mtd.net_cost_usd)}</div>
+                      <div className="text-[10px] text-gray-500 font-mono uppercase tracking-wider">net total mtd</div>
+                    </div>
+                  )}
+                </div>
+                {(data?.full_mtd?.rows.length ?? 0) === 0 ? (
+                  <div className="px-6 py-10 text-center text-sm text-gray-500">
+                    No Google Cloud charges yet this month.
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-white/[0.04]">
+                    {data!.full_mtd!.rows.map((s) => (
+                      <li key={s.service + s.sku_id} className="px-5 sm:px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
+                        <div className="min-w-0">
+                          <div className="text-sm text-gray-200 truncate">
+                            <span className="text-gray-400 font-mono text-[11px] uppercase tracking-wider mr-2">{s.service}</span>
+                            {s.sku_description}
+                          </div>
+                          <div className="text-[11px] text-gray-500 font-mono mt-0.5 flex flex-wrap gap-x-3">
+                            <span>{s.sku_id}</span>
+                            {s.usage_amount > 0 && (
+                              <span>{s.usage_amount.toLocaleString()} {s.usage_unit || 'units'}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-white tabular-nums">{dollars(Math.max(0, s.net_cost_usd))}</div>
+                          {s.credit_usd < 0 ? (
+                            <div className="text-[11px] text-gray-500">
+                              {dollars(s.list_cost_usd)} − {dollars(Math.abs(s.credit_usd))} credit
+                            </div>
+                          ) : (
+                            <div className="text-[11px] text-gray-500">{dollars(s.list_cost_usd)} list</div>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Panel>
+
+              {/* Per-day net spend (last 30d) - spot spikes / patterns at a glance. */}
+              {(data?.full_30d?.by_day.length ?? 0) > 0 && (
+                <Panel padding="none">
+                  <div className="px-5 sm:px-6 pt-5 pb-3 border-b border-white/[0.06]">
+                    <PanelHeader title="Net spend per day" eyebrow="last 30 days · all services" />
+                  </div>
+                  <ul className="divide-y divide-white/[0.04] max-h-80 overflow-y-auto">
+                    {[...data!.full_30d!.by_day].reverse().map((d) => (
+                      <li key={d.day} className="px-5 sm:px-6 py-2 flex items-center justify-between gap-4">
+                        <span className="text-xs font-mono text-gray-400">{d.day}</span>
+                        <span className="text-sm text-white tabular-nums">{dollars(Math.max(0, d.net_cost_usd))}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Panel>
+              )}
             </>
           )}
         </div>

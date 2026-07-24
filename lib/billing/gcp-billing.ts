@@ -222,6 +222,113 @@ export async function getPlacesSpendDashboard(): Promise<{
   return { today, mtd, last_30d, last_90d, freshness_iso: freshness }
 }
 
+export type FullSpendRow = {
+  service: string
+  sku_id: string
+  sku_description: string
+  list_cost_usd: number
+  credit_usd: number
+  net_cost_usd: number
+  usage_amount: number
+  usage_unit: string | null
+}
+
+export type FullSpendBreakdown = {
+  range: keyof typeof RANGES
+  start_iso: string
+  end_iso: string
+  list_cost_usd: number
+  credit_usd: number
+  net_cost_usd: number
+  /** Every service+SKU with any cost, sorted by net desc. */
+  rows: FullSpendRow[]
+  /** Net cost per calendar day (UTC) across the range. */
+  by_day: Array<{ day: string; net_cost_usd: number }>
+}
+
+/**
+ * Full spend breakdown across ALL Google Cloud services/SKUs for a range,
+ * not just Places. Answers "what is actually eating the bill" - Places vs
+ * Routes vs Geocoding vs Autocomplete vs anything else - with the same
+ * post-credit numbers as the GCP console.
+ */
+export async function getFullSpendBreakdown(
+  range: keyof typeof RANGES,
+): Promise<FullSpendBreakdown> {
+  const table = await getBillingTable()
+  const { start, end } = RANGES[range]()
+  const bq = getClient()
+
+  const [rows] = await bq.query({
+    query: `
+      SELECT
+        service.description AS service,
+        sku.id AS sku_id,
+        sku.description AS sku_description,
+        SUM(cost) AS list_cost,
+        SUM(IFNULL((SELECT SUM(c.amount) FROM UNNEST(credits) c), 0)) AS credit,
+        SUM(cost + IFNULL((SELECT SUM(c.amount) FROM UNNEST(credits) c), 0)) AS net_cost,
+        SUM(IFNULL(usage.amount, 0)) AS usage_amount,
+        ANY_VALUE(usage.unit) AS usage_unit
+      FROM \`${table}\`
+      WHERE usage_start_time >= @start AND usage_start_time < @end
+      GROUP BY service, sku_id, sku_description
+      HAVING list_cost <> 0 OR net_cost <> 0
+      ORDER BY net_cost DESC
+    `,
+    params: { start: start.toISOString(), end: end.toISOString() },
+    location: 'US',
+  })
+
+  const [dayRows] = await bq.query({
+    query: `
+      SELECT
+        FORMAT_DATE('%Y-%m-%d', DATE(usage_start_time)) AS day,
+        SUM(cost + IFNULL((SELECT SUM(c.amount) FROM UNNEST(credits) c), 0)) AS net_cost
+      FROM \`${table}\`
+      WHERE usage_start_time >= @start AND usage_start_time < @end
+      GROUP BY day
+      ORDER BY day
+    `,
+    params: { start: start.toISOString(), end: end.toISOString() },
+    location: 'US',
+  })
+
+  let listSum = 0, creditSum = 0, netSum = 0
+  const outRows: FullSpendRow[] = (rows || []).map((r: any) => {
+    const list = Number(r.list_cost || 0)
+    const credit = Number(r.credit || 0)
+    const net = Number(r.net_cost || 0)
+    listSum += list; creditSum += credit; netSum += net
+    return {
+      service: String(r.service || 'Unknown'),
+      sku_id: String(r.sku_id || ''),
+      sku_description: String(r.sku_description || ''),
+      list_cost_usd: round2(list),
+      credit_usd: round2(credit),
+      net_cost_usd: round2(net),
+      usage_amount: Number(r.usage_amount || 0),
+      usage_unit: r.usage_unit ? String(r.usage_unit) : null,
+    }
+  })
+
+  const by_day = (dayRows || []).map((r: any) => ({
+    day: String(r.day),
+    net_cost_usd: round2(Number(r.net_cost || 0)),
+  }))
+
+  return {
+    range,
+    start_iso: start.toISOString(),
+    end_iso: end.toISOString(),
+    list_cost_usd: round2(listSum),
+    credit_usd: round2(creditSum),
+    net_cost_usd: round2(Math.max(0, netSum)),
+    rows: outRows,
+    by_day,
+  }
+}
+
 async function getExportFreshness(): Promise<string | null> {
   const table = await getBillingTable()
   const bq = getClient()

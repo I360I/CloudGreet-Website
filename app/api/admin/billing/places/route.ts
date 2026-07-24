@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
-import { isGcpBillingConfigured, getPlacesSpendDashboard } from '@/lib/billing/gcp-billing'
+import { isGcpBillingConfigured, getPlacesSpendDashboard, getFullSpendBreakdown } from '@/lib/billing/gcp-billing'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -29,8 +29,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getPlacesSpendDashboard()
-    return NextResponse.json({ success: true, configured: true, ...data })
+    const [data, fullMtd, full30d] = await Promise.all([
+      getPlacesSpendDashboard(),
+      getFullSpendBreakdown('mtd'),
+      getFullSpendBreakdown('last_30d'),
+    ])
+    return NextResponse.json({ success: true, configured: true, ...data, full_mtd: fullMtd, full_30d: full30d })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown'
     logger.warn('Places spend query failed', { error: msg })
