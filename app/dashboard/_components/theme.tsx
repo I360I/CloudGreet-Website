@@ -116,7 +116,7 @@ const swipeListeners = new Set<() => void>()
 function setSwipe(next: SwipeState) { swipe = next; swipeListeners.forEach((l) => l()) }
 function subSwipe(cb: () => void) { swipeListeners.add(cb); return () => { swipeListeners.delete(cb) } }
 
-const EXIT_MS = 200
+const EXIT_MS = 240
 let swipeBusy = false
 
 export function startPageTransition(push: (href: string) => void, href: string, label: string) {
@@ -151,9 +151,12 @@ export function usePageSwipe(): {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   const exiting = st.exiting && !arrivedMidTransition.current
+  // Push/pop feel: accelerate out, decelerate in (not symmetric easing).
   return {
-    initial: { opacity: 0, y: 34 * st.dir },
-    animate: exiting ? { opacity: 0, y: -34 * st.dir } : { opacity: 1, y: 0 },
-    transition: { duration: exiting ? 0.2 : 0.5, ease: [0.32, 0.72, 0, 1] as const },
+    initial: { opacity: 0, y: 44 * st.dir },
+    animate: exiting ? { opacity: 0, y: -44 * st.dir } : { opacity: 1, y: 0 },
+    transition: exiting
+      ? { duration: 0.24, ease: [0.4, 0, 1, 1] as const }
+      : { duration: 0.46, ease: [0.16, 1, 0.3, 1] as const },
   }
 }

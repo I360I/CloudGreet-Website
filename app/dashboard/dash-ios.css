@@ -317,3 +317,21 @@ html[data-dash-theme="dark"] .dash-ios .ios-seg-thumb { background: #5A5A5F; }
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.35);
   }
 }
+
+/* ============================================================
+   Sliding nav pill: the blue active background is a single
+   element that glides between items (framer layoutId).
+   ============================================================ */
+.ios-nav-item { position: relative; }
+.ios-nav-item.on {
+  background: transparent; /* the pill carries the fill now */
+  box-shadow: none;
+  color: #fff;
+}
+.ios-nav-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: var(--dblue);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 2px 8px rgba(0, 122, 255, 0.32);
+}

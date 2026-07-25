@@ -3,6 +3,8 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { motion } from 'framer-motion'
 import { SquaresFour, PhoneCall, Calendar, ChatTeardropDots, Gear, CreditCard, SignOut, MagicWand } from '@phosphor-icons/react'
 import { SupportButton } from './SupportButton'
 import { ThemeToggle, startPageTransition } from './theme'
@@ -27,10 +29,15 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
 }) {
  const pathname = usePathname() || '/dashboard'
  const router = useRouter()
+ // Optimistic active state: the blue pill SLIDES to the clicked item
+ // immediately (during the page's exit swipe), so the nav answers the
+ // click before the route even changes - iOS behavior.
+ const [pending, setPending] = useState<string | null>(null)
  const go = (e: React.MouseEvent, href: string, label: string, active: boolean) => {
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return // let new-tab clicks through
   e.preventDefault()
   if (active) return
+  setPending(label)
   startPageTransition((h) => router.push(h), href, label)
  }
 
@@ -46,14 +53,25 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
 
    <nav className="px-3 flex-1 min-h-0 overflow-y-auto">
     {items.map((item) => {
-     const active = activeLabel ? item.label === activeLabel : item.match(pathname)
+     const active = pending
+      ? item.label === pending
+      : (activeLabel ? item.label === activeLabel : item.match(pathname))
      return (
       <Link key={item.label} href={item.href}
        onClick={(e) => go(e, item.href, item.label, active)}
        className={`ios-nav-item ${active ? 'on' : ''}`}
       >
-       <item.icon className="w-[18px] h-[18px]" weight={active ? 'fill' : 'regular'} />
-       {item.label}
+       {active && (
+        <motion.span
+         layoutId="dash-nav-pill"
+         className="ios-nav-pill"
+         transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+        />
+       )}
+       <span className="relative z-10 flex items-center gap-[11px]">
+        <item.icon className="w-[18px] h-[18px]" weight={active ? 'fill' : 'regular'} />
+        {item.label}
+       </span>
       </Link>
      )
     })}
