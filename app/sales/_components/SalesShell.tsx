@@ -17,6 +17,9 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { NotificationsBell } from '@/components/NotificationsBell'
 import { ImpersonationBanner } from '@/app/dashboard/_components/ImpersonationBanner'
+import { motion } from 'framer-motion'
+import { ThemeToggle, startPageTransition, usePageSwipe } from './sales-theme'
+import '../sales-ios.css'
 
 type ActiveLabel = 'Overview' | 'Leads' | 'Prospects' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook' | 'Emails'
 
@@ -53,6 +56,9 @@ export function SalesShell({
   const pathname = usePathname() || '/sales'
   const [name, setName] = useState<string | null>(null)
   const [payoutsReady, setPayoutsReady] = useState<boolean | null>(null)
+  // CRM Pro chrome: optimistic nav pill + page-swipe transition props.
+  const [pending, setPending] = useState<string | null>(null)
+  const swipeProps = usePageSwipe()
 
   // Defense against shared-browser session swaps + cross-tab identity
   // contamination - reloads / kicks to login on mismatch.
@@ -89,10 +95,10 @@ export function SalesShell({
         fixed-height row, the sidebar always fits on screen (Settings /
         Sign out never slip below the fold), and only the content column
         scrolls. */}
-    <div className="h-dvh flex flex-col">
+    <div className="sales-crm h-dvh flex flex-col">
     <ImpersonationBanner />
     <main className="flex-1 min-h-0 bg-[#f6f5f1] text-gray-900 flex">
-      <aside className="hidden lg:flex w-60 border-r border-black/5 flex-col py-6 px-4 h-full bg-white/40 backdrop-blur-sm">
+      <aside className="crm-sidebar hidden lg:flex w-60 flex-col py-6 px-4 h-full">
         <div className="px-2 mb-8 flex items-start justify-between gap-2">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500">CloudGreet</div>
@@ -102,20 +108,31 @@ export function SalesShell({
         </div>
         <nav className="flex-1 min-h-0 overflow-y-auto space-y-1">
           {NAV.map((item) => {
-            const active = item.match(pathname) || item.label === activeLabel
+            const active = pending ? item.label === pending : (item.match(pathname) || item.label === activeLabel)
             const Icon = item.icon
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
-                  active
-                    ? 'bg-gray-900 text-white shadow-sm'
-                    : 'text-gray-700 hover:bg-gray-200/60 hover:text-gray-900'
-                }`}
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || active) return
+                  e.preventDefault()
+                  setPending(item.label)
+                  startPageTransition((h) => router.push(h), item.href, item.label)
+                }}
+                className={`crm-nav-item ${active ? 'on' : ''}`}
               >
-                <Icon weight={active ? 'fill' : 'regular'} className="w-4 h-4" />
-                {item.label}
+                {active && (
+                  <motion.span
+                    layoutId="sales-nav-pill"
+                    className="crm-nav-pill"
+                    transition={{ type: 'spring', stiffness: 520, damping: 40 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2.5">
+                  <Icon weight={active ? 'fill' : 'regular'} className="w-4 h-4" />
+                  {item.label}
+                </span>
               </Link>
             )
           })}
@@ -144,6 +161,7 @@ export function SalesShell({
               <div className="text-xs text-amber-900 mt-0.5">Connect bank to receive payouts</div>
             </button>
           )}
+          <ThemeToggle />
           <div className="flex items-center gap-4 text-xs">
             <Link
               href="/sales/settings"
@@ -182,7 +200,9 @@ export function SalesShell({
       </nav>
 
       <div className="flex-1 min-w-0 min-h-0 overflow-y-auto pb-24 lg:pb-0">
-        {children}
+        <motion.div key={pathname} {...swipeProps}>
+          {children}
+        </motion.div>
       </div>
 
       {(pathname.startsWith('/sales/leads') || pathname.startsWith('/sales/email-campaigns')) && <Dialer />}
