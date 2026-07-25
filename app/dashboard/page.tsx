@@ -41,13 +41,18 @@ type Overview = {
  upcomingAppointments: Appt[]
 }
 
+// Module-level cache: revisiting Overview renders the full page
+// instantly from the last payload (refreshed in the background), so tab
+// switches never drop to a skeleton. Cleared on sign-out below.
+let ovCache: { data: Overview | null; biz: string | null } = { data: null, biz: null }
+
 type Range = 7 | 30 | 90
 type CallFilter = 'all' | 'booked' | 'message' | 'dropped'
 
 export default function DashboardPage() {
  const router = useRouter()
- const [data, setData] = useState<Overview | null>(null)
- const [loading, setLoading] = useState(true)
+ const [data, setData] = useState<Overview | null>(ovCache.data)
+ const [loading, setLoading] = useState(!ovCache.data)
  const [error, setError] = useState('')
  const [openCall, setOpenCall] = useState<Call | null>(null)
  const [range, setRange] = useState<Range>(30)
@@ -109,6 +114,7 @@ export default function DashboardPage() {
     }
     if (!res.ok) { setError(json.error || 'Failed to load dashboard'); return }
     setData(json)
+    if (range === 30) ovCache = { data: json, biz: json?.business?.business_name || ovCache.biz }
     setError('')
    } catch {
     if (!cancelled) setError('Network error')
@@ -154,18 +160,32 @@ export default function DashboardPage() {
  }, [displayData, callFilter, search])
 
  const handleSignOut = async () => {
+  ovCache = { data: null, biz: null } // never leak one tenant's stats into the next session
   try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
   localStorage.removeItem('user'); localStorage.removeItem('business'); localStorage.removeItem('token')
   router.replace('/login')
  }
 
  if (loading && !data) {
+  // First-ever load only (cache empty). Keep the REAL chrome - sidebar,
+  // top bar, page header - so nothing jumps when data lands; only the
+  // card area pulses.
   return (
    <main className="dash-ios h-dvh flex overflow-hidden">
-    <SidebarSkeleton />
-    <div className="flex-1 px-4 lg:px-8 py-10 pb-20 lg:pb-10">
-     <SkeletonHeader />
-     <SkeletonGrid />
+    <Sidebar businessName={ovCache.biz || 'Loading…'} onSignOut={handleSignOut} />
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+     <TopBar />
+     <div className="flex-1 min-h-0 overflow-y-auto pb-20 lg:pb-0">
+      <section className="px-4 lg:px-8 py-6 lg:py-10">
+       <div className="max-w-7xl">
+        <div className="mb-8">
+         <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Overview</h1>
+         <div className="h-4 w-64 bg-gray-200/50 rounded animate-pulse mt-2" />
+        </div>
+        <SkeletonGrid />
+       </div>
+      </section>
+     </div>
     </div>
    </main>
   )

@@ -11,11 +11,15 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
  * When no number is provisioned yet, the bar says so plainly instead of
  * leaking a hardcoded demo number.
  */
+// Module cache: the number almost never changes, so remounts (every tab
+// switch) render the capsule instantly instead of flashing "connecting…".
+let phoneCache: string | null | undefined = undefined
+
 export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
  // `undefined` = not resolved yet (show neutral skeleton)
  // `null`      = resolved, no number provisioned (show amber warning)
  // `string`    = resolved, real number (show "listening on …")
- const [phone, setPhone] = useState<string | null | undefined>(phoneProp)
+ const [phone, setPhone] = useState<string | null | undefined>(phoneProp ?? phoneCache)
 
  // Re-resolve the phone whenever the route changes - that way navigating
  // between dashboard pages reflects any number that landed since first
@@ -23,7 +27,7 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
  const pathname = usePathname() || ''
 
  useEffect(() => {
-  if (phoneProp !== undefined) { setPhone(phoneProp); return }
+  if (phoneProp !== undefined) { if (typeof phoneProp === 'string') phoneCache = phoneProp; setPhone(phoneProp ?? phoneCache); return }
   let cancelled = false
 
   // Retry on null: the first fetch right after sign-in races with the
@@ -45,7 +49,7 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
      setPhone(null); return
     }
     const j = await res.json().catch(() => ({}))
-    if (j?.phone) { setPhone(j.phone); return }
+    if (j?.phone) { phoneCache = j.phone; setPhone(j.phone); return }
     // Got a successful response with no number. If we haven't checked
     // a few times yet, give the DB a beat and try again - this is the
     // window where admin just saved the number elsewhere.
