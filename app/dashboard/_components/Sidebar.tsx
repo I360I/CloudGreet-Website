@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { SquaresFour, PhoneCall, Calendar, ChatTeardropDots, Gear, CreditCard, SignOut, MagicWand } from '@phosphor-icons/react'
 import { SupportButton } from './SupportButton'
+import { ThemeToggle } from './theme'
+import '../dash-ios.css'
 
 type Item = { icon: React.ElementType; label: string; href: string; match: (pathname: string) => boolean }
 
@@ -28,10 +30,10 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
  return (
   <>
    <MobileNav pathname={pathname} activeLabel={activeLabel} />
-   <aside className="hidden lg:flex w-60 flex-col bg-white/40 border-r border-black/5 sticky top-0 h-screen">
+   <aside className="ios-sidebar hidden lg:flex w-60 flex-col sticky top-0 h-screen">
    <div className="px-5 py-5">
     <Link href="/dashboard" className="flex items-center" aria-label="CloudGreet">
-     <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={140} height={40} priority className="h-7 w-auto" />
+     <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={140} height={40} priority className="ios-logo h-7 w-auto" />
     </Link>
    </div>
 
@@ -40,30 +42,27 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
      const active = activeLabel ? item.label === activeLabel : item.match(pathname)
      return (
       <Link key={item.label} href={item.href}
-       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-300 ease-out mb-0.5 ${
-        active
-         ? 'bg-gray-900 text-white'
-         : 'text-gray-600 hover:text-gray-900 hover:bg-black/[.04]'
-       }`}
+       className={`ios-nav-item ${active ? 'on' : ''}`}
       >
-       <item.icon className="w-4 h-4" />
+       <item.icon className="w-[18px] h-[18px]" weight={active ? 'fill' : 'regular'} />
        {item.label}
       </Link>
      )
     })}
    </nav>
 
-   <div className="px-3 pb-5 border-t border-black/5 pt-4 mt-4">
-    <div className="px-3 mb-3">
-     <div className="text-xs text-gray-500 mb-1">Signed in as</div>
-     <div className="text-sm font-medium text-gray-900 truncate">{businessName}</div>
+   <div className="pb-5 border-t pt-4 mt-4" style={{ borderColor: 'var(--dline2)' }}>
+    <div className="px-6 mb-3">
+     <div className="text-xs mb-1" style={{ color: 'var(--dmut)' }}>Signed in as</div>
+     <div className="text-sm font-medium truncate" style={{ color: 'var(--dink)' }}>{businessName}</div>
     </div>
-    <SupportButton />
-    <button onClick={onSignOut}
-     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-gray-900 hover:bg-black/[.04] transition-all duration-300 ease-out"
-    >
-     <SignOut className="w-4 h-4" /> Sign out
-    </button>
+    <ThemeToggle />
+    <div className="px-3">
+     <SupportButton />
+     <button onClick={onSignOut} className="ios-nav-item w-full">
+      <SignOut className="w-[18px] h-[18px]" /> Sign out
+     </button>
+    </div>
    </div>
    </aside>
   </>
@@ -75,7 +74,7 @@ function MobileNav({ pathname, activeLabel }: { pathname: string; activeLabel?: 
  // because anything more crowds the bar; Setup is reachable inside Settings.
  const mobileItems = items.filter((it) => it.label !== 'Setup')
  return (
-  <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-gray-200 px-2 pt-1.5 pb-[env(safe-area-inset-bottom)]">
+  <nav className="ios-tabbar lg:hidden fixed bottom-0 inset-x-0 z-40 px-2 pt-1.5 pb-[env(safe-area-inset-bottom)]">
    <div className="flex items-stretch justify-around">
     {mobileItems.map((item) => {
      const active = activeLabel ? item.label === activeLabel : item.match(pathname)
@@ -83,11 +82,10 @@ function MobileNav({ pathname, activeLabel }: { pathname: string; activeLabel?: 
       <Link
        key={item.label}
        href={item.href}
-       className={`flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-medium transition-colors ${
-        active ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'
-       }`}
+       className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-medium transition-colors"
+       style={{ color: active ? 'var(--dblue)' : 'var(--dmut)' }}
       >
-       <item.icon className={`w-5 h-5 ${active ? 'text-sky-600' : ''}`} />
+       <item.icon className="w-5 h-5" weight={active ? 'fill' : 'regular'} />
        {item.label}
       </Link>
      )
@@ -99,7 +97,7 @@ function MobileNav({ pathname, activeLabel }: { pathname: string; activeLabel?: 
 
 export function SidebarSkeleton() {
  return (
-  <aside className="hidden lg:block w-60 border-r border-black/5 sticky top-0 h-screen">
+  <aside className="ios-sidebar hidden lg:block w-60 sticky top-0 h-screen">
    <div className="p-5"><div className="h-7 w-32 bg-gray-200/70 rounded animate-pulse" /></div>
    <div className="px-5 space-y-2.5">
     {[...Array(5)].map((_, i) => <div key={i} className="h-7 bg-gray-200/50 rounded animate-pulse" />)}

@@ -65,33 +65,32 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
  const resolved = phone !== undefined
 
  return (
-  <div className="border-b border-black/5 bg-[#f6f5f1]/80 backdrop-blur-md sticky top-0 z-30">
-   <div className="px-4 lg:px-8 py-3 flex items-center justify-between gap-4 flex-wrap">
-    <div className="inline-flex items-center gap-2.5">
+  <div className="ios-topbar sticky top-0 z-30">
+   <div className="px-4 lg:px-8 py-2.5 flex items-center justify-between gap-4 flex-wrap">
+    <div className="ios-live">
      {!resolved ? (
       // Neutral loading state - no warning, no false positive.
       <>
        <span className="w-2 h-2 rounded-full bg-gray-300" />
-       <span className="text-xs font-mono text-gray-400 tracking-tight">
+       <span className="text-xs font-mono tracking-tight" style={{ color: 'var(--dmut)' }}>
         connecting…
        </span>
       </>
      ) : display ? (
       <>
        <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full rounded-full bg-sky-500 animate-breathe" />
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500" />
+        <span className="absolute inline-flex h-full w-full rounded-full animate-breathe" style={{ background: 'var(--dgreen)' }} />
+        <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: 'var(--dgreen)' }} />
        </span>
-       <span className="text-xs font-mono text-gray-600 tracking-tight">
-        listening on{' '}
-        <span className="text-gray-900">{display}</span>
-        <span className="ml-0.5 text-sky-500 animate-blink">_</span>
+       <span className="text-xs tracking-tight" style={{ color: 'var(--dmut)' }}>
+        AI listening on{' '}
+        <span className="font-mono font-medium" style={{ color: 'var(--dink)' }}>{display}</span>
        </span>
       </>
      ) : (
       <>
-       <span className="w-2 h-2 rounded-full bg-amber-400" />
-       <span className="text-xs font-mono text-amber-700 tracking-tight">
+       <span className="w-2 h-2 rounded-full" style={{ background: 'var(--dorange)' }} />
+       <span className="text-xs font-mono tracking-tight" style={{ color: 'var(--dorange-deep)' }}>
         no Retell number provisioned · finish onboarding to go live
        </span>
       </>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
 import { MagicWand, ArrowRight } from '@phosphor-icons/react'
 import { Sidebar, SidebarSkeleton } from './Sidebar'
 import { TopBar } from './TopBar'
@@ -12,7 +11,7 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { OnboardingProvider } from './onboarding-context'
 
-const PAGE_EASE = [0.22, 1, 0.36, 1] as const
+
 
 export function DashShell({
  activeLabel,
@@ -77,7 +76,7 @@ export function DashShell({
 
  if (businessName === null || redirecting) {
   return (
-   <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
+   <main className="dash-ios min-h-screen flex">
     <SidebarSkeleton />
     <div className="flex-1" />
    </main>
@@ -87,19 +86,13 @@ export function DashShell({
  return (
   <OnboardingProvider value={{ needsSetup }}>
    <ImpersonationBanner />
-   <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
+   <main className="dash-ios min-h-screen flex">
     <Sidebar businessName={businessName} onSignOut={handleSignOut} activeLabel={activeLabel} />
     <div className="flex-1 min-w-0 pb-20 lg:pb-0">
      <TopBar />
      {needsSetup && activeLabel !== 'Setup' && <SetupBanner />}
-     <motion.div
-      key={activeLabel}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: PAGE_EASE }}
-     >
-      {children}
-     </motion.div>
+     {/* Page-enter animation lives in app/dashboard/template.tsx (iOS swipe). */}
+     {children}
     </div>
    </main>
   </OnboardingProvider>

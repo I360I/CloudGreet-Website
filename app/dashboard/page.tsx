@@ -12,6 +12,7 @@ import {
  fmtDur, relTime, fmtDateTime,
 } from './_components/calls'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { useDashTheme } from './_components/theme'
 import {
  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement,
  Tooltip, Filler, ArcElement,
@@ -159,7 +160,7 @@ export default function DashboardPage() {
 
  if (loading && !data) {
   return (
-   <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
+   <main className="dash-ios min-h-screen flex">
     <SidebarSkeleton />
     <div className="flex-1 px-4 lg:px-8 py-10 pb-20 lg:pb-10">
      <SkeletonHeader />
@@ -188,7 +189,7 @@ export default function DashboardPage() {
    location.href = '/login'
   }
   return (
-   <main className="min-h-screen bg-[#f6f5f1] flex items-center justify-center px-6">
+   <main className="dash-ios min-h-screen flex items-center justify-center px-6">
     <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center max-w-md">
      <p className="text-gray-700 mb-4">{error || 'Dashboard unavailable'}</p>
      <div className="flex items-center justify-center gap-3">
@@ -225,7 +226,7 @@ export default function DashboardPage() {
  const bookedDelta = absDelta(k.bookedRate, k.deltas.bookedRate)
 
  return (
-  <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
+  <main className="dash-ios min-h-screen flex">
    <Sidebar businessName={displayData.business.business_name} onSignOut={handleSignOut} />
 
    <div className="flex-1 min-w-0 pb-20 lg:pb-0">
@@ -508,36 +509,52 @@ function Sparkline({ data, accent = false, large = false }: { data: number[]; ac
  return (
   <svg width={large ? '100%' : w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="overflow-visible">
    <polyline
-    fill="none" stroke={accent ? '#0ea5e9' : (large ? '#0ea5e9' : '#9ca3af')}
+    fill="none" stroke={accent ? '#007AFF' : (large ? '#007AFF' : '#AEAEB4')}
     strokeLinecap="round" strokeLinejoin="round" points={pts}
    />
   </svg>
  )
 }
 
+
+/* iOS chart palette (concept branch): system colors per theme. */
+function useChartPalette() {
+ const [theme] = useDashTheme()
+ const dark = theme === 'dark'
+ return {
+  blue: dark ? '#0A84FF' : '#007AFF',
+  blueFill: dark ? 'rgba(10, 132, 255, 0.10)' : 'rgba(0, 122, 255, 0.07)',
+  gray: dark ? '#6C6C73' : '#C7C7CC',
+  red: dark ? '#FF6961' : '#FF9AA0',
+  grid: dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
+  tick: dark ? '#98989F' : '#AEAEB4',
+ }
+}
+
 /* ====================== CHARTS ====================== */
 
 function VolumeChart({ data }: { data: { date: string; count: number }[] }) {
+ const pal = useChartPalette()
  const labels = data.map((d) => d.date.slice(5))
  const counts = data.map((d) => d.count)
  const cfg = useMemo(() => ({
   labels,
   datasets: [{
-   data: counts, borderColor: '#0ea5e9',
-   backgroundColor: 'rgba(14, 165, 233, 0.08)',
+   data: counts, borderColor: pal.blue,
+   backgroundColor: pal.blueFill,
    borderWidth: 2, tension: 0.35, fill: true,
-   pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: '#0ea5e9',
+   pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: pal.blue,
   }],
   // eslint-disable-next-line react-hooks/exhaustive-deps
- }), [data])
+ }), [data, pal.blue])
  const opts = useMemo(() => ({
   responsive: true, maintainAspectRatio: false,
   plugins: { tooltip: { intersect: false, mode: 'index' as const, displayColors: false } },
   scales: {
-   x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9ca3af', maxTicksLimit: 8 } },
-   y: { grid: { color: '#f3f4f6' }, ticks: { font: { size: 10 }, color: '#9ca3af', stepSize: 1 }, beginAtZero: true },
+   x: { grid: { display: false }, ticks: { font: { size: 10 }, color: pal.tick, maxTicksLimit: 8 } },
+   y: { grid: { color: pal.grid }, ticks: { font: { size: 10 }, color: pal.tick, stepSize: 1 }, beginAtZero: true },
   },
- }), [])
+ }), [pal])
  return <Line data={cfg} options={opts} />
 }
 
@@ -550,6 +567,7 @@ function ChartEmpty() {
 }
 
 function OutcomesChart({ data }: { data: { booked: number; message: number; dropped: number } }) {
+ const pal = useChartPalette()
  const total = data.booked + data.message + data.dropped
  if (total === 0) {
   return (
@@ -562,7 +580,7 @@ function OutcomesChart({ data }: { data: { booked: number; message: number; drop
   labels: ['Booked', 'Message', 'Dropped'],
   datasets: [{
    data: [data.booked, data.message, data.dropped],
-   backgroundColor: ['#0ea5e9', '#cbd5e1', '#fda4af'], borderWidth: 0,
+   backgroundColor: [pal.blue, pal.gray, pal.red], borderWidth: 0,
   }],
  }
  const opts = { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { tooltip: { enabled: true } } } as const
@@ -578,12 +596,13 @@ function OutcomesChart({ data }: { data: { booked: number; message: number; drop
 }
 
 function OutcomesLegend({ data }: { data: { booked: number; message: number; dropped: number } }) {
+ const pal = useChartPalette()
  const total = data.booked + data.message + data.dropped
  if (total === 0) return null
  const items = [
-  { label: 'Booked', count: data.booked, color: '#0ea5e9' },
-  { label: 'Message', count: data.message, color: '#cbd5e1' },
-  { label: 'Dropped', count: data.dropped, color: '#fda4af' },
+  { label: 'Booked', count: data.booked, color: pal.blue },
+  { label: 'Message', count: data.message, color: pal.gray },
+  { label: 'Dropped', count: data.dropped, color: pal.red },
  ]
  return (
   <div className="mt-4 space-y-1.5">
