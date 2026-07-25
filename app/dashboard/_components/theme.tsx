@@ -1,6 +1,6 @@
 'use client'
 
-import { useSyncExternalStore, useCallback } from 'react'
+import { useSyncExternalStore, useCallback, useRef, useEffect } from 'react'
 import { Sun, Moon } from '@phosphor-icons/react'
 
 /**
@@ -98,4 +98,62 @@ export function navDirection(label: string): 1 | -1 {
   const dir: 1 | -1 = idx >= lastNavIndex ? 1 : -1
   lastNavIndex = idx
   return dir
+}
+
+/* ---------------- Page swipe transition (exit + enter) ----------------
+ * The App Router unmounts a page the moment navigation commits, so a
+ * true "old page slides out, new page slides in" needs the exit to play
+ * BEFORE the route push. Sidebar links call startPageTransition():
+ *   1. every mounted page surface animates out (up or down by nav dir)
+ *   2. after the exit beat we router.push()
+ *   3. the incoming page mounts, sees it arrived mid-transition, and
+ *      plays the enter from the opposite side, then clears the flag.
+ */
+type SwipeState = { dir: 1 | -1; exiting: boolean }
+let swipe: SwipeState = { dir: 1, exiting: false }
+const SWIPE_SERVER: SwipeState = { dir: 1, exiting: false }
+const swipeListeners = new Set<() => void>()
+function setSwipe(next: SwipeState) { swipe = next; swipeListeners.forEach((l) => l()) }
+function subSwipe(cb: () => void) { swipeListeners.add(cb); return () => { swipeListeners.delete(cb) } }
+
+const EXIT_MS = 200
+let swipeBusy = false
+
+export function startPageTransition(push: (href: string) => void, href: string, label: string) {
+  if (swipeBusy) return
+  swipeBusy = true
+  const dir = navDirection(label)
+  setSwipe({ dir, exiting: true })
+  window.setTimeout(() => {
+    push(href)
+    // Failsafe: if the new page never mounts (e.g. push to same route),
+    // clear the exit state so the UI can't get stuck faded out.
+    window.setTimeout(() => { swipeBusy = false; if (swipe.exiting) setSwipe({ dir, exiting: false }) }, 900)
+  }, EXIT_MS)
+}
+
+/** Motion props for a page surface: exit up/down, enter from the other side. */
+export function usePageSwipe(): {
+  initial: { opacity: number; y: number }
+  animate: { opacity: number; y: number }
+  transition: { duration: number; ease: readonly [number, number, number, number] }
+} {
+  const st = useSyncExternalStore(subSwipe, () => swipe, () => SWIPE_SERVER)
+  // If this instance mounted while an exit was in flight, it IS the
+  // incoming page: ignore the exiting flag and clear it once mounted.
+  const arrivedMidTransition = useRef(swipe.exiting)
+  useEffect(() => {
+    if (arrivedMidTransition.current) {
+      swipeBusy = false
+      setSwipe({ dir: swipe.dir, exiting: false })
+      arrivedMidTransition.current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const exiting = st.exiting && !arrivedMidTransition.current
+  return {
+    initial: { opacity: 0, y: 34 * st.dir },
+    animate: exiting ? { opacity: 0, y: -34 * st.dir } : { opacity: 1, y: 0 },
+    transition: { duration: exiting ? 0.2 : 0.5, ease: [0.32, 0.72, 0, 1] as const },
+  }
 }

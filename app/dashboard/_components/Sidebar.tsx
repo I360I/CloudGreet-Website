@@ -2,10 +2,10 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { SquaresFour, PhoneCall, Calendar, ChatTeardropDots, Gear, CreditCard, SignOut, MagicWand } from '@phosphor-icons/react'
 import { SupportButton } from './SupportButton'
-import { ThemeToggle } from './theme'
+import { ThemeToggle, startPageTransition } from './theme'
 import '../dash-ios.css'
 
 type Item = { icon: React.ElementType; label: string; href: string; match: (pathname: string) => boolean }
@@ -26,6 +26,13 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
  activeLabel?: 'Overview' | 'Calls' | 'Conversations' | 'Bookings' | 'Settings' | 'Billing' | 'Setup'
 }) {
  const pathname = usePathname() || '/dashboard'
+ const router = useRouter()
+ const go = (e: React.MouseEvent, href: string, label: string, active: boolean) => {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return // let new-tab clicks through
+  e.preventDefault()
+  if (active) return
+  startPageTransition((h) => router.push(h), href, label)
+ }
 
  return (
   <>
@@ -42,6 +49,7 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
      const active = activeLabel ? item.label === activeLabel : item.match(pathname)
      return (
       <Link key={item.label} href={item.href}
+       onClick={(e) => go(e, item.href, item.label, active)}
        className={`ios-nav-item ${active ? 'on' : ''}`}
       >
        <item.icon className="w-[18px] h-[18px]" weight={active ? 'fill' : 'regular'} />
@@ -72,6 +80,7 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
 function MobileNav({ pathname, activeLabel }: { pathname: string; activeLabel?: string }) {
  // Bottom-tab nav for phones. We trim to the 5 most-used destinations
  // because anything more crowds the bar; Setup is reachable inside Settings.
+ const router = useRouter()
  const mobileItems = items.filter((it) => it.label !== 'Setup')
  return (
   <nav className="ios-tabbar lg:hidden fixed bottom-0 inset-x-0 z-40 px-2 pt-1.5 pb-[env(safe-area-inset-bottom)]">
@@ -82,6 +91,11 @@ function MobileNav({ pathname, activeLabel }: { pathname: string; activeLabel?: 
       <Link
        key={item.label}
        href={item.href}
+       onClick={(e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || active) return
+        e.preventDefault()
+        startPageTransition((h) => router.push(h), item.href, item.label)
+       }}
        className="flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-lg text-[10px] font-medium transition-colors"
        style={{ color: active ? 'var(--dblue)' : 'var(--dmut)' }}
       >

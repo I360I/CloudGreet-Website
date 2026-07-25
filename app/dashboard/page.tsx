@@ -12,7 +12,7 @@ import {
  fmtDur, relTime, fmtDateTime,
 } from './_components/calls'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { useDashTheme, navDirection } from './_components/theme'
+import { useDashTheme, usePageSwipe } from './_components/theme'
 import {
  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement,
  Tooltip, Filler, ArcElement,
@@ -54,6 +54,7 @@ export default function DashboardPage() {
  const [callFilter, setCallFilter] = useState<CallFilter>('all')
  const [search, setSearch] = useState('')
  const [needsSetup, setNeedsSetup] = useState(false)
+ const swipeProps = usePageSwipe()
 
  // Fetch onboarding state once so we know whether to fall back to demo data.
  useEffect(() => {
@@ -238,9 +239,7 @@ export default function DashboardPage() {
 
     <div className="flex-1 min-h-0 overflow-y-auto pb-20 lg:pb-0">
     <motion.section
-     initial={{ opacity: 0, y: 30 * navDirection('Overview') }}
-     animate={{ opacity: 1, y: 0 }}
-     transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+     {...swipeProps}
      className="px-4 lg:px-8 py-6 lg:py-10">
      <div className="max-w-7xl">
       {isDemo && (

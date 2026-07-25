@@ -11,9 +11,8 @@ import { ImpersonationBanner } from './ImpersonationBanner'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { OnboardingProvider } from './onboarding-context'
-import { navDirection } from './theme'
+import { usePageSwipe } from './theme'
 
-const APPLE_EASE = [0.32, 0.72, 0, 1] as const
 
 // Module-level cache so tab-to-tab navigation renders the shell instantly
 // (no skeleton flash) and the iOS page-swipe animation is actually visible
@@ -33,6 +32,7 @@ export function DashShell({
  const [redirecting, setRedirecting] = useState(false)
 
  const [needsSetup, setNeedsSetup] = useState(shellCache?.needsSetup ?? false)
+ const swipeProps = usePageSwipe()
 
  // Detect cross-tab session swaps and identity mismatches. If another
  // user logged in via a sibling tab (shared workstation) or the JWT
@@ -109,12 +109,7 @@ export function DashShell({
       <div className="flex-1 min-h-0 overflow-y-auto pb-20 lg:pb-0">
        {/* iOS page-swipe: the content slides on every tab change. The
            shell stays put (cached), so only the page moves. */}
-       <motion.div
-        key={pathname}
-        initial={{ opacity: 0, y: 30 * navDirection(activeLabel) }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: APPLE_EASE }}
-       >
+       <motion.div key={pathname} {...swipeProps}>
         {children}
        </motion.div>
       </div>
