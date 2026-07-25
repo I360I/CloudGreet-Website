@@ -67,7 +67,7 @@ export function SetterChrome({
   children: React.ReactNode
 }) {
   return (
-    <main className={`${firaSans.className} min-h-screen bg-[#F8FAFC] text-slate-800 lg:flex`}>
+    <main className={`${firaSans.className} flex-1 min-h-0 bg-[#F8FAFC] text-slate-800 lg:flex`}>
       {/* Stretches with the content column (flex default), so the dark
           panel always runs the full page height. Inner wrapper is sticky
           so the nav stays in view on long pages. */}
@@ -75,12 +75,12 @@ export function SetterChrome({
         className="hidden lg:block w-52 shrink-0"
         style={{ backgroundImage: SIDEBAR_GRADIENT }}
       >
-        <div className="sticky top-0 h-screen flex flex-col py-8 px-3">
+        <div className="h-full flex flex-col py-8 px-3">
         <div className="flex flex-col items-center mb-10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/cloudgreet-logo-white.png" alt="CloudGreet" className="w-24 h-auto object-contain" />
         </div>
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 min-h-0 overflow-y-auto space-y-2">
           {NAV.map((item) => {
             const active = item.match(pathname) || item.label === activeLabel
             const Icon = item.icon
@@ -119,7 +119,7 @@ export function SetterChrome({
         </div>
       </aside>
 
-      <div className="flex-1 min-w-0 pb-24 lg:pb-0">
+      <div className="flex-1 min-w-0 h-full overflow-y-auto pb-24 lg:pb-0">
         {children}
       </div>
 
@@ -221,10 +221,14 @@ export function SetterShell({
 
   return (
     <>
+      {/* Viewport-locked frame: banner on top, sidebar always fully
+          visible, only the content column scrolls. */}
+      <div className="h-dvh flex flex-col">
       <ImpersonationBanner />
       <SetterChrome activeLabel={activeLabel} pathname={pathname} name={name} onSignOut={signOut} messagesUnread={messagesUnread}>
         {children}
       </SetterChrome>
+      </div>
       {/* Floating panel spins up its OWN engine - keep it off while a
           cockpit session runs on the shared provider engine, or the two
           fight over window.cgDial and Telnyx sessions. */}

@@ -85,9 +85,14 @@ export function SalesShell({
 
   return (
     <>
+    {/* Viewport-locked frame: the impersonation banner sits above a
+        fixed-height row, the sidebar always fits on screen (Settings /
+        Sign out never slip below the fold), and only the content column
+        scrolls. */}
+    <div className="h-dvh flex flex-col">
     <ImpersonationBanner />
-    <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
-      <aside className="hidden lg:flex w-60 border-r border-black/5 flex-col py-6 px-4 sticky top-0 h-screen bg-white/40 backdrop-blur-sm">
+    <main className="flex-1 min-h-0 bg-[#f6f5f1] text-gray-900 flex">
+      <aside className="hidden lg:flex w-60 border-r border-black/5 flex-col py-6 px-4 h-full bg-white/40 backdrop-blur-sm">
         <div className="px-2 mb-8 flex items-start justify-between gap-2">
           <div>
             <div className="text-[10px] font-mono uppercase tracking-[0.25em] text-gray-500">CloudGreet</div>
@@ -95,7 +100,7 @@ export function SalesShell({
           </div>
           <NotificationsBell basePath="/api/sales/notifications" align="left" />
         </div>
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 min-h-0 overflow-y-auto space-y-1">
           {NAV.map((item) => {
             const active = item.match(pathname) || item.label === activeLabel
             const Icon = item.icon
@@ -176,12 +181,13 @@ export function SalesShell({
         })}
       </nav>
 
-      <div className="flex-1 min-w-0 pb-24 lg:pb-0">
+      <div className="flex-1 min-w-0 min-h-0 overflow-y-auto pb-24 lg:pb-0">
         {children}
       </div>
 
       {(pathname.startsWith('/sales/leads') || pathname.startsWith('/sales/email-campaigns')) && <Dialer />}
     </main>
+    </div>
     </>
   )
 }
