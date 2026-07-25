@@ -533,20 +533,18 @@ export default function ConversationsPage() {
                       className="w-full text-left px-4 lg:px-6 py-3.5 lg:py-4 hover:bg-gray-50/60 flex items-start gap-3 lg:gap-4 group transition-all duration-300 ease-out"
                       style={selectedId === c.id ? { background: 'var(--dblue-tint)' } : undefined}
                     >
+                      {/* Compact stacked row (iOS Messages style): the split
+                          view's narrow column can't fit the old 12-col grid,
+                          which crashed the date into the caret. */}
                       <ChannelDot channel={c.channel} />
-                      <div className="flex-1 min-w-0 lg:grid lg:grid-cols-12 lg:gap-4 lg:items-baseline">
-                        <div className="lg:col-span-3 min-w-0">
-                          <div className="flex items-start gap-2 flex-wrap">
-                            <div className="min-w-0 truncate flex-1">
-                              <CustomerLabel c={c} />
-                            </div>
-                            <span className="lg:hidden text-xs text-gray-400 flex-shrink-0">{relTime(c.lastActivity)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <div className="min-w-0 truncate">
+                            <CustomerLabel c={c} />
                           </div>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <OutcomeBadge outcome={c.outcome} />
-                          </div>
+                          <span className="text-[11px] text-gray-400 flex-shrink-0 tabular-nums">{relTime(c.lastActivity)}</span>
                         </div>
-                        <div className="lg:col-span-7 mt-1 lg:mt-0 text-xs text-gray-500 truncate">
+                        <div className="mt-0.5 text-xs text-gray-500 truncate">
                           {c.lastMessage
                             ? <>
                                 {c.lastMessage.direction !== 'inbound' && <span className="text-gray-400 mr-1">Agent:</span>}
@@ -555,12 +553,11 @@ export default function ConversationsPage() {
                             : <span className="text-gray-400">No messages</span>
                           }
                         </div>
-                        <div className="hidden lg:block lg:col-span-2 text-right text-xs text-gray-500 flex-shrink-0">
-                          <div>{relTime(c.lastActivity)}</div>
-                          <div className="text-gray-400 mt-0.5">{c.messageCount} msgs</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <OutcomeBadge outcome={c.outcome} />
+                          <span className="text-[10px] text-gray-400 tabular-nums">{c.messageCount} msgs</span>
                         </div>
                       </div>
-                      <CaretRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 flex-shrink-0 transition-all duration-300 ease-out mt-0.5" />
                     </button>
                   </motion.li>
                 ))}
