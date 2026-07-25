@@ -475,20 +475,25 @@ export default function ConversationsPage() {
             {/* Filters */}
             <div className="px-6 pt-5 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2 flex-wrap">
-                <Pill active={filter === 'all'} onClick={() => setFilter('all')}>All</Pill>
-                <Pill active={filter === 'sms'} onClick={() => setFilter('sms')}>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500 inline-block" />
-                    SMS
-                  </span>
-                </Pill>
-                <Pill active={filter === 'web'} onClick={() => setFilter('web')}>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500 inline-block" />
-                    Web Chat
-                  </span>
-                </Pill>
-                <Pill active={filter === 'booked'} onClick={() => setFilter('booked')}>Booked</Pill>
+                <div className="ios-seg-track inline-flex relative">
+                  {([['all', 'All'], ['sms', 'SMS'], ['web', 'Web Chat'], ['booked', 'Booked']] as [Filter, string][]).map(([v, label]) => (
+                    <button
+                      key={v}
+                      onClick={() => setFilter(v)}
+                      className="relative px-3.5 py-1.5 text-xs font-medium"
+                      style={{ color: filter === v ? 'var(--dink)' : 'var(--dmut)', fontWeight: filter === v ? 600 : 500 }}
+                    >
+                      {filter === v && (
+                        <motion.span
+                          layoutId="convo-filter-thumb"
+                          className="ios-seg-thumb absolute inset-0"
+                          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                        />
+                      )}
+                      <span className="relative z-10">{label}</span>
+                    </button>
+                  ))}
+                </div>
                 <div className="ml-auto relative">
                   <MagnifyingGlass className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   <input

@@ -354,20 +354,23 @@ export default function AppointmentsPage() {
                     a.isEmergency ? 'bg-rose-50/40 hover:bg-rose-50/70' : 'hover:bg-sky-50/40'
                    }`}
                   >
-                   <div className="w-12 flex-shrink-0 text-right">
-                    <div className={`text-sm font-mono font-medium leading-none ${a.isEmergency ? 'text-rose-700' : 'text-sky-700'}`}>
+                   {/* iOS time capsule (mirrors the concept mock) */}
+                   <div
+                    className="w-[54px] flex-shrink-0 text-center rounded-xl py-1.5"
+                    style={{ background: a.isEmergency ? 'var(--dred-tint)' : 'var(--dblue-tint)' }}
+                   >
+                    <div className="text-[15px] font-semibold leading-none tabular-nums" style={{ color: a.isEmergency ? 'var(--dred-deep)' : 'var(--dblue)' }}>
                      {fmtTime(a.start).replace(/\s.*/, '')}
                     </div>
-                    <div className={`text-[9px] uppercase tracking-wider mt-0.5 ${a.isEmergency ? 'text-rose-400' : 'text-sky-400'}`}>
+                    <div className="text-[9px] uppercase tracking-wider mt-0.5 font-semibold opacity-75" style={{ color: a.isEmergency ? 'var(--dred-deep)' : 'var(--dblue)' }}>
                      {fmtTime(a.start).split(' ')[1]}
                     </div>
                    </div>
-                   <div className={`w-px h-7 flex-shrink-0 ${a.isEmergency ? 'bg-rose-200' : 'bg-gray-200'}`} />
                    <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 min-w-0">
                      {a.isEmergency && (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-rose-100 text-[9px] font-medium text-rose-700 uppercase tracking-wider flex-shrink-0" aria-label="emergency">
-                       🚨 Urgent
+                       Urgent
                       </span>
                      )}
                      <div className={`text-sm font-medium truncate leading-tight ${a.isEmergency ? 'text-rose-900' : 'text-gray-900'}`}>{a.customer}</div>

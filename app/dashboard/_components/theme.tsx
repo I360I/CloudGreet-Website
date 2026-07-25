@@ -83,3 +83,19 @@ export function ThemeToggle() {
     </div>
   )
 }
+
+/* ---------------- Nav direction (iOS push/pop) ----------------
+ * Tracks the last visited tab's position in the sidebar so page
+ * transitions can slide from the correct side: moving DOWN the nav
+ * pushes content up from below; moving UP slides it in from above.
+ */
+const NAV_ORDER = ['Overview', 'Calls', 'Conversations', 'Bookings', 'Settings', 'Billing', 'Setup']
+let lastNavIndex = 0
+
+/** Returns +1 (enter from below) or -1 (enter from above) and records the tab. */
+export function navDirection(label: string): 1 | -1 {
+  const idx = Math.max(0, NAV_ORDER.indexOf(label))
+  const dir: 1 | -1 = idx >= lastNavIndex ? 1 : -1
+  lastNavIndex = idx
+  return dir
+}

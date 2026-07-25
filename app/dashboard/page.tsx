@@ -12,7 +12,7 @@ import {
  fmtDur, relTime, fmtDateTime,
 } from './_components/calls'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { useDashTheme } from './_components/theme'
+import { useDashTheme, navDirection } from './_components/theme'
 import {
  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement,
  Tooltip, Filler, ArcElement,
@@ -237,7 +237,7 @@ export default function DashboardPage() {
     <TopBar phone={data ? ((data as any).retellPhone ?? null) : undefined} />
 
     <motion.section
-     initial={{ opacity: 0, y: 26 }}
+     initial={{ opacity: 0, y: 30 * navDirection('Overview') }}
      animate={{ opacity: 1, y: 0 }}
      transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
      className="px-4 lg:px-8 py-6 lg:py-10">
@@ -436,18 +436,26 @@ export default function DashboardPage() {
 /* ====================== RANGE SELECTOR ====================== */
 
 function RangeSelector({ range, onChange }: { range: Range; onChange: (r: Range) => void }) {
+ // iOS segmented control: gray track, white thumb that SPRINGS between
+ // options (framer layoutId keeps it as one element sliding).
  const opts: Range[] = [7, 30, 90]
  return (
-  <div className="inline-flex bg-white border border-gray-200 rounded-lg p-0.5">
+  <div className="ios-seg-track inline-flex relative">
    {opts.map((r) => (
     <button
      key={r}
      onClick={() => onChange(r)}
-     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-      range === r ? 'bg-gray-900 text-white' : 'text-gray-600 hover:text-gray-900'
-     }`}
+     className="relative px-3.5 py-1.5 text-xs font-medium"
+     style={{ color: range === r ? 'var(--dink)' : 'var(--dmut)', fontWeight: range === r ? 600 : 500 }}
     >
-     {r}d
+     {range === r && (
+      <motion.span
+       layoutId="range-thumb"
+       className="ios-seg-thumb absolute inset-0"
+       transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+      />
+     )}
+     <span className="relative z-10">{r}d</span>
     </button>
    ))}
   </div>

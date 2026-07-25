@@ -11,6 +11,7 @@ import { ImpersonationBanner } from './ImpersonationBanner'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { OnboardingProvider } from './onboarding-context'
+import { navDirection } from './theme'
 
 const APPLE_EASE = [0.32, 0.72, 0, 1] as const
 
@@ -105,7 +106,7 @@ export function DashShell({
          shell itself stays put (cached), so only the page moves. */}
      <motion.div
       key={pathname}
-      initial={{ opacity: 0, y: 26 }}
+      initial={{ opacity: 0, y: 30 * navDirection(activeLabel) }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: APPLE_EASE }}
      >

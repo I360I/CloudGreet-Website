@@ -72,7 +72,7 @@ export function MonthGrid({
      key={monthKey}
      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
      transition={{ duration: 0.25, ease: EASE }}
-     className="grid grid-cols-7"
+     className="grid grid-cols-7 gap-1 p-2"
     >
      {cells.map((cell, i) => {
       const isLastRow = i >= cells.length - 7
@@ -87,14 +87,12 @@ export function MonthGrid({
         transition={{ duration: 0.35, ease: EASE, delay: row * 0.04 + (i % 7) * 0.008 }}
         onClick={() => cell.inMonth && onPickDate(cell.iso)}
         disabled={!cell.inMonth}
-        className={`relative text-left min-h-[88px] sm:min-h-[112px] pt-7 sm:pt-8 px-1.5 sm:px-2.5 pb-2 border-r border-b border-gray-100 last:border-r-0 transition-all duration-300 ease-out ${
-         isLastRow ? 'border-b-0' : ''
-        } ${
+        className={`relative text-left min-h-[88px] sm:min-h-[112px] pt-7 sm:pt-8 px-1.5 sm:px-2.5 pb-2 rounded-xl transition-all duration-300 ease-out ${
          cell.inMonth
           ? hasAppts
            ? 'hover:bg-sky-50/70 hover:-translate-y-0.5 hover:shadow-sm cursor-pointer'
            : 'hover:bg-gray-50 cursor-pointer'
-          : 'bg-gray-50/40 cursor-default'
+          : 'opacity-40 cursor-default'
         } ${cell.isToday && !isSelected ? 'bg-sky-50/60' : ''} ${
          isSelected ? 'bg-sky-100/70 ring-2 ring-inset ring-sky-400' : ''
         }`}
@@ -104,17 +102,15 @@ export function MonthGrid({
             count badges, chip width, anything). Count badge is absolutely
             positioned at the top-right for the same reason. */}
         <span
-         className={`absolute top-1.5 sm:top-2 left-1.5 sm:left-2.5 text-[11px] sm:text-xs font-mono tabular-nums leading-none ${
+         className={`absolute top-1.5 sm:top-2 left-1.5 sm:left-2 text-[11px] sm:text-xs tabular-nums leading-none ${
           cell.isToday
-           ? 'text-sky-700 font-semibold'
+           ? 'w-[22px] h-[22px] rounded-full flex items-center justify-center font-semibold'
            : cell.inMonth ? 'text-gray-900' : 'text-gray-300'
          }`}
+         style={cell.isToday ? { background: 'var(--dblue)', color: '#fff' } : undefined}
         >
          {cell.dayNumber}
         </span>
-        {cell.isToday && (
-         <span className="absolute top-[22px] sm:top-[26px] left-2 sm:left-3 block w-1 h-1 rounded-full bg-sky-600" />
-        )}
         {hasAppts && (
          <span className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 text-[9px] sm:text-[10px] font-mono text-sky-700 bg-sky-100 px-1.5 rounded-full leading-[14px] sm:leading-[16px]">
           {cell.appointments.length}
@@ -142,7 +138,7 @@ export function MonthGrid({
            }`}
           >
            {a.is_emergency && (
-            <span className="text-[9px] flex-shrink-0" aria-label="emergency">🚨</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0" aria-label="emergency" />
            )}
            <span className={`text-[10px] font-medium truncate flex-1 min-w-0 leading-tight ${
             a.is_emergency ? 'text-rose-900' : 'text-sky-900'
@@ -176,7 +172,7 @@ function NavBtn({ children, onClick, label }: { children: React.ReactNode; onCli
   <button
    onClick={onClick}
    aria-label={label}
-   className="w-7 h-7 rounded-md text-gray-600 hover:bg-gray-100 transition-all duration-300 ease-out flex items-center justify-center text-base"
+   className="w-8 h-8 rounded-full text-gray-600 hover:bg-gray-100 active:scale-90 transition-all duration-200 ease-out flex items-center justify-center text-lg"
   >
    {children}
   </button>
