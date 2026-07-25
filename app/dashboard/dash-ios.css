@@ -335,3 +335,24 @@ html[data-dash-theme="dark"] .dash-ios .ios-seg-thumb { background: #5A5A5F; }
   background: var(--dblue);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 2px 8px rgba(0, 122, 255, 0.32);
 }
+
+/* ============================================================
+   Dark-mode form fields. Several forms (booking modal, onboarding)
+   use a styled-jsx .form-input with a hardcoded white background
+   that the utility remap can't see. Override EVERY text field in
+   dark mode with the iOS dark field surface so typed text is
+   always legible. Checkboxes/radios/ranges excluded (custom UI).
+   ============================================================ */
+html[data-dash-theme="dark"] .dash-ios { color-scheme: dark; }
+html[data-dash-theme="dark"] .dash-ios input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html[data-dash-theme="dark"] .dash-ios textarea,
+html[data-dash-theme="dark"] .dash-ios select {
+  background-color: #2C2C2E;
+  border-color: var(--dline);
+  color: var(--dink);
+}
+html[data-dash-theme="dark"] .dash-ios input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+html[data-dash-theme="dark"] .dash-ios textarea:focus,
+html[data-dash-theme="dark"] .dash-ios select:focus {
+  border-color: var(--dblue);
+}
