@@ -128,6 +128,24 @@ type SettingRow = {
  render: () => React.ReactNode
 }
 
+
+// iOS Settings-style icon tiles: one gradient per row, white glyph.
+const ROW_TINTS: Record<string, string> = {
+ name: 'linear-gradient(160deg,#3FA0FF,#007AFF)',
+ greeting: 'linear-gradient(160deg,#FFB25E,#F08A1D)',
+ voice: 'linear-gradient(160deg,#B49CF5,#8465E0)',
+ speed: 'linear-gradient(160deg,#4ADE80,#22A94E)',
+ owner: 'linear-gradient(160deg,#9CA3AF,#6B7280)',
+ notifications: 'linear-gradient(160deg,#4ADE80,#22A94E)',
+ reviews: 'linear-gradient(160deg,#FFB25E,#F08A1D)',
+ sms_booking: 'linear-gradient(160deg,#3FA0FF,#007AFF)',
+ calcom: 'linear-gradient(160deg,#3FA0FF,#007AFF)',
+ emergency_event: 'linear-gradient(160deg,#FF7B72,#E43D33)',
+ forwarding: 'linear-gradient(160deg,#4ADE80,#22A94E)',
+ password: 'linear-gradient(160deg,#9CA3AF,#6B7280)',
+ venue_fees: 'linear-gradient(160deg,#4ADE80,#22A94E)',
+}
+
 function SettingsGroups({
  agentState, profile, reload,
 }: {
@@ -188,9 +206,9 @@ function SettingsGroups({
    <LiveAgentBanner state={agentState} />
    {groups.map((g) => (
     <div key={g.title}>
-     <div className="mb-2 px-1">
-      <div className="text-[10px] uppercase tracking-[0.2em] font-semibold text-gray-500">{g.title}</div>
-      <p className="text-xs text-gray-400 mt-0.5">{g.subtitle}</p>
+     <div className="mb-2 px-4">
+      <div className="text-[11px] uppercase tracking-[0.06em] font-semibold" style={{ color: 'var(--dmut)' }}>{g.title}</div>
+      <p className="text-xs mt-0.5" style={{ color: 'var(--dmut2)' }}>{g.subtitle}</p>
      </div>
      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
       {g.rows.map((s, i) => {
@@ -202,14 +220,17 @@ function SettingsGroups({
           onClick={() => setOpenKey(isOpen ? null : s.key)}
           className="w-full flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-gray-50/60 transition-colors"
          >
-          <div className="w-9 h-9 rounded-lg bg-sky-50 border border-sky-100 flex items-center justify-center flex-shrink-0">
-           <Icon className="w-4 h-4 text-sky-500" />
+          <div
+           className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center flex-shrink-0"
+           style={{ background: ROW_TINTS[s.key] || ROW_TINTS.owner, boxShadow: 'inset 0 1px 0 rgba(255,255,255,.25)' }}
+          >
+           <Icon className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0 text-left">
            <h2 className="text-sm font-medium text-gray-900 truncate">{s.label}</h2>
            {s.subtitle && <p className="text-xs text-gray-500 truncate mt-0.5">{s.subtitle}</p>}
           </div>
-          <CaretDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ease-out ${isOpen ? 'rotate-180 text-sky-500' : ''}`} />
+          <CaretDown className={`w-3.5 h-3.5 transition-transform duration-300 ease-out ${isOpen ? 'text-sky-500' : '-rotate-90 text-gray-400'}`} />
          </button>
          <AnimatePresence initial={false}>
           {isOpen && (

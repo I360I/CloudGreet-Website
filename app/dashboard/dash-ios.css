@@ -260,3 +260,24 @@ html[data-dash-theme="dark"] .dash-ios .ios-logo { filter: brightness(0) invert(
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================
+   Pass 2 polish: larger iOS-title pages, calendar, misc.
+   ============================================================ */
+
+/* Large-title feel on every page h1 (they all use .font-display) */
+.dash-ios h1.font-display { font-weight: 700; letter-spacing: -0.022em; }
+
+/* Calendar: iOS selection + today (sky remaps catch the rest) */
+.dash-ios .ring-sky-400 { --tw-ring-color: var(--dblue); }
+.dash-ios [class*="bg-sky-50/"], .dash-ios [class*="bg-sky-100/"] { background-color: var(--dblue-tint); }
+
+/* Filter pills: iOS capsule rhythm */
+.dash-ios button.rounded-full { transition: transform 0.12s var(--dease), background 0.18s var(--dease); }
+.dash-ios button.rounded-full:active { transform: scale(0.96); }
+
+/* Search inputs read as iOS field */
+.dash-ios input[type="search"] { border-radius: 10px; }
+
+/* Focus ring: iOS blue everywhere */
+.dash-ios :focus-visible { outline-color: var(--dblue); }

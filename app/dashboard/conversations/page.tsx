@@ -138,6 +138,130 @@ function Pill({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
+/**
+ * Shared thread loader + iMessage-style bubbles. Used by the desktop
+ * split pane (always-open conversation) and the mobile drawer.
+ */
+function useThread(convoId: string | null) {
+  const [detail, setDetail] = useState<ConvoDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    if (!convoId) return
+    let alive = true
+    setLoading(true)
+    setError('')
+    ;(async () => {
+      try {
+        const res = await fetchWithAuth(`/api/dashboard/conversations/${convoId}`)
+        const j = await res.json()
+        if (!alive) return
+        if (!res.ok) { setError(j.error || 'Failed to load'); return }
+        setDetail(j)
+      } catch { if (alive) setError('Failed to load') }
+      finally { if (alive) setLoading(false) }
+    })()
+    return () => { alive = false }
+  }, [convoId])
+  return { detail, loading, error }
+}
+
+function ThreadBubbles({ msgs, loading, error, autoScroll = true }: {
+  msgs: ConvoDetail['messages']; loading: boolean; error: string; autoScroll?: boolean
+}) {
+  const bottomRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!loading && msgs.length && autoScroll) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [loading, msgs, autoScroll])
+  if (loading) {
+    return <div className="flex items-center justify-center py-16"><CircleNotch className="w-5 h-5 animate-spin text-gray-400" /></div>
+  }
+  if (error) {
+    return (
+      <div className="flex items-start gap-2 py-8">
+        <WarningCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+        <span className="text-sm text-gray-600">{error}</span>
+      </div>
+    )
+  }
+  if (msgs.length === 0) return <p className="text-sm text-gray-400 text-center py-12">No messages in this conversation.</p>
+  return (
+    <>
+      {msgs.map((m) => {
+        const inbound = m.direction === 'inbound'
+        return (
+          <div key={m.id} className={`flex ${inbound ? 'justify-start' : 'justify-end'}`}>
+            <div className={`max-w-[78%] flex flex-col ${inbound ? 'items-start' : 'items-end'}`}>
+              <div
+                className="px-3.5 py-2.5 text-sm whitespace-pre-wrap break-words leading-relaxed"
+                style={inbound
+                  ? { background: 'var(--dseg)', color: 'var(--dink)', borderRadius: '18px 18px 18px 6px' }
+                  : { background: 'var(--dblue)', color: '#fff', borderRadius: '18px 18px 6px 18px' }}
+              >
+                {m.body}
+              </div>
+              <div className="flex items-center gap-1.5 mt-1 px-1">
+                <span className="text-[11px] text-gray-400">{fmtTime(m.createdAt)}</span>
+                {m.toolNames.length > 0 && (
+                  <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                    {m.toolNames.join(', ')}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+      <div ref={bottomRef} />
+    </>
+  )
+}
+
+/** Desktop split-pane: the selected conversation, always open (iOS style). */
+function ThreadPane({ convoId }: { convoId: string | null }) {
+  const { detail, loading, error } = useThread(convoId)
+  if (!convoId) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl h-full min-h-[420px] flex flex-col items-center justify-center gap-2 text-center p-8">
+        <ChatTeardropDots className="w-8 h-8 text-gray-300" />
+        <p className="text-sm text-gray-500">Select a conversation to read it here.</p>
+      </div>
+    )
+  }
+  const convo = detail?.conversation
+  const msgs = detail?.messages || []
+  const isWeb = convo?.channel === 'web'
+  const title = isWeb ? 'Web visitor' : fmtPhone(convo?.customerPhone || '') || convo?.customerPhone || ''
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl flex flex-col overflow-hidden lg:sticky lg:top-[64px] lg:max-h-[calc(100vh-96px)]">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {isWeb
+            ? <GlobeSimple className="w-4 h-4 text-violet-500 flex-shrink-0" />
+            : <DeviceMobile className="w-4 h-4 text-sky-500 flex-shrink-0" />}
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-gray-900 truncate">{loading ? 'Loading…' : title}</div>
+            {convo && <div className="text-xs text-gray-500">{fmtDateTime(convo.createdAt)} · {msgs.length} messages</div>}
+          </div>
+        </div>
+        {convo && (
+          <span
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
+            style={{ background: 'var(--dblue-tint)', color: 'var(--dblue)' }}
+          >
+            {isWeb ? 'Web chat' : 'SMS'}
+          </span>
+        )}
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-3 min-h-[360px]">
+        <ThreadBubbles msgs={msgs} loading={loading} error={error} autoScroll={false} />
+      </div>
+    </div>
+  )
+}
+
 function ConvoDrawer({ convoId, onClose }: { convoId: string; onClose: () => void }) {
   const [detail, setDetail] = useState<ConvoDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -181,7 +305,7 @@ function ConvoDrawer({ convoId, onClose }: { convoId: string; onClose: () => voi
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex justify-end"
+      className="fixed inset-0 z-50 flex justify-end lg:hidden"
     >
       <button onClick={onClose} aria-label="Close" className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
       <motion.aside
@@ -265,7 +389,8 @@ export default function ConversationsPage() {
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
-  const [openId, setOpenId] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)   // mobile drawer
+  const [selectedId, setSelectedId] = useState<string | null>(null) // desktop pane
 
   useEffect(() => {
     let cancelled = false
@@ -308,6 +433,13 @@ export default function ConversationsPage() {
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  // Always keep a conversation open in the desktop pane (iOS style):
+  // auto-select the first visible thread when none is selected.
+  useEffect(() => {
+    if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convos, filter])
+
   return (
     <DashShell activeLabel="Conversations">
       <section className="px-4 lg:px-8 py-6 lg:py-10">
@@ -338,7 +470,8 @@ export default function ConversationsPage() {
             </div>
           )}
 
-          {featureEnabled !== false && <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+          {featureEnabled !== false && <div className="grid lg:grid-cols-[5fr,6fr] gap-4 items-start">
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             {/* Filters */}
             <div className="px-6 pt-5 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2 flex-wrap">
@@ -396,8 +529,9 @@ export default function ConversationsPage() {
                     variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } } }}
                   >
                     <button
-                      onClick={() => setOpenId(c.id)}
+                      onClick={() => { setSelectedId(c.id); setOpenId(c.id) }}
                       className="w-full text-left px-4 lg:px-6 py-3.5 lg:py-4 hover:bg-gray-50/60 flex items-start gap-3 lg:gap-4 group transition-all duration-300 ease-out"
+                      style={selectedId === c.id ? { background: 'var(--dblue-tint)' } : undefined}
                     >
                       <ChannelDot channel={c.channel} />
                       <div className="flex-1 min-w-0 lg:grid lg:grid-cols-12 lg:gap-4 lg:items-baseline">
@@ -455,6 +589,10 @@ export default function ConversationsPage() {
                 </div>
               </div>
             )}
+          </div>
+          <div className="hidden lg:block">
+            <ThreadPane convoId={selectedId} />
+          </div>
           </div>}
         </div>
       </section>

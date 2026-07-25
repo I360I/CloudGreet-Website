@@ -236,7 +236,11 @@ export default function DashboardPage() {
         the overview response is in, we hand it the real value. */}
     <TopBar phone={data ? ((data as any).retellPhone ?? null) : undefined} />
 
-    <section className="px-4 lg:px-8 py-6 lg:py-10">
+    <motion.section
+     initial={{ opacity: 0, y: 26 }}
+     animate={{ opacity: 1, y: 0 }}
+     transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+     className="px-4 lg:px-8 py-6 lg:py-10">
      <div className="max-w-7xl">
       {isDemo && (
        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-3">
@@ -415,7 +419,7 @@ export default function DashboardPage() {
        </div>
       </motion.div>
      </div>
-    </section>
+    </motion.section>
    </div>
 
    <AnimatePresence>
