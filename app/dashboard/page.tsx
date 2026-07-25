@@ -160,7 +160,7 @@ export default function DashboardPage() {
 
  if (loading && !data) {
   return (
-   <main className="dash-ios min-h-screen flex">
+   <main className="dash-ios h-dvh flex overflow-hidden">
     <SidebarSkeleton />
     <div className="flex-1 px-4 lg:px-8 py-10 pb-20 lg:pb-10">
      <SkeletonHeader />
@@ -226,16 +226,17 @@ export default function DashboardPage() {
  const bookedDelta = absDelta(k.bookedRate, k.deltas.bookedRate)
 
  return (
-  <main className="dash-ios min-h-screen flex">
+  <main className="dash-ios h-dvh flex">
    <Sidebar businessName={displayData.business.business_name} onSignOut={handleSignOut} />
 
-   <div className="flex-1 min-w-0 pb-20 lg:pb-0">
+   <div className="flex-1 min-w-0 min-h-0 flex flex-col">
     {/* While `data` is still loading, leave the TopBar uncontrolled
         (phone={undefined}) so it self-fetches once and shows a neutral
         loading state instead of flashing the "no number" warning. Once
         the overview response is in, we hand it the real value. */}
     <TopBar phone={data ? ((data as any).retellPhone ?? null) : undefined} />
 
+    <div className="flex-1 min-h-0 overflow-y-auto pb-20 lg:pb-0">
     <motion.section
      initial={{ opacity: 0, y: 30 * navDirection('Overview') }}
      animate={{ opacity: 1, y: 0 }}
@@ -420,6 +421,7 @@ export default function DashboardPage() {
       </motion.div>
      </div>
     </motion.section>
+    </div>
    </div>
 
    <AnimatePresence>

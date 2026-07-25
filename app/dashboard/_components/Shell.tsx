@@ -87,7 +87,7 @@ export function DashShell({
 
  if (businessName === null || redirecting) {
   return (
-   <main className="dash-ios min-h-screen flex">
+   <main className="dash-ios h-dvh flex overflow-hidden">
     <SidebarSkeleton />
     <div className="flex-1" />
    </main>
@@ -96,24 +96,31 @@ export function DashShell({
 
  return (
   <OnboardingProvider value={{ needsSetup }}>
-   <ImpersonationBanner />
-   <main className="dash-ios min-h-screen flex">
-    <Sidebar businessName={businessName} onSignOut={handleSignOut} activeLabel={activeLabel} />
-    <div className="flex-1 min-w-0 pb-20 lg:pb-0">
-     <TopBar />
-     {needsSetup && activeLabel !== 'Setup' && <SetupBanner />}
-     {/* iOS page-swipe: the content slides up on every tab change. The
-         shell itself stays put (cached), so only the page moves. */}
-     <motion.div
-      key={pathname}
-      initial={{ opacity: 0, y: 30 * navDirection(activeLabel) }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: APPLE_EASE }}
-     >
-      {children}
-     </motion.div>
-    </div>
-   </main>
+   {/* Viewport-locked app frame: the banner and sidebar always fit on
+       screen (Sign out never hides below the fold) and ONLY the content
+       column scrolls - iPadOS style. */}
+   <div className="dash-ios h-dvh flex flex-col">
+    <ImpersonationBanner />
+    <main className="flex-1 min-h-0 flex">
+     <Sidebar businessName={businessName} onSignOut={handleSignOut} activeLabel={activeLabel} />
+     <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+      <TopBar />
+      {needsSetup && activeLabel !== 'Setup' && <SetupBanner />}
+      <div className="flex-1 min-h-0 overflow-y-auto pb-20 lg:pb-0">
+       {/* iOS page-swipe: the content slides on every tab change. The
+           shell stays put (cached), so only the page moves. */}
+       <motion.div
+        key={pathname}
+        initial={{ opacity: 0, y: 30 * navDirection(activeLabel) }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: APPLE_EASE }}
+       >
+        {children}
+       </motion.div>
+      </div>
+     </div>
+    </main>
+   </div>
   </OnboardingProvider>
  )
 }

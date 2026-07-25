@@ -30,14 +30,14 @@ export function Sidebar({ businessName, onSignOut, activeLabel }: {
  return (
   <>
    <MobileNav pathname={pathname} activeLabel={activeLabel} />
-   <aside className="ios-sidebar hidden lg:flex w-60 flex-col sticky top-0 h-screen">
+   <aside className="ios-sidebar hidden lg:flex w-60 flex-col h-full">
    <div className="px-5 py-5">
     <Link href="/dashboard" className="flex items-center" aria-label="CloudGreet">
      <Image src="/cloudgreet-logo.png" alt="CloudGreet" width={140} height={40} priority className="ios-logo h-7 w-auto" />
     </Link>
    </div>
 
-   <nav className="px-3 flex-1">
+   <nav className="px-3 flex-1 min-h-0 overflow-y-auto">
     {items.map((item) => {
      const active = activeLabel ? item.label === activeLabel : item.match(pathname)
      return (
@@ -97,7 +97,7 @@ function MobileNav({ pathname, activeLabel }: { pathname: string; activeLabel?: 
 
 export function SidebarSkeleton() {
  return (
-  <aside className="ios-sidebar hidden lg:block w-60 sticky top-0 h-screen">
+  <aside className="ios-sidebar hidden lg:block w-60 h-full">
    <div className="p-5"><div className="h-7 w-32 bg-gray-200/70 rounded animate-pulse" /></div>
    <div className="px-5 space-y-2.5">
     {[...Array(5)].map((_, i) => <div key={i} className="h-7 bg-gray-200/50 rounded animate-pulse" />)}
