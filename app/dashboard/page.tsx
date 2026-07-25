@@ -274,11 +274,11 @@ export default function DashboardPage() {
       <motion.div
        initial="hidden" animate="show"
        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
-       className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-6"
+       className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
       >
-       <div className="lg:col-span-3">
+       <div>
         <Kpi
-         hero label="Total calls" value={String(k.totalCalls)}
+         label="Total calls" value={String(k.totalCalls)}
          delta={totalDelta} deltaLabel={`vs prior ${displayData.range}d`} spark={k.spark}
         />
        </div>
@@ -472,44 +472,42 @@ function Kpi({
 }) {
  const isUp = delta > 0
  const isFlat = delta === 0
+ void hero // compact iOS stat card: no hero variant anymore
  return (
   <motion.div
    variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
-   className={`bg-white border ${accent ? 'border-sky-200' : 'border-gray-200'} rounded-2xl ${hero ? 'p-5 sm:p-7 md:p-8' : 'p-5'} relative overflow-hidden`}
+   className="bg-white border border-gray-200 rounded-2xl p-5 relative overflow-hidden h-full"
   >
-   <div className={`text-xs text-gray-500 ${hero ? 'mb-3 sm:mb-4' : 'mb-2'}`}>{label}</div>
-   <div className={`${hero ? 'flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-6' : 'flex items-end gap-6 mb-1'}`}>
-    <div className={`font-mono font-medium tracking-tight tabular-nums ${
-     hero ? 'text-5xl sm:text-6xl md:text-7xl' : 'text-3xl md:text-4xl'
-    } ${accent ? 'text-sky-600' : 'text-gray-900'}`}>
-     {value}
-    </div>
-    {hero && spark && spark.length > 1 && (
-     <div className="w-full sm:flex-1 sm:max-w-[280px] sm:pb-2">
-      <Sparkline data={spark} accent={accent} large />
-     </div>
+   <div className="text-[11px] font-semibold uppercase tracking-[0.05em] mb-2" style={{ color: 'var(--dmut)' }}>{label}</div>
+   <div className={`text-[30px] leading-none font-bold tracking-tight tabular-nums ${accent ? 'text-sky-600' : 'text-gray-900'}`}>
+    {value}
+   </div>
+   <div className="flex items-center gap-1.5 text-xs mt-2.5">
+    {isFlat ? (
+     <span className="text-gray-400">- {deltaLabel}</span>
+    ) : (
+     <>
+      <span
+       className="inline-flex items-center gap-0.5 font-semibold rounded-md px-1.5 py-0.5 text-[11px] tabular-nums"
+       style={isUp
+        ? { color: 'var(--dgreen-deep)', background: 'var(--dgreen-tint)' }
+        : { color: 'var(--dred-deep)', background: 'var(--dred-tint)' }}
+      >
+       {isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+       {Math.abs(delta)}
+      </span>
+      <span className="text-gray-400">{deltaLabel}</span>
+     </>
     )}
    </div>
-   <div className={`flex items-center justify-between ${hero ? 'mt-3' : ''}`}>
-    <div className="flex items-center gap-1 text-xs">
-     {isFlat ? (
-      <span className="text-gray-400">- {deltaLabel}</span>
-     ) : (
-      <>
-       <span className={`inline-flex items-center gap-0.5 font-medium font-mono ${isUp ? 'text-emerald-600' : 'text-rose-500'}`}>
-        {isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-        {Math.abs(delta).toLocaleString()}{deltaLabel === 'pp' ? 'pp' : ''}
-       </span>
-       <span className="text-gray-400">{deltaLabel === 'pp' ? '' : deltaLabel}</span>
-      </>
-     )}
+   {spark && spark.length > 1 && (
+    <div className="mt-3 -mb-1">
+     <Sparkline data={spark} accent large />
     </div>
-    {!hero && spark && spark.length > 1 && <Sparkline data={spark} accent={accent} />}
-   </div>
+   )}
   </motion.div>
  )
 }
-
 function Sparkline({ data, accent = false, large = false }: { data: number[]; accent?: boolean; large?: boolean }) {
  const max = Math.max(...data, 1)
  const w = large ? 240 : 60, h = large ? 36 : 18

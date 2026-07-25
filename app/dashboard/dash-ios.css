@@ -317,3 +317,24 @@ html[data-dash-theme="dark"] .dash-ios .ios-seg-thumb { background: #5A5A5F; }
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.35);
   }
 }
+
+/* ============================================================
+   Density pass: this repo's Tailwind spacing scale is 8px-based
+   (p-6 = 48px!), which bloats every card with dead air. Compress
+   the big steps to iOS-density values inside the dashboard only.
+   ============================================================ */
+.dash-ios .p-5 { padding: 18px; }
+.dash-ios .p-6 { padding: 22px; }
+.dash-ios .px-5 { padding-left: 18px; padding-right: 18px; }
+.dash-ios .px-6 { padding-left: 20px; padding-right: 20px; }
+.dash-ios .py-5 { padding-top: 16px; padding-bottom: 16px; }
+.dash-ios .py-6 { padding-top: 24px; padding-bottom: 24px; }
+.dash-ios .lg\:px-8 { padding-left: 32px; padding-right: 32px; }
+.dash-ios .lg\:py-10 { padding-top: 32px; padding-bottom: 32px; }
+.dash-ios .py-10 { padding-top: 36px; padding-bottom: 36px; }
+.dash-ios .mb-6 { margin-bottom: 18px; }
+.dash-ios .mb-8 { margin-bottom: 26px; }
+.dash-ios .gap-3 { gap: 14px; }
+.dash-ios .gap-4 { gap: 16px; }
+.dash-ios .py-4 { padding-top: 14px; padding-bottom: 14px; }
+.dash-ios .h-72 { height: 230px; }
