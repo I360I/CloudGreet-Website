@@ -11,7 +11,7 @@ flow. Reps must not be confused. No IA changes.
 - Ground: #F6F6FA (lavender-tinted near-white; iOS-adjacent, CRM-kit hue)
 - Cards: #FFFFFF, radius 16-18px, hairline rgba(15,23,42,.07), soft shadow
 - Ink: #0F172A / secondary #475569 / muted #94A3B8
-- ACCENT (single): indigo #4F46E5 (CRM kit); tint rgba(79,70,229,.10)
+- ACCENT (single): iOS blue #007AFF (owner: blue not purple); tint rgba(0,122,255,.10)
   - replaces the gray-900 primary via utility remap like dash-ios.css
 - Semantic: green #16A34A(+tint), red #DC2626(+tint), amber #D97706(+tint)
 - Dark mode: same token architecture as dash-ios (html[data-sales-theme])

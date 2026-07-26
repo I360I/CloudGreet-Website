@@ -57,6 +57,12 @@ export default function LeadDetailPage() {
 
   const [lead, setLead] = useState<Lead | null>(null)
   const [notes, setNotes] = useState<Note[]>([])
+  const [calls, setCalls] = useState<Array<{
+    id: string; status: string; duration_seconds: number | null
+    started_at: string; has_recording: boolean
+  }>>([])
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  const [playUrl, setPlayUrl] = useState<string | null>(null)
   const [bookingUrl, setBookingUrl] = useState<string | null>(null)
   const [linkedBusiness, setLinkedBusiness] = useState<{ id: string; business_name: string } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -98,6 +104,7 @@ export default function LeadDetailPage() {
       } else {
         setLead(j.lead)
         setNotes(j.notes || [])
+        setCalls(j.calls || [])
         setBookingUrl(j.booking_url || null)
         setLinkedBusiness(j.linked_business || null)
       }
@@ -740,6 +747,52 @@ export default function LeadDetailPage() {
           transition={{ duration: 0.35, ease: EASE, delay: 0.1 }}
           className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
         >
+          {/* My calls with this lead - talk time + replayable recordings
+              (self-coaching: hear your own pitch back). */}
+          {calls.length > 0 && (
+            <div className="border-b border-gray-100">
+              <div className="px-5 py-3 border-b border-gray-100">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">My calls</div>
+                <div className="text-sm font-medium text-gray-900">{calls.length} with this lead</div>
+              </div>
+              <ul className="divide-y divide-gray-100">
+                {calls.slice(0, 6).map((c) => (
+                  <li key={c.id} className="px-5 py-2.5 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-gray-900 tabular-nums">
+                        {new Date(c.started_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      </div>
+                      <div className="text-[11px] text-gray-500 mt-0.5 tabular-nums">
+                        {c.status}{c.duration_seconds ? ` · ${Math.floor(c.duration_seconds / 60)}:${String(c.duration_seconds % 60).padStart(2, '0')}` : ''}
+                      </div>
+                    </div>
+                    {c.has_recording && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (playingId === c.id) { setPlayingId(null); setPlayUrl(null); return }
+                          try {
+                            const r = await fetchWithAuth(`/api/sales/my-calls/${c.id}/recording`)
+                            const j = await r.json().catch(() => ({}))
+                            if (r.ok && j?.url) { setPlayingId(c.id); setPlayUrl(j.url) }
+                          } catch { /* leave silent */ }
+                        }}
+                        className="text-[11px] font-semibold rounded-full px-2.5 py-1 flex-shrink-0"
+                        style={{ background: 'var(--dblue-tint)', color: 'var(--dblue)' }}
+                      >
+                        {playingId === c.id ? 'Hide' : 'Listen'}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {playingId && playUrl && (
+                <div className="px-5 py-3 border-t border-gray-100">
+                  <audio src={playUrl} controls autoPlay className="w-full h-9" />
+                </div>
+              )}
+            </div>
+          )}
           <div className="px-5 py-3 border-b border-gray-100">
             <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Notes</div>
             <div className="text-sm font-medium text-gray-900">

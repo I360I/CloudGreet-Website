@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch, Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass, CaretRight, Clock, CalendarBlank, PaperPlaneTilt, CopySimple, NotePencil } from '@phosphor-icons/react'
 import { SalesPageHeader, SalesLoadingState } from '@/app/sales/_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { leadTimeZone, wallClockToUtc, tzAbbrev } from '@/lib/time/lead-timezone'
+import { leadTimeZone, wallClockToUtc, tzAbbrev, tzToday } from '@/lib/time/lead-timezone'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -103,6 +103,15 @@ export function LeadsWorkspace({
   const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
   // Quick-notes modal: jot a note from the list without leaving the page.
   const [notesLeadId, setNotesLeadId] = useState<string | null>(null)
+  // Deep link: /sales/leads?powerdial=1 (the Overview CTA) starts a
+  // session as soon as leads + the dialer are ready. One-shot; read at
+  // mount from location (useSearchParams would force a Suspense wrap).
+  const powerDialPending = useRef(false)
+  useEffect(() => {
+    try {
+      powerDialPending.current = new URLSearchParams(window.location.search).get('powerdial') === '1'
+    } catch { /* SSR/no-window: stays false */ }
+  }, [])
   const [findingEmails, setFindingEmails] = useState(false)
   const [outreachModal, setOutreachModal] = useState<{
     leads: Pick<Lead, 'id' | 'business_name'>[]
@@ -302,20 +311,59 @@ export function LeadsWorkspace({
     }
   }
 
+  useEffect(() => {
+    if (!powerDialPending.current || loading || leads.length === 0) return
+    const t = setTimeout(() => {
+      if (!powerDialPending.current) return
+      powerDialPending.current = false
+      startPowerDial()
+    }, 900) // give the floating Dialer a beat to register window.cgPowerDial
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, leads])
+
+  const startPowerDial = () => {
+                const callable = filtered
+                  .filter((l) => !!l.phone && l.status !== 'do_not_call' && l.status !== 'closed' && l.status !== 'dead')
+                  .map((l) => ({
+                    leadId: l.id,
+                    phone: l.phone!,
+                    businessName: l.business_name,
+                    contactName: l.contact_name,
+                  }))
+                if (callable.length === 0) {
+                  alert('No callable leads in the current filter. Power dial only runs against leads with a phone number that aren\'t Closed/Dead/DNC.')
+                  return
+                }
+                if (typeof window === 'undefined' || !window.cgPowerDial) {
+                  alert('Dialer not loaded yet. Try again in a second.')
+                  return
+                }
+                if (!confirm(`Power dial through ${callable.length} lead${callable.length === 1 ? '' : 's'}? Auto-dials each one with a 5-second pause between calls. Pause/skip/stop available throughout.`)) return
+                window.cgPowerDial(callable)
+  }
+
   const updateStatus = async (leadId: string, status: string) => {
     // "Callback" isn't a status - it schedules a follow-up 2 business
-    // days out (weekends skipped: Thu->Mon, Fri->Tue) and marks the
-    // lead called so it resurfaces at the top of the call list then.
+    // days out (weekends skipped: Thu->Mon, Fri->Tue) at 9:30am in the
+    // LEAD'S timezone (same tz derivation the demo modal uses), and
+    // marks the lead called so it resurfaces in the call list that day.
     if (status === '__callback') {
-      const d = new Date()
+      const lead = leads.find((x) => x.id === leadId)
+      const tz = leadTimeZone(lead?.state, lead?.phone) || 'America/Chicago'
+      const t = tzToday(tz)
+      const dt = new Date(Date.UTC(t.y, t.mo - 1, t.d))
       let added = 0
       while (added < 2) {
-        d.setDate(d.getDate() + 1)
-        const dow = d.getDay()
+        dt.setUTCDate(dt.getUTCDate() + 1)
+        const dow = dt.getUTCDay()
         if (dow !== 0 && dow !== 6) added++
       }
-      d.setHours(9, 30, 0, 0) // land at 9:30am local, prime dial time
-      const iso = d.toISOString()
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const iso = wallClockToUtc(
+        `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}T09:30`,
+        tz,
+      )
       setUpdatingStatusId(leadId)
       setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, status: 'called', follow_up_at: iso } : l))
       try {
@@ -466,27 +514,9 @@ export function LeadsWorkspace({
         action={
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => {
-                const callable = filtered
-                  .filter((l) => !!l.phone && l.status !== 'do_not_call' && l.status !== 'closed' && l.status !== 'dead')
-                  .map((l) => ({
-                    leadId: l.id,
-                    phone: l.phone!,
-                    businessName: l.business_name,
-                    contactName: l.contact_name,
-                  }))
-                if (callable.length === 0) {
-                  alert('No callable leads in the current filter. Power dial only runs against leads with a phone number that aren\'t Closed/Dead/DNC.')
-                  return
-                }
-                if (typeof window === 'undefined' || !window.cgPowerDial) {
-                  alert('Dialer not loaded yet. Try again in a second.')
-                  return
-                }
-                if (!confirm(`Power dial through ${callable.length} lead${callable.length === 1 ? '' : 's'}? Auto-dials each one with a 5-second pause between calls. Pause/skip/stop available throughout.`)) return
-                window.cgPowerDial(callable)
-              }}
-              className="inline-flex items-center gap-1.5 text-sm bg-violet-600 text-white hover:bg-violet-700 rounded-lg px-3.5 py-2 transition-colors shadow-sm"
+              onClick={startPowerDial}
+              className="inline-flex items-center gap-1.5 text-sm text-white rounded-lg px-3.5 py-2 transition-colors shadow-sm hover:brightness-110"
+              style={{ background: 'var(--dblue)' }}
               title="Auto-dial through the filtered list"
             >
               <PhoneCall weight="fill" className="w-4 h-4" /> Power dial

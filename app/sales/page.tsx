@@ -226,7 +226,7 @@ export default function SalesHome() {
           <motion.div
             variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
             className="rounded-2xl p-5 text-white relative overflow-hidden"
-            style={{ background: 'linear-gradient(150deg, #6366F1 0%, #4F46E5 55%, #4338CA 100%)', boxShadow: '0 8px 24px rgba(79,70,229,.35), inset 0 1px 0 rgba(255,255,255,.25)' }}
+            style={{ background: 'linear-gradient(150deg, #3FA0FF 0%, #007AFF 55%, #0063D1 100%)', boxShadow: '0 8px 24px rgba(0,122,255,.35), inset 0 1px 0 rgba(255,255,255,.25)' }}
           >
             <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-white/75">Owed to you</div>
             <div className="text-[26px] leading-none font-bold tabular-nums mt-2">{dollars(data.earnings.owed_cents)}</div>
@@ -245,7 +245,11 @@ export default function SalesHome() {
             <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--dmut)' }}>Demos today</div>
             <div className="text-[26px] leading-none font-bold tabular-nums text-gray-900 mt-2">{calToday.length}</div>
             <div className="text-[11px] mt-2.5 tabular-nums" style={{ color: 'var(--dmut2)' }}>
-              {calToday.length > 0 ? `next at ${fmtTime(calToday[0].start_iso)}` : 'none scheduled'}
+              {calToday.length > 0
+                ? `next at ${fmtTime(calToday[0].start_iso)}`
+                : data.me.cal_connected === false
+                  ? <Link href="/sales/settings" className="hover:underline" style={{ color: 'var(--dblue)' }}>Connect Cal.com →</Link>
+                  : 'none scheduled'}
             </div>
           </motion.div>
           <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }} className="bg-white border border-gray-200 rounded-2xl p-5">
@@ -369,7 +373,7 @@ export default function SalesHome() {
               </div>
             </div>
             <Link
-              href="/sales/leads"
+              href="/sales/leads?powerdial=1"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-white rounded-lg px-3 py-1.5 transition-colors"
               style={{ background: 'var(--dblue)' }}
             >

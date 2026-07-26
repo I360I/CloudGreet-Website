@@ -97,6 +97,10 @@ export default function SalesEarningsPage() {
   const [chart, setChart] = useState<ChartPoint[]>([])
   const [chartTab, setChartTab] = useState<ChartTab>('both')
   const [payoutsEnabled, setPayoutsEnabled] = useState(true)
+  const [payoutHistory, setPayoutHistory] = useState<Array<{
+    id: string; amount_cents: number; status: string; period_start: string | null
+    period_end: string | null; transferred_at: string | null; created_at: string
+  }>>([])
   const [hasConnectAccount, setHasConnectAccount] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -116,6 +120,7 @@ export default function SalesEarningsPage() {
           setCustomers(j.customers || [])
           setChart(j.chart || [])
           setPayoutsEnabled(!!j.payouts_enabled)
+          setPayoutHistory(j.payouts || [])
           setHasConnectAccount(!!j.has_connect_account)
         }
       } finally {
@@ -191,7 +196,7 @@ export default function SalesEarningsPage() {
               <motion.div
                 variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
                 className="rounded-2xl p-5 text-white relative overflow-hidden"
-                style={{ background: 'linear-gradient(150deg, #6366F1 0%, #4F46E5 55%, #4338CA 100%)', boxShadow: '0 8px 24px rgba(79,70,229,.35), inset 0 1px 0 rgba(255,255,255,.25)' }}
+                style={{ background: 'linear-gradient(150deg, #3FA0FF 0%, #007AFF 55%, #0063D1 100%)', boxShadow: '0 8px 24px rgba(0,122,255,.35), inset 0 1px 0 rgba(255,255,255,.25)' }}
               >
                 <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-white/75">Owed to you</div>
                 <div className="text-[30px] leading-none font-bold tabular-nums mt-2.5">{dollars(totals?.owed_cents ?? 0)}</div>
@@ -297,6 +302,47 @@ export default function SalesEarningsPage() {
                 </ul>
               )}
             </motion.div>
+
+            {/* Payout history - every Friday transfer, newest first. */}
+            {payoutHistory.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: EASE, delay: 0.18 }}
+                className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mt-6"
+              >
+                <div className="px-5 py-3 border-b border-gray-100">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Payout history</div>
+                  <div className="text-sm font-medium text-gray-900">{payoutHistory.length} transfer{payoutHistory.length === 1 ? '' : 's'}</div>
+                </div>
+                <ul className="divide-y divide-gray-100">
+                  {payoutHistory.slice(0, 12).map((po) => (
+                    <li key={po.id} className="px-5 py-3 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 tabular-nums">{dollars(po.amount_cents)}</div>
+                        <div className="text-xs text-gray-500 mt-0.5 tabular-nums">
+                          {po.transferred_at
+                            ? new Date(po.transferred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            : new Date(po.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {po.period_start && po.period_end && (
+                            <span className="text-gray-400"> · {new Date(po.period_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} to {new Date(po.period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          )}
+                        </div>
+                      </div>
+                      <span
+                        className="text-[11px] font-semibold rounded-full px-2.5 py-1 flex-shrink-0"
+                        style={po.status === 'transferred'
+                          ? { background: 'var(--dgreen-tint)', color: 'var(--dgreen-deep)' }
+                          : po.status === 'failed' || po.status === 'reversed'
+                            ? { background: 'var(--dred-tint)', color: 'var(--dred-deep)' }
+                            : { background: 'var(--dorange-tint)', color: 'var(--dorange-deep)' }}
+                      >
+                        {po.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )}
 
             {/* Taxes - what's coming at year-end */}
             <TaxCard
