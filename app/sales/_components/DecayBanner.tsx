@@ -61,6 +61,9 @@ export function DecayBanner() {
   if (!data) return null
 
   const c = COPY[data.tier]
+  // An unexpected tier value must never take down the whole dashboard -
+  // this banner is decoration, not load-bearing.
+  if (!c) return null
   const styles = {
     good: 'bg-white border-emerald-200/70',
     warn: 'bg-amber-50 border-amber-200',

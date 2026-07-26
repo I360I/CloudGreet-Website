@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, CalendarBlank, PhoneCall } from '@phosphor-icons/react'
+import { Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, CalendarBlank, PhoneCall, PencilSimple, CircleNotch } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from './_components/SalesShell'
 import { DecayBanner } from './_components/DecayBanner'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -49,7 +49,7 @@ type Funnel = {
   demos_set: number; demos_held: number; no_shows: number; won: number
   show_rate: number | null; win_rate: number | null
 }
-type Goal = { target: number; this_week: number; on_pace: boolean }
+type Goal = { target: number; this_week: number; on_pace: boolean; daily_dial_goal?: number | null }
 
 type Overview = {
   me: { name: string; payouts_enabled: boolean; cal_connected?: boolean }
@@ -81,6 +81,36 @@ function nextFriday(): string {
 export default function SalesHome() {
   const [data, setData] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
+  // Goal editor modal - the rep owns their own targets.
+  const [editGoals, setEditGoals] = useState(false)
+  const [gDemo, setGDemo] = useState('')
+  const [gDial, setGDial] = useState('')
+  const [savingGoals, setSavingGoals] = useState(false)
+  const [goalErr, setGoalErr] = useState('')
+
+  const saveGoals = async () => {
+    setSavingGoals(true); setGoalErr('')
+    try {
+      const res = await fetchWithAuth('/api/sales/goals', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...(gDemo !== '' ? { weekly_demo_goal: Number(gDemo) } : {}),
+          ...(gDial !== '' ? { daily_dial_goal: Number(gDial) } : {}),
+        }),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) { setGoalErr(j?.error || 'Failed to save'); return }
+      const ov = await fetchWithAuth('/api/sales/overview')
+      const oj = await ov.json().catch(() => ({}))
+      if (oj?.success) setData(oj)
+      setEditGoals(false)
+    } catch {
+      setGoalErr('Failed to save')
+    } finally {
+      setSavingGoals(false)
+    }
+  }
 
 
   // Initial load + lightweight polling so admin-side flips (demo agent
@@ -279,23 +309,37 @@ export default function SalesHome() {
                 <div className="text-sm font-medium text-gray-900">Today &amp; last 7 days</div>
               </div>
               {data.goal && (
-                <span
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-1"
+                <button
+                  onClick={() => {
+                    setGDemo(String(data.goal!.target))
+                    setGDial(data.goal!.daily_dial_goal ? String(data.goal!.daily_dial_goal) : '')
+                    setGoalErr(''); setEditGoals(true)
+                  }}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-1 hover:brightness-95 transition"
                   style={data.goal.this_week >= data.goal.target
                     ? { background: 'var(--dgreen-tint)', color: 'var(--dgreen-deep)' }
                     : data.goal.on_pace
                       ? { background: 'var(--dblue-tint)', color: 'var(--dblue)' }
                       : { background: 'var(--dorange-tint)', color: 'var(--dorange-deep)' }}
+                  title="Edit your goals"
                 >
                   Demos this week {data.goal.this_week}/{data.goal.target}
                   {data.goal.this_week >= data.goal.target ? ' · goal hit' : data.goal.on_pace ? ' · on pace' : ' · behind pace'}
-                </span>
+                  <PencilSimple weight="bold" className="w-3 h-3 opacity-70" />
+                </button>
               )}
             </div>
             <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-5 gap-4 items-end">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.05em]" style={{ color: 'var(--dmut)' }}>Dials today</div>
-                <div className="text-[24px] leading-none font-bold tabular-nums text-gray-900 mt-1.5">{data.activity.today.dials}</div>
+                <div className="text-[24px] leading-none font-bold tabular-nums text-gray-900 mt-1.5">
+                  {data.activity.today.dials}
+                  {data.goal?.daily_dial_goal ? (
+                    <span className="text-sm font-semibold" style={{ color: data.activity.today.dials >= data.goal.daily_dial_goal ? 'var(--dgreen-deep)' : 'var(--dmut2, #94A3B8)' }}>
+                      /{data.goal.daily_dial_goal}
+                    </span>
+                  ) : null}
+                </div>
               </div>
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.05em]" style={{ color: 'var(--dmut)' }}>Connects</div>
@@ -540,6 +584,60 @@ export default function SalesHome() {
 
         </div>
         </div>
+
+        {/* Goal editor - the rep sets their own weekly demo + daily dial targets */}
+        {editGoals && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(15, 23, 42, 0.4)' }}
+            onClick={() => { if (!savingGoals) setEditGoals(false) }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.18, ease: EASE }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5"
+            >
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Goals</div>
+              <h2 className="text-base font-semibold text-gray-900 mt-0.5 mb-4">Set your targets</h2>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Demos per week</label>
+              <input
+                type="number" min={1} max={50} value={gDemo}
+                onChange={(e) => setGDemo(e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-gray-400"
+              />
+              <label className="block text-xs font-medium text-gray-600 mb-1">Dials per day</label>
+              <input
+                type="number" min={5} max={500} value={gDial}
+                onChange={(e) => setGDial(e.target.value)}
+                placeholder="e.g. 50"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-gray-400"
+              />
+              <p className="text-[11px] text-gray-400 mt-2">
+                Pros run 50 to 80 dials a day. Demos count when they&apos;re on the calendar for this week.
+              </p>
+              {goalErr && <p className="text-xs text-red-600 mt-2">{goalErr}</p>}
+              <div className="flex items-center justify-end gap-2 mt-4">
+                <button
+                  onClick={() => setEditGoals(false)}
+                  disabled={savingGoals}
+                  className="text-sm text-gray-600 hover:text-gray-900 rounded-lg px-3 py-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveGoals}
+                  disabled={savingGoals}
+                  className="inline-flex items-center gap-1.5 text-sm text-white rounded-lg px-4 py-2 disabled:opacity-60"
+                  style={{ background: 'var(--dblue)' }}
+                >
+                  {savingGoals && <CircleNotch className="w-4 h-4 animate-spin" />}
+                  Save
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </section>
     </SalesShell>
   )

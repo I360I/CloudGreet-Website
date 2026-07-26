@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       supabaseAdmin
         .from('custom_users')
-        .select('id, email, first_name, last_name, name, weekly_demo_goal')
+        .select('id, email, first_name, last_name, name, weekly_demo_goal, daily_dial_goal')
         .eq('id', auth.userId)
         .maybeSingle(),
       supabaseAdmin
@@ -225,17 +225,38 @@ export async function GET(request: NextRequest) {
     }
 
     // ---- Weekly demo goal + pace (was setter-only infra) ----
+    // "This week" = the current Mon-Sun calendar week, counting demos
+    // SCHEDULED to happen this week. Demos live in two places that don't
+    // always agree: closes rows (the mark-demo flow stamps
+    // demo_scheduled_at) and the rep's Cal.com calendar (bookings made
+    // straight through their link never create a close). Count both and
+    // take the larger so a demo logged in both places counts once and a
+    // calendar-only demo still moves the needle. (Cal.com only reports
+    // upcoming bookings, so a calendar-only demo stops counting once it
+    // happens - log demos via mark-demo to keep credit all week.)
     const goalTarget = Math.max(1, Number((me as any)?.weekly_demo_goal ?? 2) || 2)
-    const { count: demosThisWeek } = await supabaseAdmin
+    const weekStart = new Date(now)
+    weekStart.setHours(0, 0, 0, 0)
+    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7)) // back to Monday
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekEnd.getDate() + 7)
+    const { count: closesThisWeek } = await supabaseAdmin
       .from('closes')
       .select('id', { count: 'exact', head: true })
       .eq('rep_id', auth.userId)
-      .gte('demo_scheduled_at', weekAgo.toISOString())
+      .gte('demo_scheduled_at', weekStart.toISOString())
+      .lt('demo_scheduled_at', weekEnd.toISOString())
+    const calThisWeek = calBookings.filter((b) => {
+      const t = new Date(b.start_iso).getTime()
+      return t >= weekStart.getTime() && t < weekEnd.getTime()
+    }).length
+    const demosThisWeek = Math.max(closesThisWeek || 0, calThisWeek)
     const goal = {
       target: goalTarget,
-      this_week: demosThisWeek || 0,
-      // Pace: fraction of the rolling week elapsed vs fraction of goal hit.
-      on_pace: (demosThisWeek || 0) >= goalTarget * Math.min(1, (now.getDay() === 0 ? 7 : now.getDay()) / 5),
+      this_week: demosThisWeek,
+      // Pace: fraction of the work week elapsed vs fraction of goal hit.
+      on_pace: demosThisWeek >= goalTarget * Math.min(1, (now.getDay() === 0 ? 7 : now.getDay()) / 5),
+      daily_dial_goal: Number((me as any)?.daily_dial_goal) > 0 ? Number((me as any)?.daily_dial_goal) : null,
     }
 
     const cleanLeads = (rows: any[] | null) => (rows || []).map((r) => ({
