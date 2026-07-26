@@ -53,6 +53,8 @@ const STATUS_META: Record<string, { label: string; pill: string; dot: string; ro
 
 const STATUS_FILTERS: Array<{ key: string; label: string }> = [
   { key: 'all',           label: 'All' },
+  { key: '__due',         label: 'Due' },
+  { key: '__stale',       label: 'Untouched 14d+' },
   { key: 'new',           label: 'New' },
   { key: 'called',        label: 'Called' },
   { key: 'voicemail',     label: 'Voicemail' },
@@ -389,7 +391,15 @@ export function LeadsWorkspace({
 
   const filtered = useMemo(() => {
     let out = [...leads]
-    if (filter !== 'all') out = out.filter((l) => l.status === filter)
+    if (filter === '__due') {
+      // Follow-ups due now or overdue - the calls that must happen today.
+      const cutoff = Date.now()
+      out = out.filter((l) => l.follow_up_at && new Date(l.follow_up_at).getTime() <= cutoff)
+    } else if (filter === '__stale') {
+      // Claimed 14+ days ago and still sitting at 'new' - dying inventory.
+      const cutoff = Date.now() - 14 * 86_400_000
+      out = out.filter((l) => l.status === 'new' && l.claimed_at && new Date(l.claimed_at).getTime() < cutoff)
+    } else if (filter !== 'all') out = out.filter((l) => l.status === filter)
     if (search.trim()) {
       const q = search.toLowerCase()
       out = out.filter((l) =>
@@ -427,6 +437,10 @@ export function LeadsWorkspace({
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: leads.length }
     for (const l of leads) c[l.status] = (c[l.status] || 0) + 1
+    const nowT = Date.now()
+    const staleT = nowT - 14 * 86_400_000
+    c['__due'] = leads.filter((l) => l.follow_up_at && new Date(l.follow_up_at).getTime() <= nowT).length
+    c['__stale'] = leads.filter((l) => l.status === 'new' && l.claimed_at && new Date(l.claimed_at).getTime() < staleT).length
     return c
   }, [leads])
 
@@ -598,7 +612,9 @@ export function LeadsWorkspace({
                     className={`text-xs rounded-full px-2.5 py-1 border transition-all ${
                       active
                         ? 'bg-gray-900 text-white border-gray-900'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                        : f.key === '__due'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200 hover:border-rose-400'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
                     }`}
                   >
                     {f.label}
@@ -694,7 +710,7 @@ export function LeadsWorkspace({
                   className="text-xs font-mono uppercase tracking-wider rounded-lg border border-sky-300 bg-white px-3 py-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <option value="" disabled>Set status…</option>
-                  {STATUS_FILTERS.filter((s) => s.key !== 'all').map((s) => (
+                  {STATUS_FILTERS.filter((s) => s.key !== 'all' && !s.key.startsWith('__')).map((s) => (
                     <option key={s.key} value={s.key}>{s.label}</option>
                   ))}
                 </select>
@@ -836,7 +852,7 @@ export function LeadsWorkspace({
                               backgroundSize: '0.85em',
                             }}
                           >
-                            {STATUS_FILTERS.filter((s) => s.key !== 'all').map((s) => (
+                            {STATUS_FILTERS.filter((s) => s.key !== 'all' && !s.key.startsWith('__')).map((s) => (
                               <option key={s.key} value={s.key}>{s.label}</option>
                             ))}
                             <option value="__callback">Callback · 2 days</option>

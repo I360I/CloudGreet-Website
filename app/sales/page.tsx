@@ -39,8 +39,24 @@ type CalBooking = {
   attendees: Array<{ name: string | null; email: string | null }>
 }
 
+type Activity = {
+  today: { dials: number; connects: number; talk_seconds: number; last_call_at: string | null }
+  week: { dials: number; connects: number; connect_rate: number; talk_seconds: number }
+  series: Array<{ date: string; dials: number; connects: number }>
+}
+type Funnel = {
+  leads_total: number; contacted: number; interested: number
+  demos_set: number; demos_held: number; no_shows: number; won: number
+  show_rate: number | null; win_rate: number | null
+}
+type Goal = { target: number; this_week: number; on_pace: boolean }
+type BoardRow = { rep_id: string; name: string; dials: number; connects: number; demos_set: number; earned_cents: number; is_me: boolean }
+
 type Overview = {
   me: { name: string; payouts_enabled: boolean; cal_connected?: boolean }
+  activity?: Activity
+  funnel?: Funnel
+  goal?: Goal
   todays: LeadCard[]
   overdue: LeadCard[]
   interested: LeadCard[]
@@ -64,7 +80,18 @@ function nextFriday(): string {
 
 export default function SalesHome() {
   const [data, setData] = useState<Overview | null>(null)
+  const [board, setBoard] = useState<BoardRow[] | null>(null)
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const r = await fetchWithAuth('/api/sales/leaderboard')
+        const j = await r.json().catch(() => ({}))
+        if (j?.success) setBoard(j.week || [])
+      } catch { /* board is optional */ }
+    })()
+  }, [])
 
   // Initial load + lightweight polling so admin-side flips (demo agent
   // building / ready, customization status) reflect on the rep's
@@ -241,6 +268,100 @@ export default function SalesHome() {
           </motion.div>
         </motion.div>
 
+        {/* My numbers: the rep's own activity - dials, connects, talk
+            time, 7-day trend, weekly demo goal pace. Data always existed
+            in rep_calls; now the rep can finally see it. */}
+        {data.activity && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASE, delay: 0.03 }}
+            className="bg-white border border-gray-200 rounded-2xl shadow-sm mb-4 overflow-hidden"
+          >
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">My numbers</div>
+                <div className="text-sm font-medium text-gray-900">Today &amp; last 7 days</div>
+              </div>
+              {data.goal && (
+                <span
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-1"
+                  style={data.goal.this_week >= data.goal.target
+                    ? { background: 'var(--dgreen-tint)', color: 'var(--dgreen-deep)' }
+                    : data.goal.on_pace
+                      ? { background: 'var(--dblue-tint)', color: 'var(--dblue)' }
+                      : { background: 'var(--dorange-tint)', color: 'var(--dorange-deep)' }}
+                >
+                  Demos this week {data.goal.this_week}/{data.goal.target}
+                  {data.goal.this_week >= data.goal.target ? ' · goal hit' : data.goal.on_pace ? ' · on pace' : ' · behind pace'}
+                </span>
+              )}
+            </div>
+            <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-5 gap-4 items-end">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.05em]" style={{ color: 'var(--dmut)' }}>Dials today</div>
+                <div className="text-[24px] leading-none font-bold tabular-nums text-gray-900 mt-1.5">{data.activity.today.dials}</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.05em]" style={{ color: 'var(--dmut)' }}>Connects</div>
+                <div className="text-[24px] leading-none font-bold tabular-nums text-gray-900 mt-1.5">{data.activity.today.connects}</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.05em]" style={{ color: 'var(--dmut)' }}>Talk time</div>
+                <div className="text-[24px] leading-none font-bold tabular-nums text-gray-900 mt-1.5">
+                  {Math.floor(data.activity.today.talk_seconds / 60)}<span className="text-sm font-semibold text-gray-400">m</span>
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.05em]" style={{ color: 'var(--dmut)' }}>Connect rate 7d</div>
+                <div className="text-[24px] leading-none font-bold tabular-nums text-gray-900 mt-1.5">
+                  {Math.round(data.activity.week.connect_rate * 100)}<span className="text-sm font-semibold text-gray-400">%</span>
+                </div>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.05em] mb-1.5" style={{ color: 'var(--dmut)' }}>7-day dials</div>
+                <div className="flex items-end gap-1 h-10">
+                  {data.activity.series.map((d) => {
+                    const max = Math.max(...data.activity!.series.map((x) => x.dials), 1)
+                    return (
+                      <div key={d.date} className="flex-1 flex flex-col justify-end gap-px" title={`${d.date}: ${d.dials} dials · ${d.connects} connects`}>
+                        <div className="rounded-sm" style={{ height: `${Math.max(6, (d.dials / max) * 100)}%`, background: d.dials > 0 ? 'var(--dblue)' : 'var(--dseg)', opacity: d.dials > 0 ? 0.85 : 1 }} />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+            {data.funnel && (
+              <div className="px-5 py-3 border-t border-gray-100 flex items-center gap-2 flex-wrap text-[12px]">
+                {([
+                  ['Leads', data.funnel.leads_total],
+                  ['Contacted', data.funnel.contacted],
+                  ['Interested', data.funnel.interested],
+                  ['Demos set', data.funnel.demos_set],
+                  ['Held', data.funnel.demos_held],
+                  ['Won', data.funnel.won],
+                ] as const).map(([label, val], i, arr) => (
+                  <span key={label} className="inline-flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="font-semibold tabular-nums text-gray-900">{val}</span>
+                      <span style={{ color: 'var(--dmut)' }}>{label}</span>
+                    </span>
+                    {i < arr.length - 1 && <CaretRight className="w-3 h-3 text-gray-300" />}
+                  </span>
+                ))}
+                <span className="ml-auto flex items-center gap-3">
+                  {data.funnel.show_rate !== null && (
+                    <span style={{ color: 'var(--dmut)' }}>Show rate <b className="tabular-nums text-gray-900">{Math.round(data.funnel.show_rate * 100)}%</b></span>
+                  )}
+                  {data.funnel.win_rate !== null && (
+                    <span style={{ color: 'var(--dmut)' }}>Win rate <b className="tabular-nums text-gray-900">{Math.round(data.funnel.win_rate * 100)}%</b></span>
+                  )}
+                </span>
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Workday grid: call queue is the job (left); demos + pipeline
             keep score (right). */}
         <div className="grid lg:grid-cols-5 gap-4 items-start">
@@ -407,6 +528,44 @@ export default function SalesHome() {
                       </div>
                     )}
                   </div>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+
+        {/* This week's board - friendly competition. */}
+        {board && board.length > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASE, delay: 0.12 }}
+            className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
+          >
+            <div className="px-5 py-3 border-b border-gray-100">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">This week</div>
+              <div className="text-sm font-medium text-gray-900">Team board</div>
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {board.slice(0, 6).map((r, i) => (
+                <li
+                  key={r.rep_id}
+                  className="px-5 py-2.5 flex items-center gap-3"
+                  style={r.is_me ? { background: 'var(--dblue-tint)' } : undefined}
+                >
+                  <span
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold tabular-nums flex-shrink-0"
+                    style={i === 0
+                      ? { background: 'var(--dorange-tint)', color: 'var(--dorange-deep)' }
+                      : { background: 'var(--dseg)', color: 'var(--dmut)' }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span className={`flex-1 min-w-0 truncate text-sm ${r.is_me ? 'font-semibold' : ''} text-gray-900`}>
+                    {r.name}{r.is_me ? ' (you)' : ''}
+                  </span>
+                  <span className="text-xs tabular-nums flex-shrink-0" style={{ color: 'var(--dmut)' }}>
+                    {r.demos_set} demo{r.demos_set === 1 ? '' : 's'} · {r.dials} dials
+                  </span>
                 </li>
               ))}
             </ul>
