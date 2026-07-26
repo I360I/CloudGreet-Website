@@ -11,11 +11,15 @@ import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
  * When no number is provisioned yet, the bar says so plainly instead of
  * leaking a hardcoded demo number.
  */
+// Module cache: the number almost never changes, so remounts (every tab
+// switch) render the capsule instantly instead of flashing "connecting…".
+let phoneCache: string | null | undefined = undefined
+
 export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
  // `undefined` = not resolved yet (show neutral skeleton)
  // `null`      = resolved, no number provisioned (show amber warning)
  // `string`    = resolved, real number (show "listening on …")
- const [phone, setPhone] = useState<string | null | undefined>(phoneProp)
+ const [phone, setPhone] = useState<string | null | undefined>(phoneProp ?? phoneCache)
 
  // Re-resolve the phone whenever the route changes - that way navigating
  // between dashboard pages reflects any number that landed since first
@@ -23,7 +27,7 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
  const pathname = usePathname() || ''
 
  useEffect(() => {
-  if (phoneProp !== undefined) { setPhone(phoneProp); return }
+  if (phoneProp !== undefined) { if (typeof phoneProp === 'string') phoneCache = phoneProp; setPhone(phoneProp ?? phoneCache); return }
   let cancelled = false
 
   // Retry on null: the first fetch right after sign-in races with the
@@ -45,7 +49,7 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
      setPhone(null); return
     }
     const j = await res.json().catch(() => ({}))
-    if (j?.phone) { setPhone(j.phone); return }
+    if (j?.phone) { phoneCache = j.phone; setPhone(j.phone); return }
     // Got a successful response with no number. If we haven't checked
     // a few times yet, give the DB a beat and try again - this is the
     // window where admin just saved the number elsewhere.
@@ -65,33 +69,32 @@ export function TopBar({ phone: phoneProp }: { phone?: string | null } = {}) {
  const resolved = phone !== undefined
 
  return (
-  <div className="border-b border-black/5 bg-[#f6f5f1]/80 backdrop-blur-md sticky top-0 z-30">
-   <div className="px-4 lg:px-8 py-3 flex items-center justify-between gap-4 flex-wrap">
-    <div className="inline-flex items-center gap-2.5">
+  <div className="ios-topbar sticky top-0 z-30">
+   <div className="px-4 lg:px-8 py-2.5 flex items-center justify-between gap-4 flex-wrap">
+    <div className="ios-live">
      {!resolved ? (
       // Neutral loading state - no warning, no false positive.
       <>
        <span className="w-2 h-2 rounded-full bg-gray-300" />
-       <span className="text-xs font-mono text-gray-400 tracking-tight">
+       <span className="text-xs font-mono tracking-tight" style={{ color: 'var(--dmut)' }}>
         connecting…
        </span>
       </>
      ) : display ? (
       <>
        <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full rounded-full bg-sky-500 animate-breathe" />
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500" />
+        <span className="absolute inline-flex h-full w-full rounded-full animate-breathe" style={{ background: 'var(--dgreen)' }} />
+        <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: 'var(--dgreen)' }} />
        </span>
-       <span className="text-xs font-mono text-gray-600 tracking-tight">
-        listening on{' '}
-        <span className="text-gray-900">{display}</span>
-        <span className="ml-0.5 text-sky-500 animate-blink">_</span>
+       <span className="text-xs tracking-tight" style={{ color: 'var(--dmut)' }}>
+        AI listening on{' '}
+        <span className="font-mono font-medium" style={{ color: 'var(--dink)' }}>{display}</span>
        </span>
       </>
      ) : (
       <>
-       <span className="w-2 h-2 rounded-full bg-amber-400" />
-       <span className="text-xs font-mono text-amber-700 tracking-tight">
+       <span className="w-2 h-2 rounded-full" style={{ background: 'var(--dorange)' }} />
+       <span className="text-xs font-mono tracking-tight" style={{ color: 'var(--dorange-deep)' }}>
         no Retell number provisioned · finish onboarding to go live
        </span>
       </>

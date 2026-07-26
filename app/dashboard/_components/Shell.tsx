@@ -11,8 +11,13 @@ import { ImpersonationBanner } from './ImpersonationBanner'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { OnboardingProvider } from './onboarding-context'
+import { usePageSwipe } from './theme'
 
-const PAGE_EASE = [0.22, 1, 0.36, 1] as const
+
+// Module-level cache so tab-to-tab navigation renders the shell instantly
+// (no skeleton flash) and the iOS page-swipe animation is actually visible
+// on the content. Refreshed in the background on every mount.
+let shellCache: { businessName: string; needsSetup: boolean } | null = null
 
 export function DashShell({
  activeLabel,
@@ -23,10 +28,11 @@ export function DashShell({
 }) {
  const router = useRouter()
  const pathname = usePathname() || ''
- const [businessName, setBusinessName] = useState<string | null>(null)
+ const [businessName, setBusinessName] = useState<string | null>(shellCache?.businessName ?? null)
  const [redirecting, setRedirecting] = useState(false)
 
- const [needsSetup, setNeedsSetup] = useState(false)
+ const [needsSetup, setNeedsSetup] = useState(shellCache?.needsSetup ?? false)
+ const swipeProps = usePageSwipe()
 
  // Detect cross-tab session swaps and identity mismatches. If another
  // user logged in via a sibling tab (shared workstation) or the JWT
@@ -57,8 +63,11 @@ export function DashShell({
     const json = await res.json()
     if (cancelled) return
     if (json?.success && json.business) {
-     setBusinessName(json.business.business_name || 'Account')
-     setNeedsSetup(!json.business.onboarding_completed)
+     const name = json.business.business_name || 'Account'
+     const setup = !json.business.onboarding_completed
+     shellCache = { businessName: name, needsSetup: setup }
+     setBusinessName(name)
+     setNeedsSetup(setup)
     } else {
      setBusinessName('Account')
     }
@@ -70,6 +79,7 @@ export function DashShell({
  }, [pathname, router])
 
  const handleSignOut = async () => {
+  shellCache = null // never leak one tenant's name into the next session
   try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
   clearClientAuthState()
   router.replace('/login')
@@ -77,7 +87,7 @@ export function DashShell({
 
  if (businessName === null || redirecting) {
   return (
-   <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
+   <main className="dash-ios h-dvh flex overflow-hidden">
     <SidebarSkeleton />
     <div className="flex-1" />
    </main>
@@ -86,22 +96,26 @@ export function DashShell({
 
  return (
   <OnboardingProvider value={{ needsSetup }}>
-   <ImpersonationBanner />
-   <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
-    <Sidebar businessName={businessName} onSignOut={handleSignOut} activeLabel={activeLabel} />
-    <div className="flex-1 min-w-0 pb-20 lg:pb-0">
-     <TopBar />
-     {needsSetup && activeLabel !== 'Setup' && <SetupBanner />}
-     <motion.div
-      key={activeLabel}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: PAGE_EASE }}
-     >
-      {children}
-     </motion.div>
-    </div>
-   </main>
+   {/* Viewport-locked app frame: the banner and sidebar always fit on
+       screen (Sign out never hides below the fold) and ONLY the content
+       column scrolls - iPadOS style. */}
+   <div className="dash-ios h-dvh flex flex-col">
+    <ImpersonationBanner />
+    <main className="flex-1 min-h-0 flex">
+     <Sidebar businessName={businessName} onSignOut={handleSignOut} activeLabel={activeLabel} />
+     <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+      <TopBar />
+      {needsSetup && activeLabel !== 'Setup' && <SetupBanner />}
+      <div className="flex-1 min-h-0 overflow-y-auto pb-20 lg:pb-0">
+       {/* iOS page-swipe: the content slides on every tab change. The
+           shell stays put (cached), so only the page moves. */}
+       <motion.div key={pathname} {...swipeProps}>
+        {children}
+       </motion.div>
+      </div>
+     </div>
+    </main>
+   </div>
   </OnboardingProvider>
  )
 }

@@ -138,6 +138,130 @@ function Pill({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
+/**
+ * Shared thread loader + iMessage-style bubbles. Used by the desktop
+ * split pane (always-open conversation) and the mobile drawer.
+ */
+function useThread(convoId: string | null) {
+  const [detail, setDetail] = useState<ConvoDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    if (!convoId) return
+    let alive = true
+    setLoading(true)
+    setError('')
+    ;(async () => {
+      try {
+        const res = await fetchWithAuth(`/api/dashboard/conversations/${convoId}`)
+        const j = await res.json()
+        if (!alive) return
+        if (!res.ok) { setError(j.error || 'Failed to load'); return }
+        setDetail(j)
+      } catch { if (alive) setError('Failed to load') }
+      finally { if (alive) setLoading(false) }
+    })()
+    return () => { alive = false }
+  }, [convoId])
+  return { detail, loading, error }
+}
+
+function ThreadBubbles({ msgs, loading, error, autoScroll = true }: {
+  msgs: ConvoDetail['messages']; loading: boolean; error: string; autoScroll?: boolean
+}) {
+  const bottomRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!loading && msgs.length && autoScroll) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [loading, msgs, autoScroll])
+  if (loading) {
+    return <div className="flex items-center justify-center py-16"><CircleNotch className="w-5 h-5 animate-spin text-gray-400" /></div>
+  }
+  if (error) {
+    return (
+      <div className="flex items-start gap-2 py-8">
+        <WarningCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+        <span className="text-sm text-gray-600">{error}</span>
+      </div>
+    )
+  }
+  if (msgs.length === 0) return <p className="text-sm text-gray-400 text-center py-12">No messages in this conversation.</p>
+  return (
+    <>
+      {msgs.map((m) => {
+        const inbound = m.direction === 'inbound'
+        return (
+          <div key={m.id} className={`flex ${inbound ? 'justify-start' : 'justify-end'}`}>
+            <div className={`max-w-[78%] flex flex-col ${inbound ? 'items-start' : 'items-end'}`}>
+              <div
+                className="px-3.5 py-2.5 text-sm whitespace-pre-wrap break-words leading-relaxed"
+                style={inbound
+                  ? { background: 'var(--dseg)', color: 'var(--dink)', borderRadius: '18px 18px 18px 6px' }
+                  : { background: 'var(--dblue)', color: '#fff', borderRadius: '18px 18px 6px 18px' }}
+              >
+                {m.body}
+              </div>
+              <div className="flex items-center gap-1.5 mt-1 px-1">
+                <span className="text-[11px] text-gray-400">{fmtTime(m.createdAt)}</span>
+                {m.toolNames.length > 0 && (
+                  <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                    {m.toolNames.join(', ')}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+      <div ref={bottomRef} />
+    </>
+  )
+}
+
+/** Desktop split-pane: the selected conversation, always open (iOS style). */
+function ThreadPane({ convoId }: { convoId: string | null }) {
+  const { detail, loading, error } = useThread(convoId)
+  if (!convoId) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl h-full min-h-[420px] flex flex-col items-center justify-center gap-2 text-center p-8">
+        <ChatTeardropDots className="w-8 h-8 text-gray-300" />
+        <p className="text-sm text-gray-500">Select a conversation to read it here.</p>
+      </div>
+    )
+  }
+  const convo = detail?.conversation
+  const msgs = detail?.messages || []
+  const isWeb = convo?.channel === 'web'
+  const title = isWeb ? 'Web visitor' : fmtPhone(convo?.customerPhone || '') || convo?.customerPhone || ''
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl flex flex-col overflow-hidden lg:sticky lg:top-[64px] lg:max-h-[calc(100vh-96px)]">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {isWeb
+            ? <GlobeSimple className="w-4 h-4 text-violet-500 flex-shrink-0" />
+            : <DeviceMobile className="w-4 h-4 text-sky-500 flex-shrink-0" />}
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-gray-900 truncate">{loading ? 'Loading…' : title}</div>
+            {convo && <div className="text-xs text-gray-500">{fmtDateTime(convo.createdAt)} · {msgs.length} messages</div>}
+          </div>
+        </div>
+        {convo && (
+          <span
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
+            style={{ background: 'var(--dblue-tint)', color: 'var(--dblue)' }}
+          >
+            {isWeb ? 'Web chat' : 'SMS'}
+          </span>
+        )}
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-3 min-h-[360px]">
+        <ThreadBubbles msgs={msgs} loading={loading} error={error} autoScroll={false} />
+      </div>
+    </div>
+  )
+}
+
 function ConvoDrawer({ convoId, onClose }: { convoId: string; onClose: () => void }) {
   const [detail, setDetail] = useState<ConvoDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -181,7 +305,7 @@ function ConvoDrawer({ convoId, onClose }: { convoId: string; onClose: () => voi
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex justify-end"
+      className="fixed inset-0 z-50 flex justify-end lg:hidden"
     >
       <button onClick={onClose} aria-label="Close" className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
       <motion.aside
@@ -265,7 +389,8 @@ export default function ConversationsPage() {
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
-  const [openId, setOpenId] = useState<string | null>(null)
+  const [openId, setOpenId] = useState<string | null>(null)   // mobile drawer
+  const [selectedId, setSelectedId] = useState<string | null>(null) // desktop pane
 
   useEffect(() => {
     let cancelled = false
@@ -308,6 +433,13 @@ export default function ConversationsPage() {
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  // Always keep a conversation open in the desktop pane (iOS style):
+  // auto-select the first visible thread when none is selected.
+  useEffect(() => {
+    if (!selectedId && filtered.length > 0) setSelectedId(filtered[0].id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [convos, filter])
+
   return (
     <DashShell activeLabel="Conversations">
       <section className="px-4 lg:px-8 py-6 lg:py-10">
@@ -338,24 +470,30 @@ export default function ConversationsPage() {
             </div>
           )}
 
-          {featureEnabled !== false && <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+          {featureEnabled !== false && <div className="grid lg:grid-cols-[5fr,6fr] gap-4 items-start">
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
             {/* Filters */}
             <div className="px-6 pt-5 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2 flex-wrap">
-                <Pill active={filter === 'all'} onClick={() => setFilter('all')}>All</Pill>
-                <Pill active={filter === 'sms'} onClick={() => setFilter('sms')}>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500 inline-block" />
-                    SMS
-                  </span>
-                </Pill>
-                <Pill active={filter === 'web'} onClick={() => setFilter('web')}>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500 inline-block" />
-                    Web Chat
-                  </span>
-                </Pill>
-                <Pill active={filter === 'booked'} onClick={() => setFilter('booked')}>Booked</Pill>
+                <div className="ios-seg-track inline-flex relative">
+                  {([['all', 'All'], ['sms', 'SMS'], ['web', 'Web Chat'], ['booked', 'Booked']] as [Filter, string][]).map(([v, label]) => (
+                    <button
+                      key={v}
+                      onClick={() => setFilter(v)}
+                      className="relative px-3.5 py-1.5 text-xs font-medium"
+                      style={{ color: filter === v ? 'var(--dink)' : 'var(--dmut)', fontWeight: filter === v ? 600 : 500 }}
+                    >
+                      {filter === v && (
+                        <motion.span
+                          layoutId="convo-filter-thumb"
+                          className="ios-seg-thumb absolute inset-0"
+                          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                        />
+                      )}
+                      <span className="relative z-10">{label}</span>
+                    </button>
+                  ))}
+                </div>
                 <div className="ml-auto relative">
                   <MagnifyingGlass className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   <input
@@ -396,23 +534,22 @@ export default function ConversationsPage() {
                     variants={{ hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } } }}
                   >
                     <button
-                      onClick={() => setOpenId(c.id)}
+                      onClick={() => { setSelectedId(c.id); setOpenId(c.id) }}
                       className="w-full text-left px-4 lg:px-6 py-3.5 lg:py-4 hover:bg-gray-50/60 flex items-start gap-3 lg:gap-4 group transition-all duration-300 ease-out"
+                      style={selectedId === c.id ? { background: 'var(--dblue-tint)' } : undefined}
                     >
+                      {/* Compact stacked row (iOS Messages style): the split
+                          view's narrow column can't fit the old 12-col grid,
+                          which crashed the date into the caret. */}
                       <ChannelDot channel={c.channel} />
-                      <div className="flex-1 min-w-0 lg:grid lg:grid-cols-12 lg:gap-4 lg:items-baseline">
-                        <div className="lg:col-span-3 min-w-0">
-                          <div className="flex items-start gap-2 flex-wrap">
-                            <div className="min-w-0 truncate flex-1">
-                              <CustomerLabel c={c} />
-                            </div>
-                            <span className="lg:hidden text-xs text-gray-400 flex-shrink-0">{relTime(c.lastActivity)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <div className="min-w-0 truncate">
+                            <CustomerLabel c={c} />
                           </div>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <OutcomeBadge outcome={c.outcome} />
-                          </div>
+                          <span className="text-[11px] text-gray-400 flex-shrink-0 tabular-nums">{relTime(c.lastActivity)}</span>
                         </div>
-                        <div className="lg:col-span-7 mt-1 lg:mt-0 text-xs text-gray-500 truncate">
+                        <div className="mt-0.5 text-xs text-gray-500 truncate">
                           {c.lastMessage
                             ? <>
                                 {c.lastMessage.direction !== 'inbound' && <span className="text-gray-400 mr-1">Agent:</span>}
@@ -421,12 +558,11 @@ export default function ConversationsPage() {
                             : <span className="text-gray-400">No messages</span>
                           }
                         </div>
-                        <div className="hidden lg:block lg:col-span-2 text-right text-xs text-gray-500 flex-shrink-0">
-                          <div>{relTime(c.lastActivity)}</div>
-                          <div className="text-gray-400 mt-0.5">{c.messageCount} msgs</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <OutcomeBadge outcome={c.outcome} />
+                          <span className="text-[10px] text-gray-400 tabular-nums">{c.messageCount} msgs</span>
                         </div>
                       </div>
-                      <CaretRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 flex-shrink-0 transition-all duration-300 ease-out mt-0.5" />
                     </button>
                   </motion.li>
                 ))}
@@ -455,6 +591,10 @@ export default function ConversationsPage() {
                 </div>
               </div>
             )}
+          </div>
+          <div className="hidden lg:block">
+            <ThreadPane convoId={selectedId} />
+          </div>
           </div>}
         </div>
       </section>

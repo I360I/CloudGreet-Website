@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise, Plug, Trash, ArrowSquareOut, Phone, Copy, CaretDown, CurrencyDollar } from '@phosphor-icons/react'
+import { CircleNotch, FloppyDisk, WarningCircle, CheckCircle, Key, Eye, EyeSlash, Play, Robot, Gauge, CalendarBlank, ArrowsClockwise, Plug, Trash, ArrowSquareOut, Phone, Copy, CaretDown, CurrencyDollar, Storefront, ChatCircleText, Waveform, PhoneTransfer, BellRinging, Star, ChatsCircle, Siren, LockKey } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { DashShell } from '../_components/Shell'
 import {
@@ -128,6 +128,25 @@ type SettingRow = {
  render: () => React.ReactNode
 }
 
+
+// iOS Settings-style icon tiles: flat system colors, solid white glyphs
+// (matches the Settings app - no gradients, no outline icons).
+const ROW_TINTS: Record<string, string> = {
+ name: '#007AFF',            // systemBlue
+ greeting: '#FF9500',        // systemOrange
+ voice: '#AF52DE',           // systemPurple
+ speed: '#30B0C7',           // systemTeal
+ owner: '#8E8E93',           // systemGray
+ notifications: '#34C759',   // systemGreen
+ reviews: '#FF9500',
+ sms_booking: '#007AFF',
+ calcom: '#FF3B30',          // systemRed (calendar)
+ emergency_event: '#FF3B30',
+ forwarding: '#34C759',
+ password: '#8E8E93',
+ venue_fees: '#34C759',
+}
+
 function SettingsGroups({
  agentState, profile, reload,
 }: {
@@ -142,20 +161,20 @@ function SettingsGroups({
    title: 'Customize AI',
    subtitle: 'Voice, greeting, speed and what the AI says about the business.',
    rows: [
-    { key: 'name', label: 'Business name', subtitle: 'How the AI refers to your business on every call.', icon: Robot, render: () => <NameSection profile={profile} onSaved={reload} /> },
-    { key: 'greeting', label: 'AI greeting', subtitle: 'The first line callers hear.', icon: Robot, render: () => <GreetingSection profile={profile} state={agentState} onSaved={reload} /> },
-    { key: 'voice', label: 'AI voice', subtitle: 'Pick the voice and tone.', icon: Play, render: () => <VoiceSection profile={profile} state={agentState} onSaved={reload} /> },
+    { key: 'name', label: 'Business name', subtitle: 'How the AI refers to your business on every call.', icon: Storefront, render: () => <NameSection profile={profile} onSaved={reload} /> },
+    { key: 'greeting', label: 'AI greeting', subtitle: 'The first line callers hear.', icon: ChatCircleText, render: () => <GreetingSection profile={profile} state={agentState} onSaved={reload} /> },
+    { key: 'voice', label: 'AI voice', subtitle: 'Pick the voice and tone.', icon: Waveform, render: () => <VoiceSection profile={profile} state={agentState} onSaved={reload} /> },
     { key: 'speed', label: 'Speech speed', subtitle: 'Faster, slower, natural.', icon: Gauge, render: () => <SpeedSection profile={profile} state={agentState} onSaved={reload} /> },
-    { key: 'owner', label: 'Call transfer destination', subtitle: 'Who the AI hands off to when a caller asks for the owner.', icon: Phone, render: () => <OwnerNameSection /> },
+    { key: 'owner', label: 'Call transfer destination', subtitle: 'Who the AI hands off to when a caller asks for the owner.', icon: PhoneTransfer, render: () => <OwnerNameSection /> },
    ],
   },
   {
    title: 'SMS settings',
    subtitle: 'Texts the AI sends after a call.',
    rows: [
-    { key: 'notifications', label: 'Booking notifications', subtitle: 'Where booking summary texts get sent.', icon: CheckCircle, render: () => <BookingNotificationsSection /> },
-    { key: 'reviews', label: 'Review requests', subtitle: 'Auto-text customers a review link after the job.', icon: CheckCircle, render: () => <ReviewRequestsSection /> },
-    { key: 'sms_booking', label: 'Text-to-book', subtitle: 'A dedicated number customers can text to get quotes and request bookings.', icon: Phone, render: () => <SmsBookingSection /> },
+    { key: 'notifications', label: 'Booking notifications', subtitle: 'Where booking summary texts get sent.', icon: BellRinging, render: () => <BookingNotificationsSection /> },
+    { key: 'reviews', label: 'Review requests', subtitle: 'Auto-text customers a review link after the job.', icon: Star, render: () => <ReviewRequestsSection /> },
+    { key: 'sms_booking', label: 'Text-to-book', subtitle: 'A dedicated number customers can text to get quotes and request bookings.', icon: ChatsCircle, render: () => <SmsBookingSection /> },
    ],
   },
   {
@@ -163,15 +182,15 @@ function SettingsGroups({
    subtitle: 'Where calls land and where bookings go.',
    rows: [
     { key: 'calcom', label: 'Cal.com calendar', subtitle: 'Connect, change event type, re-sync.', icon: CalendarBlank, render: () => <CalendarConnectionSection /> },
-    { key: 'emergency_event', label: 'Emergency event type', subtitle: 'Pick a Cal.com event type for urgent bookings.', icon: CalendarBlank, render: () => <EmergencyEventTypeSection /> },
-    { key: 'forwarding', label: 'Call forwarding', subtitle: 'How your existing line points to CloudGreet.', icon: Phone, render: () => <ForwardingSection profile={profile} onSaved={reload} /> },
+    { key: 'emergency_event', label: 'Emergency event type', subtitle: 'Pick a Cal.com event type for urgent bookings.', icon: Siren, render: () => <EmergencyEventTypeSection /> },
+    { key: 'forwarding', label: 'Call forwarding', subtitle: 'How your existing line points to CloudGreet.', icon: PhoneTransfer, render: () => <ForwardingSection profile={profile} onSaved={reload} /> },
    ],
   },
   {
    title: 'Account',
    subtitle: 'Your CloudGreet login.',
    rows: [
-    { key: 'password', label: 'Change password', subtitle: 'Update your login password.', icon: Key, render: () => <PasswordSection /> },
+    { key: 'password', label: 'Change password', subtitle: 'Update your login password.', icon: LockKey, render: () => <PasswordSection /> },
    ],
   },
   ...(profile.hasVenueFees ? [{
@@ -188,9 +207,9 @@ function SettingsGroups({
    <LiveAgentBanner state={agentState} />
    {groups.map((g) => (
     <div key={g.title}>
-     <div className="mb-2 px-1">
-      <div className="text-[10px] uppercase tracking-[0.2em] font-semibold text-gray-500">{g.title}</div>
-      <p className="text-xs text-gray-400 mt-0.5">{g.subtitle}</p>
+     <div className="mb-2 px-4">
+      <div className="text-[11px] uppercase tracking-[0.06em] font-semibold" style={{ color: 'var(--dmut)' }}>{g.title}</div>
+      <p className="text-xs mt-0.5" style={{ color: 'var(--dmut2)' }}>{g.subtitle}</p>
      </div>
      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
       {g.rows.map((s, i) => {
@@ -202,14 +221,17 @@ function SettingsGroups({
           onClick={() => setOpenKey(isOpen ? null : s.key)}
           className="w-full flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-gray-50/60 transition-colors"
          >
-          <div className="w-9 h-9 rounded-lg bg-sky-50 border border-sky-100 flex items-center justify-center flex-shrink-0">
-           <Icon className="w-4 h-4 text-sky-500" />
+          <div
+           className="w-[30px] h-[30px] rounded-[8px] flex items-center justify-center flex-shrink-0"
+           style={{ background: ROW_TINTS[s.key] || ROW_TINTS.owner, boxShadow: 'inset 0 1px 0 rgba(255,255,255,.25)' }}
+          >
+           <Icon weight="fill" className="w-[17px] h-[17px] text-white" />
           </div>
           <div className="flex-1 min-w-0 text-left">
            <h2 className="text-sm font-medium text-gray-900 truncate">{s.label}</h2>
            {s.subtitle && <p className="text-xs text-gray-500 truncate mt-0.5">{s.subtitle}</p>}
           </div>
-          <CaretDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ease-out ${isOpen ? 'rotate-180 text-sky-500' : ''}`} />
+          <CaretDown className={`w-3.5 h-3.5 transition-transform duration-300 ease-out ${isOpen ? 'text-sky-500' : '-rotate-90 text-gray-400'}`} />
          </button>
          <AnimatePresence initial={false}>
           {isOpen && (

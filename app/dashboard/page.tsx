@@ -12,6 +12,7 @@ import {
  fmtDur, relTime, fmtDateTime,
 } from './_components/calls'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import { useDashTheme, usePageSwipe } from './_components/theme'
 import {
  Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement,
  Tooltip, Filler, ArcElement,
@@ -40,19 +41,25 @@ type Overview = {
  upcomingAppointments: Appt[]
 }
 
+// Module-level cache: revisiting Overview renders the full page
+// instantly from the last payload (refreshed in the background), so tab
+// switches never drop to a skeleton. Cleared on sign-out below.
+let ovCache: { data: Overview | null; biz: string | null } = { data: null, biz: null }
+
 type Range = 7 | 30 | 90
 type CallFilter = 'all' | 'booked' | 'message' | 'dropped'
 
 export default function DashboardPage() {
  const router = useRouter()
- const [data, setData] = useState<Overview | null>(null)
- const [loading, setLoading] = useState(true)
+ const [data, setData] = useState<Overview | null>(ovCache.data)
+ const [loading, setLoading] = useState(!ovCache.data)
  const [error, setError] = useState('')
  const [openCall, setOpenCall] = useState<Call | null>(null)
  const [range, setRange] = useState<Range>(30)
  const [callFilter, setCallFilter] = useState<CallFilter>('all')
  const [search, setSearch] = useState('')
  const [needsSetup, setNeedsSetup] = useState(false)
+ const swipeProps = usePageSwipe()
 
  // Fetch onboarding state once so we know whether to fall back to demo data.
  useEffect(() => {
@@ -107,6 +114,7 @@ export default function DashboardPage() {
     }
     if (!res.ok) { setError(json.error || 'Failed to load dashboard'); return }
     setData(json)
+    if (range === 30) ovCache = { data: json, biz: json?.business?.business_name || ovCache.biz }
     setError('')
    } catch {
     if (!cancelled) setError('Network error')
@@ -152,18 +160,32 @@ export default function DashboardPage() {
  }, [displayData, callFilter, search])
 
  const handleSignOut = async () => {
+  ovCache = { data: null, biz: null } // never leak one tenant's stats into the next session
   try { await fetch('/api/auth/clear-token', { method: 'POST' }) } catch {}
   localStorage.removeItem('user'); localStorage.removeItem('business'); localStorage.removeItem('token')
   router.replace('/login')
  }
 
  if (loading && !data) {
+  // First-ever load only (cache empty). Keep the REAL chrome - sidebar,
+  // top bar, page header - so nothing jumps when data lands; only the
+  // card area pulses.
   return (
-   <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
-    <SidebarSkeleton />
-    <div className="flex-1 px-4 lg:px-8 py-10 pb-20 lg:pb-10">
-     <SkeletonHeader />
-     <SkeletonGrid />
+   <main className="dash-ios h-dvh flex overflow-hidden">
+    <Sidebar businessName={ovCache.biz || 'Loading…'} onSignOut={handleSignOut} />
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+     <TopBar />
+     <div className="flex-1 min-h-0 overflow-y-auto pb-20 lg:pb-0">
+      <section className="px-4 lg:px-8 py-6 lg:py-10">
+       <div className="max-w-7xl">
+        <div className="mb-8">
+         <h1 className="font-display text-3xl md:text-4xl font-medium tracking-tight">Overview</h1>
+         <div className="h-4 w-64 bg-gray-200/50 rounded animate-pulse mt-2" />
+        </div>
+        <SkeletonGrid />
+       </div>
+      </section>
+     </div>
     </div>
    </main>
   )
@@ -188,7 +210,7 @@ export default function DashboardPage() {
    location.href = '/login'
   }
   return (
-   <main className="min-h-screen bg-[#f6f5f1] flex items-center justify-center px-6">
+   <main className="dash-ios min-h-screen flex items-center justify-center px-6">
     <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center max-w-md">
      <p className="text-gray-700 mb-4">{error || 'Dashboard unavailable'}</p>
      <div className="flex items-center justify-center gap-3">
@@ -225,17 +247,20 @@ export default function DashboardPage() {
  const bookedDelta = absDelta(k.bookedRate, k.deltas.bookedRate)
 
  return (
-  <main className="min-h-screen bg-[#f6f5f1] text-gray-900 flex">
+  <main className="dash-ios h-dvh flex">
    <Sidebar businessName={displayData.business.business_name} onSignOut={handleSignOut} />
 
-   <div className="flex-1 min-w-0 pb-20 lg:pb-0">
+   <div className="flex-1 min-w-0 min-h-0 flex flex-col">
     {/* While `data` is still loading, leave the TopBar uncontrolled
         (phone={undefined}) so it self-fetches once and shows a neutral
         loading state instead of flashing the "no number" warning. Once
         the overview response is in, we hand it the real value. */}
     <TopBar phone={data ? ((data as any).retellPhone ?? null) : undefined} />
 
-    <section className="px-4 lg:px-8 py-6 lg:py-10">
+    <div className="flex-1 min-h-0 overflow-y-auto pb-20 lg:pb-0">
+    <motion.section
+     {...swipeProps}
+     className="px-4 lg:px-8 py-6 lg:py-10">
      <div className="max-w-7xl">
       {isDemo && (
        <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-3">
@@ -414,7 +439,8 @@ export default function DashboardPage() {
        </div>
       </motion.div>
      </div>
-    </section>
+    </motion.section>
+    </div>
    </div>
 
    <AnimatePresence>
@@ -431,18 +457,26 @@ export default function DashboardPage() {
 /* ====================== RANGE SELECTOR ====================== */
 
 function RangeSelector({ range, onChange }: { range: Range; onChange: (r: Range) => void }) {
+ // iOS segmented control: gray track, white thumb that SPRINGS between
+ // options (framer layoutId keeps it as one element sliding).
  const opts: Range[] = [7, 30, 90]
  return (
-  <div className="inline-flex bg-white border border-gray-200 rounded-lg p-0.5">
+  <div className="ios-seg-track inline-flex relative">
    {opts.map((r) => (
     <button
      key={r}
      onClick={() => onChange(r)}
-     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-      range === r ? 'bg-gray-900 text-white' : 'text-gray-600 hover:text-gray-900'
-     }`}
+     className="relative px-3.5 py-1.5 text-xs font-medium"
+     style={{ color: range === r ? 'var(--dink)' : 'var(--dmut)', fontWeight: range === r ? 600 : 500 }}
     >
-     {r}d
+     {range === r && (
+      <motion.span
+       layoutId="range-thumb"
+       className="ios-seg-thumb absolute inset-0"
+       transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+      />
+     )}
+     <span className="relative z-10">{r}d</span>
     </button>
    ))}
   </div>
@@ -508,36 +542,52 @@ function Sparkline({ data, accent = false, large = false }: { data: number[]; ac
  return (
   <svg width={large ? '100%' : w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="overflow-visible">
    <polyline
-    fill="none" stroke={accent ? '#0ea5e9' : (large ? '#0ea5e9' : '#9ca3af')}
+    fill="none" stroke={accent ? '#007AFF' : (large ? '#007AFF' : '#AEAEB4')}
     strokeLinecap="round" strokeLinejoin="round" points={pts}
    />
   </svg>
  )
 }
 
+
+/* iOS chart palette (concept branch): system colors per theme. */
+function useChartPalette() {
+ const [theme] = useDashTheme()
+ const dark = theme === 'dark'
+ return {
+  blue: dark ? '#0A84FF' : '#007AFF',
+  blueFill: dark ? 'rgba(10, 132, 255, 0.10)' : 'rgba(0, 122, 255, 0.07)',
+  gray: dark ? '#6C6C73' : '#C7C7CC',
+  red: dark ? '#FF6961' : '#FF9AA0',
+  grid: dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
+  tick: dark ? '#98989F' : '#AEAEB4',
+ }
+}
+
 /* ====================== CHARTS ====================== */
 
 function VolumeChart({ data }: { data: { date: string; count: number }[] }) {
+ const pal = useChartPalette()
  const labels = data.map((d) => d.date.slice(5))
  const counts = data.map((d) => d.count)
  const cfg = useMemo(() => ({
   labels,
   datasets: [{
-   data: counts, borderColor: '#0ea5e9',
-   backgroundColor: 'rgba(14, 165, 233, 0.08)',
+   data: counts, borderColor: pal.blue,
+   backgroundColor: pal.blueFill,
    borderWidth: 2, tension: 0.35, fill: true,
-   pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: '#0ea5e9',
+   pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: pal.blue,
   }],
   // eslint-disable-next-line react-hooks/exhaustive-deps
- }), [data])
+ }), [data, pal.blue])
  const opts = useMemo(() => ({
   responsive: true, maintainAspectRatio: false,
   plugins: { tooltip: { intersect: false, mode: 'index' as const, displayColors: false } },
   scales: {
-   x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9ca3af', maxTicksLimit: 8 } },
-   y: { grid: { color: '#f3f4f6' }, ticks: { font: { size: 10 }, color: '#9ca3af', stepSize: 1 }, beginAtZero: true },
+   x: { grid: { display: false }, ticks: { font: { size: 10 }, color: pal.tick, maxTicksLimit: 8 } },
+   y: { grid: { color: pal.grid }, ticks: { font: { size: 10 }, color: pal.tick, stepSize: 1 }, beginAtZero: true },
   },
- }), [])
+ }), [pal])
  return <Line data={cfg} options={opts} />
 }
 
@@ -550,6 +600,7 @@ function ChartEmpty() {
 }
 
 function OutcomesChart({ data }: { data: { booked: number; message: number; dropped: number } }) {
+ const pal = useChartPalette()
  const total = data.booked + data.message + data.dropped
  if (total === 0) {
   return (
@@ -562,7 +613,7 @@ function OutcomesChart({ data }: { data: { booked: number; message: number; drop
   labels: ['Booked', 'Message', 'Dropped'],
   datasets: [{
    data: [data.booked, data.message, data.dropped],
-   backgroundColor: ['#0ea5e9', '#cbd5e1', '#fda4af'], borderWidth: 0,
+   backgroundColor: [pal.blue, pal.gray, pal.red], borderWidth: 0,
   }],
  }
  const opts = { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { tooltip: { enabled: true } } } as const
@@ -578,12 +629,13 @@ function OutcomesChart({ data }: { data: { booked: number; message: number; drop
 }
 
 function OutcomesLegend({ data }: { data: { booked: number; message: number; dropped: number } }) {
+ const pal = useChartPalette()
  const total = data.booked + data.message + data.dropped
  if (total === 0) return null
  const items = [
-  { label: 'Booked', count: data.booked, color: '#0ea5e9' },
-  { label: 'Message', count: data.message, color: '#cbd5e1' },
-  { label: 'Dropped', count: data.dropped, color: '#fda4af' },
+  { label: 'Booked', count: data.booked, color: pal.blue },
+  { label: 'Message', count: data.message, color: pal.gray },
+  { label: 'Dropped', count: data.dropped, color: pal.red },
  ]
  return (
   <div className="mt-4 space-y-1.5">
