@@ -396,7 +396,16 @@ export default function LeadDetailPage() {
           {lead.contact_name && <div className="text-gray-700">{lead.contact_name}</div>}
           {lead.phone && (
             <div>
-              <a href={`tel:${lead.phone}`} className="text-gray-900 hover:underline">
+              <a
+                href={`tel:${lead.phone}`}
+                onClick={(e) => {
+                  if (typeof window !== 'undefined' && window.cgDial && lead.phone) {
+                    e.preventDefault()
+                    window.cgDial(lead.phone, lead.id)
+                  }
+                }}
+                className="text-gray-900 hover:underline"
+              >
                 {formatPhone(lead.phone)}
               </a>
             </div>

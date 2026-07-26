@@ -425,6 +425,14 @@ export default function SalesHome() {
                   {l.phone && (
                     <a
                       href={`tel:${l.phone}`}
+                      onClick={(e) => {
+                        // In-browser dialer first (same behavior as the
+                        // leads list); tel: only as the mobile fallback.
+                        if (typeof window !== 'undefined' && (window as any).cgDial && l.phone) {
+                          e.preventDefault()
+                          ;(window as any).cgDial(l.phone, l.lead_id)
+                        }
+                      }}
                       className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-900 hover:text-white transition-colors flex-shrink-0"
                       aria-label="Call"
                     >

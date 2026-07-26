@@ -205,7 +205,9 @@ export function SalesShell({
         </motion.div>
       </div>
 
-      {(pathname.startsWith('/sales/leads') || pathname.startsWith('/sales/email-campaigns')) && <Dialer />}
+      {/* Overview included: its call queue + Power dial need the
+          in-browser dialer, not the OS tel: handler. */}
+      {(pathname === '/sales' || pathname.startsWith('/sales/leads') || pathname.startsWith('/sales/closes') || pathname.startsWith('/sales/email-campaigns')) && <Dialer />}
     </main>
     </div>
     </>

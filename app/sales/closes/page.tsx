@@ -351,7 +351,13 @@ export default function SalesClosesPage() {
                               </span>
                               <a
                                 href={`tel:${c.demo_agent_test_phone}`}
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (typeof window !== 'undefined' && (window as any).cgDial && c.demo_agent_test_phone) {
+                                    e.preventDefault()
+                                    ;(window as any).cgDial(c.demo_agent_test_phone, null)
+                                  }
+                                }}
                                 className="inline-flex items-center gap-1 text-[11px] bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg px-2 py-0.5 font-mono"
                               >
                                 {c.demo_agent_test_phone}

@@ -640,7 +640,16 @@ function DemoAgentSection({ close }: { close: CloseRow }) {
         {close.demo_agent_status === 'ready' && close.demo_agent_test_phone && (
           <div className="mt-1 font-mono text-xs">
             Test number:{' '}
-            <a href={`tel:${close.demo_agent_test_phone}`} className="underline">
+            <a
+              href={`tel:${close.demo_agent_test_phone}`}
+              onClick={(e) => {
+                if (typeof window !== 'undefined' && (window as any).cgDial && close.demo_agent_test_phone) {
+                  e.preventDefault()
+                  ;(window as any).cgDial(close.demo_agent_test_phone, null)
+                }
+              }}
+              className="underline"
+            >
               {close.demo_agent_test_phone}
             </a>
           </div>
@@ -671,6 +680,12 @@ function AgentNumberCard({ close }: { close: CloseRow }) {
         </div>
         <a
           href={`tel:${num}`}
+          onClick={(e) => {
+            if (typeof window !== 'undefined' && (window as any).cgDial && num) {
+              e.preventDefault()
+              ;(window as any).cgDial(num, null)
+            }
+          }}
           className="inline-flex items-center gap-1.5 bg-white text-gray-900 rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-gray-100"
         >
           <Phone weight="fill" className="w-3.5 h-3.5" /> Call
