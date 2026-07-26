@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, CalendarBlank, PhoneCall, PencilSimple, CircleNotch } from '@phosphor-icons/react'
+import { Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, CalendarBlank, PhoneCall, CircleNotch } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from './_components/SalesShell'
 import { DecayBanner } from './_components/DecayBanner'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -309,24 +309,34 @@ export default function SalesHome() {
                 <div className="text-sm font-medium text-gray-900">Today &amp; last 7 days</div>
               </div>
               {data.goal && (
-                <button
-                  onClick={() => {
-                    setGDemo(String(data.goal!.target))
-                    setGDial(data.goal!.daily_dial_goal ? String(data.goal!.daily_dial_goal) : '')
-                    setGoalErr(''); setEditGoals(true)
-                  }}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold rounded-full px-2.5 py-1 hover:brightness-95 transition"
-                  style={data.goal.this_week >= data.goal.target
-                    ? { background: 'var(--dgreen-tint)', color: 'var(--dgreen-deep)' }
-                    : data.goal.on_pace
-                      ? { background: 'var(--dblue-tint)', color: 'var(--dblue)' }
-                      : { background: 'var(--dorange-tint)', color: 'var(--dorange-deep)' }}
-                  title="Edit your goals"
-                >
-                  Demos this week {data.goal.this_week}/{data.goal.target}
-                  {data.goal.this_week >= data.goal.target ? ' · goal hit' : data.goal.on_pace ? ' · on pace' : ' · behind pace'}
-                  <PencilSimple weight="bold" className="w-3 h-3 opacity-70" />
-                </button>
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-700 bg-white border border-gray-200 rounded-full px-2.5 py-1">
+                    <span
+                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      style={{
+                        background: data.goal.this_week >= data.goal.target
+                          ? 'var(--dgreen)'
+                          : data.goal.on_pace ? 'var(--dblue)' : 'var(--dorange)',
+                      }}
+                    />
+                    Demos this week
+                    <span className="font-semibold tabular-nums text-gray-900">{data.goal.this_week}/{data.goal.target}</span>
+                    <span className="text-gray-400">
+                      {data.goal.this_week >= data.goal.target ? 'goal hit' : data.goal.on_pace ? 'on pace' : 'behind pace'}
+                    </span>
+                  </span>
+                  <button
+                    onClick={() => {
+                      setGDemo(String(data.goal!.target))
+                      setGDial(data.goal!.daily_dial_goal ? String(data.goal!.daily_dial_goal) : '')
+                      setGoalErr(''); setEditGoals(true)
+                    }}
+                    className="text-[11px] font-medium text-gray-400 hover:text-gray-700 hover:underline underline-offset-2 transition-colors"
+                    title="Edit your goals"
+                  >
+                    Edit goals
+                  </button>
+                </div>
               )}
             </div>
             <div className="px-5 py-4 grid grid-cols-2 sm:grid-cols-5 gap-4 items-end">
