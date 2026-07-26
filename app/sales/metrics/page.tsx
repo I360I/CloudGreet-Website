@@ -273,11 +273,14 @@ export default function MetricsPage() {
                 ['Demos / 100 dials', data.efficiency.demos_per_100_dials ?? '--'],
                 ['Avg deal', data.money.avg_deal_cents ? `${dollars(data.money.avg_deal_cents)}/mo` : '--'],
                 ['Connects / demo', data.efficiency.connects_per_demo ?? '--'],
-                ['Best day', bestDay ? `${bestDay.dials} dials · ${bestDayLabel}` : '--'],
+                [bestDay ? `Best day · ${bestDayLabel}` : 'Best day', bestDay ? `${bestDay.dials} dials` : '--'],
               ] as const).map(([label, val]) => (
+                // Labels can run two lines ("Demos / 100 dials") - reserve the
+                // height so every tile's number sits on the same baseline, and
+                // never let a value wrap mid-figure.
                 <div key={label as string} className="bg-white border border-gray-200 rounded-2xl px-4 py-3.5">
-                  <div className="text-[10px] font-mono uppercase tracking-[0.1em]" style={{ color: 'var(--dmut)' }}>{label}</div>
-                  <div className="text-lg font-bold tabular-nums text-gray-900 mt-1">{val}</div>
+                  <div className="text-[10px] font-mono uppercase tracking-[0.1em] leading-4 min-h-[32px]" style={{ color: 'var(--dmut)' }}>{label}</div>
+                  <div className="text-lg font-bold tabular-nums text-gray-900 whitespace-nowrap">{val}</div>
                 </div>
               ))}
             </motion.div>
