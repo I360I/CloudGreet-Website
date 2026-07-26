@@ -1,11 +1,12 @@
 'use client'
 
 /**
- * /sales/metrics - the rep's numbers, set in a warm editorial dashboard
- * language: bone canvas, white cards, deep forest green with a lime
- * accent, honest red/green deltas. The one dark moment on the page is
- * the forest territory tile with the 3D map inside it - demos beam out
- * in blue, live clients in lime, lead density glows hot and cold.
+ * /sales/metrics - the rep's numbers in CloudGreet's own language:
+ * cool paper canvas, white cards, deep navy with the brand blue as the
+ * working accent; green appears only where it means winning (clients,
+ * won deals, upward deltas). The one dark moment on the page is the
+ * navy territory tile with the 3D map inside it - demos beam out in
+ * blue, live clients in green, lead density glows hot and cold.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -44,19 +45,19 @@ type Metrics = {
   map: { home: MapHome | null; points: MapPoint[]; heat: HeatCell[] }
 }
 
-/* Palette - warm bone canvas, forest + lime, restrained red for drops */
-const CANVAS = '#F2F1EB'
+/* Palette - CloudGreet: cool paper, navy + brand blue, green = winning */
+const CANVAS = '#F5F6F8'
 const CARD = '#FFFFFF'
-const LINE = '#E6E4D9'
-const INK = '#22271F'
-const MUT = '#7D8375'
-const TRACK = '#EEF0E5'
-const FOREST = '#1E3B2A'
-const FOREST_DEEP = '#152C1E'
-const LIME = '#C9F26F'
-const LIME_INK = '#5F8A1D'
-const RED = '#CF4F33'
-const BLUE = '#4DA3FF'
+const LINE = '#E5E8EE'
+const INK = '#1B2430'
+const MUT = '#75808F'
+const TRACK = '#EEF1F5'
+const NAVY = '#16294B'
+const NAVY_DEEP = '#0F1E38'
+const ACCENT = '#2563EB'
+const SKY = '#5AB0FF'
+const WIN = '#2E9E5B'
+const RED = '#D14D32'
 
 const dollars = (c: number) => `$${(c / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
 const mins = (s: number) => `${Math.floor(s / 3600) > 0 ? `${Math.floor(s / 3600)}h ` : ''}${Math.floor((s % 3600) / 60)}m`
@@ -89,7 +90,7 @@ function Delta({ now, before }: { now: number; before: number }) {
   return (
     <span
       className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums"
-      style={{ background: up ? '#E9F5D8' : '#F9E7E1', color: up ? LIME_INK : RED }}
+      style={{ background: up ? '#E4F3EA' : '#FBEAE5', color: up ? WIN : RED }}
       title="vs the first half of this window"
     >
       {up ? <ArrowUpRight weight="bold" className="w-3 h-3" /> : <ArrowDownRight weight="bold" className="w-3 h-3" />}
@@ -194,14 +195,14 @@ export default function MetricsPage() {
     if (!data || data.activity.dials === 0) return null
     const total = data.activity.dials
     const segs = [
-      { label: 'Connected', n: data.activity.connects, color: FOREST },
-      { label: 'Voicemail', n: data.activity.voicemails, color: LIME },
-      { label: 'No answer', n: data.activity.no_answers, color: '#DDE2CF' },
+      { label: 'Connected', n: data.activity.connects, color: NAVY },
+      { label: 'Voicemail', n: data.activity.voicemails, color: SKY },
+      { label: 'No answer', n: data.activity.no_answers, color: '#DEE4ED' },
     ]
     const other = total - segs.reduce((s, x) => s + x.n, 0)
-    if (other > 0) segs.push({ label: 'Other', n: other, color: '#C9CEBB' })
+    if (other / total >= 0.03) segs.push({ label: 'Other', n: other, color: '#C6CEDA' })
     let acc = 0
-    return segs.filter((s) => s.n > 0).map((s) => {
+    return segs.filter((s) => s.n / total >= 0.03).map((s) => {
       const f = s.n / total
       const seg = { ...s, f, start: acc }
       acc += f
@@ -224,7 +225,7 @@ export default function MetricsPage() {
                 How you&apos;re selling over the last {range} days
               </p>
             </div>
-            <div className="inline-flex rounded-full p-1" style={{ background: '#E9E8DF' }}>
+            <div className="inline-flex rounded-full p-1" style={{ background: '#E8EAEF' }}>
               {RANGES.map((r) => (
                 <button
                   key={r}
@@ -236,7 +237,7 @@ export default function MetricsPage() {
                     <motion.span
                       layoutId="metrics-range"
                       className="absolute inset-0 rounded-full"
-                      style={{ background: FOREST }}
+                      style={{ background: NAVY }}
                       transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                     />
                   )}
@@ -256,7 +257,7 @@ export default function MetricsPage() {
           {loading && !data ? (
             <div className="py-28 flex justify-center">
               <div className="w-9 h-9 rounded-full animate-spin"
-                style={{ border: `2px solid ${LINE}`, borderTopColor: FOREST }} />
+                style={{ border: `2px solid ${LINE}`, borderTopColor: NAVY }} />
             </div>
           ) : data && (
             <motion.div
@@ -272,7 +273,7 @@ export default function MetricsPage() {
                 <motion.div variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } }}
                   className="grid sm:grid-cols-2 gap-4">
                   <div className="p-6" style={cardStyle}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between h-6">
                       <span className="text-[13px] font-medium" style={{ color: MUT }}>Dials</span>
                       {halves && <Delta now={halves.dialsNow} before={halves.dialsBefore} />}
                     </div>
@@ -284,7 +285,7 @@ export default function MetricsPage() {
                     </div>
                   </div>
                   <div className="p-6" style={cardStyle}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between h-6">
                       <span className="text-[13px] font-medium" style={{ color: MUT }}>Earned</span>
                       {halves && <Delta now={halves.earnedNow} before={halves.earnedBefore} />}
                     </div>
@@ -303,26 +304,26 @@ export default function MetricsPage() {
                   className="relative overflow-hidden"
                   style={{
                     borderRadius: 20,
-                    background: `linear-gradient(155deg, ${FOREST} 0%, ${FOREST_DEEP} 70%)`,
-                    boxShadow: '0 24px 48px -24px rgba(21, 44, 30, 0.55)',
+                    background: `linear-gradient(155deg, ${NAVY} 0%, ${NAVY_DEEP} 70%)`,
+                    boxShadow: '0 24px 48px -24px rgba(15, 30, 56, 0.5)',
                   }}
                 >
                   <div className="flex items-start justify-between px-6 pt-5 relative z-10 pointer-events-none">
                     <div>
-                      <div className="text-[15px] font-semibold" style={{ color: '#F4F7EC' }}>Your territory</div>
-                      <div className="text-[12px] mt-0.5" style={{ color: '#A9C5AE' }}>
+                      <div className="text-[15px] font-semibold" style={{ color: '#EFF5FF' }}>Your territory</div>
+                      <div className="text-[12px] mt-0.5" style={{ color: '#9FB4D4' }}>
                         drag to explore · hover anything
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
                       {([
-                        [BLUE, `${demoCount} demo${demoCount === 1 ? '' : 's'} booked`],
-                        [LIME, `${clientCount} client${clientCount === 1 ? '' : 's'} live`],
+                        [SKY, `${demoCount} demo${demoCount === 1 ? '' : 's'} booked`],
+                        ['#4ADE80', `${clientCount} client${clientCount === 1 ? '' : 's'} live`],
                         ['#FFAB3D', 'hot zones = your leads'],
                       ] as const).map(([c, label]) => (
                         <div key={label} className="flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full" style={{ background: c }} />
-                          <span className="text-[11px]" style={{ color: '#A9C5AE' }}>{label}</span>
+                          <span className="text-[11px]" style={{ color: '#9FB4D4' }}>{label}</span>
                         </div>
                       ))}
                     </div>
@@ -335,10 +336,10 @@ export default function MetricsPage() {
                   {data.map.points.length === 0 && (
                     <div className="absolute inset-x-0 bottom-5 flex justify-center pointer-events-none">
                       <div className="rounded-full px-4 py-2 flex items-center gap-2"
-                        style={{ background: 'rgba(244, 247, 236, 0.94)' }}>
-                        <MapTrifold className="w-3.5 h-3.5" style={{ color: FOREST }} />
-                        <span className="text-[12px] font-medium" style={{ color: FOREST }}>
-                          Book a demo and it appears here in blue. Close it and it turns lime.
+                        style={{ background: 'rgba(239, 245, 255, 0.95)' }}>
+                        <MapTrifold className="w-3.5 h-3.5" style={{ color: NAVY }} />
+                        <span className="text-[12px] font-medium" style={{ color: NAVY }}>
+                          Book a demo and it appears here in blue. Close it and it turns green.
                         </span>
                       </div>
                     </div>
@@ -351,8 +352,8 @@ export default function MetricsPage() {
                   <div className="flex items-baseline justify-between flex-wrap gap-2 mb-5">
                     <span className="text-[13px] font-medium" style={{ color: MUT }}>Daily activity</span>
                     <div className="flex items-center gap-4 text-[12px]" style={{ color: MUT }}>
-                      <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[4px]" style={{ background: FOREST }} /> dials</span>
-                      <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[4px]" style={{ background: LIME }} /> connects</span>
+                      <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[4px]" style={{ background: NAVY }} /> dials</span>
+                      <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[4px]" style={{ background: SKY }} /> connects</span>
                     </div>
                   </div>
                   <div className="relative">
@@ -377,14 +378,14 @@ export default function MetricsPage() {
                               className="rounded-t-[5px] relative"
                               style={{
                                 height: `${Math.max(2.5, (d.dials / max) * 100)}%`,
-                                background: d.dials ? (active ? '#2E5540' : FOREST) : TRACK,
+                                background: d.dials ? (active ? '#24406E' : NAVY) : TRACK,
                                 transformOrigin: 'bottom',
                                 transition: 'background 0.15s',
                               }}
                             >
                               {d.connects > 0 && (
                                 <div className="absolute bottom-0 left-0 right-0 rounded-t-[5px]"
-                                  style={{ height: `${(d.connects / Math.max(d.dials, 1)) * 100}%`, background: LIME }} />
+                                  style={{ height: `${(d.connects / Math.max(d.dials, 1)) * 100}%`, background: SKY }} />
                               )}
                             </motion.div>
                           </div>
@@ -403,11 +404,11 @@ export default function MetricsPage() {
                             exit={{ opacity: 0, scale: 0.97 }}
                             transition={{ duration: 0.15 }}
                             className="rounded-xl px-3.5 py-2.5 whitespace-nowrap"
-                            style={{ background: FOREST, boxShadow: '0 14px 30px -12px rgba(21, 44, 30, 0.55)' }}
+                            style={{ background: NAVY, boxShadow: '0 14px 30px -12px rgba(15, 30, 56, 0.55)' }}
                           >
-                            <div className="text-[12px] font-semibold" style={{ color: '#F4F7EC' }}>{fmtDate(data.days[barTip.i].date)}</div>
-                            <div className="text-[12px] mt-0.5 tabular-nums" style={{ color: '#A9C5AE' }}>
-                              {data.days[barTip.i].dials} dials · <span style={{ color: LIME }}>{data.days[barTip.i].connects} connects</span>
+                            <div className="text-[12px] font-semibold" style={{ color: '#EFF5FF' }}>{fmtDate(data.days[barTip.i].date)}</div>
+                            <div className="text-[12px] mt-0.5 tabular-nums" style={{ color: '#9FB4D4' }}>
+                              {data.days[barTip.i].dials} dials · <span style={{ color: SKY }}>{data.days[barTip.i].connects} connects</span>
                               {data.days[barTip.i].demos > 0 && <> · {data.days[barTip.i].demos} demo{data.days[barTip.i].demos === 1 ? '' : 's'}</>}
                             </div>
                           </motion.div>
@@ -426,15 +427,15 @@ export default function MetricsPage() {
                       onClick={() => setHideEmpty((v) => !v)}
                       className="text-[12px] font-medium rounded-full px-3 py-1"
                       style={hideEmpty
-                        ? { background: '#E9F5D8', color: LIME_INK }
+                        ? { background: '#E7EEFB', color: ACCENT }
                         : { background: TRACK, color: MUT }}
                     >
                       {hideEmpty ? 'Hiding empty days' : 'Showing all days'}
                     </button>
                   </div>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto overflow-y-auto max-h-[420px]">
                     <table className="w-full text-sm">
-                      <thead style={{ borderBottom: `1px solid ${LINE}` }}>
+                      <thead className="sticky top-0 z-10" style={{ background: CARD, boxShadow: `inset 0 -1px 0 ${LINE}` }}>
                         <tr>
                           {th('date', 'Date', 'left')}
                           {th('dials', 'Dials')}
@@ -449,16 +450,16 @@ export default function MetricsPage() {
                         {sortedDays.map((d) => (
                           <tr
                             key={d.date}
-                            className="transition-colors hover:bg-[#F7F6F0]"
-                            style={{ borderTop: `1px solid #F0EEE6` }}
+                            className="transition-colors hover:bg-[#F6F8FB]"
+                            style={{ borderTop: `1px solid #EFF2F6` }}
                           >
                             <td className="px-3 py-2.5 text-[13px] whitespace-nowrap" style={{ color: INK }}>{fmtDate(d.date)}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums" style={{ color: d.dials ? INK : '#C4C7B8' }}>{d.dials || 0}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums font-medium" style={{ color: d.connects ? LIME_INK : '#C4C7B8' }}>{d.connects || 0}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums" style={{ color: d.dials ? INK : '#C2C9D2' }}>{d.dials || 0}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums font-medium" style={{ color: d.connects ? ACCENT : '#C2C9D2' }}>{d.connects || 0}</td>
                             <td className="px-3 py-2.5 text-right tabular-nums" style={{ color: MUT }}>{d.dials ? `${d.rate}%` : '--'}</td>
                             <td className="px-3 py-2.5 text-right tabular-nums" style={{ color: MUT }}>{d.talk_seconds ? mins(d.talk_seconds) : '--'}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums font-semibold" style={{ color: d.demos ? FOREST : '#C4C7B8' }}>{d.demos || 0}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums font-semibold" style={{ color: d.earned_cents ? INK : '#C4C7B8' }}>{d.earned_cents ? dollars(d.earned_cents) : '--'}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums font-semibold" style={{ color: d.demos ? NAVY : '#C2C9D2' }}>{d.demos || 0}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums font-semibold" style={{ color: d.earned_cents ? INK : '#C2C9D2' }}>{d.earned_cents ? dollars(d.earned_cents) : '--'}</td>
                           </tr>
                         ))}
                         {sortedDays.length === 0 && (
@@ -511,7 +512,7 @@ export default function MetricsPage() {
                               {s.label}
                             </span>
                             <span className="tabular-nums font-medium" style={{ color: INK }}>
-                              {s.n} <span className="font-normal" style={{ color: '#B9BCAC' }}>· {Math.round(s.f * 100)}%</span>
+                              {s.n} <span className="font-normal" style={{ color: '#B6BEC9' }}>· {Math.round(s.f * 100)}%</span>
                             </span>
                           </div>
                         ))}
@@ -528,9 +529,9 @@ export default function MetricsPage() {
                   <span className="text-[13px] font-medium" style={{ color: MUT }}>Demo funnel · all time</span>
                   <div className="space-y-3 mt-4">
                     {([
-                      ['Set', data.funnel.demos_set + data.funnel.demos_held + data.funnel.no_shows, FOREST],
-                      ['Held', data.funnel.demos_held, '#3E7C4F'],
-                      ['Won', data.funnel.won, LIME],
+                      ['Set', data.funnel.demos_set + data.funnel.demos_held + data.funnel.no_shows, NAVY],
+                      ['Held', data.funnel.demos_held, ACCENT],
+                      ['Won', data.funnel.won, WIN],
                     ] as const).map(([label, val, color], i, arr) => {
                       const max = Math.max(Number(arr[0][1]), 1)
                       return (
@@ -574,9 +575,9 @@ export default function MetricsPage() {
                           <div className="w-full rounded-t-[4px]"
                             style={{
                               height: `${Math.max(4, (h.dials / max) * 100)}%`,
-                              background: isBest ? LIME : (h.dials ? '#D6DBC6' : TRACK),
+                              background: isBest ? ACCENT : (h.dials ? '#D7DEE8' : TRACK),
                             }} />
-                          <span className="text-[9px] tabular-nums" style={{ color: isBest ? LIME_INK : '#B9BCAC', fontWeight: isBest ? 700 : 400 }}>
+                          <span className="text-[9px] tabular-nums" style={{ color: isBest ? ACCENT : '#B6BEC9', fontWeight: isBest ? 700 : 400 }}>
                             {h.hour % 12 === 0 ? 12 : h.hour % 12}
                           </span>
                         </div>
@@ -608,12 +609,12 @@ export default function MetricsPage() {
                 {bestDay && (
                   <motion.div variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } }}
                     className="p-6 relative overflow-hidden"
-                    style={{ borderRadius: 20, background: FOREST, boxShadow: '0 20px 40px -22px rgba(21, 44, 30, 0.5)' }}>
-                    <span className="text-[13px] font-medium" style={{ color: '#A9C5AE' }}>Record to beat</span>
-                    <div className="text-[34px] font-semibold tracking-tight mt-1 leading-none" style={{ color: LIME }}>
+                    style={{ borderRadius: 20, background: NAVY, boxShadow: '0 20px 40px -22px rgba(15, 30, 56, 0.5)' }}>
+                    <span className="text-[13px] font-medium" style={{ color: '#9FB4D4' }}>Record to beat</span>
+                    <div className="text-[34px] font-semibold tracking-tight mt-1 leading-none" style={{ color: SKY }}>
                       {bestDay.dials} dials
                     </div>
-                    <div className="text-[12px] mt-2" style={{ color: '#A9C5AE' }}>
+                    <div className="text-[12px] mt-2" style={{ color: '#9FB4D4' }}>
                       Your biggest day this window, set {bestDayLabel}. One more dial today beats it.
                     </div>
                   </motion.div>
