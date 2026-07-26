@@ -101,6 +101,34 @@ export async function GET(request: NextRequest) {
     const bookingsPerWeek = demosSet / weeksActive
     const closeRate = demosSet > 0 ? paidCloses.length / demosSet : 0.3 // default to 30% if no data
 
+
+  // The rep's REAL commission rate: average of their historical ledger
+  // rates when they have earnings (captures self-sourced vs setter-fed
+  // mix AND live decay), else inferred from how their closes were
+  // booked, else the 50% self-sourced default.
+  let commissionRate = 0.5
+  try {
+    const { data: rateRows } = await supabaseAdmin
+      .from('commission_ledger')
+      .select('commission_rate')
+      .eq('rep_id', auth.userId)
+      .order('earned_at', { ascending: false })
+      .limit(20)
+    const rates = (rateRows || []).map((r: any) => Number(r.commission_rate)).filter((n: number) => n > 0)
+    if (rates.length > 0) {
+      commissionRate = rates.reduce((a: number, b: number) => a + b, 0) / rates.length
+    } else {
+      const { data: closeRows } = await supabaseAdmin
+        .from('closes')
+        .select('set_by_setter_id')
+        .eq('rep_id', auth.userId)
+        .not('status', 'in', '("cancelled","rejected")')
+        .limit(20)
+      const cs = closeRows || []
+      if (cs.length > 0 && cs.every((c: any) => !!c.set_by_setter_id)) commissionRate = 0.25
+    }
+  } catch { /* default 0.5 */ }
+
     const inputs = {
       bookings_per_week: round(overrides.bookings_per_week ?? bookingsPerWeek, 2),
       close_rate: round(overrides.close_rate ?? closeRate, 3),
@@ -108,6 +136,7 @@ export async function GET(request: NextRequest) {
       avg_monthly_cents: overrides.avg_monthly_cents ?? avgMonthlyCents,
       avg_setup_cents: overrides.avg_setup_cents ?? avgSetupCents,
       // Whether the rep has enough history to trust the auto inputs.
+      commission_rate: Math.round(commissionRate * 1000) / 1000,
       based_on: paidCloses.length >= 2 ? 'history' : 'defaults',
       history_weeks: round(weeksActive, 1),
     }
@@ -119,12 +148,14 @@ export async function GET(request: NextRequest) {
       ? closesPerWeek
       : (overrides.bookings_per_week ?? bookingsPerWeek) * (overrides.close_rate ?? closeRate)
 
+
     const monthly = projectMonthly({
       effectiveClosesPerWeek,
       avgMonthlyCents: inputs.avg_monthly_cents,
       avgSetupCents: inputs.avg_setup_cents,
       months: 12,
-    })
+      commissionRate,
+  })
 
     return NextResponse.json({
       success: true,
@@ -188,15 +219,19 @@ function projectMonthly({
   avgMonthlyCents,
   avgSetupCents,
   months,
+  commissionRate,
 }: {
   effectiveClosesPerWeek: number
   avgMonthlyCents: number
   avgSetupCents: number
   months: number
+  /** The rep's real base rate (0.5 self-sourced / 0.25 setter-fed, or
+   *  their historical blend) - no more hard-coded 50%. */
+  commissionRate: number
 }) {
   const closesPerMonth = effectiveClosesPerWeek * (365 / 12 / 7) // ~4.345
-  const monthlyCommissionPerClose = Math.round(avgMonthlyCents * 0.5)
-  const setupCommissionPerClose = Math.round(avgSetupCents * 0.5)
+  const monthlyCommissionPerClose = Math.round(avgMonthlyCents * commissionRate)
+  const setupCommissionPerClose = Math.round(avgSetupCents * commissionRate)
 
   const out: {
     month: string

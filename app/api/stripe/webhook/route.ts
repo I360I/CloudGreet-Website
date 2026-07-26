@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/monitoring'
+import { computeDecayState, TIER_MULTIPLIER, getRepDecayAnchor } from '@/lib/sales/decay'
 import Stripe from 'stripe'
 import { Resend } from 'resend'
 import { getStripeClient } from '@/lib/billing/stripe-client'
@@ -774,7 +775,40 @@ async function creditRepCommission(
   .limit(1)
   .maybeSingle()
  const isSetterFed = !!closeRow?.set_by_setter_id
- const commissionRate = isSetterFed ? SETTER_FED_PCT : COMMISSION_PCT
+ const baseRate = isSetterFed ? SETTER_FED_PCT : COMMISSION_PCT
+
+ // DECAY - LIVE (owner-approved 2026-07-25). The rep's tier at earn
+ // time scales the base rate: full x1.0, reduced x0.5, transferred x0.
+ // Anchor = most recent FIRST payment across their closes (shared
+ // helper also drives the dashboard banner, so what the rep sees is
+ // exactly what pays). Fails open to 'full' on any lookup error -
+ // a data hiccup must never zero out a rep's check.
+ let decayTier: 'full' | 'reduced' | 'transferred' = 'full'
+ try {
+  const [{ data: repRow }, anchorAt] = await Promise.all([
+   supabaseAdmin.from('sales_reps').select('created_at').eq('id', business.rep_id).maybeSingle(),
+   getRepDecayAnchor(supabaseAdmin, business.rep_id),
+  ])
+  const state = computeDecayState({
+   lastCloseAt: anchorAt,
+   repStartedAt: (repRow as any)?.created_at ?? new Date().toISOString(),
+  })
+  decayTier = state.tier
+ } catch (e) {
+  logger.warn('decay lookup failed - crediting at full tier', {
+   repId: business.rep_id,
+   error: e instanceof Error ? e.message : 'Unknown',
+  })
+ }
+ const decayMultiplier = TIER_MULTIPLIER[decayTier]
+ const commissionRate = baseRate * decayMultiplier
+
+ if (decayMultiplier === 0) {
+  logger.info('commission skipped - rep tier is transferred (180d+ no new close)', {
+   repId: business.rep_id, businessId: business.id, invoiceId: invoice.id,
+  })
+  return
+ }
 
  const earnedAt = invoice.status_transitions?.paid_at
   ? new Date(invoice.status_transitions.paid_at * 1000).toISOString()
@@ -791,6 +825,8 @@ async function creditRepCommission(
   close_id?: string
   is_setter_fed: boolean
   commission_rate: number
+  rep_tier_at_earn: string
+  decay_multiplier: number
  }> = []
 
  if (mrrCents > 0) {
@@ -805,6 +841,8 @@ async function creditRepCommission(
    ...(closeRow?.id ? { close_id: closeRow.id } : {}),
    is_setter_fed: isSetterFed,
    commission_rate: commissionRate,
+   rep_tier_at_earn: decayTier,
+   decay_multiplier: decayMultiplier,
   })
  }
  if (setupCents > 0) {
@@ -819,6 +857,8 @@ async function creditRepCommission(
    ...(closeRow?.id ? { close_id: closeRow.id } : {}),
    is_setter_fed: isSetterFed,
    commission_rate: commissionRate,
+   rep_tier_at_earn: decayTier,
+   decay_multiplier: decayMultiplier,
   })
  }
 

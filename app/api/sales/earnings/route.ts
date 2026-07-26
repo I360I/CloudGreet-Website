@@ -186,11 +186,27 @@ export async function GET(request: NextRequest) {
       if (c.business_id) monthlyByBiz.set(c.business_id, c.agreed_monthly_cents || 0)
     }
 
+    // Carry-forward: once a business pays an MRR commission it stays in
+    // the book for every later month (until it stops appearing forever) -
+    // a client whose ledger row lands a few days outside a month boundary
+    // must not read as churn. Without this the MRR line dipped to 0 on
+    // stable books whenever billing dates straddled month edges.
+    const lastMrrMonth = new Map<string, number>() // business_id -> last bucket index with an mrr row
+    buckets.forEach((b, i) => {
+      Array.from(b.mrrBiz).forEach((bizId) => lastMrrMonth.set(bizId, i))
+    })
+    const activeBook = new Set<string>()
     let running = 0
-    for (const b of buckets) {
+    for (let bi = 0; bi < buckets.length; bi++) {
+      const b = buckets[bi]
       running += b.earned
+      Array.from(b.mrrBiz).forEach((bizId) => activeBook.add(bizId))
+      // Drop a business only after its final MRR month has passed.
+      Array.from(activeBook).forEach((bizId) => {
+        if ((lastMrrMonth.get(bizId) ?? -1) < bi) activeBook.delete(bizId)
+      })
       let mrr = 0
-      Array.from(b.mrrBiz).forEach((bizId) => {
+      Array.from(activeBook).forEach((bizId) => {
         mrr += monthlyByBiz.get(bizId) || 0
       })
       months.push({

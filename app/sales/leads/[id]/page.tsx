@@ -622,7 +622,7 @@ export default function LeadDetailPage() {
                         Cancel
                       </button>
                       <div className="text-[11px] text-emerald-700/80 ml-auto">
-                        50% of every paid invoice → you, auto-deposited Friday
+                        Your rate on every paid invoice (50% self-sourced, 25% setter-booked), auto-deposited Friday
                       </div>
                     </div>
                   </>

@@ -219,8 +219,8 @@ export default function SalesHome() {
             </Link>
           </motion.div>
           <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }} className="bg-white border border-gray-200 rounded-2xl p-5">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--dmut)' }}>To call</div>
-            <div className="text-[26px] leading-none font-bold tabular-nums text-gray-900 mt-2">{callList.length}</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--dmut)' }}>Due today</div>
+            <div className="text-[26px] leading-none font-bold tabular-nums text-gray-900 mt-2">{data.overdue.length + data.todays.length}</div>
             <div className="text-[11px] mt-2.5" style={{ color: data.overdue.length > 0 ? '#DC2626' : 'var(--dmut2)' }}>
               {data.overdue.length > 0 ? `${data.overdue.length} overdue` : 'nothing overdue'}
             </div>

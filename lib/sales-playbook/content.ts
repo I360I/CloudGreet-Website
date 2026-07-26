@@ -63,16 +63,16 @@ Solo and small-shop service businesses, 1-15 employees. HVAC, plumbing, electric
 **Hard floor**
 - $50/mo platform minimum.
 
-**Comp (50/50 split)**
-- 50% of every dollar paid for the first 3 months past your last close
-- Months 3-6 past last close → 25% trailing
-- 6+ months past last close → 0%, client transfers
-- One new close resets the trailing clock back to 50% on every active client
+**Comp - how your rate works**
+- Base rate: **50%** of every dollar paid on closes you sourced yourself. **25%** when a setter booked the demo for you (the classification is frozen on the close at booking).
+- Stay-active decay (this is live, it affects real checks): 90+ days without a NEW close's first payment cuts your rate in half (50→25, setter-fed 25→12.5). At 180 days your clients transfer to CloudGreet (0%).
+- The clock resets when a new close's first invoice is PAID - not when you submit paperwork, and recurring payments from your existing book do not reset it.
+- Commission is computed on the net after Stripe fees, auto-deposited every Friday.
 
-**Worked example**
+**Worked example (self-sourced)**
 $300/mo + $500 setup deal:
-- $250 immediately (50% of setup)
-- $150/mo recurring while you stay active
+- ~$250 immediately (50% of setup, net of fees)
+- ~$150/mo recurring while you stay active
 - Year 1 per close: ~$2,050 if you keep closing`,
   },
 

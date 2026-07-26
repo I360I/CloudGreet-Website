@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
-import { computeDecayState } from '@/lib/sales/decay'
+import { computeDecayState, getRepDecayAnchor } from '@/lib/sales/decay'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -28,20 +28,10 @@ export async function GET(request: NextRequest) {
       .eq('id', auth.userId)
       .maybeSingle()
 
-    // Anchor "last close" to the most recent PAID commission, not to
-    // close-form submission. A rep clicking "Submit close" doesn't
-    // reset the decay clock — only money actually landing in Stripe
-    // (which writes a commission_ledger row from the invoice.paid
-    // webhook) does. Keeps the incentive honest: pending paperwork
-    // doesn't count.
-    const { data: row } = await supabaseAdmin
-      .from('commission_ledger')
-      .select('earned_at')
-      .eq('rep_id', auth.userId)
-      .order('earned_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    const lastCloseAt: string | null = row?.earned_at ?? null
+    // Anchor: most recent FIRST payment across the rep's closes (new
+    // money, not recurring invoices) - the exact same helper the payout
+    // wiring uses, so the banner always matches what actually pays.
+    const lastCloseAt = await getRepDecayAnchor(supabaseAdmin, auth.userId)
 
     const repStartedAt = (rep as any)?.created_at ?? new Date().toISOString()
     const state = computeDecayState({ lastCloseAt, repStartedAt })
