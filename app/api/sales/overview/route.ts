@@ -144,6 +144,33 @@ export async function GET(request: NextRequest) {
       return s + (c.agreed_monthly_cents || 0)
     }, 0)
 
+    // ---- Pipeline = what the Prospects page shows ----
+    // Every live close (any stage that isn't cancelled/rejected) whose
+    // business isn't actively paying yet, plus linked not-paying
+    // accounts that never went through a close. Matches /sales/closes.
+    const [{ data: allCloses }, { data: myBizs }] = await Promise.all([
+      supabaseAdmin
+        .from('closes')
+        .select('id, business_id, agreed_monthly_cents, status, businesses:business_id(subscription_status)')
+        .eq('rep_id', auth.userId)
+        .not('status', 'in', '("cancelled","rejected")')
+        .limit(200),
+      supabaseAdmin
+        .from('businesses')
+        .select('id, subscription_status')
+        .eq('rep_id', auth.userId)
+        .limit(200),
+    ])
+    const PAYING = new Set(['active', 'past_due'])
+    const isPaying = (sub: string | null | undefined) => PAYING.has(String(sub || '').toLowerCase())
+    const prospectCloses = (allCloses || []).filter((c: any) => !isPaying(c.businesses?.subscription_status))
+    const closeBizIds = new Set((allCloses || []).map((c: any) => c.business_id).filter(Boolean))
+    const linkedNotPaying = (myBizs || []).filter((b: any) => !isPaying(b.subscription_status) && !closeBizIds.has(b.id))
+    const prospects = {
+      count: prospectCloses.length + linkedNotPaying.length,
+      monthly_cents: prospectCloses.reduce((a: number, c: any) => a + (c.agreed_monthly_cents || 0), 0),
+    }
+
     // ---- Rep activity (the missing half of the dashboard) ----
     // Aggregates that always existed in dialer-stats but were only ever
     // wired to setters/admin. Today = business day (Central); week = 7d.
@@ -245,6 +272,7 @@ export async function GET(request: NextRequest) {
       activity,
       funnel,
       goal,
+      prospects,
     })
   } catch (e) {
     logger.error('Sales overview load failed', {

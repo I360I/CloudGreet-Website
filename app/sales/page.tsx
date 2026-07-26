@@ -56,6 +56,7 @@ type Overview = {
   activity?: Activity
   funnel?: Funnel
   goal?: Goal
+  prospects?: { count: number; monthly_cents: number }
   todays: LeadCard[]
   overdue: LeadCard[]
   interested: LeadCard[]
@@ -254,9 +255,11 @@ export default function SalesHome() {
           </motion.div>
           <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }} className="bg-white border border-gray-200 rounded-2xl p-5">
             <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--dmut)' }}>Pipeline</div>
-            <div className="text-[26px] leading-none font-bold tabular-nums text-gray-900 mt-2">{data.deals.length}</div>
+            <div className="text-[26px] leading-none font-bold tabular-nums text-gray-900 mt-2">{data.prospects?.count ?? data.deals.length}</div>
             <div className="text-[11px] mt-2.5 tabular-nums" style={{ color: 'var(--dmut2)' }}>
-              {data.deals.length > 0 ? `${dollars(data.deals.reduce((a, d) => a + d.agreed_monthly_cents, 0))}/mo on the table` : 'submit a close'}
+              {(data.prospects?.count ?? 0) > 0
+                ? (data.prospects!.monthly_cents > 0 ? `${dollars(data.prospects!.monthly_cents)}/mo on the table` : 'demos in motion')
+                : 'submit a close'}
             </div>
           </motion.div>
         </motion.div>
