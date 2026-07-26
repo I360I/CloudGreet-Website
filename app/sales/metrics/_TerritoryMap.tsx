@@ -182,7 +182,7 @@ export default function TerritoryMap({ points, home, density }: {
           const [x, y] = project(home.lat, home.lng)
           return (
             <g
-              onMouseMove={(e) => place(e, 'Home base', 'Your dialer number lives here')}
+              onMouseMove={(e) => place(e, 'Home base', 'CloudGreet HQ · Austin, TX')}
               onMouseLeave={() => setHover(null)}
               style={{ cursor: 'default' }}
             >

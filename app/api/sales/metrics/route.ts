@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
-import { geolocate, jitter, AREA_CODES } from '@/lib/geo/us-geo'
+import { geolocate, jitter } from '@/lib/geo/us-geo'
 
 /** Full state names keyed by USPS code - matches public/geo/us-states.json. */
 const STATE_NAME_BY_CODE: Record<string, string> = {
@@ -47,7 +47,7 @@ export const runtime = 'nodejs'
  *   money      - earned by day (+cumulative), owed, mrr, avg deal
  *   efficiency - dials per demo, connects per demo, demos per 100 dials
  *   days       - per-day table rows (date, dials, connects, rate, talk, demos, earned)
- *   map        - territory: home (rep DID metro), demo + client points,
+ *   map        - territory: home (Austin HQ), demo + client points,
  *                per-state lead counts (point-in-time)
  */
 export async function GET(request: NextRequest) {
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     const since = new Date(Date.now() - rangeDays * 86_400_000)
     const sinceIso = since.toISOString()
 
-    const [callsRes, assignsRes, closesRes, ledgerRes, owedRes, didRes] = await Promise.all([
+    const [callsRes, assignsRes, closesRes, ledgerRes, owedRes] = await Promise.all([
       supabaseAdmin
         .from('rep_calls')
         .select('status, duration_seconds, started_at')
@@ -93,10 +93,6 @@ export async function GET(request: NextRequest) {
         .eq('rep_id', auth.userId)
         .is('payout_id', null)
         .limit(5000),
-      supabaseAdmin
-        .from('sales_rep_phone_numbers')
-        .select('phone_number, is_active, is_sms_line')
-        .eq('rep_id', auth.userId),
     ])
 
     const calls = callsRes.data || []
@@ -166,12 +162,10 @@ export async function GET(request: NextRequest) {
     const owed = ((owedRes.data || []) as any[]).reduce((s, r) => s + (r.commission_cents || 0), 0)
 
     // ---- territory map ----
-    // Home = the metro of the rep's active dialer DID (the number prospects
-    // see calling them). Demo/client points geolocate from the linked
-    // business first, then the prospect's phone area code.
-    const activeDid = ((didRes.data || []) as any[]).find((n) => n.is_active && !n.is_sms_line)
-    const homeCode = activeDid ? String(activeDid.phone_number).replace(/\D/g, '').replace(/^1/, '').slice(0, 3) : null
-    const home = homeCode && AREA_CODES[homeCode] ? { lat: AREA_CODES[homeCode][0], lng: AREA_CODES[homeCode][1] } : null
+    // Home base is always CloudGreet HQ in Austin. Demo/client points
+    // geolocate from the linked business first, then the prospect's
+    // phone area code.
+    const home = { lat: 30.2672, lng: -97.7431 }
 
     const bizIds = (closes as any[]).map((c) => c.business_id).filter(Boolean)
     const bizById = new Map<string, any>()
