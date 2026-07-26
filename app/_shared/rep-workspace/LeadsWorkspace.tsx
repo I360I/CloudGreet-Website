@@ -39,16 +39,18 @@ type Lead = {
   latest_note?: { body: string; created_at: string } | null
 }
 
-const STATUS_META: Record<string, { label: string; pill: string; dot: string; row: string }> = {
-  new:             { label: 'New',         pill: 'bg-gray-100 text-gray-700',          dot: 'bg-gray-400',     row: '' },
-  called:          { label: 'Called',      pill: 'bg-sky-100 text-sky-700',            dot: 'bg-sky-500',      row: 'bg-sky-100/70 hover:bg-sky-100' },
-  voicemail:       { label: 'Voicemail',   pill: 'bg-violet-100 text-violet-700',      dot: 'bg-violet-500',   row: 'bg-violet-100/70 hover:bg-violet-100' },
-  interested:      { label: 'Interested',  pill: 'bg-amber-100 text-amber-800',        dot: 'bg-amber-500',    row: 'bg-amber-100/80 hover:bg-amber-100' },
-  demo_scheduled:  { label: 'Demo set',    pill: 'bg-amber-200 text-amber-900',        dot: 'bg-amber-600',    row: 'bg-amber-100 hover:bg-amber-200/70' },
-  proposal_sent:   { label: 'Proposal',    pill: 'bg-emerald-100 text-emerald-700',    dot: 'bg-emerald-500',  row: 'bg-emerald-100/70 hover:bg-emerald-100' },
-  closed:          { label: 'Closed',      pill: 'bg-emerald-200 text-emerald-900',    dot: 'bg-emerald-600',  row: 'bg-emerald-100 hover:bg-emerald-200/70' },
-  dead:            { label: 'Dead',        pill: 'bg-gray-200 text-gray-500',          dot: 'bg-gray-300',     row: 'bg-gray-100/80 opacity-50 hover:opacity-75' },
-  do_not_call:     { label: 'DNC',         pill: 'bg-red-100 text-red-700',            dot: 'bg-red-500',      row: 'bg-red-100/70 hover:bg-red-100' },
+// CRM Pro: status color lives in the chip + a slim left accent bar on the
+// row (professional scan pattern), not full-row background washes.
+const STATUS_META: Record<string, { label: string; pill: string; dot: string; row: string; accent: string }> = {
+  new:             { label: 'New',         pill: 'bg-gray-100 text-gray-700',       dot: 'bg-gray-400',    row: 'hover:bg-gray-50/60',    accent: 'transparent' },
+  called:          { label: 'Called',      pill: 'bg-sky-50 text-sky-700',          dot: 'bg-sky-500',     row: 'hover:bg-gray-50/60',    accent: '#0EA5E9' },
+  voicemail:       { label: 'Voicemail',   pill: 'bg-violet-50 text-violet-700',    dot: 'bg-violet-500',  row: 'hover:bg-gray-50/60',    accent: '#8B5CF6' },
+  interested:      { label: 'Interested',  pill: 'bg-amber-50 text-amber-800',      dot: 'bg-amber-500',   row: 'hover:bg-gray-50/60',    accent: '#F59E0B' },
+  demo_scheduled:  { label: 'Demo set',    pill: 'bg-amber-100 text-amber-900',     dot: 'bg-amber-600',   row: 'hover:bg-gray-50/60',    accent: '#D97706' },
+  proposal_sent:   { label: 'Proposal',    pill: 'bg-emerald-50 text-emerald-700',  dot: 'bg-emerald-500', row: 'hover:bg-gray-50/60',    accent: '#10B981' },
+  closed:          { label: 'Closed',      pill: 'bg-emerald-100 text-emerald-900', dot: 'bg-emerald-600', row: 'hover:bg-gray-50/60',    accent: '#059669' },
+  dead:            { label: 'Dead',        pill: 'bg-gray-200 text-gray-500',       dot: 'bg-gray-300',    row: 'opacity-45 hover:opacity-70', accent: 'transparent' },
+  do_not_call:     { label: 'DNC',         pill: 'bg-red-50 text-red-700',          dot: 'bg-red-500',     row: 'hover:bg-gray-50/60',    accent: '#EF4444' },
 }
 
 const STATUS_FILTERS: Array<{ key: string; label: string }> = [
@@ -750,10 +752,11 @@ export function LeadsWorkspace({
                   <motion.li
                     key={l.id}
                     variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: EASE } } }}
-                    className={`px-3 py-1.5 transition-colors ${
-                      isSelected ? 'bg-sky-100/80 ring-1 ring-inset ring-sky-300' :
+                    className={`px-3 py-2 transition-colors ${
+                      isSelected ? 'bg-sky-50 ring-1 ring-inset ring-sky-300' :
                       (meta.row || 'hover:bg-gray-50/60')
                     }`}
+                    style={{ boxShadow: meta.accent !== 'transparent' ? `inset 2.5px 0 0 ${meta.accent}` : undefined }}
                   >
                     <div className="flex items-center gap-2.5">
                       <input

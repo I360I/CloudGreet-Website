@@ -110,7 +110,7 @@ export default function SalesHome() {
   if (loading || !data) {
     return (
       <SalesShell activeLabel="Overview">
-        <section className="max-w-3xl mx-auto px-6 py-10">
+        <section className="max-w-5xl mx-auto px-6 py-8">
           <SalesLoadingState />
         </section>
       </SalesShell>
@@ -151,8 +151,15 @@ export default function SalesHome() {
 
   return (
     <SalesShell activeLabel="Overview">
-      <section className="max-w-3xl mx-auto px-6 py-10">
-        <SalesPageHeader eyebrow="overview" title={`Welcome, ${data.me.name}`} />
+      <section className="max-w-5xl mx-auto px-6 py-8">
+        <div className="flex items-end justify-between gap-4 flex-wrap mb-6">
+          <h1 className="font-display text-2xl md:text-[28px] font-semibold tracking-tight text-gray-900">
+            Welcome, {data.me.name}
+          </h1>
+          <span className="text-xs" style={{ color: 'var(--dmut)' }}>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          </span>
+        </div>
 
         {!data.me.payouts_enabled && (
           <motion.div
@@ -197,23 +204,29 @@ export default function SalesHome() {
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE }}
-          className="bg-gray-900 text-white rounded-2xl p-5 mb-5 shadow-lg shadow-gray-900/10"
+          className="rounded-2xl p-5 mb-5 text-white relative overflow-hidden"
+          style={{ background: 'linear-gradient(150deg, #6366F1 0%, #4F46E5 55%, #4338CA 100%)', boxShadow: '0 8px 24px rgba(79,70,229,.35), inset 0 1px 0 rgba(255,255,255,.25)' }}
         >
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400">
-                Owed · pays {nextFriday()}
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-white/75">
+                Owed to you
               </div>
-              <div className="text-3xl font-medium tabular-nums mt-1">
+              <div className="text-[30px] leading-none font-bold tabular-nums mt-2">
                 {dollars(data.earnings.owed_cents)}
               </div>
-              <div className="text-xs text-gray-400 mt-1">
-                MRR {dollars(data.earnings.mrr_cents)} · auto-deposits via Stripe
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                <span className="inline-flex text-[11px] font-semibold rounded-full px-2 py-0.5 bg-white/20 tabular-nums">
+                  Pays {nextFriday()}
+                </span>
+                <span className="text-[11px] text-white/70 tabular-nums">
+                  MRR {dollars(data.earnings.mrr_cents)} · auto-deposits via Stripe
+                </span>
               </div>
             </div>
             <Link
               href="/sales/earnings"
-              className="text-xs text-gray-300 hover:text-white border border-white/15 rounded-lg px-3 py-1.5 transition-colors"
+              className="text-xs font-semibold text-white bg-white/15 hover:bg-white/25 rounded-lg px-3 py-1.5 transition-colors"
             >
               Detail
             </Link>
