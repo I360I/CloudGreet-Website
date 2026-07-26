@@ -1,10 +1,14 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { motion, animate } from 'framer-motion'
 import { CircleNotch, WarningCircle } from '@phosphor-icons/react'
 import { SalesShell } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
+import type { MapPoint, MapHome } from './_TerritoryMap'
+
+const TerritoryMap = dynamic(() => import('./_TerritoryMap'), { ssr: false, loading: () => <div style={{ height: 380 }} /> })
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -26,6 +30,7 @@ type Metrics = {
   }
   efficiency: { dials_per_demo: number | null; connects_per_demo: number | null; demos_per_100_dials: number | null }
   days: Array<{ date: string; dials: number; connects: number; rate: number; talk_seconds: number; demos: number; earned_cents: number }>
+  map: { home: MapHome | null; points: MapPoint[]; states: Record<string, number> }
 }
 
 const dollars = (c: number) => `$${(c / 100).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
@@ -329,6 +334,33 @@ export default function MetricsPage() {
                   </tbody>
                 </table>
               </div>
+            </motion.div>
+
+            {/* ---- Territory map - flat on the page background ---- */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } } }}
+              className="pt-4">
+              <div className="flex items-baseline justify-between flex-wrap gap-2 mb-1 px-1">
+                <div className="text-[10px] font-mono uppercase tracking-[0.12em]" style={{ color: 'var(--dmut)' }}>Your territory</div>
+                <div className="flex items-center gap-4 text-[11px]" style={{ color: 'var(--dmut)' }}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full" style={{ background: 'var(--dblue)' }} />
+                    {data.map.points.filter((p) => p.kind === 'demo').length} demos
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full" style={{ background: 'var(--dgreen)' }} />
+                    {data.map.points.filter((p) => p.kind === 'client').length} clients
+                  </span>
+                  <span>shaded = your leads</span>
+                </div>
+              </div>
+              <div className="max-w-4xl mx-auto">
+                <TerritoryMap points={data.map.points} home={data.map.home} density={data.map.states} />
+              </div>
+              {data.map.points.length === 0 && (
+                <p className="text-center text-xs -mt-6 relative z-10" style={{ color: 'var(--dmut2)' }}>
+                  Book a demo and it appears here in blue. Close it and it turns green.
+                </p>
+              )}
             </motion.div>
           </motion.div>
         )}
