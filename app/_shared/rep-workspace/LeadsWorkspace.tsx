@@ -726,7 +726,7 @@ export function LeadsWorkspace({
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className={`text-xs border rounded-lg px-2.5 py-1.5 focus:outline-none max-w-[150px] ${
+                className={`text-xs border rounded-lg px-2.5 py-1.5 focus:outline-none flex-1 min-w-[120px] max-w-[220px] ${
                   typeFilter !== 'all'
                     ? 'bg-sky-50 border-sky-300 text-sky-900'
                     : 'bg-gray-50 border-gray-200 hover:border-gray-400 focus:bg-white'
@@ -743,7 +743,7 @@ export function LeadsWorkspace({
               <select
                 value={locFilter}
                 onChange={(e) => setLocFilter(e.target.value)}
-                className={`text-xs border rounded-lg px-2.5 py-1.5 focus:outline-none max-w-[150px] ${
+                className={`text-xs border rounded-lg px-2.5 py-1.5 focus:outline-none flex-1 min-w-[120px] max-w-[220px] ${
                   locFilter !== 'all'
                     ? 'bg-sky-50 border-sky-300 text-sky-900'
                     : 'bg-gray-50 border-gray-200 hover:border-gray-400 focus:bg-white'
@@ -771,7 +771,7 @@ export function LeadsWorkspace({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:border-gray-400 focus:outline-none focus:bg-white"
+              className="text-xs bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:border-gray-400 focus:outline-none focus:bg-white flex-1 min-w-[120px] max-w-[220px]"
               title="Sort"
             >
               <option value="quality">Best leads first</option>
@@ -783,13 +783,13 @@ export function LeadsWorkspace({
               <option value="follow_up">Follow-up soonest</option>
               <option value="name">Name A to Z</option>
             </select>
-            <div className="relative flex-shrink-0">
+            <div className="relative flex-1 min-w-[200px]">
               <MagnifyingGlass className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search…"
-                className="w-44 sm:w-56 pl-8 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-white transition-colors"
+                className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-white transition-colors"
               />
             </div>
             {(typeFilter !== 'all' || locFilter !== 'all') && (
