@@ -95,7 +95,9 @@ export function LeadsWorkspace({
   const [importing, setImporting] = useState(false)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
-  const [sortBy, setSortBy] = useState<'quality' | 'newest' | 'untouched'>('newest')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [locFilter, setLocFilter] = useState('all')
+  const [sortBy, setSortBy] = useState<'quality' | 'rating' | 'reviews' | 'newest' | 'oldest' | 'untouched' | 'follow_up' | 'name'>('newest')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
   // Page-scoped modal so any row can pop the demo-set picker without
@@ -437,6 +439,37 @@ export function LeadsWorkspace({
     return p
   }
 
+  // Type + location options come from the rep's own inventory, with
+  // counts, most common first - no hardcoded category list to drift.
+  const typeOptions = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const l of leads) {
+      const t = (l.business_type || '').trim().toLowerCase()
+      if (t) m.set(t, (m.get(t) || 0) + 1)
+    }
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1])
+  }, [leads])
+
+  const locOptions = useMemo(() => {
+    const states = new Map<string, number>()
+    const cities = new Map<string, number>()
+    for (const l of leads) {
+      const st = (l.state || '').trim().toUpperCase()
+      if (st) states.set(st, (states.get(st) || 0) + 1)
+      const city = (l.city || '').trim()
+      if (city) {
+        const key = `${city}|${st}`
+        cities.set(key, (cities.get(key) || 0) + 1)
+      }
+    }
+    return {
+      states: Array.from(states.entries()).sort((a, b) => b[1] - a[1]),
+      cities: Array.from(cities.entries()).sort((a, b) => b[1] - a[1]).slice(0, 30),
+    }
+  }, [leads])
+
+  const prettyType = (t: string) => t.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+
   const filtered = useMemo(() => {
     let out = [...leads]
     if (filter === '__due') {
@@ -448,6 +481,18 @@ export function LeadsWorkspace({
       const cutoff = Date.now() - 14 * 86_400_000
       out = out.filter((l) => l.status === 'new' && l.claimed_at && new Date(l.claimed_at).getTime() < cutoff)
     } else if (filter !== 'all') out = out.filter((l) => l.status === filter)
+    if (typeFilter !== 'all') {
+      out = out.filter((l) => (l.business_type || '').trim().toLowerCase() === typeFilter)
+    }
+    if (locFilter.startsWith('state:')) {
+      const st = locFilter.slice(6)
+      out = out.filter((l) => (l.state || '').trim().toUpperCase() === st)
+    } else if (locFilter.startsWith('city:')) {
+      const [city, st] = locFilter.slice(5).split('|')
+      out = out.filter((l) =>
+        (l.city || '').trim().toLowerCase() === city.toLowerCase() &&
+        (l.state || '').trim().toUpperCase() === (st || '').toUpperCase())
+    }
     if (search.trim()) {
       const q = search.toLowerCase()
       out = out.filter((l) =>
@@ -469,8 +514,18 @@ export function LeadsWorkspace({
         if (qb !== qa) return qb - qa
         return (b.claimed_at || '').localeCompare(a.claimed_at || '')
       })
+    } else if (sortBy === 'rating') {
+      // Highest star rating first; review volume breaks ties so a 4.9
+      // with 300 reviews beats a 4.9 with 6.
+      out.sort((a, b) =>
+        ((b.google_rating ?? -1) - (a.google_rating ?? -1)) ||
+        ((b.google_review_count ?? 0) - (a.google_review_count ?? 0)))
+    } else if (sortBy === 'reviews') {
+      out.sort((a, b) => (b.google_review_count ?? -1) - (a.google_review_count ?? -1))
     } else if (sortBy === 'newest') {
       out.sort((a, b) => (b.claimed_at || '').localeCompare(a.claimed_at || ''))
+    } else if (sortBy === 'oldest') {
+      out.sort((a, b) => (a.claimed_at || '').localeCompare(b.claimed_at || ''))
     } else if (sortBy === 'untouched') {
       // Never-touched first, then oldest-touched.
       out.sort((a, b) => {
@@ -478,9 +533,18 @@ export function LeadsWorkspace({
         const tb = b.last_touched_at ? new Date(b.last_touched_at).getTime() : 0
         return ta - tb
       })
+    } else if (sortBy === 'follow_up') {
+      // Soonest follow-up first; leads without one sink to the bottom.
+      out.sort((a, b) => {
+        const ta = a.follow_up_at ? new Date(a.follow_up_at).getTime() : Infinity
+        const tb = b.follow_up_at ? new Date(b.follow_up_at).getTime() : Infinity
+        return ta - tb
+      })
+    } else if (sortBy === 'name') {
+      out.sort((a, b) => (a.business_name || '').localeCompare(b.business_name || ''))
     }
     return out
-  }, [leads, filter, search, sortBy])
+  }, [leads, filter, typeFilter, locFilter, search, sortBy])
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: leads.length }
@@ -629,8 +693,10 @@ export function LeadsWorkspace({
           transition={{ duration: 0.4, ease: EASE }}
           className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm"
         >
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+          {/* Two rows: status pills breathe on top, type/location/sort/search
+              controls get their own line underneath. */}
+          <div className="px-5 py-3 border-b border-gray-100 flex flex-col gap-2.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {STATUS_FILTERS.map((f) => {
                 const c = counts[f.key] ?? 0
                 if (f.key !== 'all' && c === 0) return null
@@ -655,6 +721,53 @@ export function LeadsWorkspace({
                 )
               })}
             </div>
+            <div className="flex items-center gap-2 flex-wrap">
+            {typeOptions.length > 1 && (
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className={`text-xs border rounded-lg px-2.5 py-1.5 focus:outline-none max-w-[150px] ${
+                  typeFilter !== 'all'
+                    ? 'bg-sky-50 border-sky-300 text-sky-900'
+                    : 'bg-gray-50 border-gray-200 hover:border-gray-400 focus:bg-white'
+                }`}
+                title="Filter by business type"
+              >
+                <option value="all">All types</option>
+                {typeOptions.map(([t, n]) => (
+                  <option key={t} value={t}>{prettyType(t)} ({n})</option>
+                ))}
+              </select>
+            )}
+            {(locOptions.states.length > 0 || locOptions.cities.length > 0) && (
+              <select
+                value={locFilter}
+                onChange={(e) => setLocFilter(e.target.value)}
+                className={`text-xs border rounded-lg px-2.5 py-1.5 focus:outline-none max-w-[150px] ${
+                  locFilter !== 'all'
+                    ? 'bg-sky-50 border-sky-300 text-sky-900'
+                    : 'bg-gray-50 border-gray-200 hover:border-gray-400 focus:bg-white'
+                }`}
+                title="Filter by location"
+              >
+                <option value="all">All locations</option>
+                {locOptions.states.length > 0 && (
+                  <optgroup label="States">
+                    {locOptions.states.map(([st, n]) => (
+                      <option key={st} value={`state:${st}`}>{st} ({n})</option>
+                    ))}
+                  </optgroup>
+                )}
+                {locOptions.cities.length > 0 && (
+                  <optgroup label="Cities">
+                    {locOptions.cities.map(([key, n]) => {
+                      const [city, st] = key.split('|')
+                      return <option key={key} value={`city:${key}`}>{city}{st ? `, ${st}` : ''} ({n})</option>
+                    })}
+                  </optgroup>
+                )}
+              </select>
+            )}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
@@ -662,8 +775,13 @@ export function LeadsWorkspace({
               title="Sort"
             >
               <option value="quality">Best leads first</option>
+              <option value="rating">Highest rated</option>
+              <option value="reviews">Most reviews</option>
               <option value="newest">Newest claim</option>
+              <option value="oldest">Oldest claim</option>
               <option value="untouched">Untouched longest</option>
+              <option value="follow_up">Follow-up soonest</option>
+              <option value="name">Name A to Z</option>
             </select>
             <div className="relative flex-shrink-0">
               <MagnifyingGlass className="w-4 h-4 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -673,6 +791,15 @@ export function LeadsWorkspace({
                 placeholder="Search…"
                 className="w-44 sm:w-56 pl-8 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-400 focus:bg-white transition-colors"
               />
+            </div>
+            {(typeFilter !== 'all' || locFilter !== 'all') && (
+              <button
+                onClick={() => { setTypeFilter('all'); setLocFilter('all') }}
+                className="text-xs text-gray-500 hover:text-gray-800 underline underline-offset-2"
+              >
+                Clear · {filtered.length} shown
+              </button>
+            )}
             </div>
           </div>
 
