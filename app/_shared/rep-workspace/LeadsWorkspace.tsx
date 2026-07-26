@@ -301,6 +301,34 @@ export function LeadsWorkspace({
   }
 
   const updateStatus = async (leadId: string, status: string) => {
+    // "Callback" isn't a status - it schedules a follow-up 2 business
+    // days out (weekends skipped: Thu->Mon, Fri->Tue) and marks the
+    // lead called so it resurfaces at the top of the call list then.
+    if (status === '__callback') {
+      const d = new Date()
+      let added = 0
+      while (added < 2) {
+        d.setDate(d.getDate() + 1)
+        const dow = d.getDay()
+        if (dow !== 0 && dow !== 6) added++
+      }
+      d.setHours(9, 30, 0, 0) // land at 9:30am local, prime dial time
+      const iso = d.toISOString()
+      setUpdatingStatusId(leadId)
+      setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, status: 'called', follow_up_at: iso } : l))
+      try {
+        await fetchWithAuth(`/api/sales/leads/${leadId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'called', follow_up_at: iso, touched: true }),
+        })
+      } catch {
+        load()
+      } finally {
+        setUpdatingStatusId(null)
+      }
+      return
+    }
     setUpdatingStatusId(leadId)
     // Optimistic update
     setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, status } : l))
@@ -811,6 +839,7 @@ export function LeadsWorkspace({
                             {STATUS_FILTERS.filter((s) => s.key !== 'all').map((s) => (
                               <option key={s.key} value={s.key}>{s.label}</option>
                             ))}
+                            <option value="__callback">Callback · 2 days</option>
                           </select>
                         </div>
                         {l.phone && (
