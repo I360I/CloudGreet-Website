@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   title: 'Blog — CloudGreet | AI Receptionist for Service Businesses',
   description:
     'Practical advice for service-business owners on never missing a call, booking more jobs, and growing without hiring a front desk. From the team behind CloudGreet.',
-  alternates: { canonical: 'https://cloudgreet.com/blog' },
+  alternates: {
+    canonical: 'https://cloudgreet.com/blog',
+    types: { 'application/rss+xml': 'https://cloudgreet.com/blog/rss.xml' },
+  },
   openGraph: {
     title: 'CloudGreet Blog',
     description: 'Practical advice for service-business owners on never missing a call and booking more jobs.',

@@ -56,7 +56,7 @@ Best fit: home-service and trade businesses that get booked jobs from inbound ph
 
 - [Home](https://cloudgreet.com/)
 - [Contact / book a demo](https://cloudgreet.com/contact)
-- [Blog](https://cloudgreet.com/blog)
+- [Blog](https://cloudgreet.com/blog) ([RSS](https://cloudgreet.com/blog/rss.xml))
 - [Customer results: Smart Ride Central Ohio](https://cloudgreet.com/customers/smart-ride)
 - [Trust, security & privacy](https://cloudgreet.com/trust)
 - [TCPA & A2P compliance](https://cloudgreet.com/tcpa-a2p)
