@@ -16,6 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   { url: `${baseUrl}/apply`, lastModified, changeFrequency: 'monthly', priority: 0.6 },
   { url: `${baseUrl}/privacy`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
   { url: `${baseUrl}/terms`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
+  { url: `${baseUrl}/trust`, lastModified, changeFrequency: 'monthly', priority: 0.5 },
   { url: `${baseUrl}/tcpa-a2p`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
   { url: `${baseUrl}/cookies`, lastModified, changeFrequency: 'yearly', priority: 0.3 },
  ]

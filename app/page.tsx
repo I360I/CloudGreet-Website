@@ -913,6 +913,18 @@ function Faq() {
    a: "Neither. Flat monthly. We don't believe in per-call or per-booking fees because they punish you for being successful. Take 1,000 calls a month or 50 - the price is the same.",
   },
   {
+   q: 'What happens on emergencies, or when a caller needs a real person?',
+   a: "You set the triggers in plain English - \"emergency\", \"talk to the owner\", a burst pipe - and the AI hot-transfers the live call to whoever you choose. If nobody picks up, it takes a detailed message and texts you immediately. Emergency calls can also be flagged for priority dispatch. Nobody ever hits a dead end.",
+  },
+  {
+   q: 'Are calls recorded? Where does that data live?',
+   a: "Yes - every call gets a recording, transcript, and summary in your dashboard. It's all stored encrypted in access-controlled private storage, visible only to you and authorized CloudGreet staff. Never sold, never shared, deletable on request. Full details at cloudgreet.com/trust.",
+  },
+  {
+   q: 'How do I know the bookings are accurate?',
+   a: "It books onto your real calendar with your real availability, so double-booking is structurally impossible, and you get a text summary of every booking the moment it lands. Every call has a transcript, so if anything's off you see it same-day and we tune the agent. Not a black box.",
+  },
+  {
    q: 'What if it doesn\'t work for my business?',
    a: "We work with you. If you're not seeing bookings come through in the first couple of weeks we'll dig into the call transcripts together, tune the script, and get it right. The product is the result for you - if it isn't producing, we're going to fix it.",
   },

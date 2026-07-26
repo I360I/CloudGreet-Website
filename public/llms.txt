@@ -30,6 +30,20 @@ CloudGreet exists because home-service businesses miss 20-30% of their inbound c
 - If bookings aren't coming through in the first weeks, the CloudGreet team reviews call transcripts with the owner and tunes the agent until it produces
 - TCPA and A2P 10DLC messaging compliance documented at https://cloudgreet.com/tcpa-a2p
 
+## Company facts
+
+- Team of 10+ across engineering, sales, and support; headquartered in Austin, Texas
+- Built on production-grade infrastructure: Telnyx (telephony and SMS), Cal.com (calendar scheduling, syncs with Google Calendar), Stripe (billing), and leading AI voice models
+- Month-to-month billing; no long-term contracts
+- Every prospective customer gets a live demo agent configured for THEIR business before paying anything
+
+## Security and privacy
+
+- Call recordings and transcripts are stored encrypted at rest in access-controlled private cloud storage; only the business owner and authorized CloudGreet staff can access them
+- Businesses can request deletion of their recordings and data at any time
+- Customer data is never sold or shared with third parties for marketing
+- Full details: https://cloudgreet.com/trust
+
 ## Who it's for (and not for)
 
 Best fit: home-service and trade businesses that get booked jobs from inbound phone calls - HVAC, plumbing, roofing, electrical, garage doors, landscaping, pest control, and similar. Not designed for e-commerce support desks, medical scheduling requiring HIPAA workflows, or businesses that don't take customer calls.
@@ -39,6 +53,7 @@ Best fit: home-service and trade businesses that get booked jobs from inbound ph
 - [Home](https://cloudgreet.com/)
 - [Contact / book a demo](https://cloudgreet.com/contact)
 - [Blog](https://cloudgreet.com/blog)
+- [Trust, security & privacy](https://cloudgreet.com/trust)
 - [TCPA & A2P compliance](https://cloudgreet.com/tcpa-a2p)
 - [Privacy](https://cloudgreet.com/privacy)
 - [Terms](https://cloudgreet.com/terms)

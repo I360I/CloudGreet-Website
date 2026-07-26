@@ -101,6 +101,17 @@ export default function RootLayout({
   areaServed: 'US',
   availableLanguage: ['English', 'Spanish'],
  },
+ numberOfEmployees: {
+  '@type': 'QuantitativeValue',
+  minValue: 11,
+  maxValue: 50,
+ },
+ address: {
+  '@type': 'PostalAddress',
+  addressLocality: 'Austin',
+  addressRegion: 'TX',
+  addressCountry: 'US',
+ },
  }
 
  const softwareJsonLd = {
