@@ -12,7 +12,7 @@ const Dialer = dynamicImport(
   () => import('./Dialer').then((m) => ({ default: m.Dialer })),
   { ssr: false },
 )
-import { SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch, Gear, Users, GraduationCap, BookOpen, UserPlus, EnvelopeSimple, Icon as PhosphorIcon } from '@phosphor-icons/react'
+import { SquaresFour, ListChecks, Trophy, CurrencyDollar, SignOut, CircleNotch, Gear, Users, GraduationCap, BookOpen, UserPlus, EnvelopeSimple, Icon as PhosphorIcon , ChartLineUp } from '@phosphor-icons/react'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { useSessionGuard, clearClientAuthState } from '@/lib/auth/session-guard'
 import { NotificationsBell } from '@/components/NotificationsBell'
@@ -21,7 +21,7 @@ import { motion } from 'framer-motion'
 import { ThemeToggle, startPageTransition, usePageSwipe } from './sales-theme'
 import '../sales-ios.css'
 
-type ActiveLabel = 'Overview' | 'Leads' | 'Prospects' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook' | 'Emails'
+type ActiveLabel = 'Overview' | 'Metrics' | 'Leads' | 'Prospects' | 'Clients' | 'Earnings' | 'Onboarding' | 'Playbook' | 'Emails'
 
 type NavItem = {
   label: ActiveLabel
@@ -32,6 +32,7 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { label: 'Overview', href: '/sales',          icon: SquaresFour,   match: (p) => p === '/sales' },
+  { label: 'Metrics',  href: '/sales/metrics',  icon: ChartLineUp,   match: (p) => p.startsWith('/sales/metrics') },
   { label: 'Leads',    href: '/sales/leads',    icon: ListChecks,    match: (p) => p.startsWith('/sales/leads') },
   { label: 'Prospects', href: '/sales/closes',   icon: UserPlus,      match: (p) => p.startsWith('/sales/closes') },
   { label: 'Clients',  href: '/sales/clients',  icon: Users,         match: (p) => p.startsWith('/sales/clients') },

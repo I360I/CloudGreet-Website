@@ -89,7 +89,7 @@ export function ThemeToggle() {
  * transitions can slide from the correct side: moving DOWN the nav
  * pushes content up from below; moving UP slides it in from above.
  */
-const NAV_ORDER = ['Overview', 'Leads', 'Prospects', 'Clients', 'Earnings', 'Onboarding', 'Playbook', 'Emails']
+const NAV_ORDER = ['Overview', 'Metrics', 'Leads', 'Prospects', 'Clients', 'Earnings', 'Onboarding', 'Playbook', 'Emails']
 let lastNavIndex = 0
 
 /** Returns +1 (enter from below) or -1 (enter from above) and records the tab. */
