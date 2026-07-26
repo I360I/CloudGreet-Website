@@ -50,3 +50,18 @@ flow. Reps must not be confused. No IA changes.
 - Dialer engine files: do NOT refactor (audio hacks are load-bearing)
 - Design sign-off rule: sales-facing pages need owner screenshot approval
   - satisfied via Vercel preview on this branch before any merge.
+
+## Owner directive 2026-07-25 (screenshot review of Earnings, dark)
+FULL RECOMPOSITION approved - not a reskin. "Sharper, cooler, more
+professional." Rebuild layouts:
+- EARNINGS: compact header (title + next-payout chip inline, kill the
+  giant eyebrow+H1 stack). Row 1: solid-indigo Owed tile (white 70%
+  caps label, huge tabular number, pays-date pill, subtle diagonal
+  texture) + MRR / Lifetime / Paid-out cards w/ tinted delta chips
+  (CRM-kit style). Row 2: full-width trend card - proper segmented
+  control (spring thumb), rounded-bar chart, NO emoji icons. Row 3:
+  commission ledger as a real table: date, client, type chip, net,
+  amount right-aligned tabular; hover rows; empty state designed.
+- LEADS (CRM core): two-pane or dense-list recomposition; status
+  pipeline chips w/ dots; last-touch + next-action columns; bulk bar.
+- Fix classes colliding inside indigo surfaces (gray text on indigo).

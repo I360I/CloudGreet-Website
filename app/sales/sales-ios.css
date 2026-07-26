@@ -356,3 +356,12 @@ html[data-sales-theme="dark"] .sales-crm textarea:focus,
 html[data-sales-theme="dark"] .sales-crm select:focus {
   border-color: var(--dblue);
 }
+
+/* Text inside solid-indigo surfaces (remapped .bg-gray-900): gray text
+   utilities are illegible there - force readable white tones. */
+.sales-crm .bg-gray-900 [class*="text-gray-4"],
+.sales-crm .bg-gray-900 [class*="text-gray-5"],
+.sales-crm .bg-gray-900 [class*="text-gray-6"] { color: rgba(255, 255, 255, 0.72); }
+.sales-crm .bg-gray-900 [class*="text-gray-7"],
+.sales-crm .bg-gray-900 [class*="text-gray-8"],
+.sales-crm .bg-gray-900 [class*="text-gray-9"] { color: #FFFFFF; }
