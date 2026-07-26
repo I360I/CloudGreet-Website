@@ -415,7 +415,7 @@ export default function SalesEmailCampaignsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  {['Campaign', 'From', 'Status', 'Sent', 'Bounced', 'Created'].map((h) => (
+                  {['Campaign', 'From', 'Status', 'Sent', 'Bounced', 'Replies', 'Created'].map((h) => (
                     <th
                       key={h}
                       className="px-4 py-3 text-left text-[10px] font-mono uppercase tracking-wider text-gray-500 font-normal"
@@ -441,6 +441,7 @@ export default function SalesEmailCampaignsPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-700 tabular-nums">{c.sent_count}</td>
                     <td className="px-4 py-3 text-gray-500 tabular-nums">{c.bounce_count}</td>
+                    <td className="px-4 py-3 tabular-nums font-medium" style={{ color: c.reply_count > 0 ? 'var(--dgreen-deep)' : 'var(--dmut2)' }}>{c.reply_count}</td>
                     <td className="px-4 py-3 text-gray-400 text-xs">{fmtDate(c.created_at)}</td>
                   </tr>
                 ))}

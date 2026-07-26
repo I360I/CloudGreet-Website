@@ -19,3 +19,5 @@ create index if not exists idx_harvest_targets_pending
   on public.harvest_targets(status) where status = 'pending';
 alter table public.email_campaigns
   add column if not exists auto_feed_category text;
+
+-- (2026-07-07) ai_places generic source is code-only; no schema change.

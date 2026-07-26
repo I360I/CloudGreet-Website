@@ -1,0 +1,71 @@
+app/admin/conversations/page.tsx: error TS2339: Property 'error' does not exist on type 'PingResult'.
+app/api/cron/sms-daily-health/route.ts: error TS2339: Property 'error' does not exist on type '{ ok: true; reply: string; ms: number; } | { ok: false; error: string; ms: number; }'.
+app/api/health/route.ts: error TS2322: Type 'Record<string, unknown>' is not assignable to type 'string | number | boolean'.
+lib/integrations/service.ts: error TS2558: Expected 2 type arguments, but got 1.
+lib/integrations/validators.ts: error TS2322: Type '"2022-11-15"' is not assignable to type '"2023-10-16"'.
+lib/job-queue.ts: error TS2306: File '/Users/anthony/Projects/cloudgreet/lib/email.ts' is not a module.
+lib/job-queue.ts: error TS2322: Type 'JobPayload' is not assignable to type 'string | number | boolean'.
+lib/job-queue.ts: error TS2339: Property 'syncCalendarEvents' does not exist on type 'typeof import("/Users/anthony/Projects/cloudgreet/lib/calendar")'.
+lib/job-queue.ts: error TS2345: Argument of type 'JobPayload' is not assignable to parameter of type '{ businessId: string; }'.
+lib/job-queue.ts: error TS2345: Argument of type 'JobPayload' is not assignable to parameter of type '{ businessId: string; reportType: string; }'.
+lib/job-queue.ts: error TS2345: Argument of type 'JobPayload' is not assignable to parameter of type '{ olderThanDays: number; }'.
+lib/job-queue.ts: error TS2345: Argument of type 'JobPayload' is not assignable to parameter of type '{ to: string; message: string; from?: string; businessId: string; userId?: string; type?: string; }'.
+lib/job-queue.ts: error TS2345: Argument of type 'JobPayload' is not assignable to parameter of type '{ to: string; subject: string; html: string; text?: string; from?: string; replyTo?: string; }'.
+lib/job-queue.ts: error TS2345: Argument of type 'JobPayload' is not assignable to parameter of type '{ url: string; data: any; }'.
+lib/monitoring-enhanced.ts: error TS2322: Type 'string[]' is not assignable to type 'string | number | boolean'.
+lib/monitoring-enhanced.ts: error TS2323: Cannot redeclare exported variable 'reportBusinessError'.
+lib/monitoring-enhanced.ts: error TS2323: Cannot redeclare exported variable 'reportCriticalError'.
+lib/monitoring-enhanced.ts: error TS2323: Cannot redeclare exported variable 'reportError'.
+lib/monitoring-enhanced.ts: error TS2323: Cannot redeclare exported variable 'reportHealthCheck'.
+lib/monitoring-enhanced.ts: error TS2323: Cannot redeclare exported variable 'reportPerformanceIssue'.
+lib/monitoring-enhanced.ts: error TS2323: Cannot redeclare exported variable 'reportSecurityEvent'.
+lib/monitoring-enhanced.ts: error TS2345: Argument of type '{ level: "error" | "fatal"; tags: string[]; user: { id: string; }; contexts: { business: { id: string; }; custom: Record<string, any>; }; }' is not assignable to parameter of type 'ExclusiveEventHintOrCaptureContext'.
+lib/monitoring-enhanced.ts: error TS2393: Duplicate function implementation.
+lib/prospecting/filters.ts: error TS2558: Expected 2 type arguments, but got 1.
+lib/prospecting/outreach-runner.ts: error TS2322: Type 'PostgrestError' is not assignable to type 'string | number | boolean'.
+lib/prospecting/outreach-service.ts: error TS2322: Type 'PostgrestError' is not assignable to type 'string | number | boolean'.
+lib/prospecting/outreach-service.ts: error TS2339: Property 'or' does not exist on type 'PostgrestBuilder<any, any, false>'.
+lib/prospecting/outreach-service.ts: error TS2339: Property 'partial' does not exist on type 'ZodEffects<ZodObject<{ name: ZodString; channel: ZodEnum<["email", "sms"]>; subject: ZodUnion<[ZodOptional<ZodString>, ZodLiteral<"">]>; ... 4 more ...; metadata: ZodDefault<...>; }, "strip", ZodTypeAny, { ...; }, { ...; }>, { ...; }, { ...; }>'.
+lib/prospecting/sync.ts: error TS2322: Type 'PostgrestError' is not assignable to type 'string | number | boolean'.
+lib/sales/activity-service.ts: error TS2322: Type 'PostgrestError' is not assignable to type 'string | number | boolean'.
+lib/sales/activity-service.ts: error TS2339: Property 'eq' does not exist on type 'PostgrestBuilder<any, { id: any; first_name: any; last_name: any; email: any; phone: any; company_name: any; status: any; score: any; tags: any; last_outreach_at: any; next_touch_at: any; sequence_status: any; updated_at: any; ... 7 more ...; sequence_id: any; }, false>'.
+lib/sales/activity-service.ts: error TS2339: Property 'or' does not exist on type 'PostgrestBuilder<any, { id: any; first_name: any; last_name: any; email: any; phone: any; company_name: any; status: any; score: any; tags: any; last_outreach_at: any; next_touch_at: any; sequence_status: any; updated_at: any; ... 7 more ...; sequence_id: any; }, false>'.
+lib/scrapers/tda.ts: error TS2339: Property 'error' does not exist on type 'PlacesAttempt'.
+lib/scrapers/tdlr.ts: error TS2339: Property 'error' does not exist on type 'PlacesAttempt'.
+lib/scrapers/tsbpe.ts: error TS2339: Property 'error' does not exist on type 'PlacesAttempt'.
+scripts/add-pickup-arg-steve.ts: error TS2393: Duplicate function implementation.
+scripts/add-pickup-arg-steve.ts: error TS2451: Cannot redeclare block-scoped variable 'AGENT_ID'.
+scripts/add-pickup-arg-steve.ts: error TS2451: Cannot redeclare block-scoped variable 'RETELL_BASE'.
+scripts/fix-steve-phone-example.ts: error TS2393: Duplicate function implementation.
+scripts/fix-steve-phone-example.ts: error TS2451: Cannot redeclare block-scoped variable 'AGENT_ID'.
+scripts/fix-steve-phone-example.ts: error TS2451: Cannot redeclare block-scoped variable 'RETELL_BASE'.
+scripts/fix-tfv-requests.ts: error TS2393: Duplicate function implementation.
+scripts/patch-caller-id-override.ts: error TS2393: Duplicate function implementation.
+scripts/patch-caller-id-override.ts: error TS2451: Cannot redeclare block-scoped variable 'END'.
+scripts/patch-caller-id-override.ts: error TS2451: Cannot redeclare block-scoped variable 'RETELL_BASE'.
+scripts/patch-caller-id-override.ts: error TS2451: Cannot redeclare block-scoped variable 'START'.
+scripts/patch-cloudgreet-receptionist.ts: error TS2393: Duplicate function implementation.
+scripts/patch-cloudgreet-receptionist.ts: error TS2451: Cannot redeclare block-scoped variable 'AGENT_ID'.
+scripts/patch-cloudgreet-receptionist.ts: error TS2451: Cannot redeclare block-scoped variable 'CONTENT'.
+scripts/patch-cloudgreet-receptionist.ts: error TS2451: Cannot redeclare block-scoped variable 'END'.
+scripts/patch-cloudgreet-receptionist.ts: error TS2451: Cannot redeclare block-scoped variable 'RETELL_BASE'.
+scripts/patch-cloudgreet-receptionist.ts: error TS2451: Cannot redeclare block-scoped variable 'START'.
+scripts/patch-demo-agents-sms.ts: error TS2393: Duplicate function implementation.
+scripts/patch-demo-agents-sms.ts: error TS2451: Cannot redeclare block-scoped variable 'CONTENT'.
+scripts/patch-demo-agents-sms.ts: error TS2451: Cannot redeclare block-scoped variable 'END'.
+scripts/patch-demo-agents-sms.ts: error TS2451: Cannot redeclare block-scoped variable 'RETELL_BASE'.
+scripts/patch-demo-agents-sms.ts: error TS2451: Cannot redeclare block-scoped variable 'START'.
+scripts/patch-smartride-prompt.ts: error TS2393: Duplicate function implementation.
+scripts/patch-smartride-prompt.ts: error TS2451: Cannot redeclare block-scoped variable 'AGENT_ID'.
+scripts/patch-smartride-prompt.ts: error TS2451: Cannot redeclare block-scoped variable 'CONTENT'.
+scripts/patch-smartride-prompt.ts: error TS2451: Cannot redeclare block-scoped variable 'END'.
+scripts/patch-smartride-prompt.ts: error TS2451: Cannot redeclare block-scoped variable 'RETELL_BASE'.
+scripts/patch-smartride-prompt.ts: error TS2451: Cannot redeclare block-scoped variable 'START'.
+scripts/probe-steve-agent-prompt.ts: error TS2393: Duplicate function implementation.
+scripts/probe-steve-agent-prompt.ts: error TS2451: Cannot redeclare block-scoped variable 'AGENT_ID'.
+scripts/probe-steve-agent-prompt.ts: error TS2451: Cannot redeclare block-scoped variable 'RETELL_BASE'.
+scripts/wire-email-tool-steve.ts: error TS2393: Duplicate function implementation.
+scripts/wire-email-tool-steve.ts: error TS2451: Cannot redeclare block-scoped variable 'AGENT_ID'.
+scripts/wire-email-tool-steve.ts: error TS2451: Cannot redeclare block-scoped variable 'END'.
+scripts/wire-email-tool-steve.ts: error TS2451: Cannot redeclare block-scoped variable 'RETELL_BASE'.
+scripts/wire-email-tool-steve.ts: error TS2451: Cannot redeclare block-scoped variable 'START'.

@@ -1,0 +1,367 @@
+/* ============================================================
+   CRM Pro skin for the sales portal (branch sales-crm-ios26). Derived from dash-ios.css; iOS-blue accent (owner: blue, not purple).
+
+   Strategy: every dashboard page shares the same inline-Tailwind
+   patterns (bg-white cards, gray borders, #f6f5f1 ground, gray-900
+   primary). Rather than rewriting 6k+ lines per page, this sheet
+   defines iOS tokens on the `.sales-crm` scope and REMAPS those
+   recurring utility classes to the tokens. Every screen (incl.
+   Settings/Onboarding) picks up the new material + dark mode with
+   zero functional changes. Chrome (sidebar/topbar/nav) uses the
+   purpose-built ios-* classes below.
+
+   Dark mode: `data-sales-theme="dark"` on <html>, set by theme.tsx.
+   Default is light; choice persists in localStorage.
+   Liquid Glass here is a web approximation (backdrop-filter +
+   layered borders + inner highlight), not Apple's private API.
+   ============================================================ */
+
+.sales-crm {
+  /* ---- iOS light tokens ---- */
+  --dbg: #F6F6FA;
+  --dcard: #FFFFFF;
+  --dcard2: #FAFAFC;
+  --dink: #0F172A;
+  --dink2: #475569;
+  --dmut: #64748B;
+  --dmut2: #94A3B8;
+  --dline: rgba(0, 0, 0, 0.07);
+  --dline2: rgba(0, 0, 0, 0.045);
+  --dblue: #007AFF;
+  --dblue-deep: #0063D1;
+  --dblue-tint: rgba(0, 122, 255, 0.10);
+  --dgreen: #34C759;
+  --dgreen-deep: #1F9D48;
+  --dgreen-tint: rgba(52, 199, 89, 0.12);
+  --dorange: #FF9500;
+  --dorange-deep: #C46A00;
+  --dorange-tint: rgba(255, 149, 0, 0.13);
+  --dred: #FF3B30;
+  --dred-deep: #D02A21;
+  --dred-tint: rgba(255, 59, 48, 0.10);
+  --dglass: rgba(255, 255, 255, 0.66);
+  --dglass-strong: rgba(255, 255, 255, 0.84);
+  --dglass-line: rgba(255, 255, 255, 0.55);
+  --dseg: rgba(120, 120, 128, 0.14);
+  --dshadow-card: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 16px rgba(0, 0, 0, 0.03);
+  --dshadow-pop: 0 12px 40px rgba(0, 0, 0, 0.14);
+  --dease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: var(--dbg);
+  color: var(--dink);
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-sales-theme="dark"] .sales-crm {
+  /* ---- iOS dark tokens ---- */
+  --dbg: #0B0B10;
+  --dcard: #17171E;
+  --dcard2: #1E1E26;
+  --dink: #F5F5F7;
+  --dink2: #D6D6DB;
+  --dmut: #98989F;
+  --dmut2: #6C6C73;
+  --dline: rgba(255, 255, 255, 0.09);
+  --dline2: rgba(255, 255, 255, 0.06);
+  --dblue: #0A84FF;
+  --dblue-deep: #4CA5FF;
+  --dblue-tint: rgba(10, 132, 255, 0.16);
+  --dgreen: #30D158;
+  --dgreen-deep: #59DE7C;
+  --dgreen-tint: rgba(48, 209, 88, 0.14);
+  --dorange: #FF9F0A;
+  --dorange-deep: #FFB340;
+  --dorange-tint: rgba(255, 159, 10, 0.15);
+  --dred: #FF453A;
+  --dred-deep: #FF6961;
+  --dred-tint: rgba(255, 69, 58, 0.14);
+  --dglass: rgba(24, 24, 27, 0.66);
+  --dglass-strong: rgba(28, 28, 31, 0.86);
+  --dglass-line: rgba(255, 255, 255, 0.09);
+  --dseg: rgba(120, 120, 128, 0.22);
+  --dshadow-card: 0 1px 2px rgba(0, 0, 0, 0.25), 0 6px 20px rgba(0, 0, 0, 0.25);
+  --dshadow-pop: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   UTILITY REMAPS - existing page markup, new material.
+   ============================================================ */
+
+/* Ground */
+.sales-crm[class*="bg-[#f6f5f1]"],
+.sales-crm [class*="bg-[#f6f5f1]"] { background-color: var(--dbg); }
+
+/* Surfaces */
+.sales-crm .bg-white { background-color: var(--dcard); }
+.sales-crm .bg-gray-50 { background-color: var(--dcard2); }
+.sales-crm [class*="bg-gray-50/"] { background-color: var(--dcard2); }
+.sales-crm [class*="bg-white/"] { background-color: var(--dglass); }
+
+/* Hairlines */
+.sales-crm .border-gray-200,
+.sales-crm .border-gray-100,
+.sales-crm .border-gray-300,
+.sales-crm [class*="border-black/"] { border-color: var(--dline); }
+.sales-crm .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+.sales-crm .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: var(--dline2); }
+
+/* Text hierarchy */
+.sales-crm .text-gray-900 { color: var(--dink); }
+.sales-crm .text-gray-800, .sales-crm .text-gray-700 { color: var(--dink2); }
+.sales-crm .text-gray-600, .sales-crm .text-gray-500 { color: var(--dmut); }
+.sales-crm .text-gray-400, .sales-crm .text-gray-300 { color: var(--dmut2); }
+.sales-crm .hover\:text-gray-900:hover { color: var(--dink); }
+.sales-crm .hover\:bg-black\/\[\.04\]:hover,
+.sales-crm [class*="hover:bg-black/"]:hover { background-color: var(--dseg); }
+
+/* Primary (was gray-900 ink) -> iOS blue */
+.sales-crm .bg-gray-900 {
+  background-color: var(--dblue);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 8px rgba(0, 122, 255, 0.28);
+}
+.sales-crm .hover\:bg-gray-800:hover { background-color: var(--dblue-deep); }
+.sales-crm .focus\:border-gray-900:focus { border-color: var(--dblue); }
+.sales-crm .bg-gray-200 { background-color: var(--dseg); }
+.sales-crm .bg-gray-100 { background-color: var(--dseg); }
+
+/* Sky accent -> systemBlue */
+.sales-crm .text-sky-600, .sales-crm .text-sky-500, .sales-crm .text-sky-700 { color: var(--dblue); }
+.sales-crm .bg-sky-500, .sales-crm .bg-sky-600 { background-color: var(--dblue); }
+.sales-crm .bg-sky-50, .sales-crm .bg-sky-100 { background-color: var(--dblue-tint); }
+.sales-crm .border-sky-200, .sales-crm .border-sky-300 { border-color: var(--dblue-tint); }
+
+/* Semantic tints -> iOS system colors (keeps pills readable in dark) */
+.sales-crm .bg-emerald-50, .sales-crm .bg-emerald-100 { background-color: var(--dgreen-tint); }
+.sales-crm .text-emerald-700, .sales-crm .text-emerald-800, .sales-crm .text-emerald-600 { color: var(--dgreen-deep); }
+.sales-crm .border-emerald-200 { border-color: var(--dgreen-tint); }
+.sales-crm .bg-rose-50, .sales-crm .bg-rose-100 { background-color: var(--dred-tint); }
+.sales-crm .text-rose-700, .sales-crm .text-rose-600, .sales-crm .text-rose-500 { color: var(--dred-deep); }
+.sales-crm .border-rose-200, .sales-crm .border-rose-300 { border-color: var(--dred-tint); }
+.sales-crm .bg-amber-50, .sales-crm .bg-amber-100 { background-color: var(--dorange-tint); }
+.sales-crm .text-amber-700, .sales-crm .text-amber-800, .sales-crm .text-amber-900 { color: var(--dorange-deep); }
+.sales-crm .border-amber-200 { border-color: var(--dorange-tint); }
+.sales-crm .bg-violet-50 { background-color: var(--dblue-tint); }
+.sales-crm .text-violet-700 { color: var(--dblue); }
+
+/* Radii + shadows: continuous-corner feel */
+.sales-crm .rounded-2xl { border-radius: 18px; }
+.sales-crm .shadow-sm { box-shadow: var(--dshadow-card); }
+.sales-crm .shadow-xl, .sales-crm .shadow-2xl { box-shadow: var(--dshadow-pop); }
+
+/* Forms */
+.sales-crm input::placeholder, .sales-crm textarea::placeholder { color: var(--dmut2); }
+.sales-crm input, .sales-crm textarea, .sales-crm select { color: var(--dink); }
+
+/* Chart.js canvases sit on cards; keep them transparent */
+.sales-crm canvas { background: transparent; }
+
+/* ============================================================
+   CHROME - purpose-built iOS pieces (sidebar / topbar / nav)
+   ============================================================ */
+
+.crm-sidebar {
+  background: var(--dglass) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border-right: 1px solid var(--dline) !important;
+}
+
+.crm-topbar {
+  background: var(--dglass) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border-bottom: 1px solid var(--dline2) !important;
+}
+
+/* Live status capsule */
+.crm-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  background: var(--dglass-strong);
+  border: 1px solid var(--dline);
+  box-shadow: inset 0 1px 0 var(--dglass-line), 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Nav items */
+.crm-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 12px;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--dink2);
+  margin-bottom: 2px;
+  transition: background 0.18s var(--dease), color 0.18s var(--dease), transform 0.12s var(--dease);
+}
+.crm-nav-item:hover { background: var(--dseg); color: var(--dink); }
+.crm-nav-item:active { transform: scale(0.98); }
+.crm-nav-item.on {
+  background: var(--dblue);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 2px 8px rgba(0, 122, 255, 0.32);
+}
+
+/* Logo: the wordmark PNG is dark; flip it to white in dark mode */
+html[data-sales-theme="dark"] .sales-crm .crm-logo { filter: brightness(0) invert(1); }
+
+/* Theme toggle (sidebar footer) */
+.crm-theme-seg {
+  display: flex;
+  background: var(--dseg);
+  border-radius: 9px;
+  padding: 2px;
+  margin: 0 12px 10px;
+}
+.crm-theme-seg button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 5px 0;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--dmut);
+  font-family: inherit;
+  transition: background 0.2s var(--dease), color 0.2s var(--dease);
+}
+.crm-theme-seg button.on {
+  background: var(--dcard);
+  color: var(--dink);
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10);
+}
+
+/* Mobile bottom bar: floating glass */
+.crm-tabbar {
+  background: var(--dglass-strong) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border-top: 1px solid var(--dline) !important;
+}
+.crm-tabbar .on-icon { color: var(--dblue) !important; }
+
+/* Reduced motion: template.tsx transition + breathing dots degrade */
+@media (prefers-reduced-motion: reduce) {
+  .sales-crm *, .sales-crm *::before, .sales-crm *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Pass 2 polish: larger iOS-title pages, calendar, misc.
+   ============================================================ */
+
+/* Large-title feel on every page h1 (they all use .font-display) */
+.sales-crm h1.font-display { font-weight: 700; letter-spacing: -0.022em; }
+
+/* Calendar: iOS selection + today (sky remaps catch the rest) */
+.sales-crm .ring-sky-400 { --tw-ring-color: var(--dblue); }
+.sales-crm [class*="bg-sky-50/"], .sales-crm [class*="bg-sky-100/"] { background-color: var(--dblue-tint); }
+
+/* Filter pills: iOS capsule rhythm */
+.sales-crm button.rounded-full { transition: transform 0.12s var(--dease), background 0.18s var(--dease); }
+.sales-crm button.rounded-full:active { transform: scale(0.96); }
+
+/* Search inputs read as iOS field */
+.sales-crm input[type="search"] { border-radius: 10px; }
+
+/* Focus ring: iOS blue everywhere */
+.sales-crm :focus-visible { outline-color: var(--dblue); }
+
+/* ============================================================
+   Pass 3: spring segmented controls + global micro-physics
+   ============================================================ */
+
+.crm-seg-track {
+  background: var(--dseg);
+  border-radius: 9px;
+  padding: 2px;
+}
+.crm-seg-thumb {
+  background: var(--dcard);
+  border-radius: 7px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.10), 0 0.5px 1px rgba(0, 0, 0, 0.06);
+}
+html[data-sales-theme="dark"] .sales-crm .crm-seg-thumb { background: #5A5A5F; }
+
+/* Tactile press on rounded controls (never on bare/backdrop buttons) */
+.sales-crm button.rounded-full:active,
+.sales-crm button.rounded-lg:active,
+.sales-crm button.rounded-xl:active,
+.sales-crm button.rounded-md:active { transform: scale(0.96); }
+
+/* Cards breathe on hover: subtle lift, deeper shadow */
+@media (hover: hover) {
+  .sales-crm div.bg-white.rounded-2xl.border {
+    transition: transform 0.3s var(--dease), box-shadow 0.3s var(--dease);
+  }
+  .sales-crm div.bg-white.rounded-2xl.border:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 10px 28px rgba(0, 0, 0, 0.06);
+  }
+  html[data-sales-theme="dark"] .sales-crm div.bg-white.rounded-2xl.border:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.35);
+  }
+}
+
+/* ============================================================
+   Sliding nav pill: the blue active background is a single
+   element that glides between items (framer layoutId).
+   ============================================================ */
+.crm-nav-item { position: relative; }
+.crm-nav-item.on {
+  background: transparent; /* the pill carries the fill now */
+  box-shadow: none;
+  color: #fff;
+}
+.crm-nav-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: var(--dblue);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 2px 8px rgba(0, 122, 255, 0.32);
+}
+
+/* ============================================================
+   Dark-mode form fields. Several forms (booking modal, onboarding)
+   use a styled-jsx .form-input with a hardcoded white background
+   that the utility remap can't see. Override EVERY text field in
+   dark mode with the iOS dark field surface so typed text is
+   always legible. Checkboxes/radios/ranges excluded (custom UI).
+   ============================================================ */
+html[data-sales-theme="dark"] .sales-crm { color-scheme: dark; }
+html[data-sales-theme="dark"] .sales-crm input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html[data-sales-theme="dark"] .sales-crm textarea,
+html[data-sales-theme="dark"] .sales-crm select {
+  background-color: #2C2C2E;
+  border-color: var(--dline);
+  color: var(--dink);
+}
+html[data-sales-theme="dark"] .sales-crm input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+html[data-sales-theme="dark"] .sales-crm textarea:focus,
+html[data-sales-theme="dark"] .sales-crm select:focus {
+  border-color: var(--dblue);
+}
+
+/* Text inside solid-indigo surfaces (remapped .bg-gray-900): gray text
+   utilities are illegible there - force readable white tones. */
+.sales-crm .bg-gray-900 [class*="text-gray-4"],
+.sales-crm .bg-gray-900 [class*="text-gray-5"],
+.sales-crm .bg-gray-900 [class*="text-gray-6"] { color: rgba(255, 255, 255, 0.72); }
+.sales-crm .bg-gray-900 [class*="text-gray-7"],
+.sales-crm .bg-gray-900 [class*="text-gray-8"],
+.sales-crm .bg-gray-900 [class*="text-gray-9"] { color: #FFFFFF; }

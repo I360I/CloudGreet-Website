@@ -1,20 +1,19 @@
 /**
- * Rep MRR decay model.
+ * Rep MRR decay model. LIVE - applied to real payouts (owner-approved
+ * 2026-07-25; wired in the Stripe webhook's creditRepCommission).
  *
- * Reps earn 50% of MRR on every active client by default. If a rep goes
- * too long without landing a new close, that share decays:
+ * The multiplier is a FRACTION OF THE REP'S BASE RATE (50% self-sourced
+ * / 25% setter-fed), so decay scales both classes fairly:
  *
- *   0  - 89  days since last close → 'full'        (50% MRR - the standard share)
- *   90 - 179 days                  → 'reduced'     (25%)
- *   180+ days                      → 'transferred' (0%; clients revert to CG)
+ *   0  - 89  days since last NEW close paid → 'full'        (x1.0 of base)
+ *   90 - 179 days                           → 'reduced'     (x0.5 - 50%->25%, 25%->12.5%)
+ *   180+ days                               → 'transferred' (x0  - clients revert to CG)
  *
- * Any close (status != 'cancelled' / 'rejected') resets the clock.
- *
- * This module is pure: it reads `lastCloseAt` (or null if the rep has
- * never closed) and returns a snapshot. It does NOT mutate the DB or
- * apply the multiplier to commission_ledger - that wiring is intentionally
- * separate so we can ship the visibility UI first and review the
- * commission math before flipping it on.
+ * The clock resets on a close's FIRST payment (a new client's money
+ * landing), never on recurring invoices from the existing book -
+ * otherwise an old book would keep the clock at 'full' forever. See
+ * getRepDecayAnchor(), the single source of truth used by BOTH the
+ * dashboard banner and the payout wiring so they can never disagree.
  */
 
 export type DecayTier = 'full' | 'reduced' | 'transferred'
@@ -24,10 +23,10 @@ export const DECAY_THRESHOLDS = {
   transferAfterDays: 180,
 } as const
 
-/** Absolute share of MRR earned by the rep at each tier. */
+/** Fraction of the rep's BASE rate earned at each tier. */
 export const TIER_MULTIPLIER: Record<DecayTier, number> = {
-  full: 0.5,
-  reduced: 0.25,
+  full: 1.0,
+  reduced: 0.5,
   transferred: 0,
 }
 
@@ -115,10 +114,48 @@ export function computeDecayState(input: {
 export function tierLabel(tier: DecayTier): string {
   switch (tier) {
     case 'full':
-      return 'Full commission (50%)'
+      return 'Full commission'
     case 'reduced':
-      return 'Reduced (25%)'
+      return 'Reduced (half rate)'
     case 'transferred':
       return 'Transferred to CloudGreet'
   }
+}
+
+/**
+ * The decay clock's single source of truth: the most recent FIRST
+ * payment across the rep's closes. Recurring invoices from an existing
+ * client do not reset the clock; a new close's first money does.
+ * Legacy ledger rows without close_id count via their own earned_at
+ * (they were first-invoice rows in practice).
+ *
+ * Used by /api/sales/decay-status (banner) AND the Stripe webhook's
+ * creditRepCommission (real payouts) so the two can never disagree.
+ */
+export async function getRepDecayAnchor(
+  supabase: { from: (t: string) => any },
+  repId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from('commission_ledger')
+    .select('close_id, earned_at')
+    .eq('rep_id', repId)
+    .order('earned_at', { ascending: true })
+  const rows = (data || []) as Array<{ close_id: string | null; earned_at: string }>
+  if (rows.length === 0) return null
+  const firstPerClose = new Map<string, string>()
+  let latest: string | null = null
+  for (const r of rows) {
+    if (!r.earned_at) continue
+    if (r.close_id) {
+      if (!firstPerClose.has(r.close_id)) {
+        firstPerClose.set(r.close_id, r.earned_at) // rows are ASC: first = first payment
+        if (!latest || r.earned_at > latest) latest = r.earned_at
+      }
+    } else {
+      // Legacy row without close attribution - treat as its own event.
+      if (!latest || r.earned_at > latest) latest = r.earned_at
+    }
+  }
+  return latest
 }

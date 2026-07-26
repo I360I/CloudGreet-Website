@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import { fetchUpcomingCalBookings } from '@/lib/sales/cal'
+import { getRepCallStats, getRepDailySeries, startOfBusinessDay } from '@/lib/sales/dialer-stats'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       supabaseAdmin
         .from('custom_users')
-        .select('id, email, first_name, last_name, name')
+        .select('id, email, first_name, last_name, name, weekly_demo_goal')
         .eq('id', auth.userId)
         .maybeSingle(),
       supabaseAdmin
@@ -143,6 +144,100 @@ export async function GET(request: NextRequest) {
       return s + (c.agreed_monthly_cents || 0)
     }, 0)
 
+    // ---- Pipeline = what the Prospects page shows ----
+    // Every live close (any stage that isn't cancelled/rejected) whose
+    // business isn't actively paying yet, plus linked not-paying
+    // accounts that never went through a close. Matches /sales/closes.
+    const [{ data: allCloses }, { data: myBizs }] = await Promise.all([
+      supabaseAdmin
+        .from('closes')
+        .select('id, business_id, agreed_monthly_cents, status, businesses:business_id(subscription_status)')
+        .eq('rep_id', auth.userId)
+        .not('status', 'in', '("cancelled","rejected")')
+        .limit(200),
+      supabaseAdmin
+        .from('businesses')
+        .select('id, subscription_status')
+        .eq('rep_id', auth.userId)
+        .limit(200),
+    ])
+    const PAYING = new Set(['active', 'past_due'])
+    const isPaying = (sub: string | null | undefined) => PAYING.has(String(sub || '').toLowerCase())
+    const prospectCloses = (allCloses || []).filter((c: any) => !isPaying(c.businesses?.subscription_status))
+    const closeBizIds = new Set((allCloses || []).map((c: any) => c.business_id).filter(Boolean))
+    const linkedNotPaying = (myBizs || []).filter((b: any) => !isPaying(b.subscription_status) && !closeBizIds.has(b.id))
+    const prospects = {
+      count: prospectCloses.length + linkedNotPaying.length,
+      monthly_cents: prospectCloses.reduce((a: number, c: any) => a + (c.agreed_monthly_cents || 0), 0),
+    }
+
+    // ---- Rep activity (the missing half of the dashboard) ----
+    // Aggregates that always existed in dialer-stats but were only ever
+    // wired to setters/admin. Today = business day (Central); week = 7d.
+    const weekAgo = new Date(now.getTime() - 7 * 86_400_000)
+    const [today, week, series] = await Promise.all([
+      getRepCallStats(auth.userId, { since: startOfBusinessDay() }),
+      getRepCallStats(auth.userId, { since: weekAgo }),
+      getRepDailySeries(auth.userId, 7),
+    ])
+    const activity = {
+      today: {
+        dials: today.attempts,
+        connects: today.connects,
+        talk_seconds: today.talk_seconds,
+        last_call_at: today.last_call_at,
+      },
+      week: {
+        dials: week.attempts,
+        connects: week.connects,
+        connect_rate: week.attempts > 0 ? week.connects / week.attempts : 0,
+        talk_seconds: week.talk_seconds,
+      },
+      series, // [{date, dials, connects}] x7
+    }
+
+    // ---- Demo funnel from closes (show rate / win rate) ----
+    const { data: demoRows } = await supabaseAdmin
+      .from('closes')
+      .select('demo_scheduled_at, demo_result, status, created_at')
+      .eq('rep_id', auth.userId)
+      .not('status', 'in', '("cancelled","rejected")')
+      .limit(500)
+    const demosSet = (demoRows || []).filter((d: any) => d.demo_scheduled_at).length
+    const resultOf = (d: any) => d.demo_result || 'pending'
+    const held = (demoRows || []).filter((d: any) => ['won', 'lost', 'needs_followup', 'reschedule'].includes(resultOf(d))).length
+    const noShows = (demoRows || []).filter((d: any) => ['no_show', 'ghosted'].includes(resultOf(d))).length
+    const won = (demoRows || []).filter((d: any) => resultOf(d) === 'won' || d.status === 'paid').length
+    const funnel = {
+      leads_total: Object.values(pipeline).reduce((a, b) => a + b, 0),
+      contacted: (pipeline['called'] || 0) + (pipeline['voicemail'] || 0) + (pipeline['interested'] || 0)
+        + (pipeline['demo_scheduled'] || 0) + (pipeline['demo_showed'] || 0) + (pipeline['proposal_sent'] || 0)
+        + (pipeline['closed'] || 0) + (pipeline['not_interested'] || 0) + (pipeline['not_available'] || 0)
+        + (pipeline['wrong_dm'] || 0),
+      interested: (pipeline['interested'] || 0) + (pipeline['demo_scheduled'] || 0)
+        + (pipeline['demo_showed'] || 0) + (pipeline['proposal_sent'] || 0) + (pipeline['closed'] || 0),
+      demos_set: demosSet,
+      demos_held: held,
+      no_shows: noShows,
+      won,
+      show_rate: held + noShows > 0 ? held / (held + noShows) : null,
+      win_rate: held > 0 ? won / held : null,
+    }
+
+    // ---- Weekly demo goal + pace (was setter-only infra) ----
+    const goalTarget = Math.max(1, Number((me as any)?.weekly_demo_goal ?? 2) || 2)
+    const { count: demosThisWeek } = await supabaseAdmin
+      .from('closes')
+      .select('id', { count: 'exact', head: true })
+      .eq('rep_id', auth.userId)
+      .gte('demo_scheduled_at', weekAgo.toISOString())
+    const goal = {
+      target: goalTarget,
+      this_week: demosThisWeek || 0,
+      // Pace: fraction of the rolling week elapsed vs fraction of goal hit.
+      on_pace: (demosThisWeek || 0) >= goalTarget * Math.min(1, (now.getDay() === 0 ? 7 : now.getDay()) / 5),
+    }
+
     const cleanLeads = (rows: any[] | null) => (rows || []).map((r) => ({
       lead_id: r.lead_id,
       business_name: r.leads?.business_name || 'Unknown',
@@ -174,6 +269,10 @@ export async function GET(request: NextRequest) {
         mrr_cents: mrr,
       },
       cal_bookings: calBookings,
+      activity,
+      funnel,
+      goal,
+      prospects,
     })
   } catch (e) {
     logger.error('Sales overview load failed', {

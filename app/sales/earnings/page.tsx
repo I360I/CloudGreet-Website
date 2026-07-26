@@ -97,6 +97,10 @@ export default function SalesEarningsPage() {
   const [chart, setChart] = useState<ChartPoint[]>([])
   const [chartTab, setChartTab] = useState<ChartTab>('both')
   const [payoutsEnabled, setPayoutsEnabled] = useState(true)
+  const [payoutHistory, setPayoutHistory] = useState<Array<{
+    id: string; amount_cents: number; status: string; period_start: string | null
+    period_end: string | null; transferred_at: string | null; created_at: string
+  }>>([])
   const [hasConnectAccount, setHasConnectAccount] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -116,6 +120,7 @@ export default function SalesEarningsPage() {
           setCustomers(j.customers || [])
           setChart(j.chart || [])
           setPayoutsEnabled(!!j.payouts_enabled)
+          setPayoutHistory(j.payouts || [])
           setHasConnectAccount(!!j.has_connect_account)
         }
       } finally {
@@ -127,8 +132,15 @@ export default function SalesEarningsPage() {
 
   return (
     <SalesShell activeLabel="Earnings">
-      <section className="max-w-3xl mx-auto px-6 py-10">
-        <SalesPageHeader eyebrow="earnings" title="Commissions" />
+      <section className="max-w-5xl mx-auto px-6 py-8">
+        {/* Compact header: title + payout cadence inline (CRM Pro spec) */}
+        <div className="flex items-end justify-between gap-4 flex-wrap mb-6">
+          <h1 className="font-display text-2xl md:text-[28px] font-semibold tracking-tight text-gray-900">Commissions</h1>
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-3 py-1.5"
+            style={{ background: 'var(--dblue-tint)', color: 'var(--dblue)' }}>
+            Payouts every Friday
+          </span>
+        </div>
 
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 flex items-start gap-2">
@@ -174,29 +186,39 @@ export default function SalesEarningsPage() {
           <SalesLoadingState />
         ) : (
           <>
-            {/* Owed - hero */}
-            <motion.div
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: EASE }}
-              className="bg-gray-900 text-white rounded-2xl p-6 mb-4 shadow-lg shadow-gray-900/10"
-            >
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-400">
-                Owed · pays {nextFriday()}
-              </div>
-              <div className="text-4xl font-medium tabular-nums mt-2">
-                {dollars(totals?.owed_cents ?? 0)}
-              </div>
-            </motion.div>
-
-            {/* Three smaller numbers */}
+            {/* Hero stat row (CRM kit): solid-indigo Owed tile + three
+                structured stat cards with captions. */}
             <motion.div
               initial="hidden" animate="show"
               variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
-              className="grid grid-cols-3 gap-3 mb-4"
+              className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4"
             >
-              <Stat label="MRR" value={dollars(totals?.mrr_cents ?? 0)} />
-              <Stat label="Lifetime" value={dollars(totals?.lifetime_cents ?? 0)} />
-              <Stat label="Paid out" value={dollars(totals?.paid_out_cents ?? 0)} />
+              <motion.div
+                variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+                className="rounded-2xl p-5 text-white relative overflow-hidden"
+                style={{ background: 'linear-gradient(150deg, #3FA0FF 0%, #007AFF 55%, #0063D1 100%)', boxShadow: '0 8px 24px rgba(0,122,255,.35), inset 0 1px 0 rgba(255,255,255,.25)' }}
+              >
+                <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-white/75">Owed to you</div>
+                <div className="text-[30px] leading-none font-bold tabular-nums mt-2.5">{dollars(totals?.owed_cents ?? 0)}</div>
+                <span className="inline-flex mt-3 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-white/20 tabular-nums">
+                  Pays {nextFriday()}
+                </span>
+              </motion.div>
+              {([
+                ['MRR', dollars(totals?.mrr_cents ?? 0), 'recurring / month'],
+                ['Lifetime', dollars(totals?.lifetime_cents ?? 0), 'earned all-time'],
+                ['Paid out', dollars(totals?.paid_out_cents ?? 0), 'already transferred'],
+              ] as const).map(([label, value, sub]) => (
+                <motion.div
+                  key={label}
+                  variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+                  className="bg-white border border-gray-200 rounded-2xl p-5"
+                >
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--dmut)' }}>{label}</div>
+                  <div className="text-[26px] leading-none font-bold tabular-nums text-gray-900 mt-2.5">{value}</div>
+                  <div className="text-[11px] mt-2.5" style={{ color: 'var(--dmut2)' }}>{sub}</div>
+                </motion.div>
+              ))}
             </motion.div>
 
             <ChartCard
@@ -280,6 +302,47 @@ export default function SalesEarningsPage() {
                 </ul>
               )}
             </motion.div>
+
+            {/* Payout history - every Friday transfer, newest first. */}
+            {payoutHistory.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: EASE, delay: 0.18 }}
+                className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mt-6"
+              >
+                <div className="px-5 py-3 border-b border-gray-100">
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Payout history</div>
+                  <div className="text-sm font-medium text-gray-900">{payoutHistory.length} transfer{payoutHistory.length === 1 ? '' : 's'}</div>
+                </div>
+                <ul className="divide-y divide-gray-100">
+                  {payoutHistory.slice(0, 12).map((po) => (
+                    <li key={po.id} className="px-5 py-3 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 tabular-nums">{dollars(po.amount_cents)}</div>
+                        <div className="text-xs text-gray-500 mt-0.5 tabular-nums">
+                          {po.transferred_at
+                            ? new Date(po.transferred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                            : new Date(po.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {po.period_start && po.period_end && (
+                            <span className="text-gray-400"> · {new Date(po.period_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} to {new Date(po.period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          )}
+                        </div>
+                      </div>
+                      <span
+                        className="text-[11px] font-semibold rounded-full px-2.5 py-1 flex-shrink-0"
+                        style={po.status === 'transferred'
+                          ? { background: 'var(--dgreen-tint)', color: 'var(--dgreen-deep)' }
+                          : po.status === 'failed' || po.status === 'reversed'
+                            ? { background: 'var(--dred-tint)', color: 'var(--dred-deep)' }
+                            : { background: 'var(--dorange-tint)', color: 'var(--dorange-deep)' }}
+                      >
+                        {po.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )}
 
             {/* Taxes - what's coming at year-end */}
             <TaxCard

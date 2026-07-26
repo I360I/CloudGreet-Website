@@ -49,6 +49,16 @@ export async function GET(
   ])
   if (!lead) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
 
+  // The rep's own call history with this lead - talk time + recordings
+  // for self-review. Newest first, capped.
+  const { data: myCalls } = await supabaseAdmin
+    .from('rep_calls')
+    .select('id, status, duration_seconds, started_at, recording_status, recording_url')
+    .eq('rep_id', auth.userId)
+    .eq('lead_id', params.id)
+    .order('started_at', { ascending: false })
+    .limit(15)
+
   // Linked business lookup so the UI can show a "Login as client" button
   // once an account has been created for this prospect. We try to match
   // a converted close (business_id set by convertCloseToClient) against

@@ -85,10 +85,36 @@ const BRIDGET: Metro[] = [
   { state:'FL', lat:27.9506, lng:-82.4572, suburbs:['Brandon','Clearwater','Largo','Riverview','Plant City','Wesley Chapel'] },
 ]
 
+// Darrin (closer) - fresh Central/Midwest/South metros, no overlap with the setters.
+const DARRIN: Metro[] = [
+  { state:'TN', lat:36.1627, lng:-86.7816, suburbs:['Franklin','Murfreesboro','Hendersonville','Brentwood','Smyrna','Gallatin','Mount Juliet','Antioch'] },
+  { state:'TN', lat:35.1495, lng:-90.0490, suburbs:['Germantown','Bartlett','Collierville','Cordova','Millington'] },
+  { state:'IN', lat:39.7684, lng:-86.1581, suburbs:['Carmel','Fishers','Greenwood','Noblesville','Avon','Plainfield','Brownsburg'] },
+  { state:'OH', lat:39.9612, lng:-82.9988, suburbs:['Dublin','Westerville','Reynoldsburg','Grove City','Hilliard','Gahanna','Pickerington'] },
+  { state:'OH', lat:39.1031, lng:-84.5120, suburbs:['Mason','West Chester','Fairfield','Hamilton','Loveland','Milford'] },
+  { state:'KY', lat:38.2527, lng:-85.7585, suburbs:['Jeffersontown','Shively','Saint Matthews','Fern Creek','Okolona'] },
+  { state:'MO', lat:38.6270, lng:-90.1994, suburbs:['Chesterfield','Florissant','Saint Charles',"O'Fallon",'Ballwin','Wentzville'] },
+  { state:'WI', lat:43.0389, lng:-87.9065, suburbs:['Waukesha','West Allis','Wauwatosa','Brookfield','New Berlin','Franklin'] },
+  { state:'IL', lat:41.8781, lng:-87.6298, suburbs:['Naperville','Aurora','Joliet','Elgin','Schaumburg','Evanston','Oak Lawn','Orland Park'] },
+  { state:'MN', lat:44.9778, lng:-93.2650, suburbs:['Bloomington','Plymouth','Maple Grove','Eagan','Eden Prairie','Burnsville','Minnetonka'] },
+]
+
+// Briand (closer, maybe best rep) - fresh Southeast/Mid-Atlantic metros.
+const BRIAND: Metro[] = [
+  { state:'FL', lat:30.3322, lng:-81.6557, suburbs:['Orange Park','Saint Augustine','Middleburg','Fleming Island','Ponte Vedra'] },
+  { state:'FL', lat:28.5383, lng:-81.3792, suburbs:['Kissimmee','Sanford','Winter Park','Apopka','Oviedo','Clermont','Winter Garden'] },
+  { state:'FL', lat:25.7617, lng:-80.1918, suburbs:['Hialeah','Kendall','Homestead','Doral','Miami Gardens','Cutler Bay'] },
+  { state:'AL', lat:33.5186, lng:-86.8104, suburbs:['Hoover','Vestavia Hills','Bessemer','Trussville','Homewood','Alabaster'] },
+  { state:'NC', lat:35.7796, lng:-78.6382, suburbs:['Cary','Durham','Apex','Wake Forest','Garner','Morrisville','Holly Springs'] },
+  { state:'SC', lat:34.8526, lng:-82.3940, suburbs:['Greer','Simpsonville','Mauldin','Easley','Anderson','Taylors'] },
+  { state:'SC', lat:34.0007, lng:-81.0348, suburbs:['Lexington','Irmo','Cayce','West Columbia'] },
+  { state:'TN', lat:35.0456, lng:-85.3097, suburbs:['Cleveland','East Ridge','Hixson','Red Bank','Ooltewah'] },
+  { state:'TN', lat:35.9606, lng:-83.9207, suburbs:['Farragut','Maryville','Oak Ridge','Alcoa','Powell'] },
+  { state:'AL', lat:34.7304, lng:-86.5861, suburbs:['Madison','Decatur','Athens','Hartselle'] },
+]
+
 const SETTERS = [
-  { email: 'hazemkarim2002@gmail.com', metros: HAZEM },
-  { email: 'mahmoodfahad264@gmail.com', metros: FAHAD },
-  { email: 'bridgetkscott@gmail.com', metros: BRIDGET },
+  { email: 'briand@briandkitchens.com', metros: BRIAND },
 ]
 
 const digits = (p: string | null) => (p || '').replace(/\D/g, '').slice(-10)
@@ -183,7 +209,8 @@ async function main() {
 
     // Scrape replacements (target = number we're deleting; MAX_TARGET caps it for testing).
     const tag = `smallshop:${s.email}`
-    const target = process.env.MAX_TARGET ? Math.min(bigIds.length, +process.env.MAX_TARGET) : bigIds.length
+    const target = process.env.SCRAPE_TARGET ? +process.env.SCRAPE_TARGET
+      : (process.env.MAX_TARGET ? Math.min(bigIds.length, +process.env.MAX_TARGET) : bigIds.length)
     const { kept, dist } = await scrapeSmallShops(s.metros, target, existing, tag)
     console.log(`  scraped ${kept.length} small shops. reviews:`, dist)
     // reserve their phones so setters don't overlap in this same run

@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch, Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass, CaretRight, Clock, CalendarBlank, PaperPlaneTilt, CopySimple } from '@phosphor-icons/react'
+import { Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch, Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass, CaretRight, Clock, CalendarBlank, PaperPlaneTilt, CopySimple, NotePencil } from '@phosphor-icons/react'
 import { SalesPageHeader, SalesLoadingState } from '@/app/sales/_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import { leadTimeZone, wallClockToUtc, tzAbbrev } from '@/lib/time/lead-timezone'
+import { leadTimeZone, wallClockToUtc, tzAbbrev, tzToday } from '@/lib/time/lead-timezone'
 
 const EASE = [0.22, 1, 0.36, 1] as const
 
@@ -53,6 +53,8 @@ const STATUS_META: Record<string, { label: string; pill: string; dot: string; ro
 
 const STATUS_FILTERS: Array<{ key: string; label: string }> = [
   { key: 'all',           label: 'All' },
+  { key: '__due',         label: 'Due' },
+  { key: '__stale',       label: 'Untouched 14d+' },
   { key: 'new',           label: 'New' },
   { key: 'called',        label: 'Called' },
   { key: 'voicemail',     label: 'Voicemail' },
@@ -99,6 +101,17 @@ export function LeadsWorkspace({
   // Page-scoped modal so any row can pop the demo-set picker without
   // each row having to own its own state.
   const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
+  // Quick-notes modal: jot a note from the list without leaving the page.
+  const [notesLeadId, setNotesLeadId] = useState<string | null>(null)
+  // Deep link: /sales/leads?powerdial=1 (the Overview CTA) starts a
+  // session as soon as leads + the dialer are ready. One-shot; read at
+  // mount from location (useSearchParams would force a Suspense wrap).
+  const powerDialPending = useRef(false)
+  useEffect(() => {
+    try {
+      powerDialPending.current = new URLSearchParams(window.location.search).get('powerdial') === '1'
+    } catch { /* SSR/no-window: stays false */ }
+  }, [])
   const [findingEmails, setFindingEmails] = useState(false)
   const [outreachModal, setOutreachModal] = useState<{
     leads: Pick<Lead, 'id' | 'business_name'>[]
@@ -298,7 +311,74 @@ export function LeadsWorkspace({
     }
   }
 
+  useEffect(() => {
+    if (!powerDialPending.current || loading || leads.length === 0) return
+    const t = setTimeout(() => {
+      if (!powerDialPending.current) return
+      powerDialPending.current = false
+      startPowerDial()
+    }, 900) // give the floating Dialer a beat to register window.cgPowerDial
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, leads])
+
+  const startPowerDial = () => {
+                const callable = filtered
+                  .filter((l) => !!l.phone && l.status !== 'do_not_call' && l.status !== 'closed' && l.status !== 'dead')
+                  .map((l) => ({
+                    leadId: l.id,
+                    phone: l.phone!,
+                    businessName: l.business_name,
+                    contactName: l.contact_name,
+                  }))
+                if (callable.length === 0) {
+                  alert('No callable leads in the current filter. Power dial only runs against leads with a phone number that aren\'t Closed/Dead/DNC.')
+                  return
+                }
+                if (typeof window === 'undefined' || !window.cgPowerDial) {
+                  alert('Dialer not loaded yet. Try again in a second.')
+                  return
+                }
+                if (!confirm(`Power dial through ${callable.length} lead${callable.length === 1 ? '' : 's'}? Auto-dials each one with a 5-second pause between calls. Pause/skip/stop available throughout.`)) return
+                window.cgPowerDial(callable)
+  }
+
   const updateStatus = async (leadId: string, status: string) => {
+    // "Callback" isn't a status - it schedules a follow-up 2 business
+    // days out (weekends skipped: Thu->Mon, Fri->Tue) at 9:30am in the
+    // LEAD'S timezone (same tz derivation the demo modal uses), and
+    // marks the lead called so it resurfaces in the call list that day.
+    if (status === '__callback') {
+      const lead = leads.find((x) => x.id === leadId)
+      const tz = leadTimeZone(lead?.state, lead?.phone) || 'America/Chicago'
+      const t = tzToday(tz)
+      const dt = new Date(Date.UTC(t.y, t.mo - 1, t.d))
+      let added = 0
+      while (added < 2) {
+        dt.setUTCDate(dt.getUTCDate() + 1)
+        const dow = dt.getUTCDay()
+        if (dow !== 0 && dow !== 6) added++
+      }
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const iso = wallClockToUtc(
+        `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}T09:30`,
+        tz,
+      )
+      setUpdatingStatusId(leadId)
+      setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, status: 'called', follow_up_at: iso } : l))
+      try {
+        await fetchWithAuth(`/api/sales/leads/${leadId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'called', follow_up_at: iso, touched: true }),
+        })
+      } catch {
+        load()
+      } finally {
+        setUpdatingStatusId(null)
+      }
+      return
+    }
     setUpdatingStatusId(leadId)
     // Optimistic update
     setLeads((prev) => prev.map((l) => l.id === leadId ? { ...l, status } : l))
@@ -359,7 +439,15 @@ export function LeadsWorkspace({
 
   const filtered = useMemo(() => {
     let out = [...leads]
-    if (filter !== 'all') out = out.filter((l) => l.status === filter)
+    if (filter === '__due') {
+      // Follow-ups due now or overdue - the calls that must happen today.
+      const cutoff = Date.now()
+      out = out.filter((l) => l.follow_up_at && new Date(l.follow_up_at).getTime() <= cutoff)
+    } else if (filter === '__stale') {
+      // Claimed 14+ days ago and still sitting at 'new' - dying inventory.
+      const cutoff = Date.now() - 14 * 86_400_000
+      out = out.filter((l) => l.status === 'new' && l.claimed_at && new Date(l.claimed_at).getTime() < cutoff)
+    } else if (filter !== 'all') out = out.filter((l) => l.status === filter)
     if (search.trim()) {
       const q = search.toLowerCase()
       out = out.filter((l) =>
@@ -397,6 +485,10 @@ export function LeadsWorkspace({
   const counts = useMemo(() => {
     const c: Record<string, number> = { all: leads.length }
     for (const l of leads) c[l.status] = (c[l.status] || 0) + 1
+    const nowT = Date.now()
+    const staleT = nowT - 14 * 86_400_000
+    c['__due'] = leads.filter((l) => l.follow_up_at && new Date(l.follow_up_at).getTime() <= nowT).length
+    c['__stale'] = leads.filter((l) => l.status === 'new' && l.claimed_at && new Date(l.claimed_at).getTime() < staleT).length
     return c
   }, [leads])
 
@@ -422,27 +514,9 @@ export function LeadsWorkspace({
         action={
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => {
-                const callable = filtered
-                  .filter((l) => !!l.phone && l.status !== 'do_not_call' && l.status !== 'closed' && l.status !== 'dead')
-                  .map((l) => ({
-                    leadId: l.id,
-                    phone: l.phone!,
-                    businessName: l.business_name,
-                    contactName: l.contact_name,
-                  }))
-                if (callable.length === 0) {
-                  alert('No callable leads in the current filter. Power dial only runs against leads with a phone number that aren\'t Closed/Dead/DNC.')
-                  return
-                }
-                if (typeof window === 'undefined' || !window.cgPowerDial) {
-                  alert('Dialer not loaded yet. Try again in a second.')
-                  return
-                }
-                if (!confirm(`Power dial through ${callable.length} lead${callable.length === 1 ? '' : 's'}? Auto-dials each one with a 5-second pause between calls. Pause/skip/stop available throughout.`)) return
-                window.cgPowerDial(callable)
-              }}
-              className="inline-flex items-center gap-1.5 text-sm bg-violet-600 text-white hover:bg-violet-700 rounded-lg px-3.5 py-2 transition-colors shadow-sm"
+              onClick={startPowerDial}
+              className="inline-flex items-center gap-1.5 text-sm text-white rounded-lg px-3.5 py-2 transition-colors shadow-sm hover:brightness-110"
+              style={{ background: 'var(--dblue)' }}
               title="Auto-dial through the filtered list"
             >
               <PhoneCall weight="fill" className="w-4 h-4" /> Power dial
@@ -568,7 +642,9 @@ export function LeadsWorkspace({
                     className={`text-xs rounded-full px-2.5 py-1 border transition-all ${
                       active
                         ? 'bg-gray-900 text-white border-gray-900'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                        : f.key === '__due'
+                          ? 'bg-rose-50 text-rose-700 border-rose-200 hover:border-rose-400'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
                     }`}
                   >
                     {f.label}
@@ -664,7 +740,7 @@ export function LeadsWorkspace({
                   className="text-xs font-mono uppercase tracking-wider rounded-lg border border-sky-300 bg-white px-3 py-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <option value="" disabled>Set status…</option>
-                  {STATUS_FILTERS.filter((s) => s.key !== 'all').map((s) => (
+                  {STATUS_FILTERS.filter((s) => s.key !== 'all' && !s.key.startsWith('__')).map((s) => (
                     <option key={s.key} value={s.key}>{s.label}</option>
                   ))}
                 </select>
@@ -806,9 +882,10 @@ export function LeadsWorkspace({
                               backgroundSize: '0.85em',
                             }}
                           >
-                            {STATUS_FILTERS.filter((s) => s.key !== 'all').map((s) => (
+                            {STATUS_FILTERS.filter((s) => s.key !== 'all' && !s.key.startsWith('__')).map((s) => (
                               <option key={s.key} value={s.key}>{s.label}</option>
                             ))}
+                            <option value="__callback">Callback · 2 days</option>
                           </select>
                         </div>
                         {l.phone && (
@@ -826,6 +903,15 @@ export function LeadsWorkspace({
                             <Phone weight="bold" className="w-4 h-4" />
                           </a>
                         )}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNotesLeadId(l.id) }}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                          aria-label="Notes"
+                          title="Notes - jot what happened on the call"
+                        >
+                          <NotePencil weight="bold" className="w-4 h-4" />
+                        </button>
                         <button
                           type="button"
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDemoModalLeadId(l.id) }}
@@ -881,6 +967,25 @@ export function LeadsWorkspace({
           )}
         </motion.div>
       )}
+      {notesLeadId && (() => {
+        const lead = leads.find((x) => x.id === notesLeadId)
+        if (!lead) return null
+        return (
+          <QuickNoteModal
+            leadId={lead.id}
+            businessName={lead.business_name}
+            latest={lead.latest_note || null}
+            detailHref={leadDetailBase ? `${leadDetailBase}/${lead.id}` : null}
+            onClose={() => setNotesLeadId(null)}
+            onSaved={(body) => {
+              setLeads((prev) => prev.map((x) => x.id === lead.id
+                ? { ...x, latest_note: { body, created_at: new Date().toISOString() } }
+                : x))
+              setNotesLeadId(null)
+            }}
+          />
+        )
+      })()}
       {demoModalLeadId && (
         <LeadsDemoSetModal
           leadId={demoModalLeadId}
@@ -1174,5 +1279,93 @@ function QualityChip({ lead }: { lead: Lead }) {
         <span className="opacity-70">· {lead.google_review_count}</span>
       )}
     </span>
+  )
+}
+
+
+/**
+ * Quick-notes modal: shows the lead's latest note and appends a new one
+ * via POST /api/sales/leads/[id]/notes without leaving the list.
+ */
+function QuickNoteModal({ leadId, businessName, latest, detailHref, onClose, onSaved }: {
+  leadId: string
+  businessName: string
+  latest: { body: string; created_at: string } | null
+  detailHref: string | null
+  onClose: () => void
+  onSaved: (body: string) => void
+}) {
+  const [body, setBody] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+  const save = async () => {
+    const trimmed = body.trim()
+    if (!trimmed || saving) return
+    setSaving(true); setErr('')
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: trimmed }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || j?.success === false) { setErr(j?.error || `Failed (${r.status})`); return }
+      onSaved(trimmed)
+    } catch {
+      setErr('Could not save the note - try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <div className="fixed inset-0 z-[95] flex items-center justify-center px-4">
+      <button aria-label="Close" onClick={onClose} className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Notes</div>
+          <div className="text-sm font-semibold text-gray-900 truncate">{businessName}</div>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          {latest ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5">
+              <div className="text-xs text-gray-700 whitespace-pre-wrap">{latest.body}</div>
+              <div className="text-[10px] text-gray-400 mt-1.5">
+                Last note · {new Date(latest.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">No notes yet - this becomes the first one.</p>
+          )}
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') save() }}
+            placeholder="What happened on the call?"
+            rows={3}
+            autoFocus
+            className="w-full text-sm bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:bg-white focus:border-gray-400 resize-none"
+          />
+          {err && <p className="text-xs text-red-600">{err}</p>}
+        </div>
+        <div className="px-5 py-3.5 border-t border-gray-100 flex items-center justify-between gap-3">
+          {detailHref ? (
+            <Link href={detailHref} className="text-xs text-gray-500 hover:text-gray-900">
+              Full history →
+            </Link>
+          ) : <span />}
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5">Cancel</button>
+            <button
+              onClick={save}
+              disabled={!body.trim() || saving}
+              className="inline-flex items-center gap-1.5 bg-gray-900 text-white text-sm font-medium rounded-lg px-4 py-1.5 hover:bg-gray-800 disabled:opacity-40"
+            >
+              {saving ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : null}
+              Save note
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
