@@ -23,9 +23,9 @@ export type MapHome = { lat: number; lng: number }
 export type HeatCell = { lat: number; lng: number; w: number }
 export type MapHover = { x: number; y: number; title: string; sub: string; color: string }
 
-const DEMO_COLOR = '#3B9EFF'
-const CLIENT_COLOR = '#30D158'
-const HOME_COLOR = '#9BE7FF'
+const DEMO_COLOR = '#4DA3FF'
+const CLIENT_COLOR = '#C9F26F'
+const HOME_COLOR = '#F4FFE0'
 
 /* ------------------------------------------------------------------ */
 /* Albers equal-area conic projection (continental US)                 */
@@ -127,20 +127,20 @@ function StateMesh({ feature, onHover }: { feature: StateFeature; onHover: (h: M
         onPointerMove={(e: any) => {
           e.stopPropagation()
           setHovered(true)
-          onHover({ x: e.clientX, y: e.clientY, title: feature.name, sub: 'Territory', color: '#8FA3C8' })
+          onHover({ x: e.clientX, y: e.clientY, title: feature.name, sub: 'Territory', color: '#A9C5AE' })
         }}
         onPointerOut={() => { setHovered(false); onHover(null) }}
       >
         <meshStandardMaterial
-          color={hovered ? '#16233F' : '#0B1424'}
-          emissive={hovered ? '#12315E' : '#050B16'}
+          color={hovered ? '#2A523B' : '#1D3B2A'}
+          emissive={hovered ? '#2F6B44' : '#0E2117'}
           emissiveIntensity={hovered ? 0.9 : 0.55}
           roughness={0.85}
           metalness={0.1}
         />
       </mesh>
       <lineSegments geometry={lineGeo} position={[0, 0, 0.06]}>
-        <lineBasicMaterial color={hovered ? '#4D8DFF' : '#233A63'} transparent opacity={hovered ? 0.95 : 0.55} />
+        <lineBasicMaterial color={hovered ? '#C9F26F' : '#3E5F48'} transparent opacity={hovered ? 0.95 : 0.55} />
       </lineSegments>
     </group>
   )
@@ -152,8 +152,8 @@ function StateMesh({ feature, onHover }: { feature: StateFeature; onHover: (h: M
 function HeatLayer({ heat }: { heat: HeatCell[] }) {
   const tex = useMemo(() => getGlowTexture(), [])
   // Cold (sparse) cells glow deep blue, hot (dense) cells burn orange.
-  const cold = useMemo(() => new THREE.Color('#1D4ED8'), [])
-  const hot = useMemo(() => new THREE.Color('#FF7A29'), [])
+  const cold = useMemo(() => new THREE.Color('#2E6FBF'), [])
+  const hot = useMemo(() => new THREE.Color('#FFAB3D'), [])
   return (
     <group>
       {heat.map((c, i) => {
@@ -414,7 +414,7 @@ export default function TerritoryMap({ points, home, heat, height = 440 }: {
     <GLBoundary
       fallback={
         <div style={{ height }} className="flex items-center justify-center text-sm" >
-          <span style={{ color: '#5B6B8C' }}>Map unavailable on this device.</span>
+          <span style={{ color: '#6E7A6B' }}>Map unavailable on this device.</span>
         </div>
       }
     >
@@ -426,7 +426,7 @@ export default function TerritoryMap({ points, home, heat, height = 440 }: {
           style={{ background: 'transparent' }}
         >
           <ambientLight intensity={1.15} />
-          <directionalLight position={[60, -40, 120]} intensity={0.9} color="#BBD4FF" />
+          <directionalLight position={[60, -40, 120]} intensity={0.85} color="#D7EFC9" />
           <Scene states={states} points={points} home={home} heat={heat} onHover={setHover} reduce={reduce} />
           <OrbitControls
             enablePan={false}
@@ -452,16 +452,16 @@ export default function TerritoryMap({ points, home, heat, height = 440 }: {
               className="absolute z-10 pointer-events-none rounded-xl px-3 py-2"
               style={{
                 left, top, width: 208,
-                background: 'rgba(10, 16, 30, 0.86)',
-                border: '1px solid rgba(120, 160, 255, 0.22)',
+                background: 'rgba(14, 30, 21, 0.9)',
+                border: '1px solid rgba(201, 242, 111, 0.28)',
                 backdropFilter: 'blur(10px)',
-                boxShadow: `0 16px 42px -14px rgba(0,0,0,0.8), 0 0 24px -8px ${hover.color}55`,
+                boxShadow: `0 16px 42px -14px rgba(0,0,0,0.6), 0 0 24px -8px ${hover.color}55`,
               }}
             >
-              <div className="text-[13px] font-semibold truncate" style={{ color: '#EAF1FF' }}>{hover.title}</div>
+              <div className="text-[13px] font-semibold truncate" style={{ color: '#F4F7EC' }}>{hover.title}</div>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: hover.color, boxShadow: `0 0 8px ${hover.color}` }} />
-                <span className="text-[11px] font-mono" style={{ color: '#8FA3C8' }}>{hover.sub}</span>
+                <span className="text-[11px] font-mono" style={{ color: '#A9C5AE' }}>{hover.sub}</span>
               </div>
             </div>
           )
