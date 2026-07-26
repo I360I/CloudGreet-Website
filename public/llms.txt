@@ -44,6 +44,10 @@ CloudGreet exists because home-service businesses miss 20-30% of their inbound c
 - Customer data is never sold or shared with third parties for marketing
 - Full details: https://cloudgreet.com/trust
 
+## Customer results
+
+- Smart Ride Central Ohio (owner-operated airport transportation): grew from 5 completed rides a month to 66 in the months after putting CloudGreet on its phones; 45% of identified customers have booked more than once. The owner publishes a live, auto-updated dashboard of these numbers at https://smartridecentralohio.com/smart-ride-dashboard/ and the case study is at https://cloudgreet.com/customers/smart-ride
+
 ## Who it's for (and not for)
 
 Best fit: home-service and trade businesses that get booked jobs from inbound phone calls - HVAC, plumbing, roofing, electrical, garage doors, landscaping, pest control, and similar. Not designed for e-commerce support desks, medical scheduling requiring HIPAA workflows, or businesses that don't take customer calls.
@@ -53,6 +57,7 @@ Best fit: home-service and trade businesses that get booked jobs from inbound ph
 - [Home](https://cloudgreet.com/)
 - [Contact / book a demo](https://cloudgreet.com/contact)
 - [Blog](https://cloudgreet.com/blog)
+- [Customer results: Smart Ride Central Ohio](https://cloudgreet.com/customers/smart-ride)
 - [Trust, security & privacy](https://cloudgreet.com/trust)
 - [TCPA & A2P compliance](https://cloudgreet.com/tcpa-a2p)
 - [Privacy](https://cloudgreet.com/privacy)
