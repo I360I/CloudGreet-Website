@@ -17,7 +17,6 @@ export const runtime = 'nodejs'
  *   hours      - per-hour-of-day histogram (best call window)
  *   funnel     - lead statuses now + demo set/held/won + rates
  *   money      - earned by day (+cumulative), owed, mrr, avg deal
- *   sms        - sent/received/delivered in range
  *   efficiency - dials per demo, connects per demo, demos per 100 dials
  *   days       - per-day table rows (date, dials, connects, rate, talk, demos, earned)
  */
@@ -33,7 +32,7 @@ export async function GET(request: NextRequest) {
     const since = new Date(Date.now() - rangeDays * 86_400_000)
     const sinceIso = since.toISOString()
 
-    const [callsRes, assignsRes, closesRes, ledgerRes, owedRes, msgsRes] = await Promise.all([
+    const [callsRes, assignsRes, closesRes, ledgerRes, owedRes] = await Promise.all([
       supabaseAdmin
         .from('rep_calls')
         .select('status, duration_seconds, started_at')
@@ -64,19 +63,12 @@ export async function GET(request: NextRequest) {
         .eq('rep_id', auth.userId)
         .is('payout_id', null)
         .limit(5000),
-      supabaseAdmin
-        .from('rep_messages')
-        .select('direction, status')
-        .eq('rep_id', auth.userId)
-        .gte('created_at', sinceIso)
-        .limit(10000),
     ])
 
     const calls = callsRes.data || []
     const assigns = assignsRes.data || []
     const closes = closesRes.data || []
     const ledger = ledgerRes.data || []
-    const msgs = msgsRes.data || []
 
     // ---- per-day + per-hour activity ----
     const dayKey = (iso: string) => iso.slice(0, 10)
@@ -139,11 +131,6 @@ export async function GET(request: NextRequest) {
     const earnedTotal = (ledger as any[]).reduce((s, r) => s + (r.commission_cents || 0), 0)
     const owed = ((owedRes.data || []) as any[]).reduce((s, r) => s + (r.commission_cents || 0), 0)
 
-    // ---- sms ----
-    const smsOut = (msgs as any[]).filter((m) => m.direction === 'outbound')
-    const smsIn = (msgs as any[]).filter((m) => m.direction === 'inbound').length
-    const smsDelivered = smsOut.filter((m) => m.status === 'delivered').length
-
     const demosSetCount = demosSetRange.length
     return NextResponse.json({
       success: true,
@@ -175,7 +162,6 @@ export async function GET(request: NextRequest) {
         paid_closes: paid.length,
         series: earnedSeries,
       },
-      sms: { sent: smsOut.length, received: smsIn, delivered: smsDelivered },
       efficiency: {
         dials_per_demo: demosSetCount > 0 ? Math.round(totDials / demosSetCount) : null,
         connects_per_demo: demosSetCount > 0 ? Math.round(totConnects / demosSetCount) : null,

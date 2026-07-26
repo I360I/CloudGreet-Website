@@ -24,7 +24,6 @@ type Metrics = {
     earned_cents: number; owed_cents: number; avg_deal_cents: number; paid_closes: number
     series: Array<{ date: string; earned: number; cumulative: number }>
   }
-  sms: { sent: number; received: number; delivered: number }
   efficiency: { dials_per_demo: number | null; connects_per_demo: number | null; demos_per_100_dials: number | null }
   days: Array<{ date: string; dials: number; connects: number; rate: number; talk_seconds: number; demos: number; earned_cents: number }>
 }
@@ -94,6 +93,16 @@ export default function MetricsPage() {
     return active.reduce((best, h) =>
       (h.connects / h.dials) > (best.connects / best.dials) ? h : best)
   }, [data])
+
+  // Highest-dial day in range: a personal record to chase.
+  const bestDay = useMemo(() => {
+    if (!data?.days?.length) return null
+    const b = data.days.reduce((a, d) => (d.dials > a.dials ? d : a))
+    return b.dials > 0 ? b : null
+  }, [data])
+  const bestDayLabel = bestDay
+    ? new Date(bestDay.date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : ''
 
   const th = (key: typeof sortKey, label: string, align = 'right') => (
     <th
@@ -263,8 +272,8 @@ export default function MetricsPage() {
                 ['Dials / demo', data.efficiency.dials_per_demo ?? '--'],
                 ['Demos / 100 dials', data.efficiency.demos_per_100_dials ?? '--'],
                 ['Avg deal', data.money.avg_deal_cents ? `${dollars(data.money.avg_deal_cents)}/mo` : '--'],
-                ['Texts sent', `${data.sms.sent}${data.sms.sent ? ` · ${Math.round((data.sms.delivered / Math.max(data.sms.sent, 1)) * 100)}% delivered` : ''}`],
-                ['Replies', data.sms.received],
+                ['Connects / demo', data.efficiency.connects_per_demo ?? '--'],
+                ['Best day', bestDay ? `${bestDay.dials} dials · ${bestDayLabel}` : '--'],
               ] as const).map(([label, val]) => (
                 <div key={label as string} className="bg-white border border-gray-200 rounded-2xl px-4 py-3.5">
                   <div className="text-[10px] font-mono uppercase tracking-[0.1em]" style={{ color: 'var(--dmut)' }}>{label}</div>
