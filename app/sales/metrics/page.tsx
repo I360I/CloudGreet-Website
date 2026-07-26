@@ -290,6 +290,32 @@ export default function MetricsPage() {
               ))}
             </motion.div>
 
+            {/* ---- Territory map - flat on the page background ---- */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } } }}
+              className="pt-4">
+              <div className="flex items-baseline justify-between flex-wrap gap-2 mb-1 px-1">
+                <div className="text-[10px] font-mono uppercase tracking-[0.12em]" style={{ color: 'var(--dmut)' }}>Your territory</div>
+                <div className="flex items-center gap-4 text-[11px]" style={{ color: 'var(--dmut)' }}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full" style={{ background: 'var(--dblue)' }} />
+                    {data.map.points.filter((p) => p.kind === 'demo').length} demos
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full" style={{ background: 'var(--dgreen)' }} />
+                    {data.map.points.filter((p) => p.kind === 'client').length} clients
+                  </span>
+                  <span>shaded = your leads</span>
+                </div>
+              </div>
+              <div className="max-w-4xl mx-auto">
+                <TerritoryMap points={data.map.points} home={data.map.home} density={data.map.states} />
+              </div>
+              {data.map.points.length === 0 && (
+                <p className="text-center text-xs -mt-6 relative z-10" style={{ color: 'var(--dmut2)' }}>
+                  Book a demo and it appears here in blue. Close it and it turns green.
+                </p>
+              )}
+            </motion.div>
             {/* ---- Sortable daily table ---- */}
             <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } } }}
               className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
@@ -303,9 +329,9 @@ export default function MetricsPage() {
                   {hideEmpty ? 'Hiding empty days' : 'Showing all days'}
                 </button>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[420px]">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-gray-100">
+                  <thead className="sticky top-0 z-10 bg-white" style={{ boxShadow: 'inset 0 -1px 0 var(--dline)' }}>
                     <tr>
                       {th('date', 'Date', 'left')}
                       {th('dials', 'Dials')}
@@ -336,32 +362,6 @@ export default function MetricsPage() {
               </div>
             </motion.div>
 
-            {/* ---- Territory map - flat on the page background ---- */}
-            <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } } }}
-              className="pt-4">
-              <div className="flex items-baseline justify-between flex-wrap gap-2 mb-1 px-1">
-                <div className="text-[10px] font-mono uppercase tracking-[0.12em]" style={{ color: 'var(--dmut)' }}>Your territory</div>
-                <div className="flex items-center gap-4 text-[11px]" style={{ color: 'var(--dmut)' }}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full" style={{ background: 'var(--dblue)' }} />
-                    {data.map.points.filter((p) => p.kind === 'demo').length} demos
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full" style={{ background: 'var(--dgreen)' }} />
-                    {data.map.points.filter((p) => p.kind === 'client').length} clients
-                  </span>
-                  <span>shaded = your leads</span>
-                </div>
-              </div>
-              <div className="max-w-4xl mx-auto">
-                <TerritoryMap points={data.map.points} home={data.map.home} density={data.map.states} />
-              </div>
-              {data.map.points.length === 0 && (
-                <p className="text-center text-xs -mt-6 relative z-10" style={{ color: 'var(--dmut2)' }}>
-                  Book a demo and it appears here in blue. Close it and it turns green.
-                </p>
-              )}
-            </motion.div>
           </motion.div>
         )}
       </section>
