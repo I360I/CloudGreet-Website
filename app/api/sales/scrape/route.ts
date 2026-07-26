@@ -46,11 +46,25 @@ async function getDailyUsed(userId: string): Promise<number> {
   return used
 }
 
+/** Any job 'running' longer than 15 minutes is dead (serverless caps at
+ * 5); mark it failed so the UI stops spinning. Fire-and-forget. */
+async function healStuckJobs() {
+  try {
+    await supabaseAdmin
+      .from('scrape_jobs')
+      .update({ status: 'failed' })
+      .eq('status', 'running')
+      .lt('created_at', new Date(Date.now() - 15 * 60_000).toISOString())
+  } catch { /* non-fatal */ }
+}
+
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request)
   if (!auth.success || !auth.userId || !REP_TOOL_ROLES.has(auth.role || '')) {
     return NextResponse.json({ error: 'Sales role required' }, { status: 401 })
   }
+
+  void healStuckJobs()
 
   const { data: jobs, error } = await supabaseAdmin
     .from('scrape_jobs')

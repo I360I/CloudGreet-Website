@@ -190,6 +190,13 @@ async function* runQualityMode(
   let totalYielded = 0
   let totalDropped = 0
 
+  // Wall-clock budget: a narrow band (e.g. 2.0-3.0 stars nationwide)
+  // matches so little that the metro x trade sweep would page past the
+  // serverless timeout, get killed mid-run, and leave the job stuck
+  // 'running' forever (exactly what happened 2026-07-23). Stop early
+  // and return partial results so the job COMPLETES.
+  const deadline = Date.now() + Number(process.env.SCRAPER_RUN_BUDGET_MS || '190000')
+
   // Build the cell list and shuffle so NYC isn't always first. Without
   // a shuffle, even after the per-cell cap, the early cells get first
   // crack at a constant set of leads each run; the same NYC plumbers
@@ -208,6 +215,10 @@ async function* runQualityMode(
   outer: for (const { metro, cfg } of cells) {
     {
       if (totalYielded >= limit) break outer
+      if (Date.now() > deadline) {
+        diag?.push(`time budget reached after ${totalYielded} kept - returning partial`)
+        break outer
+      }
       const query = `${cfg.textQuery} near ${metro.name} ${metro.state}`
       let kept = 0
       let dropped = 0
