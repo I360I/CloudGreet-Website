@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch, Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass, CaretRight, Clock, CalendarBlank, PaperPlaneTilt, CopySimple } from '@phosphor-icons/react'
+import { Phone, PhoneCall, EnvelopeSimple, CheckCircle, WarningCircle, CircleNotch, Target, UploadSimple, DownloadSimple, FileCsv, MagnifyingGlass, CaretRight, Clock, CalendarBlank, PaperPlaneTilt, CopySimple, NotePencil } from '@phosphor-icons/react'
 import { SalesPageHeader, SalesLoadingState } from '@/app/sales/_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
 import { leadTimeZone, wallClockToUtc, tzAbbrev } from '@/lib/time/lead-timezone'
@@ -39,18 +39,16 @@ type Lead = {
   latest_note?: { body: string; created_at: string } | null
 }
 
-// CRM Pro: status color lives in the chip + a slim left accent bar on the
-// row (professional scan pattern), not full-row background washes.
-const STATUS_META: Record<string, { label: string; pill: string; dot: string; row: string; accent: string }> = {
-  new:             { label: 'New',         pill: 'bg-gray-100 text-gray-700',       dot: 'bg-gray-400',    row: 'hover:bg-gray-50/60',    accent: 'transparent' },
-  called:          { label: 'Called',      pill: 'bg-sky-50 text-sky-700',          dot: 'bg-sky-500',     row: 'hover:bg-gray-50/60',    accent: '#0EA5E9' },
-  voicemail:       { label: 'Voicemail',   pill: 'bg-violet-50 text-violet-700',    dot: 'bg-violet-500',  row: 'hover:bg-gray-50/60',    accent: '#8B5CF6' },
-  interested:      { label: 'Interested',  pill: 'bg-amber-50 text-amber-800',      dot: 'bg-amber-500',   row: 'hover:bg-gray-50/60',    accent: '#F59E0B' },
-  demo_scheduled:  { label: 'Demo set',    pill: 'bg-amber-100 text-amber-900',     dot: 'bg-amber-600',   row: 'hover:bg-gray-50/60',    accent: '#D97706' },
-  proposal_sent:   { label: 'Proposal',    pill: 'bg-emerald-50 text-emerald-700',  dot: 'bg-emerald-500', row: 'hover:bg-gray-50/60',    accent: '#10B981' },
-  closed:          { label: 'Closed',      pill: 'bg-emerald-100 text-emerald-900', dot: 'bg-emerald-600', row: 'hover:bg-gray-50/60',    accent: '#059669' },
-  dead:            { label: 'Dead',        pill: 'bg-gray-200 text-gray-500',       dot: 'bg-gray-300',    row: 'opacity-45 hover:opacity-70', accent: 'transparent' },
-  do_not_call:     { label: 'DNC',         pill: 'bg-red-50 text-red-700',          dot: 'bg-red-500',     row: 'hover:bg-gray-50/60',    accent: '#EF4444' },
+const STATUS_META: Record<string, { label: string; pill: string; dot: string; row: string }> = {
+  new:             { label: 'New',         pill: 'bg-gray-100 text-gray-700',          dot: 'bg-gray-400',     row: '' },
+  called:          { label: 'Called',      pill: 'bg-sky-100 text-sky-700',            dot: 'bg-sky-500',      row: 'bg-sky-100/70 hover:bg-sky-100' },
+  voicemail:       { label: 'Voicemail',   pill: 'bg-violet-100 text-violet-700',      dot: 'bg-violet-500',   row: 'bg-violet-100/70 hover:bg-violet-100' },
+  interested:      { label: 'Interested',  pill: 'bg-amber-100 text-amber-800',        dot: 'bg-amber-500',    row: 'bg-amber-100/80 hover:bg-amber-100' },
+  demo_scheduled:  { label: 'Demo set',    pill: 'bg-amber-200 text-amber-900',        dot: 'bg-amber-600',    row: 'bg-amber-100 hover:bg-amber-200/70' },
+  proposal_sent:   { label: 'Proposal',    pill: 'bg-emerald-100 text-emerald-700',    dot: 'bg-emerald-500',  row: 'bg-emerald-100/70 hover:bg-emerald-100' },
+  closed:          { label: 'Closed',      pill: 'bg-emerald-200 text-emerald-900',    dot: 'bg-emerald-600',  row: 'bg-emerald-100 hover:bg-emerald-200/70' },
+  dead:            { label: 'Dead',        pill: 'bg-gray-200 text-gray-500',          dot: 'bg-gray-300',     row: 'bg-gray-100/80 opacity-50 hover:opacity-75' },
+  do_not_call:     { label: 'DNC',         pill: 'bg-red-100 text-red-700',            dot: 'bg-red-500',      row: 'bg-red-100/70 hover:bg-red-100' },
 }
 
 const STATUS_FILTERS: Array<{ key: string; label: string }> = [
@@ -101,6 +99,8 @@ export function LeadsWorkspace({
   // Page-scoped modal so any row can pop the demo-set picker without
   // each row having to own its own state.
   const [demoModalLeadId, setDemoModalLeadId] = useState<string | null>(null)
+  // Quick-notes modal: jot a note from the list without leaving the page.
+  const [notesLeadId, setNotesLeadId] = useState<string | null>(null)
   const [findingEmails, setFindingEmails] = useState(false)
   const [outreachModal, setOutreachModal] = useState<{
     leads: Pick<Lead, 'id' | 'business_name'>[]
@@ -752,11 +752,10 @@ export function LeadsWorkspace({
                   <motion.li
                     key={l.id}
                     variants={{ hidden: { opacity: 0, y: 4 }, show: { opacity: 1, y: 0, transition: { duration: 0.22, ease: EASE } } }}
-                    className={`px-3 py-2 transition-colors ${
-                      isSelected ? 'bg-sky-50 ring-1 ring-inset ring-sky-300' :
+                    className={`px-3 py-1.5 transition-colors ${
+                      isSelected ? 'bg-sky-100/80 ring-1 ring-inset ring-sky-300' :
                       (meta.row || 'hover:bg-gray-50/60')
                     }`}
-                    style={{ boxShadow: meta.accent !== 'transparent' ? `inset 2.5px 0 0 ${meta.accent}` : undefined }}
                   >
                     <div className="flex items-center gap-2.5">
                       <input
@@ -831,6 +830,15 @@ export function LeadsWorkspace({
                         )}
                         <button
                           type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNotesLeadId(l.id) }}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                          aria-label="Notes"
+                          title="Notes - jot what happened on the call"
+                        >
+                          <NotePencil weight="bold" className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDemoModalLeadId(l.id) }}
                           className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-amber-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
                           aria-label="Mark demo set"
@@ -884,6 +892,25 @@ export function LeadsWorkspace({
           )}
         </motion.div>
       )}
+      {notesLeadId && (() => {
+        const lead = leads.find((x) => x.id === notesLeadId)
+        if (!lead) return null
+        return (
+          <QuickNoteModal
+            leadId={lead.id}
+            businessName={lead.business_name}
+            latest={lead.latest_note || null}
+            detailHref={leadDetailBase ? `${leadDetailBase}/${lead.id}` : null}
+            onClose={() => setNotesLeadId(null)}
+            onSaved={(body) => {
+              setLeads((prev) => prev.map((x) => x.id === lead.id
+                ? { ...x, latest_note: { body, created_at: new Date().toISOString() } }
+                : x))
+              setNotesLeadId(null)
+            }}
+          />
+        )
+      })()}
       {demoModalLeadId && (
         <LeadsDemoSetModal
           leadId={demoModalLeadId}
@@ -1177,5 +1204,93 @@ function QualityChip({ lead }: { lead: Lead }) {
         <span className="opacity-70">· {lead.google_review_count}</span>
       )}
     </span>
+  )
+}
+
+
+/**
+ * Quick-notes modal: shows the lead's latest note and appends a new one
+ * via POST /api/sales/leads/[id]/notes without leaving the list.
+ */
+function QuickNoteModal({ leadId, businessName, latest, detailHref, onClose, onSaved }: {
+  leadId: string
+  businessName: string
+  latest: { body: string; created_at: string } | null
+  detailHref: string | null
+  onClose: () => void
+  onSaved: (body: string) => void
+}) {
+  const [body, setBody] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+  const save = async () => {
+    const trimmed = body.trim()
+    if (!trimmed || saving) return
+    setSaving(true); setErr('')
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: trimmed }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || j?.success === false) { setErr(j?.error || `Failed (${r.status})`); return }
+      onSaved(trimmed)
+    } catch {
+      setErr('Could not save the note - try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <div className="fixed inset-0 z-[95] flex items-center justify-center px-4">
+      <button aria-label="Close" onClick={onClose} className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">Notes</div>
+          <div className="text-sm font-semibold text-gray-900 truncate">{businessName}</div>
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          {latest ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5">
+              <div className="text-xs text-gray-700 whitespace-pre-wrap">{latest.body}</div>
+              <div className="text-[10px] text-gray-400 mt-1.5">
+                Last note · {new Date(latest.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">No notes yet - this becomes the first one.</p>
+          )}
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') save() }}
+            placeholder="What happened on the call?"
+            rows={3}
+            autoFocus
+            className="w-full text-sm bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:bg-white focus:border-gray-400 resize-none"
+          />
+          {err && <p className="text-xs text-red-600">{err}</p>}
+        </div>
+        <div className="px-5 py-3.5 border-t border-gray-100 flex items-center justify-between gap-3">
+          {detailHref ? (
+            <Link href={detailHref} className="text-xs text-gray-500 hover:text-gray-900">
+              Full history →
+            </Link>
+          ) : <span />}
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="text-sm text-gray-600 hover:text-gray-900 px-3 py-1.5">Cancel</button>
+            <button
+              onClick={save}
+              disabled={!body.trim() || saving}
+              className="inline-flex items-center gap-1.5 bg-gray-900 text-white text-sm font-medium rounded-lg px-4 py-1.5 hover:bg-gray-800 disabled:opacity-40"
+            >
+              {saving ? <CircleNotch className="w-3.5 h-3.5 animate-spin" /> : null}
+              Save note
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

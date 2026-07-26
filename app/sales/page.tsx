@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, CalendarBlank } from '@phosphor-icons/react'
+import { Phone, ArrowRight, WarningCircle, Trophy, CaretRight, Coffee, CalendarBlank, PhoneCall } from '@phosphor-icons/react'
 import { SalesShell, SalesPageHeader, SalesLoadingState } from './_components/SalesShell'
 import { DecayBanner } from './_components/DecayBanner'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
@@ -201,69 +201,73 @@ export default function SalesHome() {
         </div>
 
         {/* Owed banner - biggest number on the page, the thing reps care about */}
+        {/* Command-center stat strip: money, workload, demos, pipeline. */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE }}
-          className="rounded-2xl p-5 mb-5 text-white relative overflow-hidden"
-          style={{ background: 'linear-gradient(150deg, #6366F1 0%, #4F46E5 55%, #4338CA 100%)', boxShadow: '0 8px 24px rgba(79,70,229,.35), inset 0 1px 0 rgba(255,255,255,.25)' }}
+          initial="hidden" animate="show"
+          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5"
         >
-          <div className="flex items-end justify-between gap-4 flex-wrap">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-white/75">
-                Owed to you
-              </div>
-              <div className="text-[30px] leading-none font-bold tabular-nums mt-2">
-                {dollars(data.earnings.owed_cents)}
-              </div>
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
-                <span className="inline-flex text-[11px] font-semibold rounded-full px-2 py-0.5 bg-white/20 tabular-nums">
-                  Pays {nextFriday()}
-                </span>
-                <span className="text-[11px] text-white/70 tabular-nums">
-                  MRR {dollars(data.earnings.mrr_cents)} · auto-deposits via Stripe
-                </span>
-              </div>
-            </div>
-            <Link
-              href="/sales/earnings"
-              className="text-xs font-semibold text-white bg-white/15 hover:bg-white/25 rounded-lg px-3 py-1.5 transition-colors"
-            >
-              Detail
+          <motion.div
+            variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+            className="rounded-2xl p-5 text-white relative overflow-hidden"
+            style={{ background: 'linear-gradient(150deg, #6366F1 0%, #4F46E5 55%, #4338CA 100%)', boxShadow: '0 8px 24px rgba(79,70,229,.35), inset 0 1px 0 rgba(255,255,255,.25)' }}
+          >
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-white/75">Owed to you</div>
+            <div className="text-[26px] leading-none font-bold tabular-nums mt-2">{dollars(data.earnings.owed_cents)}</div>
+            <Link href="/sales/earnings" className="inline-flex mt-2.5 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-white/20 hover:bg-white/30 transition-colors tabular-nums">
+              Pays {nextFriday()} →
             </Link>
-          </div>
+          </motion.div>
+          <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }} className="bg-white border border-gray-200 rounded-2xl p-5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--dmut)' }}>To call</div>
+            <div className="text-[26px] leading-none font-bold tabular-nums text-gray-900 mt-2">{callList.length}</div>
+            <div className="text-[11px] mt-2.5" style={{ color: data.overdue.length > 0 ? '#DC2626' : 'var(--dmut2)' }}>
+              {data.overdue.length > 0 ? `${data.overdue.length} overdue` : 'nothing overdue'}
+            </div>
+          </motion.div>
+          <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }} className="bg-white border border-gray-200 rounded-2xl p-5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--dmut)' }}>Demos today</div>
+            <div className="text-[26px] leading-none font-bold tabular-nums text-gray-900 mt-2">{calToday.length}</div>
+            <div className="text-[11px] mt-2.5 tabular-nums" style={{ color: 'var(--dmut2)' }}>
+              {calToday.length > 0 ? `next at ${fmtTime(calToday[0].start_iso)}` : 'none scheduled'}
+            </div>
+          </motion.div>
+          <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }} className="bg-white border border-gray-200 rounded-2xl p-5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--dmut)' }}>Pipeline</div>
+            <div className="text-[26px] leading-none font-bold tabular-nums text-gray-900 mt-2">{data.deals.length}</div>
+            <div className="text-[11px] mt-2.5 tabular-nums" style={{ color: 'var(--dmut2)' }}>
+              {data.deals.length > 0 ? `${dollars(data.deals.reduce((a, d) => a + d.agreed_monthly_cents, 0))}/mo on the table` : 'submit a close'}
+            </div>
+          </motion.div>
         </motion.div>
 
-        {/* Call list - the actual workday */}
+        {/* Workday grid: call queue is the job (left); demos + pipeline
+            keep score (right). */}
+        <div className="grid lg:grid-cols-5 gap-4 items-start">
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: EASE, delay: 0.05 }}
-          className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-5"
+          className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
         >
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
             <div>
               <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
-                Call list
+                Today&apos;s calls
               </div>
               <div className="text-sm font-medium text-gray-900">
-                {callList.length === 0 ? 'No follow-ups today' : `${callList.length} to call`}
+                {callList.length === 0 ? 'No follow-ups due' : `${callList.length} to call`}
               </div>
             </div>
             <Link
               href="/sales/leads"
-              className="text-xs text-gray-500 hover:text-gray-900 inline-flex items-center gap-1"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-white rounded-lg px-3 py-1.5 transition-colors"
+              style={{ background: 'var(--dblue)' }}
             >
-              All leads <CaretRight className="w-3 h-3" />
+              <PhoneCall weight="fill" className="w-3.5 h-3.5" /> Power dial
             </Link>
           </div>
 
-          {calToday.length > 0 && (
-            <ul className="divide-y divide-gray-100 border-b border-gray-100">
-              {calToday.map((b) => (
-                <CalRow key={b.id} booking={b} />
-              ))}
-            </ul>
-          )}
-          {callList.length === 0 && calToday.length === 0 ? (
+          {callList.length === 0 ? (
             <div className="px-5 py-10 text-center">
               <div className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-gray-100 text-gray-400 mb-3">
                 <Coffee weight="duotone" className="w-5 h-5" />
@@ -277,7 +281,7 @@ export default function SalesHome() {
                 Open my leads <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
-          ) : callList.length === 0 ? null : (
+          ) : (
             <ul className="divide-y divide-gray-100">
               {callList.slice(0, 12).map((l) => (
                 <li
@@ -319,13 +323,21 @@ export default function SalesHome() {
           )}
         </motion.div>
 
-        {/* Upcoming demos from Cal.com - only if rep has connected. */}
-        {calLater.length > 0 && (
+        <div className="lg:col-span-2 space-y-4">
+        {/* Demos: today first, then upcoming. */}
+        {(calToday.length > 0 || calLater.length > 0) && (
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: EASE, delay: 0.08 }}
-            className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-5"
+            className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
           >
+            {calToday.length > 0 && (
+              <ul className="divide-y divide-gray-100 border-b border-gray-100">
+                {calToday.map((b) => (
+                  <CalRow key={b.id} booking={b} />
+                ))}
+              </ul>
+            )}
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
               <div>
                 <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">
@@ -400,6 +412,8 @@ export default function SalesHome() {
             </ul>
           </motion.div>
         )}
+        </div>
+        </div>
       </section>
     </SalesShell>
   )
