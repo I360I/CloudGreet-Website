@@ -1,31 +1,26 @@
 'use client'
 
 /**
- * Territory map: a tilted 3D continental-US scene (react-three-fiber).
- * Albers-projected state shapes float in a dark void, the rep's lead
- * density renders as hot/cold glow zones on the surface, and animated
- * light arcs travel from the rep's home metro (their dialer DID) out to
- * every demo (blue) and every client they're serving (green), each with
- * a pulsing radar ring and a traveling spark.
- *
- * Deliberately more cinematic than the admin globe: additive-blended
- * beams with a halo + hot-core pass, per-arc phase-offset sparks, state
- * hover lift, and a slow idle camera drift. Honors reduced motion.
+ * Territory map: a gently tilted 3D continental US rendered as clean
+ * data-viz on a CloudGreet-blue tile. States are frosted glass shaded
+ * by the rep's lead count (the hot/cold read), thin white arcs connect
+ * the rep's home metro to every booked demo, soft green arcs to every
+ * live client, and the endpoints are crisp white-rimmed dots. No glow
+ * fog, no radar pulses, no sparks - it should read like Stripe, not a
+ * game. Hover any state or dot for details; drag to orbit.
  */
 
 import React, { Component, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 
 export type MapPoint = { id: string; name: string; lat: number; lng: number; kind: 'demo' | 'client' }
 export type MapHome = { lat: number; lng: number }
-export type HeatCell = { lat: number; lng: number; w: number }
-export type MapHover = { x: number; y: number; title: string; sub: string; color: string }
+export type MapHover = { x: number; y: number; title: string; sub: string }
 
-const DEMO_COLOR = '#5AB0FF'
-const CLIENT_COLOR = '#4ADE80'
-const HOME_COLOR = '#CFE8FF'
+const CLIENT_GREEN = '#4ADE80'
+const DEMO_CORE = '#1D4ED8'
 
 /* ------------------------------------------------------------------ */
 /* Albers equal-area conic projection (continental US)                 */
@@ -45,27 +40,7 @@ function project(lat: number, lng: number): [number, number] {
 }
 
 /* ------------------------------------------------------------------ */
-/* Textures (built once per session)                                   */
-/* ------------------------------------------------------------------ */
-let glowTex: THREE.Texture | null = null
-function getGlowTexture(): THREE.Texture {
-  if (glowTex) return glowTex
-  const c = document.createElement('canvas')
-  c.width = c.height = 128
-  const ctx = c.getContext('2d')!
-  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64)
-  g.addColorStop(0, 'rgba(255,255,255,1)')
-  g.addColorStop(0.22, 'rgba(255,255,255,0.5)')
-  g.addColorStop(0.55, 'rgba(255,255,255,0.1)')
-  g.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, 128, 128)
-  glowTex = new THREE.CanvasTexture(c)
-  return glowTex
-}
-
-/* ------------------------------------------------------------------ */
-/* States layer                                                        */
+/* States layer - frosted glass, shaded by lead density                */
 /* ------------------------------------------------------------------ */
 type StateFeature = { name: string; shapes: THREE.Shape[] }
 
@@ -96,9 +71,13 @@ function buildStates(geo: any): StateFeature[] {
   return out
 }
 
-function StateMesh({ feature, onHover }: { feature: StateFeature; onHover: (h: MapHover | null) => void }) {
+function StateMesh({ feature, leads, maxLeads, onHover }: {
+  feature: StateFeature
+  leads: number
+  maxLeads: number
+  onHover: (h: MapHover | null) => void
+}) {
   const [hovered, setHovered] = useState(false)
-  const groupRef = useRef<THREE.Group>(null)
 
   const { fillGeo, lineGeo } = useMemo(() => {
     const fillGeo = new THREE.ShapeGeometry(feature.shapes, 24)
@@ -114,209 +93,95 @@ function StateMesh({ feature, onHover }: { feature: StateFeature; onHover: (h: M
     return { fillGeo, lineGeo }
   }, [feature])
 
-  // Hovered states float up a touch - eased every frame, not snapped.
-  useFrame(() => {
-    if (!groupRef.current) return
-    const target = hovered ? 0.9 : 0
-    groupRef.current.position.z += (target - groupRef.current.position.z) * 0.14
-  })
+  // Choropleth: cold states stay near-transparent, the rep's busiest
+  // states frost toward white. sqrt keeps mid-size counts visible.
+  const density = maxLeads > 0 ? Math.sqrt(leads / maxLeads) : 0
+  const fillOpacity = 0.06 + density * 0.3
 
   return (
-    <group ref={groupRef}>
+    <group>
       <mesh
         geometry={fillGeo}
         onPointerMove={(e: any) => {
           e.stopPropagation()
           setHovered(true)
-          onHover({ x: e.clientX, y: e.clientY, title: feature.name, sub: 'Territory', color: '#9FB4D4' })
+          onHover({
+            x: e.clientX, y: e.clientY, title: feature.name,
+            sub: leads > 0 ? `${leads} lead${leads === 1 ? '' : 's'} assigned to you` : 'No leads here yet',
+          })
         }}
         onPointerOut={() => { setHovered(false); onHover(null) }}
       >
-        <meshStandardMaterial
-          color={hovered ? '#24406E' : '#1B2F52'}
-          emissive={hovered ? '#1D3A66' : '#0D1B33'}
-          emissiveIntensity={hovered ? 0.9 : 0.55}
-          roughness={0.85}
-          metalness={0.1}
+        <meshBasicMaterial
+          color="#FFFFFF"
+          transparent
+          opacity={hovered ? Math.min(fillOpacity + 0.12, 0.5) : fillOpacity}
         />
       </mesh>
-      <lineSegments geometry={lineGeo} position={[0, 0, 0.06]}>
-        <lineBasicMaterial color={hovered ? '#7CC0FF' : '#33507F'} transparent opacity={hovered ? 0.85 : 0.28} />
+      <lineSegments geometry={lineGeo} position={[0, 0, 0.05]}>
+        <lineBasicMaterial color="#FFFFFF" transparent opacity={hovered ? 0.55 : 0.22} />
       </lineSegments>
     </group>
   )
 }
 
 /* ------------------------------------------------------------------ */
-/* Heat layer - hot/cold glow zones                                    */
+/* Arcs - thin, calm, no particles                                     */
 /* ------------------------------------------------------------------ */
-function HeatLayer({ heat }: { heat: HeatCell[] }) {
-  const tex = useMemo(() => getGlowTexture(), [])
-  // Cold (sparse) cells glow deep blue, hot (dense) cells burn orange.
-  const cold = useMemo(() => new THREE.Color('#3A6FB8'), [])
-  const hot = useMemo(() => new THREE.Color('#FFB13D'), [])
+function Arc({ from, to, color, opacity }: {
+  from: [number, number]; to: [number, number]; color: string; opacity: number
+}) {
+  const geo = useMemo(() => {
+    const a = new THREE.Vector3(from[0], from[1], 0.3)
+    const b = new THREE.Vector3(to[0], to[1], 0.3)
+    const dist = a.distanceTo(b)
+    const mid = a.clone().lerp(b, 0.5)
+    mid.z = 1.6 + dist * 0.22
+    const curve = new THREE.QuadraticBezierCurve3(a, mid, b)
+    return new THREE.TubeGeometry(curve, 44, 0.07, 6, false)
+  }, [from, to])
   return (
-    <group>
-      {heat.map((c, i) => {
-        const [x, y] = project(c.lat, c.lng)
-        const color = cold.clone().lerp(hot, Math.pow(c.w, 0.6))
-        const size = 5 + c.w * 10
-        return (
-          <sprite key={i} position={[x, y, 0.15]} scale={[size, size, 1]}>
-            <spriteMaterial
-              map={tex}
-              color={color}
-              transparent
-              opacity={0.15 + c.w * 0.33}
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-            />
-          </sprite>
-        )
-      })}
-    </group>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/* Radar ring pulse                                                    */
-/* ------------------------------------------------------------------ */
-function Pulse({ x, y, color, phase, reduce }: { x: number; y: number; color: string; phase: number; reduce: boolean }) {
-  const ref = useRef<THREE.Mesh>(null)
-  useFrame(({ clock }) => {
-    if (!ref.current) return
-    if (reduce) { ref.current.scale.setScalar(1.6); (ref.current.material as THREE.MeshBasicMaterial).opacity = 0.2; return }
-    const t = (clock.elapsedTime * 0.55 + phase) % 1
-    const s = 0.4 + t * 3.2
-    ref.current.scale.setScalar(s)
-    ;(ref.current.material as THREE.MeshBasicMaterial).opacity = 0.5 * (1 - t)
-  })
-  return (
-    <mesh ref={ref} position={[x, y, 0.22]}>
-      <ringGeometry args={[0.82, 1, 48]} />
-      <meshBasicMaterial color={color} transparent opacity={0.4} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
+    <mesh geometry={geo}>
+      <meshBasicMaterial color={color} transparent opacity={opacity} depthWrite={false} />
     </mesh>
   )
 }
 
 /* ------------------------------------------------------------------ */
-/* Marker (glow dot + hit area + pulse)                                */
+/* Markers - crisp white-rimmed dots                                   */
 /* ------------------------------------------------------------------ */
-function Marker({ point, phase, onHover, reduce }: {
-  point: MapPoint; phase: number; onHover: (h: MapHover | null) => void; reduce: boolean
+function Dot({ x, y, core, size, onHover, hoverInfo }: {
+  x: number; y: number; core: string; size: number
+  onHover: (h: MapHover | null) => void
+  hoverInfo: { title: string; sub: string }
 }) {
-  const [x, y] = project(point.lat, point.lng)
-  const color = point.kind === 'client' ? CLIENT_COLOR : DEMO_COLOR
-  const tex = useMemo(() => getGlowTexture(), [])
   const [hovered, setHovered] = useState(false)
+  const s = hovered ? size * 1.3 : size
   return (
-    <group>
-      <Pulse x={x} y={y} color={color} phase={phase} reduce={reduce} />
-      {/* soft glow */}
-      <sprite position={[x, y, 0.4]} scale={hovered ? [5.2, 5.2, 1] : [3.4, 3.4, 1]}>
-        <spriteMaterial map={tex} color={color} transparent opacity={hovered ? 0.85 : 0.5} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </sprite>
-      {/* hot core */}
-      <mesh position={[x, y, 0.45]}>
-        <sphereGeometry args={[hovered ? 0.62 : 0.45, 20, 20]} />
-        <meshBasicMaterial color={hovered ? '#FFFFFF' : color} />
+    <group position={[x, y, 0.5]}>
+      {/* anchoring shadow keeps the dot readable over any state shade */}
+      <mesh position={[0, 0, -0.05]}>
+        <circleGeometry args={[s * 1.45, 24]} />
+        <meshBasicMaterial color="#0B245C" transparent opacity={0.25} depthWrite={false} />
       </mesh>
-      {/* generous invisible hit area so hover feels effortless */}
+      <mesh>
+        <circleGeometry args={[s, 28]} />
+        <meshBasicMaterial color="#FFFFFF" />
+      </mesh>
+      <mesh position={[0, 0, 0.02]}>
+        <circleGeometry args={[s * 0.56, 28]} />
+        <meshBasicMaterial color={core} />
+      </mesh>
       <mesh
-        position={[x, y, 0.45]}
+        position={[0, 0, 0.03]}
         onPointerMove={(e: any) => {
           e.stopPropagation()
           setHovered(true)
-          onHover({
-            x: e.clientX, y: e.clientY, title: point.name,
-            sub: point.kind === 'client' ? 'Live client · you closed this' : 'Demo on the calendar',
-            color,
-          })
+          onHover({ x: e.clientX, y: e.clientY, ...hoverInfo })
         }}
         onPointerOut={() => { setHovered(false); onHover(null) }}
       >
-        <sphereGeometry args={[2.4, 8, 8]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-      </mesh>
-    </group>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/* Beam arcs with traveling sparks                                     */
-/* ------------------------------------------------------------------ */
-function Beam({ from, to, color, phase, reduce }: {
-  from: [number, number]; to: [number, number]; color: string; phase: number; reduce: boolean
-}) {
-  const sparkRef = useRef<THREE.Sprite>(null)
-  const tex = useMemo(() => getGlowTexture(), [])
-
-  const { curve, coreGeo, haloGeo } = useMemo(() => {
-    const a = new THREE.Vector3(from[0], from[1], 0.4)
-    const b = new THREE.Vector3(to[0], to[1], 0.4)
-    const dist = a.distanceTo(b)
-    const mid = a.clone().lerp(b, 0.5)
-    mid.z = 2.5 + dist * 0.34 // arc height scales with distance
-    const curve = new THREE.QuadraticBezierCurve3(a, mid, b)
-    const coreGeo = new THREE.TubeGeometry(curve, 48, 0.09, 6, false)
-    const haloGeo = new THREE.TubeGeometry(curve, 48, 0.34, 6, false)
-    return { curve, coreGeo, haloGeo }
-  }, [from, to])
-
-  useFrame(({ clock }) => {
-    if (!sparkRef.current || reduce) return
-    const t = (clock.elapsedTime * 0.42 + phase) % 1
-    const p = curve.getPoint(t)
-    sparkRef.current.position.set(p.x, p.y, p.z)
-    // brightest mid-flight, dim near the endpoints
-    const fade = Math.sin(t * Math.PI)
-    sparkRef.current.scale.setScalar(1.6 + fade * 1.8)
-    ;(sparkRef.current.material as THREE.SpriteMaterial).opacity = 0.25 + fade * 0.75
-  })
-
-  return (
-    <group>
-      <mesh geometry={haloGeo}>
-        <meshBasicMaterial color={color} transparent opacity={0.1} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </mesh>
-      <mesh geometry={coreGeo}>
-        <meshBasicMaterial color={color} transparent opacity={0.55} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </mesh>
-      {!reduce && (
-        <sprite ref={sparkRef} scale={[2, 2, 1]}>
-          <spriteMaterial map={tex} color="#FFFFFF" transparent opacity={0.9} blending={THREE.AdditiveBlending} depthWrite={false} />
-        </sprite>
-      )}
-    </group>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/* Home beacon                                                         */
-/* ------------------------------------------------------------------ */
-function HomeBeacon({ home, onHover, reduce }: { home: MapHome; onHover: (h: MapHover | null) => void; reduce: boolean }) {
-  const [x, y] = project(home.lat, home.lng)
-  const tex = useMemo(() => getGlowTexture(), [])
-  return (
-    <group>
-      <Pulse x={x} y={y} color={HOME_COLOR} phase={0} reduce={reduce} />
-      <Pulse x={x} y={y} color={HOME_COLOR} phase={0.5} reduce={reduce} />
-      <sprite position={[x, y, 0.5]} scale={[6, 6, 1]}>
-        <spriteMaterial map={tex} color={HOME_COLOR} transparent opacity={0.7} blending={THREE.AdditiveBlending} depthWrite={false} />
-      </sprite>
-      <mesh position={[x, y, 0.5]}>
-        <sphereGeometry args={[0.6, 20, 20]} />
-        <meshBasicMaterial color="#FFFFFF" />
-      </mesh>
-      <mesh
-        position={[x, y, 0.5]}
-        onPointerMove={(e: any) => {
-          e.stopPropagation()
-          onHover({ x: e.clientX, y: e.clientY, title: 'Home base', sub: 'Your dialer number lives here', color: HOME_COLOR })
-        }}
-        onPointerOut={() => onHover(null)}
-      >
-        <sphereGeometry args={[2.6, 8, 8]} />
+        <circleGeometry args={[Math.max(s * 2.2, 2.2), 12]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>
@@ -326,28 +191,24 @@ function HomeBeacon({ home, onHover, reduce }: { home: MapHome; onHover: (h: Map
 /* ------------------------------------------------------------------ */
 /* Scene                                                               */
 /* ------------------------------------------------------------------ */
-function Scene({ states, points, home, heat, onHover, reduce }: {
+function Scene({ states, points, home, density, onHover }: {
   states: StateFeature[]
   points: MapPoint[]
   home: MapHome | null
-  heat: HeatCell[]
+  density: Record<string, number>
   onHover: (h: MapHover | null) => void
-  reduce: boolean
 }) {
   const { camera } = useThree()
-  const rootRef = useRef<THREE.Group>(null)
 
   useEffect(() => {
-    camera.position.set(0, -64, 60)
+    camera.position.set(0, -58, 56)
     camera.lookAt(0, 0, 0)
   }, [camera])
 
-  // Slow idle sway so the scene breathes even before anyone touches it.
-  useFrame(({ clock }) => {
-    if (reduce || !rootRef.current) return
-    rootRef.current.rotation.z = Math.sin(clock.elapsedTime * 0.14) * 0.022
-    rootRef.current.position.y = -7 + Math.sin(clock.elapsedTime * 0.2) * 0.6
-  })
+  const maxLeads = useMemo(
+    () => Math.max(0, ...Object.values(density)),
+    [density],
+  )
 
   const origin = useMemo<[number, number] | null>(() => {
     if (home) return project(home.lat, home.lng)
@@ -356,24 +217,54 @@ function Scene({ states, points, home, heat, onHover, reduce }: {
   }, [home, points])
 
   return (
-    <group ref={rootRef} rotation={[-Math.PI / 2.55, 0, 0]} position={[0, -7, 0]}>
+    <group rotation={[-Math.PI / 2.7, 0, 0]} position={[0, -6, 0]}>
       <group position={[0, 6, 0]}>
-        {states.map((f) => <StateMesh key={f.name} feature={f} onHover={onHover} />)}
-        <HeatLayer heat={heat} />
-        {origin && points.map((p, i) => (
-          <Beam
-            key={p.id}
-            from={origin}
-            to={project(p.lat, p.lng)}
-            color={p.kind === 'client' ? CLIENT_COLOR : DEMO_COLOR}
-            phase={(i * 0.37) % 1}
-            reduce={reduce}
+        {states.map((f) => (
+          <StateMesh
+            key={f.name}
+            feature={f}
+            leads={density[f.name] || 0}
+            maxLeads={maxLeads}
+            onHover={onHover}
           />
         ))}
-        {points.map((p, i) => (
-          <Marker key={p.id} point={p} phase={(i * 0.29) % 1} onHover={onHover} reduce={reduce} />
+        {origin && points.map((p) => (
+          <Arc
+            key={`arc-${p.id}`}
+            from={origin}
+            to={project(p.lat, p.lng)}
+            color={p.kind === 'client' ? CLIENT_GREEN : '#FFFFFF'}
+            opacity={p.kind === 'client' ? 0.6 : 0.5}
+          />
         ))}
-        {home && <HomeBeacon home={home} onHover={onHover} reduce={reduce} />}
+        {points.map((p) => {
+          const [x, y] = project(p.lat, p.lng)
+          return (
+            <Dot
+              key={p.id}
+              x={x} y={y}
+              core={p.kind === 'client' ? '#16A34A' : DEMO_CORE}
+              size={0.95}
+              onHover={onHover}
+              hoverInfo={{
+                title: p.name,
+                sub: p.kind === 'client' ? 'Live client · you closed this' : 'Demo on the calendar',
+              }}
+            />
+          )
+        })}
+        {home && (() => {
+          const [x, y] = project(home.lat, home.lng)
+          return (
+            <Dot
+              x={x} y={y}
+              core="#FFFFFF"
+              size={1.15}
+              onHover={onHover}
+              hoverInfo={{ title: 'Home base', sub: 'Your dialer number lives here' }}
+            />
+          )
+        })()}
       </group>
     </group>
   )
@@ -388,19 +279,15 @@ class GLBoundary extends Component<{ fallback: React.ReactNode; children: React.
 /* ------------------------------------------------------------------ */
 /* Public component                                                    */
 /* ------------------------------------------------------------------ */
-export default function TerritoryMap({ points, home, heat, height = 440 }: {
+export default function TerritoryMap({ points, home, density, height = 420 }: {
   points: MapPoint[]
   home: MapHome | null
-  heat: HeatCell[]
+  density: Record<string, number>
   height?: number
 }) {
   const [states, setStates] = useState<StateFeature[]>([])
   const [hover, setHover] = useState<MapHover | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
-  const reduce = useRef(
-    typeof window !== 'undefined' &&
-    (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false),
-  ).current
 
   useEffect(() => {
     let dead = false
@@ -414,8 +301,8 @@ export default function TerritoryMap({ points, home, heat, height = 440 }: {
   return (
     <GLBoundary
       fallback={
-        <div style={{ height }} className="flex items-center justify-center text-sm" >
-          <span style={{ color: '#75808F' }}>Map unavailable on this device.</span>
+        <div style={{ height }} className="flex items-center justify-center text-sm">
+          <span style={{ color: 'rgba(255,255,255,0.6)' }}>Map unavailable on this device.</span>
         </div>
       }
     >
@@ -426,21 +313,19 @@ export default function TerritoryMap({ points, home, heat, height = 440 }: {
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           style={{ background: 'transparent' }}
         >
-          <ambientLight intensity={1.15} />
-          <directionalLight position={[60, -40, 120]} intensity={0.85} color="#C9DEFF" />
-          <Scene states={states} points={points} home={home} heat={heat} onHover={setHover} reduce={reduce} />
+          <Scene states={states} points={points} home={home} density={density} onHover={setHover} />
           <OrbitControls
             enablePan={false}
             enableDamping
-            dampingFactor={0.07}
-            rotateSpeed={0.4}
-            zoomSpeed={0.5}
-            minDistance={48}
-            maxDistance={165}
-            minPolarAngle={Math.PI * 0.12}
-            maxPolarAngle={Math.PI * 0.46}
-            minAzimuthAngle={-Math.PI * 0.28}
-            maxAzimuthAngle={Math.PI * 0.28}
+            dampingFactor={0.08}
+            rotateSpeed={0.35}
+            zoomSpeed={0.45}
+            minDistance={46}
+            maxDistance={150}
+            minPolarAngle={Math.PI * 0.1}
+            maxPolarAngle={Math.PI * 0.42}
+            minAzimuthAngle={-Math.PI * 0.22}
+            maxAzimuthAngle={Math.PI * 0.22}
           />
         </Canvas>
 
@@ -450,20 +335,15 @@ export default function TerritoryMap({ points, home, heat, height = 440 }: {
           const top = Math.max(8, hover.y - rect.top - 16)
           return (
             <div
-              className="absolute z-10 pointer-events-none rounded-xl px-3 py-2"
+              className="absolute z-10 pointer-events-none rounded-xl px-3.5 py-2.5"
               style={{
                 left, top, width: 208,
-                background: 'rgba(13, 27, 51, 0.9)',
-                border: '1px solid rgba(124, 192, 255, 0.25)',
-                backdropFilter: 'blur(10px)',
-                boxShadow: `0 16px 42px -14px rgba(0,0,0,0.6), 0 0 24px -8px ${hover.color}55`,
+                background: '#FFFFFF',
+                boxShadow: '0 12px 32px -8px rgba(15, 40, 100, 0.35)',
               }}
             >
-              <div className="text-[13px] font-semibold truncate" style={{ color: '#EFF5FF' }}>{hover.title}</div>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: hover.color, boxShadow: `0 0 8px ${hover.color}` }} />
-                <span className="text-[11px] font-mono" style={{ color: '#9FB4D4' }}>{hover.sub}</span>
-              </div>
+              <div className="text-[13px] font-semibold truncate" style={{ color: '#1B2430' }}>{hover.title}</div>
+              <div className="text-[11px] mt-0.5" style={{ color: '#75808F' }}>{hover.sub}</div>
             </div>
           )
         })()}

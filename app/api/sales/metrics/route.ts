@@ -4,6 +4,33 @@ import { requireAuth } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
 import { geolocate, jitter, AREA_CODES } from '@/lib/geo/us-geo'
 
+/** Full state names keyed by USPS code - matches public/geo/us-states.json. */
+const STATE_NAME_BY_CODE: Record<string, string> = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
+  CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
+  HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa',
+  KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland',
+  MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri',
+  MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey',
+  NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio',
+  OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
+  SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont',
+  VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+  DC: 'District of Columbia',
+}
+const STATE_CODE_BY_NAME: Record<string, string> = Object.fromEntries(
+  Object.entries(STATE_NAME_BY_CODE).map(([code, name]) => [name.toLowerCase(), code]),
+)
+
+/** Normalize a lead's state field ("OH" / "ohio" / " Ohio ") to a full name. */
+function stateName(state?: string | null, _phone?: string | null): string | null {
+  const raw = (state || '').trim()
+  if (!raw) return null
+  if (raw.length === 2) return STATE_NAME_BY_CODE[raw.toUpperCase()] || null
+  const code = STATE_CODE_BY_NAME[raw.toLowerCase()]
+  return code ? STATE_NAME_BY_CODE[code] : null
+}
+
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -170,26 +197,21 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Heat = where the rep's assigned leads cluster (dial territory).
-    // Bucketed to a ~1 degree grid so the payload stays tiny.
+    // Territory shading = the rep's assigned leads counted per state,
+    // keyed by full state name to match the public geojson. Choropleth
+    // beats a heat cloud: it reads like a sales dashboard, not a game.
     const leadIds = (assigns as any[]).map((a) => a.lead_id).filter(Boolean).slice(0, 2000)
-    const heatCells = new Map<string, { lat: number; lng: number; w: number }>()
+    const stateCounts: Record<string, number> = {}
     for (let i = 0; i < leadIds.length; i += 500) {
       const { data: leadRows } = await supabaseAdmin
         .from('leads')
-        .select('id, city, state, phone')
+        .select('id, state, phone')
         .in('id', leadIds.slice(i, i + 500))
       for (const l of leadRows || []) {
-        const loc = geolocate({ city: l.city, state: l.state, phone: l.phone })
-        if (!loc) continue
-        const key = `${Math.round(loc[0])},${Math.round(loc[1])}`
-        const cell = heatCells.get(key)
-        if (cell) cell.w++
-        else heatCells.set(key, { lat: loc[0], lng: loc[1], w: 1 })
+        const name = stateName(l.state, l.phone)
+        if (name) stateCounts[name] = (stateCounts[name] || 0) + 1
       }
     }
-    const maxW = Math.max(1, ...Array.from(heatCells.values()).map((c) => c.w))
-    const heat = Array.from(heatCells.values()).map((c) => ({ lat: c.lat, lng: c.lng, w: c.w / maxW }))
 
     const demosSetCount = demosSetRange.length
     return NextResponse.json({
@@ -203,7 +225,7 @@ export async function GET(request: NextRequest) {
         talk_seconds: totTalk,
         no_answers: totNoAns,
         voicemails: totVm,
-        avg_call_seconds: totConnects > 0 ? Math.round(totTalk / Math.max(1, totDials)) : 0,
+        avg_call_seconds: totConnects > 0 ? Math.round(totTalk / totConnects) : 0,
       },
       hours: hours.map((h, i) => ({ hour: i, ...h })),
       funnel: {
@@ -227,7 +249,7 @@ export async function GET(request: NextRequest) {
         connects_per_demo: demosSetCount > 0 ? Math.round(totConnects / demosSetCount) : null,
         demos_per_100_dials: totDials > 0 ? Math.round((demosSetCount / totDials) * 100 * 10) / 10 : null,
       },
-      map: { home, points: mapPoints, heat },
+      map: { home, points: mapPoints, states: stateCounts },
       days: Array.from(days.entries()).map(([date, v]) => ({
         date,
         dials: v.dials,

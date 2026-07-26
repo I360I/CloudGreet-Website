@@ -2,11 +2,12 @@
 
 /**
  * /sales/metrics - the rep's numbers in CloudGreet's own language:
- * cool paper canvas, white cards, deep navy with the brand blue as the
- * working accent; green appears only where it means winning (clients,
- * won deals, upward deltas). The one dark moment on the page is the
- * navy territory tile with the 3D map inside it - demos beam out in
- * blue, live clients in green, lead density glows hot and cold.
+ * cool paper canvas, white cards, CloudGreet blue as the accent and
+ * the surface of the two feature tiles; green appears only where it
+ * means winning (clients, won deals, upward deltas). The territory
+ * tile holds the 3D map: states frost white with the rep's lead count
+ * (hot/cold), thin arcs run home-to-demo (white) and home-to-client
+ * (green), endpoints are crisp rimmed dots.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -15,7 +16,7 @@ import { motion, animate, AnimatePresence } from 'framer-motion'
 import { WarningCircle, ArrowUpRight, ArrowDownRight, MapTrifold } from '@phosphor-icons/react'
 import { SalesShell } from '../_components/SalesShell'
 import { fetchWithAuth } from '@/lib/auth/fetch-with-auth'
-import type { MapPoint, MapHome, HeatCell } from './_TerritoryMap'
+import type { MapPoint, MapHome } from './_TerritoryMap'
 
 const TerritoryMap = dynamic(() => import('./_TerritoryMap'), {
   ssr: false,
@@ -42,7 +43,7 @@ type Metrics = {
   }
   efficiency: { dials_per_demo: number | null; connects_per_demo: number | null; demos_per_100_dials: number | null }
   days: Array<{ date: string; dials: number; connects: number; rate: number; talk_seconds: number; demos: number; earned_cents: number }>
-  map: { home: MapHome | null; points: MapPoint[]; heat: HeatCell[] }
+  map: { home: MapHome | null; points: MapPoint[]; states: Record<string, number> }
 }
 
 /* Palette - CloudGreet: cool paper, navy + brand blue, green = winning */
@@ -52,10 +53,10 @@ const LINE = '#E5E8EE'
 const INK = '#1B2430'
 const MUT = '#75808F'
 const TRACK = '#EEF1F5'
-const NAVY = '#16294B'
-const NAVY_DEEP = '#0F1E38'
-const ACCENT = '#2563EB'
-const SKY = '#5AB0FF'
+const BRAND = '#2563EB'
+const BRAND_DEEP = '#1D4ED8'
+const ACCENT = BRAND
+const SKY = '#BFDBFE'
 const WIN = '#2E9E5B'
 const RED = '#D14D32'
 
@@ -103,6 +104,7 @@ const cardStyle: React.CSSProperties = {
   background: CARD,
   border: `1px solid ${LINE}`,
   borderRadius: 20,
+  boxShadow: '0 1px 2px rgba(16, 24, 40, 0.04)',
 }
 
 const RANGES = [7, 30, 90] as const
@@ -195,9 +197,9 @@ export default function MetricsPage() {
     if (!data || data.activity.dials === 0) return null
     const total = data.activity.dials
     const segs = [
-      { label: 'Connected', n: data.activity.connects, color: NAVY },
-      { label: 'Voicemail', n: data.activity.voicemails, color: SKY },
-      { label: 'No answer', n: data.activity.no_answers, color: '#DEE4ED' },
+      { label: 'Connected', n: data.activity.connects, color: BRAND },
+      { label: 'Voicemail', n: data.activity.voicemails, color: '#93C5FD' },
+      { label: 'No answer', n: data.activity.no_answers, color: '#E2E8F0' },
     ]
     const other = total - segs.reduce((s, x) => s + x.n, 0)
     if (other / total >= 0.03) segs.push({ label: 'Other', n: other, color: '#C6CEDA' })
@@ -237,7 +239,7 @@ export default function MetricsPage() {
                     <motion.span
                       layoutId="metrics-range"
                       className="absolute inset-0 rounded-full"
-                      style={{ background: NAVY }}
+                      style={{ background: BRAND }}
                       transition={{ type: 'spring', stiffness: 420, damping: 34 }}
                     />
                   )}
@@ -257,7 +259,7 @@ export default function MetricsPage() {
           {loading && !data ? (
             <div className="py-28 flex justify-center">
               <div className="w-9 h-9 rounded-full animate-spin"
-                style={{ border: `2px solid ${LINE}`, borderTopColor: NAVY }} />
+                style={{ border: `2px solid ${LINE}`, borderTopColor: BRAND }} />
             </div>
           ) : data && (
             <motion.div
@@ -304,41 +306,41 @@ export default function MetricsPage() {
                   className="relative overflow-hidden"
                   style={{
                     borderRadius: 20,
-                    background: `linear-gradient(155deg, ${NAVY} 0%, ${NAVY_DEEP} 70%)`,
-                    boxShadow: '0 24px 48px -24px rgba(15, 30, 56, 0.5)',
+                    background: `linear-gradient(150deg, #3B76F6 0%, ${BRAND} 45%, ${BRAND_DEEP} 100%)`,
+                    boxShadow: '0 24px 48px -22px rgba(29, 78, 216, 0.45)',
                   }}
                 >
                   <div className="flex items-start justify-between px-6 pt-5 relative z-10 pointer-events-none">
                     <div>
-                      <div className="text-[15px] font-semibold" style={{ color: '#EFF5FF' }}>Your territory</div>
-                      <div className="text-[12px] mt-0.5" style={{ color: '#9FB4D4' }}>
+                      <div className="text-[15px] font-semibold" style={{ color: '#FFFFFF' }}>Your territory</div>
+                      <div className="text-[12px] mt-0.5" style={{ color: 'rgba(255,255,255,0.72)' }}>
                         drag to explore · hover anything
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
                       {([
-                        [SKY, `${demoCount} demo${demoCount === 1 ? '' : 's'} booked`],
+                        ['#FFFFFF', `${demoCount} demo${demoCount === 1 ? '' : 's'} booked`],
                         ['#4ADE80', `${clientCount} client${clientCount === 1 ? '' : 's'} live`],
-                        ['#FFAB3D', 'hot zones = your leads'],
+                        ['rgba(255,255,255,0.45)', 'brighter states = more of your leads'],
                       ] as const).map(([c, label]) => (
                         <div key={label} className="flex items-center gap-1.5">
                           <span className="w-2 h-2 rounded-full" style={{ background: c }} />
-                          <span className="text-[11px]" style={{ color: '#9FB4D4' }}>{label}</span>
+                          <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.78)' }}>{label}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div className="-mt-10">
-                    <TerritoryMap points={data.map.points} home={data.map.home} heat={data.map.heat} height={420} />
+                    <TerritoryMap points={data.map.points} home={data.map.home} density={data.map.states} height={420} />
                   </div>
 
                   {data.map.points.length === 0 && (
                     <div className="absolute inset-x-0 bottom-5 flex justify-center pointer-events-none">
                       <div className="rounded-full px-4 py-2 flex items-center gap-2"
-                        style={{ background: 'rgba(239, 245, 255, 0.95)' }}>
-                        <MapTrifold className="w-3.5 h-3.5" style={{ color: NAVY }} />
-                        <span className="text-[12px] font-medium" style={{ color: NAVY }}>
+                        style={{ background: 'rgba(255, 255, 255, 0.95)' }}>
+                        <MapTrifold className="w-3.5 h-3.5" style={{ color: BRAND }} />
+                        <span className="text-[12px] font-medium" style={{ color: BRAND }}>
                           Book a demo and it appears here in blue. Close it and it turns green.
                         </span>
                       </div>
@@ -352,7 +354,7 @@ export default function MetricsPage() {
                   <div className="flex items-baseline justify-between flex-wrap gap-2 mb-5">
                     <span className="text-[13px] font-medium" style={{ color: MUT }}>Daily activity</span>
                     <div className="flex items-center gap-4 text-[12px]" style={{ color: MUT }}>
-                      <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[4px]" style={{ background: NAVY }} /> dials</span>
+                      <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[4px]" style={{ background: BRAND }} /> dials</span>
                       <span className="inline-flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[4px]" style={{ background: SKY }} /> connects</span>
                     </div>
                   </div>
@@ -378,7 +380,7 @@ export default function MetricsPage() {
                               className="rounded-t-[5px] relative"
                               style={{
                                 height: `${Math.max(2.5, (d.dials / max) * 100)}%`,
-                                background: d.dials ? (active ? '#24406E' : NAVY) : TRACK,
+                                background: d.dials ? (active ? BRAND_DEEP : BRAND) : TRACK,
                                 transformOrigin: 'bottom',
                                 transition: 'background 0.15s',
                               }}
@@ -404,10 +406,10 @@ export default function MetricsPage() {
                             exit={{ opacity: 0, scale: 0.97 }}
                             transition={{ duration: 0.15 }}
                             className="rounded-xl px-3.5 py-2.5 whitespace-nowrap"
-                            style={{ background: NAVY, boxShadow: '0 14px 30px -12px rgba(15, 30, 56, 0.55)' }}
+                            style={{ background: BRAND_DEEP, boxShadow: '0 14px 30px -12px rgba(29, 78, 216, 0.45)' }}
                           >
-                            <div className="text-[12px] font-semibold" style={{ color: '#EFF5FF' }}>{fmtDate(data.days[barTip.i].date)}</div>
-                            <div className="text-[12px] mt-0.5 tabular-nums" style={{ color: '#9FB4D4' }}>
+                            <div className="text-[12px] font-semibold" style={{ color: '#FFFFFF' }}>{fmtDate(data.days[barTip.i].date)}</div>
+                            <div className="text-[12px] mt-0.5 tabular-nums" style={{ color: 'rgba(255,255,255,0.75)' }}>
                               {data.days[barTip.i].dials} dials · <span style={{ color: SKY }}>{data.days[barTip.i].connects} connects</span>
                               {data.days[barTip.i].demos > 0 && <> · {data.days[barTip.i].demos} demo{data.days[barTip.i].demos === 1 ? '' : 's'}</>}
                             </div>
@@ -458,7 +460,7 @@ export default function MetricsPage() {
                             <td className="px-3 py-2.5 text-right tabular-nums font-medium" style={{ color: d.connects ? ACCENT : '#C2C9D2' }}>{d.connects || 0}</td>
                             <td className="px-3 py-2.5 text-right tabular-nums" style={{ color: MUT }}>{d.dials ? `${d.rate}%` : '--'}</td>
                             <td className="px-3 py-2.5 text-right tabular-nums" style={{ color: MUT }}>{d.talk_seconds ? mins(d.talk_seconds) : '--'}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums font-semibold" style={{ color: d.demos ? NAVY : '#C2C9D2' }}>{d.demos || 0}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums font-semibold" style={{ color: d.demos ? BRAND : '#C2C9D2' }}>{d.demos || 0}</td>
                             <td className="px-3 py-2.5 text-right tabular-nums font-semibold" style={{ color: d.earned_cents ? INK : '#C2C9D2' }}>{d.earned_cents ? dollars(d.earned_cents) : '--'}</td>
                           </tr>
                         ))}
@@ -529,8 +531,8 @@ export default function MetricsPage() {
                   <span className="text-[13px] font-medium" style={{ color: MUT }}>Demo funnel · all time</span>
                   <div className="space-y-3 mt-4">
                     {([
-                      ['Set', data.funnel.demos_set + data.funnel.demos_held + data.funnel.no_shows, NAVY],
-                      ['Held', data.funnel.demos_held, ACCENT],
+                      ['Set', data.funnel.demos_set + data.funnel.demos_held + data.funnel.no_shows, BRAND],
+                      ['Held', data.funnel.demos_held, '#93C5FD'],
                       ['Won', data.funnel.won, WIN],
                     ] as const).map(([label, val, color], i, arr) => {
                       const max = Math.max(Number(arr[0][1]), 1)
@@ -596,6 +598,7 @@ export default function MetricsPage() {
                       ['Connects per demo', data.efficiency.connects_per_demo ?? '--'],
                       ['Demos per 100 dials', data.efficiency.demos_per_100_dials ?? '--'],
                       ['Real conversations', data.activity.conversations],
+                      ['Avg connected call', data.activity.avg_call_seconds ? `${Math.floor(data.activity.avg_call_seconds / 60)}m ${data.activity.avg_call_seconds % 60}s` : '--'],
                     ] as const).map(([label, val]) => (
                       <div key={label as string} className="flex items-center justify-between text-[13px]">
                         <span style={{ color: MUT }}>{label}</span>
@@ -609,12 +612,12 @@ export default function MetricsPage() {
                 {bestDay && (
                   <motion.div variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } } }}
                     className="p-6 relative overflow-hidden"
-                    style={{ borderRadius: 20, background: NAVY, boxShadow: '0 20px 40px -22px rgba(15, 30, 56, 0.5)' }}>
-                    <span className="text-[13px] font-medium" style={{ color: '#9FB4D4' }}>Record to beat</span>
-                    <div className="text-[34px] font-semibold tracking-tight mt-1 leading-none" style={{ color: SKY }}>
+                    style={{ borderRadius: 20, background: `linear-gradient(150deg, #3B76F6 0%, ${BRAND} 45%, ${BRAND_DEEP} 100%)`, boxShadow: '0 20px 40px -20px rgba(29, 78, 216, 0.5)' }}>
+                    <span className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.75)' }}>Record to beat</span>
+                    <div className="text-[34px] font-semibold tracking-tight mt-1 leading-none" style={{ color: '#FFFFFF' }}>
                       {bestDay.dials} dials
                     </div>
-                    <div className="text-[12px] mt-2" style={{ color: '#9FB4D4' }}>
+                    <div className="text-[12px] mt-2" style={{ color: 'rgba(255,255,255,0.78)' }}>
                       Your biggest day this window, set {bestDayLabel}. One more dial today beats it.
                     </div>
                   </motion.div>
