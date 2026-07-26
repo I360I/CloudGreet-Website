@@ -50,7 +50,6 @@ type Funnel = {
   show_rate: number | null; win_rate: number | null
 }
 type Goal = { target: number; this_week: number; on_pace: boolean }
-type BoardRow = { rep_id: string; name: string; dials: number; connects: number; demos_set: number; earned_cents: number; is_me: boolean }
 
 type Overview = {
   me: { name: string; payouts_enabled: boolean; cal_connected?: boolean }
@@ -80,18 +79,8 @@ function nextFriday(): string {
 
 export default function SalesHome() {
   const [data, setData] = useState<Overview | null>(null)
-  const [board, setBoard] = useState<BoardRow[] | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const r = await fetchWithAuth('/api/sales/leaderboard')
-        const j = await r.json().catch(() => ({}))
-        if (j?.success) setBoard(j.week || [])
-      } catch { /* board is optional */ }
-    })()
-  }, [])
 
   // Initial load + lightweight polling so admin-side flips (demo agent
   // building / ready, customization status) reflect on the rep's
@@ -534,43 +523,6 @@ export default function SalesHome() {
           </motion.div>
         )}
 
-        {/* This week's board - friendly competition. */}
-        {board && board.length > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: EASE, delay: 0.12 }}
-            className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"
-          >
-            <div className="px-5 py-3 border-b border-gray-100">
-              <div className="text-[10px] font-mono uppercase tracking-wider text-gray-500">This week</div>
-              <div className="text-sm font-medium text-gray-900">Team board</div>
-            </div>
-            <ul className="divide-y divide-gray-100">
-              {board.slice(0, 6).map((r, i) => (
-                <li
-                  key={r.rep_id}
-                  className="px-5 py-2.5 flex items-center gap-3"
-                  style={r.is_me ? { background: 'var(--dblue-tint)' } : undefined}
-                >
-                  <span
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold tabular-nums flex-shrink-0"
-                    style={i === 0
-                      ? { background: 'var(--dorange-tint)', color: 'var(--dorange-deep)' }
-                      : { background: 'var(--dseg)', color: 'var(--dmut)' }}
-                  >
-                    {i + 1}
-                  </span>
-                  <span className={`flex-1 min-w-0 truncate text-sm ${r.is_me ? 'font-semibold' : ''} text-gray-900`}>
-                    {r.name}{r.is_me ? ' (you)' : ''}
-                  </span>
-                  <span className="text-xs tabular-nums flex-shrink-0" style={{ color: 'var(--dmut)' }}>
-                    {r.demos_set} demo{r.demos_set === 1 ? '' : 's'} · {r.dials} dials
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        )}
         </div>
         </div>
       </section>
