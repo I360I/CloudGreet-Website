@@ -283,14 +283,14 @@ export function LeadsWorkspace({
 
   // On-demand owner lookup ("Find owner"). Grounded web search, cached on
   // the lead so a repeat click is free. Populates contact_name + confidence.
-  const findOwner = async (leadId: string) => {
+  const findOwner = async (leadId: string, force = false) => {
     setFindingOwnerId(leadId)
     try {
       const res = await fetch(`/api/sales/leads/${leadId}/find-owner`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({}),
+        body: JSON.stringify(force ? { force: true } : {}),
       })
       const j = await res.json().catch(() => ({}))
       if (res.ok) {
@@ -940,7 +940,20 @@ export function LeadsWorkspace({
                         </button>
                       )}
                       {!l.contact_name && l.owner_verified_at && (
-                        <span className="text-gray-400 italic" title="No owner name found - ask for the owner on the call">no owner name found</span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="text-gray-400 italic" title="No owner name found yet - ask for the owner on the call">no owner found</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); findOwner(l.id, true) }}
+                            disabled={findingOwnerId === l.id}
+                            className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-600 hover:text-blue-700 hover:underline disabled:opacity-60"
+                            title="Run the owner lookup again"
+                          >
+                            {findingOwnerId === l.id
+                              ? <><CircleNotch weight="bold" className="w-3 h-3 animate-spin" /> searching…</>
+                              : 'search again'}
+                          </button>
+                        </span>
                       )}
                       {l.contact_name && (l.city || l.business_type) && <span className="text-gray-300">·</span>}
                       {l.business_type && <span className="text-gray-600">{l.business_type}</span>}

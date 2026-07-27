@@ -46,11 +46,18 @@ async function claudeGroundedOwner(input: {
 
 Business: ${input.businessName}${loc ? `\nLocation: ${loc}` : ''}${input.website ? `\nWebsite: ${input.website}` : ''}
 
-Search the web - the business's own website/about page, its Google Business listing, state contractor license records, LinkedIn, local news - and find the owner's real full name. Only report a name you actually find a source for. If you cannot find a real name, say so. Do NOT guess or invent a name.
+Search the web and find the owner's real name. The best sources for tiny local shops, in rough order:
+- Yelp reviews and business responses (reviews often say things like "Steve, the owner, was great" and owner replies are signed with a name)
+- The business's own website / about page
+- Google Business listing and its reviews
+- State contractor license lookups (license records name the qualifying individual)
+- BBB profile, Facebook page, LinkedIn, local news
+
+Try more than one phrasing if the first search is thin (e.g. "<business> owner", "<business> reviews", "<business> license"). Only report a name you actually find a source for - do NOT guess or invent one. A first name alone (e.g. "Steve" from a Yelp review) is still worth reporting: the rep can ask for Steve. If truly nothing turns up, say so.
 
 Respond with ONLY a JSON object, no other text:
-{"name": "<full name, or null if none found>", "title": "<owner/president/etc, or null>", "confidence": "high|medium|low", "source": "<short phrase, e.g. 'business website', 'state license record', 'google listing'>"}
-Use confidence "high" only when an authoritative source clearly names them as owner, "medium" when reasonably inferred, "low" when uncertain. If no name is found: name=null, confidence="low".`
+{"name": "<full name, first name, or null if none found>", "title": "<owner/president/etc, or null>", "confidence": "high|medium|low", "source": "<short phrase, e.g. 'yelp review', 'business website', 'state license record'>"}
+Use confidence "high" only when an authoritative source clearly names them as owner, "medium" when reasonably inferred (or a first name only), "low" when uncertain. If no name is found: name=null, confidence="low".`
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -64,7 +71,7 @@ Use confidence "high" only when an authoritative source clearly names them as ow
         model: OWNER_MODEL,
         max_tokens: 500,
         temperature: 0,
-        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
         messages: [{ role: 'user', content: prompt }],
       }),
       signal: AbortSignal.timeout(30_000),
@@ -83,10 +90,22 @@ Use confidence "high" only when an authoritative source clearly names them as ow
     if (!match) return null
 
     const parsed = JSON.parse(match[0])
-    const validated = validateOwnerName(parsed?.name)
+    // Full-name validation first; fall back to accepting a clean single
+    // first name (Yelp reviews often only give "Steve") - still enough
+    // for the rep to ask for Steve by name. Confidence caps at medium.
+    let validated = validateOwnerName(parsed?.name)
+    let firstNameOnly = false
+    if (!validated && typeof parsed?.name === 'string') {
+      const single = parsed.name.trim()
+      if (/^[A-Za-z][A-Za-z.'-]{2,20}$/.test(single) && !/^(owner|manager|office|team|staff|admin|info|sales|service)$/i.test(single)) {
+        validated = single.charAt(0).toUpperCase() + single.slice(1).toLowerCase()
+        firstNameOnly = true
+      }
+    }
     if (!validated) return { name: null, title: null, confidence: 'low', source: 'not_found' }
 
-    const conf = ['high', 'medium', 'low'].includes(parsed?.confidence) ? parsed.confidence : 'medium'
+    let conf = ['high', 'medium', 'low'].includes(parsed?.confidence) ? parsed.confidence : 'medium'
+    if (firstNameOnly && conf === 'high') conf = 'medium'
     const source = typeof parsed?.source === 'string' && parsed.source.trim()
       ? parsed.source.trim().slice(0, 60) : 'web search'
     return {
