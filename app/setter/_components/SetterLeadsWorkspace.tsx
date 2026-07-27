@@ -764,9 +764,14 @@ export function SetterLeadsWorkspace() {
                 const nameBlock = (
                   <div className="flex-1 min-w-0 block group">
                     <div className="flex items-baseline gap-2 flex-wrap">
-                      <div className="text-sm font-medium text-gray-900 group-hover:text-gray-700 truncate leading-tight">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNoteModalLeadId(l.id) }}
+                        className="text-sm font-medium text-gray-900 group-hover:text-blue-700 truncate leading-tight text-left"
+                        title="Open notes for this lead"
+                      >
                         {l.business_name}
-                      </div>
+                      </button>
                       <QualityChip lead={l} />
                     </div>
                     <div className="text-[11px] text-gray-500 truncate flex items-center gap-1.5 flex-wrap leading-tight">
@@ -943,9 +948,14 @@ export function SetterLeadsWorkspace() {
                           </span>
                         )}
                         {l.latest_note && (
-                          <span className="text-[11px] text-gray-500 italic truncate max-w-md">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setNoteModalLeadId(l.id) }}
+                            className="text-[11px] text-gray-500 italic truncate max-w-md text-left hover:text-blue-700 hover:underline underline-offset-2"
+                            title="See all notes on this lead"
+                          >
                             “{l.latest_note.body}”
-                          </span>
+                          </button>
                         )}
                       </div>
                     )}
@@ -1173,6 +1183,23 @@ function LeadsNoteModal({ leadId, businessName, onClose, onSaved }: {
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  // Full note history for this lead - loads on open so the setter can
+  // read the whole story (their own notes + any other rep's) before
+  // dialing again.
+  const [history, setHistory] = useState<Array<{ id: string; body: string; created_at: string; author: string; mine: boolean }> | null>(null)
+
+  useEffect(() => {
+    let dead = false
+    ;(async () => {
+      try {
+        const r = await fetchWithAuth(`/api/sales/leads/${leadId}/notes`)
+        const j = await r.json().catch(() => ({}))
+        if (!dead) setHistory(j?.notes || [])
+      } catch { if (!dead) setHistory([]) }
+    })()
+    return () => { dead = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadId])
 
   const save = async () => {
     const text = body.trim()
@@ -1198,6 +1225,25 @@ function LeadsNoteModal({ leadId, businessName, onClose, onSaved }: {
           <h3 className="text-base font-medium text-gray-900">Note on {businessName}</h3>
         </div>
         <p className="text-xs text-gray-500 mb-4">Just a note - this does not book anything or change the lead&apos;s status.</p>
+        {/* Past notes - the lead's story so far */}
+        <div className="mb-4 max-h-56 overflow-y-auto rounded-lg border border-[#E3EAF4] bg-[#F8FAFC]">
+          {history === null ? (
+            <div className="px-3.5 py-3 text-xs text-gray-400">Loading notes…</div>
+          ) : history.length === 0 ? (
+            <div className="px-3.5 py-3 text-xs text-gray-400">No notes yet - this is the first one.</div>
+          ) : (
+            <ul className="divide-y divide-[#E3EAF4]">
+              {history.map((n) => (
+                <li key={n.id} className="px-3.5 py-2.5">
+                  <div className="text-sm text-gray-800 leading-snug whitespace-pre-wrap">{n.body}</div>
+                  <div className="text-[11px] text-gray-400 mt-1">
+                    {n.mine ? 'You' : n.author} · {new Date(n.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(n.created_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <textarea
           value={body} onChange={(e) => setBody(e.target.value)} rows={5} autoFocus
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); void save() } }}
