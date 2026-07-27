@@ -33,6 +33,9 @@ export type ConvertCloseInput = {
   stripeCustomerId?: string | null
   /** Set close.status = 'paid' when the caller knows payment landed. */
   markPaid?: boolean
+  /** Leave close.status untouched (auto-provisioning a prospect account
+   *  at close-submit time - nothing has been invoiced yet). */
+  keepStatus?: boolean
 }
 
 export type ConvertCloseResult = {
@@ -163,7 +166,7 @@ export async function convertCloseToClient(
             business_id: existingBiz.id,
             status: input.markPaid
               ? 'paid'
-              : (close.status === 'pending' ? 'invoice_sent' : close.status),
+              : (input.keepStatus ? close.status : (close.status === 'pending' ? 'invoice_sent' : close.status)),
             updated_at: new Date().toISOString(),
           })
           .eq('id', close.id)
@@ -258,7 +261,7 @@ export async function convertCloseToClient(
     .from('closes')
     .update({
       business_id: business.id,
-      status: input.markPaid ? 'paid' : (close.status === 'pending' ? 'invoice_sent' : close.status),
+      status: input.markPaid ? 'paid' : (input.keepStatus ? close.status : (close.status === 'pending' ? 'invoice_sent' : close.status)),
       updated_at: new Date().toISOString(),
     })
     .eq('id', close.id)

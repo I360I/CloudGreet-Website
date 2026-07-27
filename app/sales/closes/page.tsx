@@ -134,16 +134,21 @@ export default function SalesClosesPage() {
       const j = await cr.json().catch(() => ({}))
       if (!cr.ok) setError(j?.error || 'Failed to load prospects')
       const closesList = (j.closes || []) as Close[]
-      setCloses(closesList)
       // Externally-linked businesses that never went through a close and
       // aren't paying yet are prospects too - surface them here so they
       // don't vanish (they're filtered out of the Clients tab now).
       const bj = await br.json().catch(() => ({}))
       const PAYING = new Set(['active', 'past_due'])
-      const closeBizIds = new Set(closesList.map((c) => c.business_id).filter(Boolean))
+      // EVERY business-backed prospect renders as the standard client
+      // card (the one reps are trained on: send login info, log in as
+      // them). Closes are auto-provisioned into businesses at submit
+      // now, so the close row only shows for legacy closes that never
+      // got an account.
       const linked = ((bj.clients || []) as any[]).filter(
-        (b) => !PAYING.has((b.subscription_status || '').toLowerCase()) && !closeBizIds.has(b.id),
+        (b) => !PAYING.has((b.subscription_status || '').toLowerCase()),
       )
+      const linkedBizIds = new Set(linked.map((b: any) => b.id))
+      setCloses(closesList.filter((c) => !c.business_id || !linkedBizIds.has(c.business_id)))
       setLinkedProspects(linked)
     } finally {
       setLoading(false)

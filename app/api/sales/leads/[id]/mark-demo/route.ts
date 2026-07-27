@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth, REP_TOOL_ROLES } from '@/lib/auth-middleware'
 import { logger } from '@/lib/monitoring'
+import { convertCloseToClient } from '@/lib/sales/convert-close'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -177,6 +178,17 @@ export async function POST(
         })
       } else {
         closeId = newClose?.id || null
+      }
+    }
+    // Auto-provision the prospect's account (business + owner login) so
+    // the demo prospect shows up as the standard client card the reps
+    // are trained on. keepStatus: nothing has been invoiced.
+    if (closeId) {
+      try {
+        const conv = await convertCloseToClient({ closeId, keepStatus: true })
+        if (conv.ok !== true) logger.warn('mark-demo auto-provision failed', { closeId, error: (conv as { error: string }).error })
+      } catch (e) {
+        logger.warn('mark-demo auto-provision threw', { closeId, error: e instanceof Error ? e.message : 'unknown' })
       }
     }
   } else if (setterAssignedRepMissing) {

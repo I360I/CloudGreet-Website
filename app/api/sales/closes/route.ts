@@ -4,6 +4,7 @@ import { Resend } from 'resend'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAuth } from '@/lib/auth-middleware'
 import { ensureLeadForRep } from '@/lib/sales/ensure-lead'
+import { convertCloseToClient } from '@/lib/sales/convert-close'
 import { logger } from '@/lib/monitoring'
 
 export const dynamic = 'force-dynamic'
@@ -130,6 +131,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: insertErr?.message || 'Failed to submit' }, { status: 500 })
   }
 
+  // Auto-provision the prospect's account right away (business + owner
+  // login), keeping close.status at 'pending' - nothing invoiced yet.
+  // Reps are trained on the client-page flow for EVERY prospect: send
+  // the login info, log in as them, walk them through the dashboard.
+  // Best-effort: a failure here still leaves a valid close the admin
+  // can convert later.
+  let provisionedBusinessId: string | null = null
+  try {
+    const conv = await convertCloseToClient({ closeId: created.id, keepStatus: true })
+    if (conv.ok === true) provisionedBusinessId = conv.data.business.id
+    else logger.warn('Close auto-provision failed', { closeId: created.id, error: (conv as { error: string }).error })
+  } catch (e) {
+    logger.warn('Close auto-provision threw', { closeId: created.id, error: e instanceof Error ? e.message : 'unknown' })
+  }
+
   // If this came from a claimed lead, mark the lead "won" so it
   // disappears from the rep's pool view. Best-effort.
   if (leadId) {
@@ -207,5 +223,5 @@ ${notes ? `Notes:\n${notes}\n\n` : ''}Review & approve in admin: ${process.env.N
     },
   })
 
-  return NextResponse.json({ success: true, close: created })
+  return NextResponse.json({ success: true, close: { ...created, business_id: provisionedBusinessId || (created as any).business_id || null } })
 }
