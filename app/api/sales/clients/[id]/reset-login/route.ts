@@ -67,6 +67,44 @@ export async function POST(
       return NextResponse.json({ error: 'Owner account not found' }, { status: 404 })
     }
 
+    // Placeholder owners (auto-provisioned closes with no email on file)
+    // must get the client's REAL email before login info goes out - a
+    // rep should never paste roof-crafters-xxxx@cloudgreet.client to a
+    // customer. The UI prompts for it and retries with { email }.
+    const isPlaceholder = owner.email.endsWith('@cloudgreet.client')
+    const reqBody = await request.json().catch(() => ({} as any))
+    const providedEmail = String(reqBody?.email || '').trim().toLowerCase()
+    if (isPlaceholder && !providedEmail) {
+      return NextResponse.json({
+        error: 'needs_email',
+        detail: 'No real email on file for this client yet - enter their email to set up the login.',
+      }, { status: 422 })
+    }
+    if (providedEmail) {
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(providedEmail)) {
+        return NextResponse.json({ error: 'That email doesn\'t look valid.' }, { status: 400 })
+      }
+      const { data: emailTaken } = await supabaseAdmin
+        .from('custom_users')
+        .select('id')
+        .eq('email', providedEmail)
+        .neq('id', owner.id)
+        .maybeSingle()
+      if (emailTaken) {
+        return NextResponse.json({ error: 'That email already belongs to another account.' }, { status: 409 })
+      }
+      const { error: emailErr } = await supabaseAdmin
+        .from('custom_users')
+        .update({ email: providedEmail, updated_at: new Date().toISOString() })
+        .eq('id', owner.id)
+      if (emailErr) return NextResponse.json({ error: emailErr.message }, { status: 500 })
+      owner.email = providedEmail
+      // Keep the business row's contact email in step.
+      await supabaseAdmin.from('businesses')
+        .update({ email: providedEmail, updated_at: new Date().toISOString() })
+        .eq('id', business.id)
+    }
+
     // Readable 12-char password (no ambiguous chars), same recipe as the
     // admin reset endpoint.
     const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'

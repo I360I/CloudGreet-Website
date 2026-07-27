@@ -632,7 +632,7 @@ function LoginAsClientSection({ businessId, businessName }: {
   return (
     <div className="w-full">
       <button
-        onClick={go}
+        onClick={() => go()}
         disabled={busy}
         title={`Login as ${businessName}`}
         className="w-full inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-4 rounded-2xl text-sm font-semibold disabled:opacity-50 transition-colors"
@@ -730,14 +730,24 @@ function CopyLoginSection({ businessId }: { businessId: string }) {
   const [err, setErr] = useState('')
   const [copied, setCopied] = useState<{ email: string; password: string; login_url: string } | null>(null)
 
-  const go = async () => {
+  const go = async (realEmail?: string) => {
     setBusy(true); setErr('')
     try {
       const r = await fetch(`/api/sales/clients/${businessId}/reset-login`, {
         method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(realEmail ? { email: realEmail } : {}),
       })
       const j = await r.json().catch(() => ({}))
+      if (!r.ok && j?.error === 'needs_email') {
+        // Auto-provisioned account with no real email yet - the login
+        // username should be the client's actual email, so ask for it.
+        const entered = window.prompt("What's the client's email? Their login username will be this address.")
+        if (entered && entered.trim()) { await go(entered.trim()); return }
+        setErr('Login info needs the client\'s real email first.')
+        return
+      }
       if (!r.ok || !j?.success) throw new Error(j?.error || `Failed (${r.status})`)
       const block = `Login: ${j.login_url}\nUsername: ${j.email}\nPassword: ${j.password}`
       try { await navigator.clipboard.writeText(block) } catch { /* clipboard may be blocked; values still shown below */ }
@@ -752,7 +762,7 @@ function CopyLoginSection({ businessId }: { businessId: string }) {
   return (
     <div className="mt-4 pt-4 border-t border-gray-100">
       <button
-        onClick={go}
+        onClick={() => go()}
         disabled={busy}
         className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 transition-colors"
       >
