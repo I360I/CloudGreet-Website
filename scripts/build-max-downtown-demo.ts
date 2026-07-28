@@ -4,8 +4,10 @@
  * Restaurant-demo pattern: business + owner + lead (Darrin + Zack, no
  * close), cloned voice/tools, verified-facts prompt (dress code, free
  * CityPlace garage, Whiskey Bar), menu KB from their site, dedicated
- * 860 line. Dispatch texts go to Brendan's mobile so the private-event
- * capture demo lands on his own phone.
+ * 860 line. Dispatch texts go to Darrin's line pre-onboarding - the
+ * prospect's own mobile only gets wired in during onboarding (owner
+ * rule: no system texts to the prospect before they've been walked
+ * through it).
  */
 import { readFileSync } from 'fs'
 import { createClient } from '@supabase/supabase-js'
@@ -260,7 +262,7 @@ async function main() {
     address: '185 Asylum St, City Place, Hartford, CT 06103',
     website: 'https://www.maxdowntown.com/',
     phone_number: '(860) 522-2530',
-    notifications_phone: '+18602277994',
+    notifications_phone: '+15204120447', // Darrin pre-onboarding; swap to owner's mobile at onboarding
     timezone: 'America/New_York',
     tone: 'professional', ai_tone: 'professional',
     billing_plan: 'pro', account_status: 'active', subscription_status: 'pending',
