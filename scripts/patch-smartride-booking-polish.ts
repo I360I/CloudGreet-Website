@@ -51,7 +51,7 @@ ${END}`
 const SMS_BLOCK = `${START}
 BOOKING POLISH (refines the steps above; where anything conflicts, THIS section wins):
 
-- BAGS ON AIRPORT TRIPS: fold luggage into the airport flight question, one turn: "What airline and flight number are you on? Steve tracks flights to adjust for delays. And roughly how many bags - anything oversized?" Put oversized items in the dispatch/booking notes. Non-airport trips: don't ask about luggage.
+- BAGS ON AIRPORT TRIPS: fold luggage into the airport flight question, one turn: "What airline and flight number are you on? Steve tracks flights to adjust for delays. And roughly how many bags - anything oversized?" Put oversized items in the dispatch/booking notes. Whenever you list out the info needed to book an airport trip (including the "Want to book this ride? Just share..." ask right after a quote), that list MUST include "your estimated number of bags" - never leave bags for a later message. Non-airport trips: don't ask about luggage.
 - FINAL REVIEW BEFORE BOOKING (replaces the bare "send to Steve or book it?" closing question): once every required piece is in, send ONE review message:
 "Please review your reservation:
 - [Day, Month Date] at [Time]
