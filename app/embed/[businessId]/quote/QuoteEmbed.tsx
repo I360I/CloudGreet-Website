@@ -425,8 +425,12 @@ export default function QuoteEmbed({
           <button
             onClick={submitQuote}
             disabled={!pickup.trim() || (!isHourly && !dropoff.trim())}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[14px] font-semibold text-white transition-all disabled:opacity-35 mt-1"
-            style={{ background: accent, borderRadius: r }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[14px] font-semibold transition-all mt-1"
+            style={{
+              background: (!pickup.trim() || (!isHourly && !dropoff.trim())) ? '#E8EBE9' : accent,
+              color: (!pickup.trim() || (!isHourly && !dropoff.trim())) ? '#9CA3AF' : '#fff',
+              borderRadius: r,
+            }}
           >
             {label} <ArrowRight weight="bold" className="w-4 h-4" />
           </button>

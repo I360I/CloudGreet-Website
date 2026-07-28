@@ -62,7 +62,7 @@ export default async function QuoteEmbedPage({
   const bg     = hex(searchParams.bg, '#ffffff')
 
   const rawRadius = parseInt(searchParams.radius || '', 10)
-  const radius = isNaN(rawRadius) ? 12 : Math.min(Math.max(rawRadius, 0), 24)
+  const radius = isNaN(rawRadius) ? (pageMode ? 6 : 12) : Math.min(Math.max(rawRadius, 0), 24)
 
   const label = searchParams.label?.slice(0, 40).trim() || 'Get Quote'
 
@@ -111,7 +111,7 @@ export default async function QuoteEmbedPage({
     </div>
   )
   const card = (
-    <div style={{ background: '#fff', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 12px 40px -12px rgba(10,30,15,0.18)' }}>
+    <div style={{ background: '#fff', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 8px 28px -14px rgba(10,30,15,0.22)' }}>
       {embed}
     </div>
   )
@@ -122,7 +122,7 @@ export default async function QuoteEmbedPage({
       <div style={{ minHeight: '100dvh', background: '#F3F5F3', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         <div style={{ background: `linear-gradient(160deg, #114E23 0%, ${brand!.accent} 100%)`, padding: '28px 16px 64px', textAlign: 'center' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={brand!.logo} alt={brand!.name} style={{ height: 92, width: 92, borderRadius: 18, background: '#fff', padding: 6, margin: '0 auto', display: 'block', boxShadow: '0 8px 24px -8px rgba(0,0,0,0.35)' }} />
+          <img src={brand!.logo} alt={brand!.name} style={{ height: 92, width: 92, borderRadius: 10, background: '#fff', padding: 6, margin: '0 auto', display: 'block', boxShadow: '0 8px 24px -8px rgba(0,0,0,0.35)' }} />
           <div style={{ color: '#fff', fontWeight: 700, fontSize: 19, marginTop: 12, letterSpacing: '-0.01em' }}>{brand!.name}</div>
           <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 3 }}>{brand!.tagline}</div>
         </div>
@@ -141,7 +141,7 @@ export default async function QuoteEmbedPage({
       <div style={{ minHeight: '100dvh', background: '#0C120E', display: 'flex', flexDirection: 'column', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#E5E7EB' }}>
         <div style={{ padding: '30px 16px 20px', textAlign: 'center' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={brand!.logo} alt={brand!.name} style={{ height: 96, width: 96, borderRadius: 20, background: '#fff', padding: 6, margin: '0 auto', display: 'block' }} />
+          <img src={brand!.logo} alt={brand!.name} style={{ height: 96, width: 96, borderRadius: 10, background: '#fff', padding: 6, margin: '0 auto', display: 'block' }} />
           <div style={{ fontWeight: 700, fontSize: 19, marginTop: 12, letterSpacing: '-0.01em', color: '#fff' }}>{brand!.name}</div>
           <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, marginTop: 3 }}>{brand!.tagline}</div>
         </div>
