@@ -99,7 +99,7 @@ export default async function QuoteEmbedPage({
   // can pick a look. Branding is per-business, server-side only.
   if (!pageMode) return embed
 
-  const v = ['1', '2', '3'].includes(searchParams.v || '') ? searchParams.v : '2'
+  const v = ['1', '2', '3'].includes(searchParams.v || '') ? searchParams.v : '1'
   const poweredBy = (
     <div style={{ textAlign: 'center', fontSize: 11, paddingBottom: 18 }}>
       <span style={{ opacity: 0.55 }}>Powered by </span>
