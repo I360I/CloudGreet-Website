@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       .select('id', { count: 'exact', head: true })
       .eq('ip', ip)
       .gte('created_at', since(5))
-    if ((count || 0) >= 25) return json({ error: 'Too many messages. Give it a minute.' }, 429)
+    if ((count || 0) >= 60) return json({ error: 'Too many messages. Give it a minute.' }, 429)
     await supabaseAdmin.from('web_chat_log').insert({ ip }).then(() => {}, () => {})
   } catch { /* if the log table is unavailable, fall through to the phone-level limit */ }
 

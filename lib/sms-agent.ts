@@ -532,7 +532,12 @@ export async function handleWebChat(args: {
   const { id: conversationId, reportToken, isNew: isNewConversation } =
     await getOrCreateConversation(args.businessId, phone)
 
-  // Per-visitor rate limit (same window/threshold as SMS). Silent reject.
+  // Per-visitor rate limit. Web chat is much chattier than SMS - a normal
+  // booking (address, date, time, passengers, name, phone, email, flight,
+  // bags, notes) is 10+ quick messages, so the SMS threshold of
+  // INBOUND_RATE_LIMIT_5MIN cut off real customers mid-booking. Abuse is
+  // already bounded by the per-IP throttle in /api/embed/chat.
+  const WEB_INBOUND_RATE_LIMIT_5MIN = 40
   const rateWindow = new Date(Date.now() - 5 * 60 * 1000).toISOString()
   const { count: recentInbound } = await supabaseAdmin
     .from('sms_agent_messages')
@@ -540,7 +545,7 @@ export async function handleWebChat(args: {
     .eq('conversation_id', conversationId)
     .eq('direction', 'inbound')
     .gte('created_at', rateWindow)
-  if ((recentInbound || 0) >= INBOUND_RATE_LIMIT_5MIN) {
+  if ((recentInbound || 0) >= WEB_INBOUND_RATE_LIMIT_5MIN) {
     logger.warn('web-chat rate limited', { phone, businessId: args.businessId })
     return { ok: false, error: 'rate_limited' }
   }

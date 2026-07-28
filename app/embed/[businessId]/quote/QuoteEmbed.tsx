@@ -256,7 +256,7 @@ export default function QuoteEmbed({
         body: JSON.stringify({ businessId, sessionId: sessionRef.current, message: text }),
       })
       const j = await r.json().catch(() => ({}))
-      const reply = r.ok ? (j.reply || 'Got it.') : 'Sorry, something went wrong. Try again.'
+      const reply = r.ok ? (j.reply || 'Got it.') : (j.error || 'Sorry, something went wrong. Try again.')
       setMessages((m) => [...m, { role: 'assistant', content: reply }])
     } catch {
       setMessages((m) => [...m, { role: 'assistant', content: 'Connection issue — give it a second and try again.' }])
