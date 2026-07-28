@@ -196,6 +196,7 @@ export default function QuoteEmbed({
   showHeader = true,
   layout = 'stacked',
   expandOnFocus = true,
+  fitContent = false,
 }: {
   businessId: string
   name: string
@@ -206,6 +207,8 @@ export default function QuoteEmbed({
   showHeader?: boolean
   layout?: 'stacked' | 'side'
   expandOnFocus?: boolean
+  /** Hosted-page mode: size to content instead of filling the iframe. */
+  fitContent?: boolean
 }) {
   const [step, setStep] = useState<'form' | 'chat'>('form')
   const [rideType, setRideType] = useState('')
@@ -309,7 +312,7 @@ export default function QuoteEmbed({
 
   if (step === 'form' && layout === 'side') {
     return (
-      <div className="flex h-screen flex-col" style={{ background: bg }}>
+      <div className={fitContent ? "flex flex-col" : "flex h-screen flex-col"} style={{ background: bg }}>
         {showHeader && <Header subtitle="Instant price quote" />}
         <div className="flex flex-1 flex-col overflow-y-scroll px-4 py-4 gap-3" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
           <RideTypeSelect value={rideType} onChange={setRideType} onFocused={expand} radius={r} />
@@ -392,7 +395,7 @@ export default function QuoteEmbed({
 
   if (step === 'form') {
     return (
-      <div className="flex h-screen flex-col" style={{ background: bg }}>
+      <div className={fitContent ? "flex flex-col" : "flex h-screen flex-col"} style={{ background: bg }}>
         {showHeader && <Header subtitle="Instant price quote" />}
         <div className="flex-1 overflow-y-scroll" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         <div className="flex flex-col px-4 py-4 gap-1.5">
@@ -435,7 +438,7 @@ export default function QuoteEmbed({
   }
 
   return (
-    <div className="flex h-screen flex-col" style={{ background: bg }}>
+    <div className={fitContent ? "flex flex-col" : "flex h-screen flex-col"} style={{ background: bg, ...(fitContent ? { height: "72dvh", minHeight: 480 } : {}) }}>
       {showHeader && <Header subtitle="Online · replies in seconds" />}
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-scroll px-3 py-4" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         {messages.map((m, i) => (
