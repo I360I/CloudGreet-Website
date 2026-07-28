@@ -401,25 +401,65 @@ export default function QuoteEmbed({
         <div className="flex flex-col px-4 py-4 gap-1.5">
           <div className="space-y-2.5">
             <RideTypeSelect value={rideType} onChange={setRideType} onFocused={expand} radius={r} />
-            <AddressInput
-              label="Pickup"
-              value={pickup}
-              onChange={setPickup}
-              placeholder="e.g. 123 Main St, Columbus"
-              onSubmit={submitQuote}
-              onFocused={expand}
-              radius={r}
-            />
-            {!isHourly && (
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Pickup</p>
+                <div className="flex gap-1">
+                  {OHIO_AIRPORTS.map((a) => (
+                    <button
+                      key={a.label}
+                      type="button"
+                      onClick={() => setPickup(a.value)}
+                      className="text-[10px] font-medium leading-none px-2 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <AddressInput
-                label="Destination"
-                value={dropoff}
-                onChange={setDropoff}
-                placeholder="e.g. 456 High St, Dublin"
+                label=""
+                value={pickup}
+                onChange={setPickup}
+                placeholder="e.g. 123 Main St, Columbus"
                 onSubmit={submitQuote}
                 onFocused={expand}
                 radius={r}
+                biasLat={CENTRAL_OHIO.lat}
+                biasLng={CENTRAL_OHIO.lng}
+                biasRadius={CENTRAL_OHIO.radius}
               />
+            </div>
+            {!isHourly && (
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Destination</p>
+                  <div className="flex gap-1">
+                    {OHIO_AIRPORTS.map((a) => (
+                      <button
+                        key={a.label}
+                        type="button"
+                        onClick={() => setDropoff(a.value)}
+                        className="text-[10px] font-medium leading-none px-2 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200 hover:text-gray-900 transition-colors"
+                      >
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <AddressInput
+                  label=""
+                  value={dropoff}
+                  onChange={setDropoff}
+                  placeholder="e.g. 456 High St, Dublin"
+                  onSubmit={submitQuote}
+                  onFocused={expand}
+                  radius={r}
+                  biasLat={CENTRAL_OHIO.lat}
+                  biasLng={CENTRAL_OHIO.lng}
+                  biasRadius={CENTRAL_OHIO.radius}
+                />
+              </div>
             )}
           </div>
           <button
