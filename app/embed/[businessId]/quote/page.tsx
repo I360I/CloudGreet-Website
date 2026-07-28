@@ -54,7 +54,14 @@ export default async function QuoteEmbedPage({
     },
   }
   const brand = BRANDING[businessId]
-  const pageMode = searchParams.mode === 'page' && !!brand
+  // Branded businesses default to the hosted page when the link is the
+  // stacked (texted/shortlink) form. The side layout is the on-site iframe
+  // embed and must stay bare chrome; mode=widget forces bare explicitly.
+  const layout = searchParams.layout === 'side' ? 'side' : 'stacked'
+  const pageMode =
+    !!brand &&
+    searchParams.mode !== 'widget' &&
+    (searchParams.mode === 'page' || (searchParams.mode === undefined && layout !== 'side'))
 
   // In hosted-page mode the brand color drives the button + header band
   // unless the link explicitly overrides it.
@@ -67,7 +74,6 @@ export default async function QuoteEmbedPage({
   const label = searchParams.label?.slice(0, 40).trim() || 'Get Quote'
 
   const showHeader = searchParams.header !== 'false'
-  const layout = searchParams.layout === 'side' ? 'side' : 'stacked'
   const expandOnFocus = searchParams.expand !== 'false'
 
   const embed = (
@@ -93,7 +99,7 @@ export default async function QuoteEmbedPage({
   // can pick a look. Branding is per-business, server-side only.
   if (!pageMode) return embed
 
-  const v = ['1', '2', '3'].includes(searchParams.v || '') ? searchParams.v : '1'
+  const v = ['1', '2', '3'].includes(searchParams.v || '') ? searchParams.v : '2'
   const poweredBy = (
     <div style={{ textAlign: 'center', fontSize: 11, paddingBottom: 18 }}>
       <span style={{ opacity: 0.55 }}>Powered by </span>
