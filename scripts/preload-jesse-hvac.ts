@@ -81,7 +81,7 @@ async function main() {
     [0.24, 0.28], [-0.24, 0.28], [0.24, -0.28], [-0.24, -0.28],
   ]
   const QUERIES = ['hvac repair', 'air conditioning repair', 'furnace repair', 'heating and cooling company']
-  const CALL_BUDGET = 450 // ~$16 of Places spend, hard stop
+  const CALL_BUDGET = Number(process.env.PRELOAD_CALL_BUDGET || '450') // Places spend hard stop for this run
 
   type Cell = { m: (typeof METROS)[number]; lat: number; lng: number; q: string }
   const cells: Cell[] = []
