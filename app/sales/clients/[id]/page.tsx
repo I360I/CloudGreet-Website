@@ -668,6 +668,11 @@ function DispositionCard({ businessId }: { businessId: string }) {
   const [saved, setSaved] = useState(false)
   const [noLead, setNoLead] = useState(false)
   const [err, setErr] = useState('')
+  const [leadId, setLeadId] = useState<string | null>(null)
+  const [notes, setNotes] = useState<{ id: string; body: string; created_at: string; author: string; mine: boolean }[]>([])
+  const [draft, setDraft] = useState('')
+  const [noteSaving, setNoteSaving] = useState(false)
+  const [noteErr, setNoteErr] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -675,11 +680,41 @@ function DispositionCard({ businessId }: { businessId: string }) {
       try {
         const r = await fetchWithAuth(`/api/sales/clients/${businessId}/disposition`)
         const j = await r.json().catch(() => ({}))
-        if (!cancelled && j?.success) { setStatus(j.status || ''); setNoLead(!j.lead_id) }
+        if (!cancelled && j?.success) { setStatus(j.status || ''); setNoLead(!j.lead_id); setLeadId(j.lead_id || null) }
       } catch { /* non-fatal */ } finally { if (!cancelled) setLoading(false) }
     })()
     return () => { cancelled = true }
   }, [businessId])
+
+  useEffect(() => {
+    if (!leadId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const r = await fetchWithAuth(`/api/sales/leads/${leadId}/notes`)
+        const j = await r.json().catch(() => ({}))
+        if (!cancelled && j?.success) setNotes(j.notes || [])
+      } catch { /* non-fatal */ }
+    })()
+    return () => { cancelled = true }
+  }, [leadId])
+
+  const addNote = async () => {
+    const body = draft.trim()
+    if (!body || !leadId || noteSaving) return
+    setNoteSaving(true); setNoteErr('')
+    try {
+      const r = await fetchWithAuth(`/api/sales/leads/${leadId}/notes`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok || !j?.success) { setNoteErr(j?.error || 'Could not save note'); return }
+      const saved = j.note || { id: `tmp-${Date.now()}`, body, created_at: new Date().toISOString() }
+      setNotes((n) => [{ ...saved, author: 'You', mine: true }, ...n])
+      setDraft('')
+    } catch { setNoteErr('Could not save note') } finally { setNoteSaving(false) }
+  }
 
   const change = async (next: string) => {
     setStatus(next); setSaving(true); setSaved(false); setErr('')
@@ -721,6 +756,47 @@ function DispositionCard({ businessId }: { businessId: string }) {
         </div>
       </div>
       {err && <div className="text-xs text-rose-700 mt-2">{err}</div>}
+
+      {/* Notes thread for the lead behind this account */}
+      <div className="mt-5 pt-4 border-t border-gray-100">
+        <div className="text-sm font-medium text-gray-900">Notes</div>
+        <div className="mt-2 flex items-start gap-2">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addNote() }}
+            placeholder="Write a note… (visible to you and anyone else on this lead)"
+            rows={2}
+            className="flex-1 text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 resize-y focus:outline-none focus:border-gray-900 placeholder:text-gray-400"
+          />
+          <button
+            onClick={addNote}
+            disabled={noteSaving || !draft.trim()}
+            className="shrink-0 text-sm font-medium rounded-lg px-3.5 py-2 bg-gray-900 text-white hover:bg-gray-700 disabled:opacity-40 disabled:cursor-default transition-colors"
+          >
+            {noteSaving ? 'Saving…' : 'Add note'}
+          </button>
+        </div>
+        {noteErr && <div className="text-xs text-rose-700 mt-1.5">{noteErr}</div>}
+        {notes.length > 0 && (
+          <ul className="mt-3 space-y-2.5 max-h-64 overflow-y-auto pr-1">
+            {notes.map((n) => (
+              <li key={n.id} className="text-sm bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-xs font-medium text-gray-700">{n.mine ? 'You' : n.author}</span>
+                  <span className="text-[11px] text-gray-400 tabular-nums shrink-0">
+                    {new Date(n.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  </span>
+                </div>
+                <div className="text-gray-800 whitespace-pre-wrap break-words mt-0.5">{n.body}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {notes.length === 0 && (
+          <div className="mt-2.5 text-xs text-gray-400">No notes yet.</div>
+        )}
+      </div>
     </motion.div>
   )
 }
