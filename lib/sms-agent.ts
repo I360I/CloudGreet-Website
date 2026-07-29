@@ -30,7 +30,7 @@ const MAX_TOOL_LOOPS = 10
 // and Telnyx (per-outbound). A determined sender could blow through
 // both by texting in a tight loop, so we drop silently once they
 // exceed sane human-pace limits.
-const INBOUND_RATE_LIMIT_5MIN = 20
+const INBOUND_RATE_LIMIT_5MIN = 10
 // Marker body for a conversation-reset inbound. These rows are preserved
 // across the reset wipe so repeated "reset"/"new" messages still consume the
 // inbound rate budget (otherwise wiping history would reset the limiter and
