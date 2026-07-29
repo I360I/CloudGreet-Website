@@ -171,6 +171,9 @@ export const CITY_COORDS: Record<string, [number, number]> = {
   'omaha,NE': [41.2565, -95.9345], 'des moines,IA': [41.5868, -93.6250],
   'grand rapids,MI': [42.9634, -85.6681], 'fort wayne,IN': [41.0793, -85.1394],
   'erie,PA': [42.1292, -80.0851], 'buffalo,NY': [42.8864, -78.8784],
+  'hartford,CT': [41.7658, -72.6734], 'litchfield,CT': [41.7473, -73.1887],
+  'findlay,OH': [41.0442, -83.6499], 'perrysburg,OH': [41.5570, -83.6272],
+  'toledo,OH': [41.6528, -83.5379], 'powell,OH': [40.1573, -83.0752],
 }
 
 const STATE_NAMES: Record<string, string> = {
