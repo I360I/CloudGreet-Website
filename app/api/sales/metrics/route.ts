@@ -193,14 +193,14 @@ export async function GET(request: NextRequest) {
     const paidCloseBizIds = new Set(
       (closes as any[]).filter((c) => c.status === 'paid' && c.business_id).map((c) => c.business_id)
     )
-    type MapPt = { id: string; name: string; lat: number; lng: number; kind: 'demo' | 'client' }
+    type MapPt = { id: string; name: string; lat: number; lng: number; kind: 'demo' | 'client'; href: string }
     const mapPoints: MapPt[] = []
     for (const b of rosterRows) {
       const loc = geolocate({ city: b.city, state: b.state, phone: b.phone_number })
       if (!loc) continue
       const [lat, lng] = jitter(loc[0], loc[1], String(b.id))
       const paying = ['active', 'trialing', 'past_due'].includes(b.subscription_status || '') || paidCloseBizIds.has(b.id)
-      mapPoints.push({ id: b.id, name: b.business_name || 'Prospect', lat, lng, kind: paying ? 'client' : 'demo' })
+      mapPoints.push({ id: b.id, name: b.business_name || 'Prospect', lat, lng, kind: paying ? 'client' : 'demo', href: `/sales/clients/${b.id}` })
     }
     for (const c of closes as any[]) {
       if (c.business_id && rosterIds.has(c.business_id)) continue // already plotted from the roster
@@ -213,6 +213,7 @@ export async function GET(request: NextRequest) {
         name: c.prospect_business_name || 'Prospect',
         lat, lng,
         kind: c.status === 'paid' ? 'client' : 'demo',
+        href: `/sales/closes/${c.id}`,
       })
     }
 

@@ -12,7 +12,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 
-export type MapPoint = { id: string; name: string; lat: number; lng: number; kind: 'demo' | 'client' }
+export type MapPoint = { id: string; name: string; lat: number; lng: number; kind: 'demo' | 'client'; href?: string }
 export type MapHome = { lat: number; lng: number }
 type Hover = { x: number; y: number; title: string; sub: string }
 
@@ -164,17 +164,21 @@ export default function TerritoryMap({ points, home, density }: {
         {/* demo + client dots */}
         {points.map((p) => {
           const [x, y] = project(p.lat, p.lng)
-          return (
+          const dot = (
             <g
-              key={p.id}
               onMouseMove={(e) => place(e, p.name, p.kind === 'client' ? 'Live client · you closed this' : 'Demo on the calendar')}
               onMouseLeave={() => setHover(null)}
-              style={{ cursor: 'default' }}
+              style={{ cursor: p.href ? 'pointer' : 'default' }}
             >
+              {/* generous invisible hit area so the 4px dot is easy to click */}
+              {p.href && <circle cx={x} cy={y} r="9" fill="transparent" />}
               <circle cx={x} cy={y} r="4.2" fill="var(--dcard)" stroke="rgba(15, 23, 42, 0.16)" strokeWidth="0.5" />
               <circle cx={x} cy={y} r="2.3" fill={p.kind === 'client' ? 'var(--dgreen-deep)' : 'var(--dblue)'} pointerEvents="none" />
             </g>
           )
+          return p.href
+            ? <a key={p.id} href={p.href} aria-label={`Open ${p.name}`}>{dot}</a>
+            : <React.Fragment key={p.id}>{dot}</React.Fragment>
         })}
 
         {/* home base */}
