@@ -167,18 +167,43 @@ export async function GET(request: NextRequest) {
     // phone area code.
     const home = { lat: 30.2672, lng: -97.7431 }
 
+    // The rep's full account roster (every business provisioned under
+    // them - same rows as the Prospects/Clients pages) is the primary
+    // point source: blue until the subscription is live, green once it
+    // pays. Closes not yet linked to a business fill in the rest so a
+    // freshly-set demo still shows before provisioning.
+    const { data: roster } = await supabaseAdmin
+      .from('businesses')
+      .select('id, business_name, city, state, phone_number, subscription_status')
+      .eq('rep_id', auth.userId)
+      .limit(500)
+    const rosterRows = (roster || []) as any[]
+    const rosterIds = new Set(rosterRows.map((b) => b.id))
+
     const bizIds = (closes as any[]).map((c) => c.business_id).filter(Boolean)
     const bizById = new Map<string, any>()
-    if (bizIds.length > 0) {
+    const unlinkedBizIds = bizIds.filter((id) => !rosterIds.has(id))
+    if (unlinkedBizIds.length > 0) {
       const { data: bizRows } = await supabaseAdmin
         .from('businesses')
         .select('id, city, state, phone_number')
-        .in('id', bizIds.slice(0, 500))
+        .in('id', unlinkedBizIds.slice(0, 500))
       for (const b of bizRows || []) bizById.set(b.id, b)
     }
+    const paidCloseBizIds = new Set(
+      (closes as any[]).filter((c) => c.status === 'paid' && c.business_id).map((c) => c.business_id)
+    )
     type MapPt = { id: string; name: string; lat: number; lng: number; kind: 'demo' | 'client' }
     const mapPoints: MapPt[] = []
+    for (const b of rosterRows) {
+      const loc = geolocate({ city: b.city, state: b.state, phone: b.phone_number })
+      if (!loc) continue
+      const [lat, lng] = jitter(loc[0], loc[1], String(b.id))
+      const paying = ['active', 'trialing', 'past_due'].includes(b.subscription_status || '') || paidCloseBizIds.has(b.id)
+      mapPoints.push({ id: b.id, name: b.business_name || 'Prospect', lat, lng, kind: paying ? 'client' : 'demo' })
+    }
     for (const c of closes as any[]) {
+      if (c.business_id && rosterIds.has(c.business_id)) continue // already plotted from the roster
       const biz = c.business_id ? bizById.get(c.business_id) : null
       const loc = geolocate({ city: biz?.city, state: biz?.state, phone: biz?.phone_number || c.prospect_phone })
       if (!loc) continue
