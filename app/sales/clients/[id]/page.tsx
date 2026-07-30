@@ -520,6 +520,7 @@ export default function SalesClientDetailPage() {
 function PaymentLinkSection({ businessId }: { businessId: string }) {
   const [monthly, setMonthly] = useState('')
   const [setup, setSetup] = useState('')
+  const [freeTrial, setFreeTrial] = useState(false)
   const [busy, setBusy] = useState(false)
   const [url, setUrl] = useState('')
   const [err, setErr] = useState('')
@@ -537,7 +538,7 @@ function PaymentLinkSection({ businessId }: { businessId: string }) {
       const r = await fetchWithAuth(`/api/sales/clients/${businessId}/payment-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monthly_cents: monthlyCents, setup_fee_cents: setupCents }),
+        body: JSON.stringify({ monthly_cents: monthlyCents, setup_fee_cents: setupCents, free_trial: freeTrial }),
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok || !j?.success) throw new Error(j?.error || `Failed (${r.status})`)
@@ -569,9 +570,7 @@ function PaymentLinkSection({ businessId }: { businessId: string }) {
               <div className="text-sm font-semibold text-gray-900">Generate payment link</div>
               <button onClick={() => setOpen(false)} className="p-1.5 -mr-1.5 rounded-full hover:bg-gray-100"><X className="w-4 h-4 text-gray-400" /></button>
             </div>
-            <div className="text-xs text-gray-500 mb-4">
-              Stripe checkout. When they pay, the account goes live and your commission is credited automatically.
-            </div>
+            <div className="mb-4" />
             <div className="flex items-end gap-2">
               <label className="text-xs text-gray-600 flex-1">
                 Monthly $
@@ -584,6 +583,14 @@ function PaymentLinkSection({ businessId }: { businessId: string }) {
                   className="block mt-1 w-full bg-white border border-gray-300 rounded-lg px-2.5 py-2 text-sm text-gray-900" />
               </label>
             </div>
+            <label className="mt-3 flex items-center gap-2.5 cursor-pointer select-none rounded-lg border border-gray-200 px-3 py-2.5 hover:bg-gray-50 transition-colors">
+              <input type="checkbox" checked={freeTrial} onChange={(e) => setFreeTrial(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" />
+              <span className="text-sm text-gray-800">
+                Apply 1-week free trial
+                <span className="block text-[11px] text-gray-500">Card collected now, first charge in 7 days.</span>
+              </span>
+            </label>
             <button onClick={generate} disabled={busy}
               className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50 transition-colors">
               {busy ? 'Generating…' : 'Generate link'}

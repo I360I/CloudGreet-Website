@@ -56,6 +56,10 @@ export async function POST(
     return NextResponse.json({ error: 'No email on this account. Add one first.' }, { status: 400 })
   }
 
+  // Optional 1-week free trial: card is collected up front, first charge
+  // (and rep commission) lands 7 days later when Stripe bills the sub.
+  const freeTrial = body?.free_trial === true
+
   // Persist the negotiated price on the business so the rep MRR + cost-margin
   // reflect it once they pay.
   await supabaseAdmin
@@ -103,11 +107,13 @@ export async function POST(
         cloudgreet_source: 'rep_prospect_link',
       },
       subscription_data: {
+        ...(freeTrial ? { trial_period_days: 7 } : {}),
         metadata: {
           cloudgreet_business_id: biz.id,
           cloudgreet_rep_id: auth.userId,
           monthly_cents: String(monthlyCents),
           setup_fee_cents: String(setupCents),
+          free_trial: String(freeTrial),
         },
       },
     })
