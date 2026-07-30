@@ -101,12 +101,22 @@ export async function POST(
     })
   }
 
+  // On a trial the setup fee is charged at trial end (attached by the
+  // webhook), so it isn't a Checkout line item and Stripe can't show it in
+  // the summary. Disclose it on the page so the trial-end charge is never a
+  // surprise.
+  const setupDollars = (setupCents / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+  const trialSetupNotice = freeTrial && setupCents > 0
+    ? { submit: { message: `Your card won't be charged today. When your 7-day free trial ends, a one-time $${setupDollars} setup fee plus your first month will be charged together, then monthly after that.` } }
+    : undefined
+
   let session
   try {
     session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       // no customer_email → Stripe prompts the payer for their own email
       line_items: lineItems,
+      ...(trialSetupNotice ? { custom_text: trialSetupNotice } : {}),
       success_url: `${baseUrl}/payment/success?business=${biz.id}`,
       cancel_url: `${baseUrl}/payment/cancel?business=${biz.id}`,
       allow_promotion_codes: true,
